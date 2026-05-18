@@ -10,3 +10,8 @@ build/
 htmlcov/
 .coverage
 *.kicad_prl
+.env
+.venv/
+venv/
+*.egg
+.python-version
