@@ -37,13 +37,14 @@ def parse_symbol_lib(path: Path) -> ParseResult:
         FileNotFoundError: If path does not exist.
         ValueError: If file extension is not .kicad_sym.
     """
-    if not path.exists():
+    resolved = path.resolve()
+    if not resolved.exists():
         raise FileNotFoundError(f"Symbol library file not found: {path}")
 
-    if path.suffix != ".kicad_sym":
-        raise ValueError(f"Expected .kicad_sym file, got {path.suffix}")
+    if resolved.suffix != ".kicad_sym":
+        raise ValueError(f"Expected .kicad_sym file, got {resolved.suffix}")
 
-    raw_content = path.read_text(encoding="utf-8")
+    raw_content = resolved.read_text(encoding="utf-8")
     symbol_lib = SymbolLib.from_file(str(path))
 
     return ParseResult(

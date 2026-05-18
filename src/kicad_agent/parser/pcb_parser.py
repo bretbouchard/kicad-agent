@@ -37,13 +37,14 @@ def parse_pcb(path: Path) -> ParseResult:
         FileNotFoundError: If path does not exist.
         ValueError: If file extension is not .kicad_pcb.
     """
-    if not path.exists():
+    resolved = path.resolve()
+    if not resolved.exists():
         raise FileNotFoundError(f"PCB file not found: {path}")
 
-    if path.suffix != ".kicad_pcb":
-        raise ValueError(f"Expected .kicad_pcb file, got {path.suffix}")
+    if resolved.suffix != ".kicad_pcb":
+        raise ValueError(f"Expected .kicad_pcb file, got {resolved.suffix}")
 
-    raw_content = path.read_text(encoding="utf-8")
+    raw_content = resolved.read_text(encoding="utf-8")
     board = Board.from_file(str(path))
 
     return ParseResult(

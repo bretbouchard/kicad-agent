@@ -127,6 +127,9 @@ def _determine_parent_type(
     return best_type, best_pos
 
 
+_MAX_PARENT_COUNT_ENTRIES = 100_000  # Safety cap to prevent memory exhaustion
+
+
 def _build_parent_count_map(content: str) -> dict[str, int]:
     """Pre-compute running counts of each parent type in a single pass.
 
@@ -138,6 +141,9 @@ def _build_parent_count_map(content: str) -> dict[str, int]:
 
     Returns:
         Dict mapping (parent_type, position) to the sequential count.
+
+    Raises:
+        ValueError: If the number of parent entries exceeds the safety cap.
     """
     counts: dict[str, int] = {}
     running: dict[str, int] = {}
@@ -146,6 +152,11 @@ def _build_parent_count_map(content: str) -> dict[str, int]:
         for match in pattern.finditer(content):
             running[type_name] = running.get(type_name, 0) + 1
             counts[(type_name, match.start())] = running[type_name] - 1
+            if len(counts) > _MAX_PARENT_COUNT_ENTRIES:
+                raise ValueError(
+                    f"Parent count map exceeded {_MAX_PARENT_COUNT_ENTRIES} entries. "
+                    "File may be malformed or maliciously large."
+                )
 
     return counts
 
@@ -250,10 +261,11 @@ def extract_uuids_from_file(path: Path, file_type: str) -> UUIDMap:
             f"Must be one of {sorted(_VALID_FILE_TYPES)}."
         )
 
-    if not path.exists():
+    resolved = path.resolve()
+    if not resolved.exists():
         raise FileNotFoundError(f"File not found: {path}")
 
-    file_size = path.stat().st_size
+    file_size = resolved.stat().st_size
     max_size = 50 * 1024 * 1024  # 50MB limit (DoS mitigation)
     if file_size > max_size:
         raise ValueError(
@@ -261,5 +273,5 @@ def extract_uuids_from_file(path: Path, file_type: str) -> UUIDMap:
             "File may be malformed or maliciously large."
         )
 
-    content = path.read_text(encoding="utf-8")
+    content = resolved.read_text(encoding="utf-8")
     return extract_uuids(content, file_type)

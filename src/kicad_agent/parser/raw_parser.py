@@ -44,7 +44,13 @@ def parse_raw_sexp(content: str) -> list:
             "File may be malformed or maliciously large."
         )
 
-    return sexpdata.loads(content)  # type: ignore[no-any-return]
+    try:
+        return sexpdata.loads(content)  # type: ignore[no-any-return]
+    except RecursionError:
+        raise ValueError(
+            "S-expression nesting depth exceeded interpreter recursion limit. "
+            "File may be malformed or maliciously nested."
+        )
 
 
 def parse_raw_sexp_file(path: Path) -> list:
@@ -63,8 +69,9 @@ def parse_raw_sexp_file(path: Path) -> list:
         ValueError: If content is empty or exceeds size limit.
         sexpdata.ExpectCloseBracket: If S-expression syntax is malformed.
     """
-    if not path.exists():
+    resolved = path.resolve()
+    if not resolved.exists():
         raise FileNotFoundError(f"File not found: {path}")
 
-    content = path.read_text(encoding="utf-8")
+    content = resolved.read_text(encoding="utf-8")
     return parse_raw_sexp(content)

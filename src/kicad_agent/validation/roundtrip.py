@@ -18,7 +18,7 @@ Usage:
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional
 
 from kicad_agent.parser.schematic_parser import parse_schematic
 from kicad_agent.parser.pcb_parser import parse_pcb
@@ -32,7 +32,7 @@ from kicad_agent.serializer.footprint_ser import serialize_footprint
 from kicad_agent.validation.constants import SUFFIX_MAP
 
 # Dispatch table mapping file_type to (parse_func, serialize_func)
-_DISPATCH_TABLE: dict[str, tuple[object, object]] = {
+_DISPATCH_TABLE: dict[str, tuple[Callable[..., Any], Callable[..., Any]]] = {
     "schematic": (parse_schematic, serialize_schematic),
     "pcb": (parse_pcb, serialize_pcb),
     "symbol_lib": (parse_symbol_lib, serialize_symbol_lib),
@@ -40,14 +40,14 @@ _DISPATCH_TABLE: dict[str, tuple[object, object]] = {
 }
 
 
-def _get_parse_func(file_type: str):
+def _get_parse_func(file_type: str) -> Callable[..., Any]:
     """Get the parse function for a file type."""
     if file_type not in _DISPATCH_TABLE:
         raise ValueError(f"Unknown file type: {file_type}")
     return _DISPATCH_TABLE[file_type][0]
 
 
-def _get_serialize_func(file_type: str):
+def _get_serialize_func(file_type: str) -> Callable[..., Any]:
     """Get the serialize function for a file type."""
     if file_type not in _DISPATCH_TABLE:
         raise ValueError(f"Unknown file type: {file_type}")

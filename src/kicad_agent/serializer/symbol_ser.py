@@ -11,7 +11,7 @@ Usage:
 
 from pathlib import Path
 
-from kicad_agent.parser.symbol_parser import ParseResult
+from kicad_agent.parser.types import ParseResult
 
 
 def serialize_symbol_lib(parse_result: ParseResult, output_path: Path) -> Path:
@@ -32,6 +32,7 @@ def serialize_symbol_lib(parse_result: ParseResult, output_path: Path) -> Path:
             f"Expected file_type='symbol_lib', got file_type={parse_result.file_type!r}"
         )
 
+    output_path = output_path.resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     parse_result.kiutils_obj.to_file(str(output_path))
     return output_path

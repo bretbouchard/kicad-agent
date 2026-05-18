@@ -12,7 +12,7 @@ Usage:
 from pathlib import Path
 from typing import Optional
 
-from kicad_agent.parser.pcb_parser import ParseResult
+from kicad_agent.parser.types import ParseResult
 from kicad_agent.parser.uuid_extractor import UUIDMap
 from kicad_agent.serializer.uuid_reinjector import reinject_uuids
 
@@ -40,6 +40,7 @@ def serialize_pcb(
             f"Expected file_type='pcb', got file_type={parse_result.file_type!r}"
         )
 
+    output_path = output_path.resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     parse_result.kiutils_obj.to_file(str(output_path))
 
