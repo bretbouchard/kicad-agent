@@ -15,3 +15,6 @@ htmlcov/
 venv/
 *.egg
 .python-version
+.claude/
+.planning/
+.benchmarks/
