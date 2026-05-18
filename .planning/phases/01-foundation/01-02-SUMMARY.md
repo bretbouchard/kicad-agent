@@ -139,3 +139,10 @@ None - no external service configuration required.
 ---
 *Phase: 01-foundation*
 *Completed: 2026-05-18*
+
+## Self-Check: PASSED
+
+- All 11 key files verified present on disk
+- Both task commits verified in git history (c010c55, e141909)
+- 38/38 tests passing on re-run (17 parser + 14 UUID/serializer + 7 round-trip)
+- All acceptance criteria verified for both tasks
