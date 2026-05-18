@@ -5,6 +5,9 @@ KiCad files (schematic + PCB pairs) in a single all-or-nothing transaction.
 
 XFILE-02/XFILE-03: Library reference propagation -- when a symbol or
 footprint library reference changes, propagate to all instances.
+
+XFILE-04: Project context detection and auto-discovery -- detect KiCad
+project root, find library paths, and discover all project files.
 """
 
 from kicad_agent.crossfile.atomic import AtomicOperation, AtomicResult
@@ -13,11 +16,19 @@ from kicad_agent.crossfile.propagation import (
     propagate_footprint_ref,
     propagate_symbol_ref,
 )
+from kicad_agent.crossfile.project_context import (
+    ProjectContext,
+    detect_project_root,
+    discover_project,
+)
 
 __all__ = [
     "AtomicOperation",
     "AtomicResult",
+    "ProjectContext",
     "PropagationResult",
+    "detect_project_root",
+    "discover_project",
     "propagate_footprint_ref",
     "propagate_symbol_ref",
 ]
