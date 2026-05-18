@@ -70,7 +70,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **XFILE-01**: Schematic <-> PCB atomic operations (maintain consistency during edits)
 - [x] **XFILE-02**: Symbol library reference update propagation
 - [x] **XFILE-03**: Footprint library reference update propagation
-- [ ] **XFILE-04**: Project context detection: auto-discover project root, libraries, configuration
+- [x] **XFILE-04**: Project context detection: auto-discover project root, libraries, configuration
 
 ### GSD Skill Integration
 
@@ -159,7 +159,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | XFILE-01 | Phase 6: Cross-File + Analysis | Pending |
 | XFILE-02 | Phase 6: Cross-File + Analysis | Complete |
 | XFILE-03 | Phase 6: Cross-File + Analysis | Complete |
-| XFILE-04 | Phase 6: Cross-File + Analysis | Pending |
+| XFILE-04 | Phase 6: Cross-File + Analysis | Complete |
 | VAL-04 | Phase 6: Cross-File + Analysis | Pending |
 | SKILL-01 | Phase 7: GSD Skill Integration | Pending |
 | SKILL-02 | Phase 7: GSD Skill Integration | Pending |
