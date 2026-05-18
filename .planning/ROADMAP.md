@@ -67,12 +67,12 @@ Plans:
   3. A pre-mutation structural validation catches invalid operations (e.g., adding a component to a non-existent sheet) before execution
   4. A validation failure triggers automatic rollback to the last valid state
   5. Net consistency between schematic and PCB can be verified programmatically
-**Plans**: 4 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: kicad-cli ERC/DRC wrappers with structured result parsing
-- [ ] 03-02: Pre-mutation structural validator and UUID uniqueness checker
-- [ ] 03-03: Error recovery pipeline with automatic rollback on validation failure
+- [ ] 03-01-PLAN.md -- kicad-cli ERC/DRC wrappers with structured result parsing (VAL-01, VAL-02)
+- [ ] 03-02-PLAN.md -- Pre-mutation structural validator and UUID uniqueness checker (VAL-05)
+- [ ] 03-03-PLAN.md -- Error recovery pipeline with automatic rollback on validation failure (VAL-03, VAL-06)
 
 ### Phase 4: Component Operations
 **Goal**: Users can add, remove, duplicate, move, and modify components in a schematic with full validation safety
@@ -85,12 +85,12 @@ Plans:
   4. Components are replicated in linear, circular, and matrix array patterns
   5. A component is moved to specified coordinates with correct precision (4 decimal schematic, 6 decimal PCB)
   6. Component properties (value, footprint, reference, custom fields) are modified and the file passes ERC
-**Plans**: 4 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: Add and remove component operations
-- [ ] 04-02: Duplicate and array replicate operations
-- [ ] 04-03: Move/reposition and property modification operations
+- [ ] 04-01-PLAN.md -- Add and remove component operations
+- [ ] 04-02-PLAN.md -- Duplicate and array replicate operations
+- [ ] 04-03-PLAN.md -- Move/reposition and property modification operations
 
 ### Phase 5: Net, Reference, and Footprint Operations
 **Goal**: Users can manage nets, buses, references, and footprints across schematic and PCB
@@ -106,10 +106,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 05-01: Net CRUD and bus operations
-- [ ] 05-02: Reference management (renumber, validate, annotate, cross-reference)
-- [ ] 05-03: Footprint management (assign, swap, validate, pin mapping)
-- [ ] 05-04: Net connectivity graph analysis via networkx
+- [ ] 05-01-PLAN.md -- Net CRUD and bus operations
+- [ ] 05-02-PLAN.md -- Reference management (renumber, validate, annotate, cross-reference)
+- [ ] 05-03-PLAN.md -- Footprint management (assign, swap, validate, pin mapping)
+- [ ] 05-04-PLAN.md -- Net connectivity graph analysis via networkx
 
 ### Phase 6: Cross-File Operations and Analysis
 **Goal**: Users can perform atomic operations across schematic and PCB files, propagate library changes, and analyze diffs and connectivity
@@ -124,10 +124,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 06-01: Cross-file atomic operations (schematic-to-PCB consistency)
-- [ ] 06-02: Library reference propagation (symbol and footprint)
-- [ ] 06-03: Project context detection and auto-discovery
-- [ ] 06-04: Structural diff generation with difftastic integration
+- [ ] 06-01-PLAN.md -- Cross-file atomic operations (schematic-to-PCB consistency)
+- [ ] 06-02-PLAN.md -- Library reference propagation (symbol and footprint)
+- [ ] 06-03-PLAN.md -- Project context detection and auto-discovery
+- [ ] 06-04-PLAN.md -- Structural diff generation with difftastic integration
 
 ### Phase 7: GSD Skill Integration
 **Goal**: The kicad-agent is invokable from any KiCad project via the GSD Skill interface, and from the terminal via CLI
