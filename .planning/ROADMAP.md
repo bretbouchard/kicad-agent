@@ -13,7 +13,7 @@ Build an AI-safe KiCad structural editing tool in 7 phases: first achieve zero-d
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation -- Parse, Serialize, Round-trip** - Parse all 4 KiCad file types with zero-diff round-trip fidelity
-- [ ] **Phase 2: Operation Schema and IR Layer** - Define the JSON intent contract and IR dataclasses that insulate the LLM from raw S-expressions
+- [x] **Phase 2: Operation Schema and IR Layer** - Define the JSON intent contract and IR dataclasses that insulate the LLM from raw S-expressions
 - [ ] **Phase 3: Validation Pipeline** - ERC/DRC gates, structural checks, and error recovery before any mutation
 - [ ] **Phase 4: Component Operations** - Add, remove, duplicate, move, and modify components with transaction safety
 - [ ] **Phase 5: Net, Reference, and Footprint Operations** - Net CRUD, bus operations, reference management, footprint assignment
