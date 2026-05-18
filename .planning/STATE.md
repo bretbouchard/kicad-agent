@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-03 (Validation pipeline), Phase 3 complete
-last_updated: "2026-05-18T07:26:30Z"
+stopped_at: Completed 04-01 (Component add/remove operations)
+last_updated: "2026-05-18T07:54:35Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 27
-  completed_plans: 9
-  planned_plans: 18
-  percent: 33
+  completed_plans: 10
+  planned_plans: 17
+  percent: 37
 ---
 
 # Project State
@@ -26,20 +26,20 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 
 ## Current Position
 
-Phase: 3 of 7 (Validation Pipeline) -- COMPLETE
-Plan: 3 of 3 complete (03-01, 03-02, 03-03 done)
-Status: Phase 3 complete. ERC/DRC wrappers, structural validator, and validation pipeline all built.
+Phase: 4 of 7 (Component Operations) -- IN PROGRESS
+Plan: 1 of 3 complete (04-01 done, 04-02 and 04-03 remaining)
+Status: Operation executor, add_component, and remove_component implemented. 201 tests passing.
 Last activity: 2026-05-18
 
-Progress: [=========░] 33%
+Progress: [==========░] 37%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 9
+- Total plans completed: 10
 - Average duration: 6 min
-- Total execution time: 0.8 hours
+- Total execution time: 0.9 hours
 
 **By Phase:**
 
@@ -48,10 +48,11 @@ Progress: [=========░] 33%
 | 01-foundation | 3 | 16 min | 5 min |
 | 02-operation-schema-and-ir-layer | 3 | 19 min | 6 min |
 | 03-validation-pipeline | 3 | 15 min | 5 min |
+| 04-component-operations | 1 | 6 min | 6 min |
 
 **Recent Trend:**
 
-- Last 5 plans: 03-03 (5 min), 03-02 (5 min), 03-01 (5 min), 02-03 (7 min), 02-02 (10 min)
+- Last 5 plans: 04-01 (6 min), 03-03 (5 min), 03-02 (5 min), 03-01 (5 min), 02-03 (7 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -93,6 +94,10 @@ Recent decisions affecting current work:
 - Structural pre-check failure does NOT create Transaction (no rollback needed)
 - Pipeline wraps mutation in Transaction context; any stage failure triggers auto-rollback
 - verify_net_consistency reuses run_drc with check_schematic_parity=True for VAL-03
+- Handler functions accept (op, ir, file_path?) -> dict rather than command pattern -- simpler for Phase 4
+- angle=None when 0.0 to match KiCad convention (no angle token in S-expression)
+- "?-suffixed" references (R?) allowed as duplicates since they represent unassigned designators
+- remove_component uses identity check (is) not equality for list removal of kiutils objects
 
 ### Pending Todos
 
@@ -113,5 +118,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-18
-Stopped at: Completed 03-03 (Validation pipeline), Phase 3 complete
-Resume file: .planning/phases/03-validation-pipeline/03-03-SUMMARY.md
+Stopped at: Completed 04-01 (Component add/remove operations)
+Resume file: .planning/phases/04-component-operations/04-01-SUMMARY.md
