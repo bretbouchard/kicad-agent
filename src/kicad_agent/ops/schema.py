@@ -29,9 +29,9 @@ Usage::
 """
 
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Optional
 
-from pydantic import BaseModel, BeforeValidator, Field
+from pydantic import BaseModel, BeforeValidator, Field, field_validator
 
 
 # ---------------------------------------------------------------------------
@@ -240,6 +240,154 @@ class ArrayReplicateOp(BaseModel):
     cols: int | None = None
 
 
+class AddNetOp(BaseModel):
+    """Add a net to a PCB.
+
+    Attributes:
+        op_type: Discriminator literal ``"add_net"``.
+        target_file: Relative path to the target KiCad PCB file (H-01 validated).
+        net_name: Net name. Empty string triggers auto-generation as ``"N_<number>"``.
+        net_number: Explicit net number. None triggers auto-assignment.
+    """
+
+    op_type: Literal["add_net"] = "add_net"
+    target_file: TargetFile
+    net_name: str = Field(
+        default="",
+        max_length=64,
+        description="Net name. Empty triggers auto-generation.",
+    )
+    net_number: Optional[int] = Field(
+        default=None,
+        description="Explicit net number. None = auto-assign.",
+    )
+
+    @field_validator("net_name")
+    @classmethod
+    def _reject_whitespace_only(cls, v: str) -> str:
+        if v.strip() == "" and len(v) > 0:
+            raise ValueError("Net name must not be whitespace-only")
+        return v
+
+
+class RemoveNetOp(BaseModel):
+    """Remove a net from a PCB, disconnecting all pads.
+
+    Attributes:
+        op_type: Discriminator literal ``"remove_net"``.
+        target_file: Relative path to the target KiCad PCB file (H-01 validated).
+        net_name: Name of the net to remove.
+    """
+
+    op_type: Literal["remove_net"] = "remove_net"
+    target_file: TargetFile
+    net_name: str = Field(
+        min_length=1,
+        max_length=64,
+        description="Name of the net to remove",
+    )
+
+    @field_validator("net_name")
+    @classmethod
+    def _reject_whitespace_only(cls, v: str) -> str:
+        if v.strip() == "":
+            raise ValueError("Net name must not be whitespace-only")
+        return v
+
+
+class RenameNetOp(BaseModel):
+    """Rename a net, propagating to all connected pads.
+
+    Attributes:
+        op_type: Discriminator literal ``"rename_net"``.
+        target_file: Relative path to the target KiCad PCB file (H-01 validated).
+        old_name: Current net name.
+        new_name: Desired new net name.
+    """
+
+    op_type: Literal["rename_net"] = "rename_net"
+    target_file: TargetFile
+    old_name: str = Field(min_length=1, max_length=64)
+    new_name: str = Field(min_length=1, max_length=64)
+
+    @field_validator("old_name", "new_name")
+    @classmethod
+    def _reject_whitespace_only(cls, v: str) -> str:
+        if v.strip() == "":
+            raise ValueError("Net name must not be whitespace-only")
+        return v
+
+
+class AddBusOp(BaseModel):
+    """Add a bus to a schematic with member nets.
+
+    Attributes:
+        op_type: Discriminator literal ``"add_bus"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        bus_name: Bus name.
+        member_nets: List of net names that belong to this bus.
+    """
+
+    op_type: Literal["add_bus"] = "add_bus"
+    target_file: TargetFile
+    bus_name: str = Field(
+        min_length=1,
+        max_length=64,
+        description="Bus name",
+    )
+    member_nets: list[str] = Field(
+        min_length=1,
+        max_length=32,
+        description="Member net names (1-32 members)",
+    )
+
+    @field_validator("bus_name")
+    @classmethod
+    def _reject_whitespace_only(cls, v: str) -> str:
+        if v.strip() == "":
+            raise ValueError("Bus name must not be whitespace-only")
+        return v
+
+    @field_validator("member_nets")
+    @classmethod
+    def _validate_member_nets(cls, v: list[str]) -> list[str]:
+        for i, net in enumerate(v):
+            if len(net) > 64:
+                raise ValueError(
+                    f"Member net at index {i} exceeds 64 characters"
+                )
+            if net.strip() == "" and len(net) > 0:
+                raise ValueError(
+                    f"Member net at index {i} must not be whitespace-only"
+                )
+        return v
+
+
+class RemoveBusOp(BaseModel):
+    """Remove a bus from a schematic.
+
+    Attributes:
+        op_type: Discriminator literal ``"remove_bus"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        bus_name: Bus name to remove.
+    """
+
+    op_type: Literal["remove_bus"] = "remove_bus"
+    target_file: TargetFile
+    bus_name: str = Field(
+        min_length=1,
+        max_length=64,
+        description="Bus name to remove",
+    )
+
+    @field_validator("bus_name")
+    @classmethod
+    def _reject_whitespace_only(cls, v: str) -> str:
+        if v.strip() == "":
+            raise ValueError("Bus name must not be whitespace-only")
+        return v
+
+
 # ---------------------------------------------------------------------------
 # Discriminated union (D-01, D-02, D-03)
 # ---------------------------------------------------------------------------
@@ -259,7 +407,12 @@ class Operation(BaseModel):
         | MoveComponentOp
         | ModifyPropertyOp
         | DuplicateComponentOp
-        | ArrayReplicateOp,
+        | ArrayReplicateOp
+        | AddNetOp
+        | RemoveNetOp
+        | RenameNetOp
+        | AddBusOp
+        | RemoveBusOp,
         Field(discriminator="op_type"),
     ]
 
