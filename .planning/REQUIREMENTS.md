@@ -74,7 +74,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### GSD Skill Integration
 
-- [ ] **SKILL-01**: GSD Skill manifest with kicad-agent capabilities
+- [x] **SKILL-01**: GSD Skill manifest with kicad-agent capabilities
 - [ ] **SKILL-02**: Skill handler: route operations from Claude to Python backend
 - [ ] **SKILL-03**: CLI wrapper for direct terminal usage (independent of Claude)
 - [ ] **SKILL-04**: Project context renderer: summarize KiCad project state for AI context
@@ -161,7 +161,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | XFILE-03 | Phase 6: Cross-File + Analysis | Complete |
 | XFILE-04 | Phase 6: Cross-File + Analysis | Complete |
 | VAL-04 | Phase 6: Cross-File + Analysis | Complete |
-| SKILL-01 | Phase 7: GSD Skill Integration | Pending |
+| SKILL-01 | Phase 7: GSD Skill Integration | Complete |
 | SKILL-02 | Phase 7: GSD Skill Integration | Pending |
 | SKILL-03 | Phase 7: GSD Skill Integration | Pending |
 | SKILL-04 | Phase 7: GSD Skill Integration | Pending |
@@ -173,4 +173,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-18 after 06-04 plan completion*
+*Last updated: 2026-05-18 after 07-01 plan completion*
