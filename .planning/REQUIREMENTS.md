@@ -68,8 +68,8 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Cross-File Operations
 
 - [ ] **XFILE-01**: Schematic <-> PCB atomic operations (maintain consistency during edits)
-- [ ] **XFILE-02**: Symbol library reference update propagation
-- [ ] **XFILE-03**: Footprint library reference update propagation
+- [x] **XFILE-02**: Symbol library reference update propagation
+- [x] **XFILE-03**: Footprint library reference update propagation
 - [ ] **XFILE-04**: Project context detection: auto-discover project root, libraries, configuration
 
 ### GSD Skill Integration
@@ -157,8 +157,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FP-03 | Phase 5: Net/Ref/FP Operations | Complete |
 | FP-04 | Phase 5: Net/Ref/FP Operations | Complete |
 | XFILE-01 | Phase 6: Cross-File + Analysis | Pending |
-| XFILE-02 | Phase 6: Cross-File + Analysis | Pending |
-| XFILE-03 | Phase 6: Cross-File + Analysis | Pending |
+| XFILE-02 | Phase 6: Cross-File + Analysis | Complete |
+| XFILE-03 | Phase 6: Cross-File + Analysis | Complete |
 | XFILE-04 | Phase 6: Cross-File + Analysis | Pending |
 | VAL-04 | Phase 6: Cross-File + Analysis | Pending |
 | SKILL-01 | Phase 7: GSD Skill Integration | Pending |
