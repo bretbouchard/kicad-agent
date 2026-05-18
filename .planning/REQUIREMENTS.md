@@ -1,7 +1,7 @@
 # Requirements: kicad-agent
 
 **Defined:** 2026-05-17
-**Core Value:** LLM → intent JSON → AST mutation → valid KiCad file. Zero corruption, every time.
+**Core Value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
 
 ## v1 Requirements
 
@@ -13,7 +13,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **FND-02**: Parse .kicad_pcb files into structured AST with full property coverage
 - [ ] **FND-03**: Parse .kicad_sym (symbol library) files into structured AST
 - [ ] **FND-04**: Parse .kicad_mod (footprint library) files into structured AST
-- [ ] **FND-05**: Round-trip fidelity: parse → serialize produces byte-identical or semantically equivalent output for all file types
+- [ ] **FND-05**: Round-trip fidelity: parse -> serialize produces byte-identical or semantically equivalent output for all file types
 - [ ] **FND-06**: UUID integrity preservation across all operations (no dangling references)
 - [ ] **FND-07**: Transaction-based mutation with rollback capability
 - [ ] **FND-08**: Deterministic, SCM-friendly serialization (stable output ordering)
@@ -22,7 +22,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **OPS-01**: JSON operation schema for all edit intents (Pydantic v2 models with JSON Schema export)
 - [ ] **OPS-02**: Operation validation: reject structurally invalid intents before mutation
-- [ ] **OPS-03**: Operation execution: translate validated intent → IR mutation → serialized file
+- [ ] **OPS-03**: Operation execution: translate validated intent -> IR mutation -> serialized file
 
 ### Component Operations
 
@@ -63,11 +63,11 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **VAL-04**: Structural/syntax-aware diff generation for S-expressions (difftastic integration)
 - [ ] **VAL-05**: Pre-mutation structural validation (catch invalid operations before execution)
 - [ ] **VAL-06**: Automated error recovery: rollback to last valid state on validation failure
-- [ ] **VAL-07**: Round-trip fidelity regression test suite (parse → serialize → compare)
+- [ ] **VAL-07**: Round-trip fidelity regression test suite (parse -> serialize -> compare)
 
 ### Cross-File Operations
 
-- [ ] **XFILE-01**: Schematic ↔ PCB atomic operations (maintain consistency during edits)
+- [ ] **XFILE-01**: Schematic <-> PCB atomic operations (maintain consistency during edits)
 - [ ] **XFILE-02**: Symbol library reference update propagation
 - [ ] **XFILE-03**: Footprint library reference update propagation
 - [ ] **XFILE-04**: Project context detection: auto-discover project root, libraries, configuration
@@ -104,15 +104,15 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Feature | Reason |
 |---------|--------|
-| Auto-routing | Separate concern — routing-rick agent handles this |
+| Auto-routing | Separate concern -- routing-rick agent handles this |
 | Raw S-expression editing | Defeats the purpose of structural safety |
 | KiCad 8.x/9.x backward compatibility | KiCad 10+ only, no legacy burden |
 | GUI/editor integration | CLI and skill interface only for v1 |
 | SPICE simulation | Separate concern, different toolchain |
 | 3D model manipulation | Out of scope for v1 |
-| CI/CD pipeline integration | KiBot's domain — don't duplicate |
+| CI/CD pipeline integration | KiBot's domain -- don't duplicate |
 | Visual BOM generation | InteractiveHtmlBom's domain |
-| Code-driven design (Python → KiCad) | Circuit-Synth/atopile's domain |
+| Code-driven design (Python -> KiCad) | Circuit-Synth/atopile's domain |
 
 ## Traceability
 
@@ -120,51 +120,51 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 1 | Pending |
-| FND-02 | Phase 1 | Pending |
-| FND-03 | Phase 1 | Pending |
-| FND-04 | Phase 1 | Pending |
-| FND-05 | Phase 1 | Pending |
-| FND-06 | Phase 1 | Pending |
-| FND-07 | Phase 2 | Pending |
-| FND-08 | Phase 2 | Pending |
-| OPS-01 | Phase 2 | Pending |
-| OPS-02 | Phase 2 | Pending |
-| OPS-03 | Phase 2 | Pending |
-| COMP-01 | Phase 3 | Pending |
-| COMP-02 | Phase 3 | Pending |
-| COMP-03 | Phase 3 | Pending |
-| COMP-04 | Phase 3 | Pending |
-| COMP-05 | Phase 3 | Pending |
-| COMP-06 | Phase 3 | Pending |
-| NET-01 | Phase 4 | Pending |
-| NET-02 | Phase 4 | Pending |
-| NET-03 | Phase 4 | Pending |
-| NET-04 | Phase 4 | Pending |
-| NET-05 | Phase 4 | Pending |
-| REF-01 | Phase 4 | Pending |
-| REF-02 | Phase 4 | Pending |
-| REF-03 | Phase 4 | Pending |
-| REF-04 | Phase 4 | Pending |
-| FP-01 | Phase 4 | Pending |
-| FP-02 | Phase 4 | Pending |
-| FP-03 | Phase 4 | Pending |
-| FP-04 | Phase 4 | Pending |
-| VAL-01 | Phase 5 | Pending |
-| VAL-02 | Phase 5 | Pending |
-| VAL-03 | Phase 5 | Pending |
-| VAL-04 | Phase 5 | Pending |
-| VAL-05 | Phase 5 | Pending |
-| VAL-06 | Phase 5 | Pending |
-| VAL-07 | Phase 1 | Pending |
-| XFILE-01 | Phase 6 | Pending |
-| XFILE-02 | Phase 6 | Pending |
-| XFILE-03 | Phase 6 | Pending |
-| XFILE-04 | Phase 6 | Pending |
-| SKILL-01 | Phase 7 | Pending |
-| SKILL-02 | Phase 7 | Pending |
-| SKILL-03 | Phase 7 | Pending |
-| SKILL-04 | Phase 7 | Pending |
+| FND-01 | Phase 1: Foundation | Pending |
+| FND-02 | Phase 1: Foundation | Pending |
+| FND-03 | Phase 1: Foundation | Pending |
+| FND-04 | Phase 1: Foundation | Pending |
+| FND-05 | Phase 1: Foundation | Pending |
+| FND-06 | Phase 1: Foundation | Pending |
+| VAL-07 | Phase 1: Foundation | Pending |
+| FND-07 | Phase 2: Schema + IR | Pending |
+| FND-08 | Phase 2: Schema + IR | Pending |
+| OPS-01 | Phase 2: Schema + IR | Pending |
+| OPS-02 | Phase 2: Schema + IR | Pending |
+| OPS-03 | Phase 2: Schema + IR | Pending |
+| VAL-01 | Phase 3: Validation Pipeline | Pending |
+| VAL-02 | Phase 3: Validation Pipeline | Pending |
+| VAL-03 | Phase 3: Validation Pipeline | Pending |
+| VAL-05 | Phase 3: Validation Pipeline | Pending |
+| VAL-06 | Phase 3: Validation Pipeline | Pending |
+| COMP-01 | Phase 4: Component Operations | Pending |
+| COMP-02 | Phase 4: Component Operations | Pending |
+| COMP-03 | Phase 4: Component Operations | Pending |
+| COMP-04 | Phase 4: Component Operations | Pending |
+| COMP-05 | Phase 4: Component Operations | Pending |
+| COMP-06 | Phase 4: Component Operations | Pending |
+| NET-01 | Phase 5: Net/Ref/FP Operations | Pending |
+| NET-02 | Phase 5: Net/Ref/FP Operations | Pending |
+| NET-03 | Phase 5: Net/Ref/FP Operations | Pending |
+| NET-04 | Phase 5: Net/Ref/FP Operations | Pending |
+| NET-05 | Phase 5: Net/Ref/FP Operations | Pending |
+| REF-01 | Phase 5: Net/Ref/FP Operations | Pending |
+| REF-02 | Phase 5: Net/Ref/FP Operations | Pending |
+| REF-03 | Phase 5: Net/Ref/FP Operations | Pending |
+| REF-04 | Phase 5: Net/Ref/FP Operations | Pending |
+| FP-01 | Phase 5: Net/Ref/FP Operations | Pending |
+| FP-02 | Phase 5: Net/Ref/FP Operations | Pending |
+| FP-03 | Phase 5: Net/Ref/FP Operations | Pending |
+| FP-04 | Phase 5: Net/Ref/FP Operations | Pending |
+| XFILE-01 | Phase 6: Cross-File + Analysis | Pending |
+| XFILE-02 | Phase 6: Cross-File + Analysis | Pending |
+| XFILE-03 | Phase 6: Cross-File + Analysis | Pending |
+| XFILE-04 | Phase 6: Cross-File + Analysis | Pending |
+| VAL-04 | Phase 6: Cross-File + Analysis | Pending |
+| SKILL-01 | Phase 7: GSD Skill Integration | Pending |
+| SKILL-02 | Phase 7: GSD Skill Integration | Pending |
+| SKILL-03 | Phase 7: GSD Skill Integration | Pending |
+| SKILL-04 | Phase 7: GSD Skill Integration | Pending |
 
 **Coverage:**
 - v1 requirements: 44 total
@@ -173,4 +173,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-17 after initial definition*
+*Last updated: 2026-05-17 after roadmap creation*
