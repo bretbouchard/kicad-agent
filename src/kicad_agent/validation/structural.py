@@ -320,9 +320,18 @@ def validate_structural(operation: Operation, ir: BaseIR) -> StructuralResult:
 
     validator = validator_map.get(op_type)
     if validator is None:
-        logger.warning("Unknown op_type %r -- no structural validator", op_type)
+        # Council M-2: Reject unknown op_type rather than silently passing.
+        # Safe default: if we can't validate it, we block it.
+        logger.warning("Unknown op_type %r -- rejecting (no structural validator)", op_type)
         return StructuralResult(
-            passed=True,
+            passed=False,
+            violations=(
+                StructuralViolation(
+                    kind=ViolationKind.FILE_TYPE_MISMATCH,
+                    description=f"Unknown operation type: {op_type!r}",
+                    detail=f"No structural validator registered for op_type={op_type!r}",
+                ),
+            ),
             operation_type=op_type,
             target_file=target_file,
         )

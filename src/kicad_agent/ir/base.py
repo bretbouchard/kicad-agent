@@ -19,6 +19,7 @@ Usage:
 """
 
 import logging
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -58,10 +59,7 @@ class BaseIR:
     _parse_result: ParseResult
     _uuid_map: Optional[UUIDMap] = None
     _dirty: bool = False
-    _mutation_log: list[dict[str, Any]] = field(default_factory=list)
-
-    # Council M-02: Maximum mutation log entries before eviction
-    _MAX_MUTATION_LOG = 1000
+    _mutation_log: deque[dict[str, Any]] = field(default_factory=lambda: deque(maxlen=1000))
 
     def __post_init__(self) -> None:
         """Enforce one-IR-per-ParseResult invariant (Council HIGH)."""
@@ -113,15 +111,13 @@ class BaseIR:
         Note: D-08 uses file-level snapshots for actual rollback, not per-field undo.
         This log is for audit trail only.
 
-        Council M-02: Log is capped at _MAX_MUTATION_LOG entries. When the
-        cap is reached, the oldest entry is evicted and a warning is logged.
+        Council M-1: Uses deque(maxlen=1000) for O(1) append with automatic
+        eviction of oldest entries when the cap is reached.
         """
-        if len(self._mutation_log) >= self._MAX_MUTATION_LOG:
-            evicted = self._mutation_log.pop(0)
+        if len(self._mutation_log) == self._mutation_log.maxlen:
             logger.warning(
-                "Mutation log cap reached (%d). Evicted oldest entry: %s",
-                self._MAX_MUTATION_LOG,
-                evicted.get("description", "unknown"),
+                "Mutation log cap reached (%d). Oldest entries auto-evicted.",
+                self._mutation_log.maxlen,
             )
         self._mutation_log.append({"description": description, **details})
         self._dirty = True

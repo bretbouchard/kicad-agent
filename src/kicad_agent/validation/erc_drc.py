@@ -22,6 +22,7 @@ Usage:
 
 import json
 import logging
+import os
 import shutil
 import subprocess
 import tempfile
@@ -158,13 +159,14 @@ def _parse_violations(
             logger.warning("Unknown severity %s, defaulting to ERROR", v.get("severity"))
             severity = Severity.ERROR
 
-        items = v.get("items", [])
+        items_raw = v.get("items", [])
+        items = tuple(items_raw) if isinstance(items_raw, list) else ()
         result.append(
             Violation(
                 description=v.get("description", ""),
                 severity=severity,
                 type=v.get("type", ""),
-                items=tuple(items) if items else (),
+                items=items,
                 sheet_path=sheet_path,
             )
         )
@@ -246,6 +248,9 @@ def run_erc(schematic_path: Path, *, timeout: int = 120) -> ErcResult:
                     f"stderr: {stderr_info}"
                 ),
             )
+
+        # Council H-01: Restrict permissions on temp report file
+        os.chmod(output_file, 0o600)
 
         # Parse JSON report
         report_text = output_file.read_text(encoding="utf-8")
@@ -389,6 +394,9 @@ def run_drc(
                     f"stderr: {stderr_info}"
                 ),
             )
+
+        # Council H-01: Restrict permissions on temp report file
+        os.chmod(output_file, 0o600)
 
         # Parse JSON report
         report_text = output_file.read_text(encoding="utf-8")

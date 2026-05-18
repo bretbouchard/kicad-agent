@@ -92,8 +92,36 @@ class Transaction:
         self._lock_fd = None
 
     def __enter__(self) -> "Transaction":
+        # Council M-01: Detect and clean up stale lock files from crashes.
+        # A stale lock has no active process holding it (empty file, no flock).
+        if self._lock_path.exists():
+            try:
+                # Try to acquire a blocking lock on the existing file
+                test_fd = open(self._lock_path, "r")
+                try:
+                    fcntl.flock(test_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    # Got the lock immediately — it was stale. Release and remove.
+                    fcntl.flock(test_fd, fcntl.LOCK_UN)
+                    test_fd.close()
+                    self._lock_path.unlink(missing_ok=True)
+                except (OSError, IOError):
+                    # Lock is held by another process — can't acquire
+                    test_fd.close()
+                    raise RuntimeError(
+                        f"Cannot acquire lock on {self._file_path}. "
+                        f"Another transaction is in progress."
+                    )
+            except FileNotFoundError:
+                pass  # Race condition: file disappeared, proceed normally
+
         # Council H-04: Acquire exclusive lock before snapshot
-        self._lock_fd = open(self._lock_path, "w")
+        # Council M-03: Create lock file with restrictive permissions
+        self._lock_fd = os.open(
+            str(self._lock_path),
+            os.O_CREAT | os.O_WRONLY | os.O_EXCL,
+            0o600,
+        )
+        self._lock_fd = os.fdopen(self._lock_fd, "w")
         try:
             fcntl.flock(self._lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except (OSError, IOError):

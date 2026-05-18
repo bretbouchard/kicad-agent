@@ -68,14 +68,14 @@ class TestBaseIRMutationTracking:
         assert len(schematic_ir.mutation_log) == 1
 
     def test_mutation_log_cap_eviction(self, schematic_ir: SchematicIR) -> None:
-        """Mutation log evicts oldest entries when cap is reached (Council M-02)."""
-        cap = BaseIR._MAX_MUTATION_LOG
+        """Mutation log evicts oldest entries when cap is reached (Council M-1)."""
+        cap = schematic_ir._mutation_log.maxlen  # deque maxlen
         for i in range(cap + 10):
             schematic_ir._record_mutation(f"mutation_{i}", {"index": i})
 
         log = schematic_ir.mutation_log
         assert len(log) == cap
-        # Oldest entries were evicted -- first entry should be mutation_10
+        # Oldest entries were auto-evicted by deque -- first entry should be mutation_10
         assert log[0]["description"] == "mutation_10"
         # Most recent entry should be the last one recorded
         assert log[-1]["description"] == f"mutation_{cap + 9}"

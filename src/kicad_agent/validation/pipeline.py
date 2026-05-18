@@ -46,6 +46,13 @@ from kicad_agent.validation.structural import (
 from kicad_agent.ir.base import BaseIR
 from kicad_agent.ir.transaction import Transaction, TransactionResult
 from kicad_agent.ops.schema import Operation
+from kicad_agent.serializer import (
+    serialize_schematic,
+    serialize_pcb,
+    serialize_symbol_lib,
+    serialize_footprint,
+)
+from kicad_agent.serializer.normalizer import normalize_kicad_output
 
 logger = logging.getLogger(__name__)
 
@@ -114,9 +121,10 @@ class ValidationPipeline:
     1. Structural pre-check (validate operation against IR state)
     2. Mutation (applied within Transaction context)
     3. UUID uniqueness check (post-mutation)
-    4. ERC check (if run_erc=True, post-mutation)
-    5. DRC check (if run_drc=True, post-mutation)
-    6. Commit (if all checks pass)
+    4. Serialize mutated IR to disk (so ERC/DRC sees post-mutation state)
+    5. ERC check (if run_erc=True, post-mutation)
+    6. DRC check (if run_drc=True, post-mutation)
+    7. Commit (if all checks pass)
 
     Any failure triggers Transaction rollback.
     """
@@ -131,6 +139,57 @@ class ValidationPipeline:
         self._erc_timeout = erc_timeout
         self._drc_timeout = drc_timeout
         self._check_schematic_parity = check_schematic_parity
+
+    @staticmethod
+    def _serialize_ir_to_disk(ir: BaseIR, file_path: Path) -> None:
+        """Serialize mutated IR to disk so ERC/DRC validates post-mutation state.
+
+        Council H-1 fix: Before running ERC/DRC via kicad-cli, the mutated IR
+        must be written to disk. The Transaction snapshot preserves the original
+        for rollback if validation fails.
+        """
+        serializer_map = {
+            "schematic": serialize_schematic,
+            "pcb": serialize_pcb,
+            "symbol_lib": serialize_symbol_lib,
+            "footprint": serialize_footprint,
+        }
+        serializer = serializer_map.get(ir.file_type)
+        if serializer is None:
+            raise ValueError(f"No serializer for file_type={ir.file_type!r}")
+
+        serializer(ir._parse_result, file_path)
+        # Normalize the written file in-place
+        content = file_path.read_text(encoding="utf-8")
+        normalized = normalize_kicad_output(content)
+        file_path.write_text(normalized, encoding="utf-8")
+
+    def _fail(
+        self,
+        stages: list[StageResult],
+        stage: PipelineStage,
+        detail: str,
+        *,
+        structural_result: Optional[StructuralResult] = None,
+        uuid_uniqueness_result: Optional[StructuralResult] = None,
+        erc_result: Optional[ErcResult] = None,
+        drc_result: Optional[DrcResult] = None,
+        rolled_back: bool = False,
+        target_file: Optional[Path] = None,
+    ) -> PipelineResult:
+        """Build a failed PipelineResult with a stage failure entry."""
+        stages.append(StageResult(stage=stage, passed=False, detail=detail))
+        return PipelineResult(
+            passed=False,
+            stages=tuple(stages),
+            structural_result=structural_result,
+            uuid_uniqueness_result=uuid_uniqueness_result,
+            erc_result=erc_result,
+            drc_result=drc_result,
+            failure_stage=stage,
+            rolled_back=rolled_back,
+            target_file=target_file,
+        )
 
     def validate_and_apply(
         self,
@@ -166,91 +225,63 @@ class ValidationPipeline:
         # Stage 1: Structural pre-check
         structural_result = validate_structural(operation, ir)
         if not structural_result.passed:
-            stages.append(
-                StageResult(
-                    stage=PipelineStage.STRUCTURAL_PRE,
-                    passed=False,
-                    detail=f"Structural validation failed: {structural_result.error_count} violation(s)",
-                )
-            )
-            return PipelineResult(
-                passed=False,
-                stages=tuple(stages),
+            return self._fail(
+                stages,
+                PipelineStage.STRUCTURAL_PRE,
+                f"Structural validation failed: {structural_result.error_count} violation(s)",
                 structural_result=structural_result,
-                failure_stage=PipelineStage.STRUCTURAL_PRE,
                 target_file=target_file,
             )
         stages.append(
-            StageResult(
-                stage=PipelineStage.STRUCTURAL_PRE,
-                passed=True,
-                detail="Structural pre-check passed",
-            )
+            StageResult(stage=PipelineStage.STRUCTURAL_PRE, passed=True, detail="Structural pre-check passed")
         )
 
         # Stage 2: Mutation within Transaction
         file_path = Path(ir.file_path)
         try:
             with Transaction(file_path) as txn:
-                # Apply mutation (modifies IR in-memory, file unchanged)
+                # Apply mutation (modifies IR in-memory)
                 mutation_fn(operation, ir)
 
                 # Stage 3: UUID uniqueness check (post-mutation, pre-write)
                 uuid_result = validate_uuid_uniqueness(ir)
                 if not uuid_result.passed:
-                    stages.append(
-                        StageResult(
-                            stage=PipelineStage.UUID_UNIQUENESS,
-                            passed=False,
-                            detail=f"UUID uniqueness violated: {uuid_result.error_count} duplicate(s)",
-                        )
-                    )
-                    # Transaction __exit__ will auto-rollback since we don't call commit
-                    return PipelineResult(
-                        passed=False,
-                        stages=tuple(stages),
+                    return self._fail(
+                        stages,
+                        PipelineStage.UUID_UNIQUENESS,
+                        f"UUID uniqueness violated: {uuid_result.error_count} duplicate(s)",
                         structural_result=structural_result,
                         uuid_uniqueness_result=uuid_result,
-                        failure_stage=PipelineStage.UUID_UNIQUENESS,
                         rolled_back=True,
                         target_file=target_file,
                     )
                 stages.append(
-                    StageResult(
-                        stage=PipelineStage.UUID_UNIQUENESS,
-                        passed=True,
-                        detail="UUID uniqueness verified",
-                    )
+                    StageResult(stage=PipelineStage.UUID_UNIQUENESS, passed=True, detail="UUID uniqueness verified")
                 )
+
+                # Serialize mutated IR to disk so kicad-cli sees post-mutation state (Council H-1)
+                needs_kicad_cli = (run_erc_check and ir.file_type == "schematic") or (
+                    run_drc_check and ir.file_type == "pcb"
+                )
+                if needs_kicad_cli:
+                    self._serialize_ir_to_disk(ir, file_path)
 
                 # Stage 4: ERC check (schematic only)
                 if run_erc_check and ir.file_type == "schematic":
                     erc_result = run_erc(file_path, timeout=self._erc_timeout)
                     if not erc_result.passed:
-                        stages.append(
-                            StageResult(
-                                stage=PipelineStage.ERC,
-                                passed=False,
-                                detail=f"ERC failed: {erc_result.error_count} error(s), {erc_result.warning_count} warning(s)",
-                            )
-                        )
-                        # Auto-rollback by not calling commit
-                        return PipelineResult(
-                            passed=False,
-                            stages=tuple(stages),
+                        return self._fail(
+                            stages,
+                            PipelineStage.ERC,
+                            f"ERC failed: {erc_result.error_count} error(s), {erc_result.warning_count} warning(s)",
                             structural_result=structural_result,
                             uuid_uniqueness_result=uuid_result,
                             erc_result=erc_result,
-                            failure_stage=PipelineStage.ERC,
                             rolled_back=True,
                             target_file=target_file,
                         )
                     stages.append(
-                        StageResult(
-                            stage=PipelineStage.ERC,
-                            passed=True,
-                            detail=f"ERC passed ({erc_result.warning_count} warnings)",
-                        )
+                        StageResult(stage=PipelineStage.ERC, passed=True, detail=f"ERC passed ({erc_result.warning_count} warnings)")
                     )
 
                 # Stage 5: DRC check (PCB only)
@@ -261,54 +292,32 @@ class ValidationPipeline:
                         check_schematic_parity=self._check_schematic_parity,
                     )
                     if not drc_result.passed:
-                        stages.append(
-                            StageResult(
-                                stage=PipelineStage.DRC,
-                                passed=False,
-                                detail=f"DRC failed: {drc_result.error_count} error(s), {len(drc_result.unconnected_items)} unconnected",
-                            )
-                        )
-                        return PipelineResult(
-                            passed=False,
-                            stages=tuple(stages),
+                        return self._fail(
+                            stages,
+                            PipelineStage.DRC,
+                            f"DRC failed: {drc_result.error_count} error(s), {len(drc_result.unconnected_items)} unconnected",
                             structural_result=structural_result,
                             uuid_uniqueness_result=uuid_result,
                             drc_result=drc_result,
-                            failure_stage=PipelineStage.DRC,
                             rolled_back=True,
                             target_file=target_file,
                         )
                     stages.append(
-                        StageResult(
-                            stage=PipelineStage.DRC,
-                            passed=True,
-                            detail=f"DRC passed ({drc_result.warning_count} warnings)",
-                        )
+                        StageResult(stage=PipelineStage.DRC, passed=True, detail=f"DRC passed ({drc_result.warning_count} warnings)")
                     )
 
                 # Stage 6: Commit
                 txn_result = txn.commit()
                 stages.append(
-                    StageResult(
-                        stage=PipelineStage.COMMIT,
-                        passed=True,
-                        detail="Transaction committed",
-                    )
+                    StageResult(stage=PipelineStage.COMMIT, passed=True, detail="Transaction committed")
                 )
 
         except Exception as e:
             logger.error("Pipeline exception: %s", e)
-            stages.append(
-                StageResult(
-                    stage=PipelineStage.MUTATION,
-                    passed=False,
-                    detail=f"Mutation failed: {e}",
-                )
-            )
-            return PipelineResult(
-                passed=False,
-                stages=tuple(stages),
-                failure_stage=PipelineStage.MUTATION,
+            return self._fail(
+                stages,
+                PipelineStage.MUTATION,
+                f"Mutation failed: {e}",
                 rolled_back=True,
                 target_file=target_file,
             )
@@ -325,24 +334,25 @@ class ValidationPipeline:
         )
 
     def verify_net_consistency(
-        self, schematic_path: Path, pcb_path: Path
+        self, pcb_path: Path,
+        schematic_path: Optional[Path] = None,
     ) -> DrcResult:
         """Verify net consistency between schematic and PCB (VAL-03).
 
-        Runs DRC with --schematic-parity flag, which checks that all nets
-        in the schematic match the PCB and vice versa.
+        Runs DRC with --schematic-parity flag. kicad-cli discovers the
+        schematic from the project context automatically; schematic_path
+        is accepted for API clarity but not passed to kicad-cli.
 
         Args:
-            schematic_path: Path to the .kicad_sch file.
             pcb_path: Path to the .kicad_pcb file.
+            schematic_path: Path to the .kicad_sch file (unused, for API clarity).
 
         Returns:
             DrcResult with schematic_parity field populated.
             If schematic_parity is empty, nets are consistent.
         """
-        result = run_drc(
+        return run_drc(
             pcb_path,
             check_schematic_parity=True,
             timeout=self._drc_timeout,
         )
-        return result

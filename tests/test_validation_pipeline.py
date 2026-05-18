@@ -346,7 +346,7 @@ class TestVerifyNetConsistency:
         self, arduino_mega_sch, arduino_mega_pcb
     ):
         pipeline = ValidationPipeline()
-        result = pipeline.verify_net_consistency(arduino_mega_sch, arduino_mega_pcb)
+        result = pipeline.verify_net_consistency(arduino_mega_pcb, arduino_mega_sch)
 
         assert isinstance(result, DrcResult)
         assert result.file_path == arduino_mega_pcb
@@ -360,7 +360,7 @@ class TestVerifyNetConsistency:
         self, arduino_mega_sch, arduino_mega_pcb
     ):
         pipeline = ValidationPipeline()
-        result = pipeline.verify_net_consistency(arduino_mega_sch, arduino_mega_pcb)
+        result = pipeline.verify_net_consistency(arduino_mega_pcb, arduino_mega_sch)
 
         # schematic_parity should be a tuple (may be empty for consistent fixtures)
         assert isinstance(result.schematic_parity, tuple)
@@ -456,3 +456,109 @@ class TestPipelineWithMutationException:
 
         # After rollback, file should be identical to original
         assert temp_sch.read_text() == original_content
+
+
+class TestRollbackOnDrcFailure:
+    """Verify rollback triggers on DRC failure (Council M-7)."""
+
+    def test_drc_failure_triggers_rollback(self, arduino_mega_pcb, tmp_output_dir):
+        from kicad_agent.parser import parse_pcb
+        from kicad_agent.parser.uuid_extractor import extract_uuids
+        from kicad_agent.ir import PcbIR
+        from kicad_agent.ops.schema import MoveComponentOp
+
+        temp_pcb = tmp_output_dir / "test.kicad_pcb"
+        shutil.copy2(arduino_mega_pcb, temp_pcb)
+
+        parse_result = parse_pcb(temp_pcb)
+        uuid_map = extract_uuids(parse_result.raw_content, parse_result.file_type)
+        ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
+
+        # Find a real reference from the PCB
+        real_ref = None
+        for fp in ir.footprints:
+            props = getattr(fp, "properties", None)
+            if isinstance(props, dict):
+                ref = props.get("Reference", "")
+                if ref.strip():
+                    real_ref = ref
+                    break
+
+        assert real_ref is not None, "No footprint references found in test fixture"
+
+        operation = Operation(
+            root=ModifyPropertyOp(
+                target_file="test.kicad_pcb",
+                reference=real_ref,
+                property_name="Value",
+                new_value="test",
+            )
+        )
+
+        # Mock run_drc to return a failure
+        failed_drc_result = DrcResult(
+            passed=False,
+            file_path=temp_pcb,
+            violations=(
+                Violation(
+                    description="Track width too narrow",
+                    severity=Severity.ERROR,
+                    type="clearance",
+                ),
+            ),
+            unconnected_items=(
+                Violation(
+                    description="Unconnected pad",
+                    severity=Severity.ERROR,
+                    type="unconnected_items",
+                ),
+            ),
+        )
+
+        pipeline = ValidationPipeline()
+        with patch(
+            "kicad_agent.validation.pipeline.run_drc",
+            return_value=failed_drc_result,
+        ), patch(
+            "kicad_agent.validation.pipeline.ValidationPipeline._serialize_ir_to_disk",
+        ):
+            result = pipeline.validate_and_apply(
+                operation,
+                ir,
+                mutation_fn=lambda op, ir: None,
+                run_drc_check=True,
+            )
+
+        assert not result.passed
+        assert result.failure_stage == PipelineStage.DRC
+        assert result.rolled_back
+        assert result.drc_result is not None
+        assert not result.drc_result.passed
+
+
+class TestUnknownOpTypeRejected:
+    """Verify unknown op_type is rejected (Council M-2)."""
+
+    def test_unknown_op_type_fails_structural(self, arduino_mega_sch):
+        from kicad_agent.validation.structural import validate_structural
+        from kicad_agent.ops.schema import AddComponentOp
+
+        parse_result = parse_schematic(arduino_mega_sch)
+        ir = SchematicIR(_parse_result=parse_result)
+
+        operation = Operation(
+            root=AddComponentOp(
+                target_file="test.kicad_sch",
+                library_id="Device:R",
+                reference="R99",
+                position=PositionSpec(x=100.0, y=100.0),
+            )
+        )
+
+        # Force the op_type to an unregistered value via __dict__ bypass
+        op = operation.root
+        object.__setattr__(op, "op_type", "future_unknown_op")
+        result = validate_structural(operation, ir)
+        assert not result.passed
+        assert result.error_count > 0
+        assert "Unknown operation type" in result.violations[0].description
