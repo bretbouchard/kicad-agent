@@ -50,10 +50,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Footprint Management
 
-- [ ] **FP-01**: Assign footprint to component with library nickname resolution
-- [ ] **FP-02**: Swap footprint on existing component (preserves connections)
-- [ ] **FP-03**: Validate footprint existence in configured library paths
-- [ ] **FP-04**: Footprint-to-symbol pin mapping verification
+- [x] **FP-01**: Assign footprint to component with library nickname resolution
+- [x] **FP-02**: Swap footprint on existing component (preserves connections)
+- [x] **FP-03**: Validate footprint existence in configured library paths
+- [x] **FP-04**: Footprint-to-symbol pin mapping verification
 
 ### Validation
 
@@ -152,10 +152,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REF-02 | Phase 5: Net/Ref/FP Operations | Complete |
 | REF-03 | Phase 5: Net/Ref/FP Operations | Complete |
 | REF-04 | Phase 5: Net/Ref/FP Operations | Complete |
-| FP-01 | Phase 5: Net/Ref/FP Operations | Pending |
-| FP-02 | Phase 5: Net/Ref/FP Operations | Pending |
-| FP-03 | Phase 5: Net/Ref/FP Operations | Pending |
-| FP-04 | Phase 5: Net/Ref/FP Operations | Pending |
+| FP-01 | Phase 5: Net/Ref/FP Operations | Complete |
+| FP-02 | Phase 5: Net/Ref/FP Operations | Complete |
+| FP-03 | Phase 5: Net/Ref/FP Operations | Complete |
+| FP-04 | Phase 5: Net/Ref/FP Operations | Complete |
 | XFILE-01 | Phase 6: Cross-File + Analysis | Pending |
 | XFILE-02 | Phase 6: Cross-File + Analysis | Pending |
 | XFILE-03 | Phase 6: Cross-File + Analysis | Pending |
@@ -173,4 +173,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-18 after 05-01 plan completion*
+*Last updated: 2026-05-18 after 05-03 plan completion*
