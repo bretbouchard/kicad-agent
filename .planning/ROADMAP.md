@@ -33,12 +33,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. A .kicad_mod file parses and serializes to zero-diff output
   5. All UUIDs are preserved without dangling references through parse/serialize cycles
   6. The regression test suite passes for all four file types with real KiCad 10 sample files
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Parser and serializer for all 4 file types via kiutils
-- [ ] 01-02: Coordinate precision, angle unit handling, and kiutils bug workarounds
-- [ ] 01-03: Round-trip fidelity regression test suite with real KiCad 10 files
+- [ ] 01-01-PLAN.md -- Parser layer for all 4 KiCad file types with raw content preservation
+- [ ] 01-02-PLAN.md -- UUID extraction/re-injection, serializers, and round-trip stability validator
+- [ ] 01-03-PLAN.md -- Comprehensive round-trip fidelity regression test suite with fixture files
 
 ### Phase 2: Operation Schema and IR Layer
 **Goal**: The LLM has a well-defined JSON contract for expressing edit intents, and the tool layer can translate those intents into IR mutations
@@ -153,7 +153,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation -- Parse, Serialize, Round-trip | 0/3 | Not started | - |
+| 1. Foundation -- Parse, Serialize, Round-trip | 0/3 | Planned | - |
 | 2. Operation Schema and IR Layer | 0/3 | Not started | - |
 | 3. Validation Pipeline | 0/3 | Not started | - |
 | 4. Component Operations | 0/3 | Not started | - |
