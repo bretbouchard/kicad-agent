@@ -20,9 +20,12 @@ Usage:
     restored = reinject_uuids(serialized_content, uuid_map)
 """
 
+import logging
 import re
 
 from kicad_agent.parser.uuid_extractor import UUIDMap
+
+logger = logging.getLogger(__name__)
 
 
 # UUID v4 validation pattern
@@ -86,6 +89,64 @@ def _validate_uuid_format(uuid_value: str) -> bool:
     return bool(_UUID_V4_PATTERN.match(uuid_value))
 
 
+# Types that both the extractor and reinjector agree on. These are directly
+# comparable and a mismatch indicates positional drift.
+_DIRECTLY_MATCHABLE_TYPES = frozenset({
+    "pad", "zone", "via", "segment", "arc", "dimension", "group",
+    "gr_line", "gr_arc", "gr_circle", "gr_poly", "gr_rect", "gr_text",
+    "graphical",
+})
+
+
+def _types_compatible(expected_parent_type: str, matched_type: str) -> bool:
+    """Check whether a matched element type is compatible with the UUID entry's parent_type.
+
+    The extractor and reinjector operate at different granularity. The extractor
+    maps UUIDs to their enclosing S-expression parent (e.g. "footprint" for
+    UUIDs inside a footprint's properties, fp_lines, etc.). The reinjector
+    matches direct child types (property, fp_line, fp_text, etc.).
+
+    Cross-checking is only enforced for types where both sides share the same
+    name (pad, zone, via, gr_line, etc.). For enclosing-container types
+    ("footprint", "schematic") and "unknown", positional matching is used.
+
+    Args:
+        expected_parent_type: The parent_type from the UUID entry.
+        matched_type: The element type matched by the reinjector regex.
+
+    Returns:
+        True if the types are compatible.
+    """
+    # "unknown" means the extractor couldn't determine the parent -- positional
+    if expected_parent_type == "unknown":
+        return True
+
+    # If both types are directly matchable, require an exact match (or
+    # graphical equivalence). Otherwise one side is a container type and
+    # positional matching applies.
+    both_matchable = (
+        expected_parent_type in _DIRECTLY_MATCHABLE_TYPES
+        and matched_type in _DIRECTLY_MATCHABLE_TYPES
+    )
+    if not both_matchable:
+        return True  # At least one is a container/unmapped type -- positional
+
+    # Both are directly matchable -- check for direct match
+    if expected_parent_type == matched_type:
+        return True
+
+    # Graphical catch-all: the extractor may assign "graphical" to any gr_*
+    # token, while the reinjector matches the specific gr_* name.
+    _GRAPHICAL_NAMES = {
+        "gr_line", "gr_arc", "gr_circle", "gr_poly", "gr_rect", "gr_text",
+        "graphical",
+    }
+    if expected_parent_type in _GRAPHICAL_NAMES and matched_type in _GRAPHICAL_NAMES:
+        return True
+
+    return False
+
+
 def reinject_uuids(serialized_content: str, uuid_map: UUIDMap) -> str:
     """Re-inject UUID tokens into kiutils serialized output.
 
@@ -104,9 +165,11 @@ def reinject_uuids(serialized_content: str, uuid_map: UUIDMap) -> str:
     if not uuid_map.entries:
         return serialized_content
 
-    # Build an ordered queue of valid UUIDs to inject
+    # Build an ordered queue of (uuid_value, parent_type) tuples.
+    # Carrying parent_type enables cross-checking against matched element types
+    # to prevent UUID misplacement when element counts diverge.
     uuid_queue = [
-        entry.uuid_value
+        (entry.uuid_value, entry.parent_type)
         for entry in uuid_map.entries
         if _validate_uuid_format(entry.uuid_value)
     ]
@@ -126,7 +189,20 @@ def reinject_uuids(serialized_content: str, uuid_map: UUIDMap) -> str:
         if uuid_idx >= len(uuid_queue):
             break
 
-        uuid_value = uuid_queue[uuid_idx]
+        uuid_value, expected_parent_type = uuid_queue[uuid_idx]
+        matched_type = match.group("type")
+
+        # Cross-check: verify the element type matches the UUID entry's
+        # parent_type for directly matchable types. Log mismatches as
+        # warnings to detect positional drift between extractor and
+        # reinjector without disrupting the sequential injection.
+        if not _types_compatible(expected_parent_type, matched_type):
+            logger.warning(
+                "UUID type mismatch at position %d: expected parent_type=%r "
+                "but matched element type=%r for UUID %s",
+                uuid_idx, expected_parent_type, matched_type, uuid_value,
+            )
+
         indent = match.group("indent")
         match_end = match.end()
 
