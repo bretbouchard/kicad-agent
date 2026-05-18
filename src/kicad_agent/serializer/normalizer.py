@@ -26,7 +26,9 @@ logger = logging.getLogger(__name__)
 
 # Scientific notation pattern that avoids matching inside quoted strings.
 # Applied only to unquoted segments after string-aware tokenization.
-_SCI_NOTATION = re.compile(r'(?<![a-zA-Z_"(])([-+]?\d+\.?\d*)[eE]([-+]?\d+)')
+# Requires decimal point in mantissa (e.g. 1.5e-07) to avoid matching
+# hex digits in UUID tokens like 000000e95976 (Verifier gap fix).
+_SCI_NOTATION = re.compile(r'(?<![a-zA-Z_"(])([-+]?\d+\.\d+)[eE]([-+]?\d+)')
 
 
 def normalize_kicad_output(content: str) -> str:

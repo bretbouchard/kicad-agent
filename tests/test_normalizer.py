@@ -109,6 +109,47 @@ class TestDeterminism:
         assert first == second
 
 
+class TestUUIDPreservation:
+    """Verifier gap: UUIDs must not be corrupted by sci-notation fix."""
+
+    def test_uuid_not_corrupted(self) -> None:
+        """UUIDs containing hex digits like e/E are not matched as sci-notation."""
+        uuid_str = "(uuid 0000d847-f0b2-a28f-0500-000000e95976)"
+        result = normalize_kicad_output(uuid_str)
+        assert "000000e95976" in result
+        assert result == uuid_str
+
+    def test_multiple_uuids_preserved(self) -> None:
+        """Multiple UUIDs in a file are all preserved."""
+        content = (
+            "(uuid 123e4567-e89b-12d3-a456-426614174000)\n"
+            "(uuid 00000000-0000-0000-0000-00000000e959)\n"
+            "(at 1.5e-07 2.0e+01)\n"
+        )
+        result = normalize_kicad_output(content)
+        assert "123e4567-e89b-12d3-a456-426614174000" in result
+        assert "00000000-0000-0000-0000-00000000e959" in result
+        assert "0.000000" in result  # 1.5e-07 was fixed
+        assert "20.000000" in result  # 2.0e+01 was fixed
+
+    def test_real_schematic_uuids_preserved(self, arduino_mega_sch: Path) -> None:
+        """UUIDs in real KiCad schematic files are not corrupted."""
+        parse_result = parse_schematic(arduino_mega_sch)
+        raw_output = parse_result.kiutils_obj.to_sexpr()
+
+        normalized = normalize_kicad_output(raw_output)
+
+        # Count UUID tokens in original and normalized
+        import re
+        uuid_pattern = re.compile(r"\(uuid ([0-9a-f-]+)\)")
+        original_uuids = uuid_pattern.findall(raw_output)
+        normalized_uuids = uuid_pattern.findall(normalized)
+
+        assert original_uuids == normalized_uuids, (
+            f"UUID mismatch: {len(original_uuids)} original vs {len(normalized_uuids)} normalized"
+        )
+
+
 class TestRoundTripStability:
     """Pitfall 3: Normalizer must not break round-trip stability."""
 
