@@ -34,7 +34,7 @@ _PARENT_TYPE_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("gr_circle", re.compile(r'\(gr_circle\b', re.IGNORECASE)),
     ("gr_poly", re.compile(r'\(gr_poly\b', re.IGNORECASE)),
     ("gr_rect", re.compile(r'\(gr_rect\b', re.IGNORECASE)),
-    ("graphical", re.compile(r'\(gr_\w+', re.IGNORECASE)),
+    ("graphical", re.compile(r'\(gr_(?!line\b|arc\b|circle\b|poly\b|rect\b)\w+', re.IGNORECASE)),
     ("zone", re.compile(r'\(zone\b', re.IGNORECASE)),
     ("via", re.compile(r'\(via\b', re.IGNORECASE)),
     ("segment", re.compile(r'\(segment\b', re.IGNORECASE)),
