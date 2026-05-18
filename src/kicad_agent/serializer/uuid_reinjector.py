@@ -218,6 +218,15 @@ def reinject_uuids(serialized_content: str, uuid_map: UUIDMap) -> str:
         insertions.append((line_end, uuid_line))
         uuid_idx += 1
 
+    # Warn if UUIDs were silently dropped (element count < UUID count).
+    # This indicates a structural mismatch between extractor and reinjector.
+    if uuid_idx < len(uuid_queue):
+        logger.warning(
+            "UUID count mismatch: %d UUIDs in queue but only %d injected "
+            "(%d dropped). Element matches ran out before UUID queue was exhausted.",
+            len(uuid_queue), uuid_idx, len(uuid_queue) - uuid_idx,
+        )
+
     # Apply insertions in reverse order to preserve positions
     result = serialized_content
     for pos, uuid_line in sorted(insertions, key=lambda x: x[0], reverse=True):
