@@ -55,7 +55,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md -- Pydantic operation schema with discriminated union and JSON Schema export (OPS-01, OPS-02)
 - [x] 02-02-PLAN.md -- IR base class and four file-type IR wrappers with mutation tracking (OPS-03)
-- [ ] 02-03-PLAN.md -- Transaction engine with rollback and KiCad output normalizer (FND-07, FND-08)
+- [x] 02-03-PLAN.md -- Transaction engine with rollback and KiCad output normalizer (FND-07, FND-08)
 
 ### Phase 3: Validation Pipeline
 **Goal**: Every mutation passes through ERC, DRC, and structural validation gates before being committed to disk
@@ -154,7 +154,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation -- Parse, Serialize, Round-trip | 3/3 | Complete | 2026-05-18 |
-| 2. Operation Schema and IR Layer | 2/3 | In Progress | - |
+| 2. Operation Schema and IR Layer | 3/3 | Complete | 2026-05-18 |
 | 3. Validation Pipeline | 0/3 | Not started | - |
 | 4. Component Operations | 0/3 | Not started | - |
 | 5. Net, Reference, and Footprint Operations | 0/4 | Not started | - |

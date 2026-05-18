@@ -15,8 +15,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **FND-04**: Parse .kicad_mod (footprint library) files into structured AST
 - [x] **FND-05**: Round-trip fidelity: parse -> serialize produces byte-identical or semantically equivalent output for all file types
 - [x] **FND-06**: UUID integrity preservation across all operations (no dangling references)
-- [ ] **FND-07**: Transaction-based mutation with rollback capability
-- [ ] **FND-08**: Deterministic, SCM-friendly serialization (stable output ordering)
+- [x] **FND-07**: Transaction-based mutation with rollback capability
+- [x] **FND-08**: Deterministic, SCM-friendly serialization (stable output ordering)
 
 ### Operation Schema
 
@@ -127,8 +127,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FND-05 | Phase 1: Foundation | Complete |
 | FND-06 | Phase 1: Foundation | Complete |
 | VAL-07 | Phase 1: Foundation | Complete |
-| FND-07 | Phase 2: Schema + IR | Pending |
-| FND-08 | Phase 2: Schema + IR | Pending |
+| FND-07 | Phase 2: Schema + IR | Complete |
+| FND-08 | Phase 2: Schema + IR | Complete |
 | OPS-01 | Phase 2: Schema + IR | Complete |
 | OPS-02 | Phase 2: Schema + IR | Complete |
 | OPS-03 | Phase 2: Schema + IR | Complete |
@@ -173,4 +173,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-18 after 02-02 plan completion*
+*Last updated: 2026-05-18 after 02-03 plan completion*

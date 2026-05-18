@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-02 (IR layer with mutation tracking), continuing to 02-03
-last_updated: "2026-05-18T06:14:43.582Z"
+stopped_at: Completed 02-03 (Transaction engine + Normalizer), Phase 2 complete
+last_updated: "2026-05-18T06:24:47Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 7
-  completed_phases: 1
-  total_plans: 6
-  completed_plans: 5
-  percent: 83
+  completed_phases: 2
+  total_plans: 9
+  completed_plans: 6
+  percent: 67
 ---
 
 # Project State
@@ -21,35 +21,35 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 2 -- Operation Schema and IR Layer
+**Current focus:** Phase 2 complete -- ready for Phase 3 (Validation Pipeline)
 
 ## Current Position
 
-Phase: 2 of 7 (Operation Schema and IR Layer)
-Plan: 2 of 3 complete (02-01, 02-02 done)
-Status: In Progress -- Plans 01 and 02 complete, continuing to Plan 03
+Phase: 2 of 7 (Operation Schema and IR Layer) -- COMPLETE
+Plan: 3 of 3 complete (02-01, 02-02, 02-03 all done)
+Status: Phase 2 complete. Ready for Phase 3.
 Last activity: 2026-05-18
 
-Progress: [████████░░░] 83%
+Progress: [========░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 5
+- Total plans completed: 6
 - Average duration: 7 min
-- Total execution time: 0.5 hours
+- Total execution time: 0.6 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3 | 16 min | 5 min |
-| 02-operation-schema-and-ir-layer | 2 | 12 min | 6 min |
+| 02-operation-schema-and-ir-layer | 3 | 19 min | 6 min |
 
 **Recent Trend:**
 
-- Last 5 plans: 02-02 (10 min), 02-01 (2 min), 01-03 (4 min), 01-02 (8 min), 01-01 (4 min)
+- Last 5 plans: 02-03 (7 min), 02-02 (10 min), 02-01 (2 min), 01-03 (4 min), 01-02 (8 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -77,6 +77,10 @@ Recent decisions affecting current work:
 - IR registry uses set[int] with id() instead of WeakSet (dataclass with mutable list is unhashable)
 - kiutils Board.traceItems replaces planned segments/vias (kiutils API mismatch)
 - FootprintIR.fp_text filters graphicItems by isinstance(FpText) (no textItems attribute)
+- Symlink check must happen BEFORE resolve() -- resolve() follows symlinks on macOS
+- String-aware tokenization for sci-notation fix: state machine splits quoted/unquoted segments (Council M-01)
+- Normalizer starts with two rules (sci-notation + whitespace); D-11/D-14 deferred to later phases
+- File locking uses fcntl.LOCK_EX | fcntl.LOCK_NB for non-blocking exclusive lock
 
 ### Pending Todos
 
@@ -97,5 +101,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-18
-Stopped at: Completed 02-02 (IR layer with mutation tracking), continuing to 02-03
-Resume file: .planning/phases/02-operation-schema-and-ir-layer/02-03-PLAN.md
+Stopped at: Completed 02-03 (Transaction engine + Normalizer), Phase 2 complete
+Resume file: .planning/phases/02-operation-schema-and-ir-layer/02-03-SUMMARY.md
