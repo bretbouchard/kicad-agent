@@ -209,6 +209,21 @@ def extract_uuids_from_file(path: Path, file_type: str) -> UUIDMap:
 
     Returns:
         UUIDMap with all entries in order of appearance.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
+        ValueError: If the file exceeds the 50MB size limit.
     """
+    if not path.exists():
+        raise FileNotFoundError(f"File not found: {path}")
+
+    file_size = path.stat().st_size
+    max_size = 50 * 1024 * 1024  # 50MB limit (DoS mitigation)
+    if file_size > max_size:
+        raise ValueError(
+            f"File exceeds 50MB size limit ({file_size} bytes): {path}. "
+            "File may be malformed or maliciously large."
+        )
+
     content = path.read_text(encoding="utf-8")
     return extract_uuids(content, file_type)
