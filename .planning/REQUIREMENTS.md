@@ -30,8 +30,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **COMP-02**: Remove component from schematic (with net stub cleanup)
 - [x] **COMP-03**: Duplicate component or section with new UUIDs and references
 - [x] **COMP-04**: Replicate component in array pattern (linear, circular, matrix)
-- [ ] **COMP-05**: Move/reposition component with coordinate precision (4 decimal schematic, 6 decimal PCB)
-- [ ] **COMP-06**: Modify component properties (value, footprint, reference, custom fields)
+- [x] **COMP-05**: Move/reposition component with coordinate precision (4 decimal schematic, 6 decimal PCB)
+- [x] **COMP-06**: Modify component properties (value, footprint, reference, custom fields)
 
 ### Net Operations
 
@@ -141,8 +141,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COMP-02 | Phase 4: Component Operations | Complete |
 | COMP-03 | Phase 4: Component Operations | Complete |
 | COMP-04 | Phase 4: Component Operations | Complete |
-| COMP-05 | Phase 4: Component Operations | Pending |
-| COMP-06 | Phase 4: Component Operations | Pending |
+| COMP-05 | Phase 4: Component Operations | Complete |
+| COMP-06 | Phase 4: Component Operations | Complete |
 | NET-01 | Phase 5: Net/Ref/FP Operations | Pending |
 | NET-02 | Phase 5: Net/Ref/FP Operations | Pending |
 | NET-03 | Phase 5: Net/Ref/FP Operations | Pending |
@@ -173,4 +173,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-18 after 04-02 plan completion*
+*Last updated: 2026-05-18 after 04-03 plan completion*

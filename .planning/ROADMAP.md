@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation -- Parse, Serialize, Round-trip** - Parse all 4 KiCad file types with zero-diff round-trip fidelity
 - [x] **Phase 2: Operation Schema and IR Layer** - Define the JSON intent contract and IR dataclasses that insulates the LLM from raw S-expressions
 - [x] **Phase 3: Validation Pipeline** - ERC/DRC gates, structural checks, and error recovery before any mutation
-- [ ] **Phase 4: Component Operations** - Add, remove, duplicate, move, and modify components with transaction safety
+- [x] **Phase 4: Component Operations** - Add, remove, duplicate, move, and modify components with transaction safety
 - [ ] **Phase 5: Net, Reference, and Footprint Operations** - Net CRUD, bus operations, reference management, footprint assignment
 - [ ] **Phase 6: Cross-File Operations and Analysis** - Schematic-to-PCB consistency, library propagation, structural diffs, connectivity analysis
 - [ ] **Phase 7: GSD Skill Integration** - Claude skill manifest, handler, CLI wrapper, and project context renderer
@@ -90,7 +90,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md -- Operation executor, add_component and remove_component handlers (COMP-01, COMP-02)
 - [x] 04-02-PLAN.md -- Duplicate and array replicate handlers with linear/circular/matrix patterns (COMP-03, COMP-04)
-- [ ] 04-03-PLAN.md -- Move/reposition and property modification handlers (COMP-05, COMP-06)
+- [x] 04-03-PLAN.md -- Move/reposition and property modification handlers (COMP-05, COMP-06)
 
 ### Phase 5: Net, Reference, and Footprint Operations
 **Goal**: Users can manage nets, buses, references, and footprints across schematic and PCB
@@ -156,7 +156,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 1. Foundation -- Parse, Serialize, Round-trip | 3/3 | Complete | 2026-05-18 |
 | 2. Operation Schema and IR Layer | 3/3 | Complete | 2026-05-18 |
 | 3. Validation Pipeline | 3/3 | Complete | 2026-05-18 |
-| 4. Component Operations | 2/3 | In Progress | - |
+| 4. Component Operations | 3/3 | Complete | 2026-05-18 |
 | 5. Net, Reference, and Footprint Operations | 0/4 | Not started | - |
 | 6. Cross-File Operations and Analysis | 0/4 | Not started | - |
 | 7. GSD Skill Integration | 0/4 | Not started | - |
