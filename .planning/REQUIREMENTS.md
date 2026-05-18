@@ -35,10 +35,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Net Operations
 
-- [ ] **NET-01**: Add net with named or auto-generated net name
-- [ ] **NET-02**: Remove net with pin disconnect and stub cleanup
-- [ ] **NET-03**: Rename net with propagation to all connected pins
-- [ ] **NET-04**: Bus operations: add/remove/rename bus with member net management
+- [x] **NET-01**: Add net with named or auto-generated net name
+- [x] **NET-02**: Remove net with pin disconnect and stub cleanup
+- [x] **NET-03**: Rename net with propagation to all connected pins
+- [x] **NET-04**: Bus operations: add/remove/rename bus with member net management
 - [ ] **NET-05**: Net connectivity graph analysis via networkx
 
 ### Reference Management
@@ -143,10 +143,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COMP-04 | Phase 4: Component Operations | Complete |
 | COMP-05 | Phase 4: Component Operations | Complete |
 | COMP-06 | Phase 4: Component Operations | Complete |
-| NET-01 | Phase 5: Net/Ref/FP Operations | Pending |
-| NET-02 | Phase 5: Net/Ref/FP Operations | Pending |
-| NET-03 | Phase 5: Net/Ref/FP Operations | Pending |
-| NET-04 | Phase 5: Net/Ref/FP Operations | Pending |
+| NET-01 | Phase 5: Net/Ref/FP Operations | Complete |
+| NET-02 | Phase 5: Net/Ref/FP Operations | Complete |
+| NET-03 | Phase 5: Net/Ref/FP Operations | Complete |
+| NET-04 | Phase 5: Net/Ref/FP Operations | Complete |
 | NET-05 | Phase 5: Net/Ref/FP Operations | Pending |
 | REF-01 | Phase 5: Net/Ref/FP Operations | Pending |
 | REF-02 | Phase 5: Net/Ref/FP Operations | Pending |
@@ -173,4 +173,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-18 after 04-03 plan completion*
+*Last updated: 2026-05-18 after 05-01 plan completion*
