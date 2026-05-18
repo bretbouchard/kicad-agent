@@ -5,6 +5,7 @@ from kicad_agent.serializer.pcb_ser import serialize_pcb
 from kicad_agent.serializer.symbol_ser import serialize_symbol_lib
 from kicad_agent.serializer.footprint_ser import serialize_footprint
 from kicad_agent.serializer.uuid_reinjector import reinject_uuids
+from kicad_agent.serializer.normalizer import normalize_kicad_output
 
 __all__ = [
     "serialize_schematic",
@@ -12,4 +13,5 @@ __all__ = [
     "serialize_symbol_lib",
     "serialize_footprint",
     "reinject_uuids",
+    "normalize_kicad_output",
 ]
