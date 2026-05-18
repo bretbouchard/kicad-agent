@@ -141,7 +141,9 @@ class OperationExecutor:
             return array_replicate(op, ir)
 
         if op_type == "move_component":
-            raise NotImplementedError("move_component not yet implemented")
+            from kicad_agent.ops.move_component import move_component
+            file_type = ir.file_type
+            return move_component(op, ir, file_type=file_type)
 
         if op_type == "modify_property":
             raise NotImplementedError("modify_property not yet implemented")
