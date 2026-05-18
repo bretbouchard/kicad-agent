@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.conftest import FIXTURE_DIR
+FIXTURE_DIR = Path(__file__).parent.parent / "fixtures"
 
 
 # ---------------------------------------------------------------------------
