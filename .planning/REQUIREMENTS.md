@@ -22,7 +22,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **OPS-01**: JSON operation schema for all edit intents (Pydantic v2 models with JSON Schema export)
 - [x] **OPS-02**: Operation validation: reject structurally invalid intents before mutation
-- [ ] **OPS-03**: Operation execution: translate validated intent -> IR mutation -> serialized file
+- [x] **OPS-03**: Operation execution: translate validated intent -> IR mutation -> serialized file
 
 ### Component Operations
 
@@ -131,7 +131,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FND-08 | Phase 2: Schema + IR | Pending |
 | OPS-01 | Phase 2: Schema + IR | Complete |
 | OPS-02 | Phase 2: Schema + IR | Complete |
-| OPS-03 | Phase 2: Schema + IR | Pending |
+| OPS-03 | Phase 2: Schema + IR | Complete |
 | VAL-01 | Phase 3: Validation Pipeline | Pending |
 | VAL-02 | Phase 3: Validation Pipeline | Pending |
 | VAL-03 | Phase 3: Validation Pipeline | Pending |
@@ -173,4 +173,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-18 after 02-01 plan completion*
+*Last updated: 2026-05-18 after 02-02 plan completion*

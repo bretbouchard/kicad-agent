@@ -1,3 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: executing
+stopped_at: Completed 02-02 (IR layer with mutation tracking), continuing to 02-03
+last_updated: "2026-05-18T06:14:43.582Z"
+last_activity: 2026-05-18
+progress:
+  total_phases: 7
+  completed_phases: 1
+  total_plans: 6
+  completed_plans: 5
+  percent: 83
+---
+
 # Project State
 
 ## Project Reference
@@ -10,28 +26,30 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 ## Current Position
 
 Phase: 2 of 7 (Operation Schema and IR Layer)
-Plan: 1 of 3 complete (02-01 done)
-Status: In Progress -- Plan 01 complete, continuing to Plan 02
-Last activity: 2026-05-18 -- Completed plan 02-01 (Pydantic operation schema with discriminated union)
+Plan: 2 of 3 complete (02-01, 02-02 done)
+Status: In Progress -- Plans 01 and 02 complete, continuing to Plan 03
+Last activity: 2026-05-18
 
-Progress: [=====.........] 17%
+Progress: [████████░░░] 83%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 5 min
-- Total execution time: 0.3 hours
+
+- Total plans completed: 5
+- Average duration: 7 min
+- Total execution time: 0.5 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3 | 16 min | 5 min |
-| 02-operation-schema-and-ir-layer | 1 | 2 min | 2 min |
+| 02-operation-schema-and-ir-layer | 2 | 12 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-03 (4 min), 01-02 (8 min), 01-01 (4 min)
+
+- Last 5 plans: 02-02 (10 min), 02-01 (2 min), 01-03 (4 min), 01-02 (8 min), 01-01 (4 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -56,6 +74,9 @@ Recent decisions affecting current work:
 - Operation.root field with Field(discriminator="op_type") for Pydantic v2 discriminated union
 - TargetFile uses BeforeValidator for early path traversal rejection before field validation
 - Added PropertySpec model alongside PositionSpec for future property mutation operations
+- IR registry uses set[int] with id() instead of WeakSet (dataclass with mutable list is unhashable)
+- kiutils Board.traceItems replaces planned segments/vias (kiutils API mismatch)
+- FootprintIR.fp_text filters graphicItems by isinstance(FpText) (no textItems attribute)
 
 ### Pending Todos
 
@@ -76,5 +97,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-18
-Stopped at: Completed 02-01 (Pydantic operation schema), continuing to 02-02
-Resume file: .planning/phases/02-operation-schema-and-ir-layer/02-02-PLAN.md
+Stopped at: Completed 02-02 (IR layer with mutation tracking), continuing to 02-03
+Resume file: .planning/phases/02-operation-schema-and-ir-layer/02-03-PLAN.md
