@@ -13,8 +13,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **FND-02**: Parse .kicad_pcb files into structured AST with full property coverage
 - [x] **FND-03**: Parse .kicad_sym (symbol library) files into structured AST
 - [x] **FND-04**: Parse .kicad_mod (footprint library) files into structured AST
-- [ ] **FND-05**: Round-trip fidelity: parse -> serialize produces byte-identical or semantically equivalent output for all file types
-- [ ] **FND-06**: UUID integrity preservation across all operations (no dangling references)
+- [x] **FND-05**: Round-trip fidelity: parse -> serialize produces byte-identical or semantically equivalent output for all file types
+- [x] **FND-06**: UUID integrity preservation across all operations (no dangling references)
 - [ ] **FND-07**: Transaction-based mutation with rollback capability
 - [ ] **FND-08**: Deterministic, SCM-friendly serialization (stable output ordering)
 
@@ -63,7 +63,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **VAL-04**: Structural/syntax-aware diff generation for S-expressions (difftastic integration)
 - [ ] **VAL-05**: Pre-mutation structural validation (catch invalid operations before execution)
 - [ ] **VAL-06**: Automated error recovery: rollback to last valid state on validation failure
-- [ ] **VAL-07**: Round-trip fidelity regression test suite (parse -> serialize -> compare)
+- [x] **VAL-07**: Round-trip fidelity regression test suite (parse -> serialize -> compare)
 
 ### Cross-File Operations
 
@@ -124,9 +124,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FND-02 | Phase 1: Foundation | Complete |
 | FND-03 | Phase 1: Foundation | Complete |
 | FND-04 | Phase 1: Foundation | Complete |
-| FND-05 | Phase 1: Foundation | Pending |
-| FND-06 | Phase 1: Foundation | Pending |
-| VAL-07 | Phase 1: Foundation | Pending |
+| FND-05 | Phase 1: Foundation | Complete |
+| FND-06 | Phase 1: Foundation | Complete |
+| VAL-07 | Phase 1: Foundation | Complete |
 | FND-07 | Phase 2: Schema + IR | Pending |
 | FND-08 | Phase 2: Schema + IR | Pending |
 | OPS-01 | Phase 2: Schema + IR | Pending |
@@ -173,4 +173,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-18 after 01-01 plan completion*
+*Last updated: 2026-05-18 after 01-03 plan completion*

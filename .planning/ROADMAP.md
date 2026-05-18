@@ -12,7 +12,7 @@ Build an AI-safe KiCad structural editing tool in 7 phases: first achieve zero-d
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation -- Parse, Serialize, Round-trip** - Parse all 4 KiCad file types with zero-diff round-trip fidelity
+- [x] **Phase 1: Foundation -- Parse, Serialize, Round-trip** - Parse all 4 KiCad file types with zero-diff round-trip fidelity
 - [ ] **Phase 2: Operation Schema and IR Layer** - Define the JSON intent contract and IR dataclasses that insulate the LLM from raw S-expressions
 - [ ] **Phase 3: Validation Pipeline** - ERC/DRC gates, structural checks, and error recovery before any mutation
 - [ ] **Phase 4: Component Operations** - Add, remove, duplicate, move, and modify components with transaction safety
@@ -38,7 +38,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 - [x] 01-01-PLAN.md -- Parser layer for all 4 KiCad file types with raw content preservation
 - [x] 01-02-PLAN.md -- UUID extraction/re-injection, serializers, and round-trip stability validator
-- [ ] 01-03-PLAN.md -- Comprehensive round-trip fidelity regression test suite with fixture files
+- [x] 01-03-PLAN.md -- Comprehensive round-trip fidelity regression test suite with fixture files
 
 ### Phase 2: Operation Schema and IR Layer
 **Goal**: The LLM has a well-defined JSON contract for expressing edit intents, and the tool layer can translate those intents into IR mutations
@@ -153,7 +153,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation -- Parse, Serialize, Round-trip | 2/3 | In Progress | - |
+| 1. Foundation -- Parse, Serialize, Round-trip | 3/3 | Complete | 2026-05-18 |
 | 2. Operation Schema and IR Layer | 0/3 | Not started | - |
 | 3. Validation Pipeline | 0/3 | Not started | - |
 | 4. Component Operations | 0/3 | Not started | - |
