@@ -243,7 +243,11 @@ class ValidationPipeline:
                 # Apply mutation (modifies IR in-memory)
                 mutation_fn(operation, ir)
 
-                # Stage 3: UUID uniqueness check (post-mutation, pre-write)
+                # Serialize mutated IR to disk so UUID check and kicad-cli
+                # validate post-mutation state (Council H-1)
+                self._serialize_ir_to_disk(ir, file_path)
+
+                # Stage 3: UUID uniqueness check (post-mutation, post-serialize)
                 uuid_result = validate_uuid_uniqueness(ir)
                 if not uuid_result.passed:
                     return self._fail(
@@ -258,13 +262,6 @@ class ValidationPipeline:
                 stages.append(
                     StageResult(stage=PipelineStage.UUID_UNIQUENESS, passed=True, detail="UUID uniqueness verified")
                 )
-
-                # Serialize mutated IR to disk so kicad-cli sees post-mutation state (Council H-1)
-                needs_kicad_cli = (run_erc_check and ir.file_type == "schematic") or (
-                    run_drc_check and ir.file_type == "pcb"
-                )
-                if needs_kicad_cli:
-                    self._serialize_ir_to_disk(ir, file_path)
 
                 # Stage 4: ERC check (schematic only)
                 if run_erc_check and ir.file_type == "schematic":

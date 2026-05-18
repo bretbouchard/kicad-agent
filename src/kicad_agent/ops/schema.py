@@ -71,6 +71,14 @@ class PositionSpec(BaseModel):
     y: float
     angle: float = 0.0
 
+    @field_validator("x", "y", "angle")
+    @classmethod
+    def _reject_non_finite(cls, v: float) -> float:
+        import math
+        if math.isnan(v) or math.isinf(v):
+            raise ValueError("Coordinate values must be finite (not NaN or Infinity)")
+        return v
+
 
 class PropertySpec(BaseModel):
     """A named property with a string value.

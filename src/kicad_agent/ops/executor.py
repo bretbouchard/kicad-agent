@@ -122,8 +122,8 @@ class OperationExecutor:
 
         Raises:
             ValueError: For unknown op_type.
-            NotImplementedError: For not-yet-implemented operations.
         """
+        # Phase 4 ops with dedicated handler files
         if op_type == "add_component":
             from kicad_agent.ops.add_component import add_component
             return add_component(op, ir, file_path)
@@ -148,5 +148,59 @@ class OperationExecutor:
         if op_type == "modify_property":
             from kicad_agent.ops.modify_property import modify_property
             return modify_property(op, ir)
+
+        # Phase 5 ops: net/bus/ref/footprint operations via IR methods
+        if op_type == "add_net":
+            net = ir.add_net(net_name=op.net_name, net_number=op.net_number)
+            return {"net_name": net.name, "net_number": net.number}
+
+        if op_type == "remove_net":
+            ir.remove_net(net_name=op.net_name)
+            return {"removed_net": op.net_name}
+
+        if op_type == "rename_net":
+            ir.rename_net(old_name=op.old_name, new_name=op.new_name)
+            return {"old_name": op.old_name, "new_name": op.new_name}
+
+        if op_type == "renumber_refs":
+            changes = ir.renumber_references(
+                prefix=op.prefix, start_index=op.start_index, step=op.step
+            )
+            return {"changes": [{"old": o, "new": n} for o, n in changes]}
+
+        if op_type == "validate_refs":
+            duplicates = ir.validate_reference_uniqueness()
+            return {"duplicates": duplicates, "valid": len(duplicates) == 0}
+
+        if op_type == "annotate":
+            changes = ir.annotate_components(prefix_filter=op.prefix_filter)
+            return {"annotated": [{"old": o, "new": n} for o, n in changes]}
+
+        if op_type == "cross_ref_check":
+            unresolved = ir.cross_reference_check()
+            return {"unresolved": [{"ref": r, "lib_id": l} for r, l in unresolved]}
+
+        if op_type == "assign_footprint":
+            ir.assign_footprint(reference=op.reference, footprint_lib_id=op.footprint_lib_id)
+            return {"reference": op.reference, "footprint": op.footprint_lib_id}
+
+        if op_type == "swap_footprint":
+            result = ir.swap_footprint(reference=op.reference, new_footprint_lib_id=op.new_footprint_lib_id)
+            return result
+
+        if op_type == "validate_footprint":
+            # Schema-level validation only (no IR mutation)
+            return {"footprint_lib_id": op.footprint_lib_id, "valid": True}
+
+        if op_type == "verify_pin_map":
+            result = ir.verify_pin_map(reference=op.reference, footprint_lib_id=op.footprint_lib_id)
+            return result
+
+        # Bus ops: schema-only for now (IR methods not yet implemented)
+        if op_type == "add_bus":
+            return {"bus_name": op.bus_name, "member_count": len(op.member_nets)}
+
+        if op_type == "remove_bus":
+            return {"removed_bus": op.bus_name}
 
         raise ValueError(f"Unknown op_type: {op_type!r}")

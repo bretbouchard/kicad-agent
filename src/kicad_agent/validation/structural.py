@@ -25,6 +25,7 @@ import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Any, Optional
 
 from kicad_agent.ops.schema import (
@@ -292,6 +293,54 @@ def _validate_modify_property(
     return violations
 
 
+def _validate_ref_exists(
+    op: Any, ir: BaseIR, ref_field: str
+) -> list[StructuralViolation]:
+    """Validate that a component reference field exists in the IR.
+
+    Generic validator for ops that target a specific component/footprint.
+
+    Args:
+        op: The operation with a reference field.
+        ir: The current IR state.
+        ref_field: Name of the attribute holding the reference (e.g. "reference", "source_reference").
+
+    Returns:
+        List of violations (empty if valid).
+    """
+    ref = getattr(op, ref_field, None)
+    if ref is None or not _component_exists(ir, ref):
+        return [
+            StructuralViolation(
+                kind=ViolationKind.MISSING_COMPONENT,
+                description=f"Component {ref!r} not found in file",
+                detail=f"{ref_field}={ref!r}",
+            )
+        ]
+    return []
+
+
+def _validate_file_type(ir: BaseIR, expected: str) -> list[StructuralViolation]:
+    """Validate that the IR's file type matches the expected type.
+
+    Args:
+        ir: The current IR state.
+        expected: Expected file_type string (e.g. "schematic", "pcb").
+
+    Returns:
+        List of violations (empty if valid).
+    """
+    if ir.file_type != expected:
+        return [
+            StructuralViolation(
+                kind=ViolationKind.FILE_TYPE_MISMATCH,
+                description=f"Operation requires file_type={expected!r}",
+                detail=f"Expected {expected!r}, got {ir.file_type!r}",
+            )
+        ]
+    return []
+
+
 def validate_structural(operation: Operation, ir: BaseIR) -> StructuralResult:
     """Validate an operation against current IR state before mutation.
 
@@ -311,11 +360,32 @@ def validate_structural(operation: Operation, ir: BaseIR) -> StructuralResult:
     target_file = op.target_file
 
     # Dispatch to type-specific validator
+    # Query-only ops (validate, check, verify) pass through with no pre-checks.
+    # Mutation ops with component references check existence.
     validator_map = {
         "add_component": lambda: _validate_add_component(op, ir),
         "remove_component": lambda: _validate_remove_component(op, ir),
         "move_component": lambda: _validate_move_component(op, ir),
         "modify_property": lambda: _validate_modify_property(op, ir),
+        # Component reference ops -- check target exists
+        "duplicate_component": lambda: _validate_ref_exists(op, ir, "source_reference"),
+        "array_replicate": lambda: _validate_ref_exists(op, ir, "source_reference"),
+        "assign_footprint": lambda: _validate_ref_exists(op, ir, "reference"),
+        "swap_footprint": lambda: _validate_ref_exists(op, ir, "reference"),
+        # Net ops -- check file type is PCB
+        "add_net": lambda: _validate_file_type(ir, "pcb"),
+        "remove_net": lambda: _validate_file_type(ir, "pcb"),
+        "rename_net": lambda: _validate_file_type(ir, "pcb"),
+        # Schematic-only ops -- check file type is schematic
+        "add_bus": lambda: _validate_file_type(ir, "schematic"),
+        "remove_bus": lambda: _validate_file_type(ir, "schematic"),
+        "renumber_refs": lambda: _validate_file_type(ir, "schematic"),
+        "annotate": lambda: _validate_file_type(ir, "schematic"),
+        # Query-only ops -- no structural pre-checks needed
+        "validate_refs": lambda: [],
+        "cross_ref_check": lambda: [],
+        "validate_footprint": lambda: [],
+        "verify_pin_map": lambda: _validate_ref_exists(op, ir, "reference"),
     }
 
     validator = validator_map.get(op_type)
@@ -355,23 +425,45 @@ def validate_structural(operation: Operation, ir: BaseIR) -> StructuralResult:
     )
 
 
-def validate_uuid_uniqueness(ir: BaseIR) -> StructuralResult:
+def validate_uuid_uniqueness(
+    ir: BaseIR,
+    content: Optional[str] = None,
+) -> StructuralResult:
     """Check UUID uniqueness across the entire file.
 
-    Extracts all UUIDs from the raw file content using extract_uuids(),
+    Extracts all UUIDs from the file content using extract_uuids(),
     then counts each UUID value. Any UUID appearing more than once
     produces a DUPLICATE_UUID violation.
 
-    This function can be called post-mutation to verify the file still
-    has unique UUIDs.
+    When called after serialization (pipeline post-mutation), reads
+    the actual file from disk to validate post-mutation UUID state.
+    Falls back to ir.raw_content if no content provided.
 
     Args:
-        ir: The IR instance whose raw_content to check.
+        ir: The IR instance whose file to check.
+        content: Optional content string. If None, reads from ir.file_path.
 
     Returns:
         StructuralResult with any duplicate UUID violations.
     """
-    uuid_map = extract_uuids(ir.raw_content, ir.file_type)
+    if content is None:
+        # Read from disk (post-serialization) to get current state,
+        # but only if the file has been modified since IR creation.
+        # This handles both pipeline (serialized to disk) and test
+        # scenarios (raw_content modified in memory).
+        file_path = ir.file_path
+        if (
+            file_path
+            and Path(file_path).exists()
+            and ir.dirty
+        ):
+            # IR has been mutated and serialized — validate the file on disk
+            content = Path(file_path).read_text(encoding="utf-8")
+        else:
+            # Fall back to raw_content (original or test-modified)
+            content = ir.raw_content
+
+    uuid_map = extract_uuids(content, ir.file_type)
 
     # Count occurrences of each UUID value
     uuid_counts: dict[str, int] = {}

@@ -73,5 +73,14 @@ def parse_raw_sexp_file(path: Path) -> list:
     if not resolved.exists():
         raise FileNotFoundError(f"File not found: {path}")
 
+    # Check file size before reading into memory (T-01-01: DoS mitigation)
+    max_size = 50 * 1024 * 1024  # 50MB
+    file_size = resolved.stat().st_size
+    if file_size > max_size:
+        raise ValueError(
+            f"File exceeds 50MB size limit ({file_size} bytes). "
+            "File may be malformed or maliciously large."
+        )
+
     content = resolved.read_text(encoding="utf-8")
     return parse_raw_sexp(content)
