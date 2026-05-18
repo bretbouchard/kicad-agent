@@ -61,7 +61,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **VAL-02**: DRC gate via kicad-cli with structured result parsing
 - [ ] **VAL-03**: Net consistency verification between schematic and PCB netlists
 - [ ] **VAL-04**: Structural/syntax-aware diff generation for S-expressions (difftastic integration)
-- [ ] **VAL-05**: Pre-mutation structural validation (catch invalid operations before execution)
+- [x] **VAL-05**: Pre-mutation structural validation (catch invalid operations before execution)
 - [ ] **VAL-06**: Automated error recovery: rollback to last valid state on validation failure
 - [x] **VAL-07**: Round-trip fidelity regression test suite (parse -> serialize -> compare)
 
@@ -135,7 +135,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VAL-01 | Phase 3: Validation Pipeline | Pending |
 | VAL-02 | Phase 3: Validation Pipeline | Pending |
 | VAL-03 | Phase 3: Validation Pipeline | Pending |
-| VAL-05 | Phase 3: Validation Pipeline | Pending |
+| VAL-05 | Phase 3: Validation Pipeline | Complete |
 | VAL-06 | Phase 3: Validation Pipeline | Pending |
 | COMP-01 | Phase 4: Component Operations | Pending |
 | COMP-02 | Phase 4: Component Operations | Pending |
@@ -173,4 +173,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-18 after 02-03 plan completion*
+*Last updated: 2026-05-18 after 03-02 plan completion*

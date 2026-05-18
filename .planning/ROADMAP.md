@@ -70,8 +70,8 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md -- kicad-cli ERC/DRC wrappers with structured result parsing (VAL-01, VAL-02)
-- [ ] 03-02-PLAN.md -- Pre-mutation structural validator and UUID uniqueness checker (VAL-05)
+- [x] 03-01-PLAN.md -- kicad-cli ERC/DRC wrappers with structured result parsing (VAL-01, VAL-02)
+- [x] 03-02-PLAN.md -- Pre-mutation structural validator and UUID uniqueness checker (VAL-05)
 - [ ] 03-03-PLAN.md -- Error recovery pipeline with automatic rollback on validation failure (VAL-03, VAL-06)
 
 ### Phase 4: Component Operations
@@ -106,10 +106,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- Net CRUD and bus operations
-- [ ] 05-02-PLAN.md -- Reference management (renumber, validate, annotate, cross-reference)
-- [ ] 05-03-PLAN.md -- Footprint management (assign, swap, validate, pin mapping)
-- [ ] 05-04-PLAN.md -- Net connectivity graph analysis via networkx
+- [ ] 05-01-PLAN.md -- Net CRUD and bus operations (NET-01, NET-02, NET-03, NET-04)
+- [ ] 05-02-PLAN.md -- Reference management (renumber, validate, annotate, cross-reference) (REF-01, REF-02, REF-03, REF-04)
+- [ ] 05-03-PLAN.md -- Footprint management (assign, swap, validate, pin mapping) (FP-01, FP-02, FP-03, FP-04)
+- [ ] 05-04-PLAN.md -- Net connectivity graph analysis via networkx (NET-05)
 
 ### Phase 6: Cross-File Operations and Analysis
 **Goal**: Users can perform atomic operations across schematic and PCB files, propagate library changes, and analyze diffs and connectivity
@@ -155,7 +155,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 |-------|----------------|--------|-----------|
 | 1. Foundation -- Parse, Serialize, Round-trip | 3/3 | Complete | 2026-05-18 |
 | 2. Operation Schema and IR Layer | 3/3 | Complete | 2026-05-18 |
-| 3. Validation Pipeline | 0/3 | Not started | - |
+| 3. Validation Pipeline | 2/3 | In Progress | - |
 | 4. Component Operations | 0/3 | Not started | - |
 | 5. Net, Reference, and Footprint Operations | 0/4 | Not started | - |
 | 6. Cross-File Operations and Analysis | 0/4 | Not started | - |
