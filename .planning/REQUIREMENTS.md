@@ -60,7 +60,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **VAL-01**: ERC gate via kicad-cli with structured result parsing (pass/fail/warning)
 - [x] **VAL-02**: DRC gate via kicad-cli with structured result parsing
 - [x] **VAL-03**: Net consistency verification between schematic and PCB netlists
-- [ ] **VAL-04**: Structural/syntax-aware diff generation for S-expressions (difftastic integration)
+- [x] **VAL-04**: Structural/syntax-aware diff generation for S-expressions (difftastic integration)
 - [x] **VAL-05**: Pre-mutation structural validation (catch invalid operations before execution)
 - [x] **VAL-06**: Automated error recovery: rollback to last valid state on validation failure
 - [x] **VAL-07**: Round-trip fidelity regression test suite (parse -> serialize -> compare)
@@ -160,7 +160,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | XFILE-02 | Phase 6: Cross-File + Analysis | Complete |
 | XFILE-03 | Phase 6: Cross-File + Analysis | Complete |
 | XFILE-04 | Phase 6: Cross-File + Analysis | Complete |
-| VAL-04 | Phase 6: Cross-File + Analysis | Pending |
+| VAL-04 | Phase 6: Cross-File + Analysis | Complete |
 | SKILL-01 | Phase 7: GSD Skill Integration | Pending |
 | SKILL-02 | Phase 7: GSD Skill Integration | Pending |
 | SKILL-03 | Phase 7: GSD Skill Integration | Pending |
@@ -173,4 +173,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-18 after 05-04 plan completion*
+*Last updated: 2026-05-18 after 06-04 plan completion*

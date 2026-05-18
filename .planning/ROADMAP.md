@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Validation Pipeline** - ERC/DRC gates, structural checks, and error recovery before any mutation
 - [x] **Phase 4: Component Operations** - Add, remove, duplicate, move, and modify components with transaction safety
 - [x] **Phase 5: Net, Reference, and Footprint Operations** - Net CRUD, bus operations, reference management, footprint assignment
-- [ ] **Phase 6: Cross-File Operations and Analysis** - Schematic-to-PCB consistency, library propagation, structural diffs, connectivity analysis
+- [x] **Phase 6: Cross-File Operations and Analysis** - Schematic-to-PCB consistency, library propagation, structural diffs, connectivity analysis
 - [ ] **Phase 7: GSD Skill Integration** - Claude skill manifest, handler, CLI wrapper, and project context renderer
 
 ## Phase Details
@@ -127,7 +127,7 @@ Plans:
 - [x] 06-01-PLAN.md -- Cross-file atomic operations (schematic-to-PCB consistency)
 - [x] 06-02-PLAN.md -- Library reference propagation (symbol and footprint)
 - [x] 06-03-PLAN.md -- Project context detection and auto-discovery
-- [ ] 06-04-PLAN.md -- Structural diff generation with difftastic integration
+- [x] 06-04-PLAN.md -- Structural diff generation with difftastic integration
 
 ### Phase 7: GSD Skill Integration
 **Goal**: The kicad-agent is invokable from any KiCad project via the GSD Skill interface, and from the terminal via CLI
@@ -158,5 +158,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 3. Validation Pipeline | 3/3 | Complete | 2026-05-18 |
 | 4. Component Operations | 3/3 | Complete | 2026-05-18 |
 | 5. Net, Reference, and Footprint Operations | 4/4 | Complete | 2026-05-18 |
-| 6. Cross-File Operations and Analysis | 3/4 | In Progress | - |
+| 6. Cross-File Operations and Analysis | 4/4 | Complete | 2026-05-18 |
 | 7. GSD Skill Integration | 0/4 | Not started | - |
