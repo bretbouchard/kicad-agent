@@ -39,7 +39,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **NET-02**: Remove net with pin disconnect and stub cleanup
 - [x] **NET-03**: Rename net with propagation to all connected pins
 - [x] **NET-04**: Bus operations: add/remove/rename bus with member net management
-- [ ] **NET-05**: Net connectivity graph analysis via networkx
+- [x] **NET-05**: Net connectivity graph analysis via networkx
 
 ### Reference Management
 
@@ -147,7 +147,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NET-02 | Phase 5: Net/Ref/FP Operations | Complete |
 | NET-03 | Phase 5: Net/Ref/FP Operations | Complete |
 | NET-04 | Phase 5: Net/Ref/FP Operations | Complete |
-| NET-05 | Phase 5: Net/Ref/FP Operations | Pending |
+| NET-05 | Phase 5: Net/Ref/FP Operations | Complete |
 | REF-01 | Phase 5: Net/Ref/FP Operations | Complete |
 | REF-02 | Phase 5: Net/Ref/FP Operations | Complete |
 | REF-03 | Phase 5: Net/Ref/FP Operations | Complete |
@@ -173,4 +173,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-18 after 05-03 plan completion*
+*Last updated: 2026-05-18 after 05-04 plan completion*
