@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 ## Current Position
 
 Phase: 2 of 7 (Operation Schema and IR Layer)
-Plan: 3 of 3 (all plans created and Council-approved)
-Status: Planned -- Ready for Execution
-Last activity: 2026-05-18 -- Plans revised per Council review (21 findings incorporated), Council APPROVED
+Plan: 1 of 3 complete (02-01 done)
+Status: In Progress -- Plan 01 complete, continuing to Plan 02
+Last activity: 2026-05-18 -- Completed plan 02-01 (Pydantic operation schema with discriminated union)
 
-Progress: [====..........] 14%
+Progress: [=====.........] 17%
 
 ## Performance Metrics
 
@@ -28,6 +28,7 @@ Progress: [====..........] 14%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3 | 16 min | 5 min |
+| 02-operation-schema-and-ir-layer | 1 | 2 min | 2 min |
 
 **Recent Trend:**
 - Last 5 plans: 01-03 (4 min), 01-02 (8 min), 01-01 (4 min)
@@ -52,6 +53,9 @@ Recent decisions affecting current work:
 - Used Regulator_Current.kicad_sym (240 lines) for symbol lib testing instead of large Device.kicad_sym
 - Path-based FIXTURE_DIR in tests to avoid collision with globally installed paddle-sdk tests package
 - Per-file temp subdirectories in regression suite to avoid name collisions
+- Operation.root field with Field(discriminator="op_type") for Pydantic v2 discriminated union
+- TargetFile uses BeforeValidator for early path traversal rejection before field validation
+- Added PropertySpec model alongside PositionSpec for future property mutation operations
 
 ### Pending Todos
 
@@ -72,5 +76,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-18
-Stopped at: Phase 2 plans Council-approved, ready for execution
-Resume file: .planning/phases/02-operation-schema-and-ir-layer/02-01-PLAN.md
+Stopped at: Completed 02-01 (Pydantic operation schema), continuing to 02-02
+Resume file: .planning/phases/02-operation-schema-and-ir-layer/02-02-PLAN.md
