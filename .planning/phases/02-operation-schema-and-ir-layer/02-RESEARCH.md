@@ -666,7 +666,7 @@ def file_transaction(file_path: Path):
 
 **If this table is empty:** All claims in this research were verified or cited.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Normalizer scope: How many normalization rules are needed?**
    - What we know: kiutils has known issues with scientific notation (Pitfall 13), property ordering (D-11), and layer quoting (Pitfall 11). The two-pass test proves deterministic output.
