@@ -67,7 +67,7 @@ Plans:
   3. A pre-mutation structural validation catches invalid operations (e.g., adding a component to a non-existent sheet) before execution
   4. A validation failure triggers automatic rollback to the last valid state
   5. Net consistency between schematic and PCB can be verified programmatically
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
 - [ ] 03-01: kicad-cli ERC/DRC wrappers with structured result parsing
@@ -85,7 +85,7 @@ Plans:
   4. Components are replicated in linear, circular, and matrix array patterns
   5. A component is moved to specified coordinates with correct precision (4 decimal schematic, 6 decimal PCB)
   6. Component properties (value, footprint, reference, custom fields) are modified and the file passes ERC
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
 - [ ] 04-01: Add and remove component operations
@@ -103,7 +103,7 @@ Plans:
   4. References are renumbered with configurable prefix and sequencing, and uniqueness is validated
   5. A footprint is assigned to a component with library nickname resolution, and pin mapping is verified
   6. Net connectivity graph is analyzable via networkx (path finding, connectivity queries)
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
 - [ ] 05-01: Net CRUD and bus operations
@@ -121,7 +121,7 @@ Plans:
   3. A footprint library reference update propagates to all components using that footprint
   4. Project context is auto-detected (project root, library paths, configuration) from any KiCad file path
   5. A structural diff between two KiCad files shows syntax-aware, semantically meaningful differences
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
 - [ ] 06-01: Cross-file atomic operations (schematic-to-PCB consistency)
@@ -138,13 +138,13 @@ Plans:
   2. An operation request from Claude routes through the skill handler to the Python backend and returns a formatted result
   3. The CLI wrapper runs any operation directly from the terminal without Claude
   4. A project context summary is renderable for any KiCad project directory (file types, component count, net count, validation status)
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 07-01: GSD Skill manifest and prompt template
-- [ ] 07-02: Skill handler routing and result rendering
-- [ ] 07-03: CLI wrapper for direct terminal usage
-- [ ] 07-04: Project context renderer
+- [ ] 07-01-PLAN.md -- GSD Skill manifest and prompt template (SKILL-01)
+- [ ] 07-02-PLAN.md -- Skill handler routing and result rendering (SKILL-02)
+- [ ] 07-03-PLAN.md -- CLI wrapper for direct terminal usage (SKILL-03)
+- [ ] 07-04-PLAN.md -- Project context renderer (SKILL-04)
 
 ## Progress
 
