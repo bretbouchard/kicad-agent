@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 1 -- Foundation (parse, serialize, round-trip fidelity)
+**Current focus:** Phase 2 -- Operation Schema and IR Layer
 
 ## Current Position
 
-Phase: 1 of 7 (Foundation -- Parse, Serialize, Round-trip)
-Plan: 3 of 3 in current phase (COMPLETE)
-Status: Phase Complete
-Last activity: 2026-05-18 -- Completed 01-03-PLAN (round-trip regression test suite)
+Phase: 2 of 7 (Operation Schema and IR Layer)
+Plan: 0 of N (discuss-phase complete, plan-phase next)
+Status: Discuss-Phase Complete
+Last activity: 2026-05-18 -- Captured 14 design decisions in 02-CONTEXT.md
 
 Progress: [====..........] 14%
 
@@ -72,5 +72,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-18
-Stopped at: Completed 01-03-PLAN.md (round-trip regression test suite) -- Phase 1 complete
-Resume file: None
+Stopped at: Discuss-phase complete for Phase 2 — 14 decisions in 02-CONTEXT.md
+Resume file: .planning/phases/02-operation-schema-and-ir-layer/02-CONTEXT.md
