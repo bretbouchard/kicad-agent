@@ -181,6 +181,65 @@ class ModifyPropertyOp(BaseModel):
     new_value: str = Field(max_length=1024)
 
 
+class DuplicateComponentOp(BaseModel):
+    """Duplicate a component with fresh UUID and incremented reference.
+
+    Attributes:
+        op_type: Discriminator literal ``"duplicate_component"``.
+        target_file: Relative path to the target KiCad file (H-01 validated).
+        source_reference: Reference designator of the component to duplicate.
+        offset: Optional position offset from source (x, y; angle is ignored).
+        count: Number of copies to create (default 1, must be >= 1).
+    """
+
+    op_type: Literal["duplicate_component"] = "duplicate_component"
+    target_file: TargetFile
+    source_reference: str = Field(
+        min_length=1,
+        max_length=64,
+        description="Reference designator of the component to duplicate",
+    )
+    offset: PositionSpec | None = None
+    count: int = Field(default=1, ge=1, le=100, description="Number of copies (1-100)")
+
+
+class ArrayReplicateOp(BaseModel):
+    """Replicate a component in a linear, circular, or matrix array pattern.
+
+    Attributes:
+        op_type: Discriminator literal ``"array_replicate"``.
+        target_file: Relative path to the target KiCad file (H-01 validated).
+        source_reference: Reference designator of the component to replicate.
+        pattern: Array pattern type (linear, circular, or matrix).
+        count: Number of replications (for matrix: rows * cols).
+        spacing: Position spacing specification.
+        angle_step: Degrees per step (circular pattern only).
+        center: Center point (circular pattern only).
+        rows: Number of rows (matrix pattern only).
+        cols: Number of columns (matrix pattern only).
+    """
+
+    op_type: Literal["array_replicate"] = "array_replicate"
+    target_file: TargetFile
+    source_reference: str = Field(
+        min_length=1,
+        max_length=64,
+        description="Reference designator of the component to replicate",
+    )
+    pattern: Literal["linear", "circular", "matrix"]
+    count: int = Field(
+        default=1,
+        ge=1,
+        le=100,
+        description="Number of replications (1-100)",
+    )
+    spacing: PositionSpec
+    angle_step: float | None = None
+    center: PositionSpec | None = None
+    rows: int | None = None
+    cols: int | None = None
+
+
 # ---------------------------------------------------------------------------
 # Discriminated union (D-01, D-02, D-03)
 # ---------------------------------------------------------------------------
@@ -195,7 +254,12 @@ class Operation(BaseModel):
     """
 
     root: Annotated[
-        AddComponentOp | RemoveComponentOp | MoveComponentOp | ModifyPropertyOp,
+        AddComponentOp
+        | RemoveComponentOp
+        | MoveComponentOp
+        | ModifyPropertyOp
+        | DuplicateComponentOp
+        | ArrayReplicateOp,
         Field(discriminator="op_type"),
     ]
 

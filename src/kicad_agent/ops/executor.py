@@ -132,6 +132,10 @@ class OperationExecutor:
             from kicad_agent.ops.remove_component import remove_component
             return remove_component(op, ir)
 
+        if op_type == "duplicate_component":
+            from kicad_agent.ops.duplicate_component import duplicate_component
+            return duplicate_component(op, ir)
+
         if op_type == "move_component":
             raise NotImplementedError("move_component not yet implemented")
 
