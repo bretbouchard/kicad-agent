@@ -57,8 +57,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Validation
 
-- [ ] **VAL-01**: ERC gate via kicad-cli with structured result parsing (pass/fail/warning)
-- [ ] **VAL-02**: DRC gate via kicad-cli with structured result parsing
+- [x] **VAL-01**: ERC gate via kicad-cli with structured result parsing (pass/fail/warning)
+- [x] **VAL-02**: DRC gate via kicad-cli with structured result parsing
 - [ ] **VAL-03**: Net consistency verification between schematic and PCB netlists
 - [ ] **VAL-04**: Structural/syntax-aware diff generation for S-expressions (difftastic integration)
 - [x] **VAL-05**: Pre-mutation structural validation (catch invalid operations before execution)
@@ -132,8 +132,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OPS-01 | Phase 2: Schema + IR | Complete |
 | OPS-02 | Phase 2: Schema + IR | Complete |
 | OPS-03 | Phase 2: Schema + IR | Complete |
-| VAL-01 | Phase 3: Validation Pipeline | Pending |
-| VAL-02 | Phase 3: Validation Pipeline | Pending |
+| VAL-01 | Phase 3: Validation Pipeline | Complete |
+| VAL-02 | Phase 3: Validation Pipeline | Complete |
 | VAL-03 | Phase 3: Validation Pipeline | Pending |
 | VAL-05 | Phase 3: Validation Pipeline | Complete |
 | VAL-06 | Phase 3: Validation Pipeline | Pending |
