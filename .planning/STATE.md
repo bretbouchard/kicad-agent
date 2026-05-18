@@ -3,16 +3,16 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-01 (Component add/remove operations)
-last_updated: "2026-05-18T07:54:35Z"
+stopped_at: Completed 04-02 (Duplicate and array replicate operations)
+last_updated: "2026-05-18T08:06:49Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 27
-  completed_plans: 10
-  planned_plans: 17
-  percent: 37
+  completed_plans: 11
+  planned_plans: 16
+  percent: 41
 ---
 
 # Project State
@@ -27,19 +27,19 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 ## Current Position
 
 Phase: 4 of 7 (Component Operations) -- IN PROGRESS
-Plan: 1 of 3 complete (04-01 done, 04-02 and 04-03 remaining)
-Status: Operation executor, add_component, and remove_component implemented. 201 tests passing.
+Plan: 2 of 3 complete (04-01 and 04-02 done, 04-03 remaining)
+Status: Duplicate and array replicate operations implemented. 235 tests passing.
 Last activity: 2026-05-18
 
-Progress: [==========░] 37%
+Progress: [==========░] 41%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: 6 min
-- Total execution time: 0.9 hours
+- Total execution time: 1.0 hours
 
 **By Phase:**
 
@@ -48,11 +48,11 @@ Progress: [==========░] 37%
 | 01-foundation | 3 | 16 min | 5 min |
 | 02-operation-schema-and-ir-layer | 3 | 19 min | 6 min |
 | 03-validation-pipeline | 3 | 15 min | 5 min |
-| 04-component-operations | 1 | 6 min | 6 min |
+| 04-component-operations | 2 | 13 min | 7 min |
 
 **Recent Trend:**
 
-- Last 5 plans: 04-01 (6 min), 03-03 (5 min), 03-02 (5 min), 03-01 (5 min), 02-03 (7 min)
+- Last 5 plans: 04-02 (7 min), 04-01 (6 min), 03-03 (5 min), 03-02 (5 min), 03-01 (5 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -98,6 +98,11 @@ Recent decisions affecting current work:
 - angle=None when 0.0 to match KiCad convention (no angle token in S-expression)
 - "?-suffixed" references (R?) allowed as duplicates since they represent unassigned designators
 - remove_component uses identity check (is) not equality for list removal of kiutils objects
+- SymbolProjectPath uses sheetInstancePath (not path); SymbolProjectInstance uses name (not project)
+- Matrix array skips (0,0) since source occupies it; creates rows*cols-1 replicas
+- Circular array rotates (dx, dy) around center using standard 2D rotation matrix
+- Reference incrementing scans all existing references to find next unused number per prefix
+- count constrained to 1-100 via Pydantic Field for DoS mitigation (T-04-07)
 
 ### Pending Todos
 
@@ -118,5 +123,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-18
-Stopped at: Completed 04-01 (Component add/remove operations)
-Resume file: .planning/phases/04-component-operations/04-01-SUMMARY.md
+Stopped at: Completed 04-02 (Duplicate and array replicate operations)
+Resume file: .planning/phases/04-component-operations/04-02-SUMMARY.md

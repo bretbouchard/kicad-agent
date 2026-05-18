@@ -89,7 +89,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md -- Operation executor, add_component and remove_component handlers (COMP-01, COMP-02)
-- [ ] 04-02-PLAN.md -- Duplicate and array replicate handlers with linear/circular/matrix patterns (COMP-03, COMP-04)
+- [x] 04-02-PLAN.md -- Duplicate and array replicate handlers with linear/circular/matrix patterns (COMP-03, COMP-04)
 - [ ] 04-03-PLAN.md -- Move/reposition and property modification handlers (COMP-05, COMP-06)
 
 ### Phase 5: Net, Reference, and Footprint Operations
@@ -156,7 +156,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 1. Foundation -- Parse, Serialize, Round-trip | 3/3 | Complete | 2026-05-18 |
 | 2. Operation Schema and IR Layer | 3/3 | Complete | 2026-05-18 |
 | 3. Validation Pipeline | 3/3 | Complete | 2026-05-18 |
-| 4. Component Operations | 1/3 | In Progress | - |
+| 4. Component Operations | 2/3 | In Progress | - |
 | 5. Net, Reference, and Footprint Operations | 0/4 | Not started | - |
 | 6. Cross-File Operations and Analysis | 0/4 | Not started | - |
 | 7. GSD Skill Integration | 0/4 | Not started | - |
