@@ -136,6 +136,10 @@ class OperationExecutor:
             from kicad_agent.ops.duplicate_component import duplicate_component
             return duplicate_component(op, ir)
 
+        if op_type == "array_replicate":
+            from kicad_agent.ops.array_replicate import array_replicate
+            return array_replicate(op, ir)
+
         if op_type == "move_component":
             raise NotImplementedError("move_component not yet implemented")
 
