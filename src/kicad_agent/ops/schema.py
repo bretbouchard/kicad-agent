@@ -35,6 +35,25 @@ from pydantic import BaseModel, BeforeValidator, Field, field_validator
 
 
 # ---------------------------------------------------------------------------
+# Shared validators (Council H-1, H-2: S-expression safety constraints)
+# ---------------------------------------------------------------------------
+
+# Safe characters for KiCad identifiers: alphanumeric, underscore, dash, colon, dot, hash
+_SAFE_ID_PATTERN = r'^[A-Za-z0-9_\-:.#/]+$'
+
+
+def _validate_safe_identifier(v: str, field_name: str) -> str:
+    """Reject strings containing characters unsafe for S-expression output."""
+    import re
+    if not re.match(_SAFE_ID_PATTERN, v):
+        raise ValueError(
+            f"{field_name} contains unsafe characters. "
+            f"Allowed: alphanumeric, underscore, dash, colon, dot, hash, forward slash."
+        )
+    return v
+
+
+# ---------------------------------------------------------------------------
 # Shared field types
 # ---------------------------------------------------------------------------
 
@@ -128,6 +147,16 @@ class AddComponentOp(BaseModel):
     )
     position: PositionSpec
 
+    @field_validator("library_id")
+    @classmethod
+    def _validate_library_id(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "library_id")
+
+    @field_validator("reference")
+    @classmethod
+    def _validate_reference(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "reference")
+
 
 class RemoveComponentOp(BaseModel):
     """Remove a component by reference designator.
@@ -146,6 +175,11 @@ class RemoveComponentOp(BaseModel):
         description="Reference designator to remove",
     )
 
+    @field_validator("reference")
+    @classmethod
+    def _validate_reference(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "reference")
+
 
 class MoveComponentOp(BaseModel):
     """Move a component to a new position.
@@ -161,6 +195,11 @@ class MoveComponentOp(BaseModel):
     target_file: TargetFile
     reference: str = Field(min_length=1, max_length=64)
     position: PositionSpec
+
+    @field_validator("reference")
+    @classmethod
+    def _validate_reference(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "reference")
 
 
 class ModifyPropertyOp(BaseModel):
@@ -179,6 +218,16 @@ class ModifyPropertyOp(BaseModel):
     reference: str = Field(min_length=1, max_length=64)
     property_name: str = Field(min_length=1, max_length=128)
     new_value: str = Field(max_length=1024)
+
+    @field_validator("reference")
+    @classmethod
+    def _validate_reference(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "reference")
+
+    @field_validator("property_name")
+    @classmethod
+    def _validate_property_name(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "property_name")
 
 
 class DuplicateComponentOp(BaseModel):
@@ -201,6 +250,11 @@ class DuplicateComponentOp(BaseModel):
     )
     offset: PositionSpec | None = None
     count: int = Field(default=1, ge=1, le=100, description="Number of copies (1-100)")
+
+    @field_validator("source_reference")
+    @classmethod
+    def _validate_reference(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "source_reference")
 
 
 class ArrayReplicateOp(BaseModel):
@@ -236,8 +290,13 @@ class ArrayReplicateOp(BaseModel):
     spacing: PositionSpec
     angle_step: float | None = None
     center: PositionSpec | None = None
-    rows: int | None = None
-    cols: int | None = None
+    rows: int | None = Field(default=None, ge=1, le=100)
+    cols: int | None = Field(default=None, ge=1, le=100)
+
+    @field_validator("source_reference")
+    @classmethod
+    def _validate_reference(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "source_reference")
 
 
 class AddNetOp(BaseModel):
@@ -483,6 +542,16 @@ class AssignFootprintOp(BaseModel):
         description="Footprint library reference, e.g. 'Package_DIP:DIP-8_W7.62mm'",
     )
 
+    @field_validator("reference")
+    @classmethod
+    def _validate_reference(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "reference")
+
+    @field_validator("footprint_lib_id")
+    @classmethod
+    def _validate_lib_id(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "footprint_lib_id")
+
 
 class SwapFootprintOp(BaseModel):
     """Swap a PCB footprint while preserving pad-to-net connections.
@@ -507,6 +576,16 @@ class SwapFootprintOp(BaseModel):
         description="New footprint library reference",
     )
 
+    @field_validator("reference")
+    @classmethod
+    def _validate_reference(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "reference")
+
+    @field_validator("new_footprint_lib_id")
+    @classmethod
+    def _validate_lib_id(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "new_footprint_lib_id")
+
 
 class ValidateFootprintOp(BaseModel):
     """Validate that a footprint exists in the available libraries.
@@ -524,6 +603,11 @@ class ValidateFootprintOp(BaseModel):
         max_length=256,
         description="Footprint library reference to validate",
     )
+
+    @field_validator("footprint_lib_id")
+    @classmethod
+    def _validate_lib_id(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "footprint_lib_id")
 
 
 class VerifyPinMapOp(BaseModel):
@@ -548,6 +632,16 @@ class VerifyPinMapOp(BaseModel):
         max_length=256,
         description="Footprint library reference to verify against",
     )
+
+    @field_validator("reference")
+    @classmethod
+    def _validate_reference(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "reference")
+
+    @field_validator("footprint_lib_id")
+    @classmethod
+    def _validate_lib_id(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "footprint_lib_id")
 
 
 # ---------------------------------------------------------------------------

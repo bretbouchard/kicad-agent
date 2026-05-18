@@ -106,6 +106,11 @@ class PcbIR(BaseIR):
         if self.get_net_by_name(net_name) is not None:
             raise ValueError(f"Net '{net_name}' already exists")
 
+        # Check for duplicate net number
+        for n in self.board.nets:
+            if n.number == net_number:
+                raise ValueError(f"Net number {net_number} already in use by '{n.name}'")
+
         net = Net(number=net_number, name=net_name)
         self.board.nets.append(net)
         self._record_mutation("add_net", {
@@ -133,8 +138,8 @@ class PcbIR(BaseIR):
                 if pad.net is not None and pad.net.name == net_name:
                     pad.net = None
 
-        # Remove the net from the board
-        self.board.nets = [n for n in self.board.nets if n.name != net_name]
+        # Remove the net from the board in-place (avoids stale list references)
+        self.board.nets[:] = [n for n in self.board.nets if n.name != net_name]
         self._record_mutation("remove_net", {"net_name": net_name})
 
     def rename_net(self, old_name: str, new_name: str) -> None:

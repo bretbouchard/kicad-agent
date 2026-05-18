@@ -145,15 +145,13 @@ class SchematicIR(BaseIR):
         Returns:
             List of (old_ref, new_ref) tuples showing what changed.
         """
-        all_refs = self.get_all_references()
-        components = self._parse_result.kiutils_obj.schematicSymbols
-
-        # Parse refs into (prefix, numeric_suffix) pairs, skipping unannotated
+        # Iterate components directly to avoid index coupling between two lists
         parsed: list[tuple[str, int, Any]] = []
-        for i, (ref, _lib_id) in enumerate(all_refs):
+        for comp in self._parse_result.kiutils_obj.schematicSymbols:
+            ref = self.get_component_property(comp, "Reference") or ""
             m = _REF_PATTERN.match(ref)
             if m and m.group(2) != "?":
-                parsed.append((m.group(1), int(m.group(2)), components[i]))
+                parsed.append((m.group(1), int(m.group(2)), comp))
 
         # Group by prefix
         groups: dict[str, list[tuple[int, Any]]] = {}
@@ -203,14 +201,14 @@ class SchematicIR(BaseIR):
         Returns:
             List of (old_ref, new_ref) tuples showing what was annotated.
         """
-        all_refs = self.get_all_references()
-        components = self._parse_result.kiutils_obj.schematicSymbols
+        symbols = self._parse_result.kiutils_obj.schematicSymbols
 
-        # Find unannotated refs (ending in '?')
+        # Find unannotated refs (ending in '?') by iterating symbols directly
         unannotated: list[tuple[str, Any]] = []
-        for i, (ref, _lib_id) in enumerate(all_refs):
+        for comp in symbols:
+            ref = self.get_component_property(comp, "Reference") or ""
             if ref.endswith("?"):
-                unannotated.append((ref, components[i]))
+                unannotated.append((ref, comp))
 
         # Apply prefix filter
         if prefix_filter:
@@ -225,7 +223,8 @@ class SchematicIR(BaseIR):
 
         # Find max existing numeric suffix per prefix across all annotated refs
         max_per_prefix: dict[str, int] = {}
-        for ref, _ in all_refs:
+        for comp in symbols:
+            ref = self.get_component_property(comp, "Reference") or ""
             m = _REF_PATTERN.match(ref)
             if m and m.group(2) != "?":
                 max_per_prefix[m.group(1)] = max(
@@ -283,6 +282,21 @@ class SchematicIR(BaseIR):
                     "footprint_lib_id": footprint_lib_id,
                 })
                 return
+
+        # No Footprint property exists — create it
+        from kiutils.items.common import Property, Position, Effects
+        comp.properties.append(Property(
+            key="Footprint",
+            value=footprint_lib_id,
+            id=len(comp.properties),
+            position=Position(X=0.0, Y=0.0, angle=0.0),
+            effects=Effects(),
+        ))
+        self._record_mutation("assign_footprint", {
+            "reference": reference,
+            "footprint_lib_id": footprint_lib_id,
+            "created_property": True,
+        })
 
     def get_component_footprint(self, reference: str) -> Optional[str]:
         """Get the current footprint libId for a component.
@@ -354,9 +368,6 @@ class SchematicIR(BaseIR):
         Returns:
             List of (reference, libId) tuples for unresolved symbols. Empty if all resolve.
         """
-        all_refs = self.get_all_references()
-        components = self._parse_result.kiutils_obj.schematicSymbols
-
         # Build set of valid libIds from embedded libSymbols
         valid_lib_ids: set[str] = set()
         lib_symbols = self._parse_result.kiutils_obj.libSymbols
@@ -370,7 +381,9 @@ class SchematicIR(BaseIR):
                     pass
 
         unresolved: list[tuple[str, str]] = []
-        for i, (ref, lib_id) in enumerate(all_refs):
+        for comp in self._parse_result.kiutils_obj.schematicSymbols:
+            ref = self.get_component_property(comp, "Reference") or ""
+            lib_id = comp.libId
             if lib_id and lib_id not in valid_lib_ids:
                 unresolved.append((ref, lib_id))
 

@@ -22,12 +22,15 @@ Usage:
 """
 
 import math
-import uuid
 from typing import Any
 
 from kiutils.items.common import Position
-from kiutils.items.schitems import SchematicSymbol
 
+from kicad_agent.ops._symbol_utils import (
+    collect_all_references,
+    deep_copy_symbol,
+    increment_reference,
+)
 from kicad_agent.ops.schema import ArrayReplicateOp
 
 
@@ -99,7 +102,7 @@ def _circular_positions(
         positions.append(Position(
             X=new_x,
             Y=new_y,
-            angle=source_pos.angle,
+            angle=source_pos.angle + angle_step * i,
         ))
     return positions
 
@@ -138,136 +141,6 @@ def _matrix_positions(
                 angle=source_pos.angle,
             ))
     return positions
-
-
-def _deep_copy_symbol(
-    symbol: SchematicSymbol,
-    new_reference: str,
-    new_position: Position,
-) -> SchematicSymbol:
-    """Create a deep copy of a SchematicSymbol with fresh UUIDs.
-
-    T-04-10: Generates fresh UUIDs for the symbol and all pins.
-
-    Args:
-        symbol: Source SchematicSymbol to copy.
-        new_reference: New reference designator.
-        new_position: New position for the copy.
-
-    Returns:
-        New SchematicSymbol with fresh UUIDs and updated reference/position.
-    """
-    from kiutils.items.common import Property
-    from kiutils.items.schitems import SymbolProjectInstance, SymbolProjectPath
-
-    # Generate fresh UUID for the symbol
-    new_uuid = str(uuid.uuid4())
-
-    # Copy pins with fresh UUIDs
-    new_pins = {name: str(uuid.uuid4()) for name in symbol.pins}
-
-    # Copy properties with updated Reference
-    new_properties = []
-    for prop in symbol.properties:
-        new_properties.append(Property(
-            key=prop.key,
-            value=new_reference if prop.key == "Reference" else prop.value,
-            id=prop.id,
-            position=Position(
-                X=prop.position.X,
-                Y=prop.position.Y,
-                angle=prop.position.angle,
-            ),
-            effects=prop.effects,
-            showName=prop.showName,
-        ))
-
-    # Copy instances with updated reference
-    new_instances = []
-    for inst in symbol.instances:
-        new_paths = [
-            SymbolProjectPath(
-                sheetInstancePath=path.sheetInstancePath,
-                reference=new_reference,
-                unit=path.unit,
-            )
-            for path in inst.paths
-        ]
-        new_instances.append(SymbolProjectInstance(
-            name=inst.name,
-            paths=new_paths,
-        ))
-
-    return SchematicSymbol(
-        libraryNickname=symbol.libraryNickname,
-        entryName=symbol.entryName,
-        libName=symbol.libName,
-        position=new_position,
-        unit=symbol.unit,
-        inBom=symbol.inBom,
-        onBoard=symbol.onBoard,
-        dnp=symbol.dnp,
-        fieldsAutoplaced=symbol.fieldsAutoplaced,
-        uuid=new_uuid,
-        properties=new_properties,
-        pins=new_pins,
-        mirror=symbol.mirror,
-        instances=new_instances,
-    )
-
-
-def _collect_all_references(ir: Any) -> set[str]:
-    """Collect all existing reference designators from the schematic.
-
-    Args:
-        ir: SchematicIR wrapping the parsed schematic.
-
-    Returns:
-        Set of all reference designator strings.
-    """
-    refs = set()
-    for sym in ir._parse_result.kiutils_obj.schematicSymbols:
-        for prop in sym.properties:
-            if prop.key == "Reference":
-                refs.add(prop.value)
-    return refs
-
-
-def _increment_reference(
-    source_reference: str,
-    all_references: set[str],
-) -> str:
-    """Generate the next available incremented reference.
-
-    Args:
-        source_reference: The source component's reference.
-        all_references: Set of all existing references.
-
-    Returns:
-        The next available reference string.
-    """
-    import re
-
-    match = re.match(r"^([A-Za-z]+)(\d*)$", source_reference)
-    if not match:
-        return source_reference
-
-    prefix = match.group(1)
-    number_str = match.group(2)
-    source_number = int(number_str) if number_str else None
-
-    used_numbers = set()
-    for ref in all_references:
-        ref_match = re.match(r"^([A-Za-z]+)(\d+)$", ref)
-        if ref_match and ref_match.group(1) == prefix:
-            used_numbers.add(int(ref_match.group(2)))
-
-    start = (source_number or 0) + 1
-    candidate = start
-    while candidate in used_numbers:
-        candidate += 1
-
-    return f"{prefix}{candidate}"
 
 
 def array_replicate(
@@ -333,16 +206,16 @@ def array_replicate(
         )
 
     # Collect all existing references for collision avoidance
-    all_references = _collect_all_references(ir)
+    all_references = collect_all_references(ir)
 
     created = []
     for position in positions:
         # Generate unique reference
-        new_ref = _increment_reference(op.source_reference, all_references)
+        new_ref = increment_reference(op.source_reference, all_references)
         all_references.add(new_ref)
 
         # Create deep copy with fresh UUIDs
-        new_symbol = _deep_copy_symbol(source, new_ref, position)
+        new_symbol = deep_copy_symbol(source, new_ref, position)
 
         # Append to schematicSymbols list
         ir._parse_result.kiutils_obj.schematicSymbols.append(new_symbol)
