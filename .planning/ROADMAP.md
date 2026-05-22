@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: Cross-File Operations and Analysis** - Schematic-to-PCB consistency, library propagation, structural diffs, connectivity analysis
 - [x] **Phase 7: GSD Skill Integration** - Claude skill manifest, handler, CLI wrapper, and project context renderer
 - [x] **Phase 8: Visual Primitives for PCB Spatial Reasoning** - AI that points while it reasons — coordinate-grounded DRC, routing guidance, and spatial analysis
-- [ ] **Phase 9: GRPO Spatial Reasoning Training** - DeepSeek-style RL training with coordinate-grounded reward signals on synthetic PCB maze data
+- [x] **Phase 9: GRPO Spatial Reasoning Training** - DeepSeek-style RL training with coordinate-grounded reward signals on synthetic PCB maze data
 
 ## Phase Details
 
@@ -179,13 +179,13 @@ Plans:
   5. Reward hacking is prevented via smooth penalty functions and multi-stage reward architecture
   6. Trained model shows measurable improvement on held-out maze-routing tasks vs baseline
   7. Training pipeline is reproducible with a single command and configurable hyperparameters
-**Plans**: 4 plans (to be planned)
+**Plans**: 4 plans
 
 Plans:
-- [ ] 09-01-PLAN.md -- Synthetic data pipeline at scale (100k+ maze samples with verified solutions and difficulty grading)
-- [ ] 09-02-PLAN.md -- Cold-start reasoning chain synthesis at scale (DFS traces, verified chains, difficulty-graded samples)
-- [ ] 09-03-PLAN.md -- Reward model architecture (per-step dense rewards, format/quality/accuracy signals, anti-hacking penalties)
-- [ ] 09-04-PLAN.md -- GRPO training loop (policy generation, reward scoring, policy updates, evaluation on held-out tasks)
+- [x] 09-01-PLAN.md -- Synthetic data pipeline at scale (100k+ maze samples with verified solutions and difficulty grading)
+- [x] 09-02-PLAN.md -- Cold-start reasoning chain synthesis at scale (DFS traces, verified chains, difficulty-graded samples)
+- [x] 09-03-PLAN.md -- Reward model architecture (per-step dense rewards, format/quality/accuracy signals, anti-hacking penalties)
+- [x] 09-04-PLAN.md -- GRPO training loop (policy generation, reward scoring, policy updates, evaluation on held-out tasks)
 
 ## Progress
 
@@ -202,4 +202,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 | 6. Cross-File Operations and Analysis | 4/4 | Complete | 2026-05-18 |
 | 7. GSD Skill Integration | 4/4 | Complete | 2026-05-18 |
 | 8. Visual Primitives for PCB Spatial Reasoning | 4/4 | Complete | 2026-05-22 |
-| 9. GRPO Spatial Reasoning Training | 0/4 | Not started | - |
+| 9. GRPO Spatial Reasoning Training | 4/4 | Complete | 2026-05-22 |
