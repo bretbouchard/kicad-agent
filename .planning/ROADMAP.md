@@ -2,7 +2,7 @@
 
 ## Overview
 
-Build an AI-safe KiCad structural editing tool in 7 phases: first achieve zero-diff round-trip parsing for all file types, then define the operation schema that insulates the LLM from raw S-expressions, then install validation gates before any mutation is attempted, then build editing operations from simple (components) to complex (nets, cross-file), add read-only analysis tools, and finally wrap it all in a GSD Skill for Claude integration.
+Build an AI-safe KiCad structural editing tool in 9 phases: first achieve zero-diff round-trip parsing for all file types, then define the operation schema that insulates the LLM from raw S-expressions, then install validation gates before any mutation is attempted, then build editing operations from simple (components) to complex (nets, cross-file), add read-only analysis tools, wrap it all in a GSD Skill for Claude integration, add visual primitives for spatial reasoning, and finally train a GRPO-based reward model for PCB spatial reasoning using synthetic training data.
 
 ## Phases
 
@@ -19,6 +19,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Net, Reference, and Footprint Operations** - Net CRUD, bus operations, reference management, footprint assignment
 - [x] **Phase 6: Cross-File Operations and Analysis** - Schematic-to-PCB consistency, library propagation, structural diffs, connectivity analysis
 - [x] **Phase 7: GSD Skill Integration** - Claude skill manifest, handler, CLI wrapper, and project context renderer
+- [x] **Phase 8: Visual Primitives for PCB Spatial Reasoning** - AI that points while it reasons — coordinate-grounded DRC, routing guidance, and spatial analysis
+- [ ] **Phase 9: GRPO Spatial Reasoning Training** - DeepSeek-style RL training with coordinate-grounded reward signals on synthetic PCB maze data
 
 ## Phase Details
 
@@ -146,19 +148,6 @@ Plans:
 - [x] 07-03-PLAN.md -- CLI wrapper for direct terminal usage (SKILL-03)
 - [x] 07-04-PLAN.md -- Project context renderer (SKILL-04)
 
-## Progress
-
-- [ ] **Phase 8: Visual Primitives for PCB Spatial Reasoning** - AI that points while it reasons — coordinate-grounded DRC, routing guidance, and spatial analysis
-- [x] **Phase 1: Foundation -- Parse, Serialize, Round-trip** - Parse all 4 KiCad file types with zero-diff round-trip fidelity
-- [x] **Phase 2: Operation Schema and IR Layer** - Define the JSON intent contract and IR dataclasses that insulates the LLM from raw S-expressions
-- [x] **Phase 3: Validation Pipeline** - ERC/DRC gates, structural checks, and error recovery before any mutation
-- [x] **Phase 4: Component Operations** - Add, remove, duplicate, move, and modify components with transaction safety
-- [x] **Phase 5: Net, Reference, and Footprint Operations** - Net CRUD, bus operations, reference management, footprint assignment
-- [x] **Phase 6: Cross-File Operations and Analysis** - Schematic-to-PCB consistency, library propagation, structural diffs, connectivity analysis
-- [x] **Phase 7: GSD Skill Integration** - Claude skill manifest, handler, CLI wrapper, and project context renderer
-
-## Phase Details
-
 ### Phase 8: Visual Primitives for PCB Spatial Reasoning
 **Goal**: AI reasons about PCB layouts using coordinate-grounded visual primitives — points for pins/vias, bounding boxes for components, paths for traces, regions for net classes. Closes the Reference Gap where natural language fails to precisely describe spatial relationships.
 **Depends on**: Phase 7
@@ -176,12 +165,32 @@ Plans:
 - [x] 08-01-PLAN.md -- PCB image renderer with coordinate grid overlay and spatial primitive extraction (VP-01, VP-02, VP-03)
 - [x] 08-02-PLAN.md -- Procedural maze-routing generator and cold-start reasoning chain synthesis (VP-04, VP-05)
 - [x] 08-03-PLAN.md -- Spatial query API and coordinate-grounded DRC/ERC report pipeline (VP-06, VP-07)
-- [ ] 08-04-PLAN.md -- Rick agent integration: coordinate-grounded findings for SI/PI/EMC/DFM reports (VP-08)
+- [x] 08-04-PLAN.md -- Rick agent integration: coordinate-grounded findings for SI/PI/EMC/DFM reports (VP-08)
+
+### Phase 9: GRPO Spatial Reasoning Training
+**Goal**: Train a reward model for PCB spatial reasoning using GRPO (Group Relative Policy Optimization) on synthetic maze-routing data from Phase 8. The reward model learns to score coordinate-grounded reasoning chains, enabling RL-based training that closes the Reference Gap at scale — not just for single boards but across arbitrary PCB topologies.
+**Depends on**: Phase 8
+**Requirements**: GRPO-01, GRPO-02, GRPO-03, GRPO-04, GRPO-05, GRPO-06, GRPO-07
+**Success Criteria** (what must be TRUE):
+  1. A dataset of 100k+ synthetic PCB maze-routing samples is generated from the Phase 8 maze generator with verified solutions
+  2. Cold-start reasoning chains are synthesized at scale (violation → coordinate → spatial context → fix) with DFS exploration traces
+  3. A reward model scores coordinate-grounded reasoning chains with per-step dense rewards (format, quality, accuracy)
+  4. GRPO training loop runs end-to-end: policy generates chains → reward model scores → policy updates
+  5. Reward hacking is prevented via smooth penalty functions and multi-stage reward architecture
+  6. Trained model shows measurable improvement on held-out maze-routing tasks vs baseline
+  7. Training pipeline is reproducible with a single command and configurable hyperparameters
+**Plans**: 4 plans (to be planned)
+
+Plans:
+- [ ] 09-01-PLAN.md -- Synthetic data pipeline at scale (100k+ maze samples with verified solutions and difficulty grading)
+- [ ] 09-02-PLAN.md -- Cold-start reasoning chain synthesis at scale (DFS traces, verified chains, difficulty-graded samples)
+- [ ] 09-03-PLAN.md -- Reward model architecture (per-step dense rewards, format/quality/accuracy signals, anti-hacking penalties)
+- [ ] 09-04-PLAN.md -- GRPO training loop (policy generation, reward scoring, policy updates, evaluation on held-out tasks)
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -192,4 +201,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 5. Net, Reference, and Footprint Operations | 4/4 | Complete | 2026-05-18 |
 | 6. Cross-File Operations and Analysis | 4/4 | Complete | 2026-05-18 |
 | 7. GSD Skill Integration | 4/4 | Complete | 2026-05-18 |
-| 8. Visual Primitives for PCB Spatial Reasoning | 3/4 | In Progress | — |
+| 8. Visual Primitives for PCB Spatial Reasoning | 4/4 | Complete | 2026-05-22 |
+| 9. GRPO Spatial Reasoning Training | 0/4 | Not started | - |

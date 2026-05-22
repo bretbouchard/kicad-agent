@@ -111,7 +111,7 @@ Inspired by DeepSeek's "Thinking with Visual Primitives" — interleave spatial 
 - [ ] **VP-05**: Generate cold-start reasoning chains from DRC/ERC violation reports with spatial grounding (violation → coordinate → fix recommendation)
 - [x] **VP-06**: Build spatial query API: "find all traces within X mm of point Y", "list components in region Z", "check clearance between component A and net B"
 - [x] **VP-07**: AI review pipeline that outputs spatially-grounded DRC findings: "The via at <point> [45.2, 22.1] is 0.15mm from the trace <path> [...] — violates minimum clearance"
-- [ ] **VP-08**: Integration with existing Rick agents (SI Rick, PI Rick, EMC Rick, DFM Rick) to produce coordinate-grounded reports instead of text-only findings
+- [x] **VP-08**: Integration with existing Rick agents (SI Rick, PI Rick, EMC Rick, DFM Rick) to produce coordinate-grounded reports instead of text-only findings
 
 ## Out of Scope
 
@@ -178,14 +178,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SKILL-02 | Phase 7: GSD Skill Integration | Complete |
 | SKILL-03 | Phase 7: GSD Skill Integration | Complete |
 | SKILL-04 | Phase 7: GSD Skill Integration | Complete |
-| VP-01 | Phase 8: Visual Primitives | Pending |
-| VP-02 | Phase 8: Visual Primitives | Pending |
-| VP-03 | Phase 8: Visual Primitives | Pending |
-| VP-04 | Phase 8: Visual Primitives | Pending |
-| VP-05 | Phase 8: Visual Primitives | Pending |
+| VP-01 | Phase 8: Visual Primitives | Complete | 08-01 |
+| VP-02 | Phase 8: Visual Primitives | Complete | 08-01 |
+| VP-03 | Phase 8: Visual Primitives | Complete | 08-01 |
+| VP-04 | Phase 8: Visual Primitives | Complete | 08-02 |
+| VP-05 | Phase 8: Visual Primitives | Complete | 08-02 |
 | VP-06 | Phase 8: Visual Primitives | Complete | 08-03 |
 | VP-07 | Phase 8: Visual Primitives | Complete | 08-03 |
-| VP-08 | Phase 8: Visual Primitives | Pending |
+| VP-08 | Phase 8: Visual Primitives | Complete | 08-04 |
 
 **Coverage:**
 - Total requirements: 52 (44 v1 + 8 Phase 8)
