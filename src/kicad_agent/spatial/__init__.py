@@ -1,6 +1,8 @@
 """Spatial primitives for PCB coordinate-grounded reasoning.
 
 VP-01, VP-02, VP-03: Spatial primitive types, extraction pipeline, and rendering.
+VP-04: Procedural maze-routing PCB generator.
+VP-05: Cold-start reasoning chain synthesis from DRC/ERC violations.
 
 Provides:
     - SpatialPoint, SpatialBox, SpatialPath, SpatialRegion: frozen dataclasses
@@ -8,6 +10,8 @@ Provides:
       extraction functions that produce spatial primitives from PcbIR
     - render_pcb_layer, render_pcb_layer_grid:
       PCB layer rendering with coordinate grid overlay
+    - generate_maze_board: Procedural maze-routing PCB puzzle generator
+    - synthesize_chain, synthesize_chains: Reasoning chain synthesis from violations
 """
 
 from kicad_agent.spatial.extractor import (
@@ -17,11 +21,18 @@ from kicad_agent.spatial.extractor import (
     extract_points,
     extract_regions,
 )
+from kicad_agent.spatial.maze_generator import MazeBoard, generate_maze_board
 from kicad_agent.spatial.primitives import (
     SpatialBox,
     SpatialPath,
     SpatialPoint,
     SpatialRegion,
+)
+from kicad_agent.spatial.reasoning_chains import (
+    ReasoningChain,
+    ReasoningStep,
+    synthesize_chain,
+    synthesize_chains,
 )
 from kicad_agent.spatial.renderer import (
     render_pcb_layer,
@@ -40,4 +51,10 @@ __all__ = [
     "extract_all",
     "render_pcb_layer",
     "render_pcb_layer_grid",
+    "MazeBoard",
+    "generate_maze_board",
+    "ReasoningChain",
+    "ReasoningStep",
+    "synthesize_chain",
+    "synthesize_chains",
 ]
