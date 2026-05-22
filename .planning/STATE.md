@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: complete
-stopped_at: Completed 07-04 (project context renderer) -- ALL PLANS DONE
-last_updated: "2026-05-18T18:57:37Z"
-last_activity: 2026-05-18
+milestone: v2.0
+milestone_name: visual-primitives
+status: planning
+stopped_at: Phase 8 (Visual Primitives) added — ready for planning
+last_updated: "2026-05-22T00:00:00Z"
+last_activity: 2026-05-22
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 7
-  total_plans: 24
+  total_plans: 28
   completed_plans: 24
-  percent: 100
+  percent: 85
 ---
 
 # Project State

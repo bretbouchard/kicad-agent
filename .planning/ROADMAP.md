@@ -148,8 +148,40 @@ Plans:
 
 ## Progress
 
+- [ ] **Phase 8: Visual Primitives for PCB Spatial Reasoning** - AI that points while it reasons — coordinate-grounded DRC, routing guidance, and spatial analysis
+- [x] **Phase 1: Foundation -- Parse, Serialize, Round-trip** - Parse all 4 KiCad file types with zero-diff round-trip fidelity
+- [x] **Phase 2: Operation Schema and IR Layer** - Define the JSON intent contract and IR dataclasses that insulates the LLM from raw S-expressions
+- [x] **Phase 3: Validation Pipeline** - ERC/DRC gates, structural checks, and error recovery before any mutation
+- [x] **Phase 4: Component Operations** - Add, remove, duplicate, move, and modify components with transaction safety
+- [x] **Phase 5: Net, Reference, and Footprint Operations** - Net CRUD, bus operations, reference management, footprint assignment
+- [x] **Phase 6: Cross-File Operations and Analysis** - Schematic-to-PCB consistency, library propagation, structural diffs, connectivity analysis
+- [x] **Phase 7: GSD Skill Integration** - Claude skill manifest, handler, CLI wrapper, and project context renderer
+
+## Phase Details
+
+### Phase 8: Visual Primitives for PCB Spatial Reasoning
+**Goal**: AI reasons about PCB layouts using coordinate-grounded visual primitives — points for pins/vias, bounding boxes for components, paths for traces, regions for net classes. Closes the Reference Gap where natural language fails to precisely describe spatial relationships.
+**Depends on**: Phase 7
+**Requirements**: VP-01, VP-02, VP-03, VP-04, VP-05, VP-06, VP-07, VP-08
+**Success Criteria** (what must be TRUE):
+  1. A PCB layer renders to a rasterized image with a mm-coordinate grid overlay
+  2. Spatial primitives (points, boxes, paths, regions) are extractable from any parsed KiCad file
+  3. A procedural maze-routing generator creates synthetic PCB puzzles solvable only by coordinate-grounded reasoning
+  4. DRC violations produce spatially-grounded reports: "The via at `<point>` [45.2, 22.1] violates clearance from `<path>` [...]"
+  5. Spatial queries return results: "find traces within 2mm of point (10, 15)"
+  6. Rick agents (SI, PI, EMC, DFM) produce coordinate-grounded findings instead of text-only reports
+**Plans**: 4 plans (to be planned)
+
+Plans:
+- [ ] 08-01-PLAN.md -- PCB image renderer with coordinate grid overlay and spatial primitive extraction (VP-01, VP-02, VP-03)
+- [ ] 08-02-PLAN.md -- Procedural maze-routing generator and cold-start reasoning chain synthesis (VP-04, VP-05)
+- [ ] 08-03-PLAN.md -- Spatial query API and coordinate-grounded DRC/ERC report pipeline (VP-06, VP-07)
+- [ ] 08-04-PLAN.md -- Rick agent integration: coordinate-grounded findings for SI/PI/EMC/DFM reports (VP-08)
+
+## Progress
+
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -160,3 +192,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 5. Net, Reference, and Footprint Operations | 4/4 | Complete | 2026-05-18 |
 | 6. Cross-File Operations and Analysis | 4/4 | Complete | 2026-05-18 |
 | 7. GSD Skill Integration | 4/4 | Complete | 2026-05-18 |
+| 8. Visual Primitives for PCB Spatial Reasoning | 0/4 | Planning | — |
