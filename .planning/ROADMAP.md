@@ -170,7 +170,7 @@ Plans:
   4. DRC violations produce spatially-grounded reports: "The via at `<point>` [45.2, 22.1] violates clearance from `<path>` [...]"
   5. Spatial queries return results: "find traces within 2mm of point (10, 15)"
   6. Rick agents (SI, PI, EMC, DFM) produce coordinate-grounded findings instead of text-only reports
-**Plans**: 4 plans (to be planned)
+**Plans**: 4 plans
 
 Plans:
 - [ ] 08-01-PLAN.md -- PCB image renderer with coordinate grid overlay and spatial primitive extraction (VP-01, VP-02, VP-03)
