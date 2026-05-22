@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: visual-primitives
 status: execute
-stopped_at: Completed 08-01 (spatial primitives and renderer)
-last_updated: "2026-05-22T08:58:45Z"
+stopped_at: Completed 08-02 (maze generator and reasoning chains)
+last_updated: "2026-05-22T15:01:01Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 28
-  completed_plans: 25
-  percent: 87
+  completed_plans: 26
+  percent: 89
 ---
 
 # Project State
@@ -26,19 +26,19 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 ## Current Position
 
 Phase: 8 of 8 (Visual Primitives for PCB Spatial Reasoning) -- IN PROGRESS
-Plan: 1 complete (08-01 done) -- 3 remaining
-Status: Spatial primitives and renderer complete. 501 tests (42 new). 08-02 next.
+Plan: 2 complete (08-01, 08-02 done) -- 2 remaining
+Status: Maze generator and reasoning chains complete. 37 tests (10 maze + 27 chains). 08-03 next.
 Last activity: 2026-05-22
 
-Progress: [█████████·] 87%
+Progress: [█████████▏] 89%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 24
+- Total plans completed: 26
 - Average duration: 5 min
-- Total execution time: 1.9 hours
+- Total execution time: 2.0 hours
 
 **By Phase:**
 
@@ -51,11 +51,11 @@ Progress: [█████████·] 87%
 | 05-net-reference-footprint-operations | 4 | 21 min | 5 min |
 | 06-cross-file-operations-and-analysis | 4 | 13 min | 3 min |
 | 07-gsd-skill-integration | 4 | 10 min | 3 min |
-| 08-visual-primitives | 1 | 16 min | 16 min |
+| 08-visual-primitives | 2 | 21 min | 11 min |
 
 **Recent Trend:**
 
-- Last 5 plans: 07-04 (2 min), 07-03 (2 min), 07-02 (2 min), 07-01 (4 min), 06-04 (4 min)
+- Last 5 plans: 08-02 (5 min), 08-01 (16 min), 07-04 (2 min), 07-03 (2 min), 07-02 (2 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -147,6 +147,10 @@ Recent decisions affecting current work:
 - Pad absolute position = footprint.position + rotate(pad.position, footprint.angle), with None angle as 0.0
 - Zone extraction uses ZonePolygon.coordinates (not outline), zone.layers (list), zone.netName (string)
 - Renderer: kicad-cli SVG export + cairocffi (primary), Pillow primitives (fallback), with mm grid overlay
+- Board.create_new() required for programmatic PCB construction -- Board() leaves version empty causing parse errors
+- 40% obstacle density with BFS regeneration loop (up to 50 attempts) guarantees solvable maze puzzles
+- Reasoning chains use 5-step pattern: observation -> spatial_context -> coordinate_reference -> diagnosis -> recommendation
+- Extended diagnosis/recommendation mappings beyond plan spec to cover 9 common DRC violation types
 
 ### Pending Todos
 
@@ -166,5 +170,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Completed 08-01 (spatial primitives and renderer) -- 3 plans remaining in Phase 8
-Resume file: .planning/phases/08-visual-primitives/08-01-SUMMARY.md
+Stopped at: Completed 08-02 (maze generator and reasoning chains) -- 2 plans remaining in Phase 8
+Resume file: .planning/phases/08-visual-primitives/08-02-SUMMARY.md
