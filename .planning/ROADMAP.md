@@ -173,7 +173,7 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 08-01-PLAN.md -- PCB image renderer with coordinate grid overlay and spatial primitive extraction (VP-01, VP-02, VP-03)
+- [x] 08-01-PLAN.md -- PCB image renderer with coordinate grid overlay and spatial primitive extraction (VP-01, VP-02, VP-03)
 - [ ] 08-02-PLAN.md -- Procedural maze-routing generator and cold-start reasoning chain synthesis (VP-04, VP-05)
 - [ ] 08-03-PLAN.md -- Spatial query API and coordinate-grounded DRC/ERC report pipeline (VP-06, VP-07)
 - [ ] 08-04-PLAN.md -- Rick agent integration: coordinate-grounded findings for SI/PI/EMC/DFM reports (VP-08)
@@ -192,4 +192,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 5. Net, Reference, and Footprint Operations | 4/4 | Complete | 2026-05-18 |
 | 6. Cross-File Operations and Analysis | 4/4 | Complete | 2026-05-18 |
 | 7. GSD Skill Integration | 4/4 | Complete | 2026-05-18 |
-| 8. Visual Primitives for PCB Spatial Reasoning | 0/4 | Planning | — |
+| 8. Visual Primitives for PCB Spatial Reasoning | 1/4 | In Progress | — |

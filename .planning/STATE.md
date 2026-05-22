@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: visual-primitives
-status: planning
-stopped_at: Phase 8 (Visual Primitives) added — ready for planning
-last_updated: "2026-05-22T00:00:00Z"
+status: execute
+stopped_at: Completed 08-01 (spatial primitives and renderer)
+last_updated: "2026-05-22T08:58:45Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 28
-  completed_plans: 24
-  percent: 85
+  completed_plans: 25
+  percent: 87
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 
 ## Current Position
 
-Phase: 7 of 7 (GSD Skill Integration) -- COMPLETE
-Plan: 4 complete (07-04 done) -- ALL PLANS EXECUTED
-Status: Project context renderer complete. 459 tests passing. All phases delivered.
-Last activity: 2026-05-18
+Phase: 8 of 8 (Visual Primitives for PCB Spatial Reasoning) -- IN PROGRESS
+Plan: 1 complete (08-01 done) -- 3 remaining
+Status: Spatial primitives and renderer complete. 501 tests (42 new). 08-02 next.
+Last activity: 2026-05-22
 
-Progress: [███████████] 100%
+Progress: [█████████·] 87%
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Progress: [███████████] 100%
 | 05-net-reference-footprint-operations | 4 | 21 min | 5 min |
 | 06-cross-file-operations-and-analysis | 4 | 13 min | 3 min |
 | 07-gsd-skill-integration | 4 | 10 min | 3 min |
+| 08-visual-primitives | 1 | 16 min | 16 min |
 
 **Recent Trend:**
 
@@ -142,6 +143,10 @@ Recent decisions affecting current work:
 - enrich_summary extracts UUIDs via extract_uuids() before PcbIR construction (required by PCB IR)
 - Broad Exception catch in enrichment loop for maximum resilience on malformed files
 - Hidden sections in render output: only shows file type sections when those files exist
+- Spatial primitives are frozen dataclasses with lazy Shapely import in to_shapely() methods
+- Pad absolute position = footprint.position + rotate(pad.position, footprint.angle), with None angle as 0.0
+- Zone extraction uses ZonePolygon.coordinates (not outline), zone.layers (list), zone.netName (string)
+- Renderer: kicad-cli SVG export + cairocffi (primary), Pillow primitives (fallback), with mm grid overlay
 
 ### Pending Todos
 
@@ -161,5 +166,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Completed 07-04 (project context renderer) -- ALL PLANS DONE
-Resume file: .planning/phases/07-gsd-skill-integration/07-04-SUMMARY.md
+Stopped at: Completed 08-01 (spatial primitives and renderer) -- 3 plans remaining in Phase 8
+Resume file: .planning/phases/08-visual-primitives/08-01-SUMMARY.md
