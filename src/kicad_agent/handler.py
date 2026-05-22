@@ -94,12 +94,11 @@ def handle_operation(
     json_str: str,
     project_dir: Path | None = None,
 ) -> Union[OperationResult, OperationError]:
-    """Validate an operation and return a structured result.
+    """Validate an operation, execute it, and return a structured result.
 
-    Currently validates the operation and returns a success result
-    indicating the operation was validated and queued.  Actual
-    mutation dispatch will be wired in Phase 4+ when operation
-    executors exist.
+    Validates the operation against the schema, then dispatches to the
+    OperationExecutor for actual file mutation. Transactions provide
+    automatic rollback on failure.
 
     Args:
         json_str: Raw JSON string from the skill interface.
@@ -112,25 +111,45 @@ def handle_operation(
     if err is not None:
         return err
 
-    # Extract the concrete operation from the discriminated union
-    concrete = op.root
+    # Resolve project directory
+    base_dir = Path(project_dir) if project_dir else Path.cwd()
 
-    # Build details from the operation fields
-    details: dict[str, Any] = {}
-    for field_name in type(concrete).model_fields:
-        if field_name in ("op_type", "target_file"):
-            continue
-        value = getattr(concrete, field_name)
-        if value is not None:
-            details[field_name] = value
-
-    return OperationResult(
-        success=True,
-        operation_type=concrete.op_type,
-        target_file=concrete.target_file,
-        message="Operation validated and queued for execution",
-        details=details,
-    )
+    # Execute the operation via the executor
+    try:
+        from kicad_agent.ops.executor import OperationExecutor
+        executor = OperationExecutor(base_dir=base_dir)
+        result = executor.execute(op)
+        return OperationResult(
+            success=True,
+            operation_type=result["operation"],
+            target_file=result["target_file"],
+            message=f"Operation {result['operation']} executed successfully",
+            details=result.get("details", {}),
+        )
+    except FileNotFoundError as exc:
+        concrete = op.root
+        return OperationError(
+            success=False,
+            operation_type=concrete.op_type,
+            error=str(exc),
+            suggestion="Ensure the target_file path is correct relative to the project directory.",
+        )
+    except ValueError as exc:
+        concrete = op.root
+        return OperationError(
+            success=False,
+            operation_type=concrete.op_type,
+            error=str(exc),
+            suggestion="Check the operation parameters and try again.",
+        )
+    except Exception as exc:
+        concrete = op.root
+        return OperationError(
+            success=False,
+            operation_type=concrete.op_type,
+            error=f"Execution failed: {exc}",
+            suggestion="The operation validated but failed during execution. Check the file format and parameters.",
+        )
 
 
 def format_result(result: Union[OperationResult, OperationError]) -> str:

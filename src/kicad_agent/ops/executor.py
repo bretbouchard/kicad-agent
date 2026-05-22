@@ -196,6 +196,44 @@ class OperationExecutor:
             result = ir.verify_pin_map(reference=op.reference, footprint_lib_id=op.footprint_lib_id)
             return result
 
+        # Phase 6 ops: wire, label, power, no-connect, junction
+        if op_type == "add_wire":
+            result = ir.add_wire(
+                start_x=op.start_x, start_y=op.start_y,
+                end_x=op.end_x, end_y=op.end_y,
+            )
+            return result
+
+        if op_type == "add_label":
+            result = ir.add_label(
+                name=op.name,
+                label_type=op.label_type,
+                x=op.position.x, y=op.position.y,
+                angle=op.position.angle,
+                shape=op.shape,
+            )
+            return result
+
+        if op_type == "add_power":
+            result = ir.add_power_symbol(
+                name=op.name,
+                x=op.position.x, y=op.position.y,
+                angle=op.position.angle,
+            )
+            return result
+
+        if op_type == "add_no_connect":
+            result = ir.add_no_connect(
+                x=op.position.x, y=op.position.y,
+            )
+            return result
+
+        if op_type == "add_junction":
+            result = ir.add_junction(
+                x=op.position.x, y=op.position.y,
+            )
+            return result
+
         # Bus ops: schema-only for now (IR methods not yet implemented)
         if op_type == "add_bus":
             return {"bus_name": op.bus_name, "member_count": len(op.member_nets)}

@@ -388,3 +388,218 @@ class SchematicIR(BaseIR):
                 unresolved.append((ref, lib_id))
 
         return unresolved
+
+    def add_wire(
+        self, start_x: float, start_y: float, end_x: float, end_y: float
+    ) -> dict[str, Any]:
+        """Add a wire segment between two points.
+
+        Args:
+            start_x: Start X coordinate in mm.
+            start_y: Start Y coordinate in mm.
+            end_x: End X coordinate in mm.
+            end_y: End Y coordinate in mm.
+
+        Returns:
+            Dict with wire details.
+        """
+        import uuid
+        from kiutils.items.schitems import Connection
+        from kiutils.items.common import Position, Stroke
+
+        wire = Connection(
+            type="wire",
+            points=[
+                Position(X=start_x, Y=start_y),
+                Position(X=end_x, Y=end_y),
+            ],
+            stroke=Stroke(width=0.0),
+            uuid=str(uuid.uuid4()),
+        )
+        self._parse_result.kiutils_obj.graphicalItems.append(wire)
+        self._record_mutation("add_wire", {
+            "start": [start_x, start_y],
+            "end": [end_x, end_y],
+        })
+        return {
+            "start": [start_x, start_y],
+            "end": [end_x, end_y],
+        }
+
+    def add_label(
+        self,
+        name: str,
+        label_type: str = "local",
+        x: float = 0.0,
+        y: float = 0.0,
+        angle: float = 0.0,
+        shape: str = "input",
+    ) -> dict[str, Any]:
+        """Add a net label to the schematic.
+
+        Args:
+            name: Label text.
+            label_type: One of "local", "global", "hierarchical".
+            x: X coordinate in mm.
+            y: Y coordinate in mm.
+            angle: Rotation angle in degrees.
+            shape: Shape for global/hierarchical labels.
+
+        Returns:
+            Dict with label details.
+        """
+        import uuid
+        from kiutils.items.common import Position
+        from kiutils.items.schitems import LocalLabel, GlobalLabel, HierarchicalLabel
+
+        pos = Position(X=x, Y=y, angle=angle)
+
+        if label_type == "global":
+            label = GlobalLabel(
+                text=name,
+                shape=shape,
+                position=pos,
+                uuid=str(uuid.uuid4()),
+            )
+            self._parse_result.kiutils_obj.globalLabels.append(label)
+        elif label_type == "hierarchical":
+            label = HierarchicalLabel(
+                text=name,
+                shape=shape,
+                position=pos,
+                uuid=str(uuid.uuid4()),
+            )
+            self._parse_result.kiutils_obj.hierarchicalLabels.append(label)
+        else:
+            label = LocalLabel(
+                text=name,
+                position=pos,
+                uuid=str(uuid.uuid4()),
+            )
+            self._parse_result.kiutils_obj.labels.append(label)
+
+        self._record_mutation("add_label", {
+            "name": name,
+            "label_type": label_type,
+            "position": [x, y, angle],
+        })
+        return {
+            "name": name,
+            "label_type": label_type,
+            "position": [x, y],
+        }
+
+    def add_power_symbol(
+        self,
+        name: str,
+        x: float = 0.0,
+        y: float = 0.0,
+        angle: float = 0.0,
+    ) -> dict[str, Any]:
+        """Add a power symbol (from the power library) to the schematic.
+
+        Power symbols (e.g. +5V, GND) are placed as SchematicSymbol objects
+        with libId ``power:<name>``. They carry a single power-output pin
+        that connects to the named net.
+
+        Args:
+            name: Power net name (e.g. "+5V", "GND", "+3V3").
+            x: X coordinate in mm.
+            y: Y coordinate in mm.
+            angle: Rotation angle in degrees.
+
+        Returns:
+            Dict with the placed power symbol details.
+        """
+        import uuid
+        from kiutils.items.common import Position, Property, Effects, Font
+        from kiutils.items.schitems import SchematicSymbol
+
+        lib_id = f"power:{name}"
+        pos = Position(X=x, Y=y, angle=angle)
+        sym_uuid = str(uuid.uuid4())
+
+        sym = SchematicSymbol(
+            libraryNickname="power",
+            entryName=name,
+            position=pos,
+            uuid=sym_uuid,
+            properties=[
+                Property(
+                    key="Reference",
+                    value="#PWR?",
+                    id=0,
+                    position=Position(X=0.0, Y=0.0, angle=0.0),
+                    effects=Effects(font=Font()),
+                ),
+                Property(
+                    key="Value",
+                    value=name,
+                    id=1,
+                    position=Position(X=0.0, Y=0.0, angle=0.0),
+                    effects=Effects(font=Font()),
+                ),
+                Property(
+                    key="Footprint",
+                    value="",
+                    id=2,
+                    position=Position(X=0.0, Y=0.0, angle=0.0),
+                    effects=Effects(font=Font()),
+                ),
+            ],
+        )
+        self._parse_result.kiutils_obj.schematicSymbols.append(sym)
+        self._record_mutation("add_power_symbol", {
+            "name": name,
+            "lib_id": lib_id,
+            "position": [x, y, angle],
+        })
+        return {
+            "name": name,
+            "lib_id": lib_id,
+            "position": [x, y],
+        }
+
+    def add_no_connect(self, x: float = 0.0, y: float = 0.0) -> dict[str, Any]:
+        """Add a no-connect flag at a position.
+
+        Args:
+            x: X coordinate in mm.
+            y: Y coordinate in mm.
+
+        Returns:
+            Dict with position details.
+        """
+        import uuid
+        from kiutils.items.common import Position
+        from kiutils.items.schitems import NoConnect
+
+        nc = NoConnect(
+            position=Position(X=x, Y=y),
+            uuid=str(uuid.uuid4()),
+        )
+        self._parse_result.kiutils_obj.noConnects.append(nc)
+        self._record_mutation("add_no_connect", {"position": [x, y]})
+        return {"position": [x, y]}
+
+    def add_junction(self, x: float = 0.0, y: float = 0.0) -> dict[str, Any]:
+        """Add a junction dot at a wire intersection.
+
+        Args:
+            x: X coordinate in mm.
+            y: Y coordinate in mm.
+
+        Returns:
+            Dict with position details.
+        """
+        import uuid
+        from kiutils.items.common import Position
+        from kiutils.items.schitems import Junction
+
+        jct = Junction(
+            position=Position(X=x, Y=y),
+            uuid=str(uuid.uuid4()),
+        )
+        self._parse_result.kiutils_obj.junctions.append(jct)
+        self._record_mutation("add_junction", {"position": [x, y]})
+        return {"position": [x, y]}
