@@ -109,8 +109,8 @@ Inspired by DeepSeek's "Thinking with Visual Primitives" — interleave spatial 
 - [ ] **VP-03**: Define visual primitive vocabulary for PCB: `<point x,y>`, `<box x1,y1,x2,y2>`, `<path [points...]>`, `<region x1,y1,x2,y2 type>`
 - [ ] **VP-04**: Generate procedural PCB "maze routing" tasks — synthetic boards where the AI must find valid trace paths around obstacles using coordinate-grounded reasoning
 - [ ] **VP-05**: Generate cold-start reasoning chains from DRC/ERC violation reports with spatial grounding (violation → coordinate → fix recommendation)
-- [ ] **VP-06**: Build spatial query API: "find all traces within X mm of point Y", "list components in region Z", "check clearance between component A and net B"
-- [ ] **VP-07**: AI review pipeline that outputs spatially-grounded DRC findings: "The via at <point> [45.2, 22.1] is 0.15mm from the trace <path> [...] — violates minimum clearance"
+- [x] **VP-06**: Build spatial query API: "find all traces within X mm of point Y", "list components in region Z", "check clearance between component A and net B"
+- [x] **VP-07**: AI review pipeline that outputs spatially-grounded DRC findings: "The via at <point> [45.2, 22.1] is 0.15mm from the trace <path> [...] — violates minimum clearance"
 - [ ] **VP-08**: Integration with existing Rick agents (SI Rick, PI Rick, EMC Rick, DFM Rick) to produce coordinate-grounded reports instead of text-only findings
 
 ## Out of Scope
@@ -183,8 +183,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VP-03 | Phase 8: Visual Primitives | Pending |
 | VP-04 | Phase 8: Visual Primitives | Pending |
 | VP-05 | Phase 8: Visual Primitives | Pending |
-| VP-06 | Phase 8: Visual Primitives | Pending |
-| VP-07 | Phase 8: Visual Primitives | Pending |
+| VP-06 | Phase 8: Visual Primitives | Complete | 08-03 |
+| VP-07 | Phase 8: Visual Primitives | Complete | 08-03 |
 | VP-08 | Phase 8: Visual Primitives | Pending |
 
 **Coverage:**

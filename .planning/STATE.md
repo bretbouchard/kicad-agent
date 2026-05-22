@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: visual-primitives
 status: execute
-stopped_at: Completed 08-02 (maze generator and reasoning chains)
-last_updated: "2026-05-22T15:01:01Z"
+stopped_at: Completed 08-03 (spatial query engine and DRC enrichment)
+last_updated: "2026-05-22T15:09:13Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 28
-  completed_plans: 26
-  percent: 89
+  completed_plans: 27
+  percent: 93
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 ## Current Position
 
 Phase: 8 of 8 (Visual Primitives for PCB Spatial Reasoning) -- IN PROGRESS
-Plan: 2 complete (08-01, 08-02 done) -- 2 remaining
-Status: Maze generator and reasoning chains complete. 37 tests (10 maze + 27 chains). 08-03 next.
+Plan: 3 complete (08-01, 08-02, 08-03 done) -- 1 remaining
+Status: Spatial query engine and DRC enrichment complete. 60 tests (12 query + 11 DRC + 37 prior). 08-04 next.
 Last activity: 2026-05-22
 
-Progress: [█████████▏] 89%
+Progress: [█████████▍] 93%
 
 ## Performance Metrics
 
@@ -51,11 +51,11 @@ Progress: [█████████▏] 89%
 | 05-net-reference-footprint-operations | 4 | 21 min | 5 min |
 | 06-cross-file-operations-and-analysis | 4 | 13 min | 3 min |
 | 07-gsd-skill-integration | 4 | 10 min | 3 min |
-| 08-visual-primitives | 2 | 21 min | 11 min |
+| 08-visual-primitives | 3 | 26 min | 9 min |
 
 **Recent Trend:**
 
-- Last 5 plans: 08-02 (5 min), 08-01 (16 min), 07-04 (2 min), 07-03 (2 min), 07-02 (2 min)
+- Last 5 plans: 08-03 (5 min), 08-02 (5 min), 08-01 (16 min), 07-04 (2 min), 07-03 (2 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -151,6 +151,9 @@ Recent decisions affecting current work:
 - 40% obstacle density with BFS regeneration loop (up to 50 attempts) guarantees solvable maze puzzles
 - Reasoning chains use 5-step pattern: observation -> spatial_context -> coordinate_reference -> diagnosis -> recommendation
 - Extended diagnosis/recommendation mappings beyond plan spec to cover 9 common DRC violation types
+- Spatial query radius capped at 10000mm for DoS mitigation (T-08-08, T-08-09); coordinate finite validation rejects NaN/Inf
+- Two-phase spatial query pattern: STRtree coarse filter + Shapely exact intersection/contains/distance check
+- ERC items without pos data get SpatialPoint(0,0) with entity_type=erc_item_no_pos for type consistency
 
 ### Pending Todos
 
@@ -170,5 +173,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Completed 08-02 (maze generator and reasoning chains) -- 2 plans remaining in Phase 8
-Resume file: .planning/phases/08-visual-primitives/08-02-SUMMARY.md
+Stopped at: Completed 08-03 (spatial query engine and DRC enrichment) -- 1 plan remaining in Phase 8
+Resume file: .planning/phases/08-visual-primitives/08-03-SUMMARY.md

@@ -3,6 +3,7 @@
 VP-01, VP-02, VP-03: Spatial primitive types, extraction pipeline, and rendering.
 VP-04: Procedural maze-routing PCB generator.
 VP-05: Cold-start reasoning chain synthesis from DRC/ERC violations.
+VP-06: Spatial query engine with Shapely STRtree.
 
 Provides:
     - SpatialPoint, SpatialBox, SpatialPath, SpatialRegion: frozen dataclasses
@@ -12,6 +13,7 @@ Provides:
       PCB layer rendering with coordinate grid overlay
     - generate_maze_board: Procedural maze-routing PCB puzzle generator
     - synthesize_chain, synthesize_chains: Reasoning chain synthesis from violations
+    - SpatialQueryEngine: Shapely STRtree spatial query engine
 """
 
 from kicad_agent.spatial.extractor import (
@@ -34,6 +36,7 @@ from kicad_agent.spatial.reasoning_chains import (
     synthesize_chain,
     synthesize_chains,
 )
+from kicad_agent.spatial.query import SpatialQueryEngine
 from kicad_agent.spatial.renderer import (
     render_pcb_layer,
     render_pcb_layer_grid,
@@ -57,4 +60,5 @@ __all__ = [
     "ReasoningStep",
     "synthesize_chain",
     "synthesize_chains",
+    "SpatialQueryEngine",
 ]
