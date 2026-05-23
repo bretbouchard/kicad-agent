@@ -1,4 +1,4 @@
-VERSION 4
+Version 4
 SymbolType CELL
 PIN 0 32 NONE 0
 PINATTR PinName C
