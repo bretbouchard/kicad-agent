@@ -2,7 +2,7 @@
 
 ## Overview
 
-Build an AI-safe KiCad structural editing tool in 12 phases: first achieve zero-diff round-trip parsing for all file types, then define the operation schema that insulates the LLM from raw S-expressions, then install validation gates before any mutation is attempted, then build editing operations from simple (components) to complex (nets, cross-file), add read-only analysis tools, wrap it all in a GSD Skill for Claude integration, add visual primitives for spatial reasoning, train a GRPO-based reward model for PCB spatial reasoning using synthetic training data, build AI-driven generative capabilities for schematic capture and PCB layout, integrate LTspice for SPICE simulation bridge, and add ADI footprint library access for on-demand manufacturer footprint fetching.
+Build an AI-safe KiCad structural editing tool in 19 phases: first achieve zero-diff round-trip parsing for all file types, then define the operation schema that insulates the LLM from raw S-expressions, then install validation gates before any mutation is attempted, then build editing operations from simple (components) to complex (nets, cross-file), add read-only analysis tools, wrap it all in a GSD Skill for Claude integration, add visual primitives for spatial reasoning, train a GRPO-based reward model for PCB spatial reasoning using synthetic training data, build AI-driven generative capabilities for schematic capture and PCB layout, integrate LTspice for SPICE simulation bridge, add ADI footprint library access, then extend with real-world training data, bidirectional LTspice bridge, AI generation wiring, component placement AI, package/distribution, CI/CD, and interactive routing suggestions.
 
 ## Phases
 
@@ -24,6 +24,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 10: AI-Driven PCB Generation** - Generative AI that creates schematics and PCB layouts from natural language intent, closing the gap from critic to creator
 - [x] **Phase 11: LTspice Integration** - Parse LTspice .asc schematics, extract components/nets/simulation commands, bridge KiCad-LTspice workflows
 - [x] **Phase 12: ADI Footprint Library** - On-demand ADI footprint/symbol download, library management, and manufacturer part integration
+- [ ] **Phase 13: Real-World PCB Training Pipeline** - GitHub crawler for KiCad repos, parse schematic+PCB pairs into structured graph datasets for real-world training
+- [ ] **Phase 14: Bidirectional KiCad↔LTspice** - KiCad schematic → .asc writer, close the simulation loop for design-simulate-iterate workflows
+- [ ] **Phase 15: AI Generation Wiring** - LLM-driven component suggestion, schematic drafting, design critique, and natural language to operations pipeline
+- [ ] **Phase 16: Component Placement AI** - Predict optimal component placement from schematic netlist using spatial reasoning and training data
+- [ ] **Phase 17: Package & Distribution** - PyPI publish, CLI entry point, pip install kicad-agent, documentation site
+- [ ] **Phase 18: CI/CD Pipeline** - GitHub Actions for test suite, linting, coverage gate, and release automation
+- [ ] **Phase 19: Interactive Routing Suggestions** - Use spatial primitives + training data to suggest trace routing on real boards
 
 ## Phase Details
 
@@ -250,10 +257,126 @@ Plans:
 - [x] 12-02-PLAN.md -- SamacSys HTTP client for part search and KiCad library download (ADI-01)
 - [x] 12-03-PLAN.md -- Fetch orchestrator wiring cache/client/lib_table, integration tests, REQUIREMENTS.md update (ADI-01, ADI-02, ADI-03, ADI-04)
 
+### Phase 13: Real-World PCB Training Pipeline
+**Goal**: Build a GitHub crawler and data pipeline that discovers KiCad repositories, parses schematic+PCB pairs into structured graph datasets, and produces real-world training data to complement Phase 9 synthetic mazes
+**Depends on**: Phase 8 (spatial primitives), Phase 9 (training pipeline)
+**Requirements**: RW-01, RW-02, RW-03, RW-04, RW-05
+**Success Criteria** (what must be TRUE):
+  1. GitHub search API discovers KiCad repos with both .kicad_sch and .kicad_pcb files
+  2. Schematic+PCB pairs parse into structured graph format (component nodes, net edges, spatial features)
+  3. Dataset normalized across repos with deduplication and quality filtering
+  4. 1,000+ real board pairs ingestible in a single pipeline run
+  5. Output format compatible with Phase 9 GRPO training pipeline
+**Plans**: 3 plans
+
+Plans:
+- [ ] 13-01-PLAN.md -- GitHub repo discovery and KiCad file pair extraction (RW-01)
+- [ ] 13-02-PLAN.md -- Schematic+PCB graph parser with spatial feature extraction (RW-02, RW-03)
+- [ ] 13-03-PLAN.md -- Dataset normalization, deduplication, and GRPO training format export (RW-04, RW-05)
+
+### Phase 14: Bidirectional KiCad↔LTspice
+**Goal**: Complete the LTspice bridge by adding KiCad → .asc export, enabling design in KiCad, simulate in LTspice, results flow back. Phase 11 reads LTspice; Phase 14 writes to it.
+**Depends on**: Phase 11 (LTspice reader), Phase 2 (operation schema)
+**Requirements**: BIDI-01, BIDI-02, BIDI-03, BIDI-04
+**Success Criteria** (what must be TRUE):
+  1. A KiCad schematic exports to a valid .asc file that LTspice can open
+  2. Component symbol mapping between KiCad symbols and LTspice .asy types
+  3. Net labels transfer correctly between KiCad and LTspice naming conventions
+  4. Simulation commands (.tran, .ac, .dc) attach correctly to exported schematics
+**Plans**: 3 plans
+
+Plans:
+- [ ] 14-01-PLAN.md -- KiCad component → LTspice symbol mapping table and converter (BIDI-02)
+- [ ] 14-02-PLAN.md -- .asc writer: KiCad schematic to LTspice .asc export (BIDI-01, BIDI-03)
+- [ ] 14-03-PLAN.md -- Simulation command injection and round-trip validation (BIDI-04)
+
+### Phase 15: AI Generation Wiring
+**Goal**: Wire an actual LLM into the Phase 10 generation pipeline — component suggestions from natural language, schematic drafting from netlists, design critique with spatial reasoning, and iterative refinement loop
+**Depends on**: Phase 10 (generation scaffolding), Phase 8 (spatial primitives)
+**Requirements**: AIGEN-01, AIGEN-02, AIGEN-03, AIGEN-04, AIGEN-05
+**Success Criteria** (what must be TRUE):
+  1. Natural language design intent produces a structured GenerationIntent with validated operations
+  2. LLM suggests components given a functional description with pin/footprint compatibility checking
+  3. Design critique identifies spatial issues (clearance violations, routing congestion, thermal hotspots)
+  4. Iterative refinement loop: generate → validate (ERC/DRC) → LLM fix → repeat until clean
+  5. End-to-end demo: "design a voltage regulator circuit" produces a valid .kicad_sch passing ERC
+**Plans**: 4 plans
+
+Plans:
+- [ ] 15-01-PLAN.md -- LLM integration layer: intent parsing, operation planning, component suggestion (AIGEN-01, AIGEN-02)
+- [ ] 15-02-PLAN.md -- Design critic with spatial reasoning (clearance, congestion, thermal analysis) (AIGEN-03)
+- [ ] 15-03-PLAN.md -- Iterative refinement loop with LLM-driven error fixing (AIGEN-04)
+- [ ] 15-04-PLAN.md -- End-to-end generation pipeline demo and validation (AIGEN-05)
+
+### Phase 16: Component Placement AI
+**Goal**: Given a schematic netlist, predict optimal component placement on PCB using spatial reasoning from Phase 8 and training data from Phase 13. Outputs placement suggestions that pass DRC.
+**Depends on**: Phase 8 (spatial primitives), Phase 9 (GRPO training), Phase 13 (real-world data)
+**Requirements**: PLACE-01, PLACE-02, PLACE-03, PLACE-04, PLACE-05
+**Success Criteria** (what must be TRUE):
+  1. Schematic netlist converts to placement graph (component nodes, connection edges, constraint weights)
+  2. Placement model predicts (x, y, rotation) for each component given board outline and constraints
+  3. Suggested placements pass DRC clearance checks
+  4. Placement quality scores on real designs comparable to manual placement (wirelength, congestion)
+  5. Interactive mode: user places some components, AI places the rest respecting constraints
+**Plans**: 4 plans
+
+Plans:
+- [ ] 16-01-PLAN.md -- Schematic netlist to placement graph converter (PLACE-01)
+- [ ] 16-02-PLAN.md -- Placement prediction model architecture and training (PLACE-02, PLACE-04)
+- [ ] 16-03-PLAN.md -- DRC-aware placement validation and scoring (PLACE-03)
+- [ ] 16-04-PLAN.md -- Interactive placement mode with constraint propagation (PLACE-05)
+
+### Phase 17: Package & Distribution
+**Goal**: Make kicad-agent installable via pip with a proper CLI entry point, PyPI package, and documentation. Transform from repo-only tool to distributable package.
+**Depends on**: Phase 7 (CLI wrapper)
+**Requirements**: DIST-01, DIST-02, DIST-03, DIST-04
+**Success Criteria** (what must be TRUE):
+  1. `pip install kicad-agent` installs a working package with CLI entry point
+  2. `kicad-agent` CLI command runs operations, validation, and project context
+  3. Package metadata (version, description, dependencies) is correct on PyPI
+  4. README and API documentation cover all public interfaces
+**Plans**: 3 plans
+
+Plans:
+- [ ] 17-01-PLAN.md -- Package structure, pyproject.toml updates, CLI entry point (DIST-01, DIST-02)
+- [ ] 17-02-PLAN.md -- PyPI publishing workflow and version management (DIST-03)
+- [ ] 17-03-PLAN.md -- README, API documentation, and usage examples (DIST-04)
+
+### Phase 18: CI/CD Pipeline
+**Goal**: GitHub Actions CI that runs the full test suite, linting, type checking, and coverage gate on every PR. Release automation for version bumps and PyPI publishing.
+**Depends on**: Phase 17 (package structure)
+**Requirements**: CI-01, CI-02, CI-03, CI-04
+**Success Criteria** (what must be TRUE):
+  1. Every PR runs full test suite (917+ tests) with pass/fail gate
+  2. Linting (ruff) and type checking (mypy) run on every push
+  3. Coverage report generated and 80%+ gate enforced
+  4. Release workflow: tag push → build → test → PyPI publish
+**Plans**: 2 plans
+
+Plans:
+- [ ] 18-01-PLAN.md -- GitHub Actions CI: test, lint, type-check, coverage gate (CI-01, CI-02, CI-03)
+- [ ] 18-02-PLAN.md -- Release automation: version bump, changelog, PyPI publish (CI-04)
+
+### Phase 19: Interactive Routing Suggestions
+**Goal**: Use spatial primitives (Phase 8) and training data (Phase 13) to suggest trace routing paths on real PCBs. Given component placement and netlist, propose routing that satisfies design rules and minimizes wirelength.
+**Depends on**: Phase 8 (spatial primitives), Phase 16 (placement AI)
+**Requirements**: ROUTE-01, ROUTE-02, ROUTE-03, ROUTE-04
+**Success Criteria** (what must be TRUE):
+  1. Given placed components and netlist, routing suggestions are generated for each net
+  2. Suggested routes satisfy DRC clearance and design rule constraints
+  3. Differential pair routing respects impedance and length matching constraints
+  4. Interactive mode: user approves/rejects suggestions, AI adapts to constraints
+**Plans**: 3 plans
+
+Plans:
+- [ ] 19-01-PLAN.md -- Routing graph model and pathfinding with DRC constraints (ROUTE-01, ROUTE-02)
+- [ ] 19-02-PLAN.md -- Differential pair routing with impedance and length matching (ROUTE-03)
+- [ ] 19-03-PLAN.md -- Interactive routing mode with approval and constraint adaptation (ROUTE-04)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18 -> 19
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -269,3 +392,10 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 10. AI-Driven PCB Generation | 6/6 | Complete | 2026-05-23 |
 | 11. LTspice Integration | 3/3 | Complete | 2026-05-23 |
 | 12. ADI Footprint Library | 3/3 | Complete | 2026-05-23 |
+| 13. Real-World PCB Training Pipeline | 0/3 | Planned | |
+| 14. Bidirectional KiCad↔LTspice | 0/3 | Planned | |
+| 15. AI Generation Wiring | 0/4 | Planned | |
+| 16. Component Placement AI | 0/4 | Planned | |
+| 17. Package & Distribution | 0/3 | Planned | |
+| 18. CI/CD Pipeline | 0/2 | Planned | |
+| 19. Interactive Routing Suggestions | 0/3 | Planned | |

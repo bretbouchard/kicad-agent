@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: visual-primitives
-status: complete
-stopped_at: "All 12 phases complete"
-last_updated: "2026-05-23T19:45:00Z"
+milestone: v2.1
+milestone_name: production-ai
+status: active
+stopped_at: "v2.1 roadmap created — 7 phases (13-19) planned"
+last_updated: "2026-05-23T20:00:00Z"
 last_activity: 2026-05-23
 progress:
-  total_phases: 12
+  total_phases: 19
   completed_phases: 12
-  total_plans: 44
+  total_plans: 65
   completed_plans: 44
-  percent: 100
+  percent: 63
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 12 (ADI Footprint Library) COMPLETE. All phases done.
+**Current focus:** v2.1 milestone "production-ai" — 7 new phases (13-19). v2.0 complete (12/12 phases, 917 tests passing).
 Last activity: 2026-05-23
 
 ## Current Position
 
-Phase: 12 of 12 (ADI Footprint Library) -- COMPLETE
-Plan: 03 of 03 complete (12-03-SUMMARY.md created)
-Status: All 12 phases complete. 909 tests passing (8 pre-existing failures unrelated to Phase 11/12). Project milestone v2.0 (visual-primitives) fully delivered.
+Phase: 13 of 19 (Real-World PCB Training Pipeline) -- NEXT
+Plan: 0 of 3 planned
+Status: v2.1 roadmap created. Ready to plan Phase 13. v2.0 complete with all 917 tests green.
 Last activity: 2026-05-23
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 63%
 
 ## Performance Metrics
 
@@ -101,6 +101,7 @@ Recent decisions affecting current work:
 
 - Phase 10 added: AI-Driven PCB Generation -- bridging from AI critic to AI creator with generative schematic/PCB capabilities
 - Phases 11-12 added: LTspice Integration and ADI Footprint Library -- ecosystem integration after ADI research (2026-05-23)
+- v2.1 milestone "production-ai" added: Phases 13-19 covering real-world training data, bidirectional LTspice, AI generation wiring, component placement AI, package/distribution, CI/CD, and interactive routing (2026-05-23)
 
 ### Pending Todos
 
@@ -118,5 +119,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: All 12 phases complete — project milestone v2.0 delivered
-Resume file: None (all phases complete)
+Stopped at: v2.1 roadmap created — 7 phases (13-19) planned, ready to plan Phase 13
+Resume file: .planning/phases/13-real-world-training-pipeline/
