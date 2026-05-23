@@ -961,6 +961,60 @@ class ValidatePowerNetsOp(BaseModel):
     target_file: TargetFile
 
 
+class AddCopperZoneOp(BaseModel):
+    """Add a copper zone/ground pour to a PCB.
+
+    Attributes:
+        op_type: Discriminator literal ``"add_copper_zone"``.
+        target_file: Relative path to the target KiCad PCB file (H-01 validated).
+        net_name: Net name for the zone (e.g. "GND").
+        layer: Copper layer (e.g. "F.Cu", "B.Cu").
+        clearance: Zone clearance in mm.
+        min_width: Minimum fill width in mm.
+        priority: Zone priority (higher = filled first).
+    """
+
+    op_type: Literal["add_copper_zone"] = "add_copper_zone"
+    target_file: TargetFile
+    net_name: str = Field(min_length=1, max_length=64, description="Net name for the zone")
+    layer: str = Field(default="F.Cu", max_length=32, description="Copper layer")
+    clearance: float = Field(default=0.5, gt=0, description="Clearance in mm")
+    min_width: float = Field(default=0.25, gt=0, description="Minimum fill width in mm")
+    priority: int = Field(default=0, ge=0, description="Zone priority")
+
+
+class SetBoardOutlineOp(BaseModel):
+    """Define PCB board shape as a rectangle on Edge.Cuts.
+
+    Attributes:
+        op_type: Discriminator literal ``"set_board_outline"``.
+        target_file: Relative path to the target KiCad PCB file (H-01 validated).
+        width: Board width in mm.
+        height: Board height in mm.
+    """
+
+    op_type: Literal["set_board_outline"] = "set_board_outline"
+    target_file: TargetFile
+    width: float = Field(gt=0, le=1000, description="Board width in mm")
+    height: float = Field(gt=0, le=1000, description="Board height in mm")
+
+
+class AssignNetClassOp(BaseModel):
+    """Assign a net class to a specific net in the PCB.
+
+    Attributes:
+        op_type: Discriminator literal ``"assign_net_class"``.
+        target_file: Relative path to the target KiCad PCB file (H-01 validated).
+        net_name: Name of the net to assign.
+        net_class_name: Name of the net class to assign.
+    """
+
+    op_type: Literal["assign_net_class"] = "assign_net_class"
+    target_file: TargetFile
+    net_name: str = Field(min_length=1, max_length=64, description="Net name")
+    net_class_name: str = Field(min_length=1, max_length=64, description="Net class name")
+
+
 # ---------------------------------------------------------------------------
 # Discriminated union (D-01, D-02, D-03)
 # ---------------------------------------------------------------------------
@@ -1005,7 +1059,10 @@ class Operation(BaseModel):
         | AddNetClassOp
         | AddDesignRuleOp
         | RepairSchematicOp
-        | ValidatePowerNetsOp,
+        | ValidatePowerNetsOp
+        | AddCopperZoneOp
+        | SetBoardOutlineOp
+        | AssignNetClassOp,
         Field(discriminator="op_type"),
     ]
 

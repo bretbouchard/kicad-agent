@@ -363,6 +363,30 @@ class OperationExecutor:
         if op_type == "validate_footprint":
             return {"footprint_lib_id": op.footprint_lib_id, "valid": True}
 
+        # Phase 10 PCB ops: copper zones, board outline, net class assignment
+        if op_type == "add_copper_zone":
+            from kicad_agent.ops.pcb_ops import add_copper_zone
+            return add_copper_zone(
+                ir, file_path,
+                net_name=op.net_name,
+                layer=op.layer,
+                clearance=op.clearance,
+                min_width=op.min_width,
+                priority=op.priority,
+            )
+
+        if op_type == "set_board_outline":
+            from kicad_agent.ops.pcb_ops import set_board_outline
+            return set_board_outline(ir, width=op.width, height=op.height)
+
+        if op_type == "assign_net_class":
+            from kicad_agent.ops.pcb_ops import assign_net_class
+            return assign_net_class(
+                ir, file_path,
+                net_name=op.net_name,
+                net_class_name=op.net_class_name,
+            )
+
         raise ValueError(f"Unknown PCB op_type: {op_type!r}")
 
     def _execute_project(self, op: Operation, file_path: Path) -> dict[str, Any]:
