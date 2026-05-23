@@ -10,10 +10,16 @@ from kicad_agent.project.adi_library.types import (
     FetchResult,
 )
 from kicad_agent.project.adi_library.cache import FootprintCache
+from kicad_agent.project.adi_library.client import (
+    SamacSysClient,
+    SearchResult,
+)
 
 __all__ = [
     "CacheEntry",
     "CacheManifest",
     "FetchResult",
     "FootprintCache",
+    "SamacSysClient",
+    "SearchResult",
 ]
