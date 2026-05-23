@@ -246,7 +246,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 12-01-PLAN.md -- Type definitions, filesystem cache with JSON manifest, ZIP extraction safety (ADI-04)
+- [x] 12-01-PLAN.md -- Type definitions, filesystem cache with JSON manifest, ZIP extraction safety (ADI-04)
 - [ ] 12-02-PLAN.md -- SamacSys HTTP client for part search and KiCad library download (ADI-01)
 - [ ] 12-03-PLAN.md -- Fetch orchestrator wiring cache/client/lib_table, integration tests, REQUIREMENTS.md update (ADI-01, ADI-02, ADI-03, ADI-04)
 
@@ -268,4 +268,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 9. GRPO Spatial Reasoning Training | 4/4 | Complete | 2026-05-22 |
 | 10. AI-Driven PCB Generation | 6/6 | Complete | 2026-05-23 |
 | 11. LTspice Integration | 3/3 | Complete | 2026-05-23 |
-| 12. ADI Footprint Library | 0/3 | Planned | 2026-05-23 |
+| 12. ADI Footprint Library | 1/3 | In Progress | 2026-05-23 |

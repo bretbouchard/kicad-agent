@@ -157,6 +157,15 @@ Parse LTspice .asc schematic files, extract components/nets/simulation commands,
 - [x] **LTSPICE-04**: Extract and parse simulation commands (.tran, .ac, .dc, .noise) from directives
 - [x] **LTSPICE-05**: Read .raw simulation result files with voltage/current traces by node name
 
+### ADI Footprint Library (Phase 12)
+
+On-demand fetching of ADI manufacturer footprints, symbols, and 3D models into KiCad library format, with caching and library management.
+
+- [ ] **ADI-01**: ADI footprints discoverable by part number via web search or API
+- [ ] **ADI-02**: .kicad_mod footprints download and import into local library
+- [ ] **ADI-03**: .kicad_sym symbols download and import into local library
+- [x] **ADI-04**: Library cache avoids re-downloading previously fetched parts
+
 ## Out of Scope
 
 | Feature | Reason |
@@ -254,12 +263,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LTSPICE-03 | Phase 11: LTspice Integration | Complete | 11-03 |
 | LTSPICE-04 | Phase 11: LTspice Integration | Complete | 11-01 |
 | LTSPICE-05 | Phase 11: LTspice Integration | Complete | 11-02 |
+| ADI-01 | Phase 12: ADI Footprint Library | Pending | 12-02 |
+| ADI-02 | Phase 12: ADI Footprint Library | Pending | 12-03 |
+| ADI-03 | Phase 12: ADI Footprint Library | Pending | 12-03 |
+| ADI-04 | Phase 12: ADI Footprint Library | Complete | 12-01 |
 
 **Coverage:**
-- Total requirements: 76 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10 + 5 Phase 11)
-- Mapped to phases: 76
+- Total requirements: 80 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10 + 5 Phase 11 + 4 Phase 12)
+- Mapped to phases: 80
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-23 — Phase 11 LTspice Integration added*
+*Last updated: 2026-05-23 — Phase 12 ADI Footprint Library added*

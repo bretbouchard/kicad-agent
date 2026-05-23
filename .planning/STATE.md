@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: visual-primitives
 status: active
-stopped_at: "Completed 11-03-PLAN.md"
-last_updated: "2026-05-23T18:05:43Z"
+stopped_at: "Completed 12-01-PLAN.md"
+last_updated: "2026-05-23T18:11:47Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 12
   completed_phases: 11
   total_plans: 38
-  completed_plans: 41
+  completed_plans: 42
   percent: 89
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 11 complete. Phase 12 (ADI Footprint Library) next.
+**Current focus:** Phase 12 (ADI Footprint Library) in progress. Plan 01 complete.
 Last activity: 2026-05-23
 
 ## Current Position
 
-Phase: 11 of 12 (LTspice Integration) -- COMPLETE
-Plan: 03 of 03 complete (11-03-SUMMARY.md created)
-Status: LTspiceNetGraph with wire connectivity, FLAG propagation, pin matching. All Phase 11 plans done.
+Phase: 12 of 12 (ADI Footprint Library) -- IN PROGRESS
+Plan: 01 of 03 complete (12-01-SUMMARY.md created)
+Status: Cache layer and types built. FootprintCache with JSON manifest, safe ZIP extraction, 14 tests passing.
 Last activity: 2026-05-23
 
 Progress: [█████████░] 89%
@@ -56,11 +56,12 @@ Progress: [█████████░] 89%
 | 09-grpo-training | 4 | 12 min | 3 min |
 | 10-ai-driven-pcb-generation | 6 | 49 min | 8 min |
 | 11-ltspice-integration | 3 | 11 min | 4 min |
+| 12-adi-footprint-library | 1 | 3 min | 3 min |
 
 **Recent Trend:**
 
-- Last 5 plans: 11-03 (5 min), 11-02 (3 min), 11-01 (3 min), 10-06 (9 min), 10-05 (6 min)
-- Trend: Steady (Phase 11 complete, 3 plans in 11 min)
+- Last 5 plans: 12-01 (3 min), 11-03 (5 min), 11-02 (3 min), 11-01 (3 min), 10-06 (9 min)
+- Trend: Steady (Phase 12 started, 1 plan in 3 min)
 
 *Updated after each plan completion*
 
@@ -90,6 +91,9 @@ Recent decisions affecting current work:
 - Arduino_Mega.kicad_sch incompatible with kicad-cli (format version issue); use RaspberryPi-uHAT fixture for sch export tests
 - SpiceLib RawRead requires explicit dialect='ltspice' when Command header lacks "ltspice" string
 - Trace unit inference from name prefix (V()=voltage, I()=current) is simpler than parsing spicelib var_type
+- Same-file guard in FootprintCache.add_entry prevents shutil.SameFileError when ZIP extraction writes directly to cache dirs
+- Manifest created on FootprintCache init for empty caches (existence check without add_entry)
+- Raw ZIP entry path validated against cache_root via resolve() prefix check (defense-in-depth with renamed target path)
 
 ### Roadmap Evolution
 
@@ -112,5 +116,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Completed 11-03-PLAN.md
-Resume file: .planning/phases/12-adi-footprint-library/12-01-PLAN.md
+Stopped at: Completed 12-01-PLAN.md
+Resume file: .planning/phases/12-adi-footprint-library/12-02-PLAN.md
