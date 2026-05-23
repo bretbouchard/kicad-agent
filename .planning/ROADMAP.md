@@ -271,7 +271,7 @@ Plans:
 
 Plans:
 - [x] 13-01-PLAN.md -- GitHub repo discovery and KiCad file pair extraction (RW-01)
-- [ ] 13-02-PLAN.md -- Schematic+PCB graph parser with spatial feature extraction (RW-02, RW-03)
+- [x] 13-02-PLAN.md -- Schematic+PCB graph parser with spatial feature extraction (RW-02, RW-03)
 - [ ] 13-03-PLAN.md -- Dataset normalization, deduplication, and GRPO training format export (RW-04, RW-05)
 
 ### Phase 14: Bidirectional KiCad↔LTspice
@@ -392,7 +392,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 10. AI-Driven PCB Generation | 6/6 | Complete | 2026-05-23 |
 | 11. LTspice Integration | 3/3 | Complete | 2026-05-23 |
 | 12. ADI Footprint Library | 3/3 | Complete | 2026-05-23 |
-| 13. Real-World PCB Training Pipeline | 1/3 | In Progress | |
+| 13. Real-World PCB Training Pipeline | 2/3 | In Progress | |
 | 14. Bidirectional KiCad↔LTspice | 0/3 | Planned | |
 | 15. AI Generation Wiring | 0/4 | Planned | |
 | 16. Component Placement AI | 0/4 | Planned | |
