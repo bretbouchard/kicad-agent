@@ -1,8 +1,8 @@
-"""Frozen dataclass types for LTspice .asc schematic parsing.
+"""Frozen dataclass types for LTspice .asc schematic parsing and .raw simulation results.
 
 Provides immutable, hashable data structures representing components,
-wires, flags, directives, and the top-level schematic parsed from
-LTspice .asc files via SpiceLib AscEditor.
+wires, flags, directives, simulation result traces, and the top-level
+schematic parsed from LTspice .asc files via SpiceLib AscEditor.
 """
 
 from __future__ import annotations
@@ -101,3 +101,59 @@ class LTspiceSchematic:
     directives: tuple[LTspiceDirective, ...]
     source_path: str
     simulation_commands: tuple = ()  # Updated in Task 2
+
+
+@dataclass(frozen=True)
+class LTspiceTrace:
+    """A single voltage or current trace from an LTspice .raw simulation result.
+
+    Attributes:
+        name: Trace name (e.g. "V(n001)", "I(R1)", "time").
+        values: Measured values as an immutable tuple of floats.
+        unit: Engineering unit inferred from the trace name
+              (e.g. "voltage", "current", "time", or "").
+    """
+
+    name: str
+    values: tuple[float, ...]
+    unit: str
+
+
+@dataclass(frozen=True)
+class SimulationResult:
+    """Parsed result from an LTspice .raw simulation file.
+
+    All collections are immutable tuples for frozen dataclass compatibility.
+
+    Attributes:
+        traces: All traces including the time/axis trace as the first element.
+        trace_names: Names of all traces in the same order as ``traces``.
+        raw_type: Analysis type string (e.g. "transient", "ac", "unknown").
+        n_points: Number of data points per trace.
+        n_variables: Number of distinct variables (including axis).
+        source_path: Absolute path to the source .raw file.
+    """
+
+    traces: tuple[LTspiceTrace, ...]
+    trace_names: tuple[str, ...]
+    raw_type: str
+    n_points: int
+    n_variables: int
+    source_path: str
+
+    def get_trace(self, name: str) -> LTspiceTrace | None:
+        """Look up a trace by name.
+
+        Returns the matching :class:`LTspiceTrace` or ``None`` if not found.
+        """
+        for trace in self.traces:
+            if trace.name == name:
+                return trace
+        return None
+
+    @property
+    def time_axis(self) -> tuple[float, ...]:
+        """Return the first trace's values (time is always index 0)."""
+        if not self.traces:
+            return ()
+        return self.traces[0].values
