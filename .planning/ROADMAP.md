@@ -211,7 +211,7 @@ Plans:
 - [x] 10-01-PLAN.md -- Project file parsers and library management (sym-lib-table, fp-lib-table, .kicad_dru, .kicad_pro) (GEN-01, GEN-06)
 - [x] 10-02-PLAN.md -- Manufacturing export wrappers (Gerber, drill, BOM, netlist, position, STEP, PDF via kicad-cli) (GEN-02)
 - [x] 10-03-PLAN.md -- Schematic repair, validation gates, and PCB operations (ERC repair, power validation, copper zones, net classes, board outline) (GEN-03, GEN-04, GEN-05, GEN-06)
-- [ ] 10-04-PLAN.md -- GenerationIntent schema and template board generator (extends maze_generator pattern for real PCB/schematic creation) (GEN-07, GEN-08)
+- [x] 10-04-PLAN.md -- GenerationIntent schema and template board generator (extends maze_generator pattern for real PCB/schematic creation) (GEN-07, GEN-08)
 - [ ] 10-05-PLAN.md -- Component placement engine and operation-sequence planning (placement algorithms, spatial validation, LLM-driven operation planning) (GEN-09)
 - [ ] 10-06-PLAN.md -- End-to-end generation pipeline with iterative refinement (full loop: intent → board → validate → fix → export) (GEN-10, GEN-11, GEN-12)
 
