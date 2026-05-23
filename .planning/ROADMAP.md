@@ -2,7 +2,7 @@
 
 ## Overview
 
-Build an AI-safe KiCad structural editing tool in 10 phases: first achieve zero-diff round-trip parsing for all file types, then define the operation schema that insulates the LLM from raw S-expressions, then install validation gates before any mutation is attempted, then build editing operations from simple (components) to complex (nets, cross-file), add read-only analysis tools, wrap it all in a GSD Skill for Claude integration, add visual primitives for spatial reasoning, train a GRPO-based reward model for PCB spatial reasoning using synthetic training data, and finally build AI-driven generative capabilities for schematic capture and PCB layout.
+Build an AI-safe KiCad structural editing tool in 12 phases: first achieve zero-diff round-trip parsing for all file types, then define the operation schema that insulates the LLM from raw S-expressions, then install validation gates before any mutation is attempted, then build editing operations from simple (components) to complex (nets, cross-file), add read-only analysis tools, wrap it all in a GSD Skill for Claude integration, add visual primitives for spatial reasoning, train a GRPO-based reward model for PCB spatial reasoning using synthetic training data, build AI-driven generative capabilities for schematic capture and PCB layout, integrate LTspice for SPICE simulation bridge, and add ADI footprint library access for on-demand manufacturer footprint fetching.
 
 ## Phases
 
@@ -22,6 +22,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 8: Visual Primitives for PCB Spatial Reasoning** - AI that points while it reasons — coordinate-grounded DRC, routing guidance, and spatial analysis
 - [x] **Phase 9: GRPO Spatial Reasoning Training** - DeepSeek-style RL training with coordinate-grounded reward signals on synthetic PCB maze data
 - [x] **Phase 10: AI-Driven PCB Generation** - Generative AI that creates schematics and PCB layouts from natural language intent, closing the gap from critic to creator
+- [ ] **Phase 11: LTspice Integration** - Parse LTspice .asc schematics, extract components/nets/simulation commands, bridge KiCad-LTspice workflows
+- [ ] **Phase 12: ADI Footprint Library** - On-demand ADI footprint/symbol download, library management, and manufacturer part integration
 
 ## Phase Details
 
@@ -150,7 +152,7 @@ Plans:
 - [x] 07-04-PLAN.md -- Project context renderer (SKILL-04)
 
 ### Phase 8: Visual Primitives for PCB Spatial Reasoning
-**Goal**: AI reasons about PCB layouts using coordinate-grounded visual primitives — points for pins/vias, bounding boxes for components, paths for traces, regions for net classes. Closes the Reference Gap where natural language fails to precisely describe spatial relationships.
+**Goal**: AI reasons about PCB layouts using coordinate-grounded visual primitives -- points for pins/vias, bounding boxes for components, paths for traces, regions for net classes. Closes the Reference Gap where natural language fails to precisely describe spatial relationships.
 **Depends on**: Phase 7
 **Requirements**: VP-01, VP-02, VP-03, VP-04, VP-05, VP-06, VP-07, VP-08
 **Success Criteria** (what must be TRUE):
@@ -169,14 +171,14 @@ Plans:
 - [x] 08-04-PLAN.md -- Rick agent integration: coordinate-grounded findings for SI/PI/EMC/DFM reports (VP-08)
 
 ### Phase 9: GRPO Spatial Reasoning Training
-**Goal**: Train a reward model for PCB spatial reasoning using GRPO (Group Relative Policy Optimization) on synthetic maze-routing data from Phase 8. The reward model learns to score coordinate-grounded reasoning chains, enabling RL-based training that closes the Reference Gap at scale — not just for single boards but across arbitrary PCB topologies.
+**Goal**: Train a reward model for PCB spatial reasoning using GRPO (Group Relative Policy Optimization) on synthetic maze-routing data from Phase 8. The reward model learns to score coordinate-grounded reasoning chains, enabling RL-based training that closes the Reference Gap at scale -- not just for single boards but across arbitrary PCB topologies.
 **Depends on**: Phase 8
 **Requirements**: GRPO-01, GRPO-02, GRPO-03, GRPO-04, GRPO-05, GRPO-06, GRPO-07
 **Success Criteria** (what must be TRUE):
   1. A dataset of 100k+ synthetic PCB maze-routing samples is generated from the Phase 8 maze generator with verified solutions
-  2. Cold-start reasoning chains are synthesized at scale (violation → coordinate → spatial context → fix) with DFS exploration traces
+  2. Cold-start reasoning chains are synthesized at scale (violation -> coordinate -> spatial context -> fix) with DFS exploration traces
   3. A reward model scores coordinate-grounded reasoning chains with per-step dense rewards (format, quality, accuracy)
-  4. GRPO training loop runs end-to-end: policy generates chains → reward model scores → policy updates
+  4. GRPO training loop runs end-to-end: policy generates chains -> reward model scores -> policy updates
   5. Reward hacking is prevented via smooth penalty functions and multi-stage reward architecture
   6. Trained model shows measurable improvement on held-out maze-routing tasks vs baseline
   7. Training pipeline is reproducible with a single command and configurable hyperparameters
@@ -189,7 +191,7 @@ Plans:
 - [x] 09-04-PLAN.md -- GRPO training loop (policy generation, reward scoring, policy updates, evaluation on held-out tasks)
 
 ### Phase 10: AI-Driven PCB Generation
-**Goal**: Two-tier phase — first close the practical operations gap (project files, manufacturing exports, schematic repair, PCB operations), then build generative AI capabilities on top. Tier 1 operations are independently valuable; Tier 2 generation requires Tier 1.
+**Goal**: Two-tier phase -- first close the practical operations gap (project files, manufacturing exports, schematic repair, PCB operations), then build generative AI capabilities on top. Tier 1 operations are independently valuable; Tier 2 generation requires Tier 1.
 **Depends on**: Phase 9
 **Requirements**: GEN-01, GEN-02, GEN-03, GEN-04, GEN-05, GEN-06, GEN-07, GEN-08, GEN-09, GEN-10, GEN-11, GEN-12
 **Success Criteria** (what must be TRUE):
@@ -202,8 +204,8 @@ Plans:
   7. A GenerationIntent schema converts natural language design parameters to structured operation sequences
   8. Template board generation creates valid .kicad_pcb files from high-level parameters (size, layers, components)
   9. Component placement engine places components with clearance validation and spatial scoring
-  10. End-to-end pipeline: intent → template → operations → validation → manufacturing export
-  11. Iterative refinement loop: generate → validate (ERC/DRC) → fix → repeat until clean
+  10. End-to-end pipeline: intent -> template -> operations -> validation -> manufacturing export
+  11. Iterative refinement loop: generate -> validate (ERC/DRC) -> fix -> repeat until clean
   12. Generated boards achieve DRC pass on simple designs (5-10 components with valid ERC)
 **Plans**: 6 plans
 
@@ -213,12 +215,40 @@ Plans:
 - [x] 10-03-PLAN.md -- Schematic repair, validation gates, and PCB operations (ERC repair, power validation, copper zones, net classes, board outline) (GEN-03, GEN-04, GEN-05, GEN-06)
 - [x] 10-04-PLAN.md -- GenerationIntent schema and template board generator (extends maze_generator pattern for real PCB/schematic creation) (GEN-07, GEN-08)
 - [x] 10-05-PLAN.md -- Component placement engine and operation-sequence planning (placement algorithms, spatial validation, LLM-driven operation planning) (GEN-09)
-- [x] 10-06-PLAN.md -- End-to-end generation pipeline with iterative refinement (full loop: intent → board → validate → fix → export) (GEN-10, GEN-11, GEN-12)
+- [x] 10-06-PLAN.md -- End-to-end generation pipeline with iterative refinement (full loop: intent -> board -> validate -> fix -> export) (GEN-10, GEN-11, GEN-12)
+
+### Phase 11: LTspice Integration
+**Goal**: Parse LTspice .asc schematic files, extract components, nets, and simulation commands, and build a bidirectional KiCad-LTspice bridge for simulation-driven design workflows
+**Depends on**: Phase 1 (parser infrastructure)
+**Requirements**: LTSPICE-01, LTSPICE-02, LTSPICE-03, LTSPICE-04, LTSPICE-05
+**Success Criteria** (what must be TRUE):
+  1. A .asc file parses into structured component/net/simulation data via SpiceLib
+  2. Components with values, positions, orientations, and node connections are extractable
+  3. Net connectivity graph is derivable from WIRE and FLAG statements
+  4. Simulation commands (.tran, .ac, .dc, .noise) are extractable and parseable
+  5. .raw simulation results are readable (voltage/current traces by node)
+**Plans**: 3 plans
+
+Plans:
+- [ ] 11-01-PLAN.md -- .asc parser with SpiceLib, frozen dataclass types, .asy symbol stubs, simulation command parser (LTSPICE-01, LTSPICE-02, LTSPICE-04)
+- [ ] 11-02-PLAN.md -- .raw simulation result reader with SpiceLib RawRead and trace extraction (LTSPICE-05)
+- [ ] 11-03-PLAN.md -- Net connectivity graph derivation from wire geometry using networkx (LTSPICE-03)
+
+### Phase 12: ADI Footprint Library
+**Goal**: On-demand fetching of ADI manufacturer footprints, symbols, and 3D models into KiCad library format, with caching and library management
+**Depends on**: Phase 5 (footprint operations), Phase 10 (library management)
+**Requirements**: ADI-01, ADI-02, ADI-03, ADI-04
+**Success Criteria** (what must be TRUE):
+  1. ADI footprints are discoverable by part number via web search or API
+  2. .kicad_mod footprints download and import into local library
+  3. .kicad_sym symbols download and import into local library
+  4. Library cache avoids re-downloading previously fetched parts
+**Plans**: 2-3 plans (estimated)
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -232,3 +262,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 8. Visual Primitives for PCB Spatial Reasoning | 4/4 | Complete | 2026-05-22 |
 | 9. GRPO Spatial Reasoning Training | 4/4 | Complete | 2026-05-22 |
 | 10. AI-Driven PCB Generation | 6/6 | Complete | 2026-05-23 |
+| 11. LTspice Integration | 0/3 | Planned | |
+| 12. ADI Footprint Library | 0/? | Not Started | |
