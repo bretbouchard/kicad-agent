@@ -320,7 +320,7 @@ class AdiFetcher:
         """
         from kiutils.footprint import Footprint
 
-        Footprint.parse(footprint_path)
+        Footprint.from_file(str(footprint_path))
 
     def _validate_symbol(self, symbol_path: Path) -> None:
         """Validate a .kicad_sym file using content check (T-12-09).
