@@ -603,3 +603,132 @@ class SchematicIR(BaseIR):
         self._parse_result.kiutils_obj.junctions.append(jct)
         self._record_mutation("add_junction", {"position": [x, y]})
         return {"position": [x, y]}
+
+    # -------------------------------------------------------------------
+    # Pin / wire / label position helpers (for repair operations)
+    # -------------------------------------------------------------------
+
+    def get_pin_positions(self) -> list[dict[str, Any]]:
+        """Return all pin absolute positions with symbol reference and pin name.
+
+        Computes absolute pin positions using the Y-inversion pattern:
+            absolute = (sx + rotated_px, sy - rotated_py)
+        where (sx, sy) is the symbol placement position and (px, py) is the
+        pin offset in the library definition. Rotation is applied to (px, py)
+        before translation.
+
+        T-10-11: Explicit Y-inversion via (sx+px, sy-py).
+
+        Returns:
+            List of dicts with keys: reference, pin_name, pin_number, x, y,
+            electrical_type.
+        """
+        import math
+
+        sch = self._parse_result.kiutils_obj
+
+        # Build libId -> list of pin definitions from embedded libSymbols
+        lib_pin_map: dict[str, list] = {}
+        for lib_sym in sch.libSymbols:
+            lib_id = getattr(lib_sym, "libId", "")
+            pins: list = []
+            for unit in lib_sym.units:
+                pins.extend(unit.pins)
+            lib_pin_map[lib_id] = pins
+
+        result: list[dict[str, Any]] = []
+        for sym in sch.schematicSymbols:
+            ref = self.get_component_property(sym, "Reference") or ""
+            lib_id = sym.libId
+            sx = sym.position.X
+            sy = sym.position.Y
+            angle_deg = sym.position.angle or 0.0
+            angle_rad = math.radians(angle_deg)
+
+            pin_defs = lib_pin_map.get(lib_id, [])
+            for pin_def in pin_defs:
+                px = pin_def.position.X
+                py = pin_def.position.Y
+
+                # Apply rotation to pin offset, then translate.
+                # Y-inversion: KiCad pin Y is inverted relative to sheet coords.
+                rot_px = px * math.cos(angle_rad) - py * math.sin(angle_rad)
+                rot_py = px * math.sin(angle_rad) + py * math.cos(angle_rad)
+
+                # T-10-11: pin absolute position = (sx + rot_px, sy - rot_py)
+                abs_x = sx + rot_px
+                abs_y = sy - rot_py
+
+                result.append({
+                    "reference": ref,
+                    "pin_name": pin_def.name,
+                    "pin_number": pin_def.number,
+                    "x": abs_x,
+                    "y": abs_y,
+                    "electrical_type": pin_def.electricalType,
+                })
+
+        return result
+
+    def get_wire_endpoints(self) -> list[dict[str, Any]]:
+        """Return all wire start/end positions from graphicalItems.
+
+        Wires are Connection objects with type='wire' in graphicalItems.
+
+        Returns:
+            List of dicts with keys: start_x, start_y, end_x, end_y, uuid,
+            wire_index.
+        """
+        result: list[dict[str, Any]] = []
+        sch = self._parse_result.kiutils_obj
+        from kiutils.items.schitems import Connection
+
+        for idx, item in enumerate(sch.graphicalItems):
+            if isinstance(item, Connection) and item.type == "wire":
+                if len(item.points) >= 2:
+                    result.append({
+                        "start_x": item.points[0].X,
+                        "start_y": item.points[0].Y,
+                        "end_x": item.points[1].X,
+                        "end_y": item.points[1].Y,
+                        "uuid": item.uuid,
+                        "wire_index": idx,
+                    })
+        return result
+
+    def get_label_positions(self) -> list[dict[str, Any]]:
+        """Return all label positions with names.
+
+        Includes local labels, global labels, and hierarchical labels.
+
+        Returns:
+            List of dicts with keys: name, x, y, label_type.
+        """
+        result: list[dict[str, Any]] = []
+        sch = self._parse_result.kiutils_obj
+
+        for label in sch.labels:
+            result.append({
+                "name": label.text,
+                "x": label.position.X,
+                "y": label.position.Y,
+                "label_type": "local",
+            })
+
+        for label in sch.globalLabels:
+            result.append({
+                "name": label.text,
+                "x": label.position.X,
+                "y": label.position.Y,
+                "label_type": "global",
+            })
+
+        for label in sch.hierarchicalLabels:
+            result.append({
+                "name": label.text,
+                "x": label.position.X,
+                "y": label.position.Y,
+                "label_type": "hierarchical",
+            })
+
+        return result

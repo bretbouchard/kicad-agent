@@ -925,6 +925,42 @@ class AddDesignRuleOp(BaseModel):
     condition: str = Field(default="", max_length=512)
 
 
+class RepairSchematicOp(BaseModel):
+    """Auto-repair common ERC errors in a schematic.
+
+    Runs wire snapping, orphaned label removal, and no-connect placement
+    based on the enabled flags.
+
+    Attributes:
+        op_type: Discriminator literal ``"repair_schematic"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        snap_wires: Snap wire endpoints to nearest pin positions (default True).
+        remove_orphans: Remove labels not connected to any wire or pin (default True).
+        place_no_connects: Place no-connect markers on unconnected pins (default True).
+    """
+
+    op_type: Literal["repair_schematic"] = "repair_schematic"
+    target_file: TargetFile
+    snap_wires: bool = Field(default=True, description="Snap wire endpoints to pins")
+    remove_orphans: bool = Field(default=True, description="Remove orphaned labels")
+    place_no_connects: bool = Field(default=True, description="Place no-connect markers")
+
+
+class ValidatePowerNetsOp(BaseModel):
+    """Check all power pins have connected power symbols.
+
+    Validates that every power pin (power_in, power_out) in the schematic
+    is connected to a power symbol (power:* library reference).
+
+    Attributes:
+        op_type: Discriminator literal ``"validate_power_nets"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+    """
+
+    op_type: Literal["validate_power_nets"] = "validate_power_nets"
+    target_file: TargetFile
+
+
 # ---------------------------------------------------------------------------
 # Discriminated union (D-01, D-02, D-03)
 # ---------------------------------------------------------------------------
@@ -967,7 +1003,9 @@ class Operation(BaseModel):
         | AddLibEntryOp
         | RemoveLibEntryOp
         | AddNetClassOp
-        | AddDesignRuleOp,
+        | AddDesignRuleOp
+        | RepairSchematicOp
+        | ValidatePowerNetsOp,
         Field(discriminator="op_type"),
     ]
 

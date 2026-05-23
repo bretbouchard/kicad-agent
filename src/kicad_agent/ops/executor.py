@@ -288,6 +288,26 @@ class OperationExecutor:
         if op_type == "remove_bus":
             return {"removed_bus": op.bus_name}
 
+        # Phase 10 ops: schematic repair and power validation
+        if op_type == "repair_schematic":
+            from kicad_agent.ops.repair import (
+                place_no_connects,
+                remove_orphaned_labels,
+                repair_wire_snapping,
+            )
+            details: dict[str, Any] = {}
+            if op.snap_wires:
+                details["wire_snapping"] = repair_wire_snapping(ir, file_path)
+            if op.remove_orphans:
+                details["orphan_removal"] = remove_orphaned_labels(ir)
+            if op.place_no_connects:
+                details["no_connects"] = place_no_connects(ir)
+            return details
+
+        if op_type == "validate_power_nets":
+            from kicad_agent.ops.validation_gates import validate_power_nets
+            return validate_power_nets(ir)
+
         raise ValueError(f"Unknown op_type: {op_type!r}")
 
     def _dispatch_pcb(
