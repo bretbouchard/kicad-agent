@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: GSD Skill Integration** - Claude skill manifest, handler, CLI wrapper, and project context renderer
 - [x] **Phase 8: Visual Primitives for PCB Spatial Reasoning** - AI that points while it reasons — coordinate-grounded DRC, routing guidance, and spatial analysis
 - [x] **Phase 9: GRPO Spatial Reasoning Training** - DeepSeek-style RL training with coordinate-grounded reward signals on synthetic PCB maze data
-- [ ] **Phase 10: AI-Driven PCB Generation** - Generative AI that creates schematics and PCB layouts from natural language intent, closing the gap from critic to creator
+- [x] **Phase 10: AI-Driven PCB Generation** - Generative AI that creates schematics and PCB layouts from natural language intent, closing the gap from critic to creator
 
 ## Phase Details
 
@@ -213,7 +213,7 @@ Plans:
 - [x] 10-03-PLAN.md -- Schematic repair, validation gates, and PCB operations (ERC repair, power validation, copper zones, net classes, board outline) (GEN-03, GEN-04, GEN-05, GEN-06)
 - [x] 10-04-PLAN.md -- GenerationIntent schema and template board generator (extends maze_generator pattern for real PCB/schematic creation) (GEN-07, GEN-08)
 - [x] 10-05-PLAN.md -- Component placement engine and operation-sequence planning (placement algorithms, spatial validation, LLM-driven operation planning) (GEN-09)
-- [ ] 10-06-PLAN.md -- End-to-end generation pipeline with iterative refinement (full loop: intent → board → validate → fix → export) (GEN-10, GEN-11, GEN-12)
+- [x] 10-06-PLAN.md -- End-to-end generation pipeline with iterative refinement (full loop: intent → board → validate → fix → export) (GEN-10, GEN-11, GEN-12)
 
 ## Progress
 
@@ -231,4 +231,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 7. GSD Skill Integration | 4/4 | Complete | 2026-05-18 |
 | 8. Visual Primitives for PCB Spatial Reasoning | 4/4 | Complete | 2026-05-22 |
 | 9. GRPO Spatial Reasoning Training | 4/4 | Complete | 2026-05-22 |
-| 10. AI-Driven PCB Generation | 5/6 | In Progress | |
+| 10. AI-Driven PCB Generation | 6/6 | Complete | 2026-05-23 |

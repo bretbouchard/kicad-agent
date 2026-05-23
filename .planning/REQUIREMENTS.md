@@ -143,9 +143,9 @@ Two-tier phase: first close the practical operations gap, then build generative 
 - [x] **GEN-07**: GenerationIntent schema (Pydantic) for converting natural language design parameters to structured operation sequences with board specs, component lists, and connection topology
 - [x] **GEN-08**: Template board generator extending maze_generator pattern to create valid .kicad_pcb and .kicad_sch files from high-level parameters (board size, layer count, component list, net topology)
 - [x] **GEN-09**: Component placement engine with clearance validation, spatial scoring, decoupling cap proximity heuristics, and LLM-driven operation-sequence planning
-- [ ] **GEN-10**: End-to-end generation pipeline: intent → template board → operation sequence → validation → manufacturing export, single-command execution
-- [ ] **GEN-11**: Iterative refinement loop: generate → validate (ERC/DRC) → feed violations back for fixes → repeat until clean (max 5 iterations)
-- [ ] **GEN-12**: Generation evaluation: DRC pass rate on simple designs (5-10 components), manufacturing output completeness check, comparison vs manual baseline
+- [x] **GEN-10**: End-to-end generation pipeline: intent → template board → operation sequence → validation → manufacturing export, single-command execution
+- [x] **GEN-11**: Iterative refinement loop: generate → validate (ERC/DRC) → feed violations back for fixes → repeat until clean (max 5 iterations)
+- [x] **GEN-12**: Generation evaluation: DRC pass rate on simple designs (5-10 components), manufacturing output completeness check, comparison vs manual baseline
 
 ## Out of Scope
 
@@ -236,9 +236,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GEN-07 | Phase 10: AI-Driven PCB Generation | Complete | 10-04 |
 | GEN-08 | Phase 10: AI-Driven PCB Generation | Complete | 10-04 |
 | GEN-09 | Phase 10: AI-Driven PCB Generation | Complete | 10-05 |
-| GEN-10 | Phase 10: AI-Driven PCB Generation | Pending | 10-06 |
-| GEN-11 | Phase 10: AI-Driven PCB Generation | Pending | 10-06 |
-| GEN-12 | Phase 10: AI-Driven PCB Generation | Pending | 10-06 |
+| GEN-10 | Phase 10: AI-Driven PCB Generation | Complete | 10-06 |
+| GEN-11 | Phase 10: AI-Driven PCB Generation | Complete | 10-06 |
+| GEN-12 | Phase 10: AI-Driven PCB Generation | Complete | 10-06 |
 
 **Coverage:**
 - Total requirements: 71 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10)
