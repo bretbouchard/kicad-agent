@@ -357,10 +357,10 @@ class TestVerifyNetConsistency:
         reason="kicad-cli not available",
     )
     def test_net_consistency_captures_parity_issues(
-        self, arduino_mega_sch, arduino_mega_pcb
+        self, raspberry_pi_sch, raspberry_pi_pcb
     ):
         pipeline = ValidationPipeline()
-        result = pipeline.verify_net_consistency(arduino_mega_pcb, arduino_mega_sch)
+        result = pipeline.verify_net_consistency(raspberry_pi_pcb, raspberry_pi_sch)
 
         # schematic_parity should be a tuple (may be empty for consistent fixtures)
         assert isinstance(result.schematic_parity, tuple)

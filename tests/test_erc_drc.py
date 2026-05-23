@@ -191,23 +191,23 @@ _SKIP_REASON = "kicad-cli not available on PATH"
 class TestRunErc:
     """Integration tests for run_erc() against real kicad-cli."""
 
-    def test_erc_on_arduino_mega(self, arduino_mega_sch: Path) -> None:
-        """run_erc on Arduino_Mega returns structured result with violations."""
-        result = run_erc(arduino_mega_sch)
+    def test_erc_on_raspberry_pi(self, raspberry_pi_sch: Path) -> None:
+        """run_erc on RaspberryPi-uHAT returns structured result with violations."""
+        result = run_erc(raspberry_pi_sch)
 
         assert isinstance(result, ErcResult)
-        assert result.file_path == arduino_mega_sch
+        assert result.file_path == raspberry_pi_sch
         assert result.error_message is None
-        # Arduino_Mega has ERC errors (power pins not driven, etc.)
+        # RaspberryPi-uHAT has ERC errors (power pins not driven, etc.)
         assert result.passed is False
         assert result.error_count > 0
         # kicad_version should be present
         assert result.kicad_version
         assert result.kicad_version[0].isdigit()
 
-    def test_erc_violations_have_details(self, arduino_mega_sch: Path) -> None:
+    def test_erc_violations_have_details(self, raspberry_pi_sch: Path) -> None:
         """Each ERC error violation has non-empty description, type, severity."""
-        result = run_erc(arduino_mega_sch)
+        result = run_erc(raspberry_pi_sch)
         assert len(result.errors) > 0
 
         for violation in result.errors:
@@ -231,9 +231,9 @@ class TestRunErc:
         assert result.error_message is not None
         assert ".kicad_sch" in result.error_message
 
-    def test_erc_has_ignored_checks(self, arduino_mega_sch: Path) -> None:
+    def test_erc_has_ignored_checks(self, raspberry_pi_sch: Path) -> None:
         """ERC result includes ignored_checks from the report."""
-        result = run_erc(arduino_mega_sch)
+        result = run_erc(raspberry_pi_sch)
         # ignored_checks is a tuple (may be empty, but should exist)
         assert isinstance(result.ignored_checks, tuple)
 
@@ -260,9 +260,9 @@ class TestRunDrc:
         for item in result.unconnected_items:
             assert item.type == "unconnected_items"
 
-    def test_drc_with_schematic_parity(self, arduino_mega_pcb: Path) -> None:
+    def test_drc_with_schematic_parity(self, raspberry_pi_pcb: Path) -> None:
         """run_drc with check_schematic_parity=True captures parity data."""
-        result = run_drc(arduino_mega_pcb, check_schematic_parity=True)
+        result = run_drc(raspberry_pi_pcb, check_schematic_parity=True)
         assert result.error_message is None
         # schematic_parity should be a tuple (may be empty or have items)
         assert isinstance(result.schematic_parity, tuple)

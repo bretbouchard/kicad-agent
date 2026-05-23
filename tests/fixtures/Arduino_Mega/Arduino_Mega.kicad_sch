@@ -1991,6 +1991,23 @@
     )
   )
 
+  (symbol (lib_name "Device:R_Small_US") (lib_id "Device:R_Small_US") (at 50 30)
+    (in_bom yes) (on_board yes)
+    (uuid b7f118d0-70e7-45bd-a640-6c2655c88c94)
+    (property "Reference" "R?" (id 0) (at 0 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Value" "" (id 1) (at 0 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (id 2) (at 0 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "~" (id 3) (at 0 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+  )
+
   (sheet_instances
     (path "/" (page "1"))
   )
