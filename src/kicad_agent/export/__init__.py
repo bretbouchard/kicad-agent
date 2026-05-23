@@ -20,9 +20,25 @@ Usage:
 """
 
 from kicad_agent.export.gerber import ExportResult, export_drill, export_gerber
+from kicad_agent.export.bom import BomResult, export_bom, parse_bom_csv
+from kicad_agent.export.general import (
+    export_netlist,
+    export_position,
+    export_schematic_pdf,
+    export_step,
+    get_board_statistics,
+)
 
 __all__ = [
     "ExportResult",
     "export_gerber",
     "export_drill",
+    "BomResult",
+    "export_bom",
+    "parse_bom_csv",
+    "export_position",
+    "export_netlist",
+    "export_step",
+    "export_schematic_pdf",
+    "get_board_statistics",
 ]
