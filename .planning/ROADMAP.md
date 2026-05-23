@@ -22,8 +22,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 8: Visual Primitives for PCB Spatial Reasoning** - AI that points while it reasons — coordinate-grounded DRC, routing guidance, and spatial analysis
 - [x] **Phase 9: GRPO Spatial Reasoning Training** - DeepSeek-style RL training with coordinate-grounded reward signals on synthetic PCB maze data
 - [x] **Phase 10: AI-Driven PCB Generation** - Generative AI that creates schematics and PCB layouts from natural language intent, closing the gap from critic to creator
-- [ ] **Phase 11: LTspice Integration** - Parse LTspice .asc schematics, extract components/nets/simulation commands, bridge KiCad-LTspice workflows
-- [ ] **Phase 12: ADI Footprint Library** - On-demand ADI footprint/symbol download, library management, and manufacturer part integration
+- [x] **Phase 11: LTspice Integration** - Parse LTspice .asc schematics, extract components/nets/simulation commands, bridge KiCad-LTspice workflows
+- [x] **Phase 12: ADI Footprint Library** - On-demand ADI footprint/symbol download, library management, and manufacturer part integration
 
 ## Phase Details
 
@@ -248,7 +248,7 @@ Plans:
 Plans:
 - [x] 12-01-PLAN.md -- Type definitions, filesystem cache with JSON manifest, ZIP extraction safety (ADI-04)
 - [x] 12-02-PLAN.md -- SamacSys HTTP client for part search and KiCad library download (ADI-01)
-- [ ] 12-03-PLAN.md -- Fetch orchestrator wiring cache/client/lib_table, integration tests, REQUIREMENTS.md update (ADI-01, ADI-02, ADI-03, ADI-04)
+- [x] 12-03-PLAN.md -- Fetch orchestrator wiring cache/client/lib_table, integration tests, REQUIREMENTS.md update (ADI-01, ADI-02, ADI-03, ADI-04)
 
 ## Progress
 
@@ -268,4 +268,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 9. GRPO Spatial Reasoning Training | 4/4 | Complete | 2026-05-22 |
 | 10. AI-Driven PCB Generation | 6/6 | Complete | 2026-05-23 |
 | 11. LTspice Integration | 3/3 | Complete | 2026-05-23 |
-| 12. ADI Footprint Library | 2/3 | In Progress | 2026-05-23 |
+| 12. ADI Footprint Library | 3/3 | Complete | 2026-05-23 |
