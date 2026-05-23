@@ -19,11 +19,13 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from kicad_agent.ir.pcb_ir import PcbIR
 from kicad_agent.ir.schematic_ir import SchematicIR
 from kicad_agent.ir.transaction import Transaction
 from kicad_agent.ops.schema import Operation
-from kicad_agent.parser import parse_schematic
-from kicad_agent.serializer import normalize_kicad_output, serialize_schematic
+from kicad_agent.parser import parse_pcb, parse_schematic
+from kicad_agent.parser.uuid_extractor import extract_uuids
+from kicad_agent.serializer import normalize_kicad_output, serialize_pcb, serialize_schematic
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +47,7 @@ class OperationExecutor:
     def execute(self, op: Operation) -> dict[str, Any]:
         """Execute a validated operation with Transaction wrapping.
 
-        Parses the target file, creates IR, dispatches to handler,
-        serializes result, normalizes output, and commits transaction.
+        Routes to schematic or PCB execution path based on file extension.
 
         Args:
             op: Validated Operation from the schema.
@@ -68,29 +69,50 @@ class OperationExecutor:
         from kicad_agent.ir.base import _clear_registry
         _clear_registry()
 
-        # Parse the schematic file
+        # Branch on file type
+        if file_path.suffix == ".kicad_pcb":
+            return self._execute_pcb(op, file_path)
+        else:
+            return self._execute_schematic(op, file_path)
+
+    def _execute_schematic(self, op: Operation, file_path: Path) -> dict[str, Any]:
+        """Execute an operation targeting a schematic file."""
+        root = op.root
+
         parse_result = parse_schematic(file_path)
         ir = SchematicIR(_parse_result=parse_result)
 
-        # Wrap in Transaction for rollback on failure
         with Transaction(file_path) as txn:
-            # Dispatch to appropriate handler
-            details = self._dispatch(
-                root.op_type,
-                root,
-                ir,
-                file_path,
-            )
-
-            # Serialize mutated IR back to file
+            details = self._dispatch(root.op_type, root, ir, file_path)
             serialize_schematic(parse_result, file_path)
-
-            # Normalize the serialized output
             content = file_path.read_text(encoding="utf-8")
             normalized = normalize_kicad_output(content)
             file_path.write_text(normalized, encoding="utf-8")
+            txn.commit()
 
-            # Commit the transaction
+        return {
+            "success": True,
+            "operation": root.op_type,
+            "target_file": root.target_file,
+            "details": details,
+        }
+
+    def _execute_pcb(self, op: Operation, file_path: Path) -> dict[str, Any]:
+        """Execute an operation targeting a PCB file."""
+        root = op.root
+
+        parse_result = parse_pcb(file_path)
+        uuid_map = extract_uuids(parse_result.raw_content, "pcb")
+        ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
+
+        with Transaction(file_path) as txn:
+            details = self._dispatch_pcb(root.op_type, root, ir, file_path)
+
+            # Skip kiutils serialization if the IR method already wrote directly
+            # via raw S-expression manipulation (avoids data loss from kiutils)
+            if not ir._raw_written:
+                serialize_pcb(parse_result, file_path, uuid_map=uuid_map)
+
             txn.commit()
 
         return {
@@ -196,6 +218,19 @@ class OperationExecutor:
             result = ir.verify_pin_map(reference=op.reference, footprint_lib_id=op.footprint_lib_id)
             return result
 
+        # PCB-only ops that also work through SchematicIR (net ops)
+        if op_type == "add_net":
+            net = ir.add_net(net_name=op.net_name, net_number=op.net_number)
+            return {"net_name": net.name, "net_number": net.number}
+
+        if op_type == "remove_net":
+            ir.remove_net(net_name=op.net_name)
+            return {"removed_net": op.net_name}
+
+        if op_type == "rename_net":
+            ir.rename_net(old_name=op.old_name, new_name=op.new_name)
+            return {"old_name": op.old_name, "new_name": op.new_name}
+
         # Phase 6 ops: wire, label, power, no-connect, junction
         if op_type == "add_wire":
             result = ir.add_wire(
@@ -242,3 +277,58 @@ class OperationExecutor:
             return {"removed_bus": op.bus_name}
 
         raise ValueError(f"Unknown op_type: {op_type!r}")
+
+    def _dispatch_pcb(
+        self,
+        op_type: str,
+        op: Any,
+        ir: PcbIR,
+        file_path: Path,
+    ) -> dict[str, Any]:
+        """Dispatch PCB-specific operations to PcbIR methods.
+
+        Separate from _dispatch to ensure type-safe access to PcbIR methods.
+
+        Args:
+            op_type: The operation type string.
+            op: The operation's root model.
+            ir: PcbIR for the target PCB file.
+            file_path: Resolved path to the target PCB file.
+
+        Returns:
+            Handler result dict.
+
+        Raises:
+            ValueError: For unknown op_type.
+        """
+        if op_type == "update_footprint_from_library":
+            result = ir.update_footprint_from_library(
+                reference=op.reference,
+                lib_id_override=op.footprint_lib_id,
+                pcb_path=file_path,
+            )
+            return result
+
+        if op_type == "swap_footprint":
+            result = ir.swap_footprint(
+                reference=op.reference,
+                new_footprint_lib_id=op.new_footprint_lib_id,
+            )
+            return result
+
+        if op_type == "add_net":
+            net = ir.add_net(net_name=op.net_name, net_number=op.net_number)
+            return {"net_name": net.name, "net_number": net.number}
+
+        if op_type == "remove_net":
+            ir.remove_net(net_name=op.net_name)
+            return {"removed_net": op.net_name}
+
+        if op_type == "rename_net":
+            ir.rename_net(old_name=op.old_name, new_name=op.new_name)
+            return {"old_name": op.old_name, "new_name": op.new_name}
+
+        if op_type == "validate_footprint":
+            return {"footprint_lib_id": op.footprint_lib_id, "valid": True}
+
+        raise ValueError(f"Unknown PCB op_type: {op_type!r}")

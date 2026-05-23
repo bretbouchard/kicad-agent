@@ -652,6 +652,52 @@ class VerifyPinMapOp(BaseModel):
         return _validate_safe_identifier(v, "footprint_lib_id")
 
 
+class UpdateFootprintFromLibraryOp(BaseModel):
+    """Reload a PCB footprint's geometry from the library, preserving placement.
+
+    Reads the fresh footprint definition from the library ``.kicad_mod`` file
+    and replaces the geometry in the PCB while preserving position, rotation,
+    reference designator, value, and pad-to-net connections.
+
+    This is the programmatic equivalent of KiCad's GUI
+    ``Tools > Update Footprints from Library`` command.
+
+    Attributes:
+        op_type: Discriminator literal ``"update_footprint_from_library"``.
+        target_file: Relative path to the KiCad PCB file (H-01 validated).
+        reference: Reference designator of the footprint to update (e.g. ``"U2"``).
+        footprint_lib_id: Optional override footprint library reference.
+            If omitted, uses the footprint's existing ``libId`` (refresh from same library).
+            If provided, also swaps to a different footprint (swap + update combined).
+    """
+
+    op_type: Literal["update_footprint_from_library"] = "update_footprint_from_library"
+    target_file: TargetFile
+    reference: str = Field(
+        min_length=1,
+        max_length=64,
+        description="Reference designator of the footprint to update",
+    )
+    footprint_lib_id: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=256,
+        description="Optional override lib_id. None = refresh from existing library.",
+    )
+
+    @field_validator("reference")
+    @classmethod
+    def _validate_reference(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "reference")
+
+    @field_validator("footprint_lib_id")
+    @classmethod
+    def _validate_lib_id(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            return _validate_safe_identifier(v, "footprint_lib_id")
+        return v
+
+
 class AddWireOp(BaseModel):
     """Add a wire segment between two points in a schematic.
 
@@ -795,6 +841,7 @@ class Operation(BaseModel):
         | SwapFootprintOp
         | ValidateFootprintOp
         | VerifyPinMapOp
+        | UpdateFootprintFromLibraryOp
         | AddWireOp
         | AddLabelOp
         | AddPowerOp
