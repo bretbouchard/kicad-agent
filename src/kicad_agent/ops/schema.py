@@ -106,7 +106,12 @@ def _validate_target_file(v: str) -> str:
     parts = Path(v).parts
     if ".." in parts:
         raise ValueError("target_file must not contain '..' path traversal")
-    if not v.endswith((".kicad_sch", ".kicad_pcb", ".kicad_sym", ".kicad_mod")):
+    valid_extensions = (
+        ".kicad_sch", ".kicad_pcb", ".kicad_sym", ".kicad_mod",
+        ".kicad_dru", ".kicad_pro",
+    )
+    valid_names = ("sym-lib-table", "fp-lib-table")
+    if not v.endswith(valid_extensions) and Path(v).name not in valid_names:
         raise ValueError("target_file must be a KiCad file type")
     return v
 
@@ -808,6 +813,118 @@ class AddJunctionOp(BaseModel):
     position: PositionSpec
 
 
+class AddLibEntryOp(BaseModel):
+    """Add a library entry to sym-lib-table or fp-lib-table.
+
+    Attributes:
+        op_type: Discriminator literal ``"add_lib_entry"``.
+        target_file: Relative path to sym-lib-table or fp-lib-table.
+        lib_name: Library name (e.g. ``"Device"``, ``"MyLib"``).
+        lib_type: Library type (``"KiCad"`` or ``"Legacy"``).
+        uri: Library URI path, may contain variables like ``${KIPRJMOD}``.
+        options: Library options string (usually empty).
+        description: Library description.
+    """
+
+    op_type: Literal["add_lib_entry"] = "add_lib_entry"
+    target_file: TargetFile
+    lib_name: str = Field(
+        min_length=1,
+        max_length=128,
+        description="Library name",
+    )
+    lib_type: Literal["KiCad", "Legacy"] = "KiCad"
+    uri: str = Field(
+        min_length=1,
+        max_length=512,
+        description="Library URI path",
+    )
+    options: str = Field(default="", max_length=256)
+    description: str = Field(default="", max_length=512)
+
+    @field_validator("lib_name")
+    @classmethod
+    def _validate_lib_name(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "lib_name")
+
+
+class RemoveLibEntryOp(BaseModel):
+    """Remove a library entry from sym-lib-table or fp-lib-table.
+
+    Attributes:
+        op_type: Discriminator literal ``"remove_lib_entry"``.
+        target_file: Relative path to sym-lib-table or fp-lib-table.
+        lib_name: Library name to remove.
+    """
+
+    op_type: Literal["remove_lib_entry"] = "remove_lib_entry"
+    target_file: TargetFile
+    lib_name: str = Field(
+        min_length=1,
+        max_length=128,
+        description="Library name to remove",
+    )
+
+    @field_validator("lib_name")
+    @classmethod
+    def _validate_lib_name(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "lib_name")
+
+
+class AddNetClassOp(BaseModel):
+    """Add a net class with track/via/clearance dimensions.
+
+    Attributes:
+        op_type: Discriminator literal ``"add_net_class"``.
+        target_file: Relative path to the .kicad_dru file.
+        name: Net class name.
+        clearance: Clearance in mm (must be > 0).
+        track_width: Track width in mm (must be > 0).
+        via_diameter: Via diameter in mm (must be > 0).
+        via_drill: Via drill in mm (must be > 0).
+    """
+
+    op_type: Literal["add_net_class"] = "add_net_class"
+    target_file: TargetFile
+    name: str = Field(
+        min_length=1,
+        max_length=64,
+        description="Net class name",
+    )
+    clearance: float = Field(gt=0, description="Clearance in mm")
+    track_width: float = Field(gt=0, description="Track width in mm")
+    via_diameter: float = Field(gt=0, description="Via diameter in mm")
+    via_drill: float = Field(gt=0, description="Via drill in mm")
+
+
+class AddDesignRuleOp(BaseModel):
+    """Add a custom DRC rule to .kicad_dru.
+
+    Attributes:
+        op_type: Discriminator literal ``"add_design_rule"``.
+        target_file: Relative path to the .kicad_dru file.
+        name: Rule name.
+        constraint_type: Constraint type (e.g. ``"clearance"``, ``"width"``).
+        constraint_values: Key-value constraint parameters.
+        condition: KiCad condition expression string.
+    """
+
+    op_type: Literal["add_design_rule"] = "add_design_rule"
+    target_file: TargetFile
+    name: str = Field(
+        min_length=1,
+        max_length=128,
+        description="Rule name",
+    )
+    constraint_type: str = Field(
+        min_length=1,
+        max_length=64,
+        description="Constraint type (e.g. 'clearance', 'width')",
+    )
+    constraint_values: dict[str, str] = Field(default_factory=dict)
+    condition: str = Field(default="", max_length=512)
+
+
 # ---------------------------------------------------------------------------
 # Discriminated union (D-01, D-02, D-03)
 # ---------------------------------------------------------------------------
@@ -846,7 +963,11 @@ class Operation(BaseModel):
         | AddLabelOp
         | AddPowerOp
         | AddNoConnectOp
-        | AddJunctionOp,
+        | AddJunctionOp
+        | AddLibEntryOp
+        | RemoveLibEntryOp
+        | AddNetClassOp
+        | AddDesignRuleOp,
         Field(discriminator="op_type"),
     ]
 

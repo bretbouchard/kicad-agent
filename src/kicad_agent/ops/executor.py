@@ -72,8 +72,20 @@ class OperationExecutor:
         # Branch on file type
         if file_path.suffix == ".kicad_pcb":
             return self._execute_pcb(op, file_path)
+        elif self._is_project_file(file_path):
+            return self._execute_project(op, file_path)
         else:
             return self._execute_schematic(op, file_path)
+
+    @staticmethod
+    def _is_project_file(file_path: Path) -> bool:
+        """Check if the file is a project-level file (not schematic/PCB)."""
+        name = file_path.name
+        suffix = file_path.suffix
+        return (
+            name in ("sym-lib-table", "fp-lib-table")
+            or suffix in (".kicad_dru", ".kicad_pro")
+        )
 
     def _execute_schematic(self, op: Operation, file_path: Path) -> dict[str, Any]:
         """Execute an operation targeting a schematic file."""
@@ -332,3 +344,109 @@ class OperationExecutor:
             return {"footprint_lib_id": op.footprint_lib_id, "valid": True}
 
         raise ValueError(f"Unknown PCB op_type: {op_type!r}")
+
+    def _execute_project(self, op: Operation, file_path: Path) -> dict[str, Any]:
+        """Execute an operation targeting a project-level file.
+
+        Handles sym-lib-table, fp-lib-table, .kicad_dru, and .kicad_pro files
+        using the project module parsers and editors.
+
+        Args:
+            op: Validated Operation from the schema.
+            file_path: Resolved path to the target file.
+
+        Returns:
+            Dict with: success, operation, target_file, details.
+        """
+        root = op.root
+        details = self._dispatch_project(root.op_type, root, file_path)
+        return {
+            "success": True,
+            "operation": root.op_type,
+            "target_file": root.target_file,
+            "details": details,
+        }
+
+    def _dispatch_project(
+        self,
+        op_type: str,
+        op: Any,
+        file_path: Path,
+    ) -> dict[str, Any]:
+        """Dispatch project-file operations to appropriate handlers.
+
+        Args:
+            op_type: The operation type string.
+            op: The operation's root model.
+            file_path: Resolved path to the target file.
+
+        Returns:
+            Handler result dict.
+
+        Raises:
+            ValueError: For unknown op_type.
+        """
+        if op_type == "add_lib_entry":
+            from kicad_agent.project.lib_table import (
+                LibEntry,
+                parse_lib_table,
+                serialize_lib_table,
+            )
+            table = parse_lib_table(file_path)
+            entry = LibEntry(
+                name=op.lib_name,
+                type=op.lib_type,
+                uri=op.uri,
+                options=op.options,
+                descr=op.description,
+            )
+            table.add(entry)
+            serialize_lib_table(table, file_path)
+            return {"lib_name": op.lib_name, "action": "added"}
+
+        if op_type == "remove_lib_entry":
+            from kicad_agent.project.lib_table import (
+                parse_lib_table,
+                serialize_lib_table,
+            )
+            table = parse_lib_table(file_path)
+            removed = table.remove(op.lib_name)
+            serialize_lib_table(table, file_path)
+            return {"lib_name": removed.name, "action": "removed"}
+
+        if op_type == "add_net_class":
+            from kicad_agent.project.design_rules import (
+                NetClassDef,
+                parse_design_rules,
+                serialize_design_rules,
+            )
+            dru = parse_design_rules(file_path)
+            nc = NetClassDef(
+                name=op.name,
+                clearance=op.clearance,
+                track_width=op.track_width,
+                via_diameter=op.via_diameter,
+                via_drill=op.via_drill,
+            )
+            dru.add_net_class(nc)
+            serialize_design_rules(dru, file_path)
+            return {"net_class": op.name, "action": "added"}
+
+        if op_type == "add_design_rule":
+            from kicad_agent.project.design_rules import (
+                DesignRule,
+                parse_design_rules,
+                serialize_design_rules,
+            )
+            dru = parse_design_rules(file_path)
+            rule = DesignRule(
+                name=op.name,
+                constraint_type=op.constraint_type,
+                constraint_values=op.constraint_values,
+                condition=op.condition,
+            )
+            dru.add_rule(rule)
+            serialize_design_rules(dru, file_path)
+            return {"rule_name": op.name, "action": "added"}
+
+        raise ValueError(f"Unknown project op_type: {op_type!r}")
