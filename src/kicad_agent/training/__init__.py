@@ -5,6 +5,7 @@ on synthetic PCB maze data.
 
 Modules:
     dataset — MazeSample, MazeDataset, generate_dataset()
+    real_dataset — RealBoardSample, RealBoardDataset, run_pipeline()
     generator — parallel generation, adversarial samples
     chains — MazeReasoningChain, chain synthesis from maze samples
     chain_builder — DFS exploration and chain construction
@@ -16,3 +17,9 @@ Modules:
     evaluation — EvalResult, EvaluationHarness
     pipeline — TrainingPipelineConfig, run_pipeline()
 """
+
+from kicad_agent.training.real_dataset import (
+    RealBoardDataset,
+    RealBoardSample,
+    run_pipeline,
+)

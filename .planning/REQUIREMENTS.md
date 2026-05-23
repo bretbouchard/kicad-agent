@@ -267,12 +267,29 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ADI-02 | Phase 12: ADI Footprint Library | Pending | 12-03 |
 | ADI-03 | Phase 12: ADI Footprint Library | Pending | 12-03 |
 | ADI-04 | Phase 12: ADI Footprint Library | Complete | 12-01, 12-03 |
+| RW-01 | Phase 13: Real-World Training Pipeline | Complete | 13-01 |
+| RW-02 | Phase 13: Real-World Training Pipeline | Complete | 13-02 |
+| RW-03 | Phase 13: Real-World Training Pipeline | Complete | 13-02 |
+| RW-04 | Phase 13: Real-World Training Pipeline | Complete | 13-03 |
+| RW-05 | Phase 13: Real-World Training Pipeline | Complete | 13-03 |
 
 **Coverage:**
-- Total requirements: 80 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10 + 5 Phase 11 + 4 Phase 12)
-- Mapped to phases: 80
+- Total requirements: 85 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10 + 5 Phase 11 + 4 Phase 12 + 5 Phase 13)
+- Mapped to phases: 85
 - Unmapped: 0
 
 ---
+
+## v2.1 Requirements
+
+### Real-World PCB Training Pipeline (Phase 13)
+
+- [x] **RW-01**: GitHub search API discovers KiCad repos with both .kicad_sch and .kicad_pcb files
+- [x] **RW-02**: Schematic+PCB pairs parse into structured graph format (component nodes, net edges)
+- [x] **RW-03**: Spatial features extracted from PCB and attached to graph node attributes
+- [x] **RW-04**: Dataset normalized with SHA256 deduplication and quality filtering (min 3 components, 2 nets)
+- [x] **RW-05**: JSONL output format compatible with Phase 9 GRPO training pipeline with train/val/test split
+
+---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-23 — Phase 12 ADI Footprint Library added*
+*Last updated: 2026-05-23 — Phase 13 Real-World Training Pipeline added*
