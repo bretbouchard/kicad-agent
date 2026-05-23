@@ -119,6 +119,33 @@ class LTspiceTrace:
     unit: str
 
 
+class SymbolMappingType:
+    """Enum-like constants for symbol mapping result types."""
+
+    COMPONENT = "component"  # Maps to LTspice SYMBOL
+    FLAG = "flag"  # Maps to LTspice FLAG (net label)
+    UNMAPPED = "unmapped"  # No mapping found
+
+
+@dataclass(frozen=True)
+class SymbolMappingResult:
+    """Result of mapping a KiCad libId to an LTspice symbol.
+
+    Attributes:
+        lib_id: Original KiCad libId (e.g., "Device:R", "power:GND").
+        mapping_type: One of SymbolMappingType constants.
+        ltspice_symbol: LTspice .asy symbol name (e.g., "res") for COMPONENT type.
+                        Net label text (e.g., "0", "VCC") for FLAG type.
+                        Empty string for UNMAPPED.
+        is_power: True if this KiCad symbol is a power symbol.
+    """
+
+    lib_id: str
+    mapping_type: str
+    ltspice_symbol: str
+    is_power: bool
+
+
 @dataclass(frozen=True)
 class SimulationResult:
     """Parsed result from an LTspice .raw simulation file.

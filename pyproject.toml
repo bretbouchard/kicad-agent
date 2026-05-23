@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "kiutils>=1.4.8",
     "sexpdata>=1.0.0",
+    "spicelib>=1.5.1",
     "networkx>=3.0",
     "httpx>=0.28.0",
     "pydantic>=2.0",
