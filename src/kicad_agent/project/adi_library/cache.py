@@ -79,6 +79,10 @@ class FootprintCache:
         self.manifest_path = cache_root / "cache_manifest.json"
         self._manifest = self._load_manifest()
 
+        # Write manifest to disk if it doesn't exist yet (ensures file is present on init)
+        if not self.manifest_path.exists():
+            self._save_manifest()
+
     def is_cached(self, part_number: str) -> bool:
         """Check if a part number exists in the cache manifest.
 
@@ -149,12 +153,14 @@ class FootprintCache:
 
         if footprint_path is not None and footprint_path.exists():
             dest = self.footprints_dir / f"{part_number}.kicad_mod"
-            shutil.copy2(footprint_path, dest)
+            if dest.resolve() != footprint_path.resolve():
+                shutil.copy2(footprint_path, dest)
             dest_footprint = f"footprints/{part_number}.kicad_mod"
 
         if symbol_path is not None and symbol_path.exists():
             dest = self.symbols_dir / f"{part_number}.kicad_sym"
-            shutil.copy2(symbol_path, dest)
+            if dest.resolve() != symbol_path.resolve():
+                shutil.copy2(symbol_path, dest)
             dest_symbol = f"symbols/{part_number}.kicad_sym"
 
         if model_3d_path is not None and model_3d_path.exists():
@@ -163,7 +169,8 @@ class FootprintCache:
             models_dir = self.cache_root / "models"
             models_dir.mkdir(exist_ok=True)
             dest = models_dir / f"{part_number}{ext}"
-            shutil.copy2(model_3d_path, dest)
+            if dest.resolve() != model_3d_path.resolve():
+                shutil.copy2(model_3d_path, dest)
             dest_model_3d = f"models/{part_number}{ext}"
 
         self._manifest.entries[part_number] = CacheEntry(
@@ -231,6 +238,14 @@ class FootprintCache:
                 if ext not in _ALLOWED_EXTENSIONS:
                     logger.debug("Skipping non-KiCad file in ZIP: %s", info.filename)
                     continue
+
+                # Path traversal check on the raw ZIP entry (T-12-01)
+                raw_resolved = (self.cache_root / info.filename).resolve()
+                if not str(raw_resolved).startswith(str(cache_root_resolved)):
+                    raise ValueError(
+                        f"ZIP entry '{info.filename}' escapes target directory "
+                        f"(path traversal attempt)"
+                    )
 
                 # Determine target subdirectory based on extension
                 if ext == ".kicad_mod":
