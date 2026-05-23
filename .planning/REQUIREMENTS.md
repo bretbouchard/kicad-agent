@@ -147,6 +147,16 @@ Two-tier phase: first close the practical operations gap, then build generative 
 - [x] **GEN-11**: Iterative refinement loop: generate → validate (ERC/DRC) → feed violations back for fixes → repeat until clean (max 5 iterations)
 - [x] **GEN-12**: Generation evaluation: DRC pass rate on simple designs (5-10 components), manufacturing output completeness check, comparison vs manual baseline
 
+### LTspice Integration (Phase 11)
+
+Parse LTspice .asc schematic files, extract components/nets/simulation commands, read .raw simulation results, and build net connectivity graphs from wire geometry.
+
+- [x] **LTSPICE-01**: Parse LTspice .asc schematic files into structured component/net/simulation data via SpiceLib AscEditor
+- [x] **LTSPICE-02**: Extract components with values, positions, orientations from .asc files
+- [ ] **LTSPICE-03**: Derive net connectivity graph from WIRE and FLAG statements using networkx
+- [x] **LTSPICE-04**: Extract and parse simulation commands (.tran, .ac, .dc, .noise) from directives
+- [x] **LTSPICE-05**: Read .raw simulation result files with voltage/current traces by node name
+
 ## Out of Scope
 
 | Feature | Reason |
@@ -239,12 +249,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GEN-10 | Phase 10: AI-Driven PCB Generation | Complete | 10-06 |
 | GEN-11 | Phase 10: AI-Driven PCB Generation | Complete | 10-06 |
 | GEN-12 | Phase 10: AI-Driven PCB Generation | Complete | 10-06 |
+| LTSPICE-01 | Phase 11: LTspice Integration | Complete | 11-01 |
+| LTSPICE-02 | Phase 11: LTspice Integration | Complete | 11-01 |
+| LTSPICE-03 | Phase 11: LTspice Integration | Pending | 11-03 |
+| LTSPICE-04 | Phase 11: LTspice Integration | Complete | 11-01 |
+| LTSPICE-05 | Phase 11: LTspice Integration | Complete | 11-02 |
 
 **Coverage:**
-- Total requirements: 71 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10)
-- Mapped to phases: 71
+- Total requirements: 76 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10 + 5 Phase 11)
+- Mapped to phases: 76
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-22 — Phase 10 AI-Driven PCB Generation added*
+*Last updated: 2026-05-23 — Phase 11 LTspice Integration added*
