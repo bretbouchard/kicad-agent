@@ -24,7 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 10: AI-Driven PCB Generation** - Generative AI that creates schematics and PCB layouts from natural language intent, closing the gap from critic to creator
 - [x] **Phase 11: LTspice Integration** - Parse LTspice .asc schematics, extract components/nets/simulation commands, bridge KiCad-LTspice workflows
 - [x] **Phase 12: ADI Footprint Library** - On-demand ADI footprint/symbol download, library management, and manufacturer part integration
-- [ ] **Phase 13: Real-World PCB Training Pipeline** - GitHub crawler for KiCad repos, parse schematic+PCB pairs into structured graph datasets for real-world training
+- [x] **Phase 13: Real-World PCB Training Pipeline** - GitHub crawler for KiCad repos, parse schematic+PCB pairs into structured graph datasets for real-world training
 - [ ] **Phase 14: Bidirectional KiCad↔LTspice** - KiCad schematic → .asc writer, close the simulation loop for design-simulate-iterate workflows
 - [ ] **Phase 15: AI Generation Wiring** - LLM-driven component suggestion, schematic drafting, design critique, and natural language to operations pipeline
 - [ ] **Phase 16: Component Placement AI** - Predict optimal component placement from schematic netlist using spatial reasoning and training data
@@ -272,7 +272,7 @@ Plans:
 Plans:
 - [x] 13-01-PLAN.md -- GitHub repo discovery and KiCad file pair extraction (RW-01)
 - [x] 13-02-PLAN.md -- Schematic+PCB graph parser with spatial feature extraction (RW-02, RW-03)
-- [ ] 13-03-PLAN.md -- Dataset normalization, deduplication, and GRPO training format export (RW-04, RW-05)
+- [x] 13-03-PLAN.md -- Dataset normalization, deduplication, and GRPO training format export (RW-04, RW-05)
 
 ### Phase 14: Bidirectional KiCad↔LTspice
 **Goal**: Complete the LTspice bridge by adding KiCad → .asc export, enabling design in KiCad, simulate in LTspice, results flow back. Phase 11 reads LTspice; Phase 14 writes to it.
@@ -392,7 +392,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 10. AI-Driven PCB Generation | 6/6 | Complete | 2026-05-23 |
 | 11. LTspice Integration | 3/3 | Complete | 2026-05-23 |
 | 12. ADI Footprint Library | 3/3 | Complete | 2026-05-23 |
-| 13. Real-World PCB Training Pipeline | 2/3 | In Progress | |
+| 13. Real-World PCB Training Pipeline | 3/3 | Complete | 2026-05-23 |
 | 14. Bidirectional KiCad↔LTspice | 0/3 | Planned | |
 | 15. AI Generation Wiring | 0/4 | Planned | |
 | 16. Component Placement AI | 0/4 | Planned | |
