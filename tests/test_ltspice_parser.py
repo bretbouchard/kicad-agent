@@ -92,5 +92,76 @@ class TestAscParser:
 class TestSimCommands:
     """Tests for parse_simulation_command() function.
 
-    Populated in Task 2.
+    Covers .tran, .ac, .dc, .noise, .op command parsing.
     """
+
+    def test_8_tran_command(self) -> None:
+        """.tran 0 1ms 0 1u returns TranCommand with correct values."""
+        from kicad_agent.ltspice.sim_commands import parse_simulation_command
+
+        result = parse_simulation_command(".tran 0 1ms 0 1u")
+        assert result is not None
+        assert result.tstart == 0.0
+        assert result.tstop == pytest.approx(0.001)
+        assert result.tstart_meas == 0.0
+        assert result.tstep == pytest.approx(1e-06)
+
+    def test_9_ac_command(self) -> None:
+        """.ac dec 10 1 100k returns AcCommand with correct values."""
+        from kicad_agent.ltspice.sim_commands import parse_simulation_command
+
+        result = parse_simulation_command(".ac dec 10 1 100k")
+        assert result is not None
+        assert result.sweep == "dec"
+        assert result.npoints == 10
+        assert result.fstart == 1.0
+        assert result.fstop == pytest.approx(100000.0)
+
+    def test_10_dc_command(self) -> None:
+        """.dc V1 0 5 0.1 returns DcCommand with correct values."""
+        from kicad_agent.ltspice.sim_commands import parse_simulation_command
+
+        result = parse_simulation_command(".dc V1 0 5 0.1")
+        assert result is not None
+        assert result.source == "V1"
+        assert result.start == 0.0
+        assert result.stop == 5.0
+        assert result.step == pytest.approx(0.1)
+
+    def test_11_noise_command(self) -> None:
+        """.noise V(out) V1 dec 10 1 100k returns NoiseCommand."""
+        from kicad_agent.ltspice.sim_commands import parse_simulation_command
+
+        result = parse_simulation_command(".noise V(out) V1 dec 10 1 100k")
+        assert result is not None
+        assert result.output == "V(out)"
+        assert result.source == "V1"
+        assert result.sweep == "dec"
+        assert result.npoints == 10
+        assert result.fstart == 1.0
+        assert result.fstop == pytest.approx(100000.0)
+
+    def test_12_op_command(self) -> None:
+        """.op returns OpCommand."""
+        from kicad_agent.ltspice.sim_commands import parse_simulation_command
+
+        result = parse_simulation_command(".op")
+        assert result is not None
+
+    def test_13_unknown_command_returns_none(self) -> None:
+        """Non-command text returns None."""
+        from kicad_agent.ltspice.sim_commands import parse_simulation_command
+
+        result = parse_simulation_command("not a command")
+        assert result is None
+
+    def test_14_tran_in_basic_rc_via_integration(self) -> None:
+        """Directive .tran in basic_rc.asc parsed into TranCommand via sim_commands."""
+        result = parse_asc(BASIC_RC_ASC)
+
+        assert len(result.simulation_commands) > 0
+        from kicad_agent.ltspice.sim_commands import TranCommand
+
+        tran = result.simulation_commands[0]
+        assert isinstance(tran, TranCommand)
+        assert tran.tstop == pytest.approx(0.001)
