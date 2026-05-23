@@ -1,6 +1,7 @@
 """LTspice integration for .asc schematic parsing, net connectivity, and .raw simulation results."""
 
 from kicad_agent.ltspice.asc_parser import parse_asc
+from kicad_agent.ltspice.net_graph import LTspiceNetGraph
 from kicad_agent.ltspice.raw_reader import read_raw
 from kicad_agent.ltspice.sim_commands import (
     AcCommand,
@@ -26,6 +27,7 @@ __all__ = [
     "LTspiceComponent",
     "LTspiceDirective",
     "LTspiceFlag",
+    "LTspiceNetGraph",
     "LTspiceSchematic",
     "LTspiceTrace",
     "LTspiceWire",
