@@ -29,6 +29,23 @@ from kicad_agent.spatial.primitives import (
 )
 
 
+def _net_name(net_obj: Any) -> str:
+    """Extract net name from a kiutils net object, handling both formats.
+
+    In older KiCad formats, net is an object with a .name attribute.
+    In newer formats, net may be an int (net number) or a string.
+    """
+    if net_obj is None:
+        return ""
+    if isinstance(net_obj, str):
+        return net_obj
+    if isinstance(net_obj, int):
+        return str(net_obj)
+    if hasattr(net_obj, "name"):
+        return net_obj.name
+    return str(net_obj)
+
+
 def _rotate_local_to_absolute(
     fp_x: float,
     fp_y: float,
@@ -84,7 +101,7 @@ def extract_points(pcb_ir: PcbIR) -> list[SpatialPoint]:
                 layers_str = ",".join(item.layers)
             net_name = ""
             if hasattr(item, "net") and item.net is not None:
-                net_name = item.net.name
+                net_name = _net_name(item.net)
             entity_id = str(item.tstamp) if hasattr(item, "tstamp") else ""
             points.append(
                 SpatialPoint(
@@ -108,7 +125,7 @@ def extract_points(pcb_ir: PcbIR) -> list[SpatialPoint]:
             abs_x, abs_y = _rotate_local_to_absolute(
                 fp_x, fp_y, fp_angle, pad.position.X, pad.position.Y
             )
-            net_name = pad.net.name if pad.net is not None else ""
+            net_name = _net_name(pad.net)
             points.append(
                 SpatialPoint(
                     x=abs_x,
@@ -202,7 +219,7 @@ def extract_paths(pcb_ir: PcbIR) -> list[SpatialPath]:
         pts.append((item.end.X, item.end.Y))
 
         entity_id = str(item.tstamp) if hasattr(item, "tstamp") else ""
-        net_name = item.net.name if hasattr(item, "net") and item.net else ""
+        net_name = _net_name(item.net) if hasattr(item, "net") and item.net else ""
         layer = item.layer if hasattr(item, "layer") else ""
         width = item.width if hasattr(item, "width") else 0.0
 
@@ -274,8 +291,7 @@ def extract_regions(pcb_ir: PcbIR) -> list[SpatialRegion]:
         if hasattr(zone, "netName") and zone.netName:
             net_name = zone.netName
         elif hasattr(zone, "net") and zone.net is not None:
-            if hasattr(zone.net, "name"):
-                net_name = zone.net.name
+            net_name = _net_name(zone.net)
 
         regions.append(
             SpatialRegion(
