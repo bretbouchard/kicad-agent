@@ -73,3 +73,19 @@ target-version = "py311"
 [tool.mypy]
 python_version = "3.11"
 strict = true
+
+[[tool.mypy.overrides]]
+module = ["kiutils.*", "sexpdata.*", "networkx.*", "shapely.*"]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["kicad_agent"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
