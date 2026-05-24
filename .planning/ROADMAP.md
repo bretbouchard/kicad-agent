@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 14: Bidirectional KiCad↔LTspice** - KiCad schematic → .asc writer, close the simulation loop for design-simulate-iterate workflows
 - [x] **Phase 15: AI Generation Wiring** - LLM-driven component suggestion, schematic drafting, design critique, and natural language to operations pipeline
 - [ ] **Phase 16: Component Placement AI** - Predict optimal component placement from schematic netlist using spatial reasoning and training data
-- [ ] **Phase 17: Package & Distribution** - PyPI publish, CLI entry point, pip install kicad-agent, documentation site
+- [ ] **Phase 17: Package & Distribution** - PyPI publish, CLI entry point, pip install kicad-agent, documentation site (3/3 plans complete)
 - [ ] **Phase 18: CI/CD Pipeline** - GitHub Actions for test suite, linting, coverage gate, and release automation
 - [ ] **Phase 19: Interactive Routing Suggestions** - Use spatial primitives + training data to suggest trace routing on real boards
 
@@ -340,7 +340,7 @@ Plans:
 Plans:
 - [x] 17-01-PLAN.md -- Package structure, pyproject.toml updates, CLI entry point (DIST-01, DIST-02)
 - [x] 17-02-PLAN.md -- PyPI publishing workflow and version management (DIST-03)
-- [ ] 17-03-PLAN.md -- README, API documentation, and usage examples (DIST-04)
+- [x] 17-03-PLAN.md -- README, API documentation, and usage examples (DIST-04)
 
 ### Phase 18: CI/CD Pipeline
 **Goal**: GitHub Actions CI that runs the full test suite, linting, type checking, and coverage gate on every PR. Release automation for version bumps and PyPI publishing.

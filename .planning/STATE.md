@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Completed 17-02 -- PyPI publishing and build workflows"
-last_updated: "2026-05-24T01:45:03Z"
+stopped_at: "Completed 17-03 -- README and documentation site"
+last_updated: "2026-05-24T01:49:02Z"
 last_activity: 2026-05-24
 progress:
   total_phases: 19
   completed_phases: 16
   total_plans: 66
-  completed_plans: 55
+  completed_plans: 56
   percent: 83
 ---
 
@@ -27,7 +27,7 @@ Last activity: 2026-05-24
 ## Current Position
 
 Phase: 17 of 19 (Package & Distribution)
-Plan: 2 of 3 complete
+Plan: 3 of 3 complete
 Status: Executing
 Last activity: 2026-05-24
 
@@ -74,6 +74,7 @@ Progress: [████████░░] 83%
 | Phase 16 P03 | 5min | 2 tasks | 5 files |
 | Phase 16 P02 | 29min | 2 tasks | 8 files |
 | Phase 16 P04 | 10min | 2 tasks | 5 files |
+| Phase 17 P03 | 4min | 2 tasks | 25 files |
 
 ## Accumulated Context
 
@@ -131,6 +132,9 @@ Recent decisions affecting current work:
 - [Phase 16]: Training uses advantage-weighted energy surrogate (non-diff reward for advantages, diff energy for gradients)
 - [Phase 16]: Synthetic data uses scipy dual_annealing (200 iterations) for near-optimal placement targets
 - [Phase 16]: Composite training loss: HPWL + 10x overlap + 5x edge penalty; GRPO reward: 0.3 accuracy + 0.4 wire + 0.3 clearance
+- [Phase 17]: Training __init__.py docstring uses bullet list (not em-dash) for griffe parsing compatibility
+- [Phase 17]: TranCommand docstring uses parenthetical notation (not brackets) to avoid Markdown reference link parsing
+- [Phase 17]: AscWriter uses TYPE_CHECKING import for Schematic type annotation without runtime import
 
 ### Roadmap Evolution
 
@@ -154,5 +158,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Completed 17-02 -- PyPI publishing and build workflows
+Stopped at: Completed 17-03 -- README and documentation site
 Resume file: None
