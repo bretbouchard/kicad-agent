@@ -55,6 +55,8 @@ def __getattr__(name: str):
         "llm_refine_design": "kicad_agent.llm.refinement",
         "LLMRefinementResult": "kicad_agent.llm.refinement",
         "LLMRefinementIteration": "kicad_agent.llm.refinement",
+        "llm_generate": "kicad_agent.llm.pipeline",
+        "LLMGenerationResult": "kicad_agent.llm.pipeline",
     }
 
     if name not in _lazy:
@@ -88,9 +90,11 @@ __all__ = [
     "INTENT_TOOL",
     "LLMClient",
     "LLMConfigError",
+    "LLMGenerationResult",
     "LLMRefinementIteration",
     "LLMRefinementResult",
     "SUGGEST_TOOL",
     "build_spatial_context",
+    "llm_generate",
     "llm_refine_design",
 ]
