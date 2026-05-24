@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: executing
-stopped_at: Completed 19-03 -- interactive routing session with approval and constraint adaptation
-last_updated: "2026-05-24T02:16:05.000Z"
+milestone: v2.1
+milestone_name: production-ai
+status: complete
+stopped_at: "v2.1 milestone COMPLETE — 19/19 phases, 66/66 plans, 1246 tests passing"
+last_updated: "2026-05-24T02:30:00Z"
 last_activity: 2026-05-24
 progress:
   total_phases: 19
-  completed_phases: 18
+  completed_phases: 19
   total_plans: 66
-  completed_plans: 62
-  percent: 94
+  completed_plans: 66
+  percent: 100
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** v2.1 milestone "production-ai" — 7 new phases (13-19). v2.0 complete (12/12 phases, 917 tests passing).
+**Current focus:** v2.1 milestone "production-ai" COMPLETE — 19/19 phases, 1246 tests passing.
 Last activity: 2026-05-24
 
 ## Current Position
 
 Phase: 19 of 19 (Interactive Routing Suggestions)
 Plan: 3 of 3 complete
-Status: Phase complete
+Status: **MILESTONE COMPLETE**
 Last activity: 2026-05-24
 
-Progress: [█████████▓] 94%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -142,6 +142,11 @@ Recent decisions affecting current work:
 - [Phase 18]: fail_under=80 in pyproject.toml as single source of truth for coverage gate (not CLI flag)
 - [Phase 18]: fetch-depth: 0 in CI test job for setuptools-scm version detection
 - [Phase 18]: mypy overrides for kiutils, sexpdata, networkx, shapely (no type stubs available)
+- [Phase 18]: GitHub Release job added to publish.yml with softprops/action-gh-release and artifact passing between jobs
+- [Phase 19]: RoutingGraph uses Shapely Point.within for exact obstacle exclusion; boundary points excluded (not within)
+- [Phase 19]: Accordion serpentining caps at 50 bumps per segment; amplitude bounded to 2x target_spacing_mm
+- [Phase 19]: InteractiveRoutingSession rebuilds graph on reroute when per-net clearance constraints increase
+- [Phase 19]: ROUTE-01 through ROUTE-04 requirements added to REQUIREMENTS.md
 
 ### Roadmap Evolution
 
@@ -155,7 +160,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Pre-existing test failures resolved -- 1161 passed, 1 skipped, 0 failures as of Phase 16 P02
+- Pre-existing test failures resolved -- 1246 passed, 1 skipped, 0 failures as of Phase 19 P03 (v2.1 complete)
 
 ## Deferred Items
 
@@ -165,5 +170,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Completed 19-03 -- interactive routing session with approval and constraint adaptation
+Stopped at: v2.1 milestone COMPLETE — 19/19 phases, 1246 tests passing
 Resume file: None
