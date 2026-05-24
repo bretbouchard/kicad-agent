@@ -70,13 +70,13 @@ def _sanitize_net_name(text: str) -> str:
     Returns:
         Sanitized net name suitable for LTspice FLAG.
     """
+    # Strip whitespace first so leading slash detection works on padded input
+    text = text.strip()
     # Strip leading slash (KiCad hierarchical prefix)
     if text.startswith("/"):
         text = text[1:]
     # Decode {slash} token back to /
     text = text.replace("{slash}", "/")
-    # Strip whitespace
-    text = text.strip()
     return text
 
 
