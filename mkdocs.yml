@@ -1,0 +1,60 @@
+site_name: kicad-agent
+site_description: "AI-safe structural editing of KiCad schematic, PCB, symbol, and footprint files"
+site_url: "https://bretbouchard.github.io/kicad-agent"
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.tabs
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            members_order: source
+            heading_level: 2
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - CLI Reference: cli.md
+  - API Reference:
+    - api/index.md
+    - Parser: api/parser.md
+    - Operations: api/ops.md
+    - Validation: api/validation.md
+    - Serializer: api/serializer.md
+    - Handler: api/handler.md
+    - Analysis: api/analysis.md
+    - Cross-file: api/crossfile.md
+    - Spatial: api/spatial.md
+    - Export: api/export.md
+    - Generation: api/generation.md
+    - LTspice: api/ltspice.md
+    - Training: api/training.md
+    - Project: api/project.md
+  - Examples:
+    - Basic Operations: examples/basic-operations.md
+    - Validation: examples/validation.md
+    - Generation: examples/generation.md

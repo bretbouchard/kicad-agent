@@ -37,7 +37,7 @@ _ENG_VALUE_RE = re.compile(
 class TranCommand:
     """Transient analysis command.
 
-    LTspice format: .tran <Tstep> <Tstop> [Tstart [dTmax]] [modifiers]
+    LTspice format: .tran Tstep Tstop (optional Tstart, dTmax, modifiers)
     """
 
     tstart: float

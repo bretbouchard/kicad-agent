@@ -12,11 +12,15 @@ import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from spicelib import AscEditor
 from spicelib.editor.asc_editor import ASC_ROTATION_DICT, Text, TextTypeEnum
 from spicelib.editor.asc_editor import asc_text_align_set
 from spicelib.editor.base_schematic import ERotation, Line, Point, SchematicComponent
+
+if TYPE_CHECKING:
+    from kiutils.schematic import Schematic
 
 from kicad_agent.ltspice.asc_parser import ASY_STUBS_DIR
 from kicad_agent.ltspice.sim_commands import SimulationCommand, serialize_sim_command
@@ -115,7 +119,7 @@ class AscWriter:
 
     def __init__(
         self,
-        schematic,
+        schematic: Schematic,
         symbol_mapper: SymbolMapper,
         coordinate_transformer: CoordinateTransformer,
         simulation_commands: Sequence[SimulationCommand] = (),
