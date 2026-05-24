@@ -289,10 +289,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DIST-01 | Phase 17: Package & Distribution | Complete | 17-01 |
 | DIST-02 | Phase 17: Package & Distribution | Complete | 17-01 |
 | DIST-03 | Phase 17: Package & Distribution | Complete | 17-02 |
+| ROUTE-01 | Phase 19: Interactive Routing Suggestions | Complete | 19-01 |
+| ROUTE-02 | Phase 19: Interactive Routing Suggestions | Complete | 19-01 |
+| ROUTE-03 | Phase 19: Interactive Routing Suggestions | Complete | 19-02 |
+| ROUTE-04 | Phase 19: Interactive Routing Suggestions | Complete | 19-03 |
 
 **Coverage:**
-- Total requirements: 94 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10 + 5 Phase 11 + 4 Phase 12 + 5 Phase 13 + 4 Phase 14 + 5 Phase 16)
-- Mapped to phases: 94
+- Total requirements: 98 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10 + 5 Phase 11 + 4 Phase 12 + 5 Phase 13 + 4 Phase 14 + 5 Phase 16 + 4 Phase 19)
+- Mapped to phases: 98
 - Unmapped: 0
 
 ---
@@ -339,3 +343,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - [x] **DIST-01**: pyproject.toml has complete [build-system] section with setuptools backend and setuptools-scm dynamic versioning
 - [x] **DIST-02**: pip install . produces a wheel with all kicad_agent modules and a kicad-agent console script entry point
 - [x] **DIST-03**: GitHub Actions workflows for build verification on push/PR and PyPI publishing on version tag push via Trusted Publishing (OIDC)
+
+### Interactive Routing Suggestions (Phase 19)
+
+- [x] **ROUTE-01**: Routing graph construction from board bounds, obstacles, and DRC constraints with grid-based nodes and clearance-aware edge costs
+- [x] **ROUTE-02**: A* pathfinding routes nets individually and in batch (shortest first), producing immutable RouteResult with path waypoints and length
+- [x] **ROUTE-03**: Differential pair routing with length matching via accordion serpentining, configurable spacing and mismatch tolerance
+- [x] **ROUTE-04**: Interactive routing session with approve/reject/reroute cycles, per-net constraint adaptation, and differential pair coupling
