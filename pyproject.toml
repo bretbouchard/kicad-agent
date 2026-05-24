@@ -21,6 +21,9 @@ dev = [
     "mypy>=1.7",
     "ruff>=0.13",
 ]
+llm = [
+    "anthropic>=0.61.0",
+]
 
 [project.scripts]
 kicad-agent = "kicad_agent.cli:main"
