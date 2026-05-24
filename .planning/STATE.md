@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: production-ai
 status: active
-stopped_at: "Completed 14-03 -- Simulation command serialization and full round-trip validation"
-last_updated: "2026-05-24T00:12:44Z"
+stopped_at: "Completed 15-01 -- LLM integration layer with IntentParser, ComponentSuggester, ContextBuilder"
+last_updated: "2026-05-24T00:23:18Z"
 last_activity: 2026-05-24
 progress:
   total_phases: 19
   completed_phases: 13
   total_plans: 66
-  completed_plans: 48
-  percent: 70
+  completed_plans: 49
+  percent: 74
 ---
 
 # Project State
@@ -26,18 +26,18 @@ Last activity: 2026-05-24
 
 ## Current Position
 
-Phase: 14 of 19 (Bidirectional KiCad↔LTspice)
-Plan: 3 of 3 complete
-Status: Phase complete
+Phase: 15 of 19 (AI Generation Wiring)
+Plan: 1 of 4 complete
+Status: In progress
 Last activity: 2026-05-24
 
-Progress: [███████░░░] 70%
+Progress: [███████░░░] 74%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 48
+- Total plans completed: 49
 - Average duration: 5 min
 - Total execution time: 3.9 hours
 
@@ -66,6 +66,7 @@ Progress: [███████░░░] 70%
 *Updated after each plan completion*
 | Phase 14 P03 | 4min | 2 tasks | 4 files |
 | Phase 14 P02 | 2min | - tasks | - files |
+| Phase 15 P01 | 7min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Direct list manipulation (editor.wires.append, editor.labels.append) for SpiceLib due to broken add_instruction() behavior
 - [Phase 14]: Plain float formatting in serialize_sim_command for simplicity; parse_eng_value extended for scientific notation round-trip
 - [Phase 14]: Simulation commands injected via editor.directives.append() with asc_text_align_set for SpiceLib compatibility
+- [Phase 15]: anthropic as optional [llm] dependency; __init__.py uses _check_anthropic_available() guard for clear ImportError
+- [Phase 15]: ComponentSuggestion as frozen dataclass; ContextBuilder uses static methods (no instance state)
+- [Phase 15]: conftest_llm.py registered via pytest_plugins in conftest.py for fixture discovery across LLM test files
 
 ### Roadmap Evolution
 
@@ -127,5 +131,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Completed 14-03 -- Simulation command serialization and full round-trip validation
+Stopped at: Completed 15-01 -- LLM integration layer with IntentParser, ComponentSuggester, ContextBuilder
 Resume file: None

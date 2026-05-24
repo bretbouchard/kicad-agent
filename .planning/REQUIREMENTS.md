@@ -276,6 +276,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BIDI-02 | Phase 14: Bidirectional KiCad-LTspice | Complete | 14-01 |
 | BIDI-03 | Phase 14: Bidirectional KiCad-LTspice | Complete | 14-02 |
 | BIDI-04 | Phase 14: Bidirectional KiCad-LTspice | Complete | 14-03 |
+| AIGEN-01 | Phase 15: AI Generation Wiring | Complete | 15-01 |
+| AIGEN-02 | Phase 15: AI Generation Wiring | Complete | 15-01 |
+| AIGEN-03 | Phase 15: AI Generation Wiring | Pending | 15-02 |
+| AIGEN-04 | Phase 15: AI Generation Wiring | Pending | 15-03 |
+| AIGEN-05 | Phase 15: AI Generation Wiring | Pending | 15-04 |
 
 **Coverage:**
 - Total requirements: 89 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10 + 5 Phase 11 + 4 Phase 12 + 5 Phase 13 + 4 Phase 14)
@@ -296,7 +301,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-23 — Phase 14 Bidirectional KiCad-LTspice added*
+*Last updated: 2026-05-24 — Phase 15 AI Generation Wiring added*
 
 ### Bidirectional KiCad-LTspice (Phase 14)
 
@@ -304,3 +309,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 - [x] **BIDI-02**: Component symbol mapping between KiCad symbols and LTspice .asy types
 - [x] **BIDI-03**: Net labels transfer correctly between KiCad and LTspice naming conventions
 - [x] **BIDI-04**: Simulation commands (.tran, .ac, .dc) attach correctly to exported schematics
+
+### AI Generation Wiring (Phase 15)
+
+- [x] **AIGEN-01**: Natural language design intent produces a structured GenerationIntent with validated operations via Anthropic SDK tool use
+- [x] **AIGEN-02**: LLM suggests KiCad components given a functional description with valid library_id values and rationale
+- [ ] **AIGEN-03**: Design critique identifies spatial issues (clearance violations, routing congestion, thermal hotspots)
+- [ ] **AIGEN-04**: Iterative refinement loop: generate -> validate (ERC/DRC) -> LLM fix -> repeat until clean
+- [ ] **AIGEN-05**: End-to-end demo: "design a voltage regulator circuit" produces a valid .kicad_sch passing ERC
