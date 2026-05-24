@@ -290,7 +290,7 @@ class TestLLMRefineDesign:
             )
 
         assert result.converged is True
-        assert result.total_iterations == 1
+        assert result.total_iterations == 2  # iter 1: fail+fix, iter 2: pass+converge
         assert result.final_erc_pass is True
 
     def test_iteration_history_passed_to_fixer(self, tmp_path):
