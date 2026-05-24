@@ -286,7 +286,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 14-01-PLAN.md -- KiCad component → LTspice symbol mapping table and converter (BIDI-02)
+- [x] 14-01-PLAN.md -- KiCad component → LTspice symbol mapping table and converter (BIDI-02)
 - [ ] 14-02-PLAN.md -- .asc writer: KiCad schematic to LTspice .asc export (BIDI-01, BIDI-03)
 - [ ] 14-03-PLAN.md -- Simulation command injection and round-trip validation (BIDI-04)
 
@@ -393,7 +393,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 11. LTspice Integration | 3/3 | Complete | 2026-05-23 |
 | 12. ADI Footprint Library | 3/3 | Complete | 2026-05-23 |
 | 13. Real-World PCB Training Pipeline | 3/3 | Complete | 2026-05-23 |
-| 14. Bidirectional KiCad↔LTspice | 0/3 | Planned | |
+| 14. Bidirectional KiCad↔LTspice | 1/3 | In Progress | |
 | 15. AI Generation Wiring | 0/4 | Planned | |
 | 16. Component Placement AI | 0/4 | Planned | |
 | 17. Package & Distribution | 0/3 | Planned | |

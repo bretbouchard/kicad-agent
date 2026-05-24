@@ -272,10 +272,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RW-03 | Phase 13: Real-World Training Pipeline | Complete | 13-02 |
 | RW-04 | Phase 13: Real-World Training Pipeline | Complete | 13-03 |
 | RW-05 | Phase 13: Real-World Training Pipeline | Complete | 13-03 |
+| BIDI-01 | Phase 14: Bidirectional KiCad-LTspice | Pending | 14-02 |
+| BIDI-02 | Phase 14: Bidirectional KiCad-LTspice | Complete | 14-01 |
+| BIDI-03 | Phase 14: Bidirectional KiCad-LTspice | Pending | 14-02 |
+| BIDI-04 | Phase 14: Bidirectional KiCad-LTspice | Pending | 14-03 |
 
 **Coverage:**
-- Total requirements: 85 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10 + 5 Phase 11 + 4 Phase 12 + 5 Phase 13)
-- Mapped to phases: 85
+- Total requirements: 89 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10 + 5 Phase 11 + 4 Phase 12 + 5 Phase 13 + 4 Phase 14)
+- Mapped to phases: 89
 - Unmapped: 0
 
 ---
@@ -292,4 +296,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-23 — Phase 13 Real-World Training Pipeline added*
+*Last updated: 2026-05-23 — Phase 14 Bidirectional KiCad-LTspice added*
+
+### Bidirectional KiCad-LTspice (Phase 14)
+
+- [ ] **BIDI-01**: KiCad schematic exports to valid .asc file that LTspice can open
+- [x] **BIDI-02**: Component symbol mapping between KiCad symbols and LTspice .asy types
+- [ ] **BIDI-03**: Net labels transfer correctly between KiCad and LTspice naming conventions
+- [ ] **BIDI-04**: Simulation commands (.tran, .ac, .dc) attach correctly to exported schematics

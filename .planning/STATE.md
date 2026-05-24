@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: production-ai
 status: active
-stopped_at: "Completed 13-03 -- RealBoardDataset with JSONL, dedup, quality filter, split, and pipeline"
-last_updated: "2026-05-23T23:55:53Z"
+stopped_at: "Completed 14-01 -- KiCad-to-LTspice symbol mapping with SymbolMapper"
+last_updated: "2026-05-23T23:58:02Z"
 last_activity: 2026-05-23
 progress:
   total_phases: 19
   completed_phases: 13
   total_plans: 65
-  completed_plans: 47
-  percent: 68
+  completed_plans: 48
+  percent: 69
 ---
 
 # Project State
@@ -26,18 +26,18 @@ Last activity: 2026-05-23
 
 ## Current Position
 
-Phase: 13 of 19 (Real-World PCB Training Pipeline) -- COMPLETE
-Plan: 3 of 3 planned
-Status: 13-03 complete. RealBoardDataset with JSONL, dedup, quality filter, split, and pipeline. 20 tests. Phase 13 finished.
+Phase: 14 of 19 (Bidirectional KiCad↔LTspice)
+Plan: 1 of 3 planned
+Status: 14-01 complete. SymbolMapper with KiCad-to-LTspice mapping table. 13 tests. Phase 14 in progress.
 Last activity: 2026-05-23
 
-Progress: [██████▓░░░] 65%
+Progress: [███████░░░] 69%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 46
+- Total plans completed: 47
 - Average duration: 5 min
 - Total execution time: 3.9 hours
 
@@ -96,6 +96,8 @@ Recent decisions affecting current work:
 - Raw ZIP entry path validated against cache_root via resolve() prefix check (defense-in-depth with renamed target path)
 - kiutils Footprint.from_file() is correct API (not .parse()); AdiFetcher uses from_file for .kicad_mod validation
 - FootprintCache.cache_root is public attribute (not _cache_root)
+- SymbolMappingType as class constants (not enum) matches project frozen dataclass pattern
+- Power prefix inference for unmapped power symbols (e.g., "power:+9V" derives FLAG text "+9V")
 
 ### Roadmap Evolution
 
@@ -119,5 +121,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Completed 13-03 -- RealBoardDataset with JSONL, dedup, quality filter, split, and pipeline
-Resume file: .planning/phases/13-real-world-training-pipeline/
+Stopped at: Completed 14-01 -- KiCad-to-LTspice symbol mapping with SymbolMapper
+Resume file: .planning/phases/14-bidirectional-ltspice/
