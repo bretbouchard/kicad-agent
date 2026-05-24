@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: production-ai
 status: active
-stopped_at: "Completed 15-01 -- LLM integration layer with IntentParser, ComponentSuggester, ContextBuilder"
-last_updated: "2026-05-24T00:23:18Z"
+stopped_at: "Completed 15-03 -- ErrorFixer and LLM-augmented refinement loop"
+last_updated: "2026-05-24T00:29:22Z"
 last_activity: 2026-05-24
 progress:
   total_phases: 19
   completed_phases: 13
   total_plans: 66
-  completed_plans: 49
-  percent: 74
+  completed_plans: 51
+  percent: 77
 ---
 
 # Project State
@@ -27,11 +27,11 @@ Last activity: 2026-05-24
 ## Current Position
 
 Phase: 15 of 19 (AI Generation Wiring)
-Plan: 1 of 4 complete
+Plan: 3 of 4 complete
 Status: In progress
 Last activity: 2026-05-24
 
-Progress: [███████░░░] 74%
+Progress: [███████░░░] 77%
 
 ## Performance Metrics
 
@@ -40,6 +40,8 @@ Progress: [███████░░░] 74%
 - Total plans completed: 49
 - Average duration: 5 min
 - Total execution time: 3.9 hours
+
+
 
 **By Phase:**
 
@@ -67,6 +69,8 @@ Progress: [███████░░░] 74%
 | Phase 14 P03 | 4min | 2 tasks | 4 files |
 | Phase 14 P02 | 2min | - tasks | - files |
 | Phase 15 P01 | 7min | 2 tasks | 9 files |
+| Phase 15 P02 | 2min | 1 task | 3 files |
+| Phase 15 P03 | 3min | 1 task | 4 files |
 
 ## Accumulated Context
 
@@ -108,6 +112,12 @@ Recent decisions affecting current work:
 - [Phase 15]: anthropic as optional [llm] dependency; __init__.py uses _check_anthropic_available() guard for clear ImportError
 - [Phase 15]: ComponentSuggestion as frozen dataclass; ContextBuilder uses static methods (no instance state)
 - [Phase 15]: conftest_llm.py registered via pytest_plugins in conftest.py for fixture discovery across LLM test files
+- [Phase 15]: Quality score computed server-side from finding severities (critical=-0.3, warning=-0.1, info=-0.02) rather than trusting LLM-reported score
+- [Phase 15]: CritiqueSeverity as str Enum for direct parsing from LLM tool output
+- [Phase 15]: build_spatial_context uses proximity(0,0,10000) to retrieve all entities via existing SpatialQueryEngine API
+- [Phase 15]: Deterministic fixes run first (fast/free/reliable); LLM only called for "other" error category
+- [Phase 15]: Prompt caching on FIX_SYSTEM_PROMPT to reduce API costs with 51KB operation schema in FIX_TOOL
+- [Phase 15]: Stagnation detection at 3 consecutive iterations with same error count; hard cap 10 iterations (T-15-11)
 
 ### Roadmap Evolution
 
@@ -131,5 +141,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Completed 15-01 -- LLM integration layer with IntentParser, ComponentSuggester, ContextBuilder
+Stopped at: Completed 15-03 -- ErrorFixer and LLM-augmented refinement loop
 Resume file: None
