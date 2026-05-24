@@ -41,6 +41,13 @@ def __getattr__(name: str):
         "INTENT_TOOL": "kicad_agent.llm.tools",
         "SUGGEST_TOOL": "kicad_agent.llm.tools",
         "COMPONENT_SYSTEM_PROMPT": "kicad_agent.llm.tools",
+        "DesignCritic": "kicad_agent.llm.design_critic",
+        "CritiqueFinding": "kicad_agent.llm.design_critic",
+        "CritiqueReport": "kicad_agent.llm.design_critic",
+        "CritiqueSeverity": "kicad_agent.llm.design_critic",
+        "CRITIC_SYSTEM_PROMPT": "kicad_agent.llm.design_critic",
+        "CRITIC_TOOL": "kicad_agent.llm.design_critic",
+        "build_spatial_context": "kicad_agent.llm.design_critic",
     }
 
     if name not in _lazy:
@@ -60,9 +67,16 @@ __all__ = [
     "ComponentSuggester",
     "COMPONENT_SYSTEM_PROMPT",
     "ContextBuilder",
+    "CRITIC_SYSTEM_PROMPT",
+    "CRITIC_TOOL",
+    "CritiqueFinding",
+    "CritiqueReport",
+    "CritiqueSeverity",
+    "DesignCritic",
     "IntentParser",
     "INTENT_TOOL",
     "LLMClient",
     "LLMConfigError",
     "SUGGEST_TOOL",
+    "build_spatial_context",
 ]
