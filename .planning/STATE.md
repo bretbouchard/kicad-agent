@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: production-ai
 status: active
-stopped_at: "Completed 14-01 -- KiCad-to-LTspice symbol mapping with SymbolMapper"
-last_updated: "2026-05-23T23:58:02Z"
-last_activity: 2026-05-23
+stopped_at: "Completed 14-02 -- AscWriter with CoordinateTransformer for KiCad-to-LTspice .asc export"
+last_updated: "2026-05-24T00:07:11.380Z"
+last_activity: 2026-05-24
 progress:
   total_phases: 19
-  completed_phases: 13
-  total_plans: 65
-  completed_plans: 48
-  percent: 69
+  completed_phases: 12
+  total_plans: 66
+  completed_plans: 45
+  percent: 68
 ---
 
 # Project State
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
 **Current focus:** v2.1 milestone "production-ai" — 7 new phases (13-19). v2.0 complete (12/12 phases, 917 tests passing).
-Last activity: 2026-05-23
+Last activity: 2026-05-24
 
 ## Current Position
 
 Phase: 14 of 19 (Bidirectional KiCad↔LTspice)
-Plan: 1 of 3 planned
-Status: 14-01 complete. SymbolMapper with KiCad-to-LTspice mapping table. 13 tests. Phase 14 in progress.
-Last activity: 2026-05-23
+Plan: 2 of 3 planned
+Status: Ready to execute
+Last activity: 2026-05-24
 
 Progress: [███████░░░] 69%
 
@@ -64,6 +64,7 @@ Progress: [███████░░░] 69%
 - Trend: All 12 phases complete — project delivered
 
 *Updated after each plan completion*
+| Phase 14 P02 | 2min | - tasks | - files |
 
 ## Accumulated Context
 
@@ -98,6 +99,8 @@ Recent decisions affecting current work:
 - FootprintCache.cache_root is public attribute (not _cache_root)
 - SymbolMappingType as class constants (not enum) matches project frozen dataclass pattern
 - Power prefix inference for unmapped power symbols (e.g., "power:+9V" derives FLAG text "+9V")
+- [Phase ?]: Strip whitespace before leading-slash check in _sanitize_net_name for correct combined input
+- [Phase ?]: Direct list manipulation (editor.wires.append, editor.labels.append) for SpiceLib due to broken add_instruction() behavior
 
 ### Roadmap Evolution
 
@@ -122,4 +125,4 @@ None yet.
 ## Session Continuity
 
 Stopped at: Completed 14-01 -- KiCad-to-LTspice symbol mapping with SymbolMapper
-Resume file: .planning/phases/14-bidirectional-ltspice/
+Resume file: None

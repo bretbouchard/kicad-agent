@@ -287,7 +287,7 @@ Plans:
 
 Plans:
 - [x] 14-01-PLAN.md -- KiCad component → LTspice symbol mapping table and converter (BIDI-02)
-- [ ] 14-02-PLAN.md -- .asc writer: KiCad schematic to LTspice .asc export (BIDI-01, BIDI-03)
+- [x] 14-02-PLAN.md -- .asc writer: KiCad schematic to LTspice .asc export (BIDI-01, BIDI-03)
 - [ ] 14-03-PLAN.md -- Simulation command injection and round-trip validation (BIDI-04)
 
 ### Phase 15: AI Generation Wiring
