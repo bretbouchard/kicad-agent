@@ -18,6 +18,11 @@ from kicad_agent.routing.diff_pair import (
     _path_length,
     route_differential_pair,
 )
+from kicad_agent.routing.interactive import (
+    InteractiveRoutingSession,
+    RoutingSuggestion,
+    SuggestionStatus,
+)
 from kicad_agent.routing.pathfinder import (
     RouteResult,
     build_routing_graph,
@@ -562,3 +567,192 @@ class TestDifferentialPair:
             assert abs(y - 5.0) <= max_amplitude + 1e-6, (
                 f"Point ({x},{y}) exceeds amplitude bound"
             )
+
+
+# ---------------------------------------------------------------------------
+# ROUTE-04: Interactive routing session
+# ---------------------------------------------------------------------------
+
+
+def _make_session(
+    netlist: dict[str, list[tuple[float, float]]] | None = None,
+    constraints: RoutingConstraints | None = None,
+    max_iterations: int = 5,
+    differential_pairs: list[tuple[str, str]] | None = None,
+) -> InteractiveRoutingSession:
+    """Helper: build an InteractiveRoutingSession with a fresh graph."""
+    if netlist is None:
+        netlist = {
+            "VCC": [(0, 0), (10, 0)],
+            "GND": [(0, 5), (10, 5)],
+            "SIG": [(0, 10), (10, 10)],
+        }
+    if constraints is None:
+        constraints = RoutingConstraints(grid_resolution_mm=1.0)
+    graph = RoutingGraph(
+        board_bounds=(0, 0, 50, 50),
+        obstacles=[],
+        constraints=constraints,
+    )
+    return InteractiveRoutingSession(
+        graph=graph,
+        netlist=netlist,
+        constraints=constraints,
+        max_iterations=max_iterations,
+        differential_pairs=differential_pairs,
+    )
+
+
+class TestInteractiveSession:
+    """ROUTE-04: Interactive routing session with approve/reject/reroute."""
+
+    def test_interactive_session_generates_suggestions(self) -> None:
+        """3-net netlist produces 3 pending suggestions."""
+        session = _make_session()
+        assert len(session.suggestions) == 3
+        for sugg in session.suggestions.values():
+            assert sugg.status == SuggestionStatus.PENDING
+            assert len(sugg.path) >= 2
+
+    def test_interactive_approve(self) -> None:
+        """Approving a net locks it and sets status."""
+        session = _make_session()
+        session.approve("VCC")
+        assert session.suggestions["VCC"].status == SuggestionStatus.APPROVED
+        assert "VCC" in session.locked_routes
+        assert session.locked_routes["VCC"].net_name == "VCC"
+
+    def test_interactive_reject(self) -> None:
+        """Rejecting a net sets status and reason."""
+        session = _make_session()
+        session.reject("GND", reason="clearance violation")
+        assert session.suggestions["GND"].status == SuggestionStatus.REJECTED
+        assert session.suggestions["GND"].reject_reason == "clearance violation"
+        assert "GND" not in session.locked_routes
+
+    def test_interactive_reroute(self) -> None:
+        """Reject and reroute produces new PENDING suggestions."""
+        session = _make_session()
+        session.reject("SIG")
+        new_suggestions = session.reroute_rejected()
+        assert len(new_suggestions) >= 1
+        for sugg in new_suggestions:
+            assert sugg.status == SuggestionStatus.PENDING
+        assert session.iteration == 1
+
+    def test_interactive_max_iterations(self) -> None:
+        """Exceeding max_iterations raises RuntimeError."""
+        session = _make_session(max_iterations=1)
+        session.reject("VCC")
+        session.reroute_rejected()
+        # Second reroute should raise.
+        session.reject("VCC")
+        with pytest.raises(RuntimeError, match="Maximum iterations"):
+            session.reroute_rejected()
+
+    def test_interactive_set_constraint(self) -> None:
+        """User constraint persists through reroute."""
+        session = _make_session()
+        session.set_constraint("VCC", "clearance_mm", 0.5)
+        assert session.suggestions["VCC"].user_constraints["clearance_mm"] == 0.5
+
+    def test_interactive_set_constraint_invalid_value(self) -> None:
+        """Non-positive constraint value raises ValueError."""
+        session = _make_session()
+        with pytest.raises(ValueError, match="positive float"):
+            session.set_constraint("VCC", "clearance_mm", -0.1)
+
+    def test_interactive_locked_excluded_from_reroute(self) -> None:
+        """Approved nets are not re-routed; only rejected ones are."""
+        session = _make_session()
+        session.approve("VCC")
+        session.reject("GND")
+        session.reject("SIG")
+        new_suggestions = session.reroute_rejected()
+        # VCC was approved -- it should NOT appear in new suggestions.
+        rerouted_names = {s.net_name for s in new_suggestions}
+        assert "VCC" not in rerouted_names
+        assert "GND" in rerouted_names or "SIG" in rerouted_names
+
+    def test_interactive_summary(self) -> None:
+        """Summary dict counts match after approve/reject operations."""
+        session = _make_session()
+        session.approve("VCC")
+        session.reject("GND", reason="bad")
+        s = session.summary()
+        assert s["total_nets"] == 3
+        assert s["approved"] == 1
+        assert s["rejected"] == 1
+        assert s["pending"] == 1
+        assert s["iteration"] == 0
+        assert s["max_iterations"] == 5
+
+    def test_interactive_nonexistent_net(self) -> None:
+        """Approve/reject on non-existent net raises KeyError."""
+        session = _make_session()
+        with pytest.raises(KeyError, match="not found"):
+            session.approve("NONEXISTENT")
+        with pytest.raises(KeyError, match="not found"):
+            session.reject("NONEXISTENT")
+        with pytest.raises(KeyError, match="not found"):
+            session.set_constraint("NONEXISTENT", "clearance_mm", 0.5)
+
+    def test_interactive_diff_pair(self) -> None:
+        """Differential pair nets are routed together and share status."""
+        netlist = {
+            "DP_P": [(0, 5), (20, 5)],
+            "DP_N": [(0, 7), (20, 7)],
+            "VCC": [(0, 0), (10, 0)],
+        }
+        session = _make_session(
+            netlist=netlist,
+            differential_pairs=[("DP_P", "DP_N")],
+        )
+        assert "DP_P" in session.suggestions
+        assert "DP_N" in session.suggestions
+        assert session.suggestions["DP_P"].is_differential_pair
+        assert session.suggestions["DP_P"].diff_pair_complement == "DP_N"
+        assert session.suggestions["DP_N"].diff_pair_complement == "DP_P"
+
+    def test_interactive_diff_pair_approve_propagates(self) -> None:
+        """Approving one diff pair net also approves its complement."""
+        netlist = {
+            "DP_P": [(0, 5), (20, 5)],
+            "DP_N": [(0, 7), (20, 7)],
+            "VCC": [(0, 0), (10, 0)],
+        }
+        session = _make_session(
+            netlist=netlist,
+            differential_pairs=[("DP_P", "DP_N")],
+        )
+        session.approve("DP_P")
+        assert session.suggestions["DP_P"].status == SuggestionStatus.APPROVED
+        assert session.suggestions["DP_N"].status == SuggestionStatus.APPROVED
+        assert "DP_P" in session.locked_routes
+        assert "DP_N" in session.locked_routes
+
+    def test_interactive_diff_pair_reject_propagates(self) -> None:
+        """Rejecting one diff pair net also rejects its complement."""
+        netlist = {
+            "DP_P": [(0, 5), (20, 5)],
+            "DP_N": [(0, 7), (20, 7)],
+            "VCC": [(0, 0), (10, 0)],
+        }
+        session = _make_session(
+            netlist=netlist,
+            differential_pairs=[("DP_P", "DP_N")],
+        )
+        session.reject("DP_N", reason="mismatch too large")
+        assert session.suggestions["DP_P"].status == SuggestionStatus.REJECTED
+        assert session.suggestions["DP_N"].status == SuggestionStatus.REJECTED
+        assert session.suggestions["DP_P"].reject_reason == "mismatch too large"
+
+    def test_interactive_is_complete(self) -> None:
+        """is_complete is True only when all nets are approved."""
+        session = _make_session()
+        assert not session.is_complete
+        session.approve("VCC")
+        session.approve("GND")
+        assert not session.is_complete
+        session.approve("SIG")
+        assert session.is_complete
