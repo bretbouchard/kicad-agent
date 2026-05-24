@@ -338,7 +338,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 17-01-PLAN.md -- Package structure, pyproject.toml updates, CLI entry point (DIST-01, DIST-02)
+- [x] 17-01-PLAN.md -- Package structure, pyproject.toml updates, CLI entry point (DIST-01, DIST-02)
 - [ ] 17-02-PLAN.md -- PyPI publishing workflow and version management (DIST-03)
 - [ ] 17-03-PLAN.md -- README, API documentation, and usage examples (DIST-04)
 
@@ -395,7 +395,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 13. Real-World PCB Training Pipeline | 3/3 | Complete | 2026-05-23 |
 | 14. Bidirectional KiCad↔LTspice | 3/3 | Complete | 2026-05-24 |
 | 15. AI Generation Wiring | 4/4 | Complete | 2026-05-24 |
-| 16. Component Placement AI | 3/4 | In Progress | |
-| 17. Package & Distribution | 0/3 | Planned | |
+| 16. Component Placement AI | 4/4 | Complete | 2026-05-24 |
+| 17. Package & Distribution | 1/3 | In Progress | |
 | 18. CI/CD Pipeline | 0/2 | Planned | |
 | 19. Interactive Routing Suggestions | 0/3 | Planned | |
