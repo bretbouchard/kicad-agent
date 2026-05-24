@@ -26,7 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 12: ADI Footprint Library** - On-demand ADI footprint/symbol download, library management, and manufacturer part integration
 - [x] **Phase 13: Real-World PCB Training Pipeline** - GitHub crawler for KiCad repos, parse schematic+PCB pairs into structured graph datasets for real-world training
 - [x] **Phase 14: Bidirectional KiCad↔LTspice** - KiCad schematic → .asc writer, close the simulation loop for design-simulate-iterate workflows
-- [ ] **Phase 15: AI Generation Wiring** - LLM-driven component suggestion, schematic drafting, design critique, and natural language to operations pipeline
+- [x] **Phase 15: AI Generation Wiring** - LLM-driven component suggestion, schematic drafting, design critique, and natural language to operations pipeline
 - [ ] **Phase 16: Component Placement AI** - Predict optimal component placement from schematic netlist using spatial reasoning and training data
 - [ ] **Phase 17: Package & Distribution** - PyPI publish, CLI entry point, pip install kicad-agent, documentation site
 - [ ] **Phase 18: CI/CD Pipeline** - GitHub Actions for test suite, linting, coverage gate, and release automation
@@ -306,7 +306,7 @@ Plans:
 - [x] 15-01-PLAN.md -- LLM integration layer: intent parsing, operation planning, component suggestion (AIGEN-01, AIGEN-02)
 - [x] 15-02-PLAN.md -- Design critic with spatial reasoning (clearance, congestion, thermal analysis) (AIGEN-03)
 - [x] 15-03-PLAN.md -- Iterative refinement loop with LLM-driven error fixing (AIGEN-04)
-- [ ] 15-04-PLAN.md -- End-to-end generation pipeline demo and validation (AIGEN-05)
+- [x] 15-04-PLAN.md -- End-to-end generation pipeline demo and validation (AIGEN-05)
 
 ### Phase 16: Component Placement AI
 **Goal**: Given a schematic netlist, predict optimal component placement on PCB using spatial reasoning from Phase 8 and training data from Phase 13. Outputs placement suggestions that pass DRC.

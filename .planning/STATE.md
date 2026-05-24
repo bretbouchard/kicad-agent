@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: production-ai
-status: active
-stopped_at: "Completed 15-03 -- ErrorFixer and LLM-augmented refinement loop"
-last_updated: "2026-05-24T00:29:22Z"
+milestone: v1.0
+milestone_name: milestone
+status: executing
+stopped_at: "Completed 15-04 -- End-to-end LLM generation pipeline orchestration (Phase 15 complete)"
+last_updated: "2026-05-24T00:39:18Z"
 last_activity: 2026-05-24
 progress:
   total_phases: 19
-  completed_phases: 13
+  completed_phases: 14
   total_plans: 66
-  completed_plans: 51
-  percent: 77
+  completed_plans: 50
+  percent: 76
 ---
 
 # Project State
@@ -27,8 +27,8 @@ Last activity: 2026-05-24
 ## Current Position
 
 Phase: 15 of 19 (AI Generation Wiring)
-Plan: 3 of 4 complete
-Status: In progress
+Plan: 4 of 4 complete
+Status: Ready to execute
 Last activity: 2026-05-24
 
 Progress: [███████░░░] 77%
@@ -40,8 +40,6 @@ Progress: [███████░░░] 77%
 - Total plans completed: 49
 - Average duration: 5 min
 - Total execution time: 3.9 hours
-
-
 
 **By Phase:**
 
@@ -71,6 +69,7 @@ Progress: [███████░░░] 77%
 | Phase 15 P01 | 7min | 2 tasks | 9 files |
 | Phase 15 P02 | 2min | 1 task | 3 files |
 | Phase 15 P03 | 3min | 1 task | 4 files |
+| Phase 15 P04 | 7min | 1 task | 3 files |
 
 ## Accumulated Context
 
@@ -118,6 +117,9 @@ Recent decisions affecting current work:
 - [Phase 15]: Deterministic fixes run first (fast/free/reliable); LLM only called for "other" error category
 - [Phase 15]: Prompt caching on FIX_SYSTEM_PROMPT to reduce API costs with 51KB operation schema in FIX_TOOL
 - [Phase 15]: Stagnation detection at 3 consecutive iterations with same error count; hard cap 10 iterations (T-15-11)
+- [Phase 15]: Component injection pattern for pipeline testability (intent_parser, design_critic, error_fixer as optional params)
+- [Phase 15]: Pipeline success = generation succeeded AND (ERC passed OR refinement converged)
+- [Phase 15]: Manufacturing export (Gerber/BOM) runs as non-fatal stage after evaluation
 
 ### Roadmap Evolution
 
@@ -141,5 +143,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Completed 15-03 -- ErrorFixer and LLM-augmented refinement loop
+Stopped at: Completed 15-04 -- End-to-end LLM generation pipeline orchestration (Phase 15 complete)
 Resume file: None
