@@ -305,7 +305,7 @@ Plans:
 Plans:
 - [x] 15-01-PLAN.md -- LLM integration layer: intent parsing, operation planning, component suggestion (AIGEN-01, AIGEN-02)
 - [x] 15-02-PLAN.md -- Design critic with spatial reasoning (clearance, congestion, thermal analysis) (AIGEN-03)
-- [ ] 15-03-PLAN.md -- Iterative refinement loop with LLM-driven error fixing (AIGEN-04)
+- [x] 15-03-PLAN.md -- Iterative refinement loop with LLM-driven error fixing (AIGEN-04)
 - [ ] 15-04-PLAN.md -- End-to-end generation pipeline demo and validation (AIGEN-05)
 
 ### Phase 16: Component Placement AI
@@ -394,7 +394,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 12. ADI Footprint Library | 3/3 | Complete | 2026-05-23 |
 | 13. Real-World PCB Training Pipeline | 3/3 | Complete | 2026-05-23 |
 | 14. Bidirectional KiCad↔LTspice | 3/3 | Complete | 2026-05-24 |
-| 15. AI Generation Wiring | 2/4 | In Progress | |
+| 15. AI Generation Wiring | 3/4 | In Progress | |
 | 16. Component Placement AI | 0/4 | Planned | |
 | 17. Package & Distribution | 0/3 | Planned | |
 | 18. CI/CD Pipeline | 0/2 | Planned | |
