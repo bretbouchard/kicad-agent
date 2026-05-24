@@ -1,6 +1,11 @@
-"""LTspice integration for .asc schematic parsing, net connectivity, and .raw simulation results."""
+"""LTspice integration for .asc schematic parsing, net connectivity, .raw simulation results, and KiCad-to-LTspice export."""
 
 from kicad_agent.ltspice.asc_parser import parse_asc
+from kicad_agent.ltspice.asc_writer import (
+    AscWriter,
+    CoordinateTransformer,
+    export_schematic_to_asc,
+)
 from kicad_agent.ltspice.net_graph import LTspiceNetGraph
 from kicad_agent.ltspice.raw_reader import read_raw
 from kicad_agent.ltspice.sim_commands import (
@@ -26,6 +31,8 @@ from kicad_agent.ltspice.types import (
 
 __all__ = [
     "AcCommand",
+    "AscWriter",
+    "CoordinateTransformer",
     "DcCommand",
     "LTspiceComponent",
     "LTspiceDirective",
@@ -41,6 +48,7 @@ __all__ = [
     "SymbolMappingResult",
     "SymbolMappingType",
     "TranCommand",
+    "export_schematic_to_asc",
     "parse_asc",
     "parse_simulation_command",
     "read_raw",
