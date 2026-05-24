@@ -323,7 +323,7 @@ Plans:
 Plans:
 - [x] 16-01-PLAN.md -- Schematic netlist to placement graph converter (PLACE-01)
 - [ ] 16-02-PLAN.md -- Placement prediction model architecture and training (PLACE-02, PLACE-04)
-- [ ] 16-03-PLAN.md -- DRC-aware placement validation and scoring (PLACE-03)
+- [x] 16-03-PLAN.md -- DRC-aware placement validation and scoring (PLACE-03)
 - [ ] 16-04-PLAN.md -- Interactive placement mode with constraint propagation (PLACE-05)
 
 ### Phase 17: Package & Distribution
@@ -395,7 +395,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 13. Real-World PCB Training Pipeline | 3/3 | Complete | 2026-05-23 |
 | 14. Bidirectional KiCad↔LTspice | 3/3 | Complete | 2026-05-24 |
 | 15. AI Generation Wiring | 4/4 | Complete | 2026-05-24 |
-| 16. Component Placement AI | 1/4 | In Progress | |
+| 16. Component Placement AI | 3/4 | In Progress | |
 | 17. Package & Distribution | 0/3 | Planned | |
 | 18. CI/CD Pipeline | 0/2 | Planned | |
 | 19. Interactive Routing Suggestions | 0/3 | Planned | |

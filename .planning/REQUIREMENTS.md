@@ -283,7 +283,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AIGEN-05 | Phase 15: AI Generation Wiring | Complete | 15-04 |
 | PLACE-01 | Phase 16: Component Placement AI | Complete | 16-01 |
 | PLACE-02 | Phase 16: Component Placement AI | Pending | 16-02 |
-| PLACE-03 | Phase 16: Component Placement AI | Pending | 16-03 |
+| PLACE-03 | Phase 16: Component Placement AI | Complete | 16-03 |
 | PLACE-04 | Phase 16: Component Placement AI | Pending | 16-02 |
 | PLACE-05 | Phase 16: Component Placement AI | Pending | 16-04 |
 
@@ -327,6 +327,6 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 - [x] **PLACE-01**: Schematic netlist converts to bipartite placement graph with component nodes and net nodes, avoiding O(n^2) edge explosion from power nets
 - [ ] **PLACE-02**: Placement model predicts (x, y, rotation) for each component given board outline and constraints using GNN-based architecture
-- [ ] **PLACE-03**: Suggested placements pass DRC clearance checks with configurable safety margins
+- [x] **PLACE-03**: Suggested placements pass DRC clearance checks with configurable safety margins
 - [ ] **PLACE-04**: Placement quality scores on real designs comparable to manual placement (wirelength, congestion metrics)
 - [ ] **PLACE-05**: Interactive mode: user places some components, AI places the rest respecting constraints
