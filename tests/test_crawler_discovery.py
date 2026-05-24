@@ -64,6 +64,10 @@ def _make_rate_limit(core_remaining=1000, search_remaining=1000):
     rate_limit = MagicMock()
     rate_limit.core = _make_rate_resource(remaining=core_remaining)
     rate_limit.search = _make_rate_resource(remaining=search_remaining)
+    # PyGithub >=2.0 exposes rate_limit.resources.core / .search
+    rate_limit.resources = MagicMock()
+    rate_limit.resources.core = rate_limit.core
+    rate_limit.resources.search = rate_limit.search
     return rate_limit
 
 
