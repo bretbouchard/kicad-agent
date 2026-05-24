@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -34,6 +35,85 @@ from kicad_agent.parser.uuid_extractor import extract_uuids
 from kicad_agent.spatial.extractor import extract_all
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# KiCad format version constants
+# ---------------------------------------------------------------------------
+
+# KiCad uses date-based version codes in S-expression files.
+# We support versions 7+ (introduced 2023). Older formats (legacy v4/v5/v6)
+# use a different S-expression grammar that kiutils cannot parse reliably.
+KICAD_VERSION_7 = 20230101  # KiCad 7.0
+KICAD_VERSION_8 = 20240106  # KiCad 8.0
+KICAD_VERSION_9 = 20241129  # KiCad 9.0
+KICAD_VERSION_10 = 20250114  # KiCad 10.0
+
+# Minimum version we support for parsing
+MIN_KICAD_VERSION = KICAD_VERSION_7
+
+_VERSION_RE = re.compile(r"\(version\s+(\d{8})\)")
+
+
+def detect_kicad_version(content: str) -> int | None:
+    """Extract KiCad format version from file content.
+
+    KiCad S-expression files contain a ``(version YYYYMMDD)`` field near
+    the top. Returns None if no version found (likely legacy format).
+
+    Args:
+        content: Raw file text content.
+
+    Returns:
+        8-digit version integer (e.g. 20241229) or None.
+    """
+    match = _VERSION_RE.search(content)
+    return int(match.group(1)) if match else None
+
+
+def is_supported_kicad_version(
+    sch_content: str,
+    pcb_content: str,
+    min_version: int = MIN_KICAD_VERSION,
+) -> bool:
+    """Check whether both files are a supported KiCad format version.
+
+    Args:
+        sch_content: Raw schematic file text.
+        pcb_content: Raw PCB file text.
+        min_version: Minimum supported version (default: KiCad 7).
+
+    Returns:
+        True if both files have version >= min_version.
+    """
+    sch_ver = detect_kicad_version(sch_content)
+    pcb_ver = detect_kicad_version(pcb_content)
+
+    if sch_ver is None or pcb_ver is None:
+        return False
+
+    return sch_ver >= min_version and pcb_ver >= min_version
+
+
+def is_likely_parseable(content: str) -> bool:
+    """Quick pre-parse check for structural validity.
+
+    Detects obviously corrupt or empty files before expensive kiutils parsing.
+    Checks that the file starts with a valid S-expression opener.
+
+    Args:
+        content: Raw file text content.
+
+    Returns:
+        True if file appears structurally valid.
+    """
+    stripped = content.strip()
+    if not stripped:
+        return False
+    if not stripped.startswith("("):
+        return False
+    if len(stripped) < 20:
+        return False
+    return True
 
 
 @dataclass(frozen=True)
@@ -189,30 +269,52 @@ def build_board_graph(
         sch_bytes = sch_path.read_bytes()
         pcb_bytes = pcb_path.read_bytes()
 
-        # 2. Compute SHA256 hash from raw bytes (stable dedup)
+        # 2. Pre-parse validation: check format version and structural integrity
+        sch_text = sch_bytes.decode("utf-8", errors="replace")
+        pcb_text = pcb_bytes.decode("utf-8", errors="replace")
+
+        if not is_likely_parseable(sch_text):
+            logger.warning("Skipping unparseable schematic: %s", sch_path)
+            return None
+        if not is_likely_parseable(pcb_text):
+            logger.warning("Skipping unparseable PCB: %s", pcb_path)
+            return None
+
+        if not is_supported_kicad_version(sch_text, pcb_text):
+            sch_ver = detect_kicad_version(sch_text)
+            pcb_ver = detect_kicad_version(pcb_text)
+            logger.warning(
+                "Skipping unsupported KiCad version: sch=%s, pcb=%s (need >=%d)",
+                sch_ver,
+                pcb_ver,
+                MIN_KICAD_VERSION,
+            )
+            return None
+
+        # 3. Compute SHA256 hash from raw bytes (stable dedup)
         board_hash = _compute_board_hash(sch_bytes, pcb_bytes)
 
-        # 3. Parse schematic
+        # 4. Parse schematic
         sch_result = parse_schematic(sch_path)
         _registered_ids.add(id(sch_result))
         sch_ir = SchematicIR(_parse_result=sch_result)
 
-        # 4. Parse PCB (requires UUID map)
+        # 5. Parse PCB (requires UUID map)
         pcb_result = parse_pcb(pcb_path)
         _registered_ids.add(id(pcb_result))
         uuid_map = extract_uuids(pcb_result.raw_content, "pcb")
         pcb_ir = PcbIR(_parse_result=pcb_result, _uuid_map=uuid_map)
 
-        # 5. Build connectivity graph from PCB
+        # 6. Build connectivity graph from PCB
         net_graph = NetGraph.from_pcb_ir(pcb_ir)
 
-        # 6. Extract spatial features
+        # 7. Extract spatial features
         spatial_data = extract_all(pcb_ir)
 
-        # 7. Build unified graph
+        # 8. Build unified graph
         G = nx.Graph()
 
-        # 7a. Add component nodes from schematic symbols
+        # 8a. Add component nodes from schematic symbols
         for sym in sch_ir.components:
             ref = ""
             value = ""
@@ -233,7 +335,7 @@ def build_board_graph(
                     footprint=footprint,
                 )
 
-        # 7b. Add net edges from connectivity graph
+        # 8b. Add net edges from connectivity graph
         # Group pad refs by component reference to create component-level edges
         net_to_components: dict[str, set[str]] = {}
         for net_name, pad_refs in net_graph._net_index.items():
@@ -250,7 +352,7 @@ def build_board_graph(
                 for j in range(i + 1, len(refs_list)):
                     G.add_edge(refs_list[i], refs_list[j], net=net_name)
 
-        # 7c. Add spatial attributes from PCB footprints
+        # 8c. Add spatial attributes from PCB footprints
         for fp in pcb_ir.footprints:
             fp_ref = fp.properties.get("Reference", "")
             if fp_ref and fp_ref in G.nodes:
@@ -281,14 +383,14 @@ def build_board_graph(
                 G.nodes[fp_ref]["bbox_width_mm"] = bbox_width_mm
                 G.nodes[fp_ref]["bbox_height_mm"] = bbox_height_mm
 
-        # 8. Serialize graph to JSON (node-link-data format)
+        # 9. Serialize graph to JSON (node-link-data format)
         graph_data = nx.node_link_data(G)
         graph_json = json.dumps(graph_data, sort_keys=True)
 
-        # 9. Build spatial summary
+        # 10. Build spatial summary
         spatial_summary_json = _build_spatial_summary(spatial_data)
 
-        # 10. Compute metadata
+        # 11. Compute metadata
         component_count = sum(
             1 for _, attrs in G.nodes(data=True)
             if attrs.get("node_type") == "component"
@@ -296,7 +398,7 @@ def build_board_graph(
         net_count = len(net_graph._net_index)
         difficulty = _grade_difficulty(component_count)
 
-        # 11. Extract board dimensions from PCB general section
+        # 12. Extract board dimensions from PCB general section
         board_width_mm = 0.0
         board_height_mm = 0.0
         board_obj = pcb_ir.board
@@ -316,7 +418,7 @@ def build_board_graph(
         sch_path_str = sch_repo_path if sch_repo_path else str(sch_path)
         pcb_path_str = pcb_repo_path if pcb_repo_path else str(pcb_path)
 
-        # 12. Return result
+        # 13. Return result
         result = BoardGraphResult(
             sample_id=sample_id,
             repo_url=repo_url,

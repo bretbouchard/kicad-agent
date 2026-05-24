@@ -18,7 +18,16 @@ import networkx as nx
 import pytest
 
 from kicad_agent.ir.base import _clear_registry
-from kicad_agent.training.graph_builder import BoardGraphResult, build_board_graph
+from kicad_agent.training.graph_builder import (
+    BoardGraphResult,
+    build_board_graph,
+    detect_kicad_version,
+    is_supported_kicad_version,
+    is_likely_parseable,
+    KICAD_VERSION_7,
+    KICAD_VERSION_10,
+    MIN_KICAD_VERSION,
+)
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 UHAT_SCH = FIXTURES_DIR / "RaspberryPi-uHAT" / "RaspberryPi-uHAT.kicad_sch"
@@ -141,7 +150,7 @@ MINIMAL_SCH = """\
 # Minimal valid KiCad 7 PCB content (kiutils-parseable)
 MINIMAL_PCB = """\
 (kicad_pcb
-\t(version 20221018)
+\t(version 20230101)
 \t(generator "kicad_agent")
 \t(general
 \t\t(thickness 1.6)
@@ -464,3 +473,76 @@ class TestBuildBoardGraph:
         graph_data = json.loads(result.graph_json)
         G = nx.node_link_graph(graph_data, directed=False)
         assert G.number_of_nodes() > 0
+
+
+class TestVersionDetection:
+    """Tests for KiCad format version detection and filtering."""
+
+    def test_detect_version_from_kicad7(self) -> None:
+        sch = '(kicad_sch (version 20230121) (generator "eeschema"))'
+        assert detect_kicad_version(sch) == 20230121
+
+    def test_detect_version_from_kicad10(self) -> None:
+        pcb = '(kicad_pcb (version 20250114) (generator "pcbnew"))'
+        assert detect_kicad_version(pcb) == 20250114
+
+    def test_detect_version_returns_none_for_legacy(self) -> None:
+        """Legacy files without version field return None."""
+        content = "(kicad_pcb\n  (some old format)\n)"
+        assert detect_kicad_version(content) is None
+
+    def test_detect_version_returns_none_for_empty(self) -> None:
+        assert detect_kicad_version("") is None
+
+    def test_is_supported_kicad_version_both_v7(self) -> None:
+        sch = '(kicad_sch (version 20230101))'
+        pcb = '(kicad_pcb (version 20230101))'
+        assert is_supported_kicad_version(sch, pcb) is True
+
+    def test_is_supported_kicad_version_both_v10(self) -> None:
+        sch = '(kicad_sch (version 20250114))'
+        pcb = '(kicad_pcb (version 20250114))'
+        assert is_supported_kicad_version(sch, pcb) is True
+
+    def test_rejects_legacy_pcb(self) -> None:
+        sch = '(kicad_sch (version 20230101))'
+        pcb = '(kicad_pcb (version 20221018))'  # pre-KiCad 7
+        assert is_supported_kicad_version(sch, pcb) is False
+
+    def test_rejects_missing_version(self) -> None:
+        sch = '(kicad_sch (version 20230101))'
+        pcb = '(kicad_pcb (no version here))'
+        assert is_supported_kicad_version(sch, pcb) is False
+
+    def test_is_likely_parseable_valid(self) -> None:
+        content = "(kicad_pcb\n  (version 20230101)\n  ...\n)"
+        assert is_likely_parseable(content) is True
+
+    def test_is_likely_parseable_empty(self) -> None:
+        assert is_likely_parseable("") is False
+
+    def test_is_likely_parseable_no_paren(self) -> None:
+        assert is_likely_parseable("not a kicad file at all") is False
+
+    def test_is_likely_parseable_too_short(self) -> None:
+        assert is_likely_parseable("(kicad)") is False
+
+    def test_build_board_graph_rejects_old_version(self, tmp_path: Path) -> None:
+        """build_board_graph returns None for pre-KiCad 7 files."""
+        sch = tmp_path / "test.kicad_sch"
+        sch.write_text('(kicad_sch (version 20230101) (generator "test"))', encoding="utf-8")
+        pcb = tmp_path / "test.kicad_pcb"
+        pcb.write_text('(kicad_pcb (version 20221018) (generator "test"))', encoding="utf-8")
+
+        result = build_board_graph(sch, pcb)
+        assert result is None
+
+    def test_build_board_graph_rejects_empty_file(self, tmp_path: Path) -> None:
+        """build_board_graph returns None for empty files."""
+        sch = tmp_path / "test.kicad_sch"
+        sch.write_text("", encoding="utf-8")
+        pcb = tmp_path / "test.kicad_pcb"
+        pcb.write_text("(kicad_pcb\n)", encoding="utf-8")
+
+        result = build_board_graph(sch, pcb)
+        assert result is None
