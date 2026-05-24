@@ -28,8 +28,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 14: Bidirectional KiCad↔LTspice** - KiCad schematic → .asc writer, close the simulation loop for design-simulate-iterate workflows
 - [x] **Phase 15: AI Generation Wiring** - LLM-driven component suggestion, schematic drafting, design critique, and natural language to operations pipeline
 - [ ] **Phase 16: Component Placement AI** - Predict optimal component placement from schematic netlist using spatial reasoning and training data
-- [ ] **Phase 17: Package & Distribution** - PyPI publish, CLI entry point, pip install kicad-agent, documentation site (3/3 plans complete)
-- [ ] **Phase 18: CI/CD Pipeline** - GitHub Actions for test suite, linting, coverage gate, and release automation
+- [x] **Phase 17: Package & Distribution** - PyPI publish, CLI entry point, pip install kicad-agent, documentation site (3/3 plans complete)
+- [ ] **Phase 18: CI/CD Pipeline** - GitHub Actions for test suite, linting, coverage gate, and release automation (1/2 plans complete)
 - [ ] **Phase 19: Interactive Routing Suggestions** - Use spatial primitives + training data to suggest trace routing on real boards
 
 ## Phase Details
@@ -354,7 +354,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 18-01-PLAN.md -- GitHub Actions CI: test, lint, type-check, coverage gate (CI-01, CI-02, CI-03)
+- [x] 18-01-PLAN.md -- GitHub Actions CI: test, lint, type-check, coverage gate (CI-01, CI-02, CI-03)
 - [ ] 18-02-PLAN.md -- Release automation: version bump, changelog, PyPI publish (CI-04)
 
 ### Phase 19: Interactive Routing Suggestions
@@ -396,6 +396,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 14. Bidirectional KiCad↔LTspice | 3/3 | Complete | 2026-05-24 |
 | 15. AI Generation Wiring | 4/4 | Complete | 2026-05-24 |
 | 16. Component Placement AI | 4/4 | Complete | 2026-05-24 |
-| 17. Package & Distribution | 2/3 | In Progress | |
-| 18. CI/CD Pipeline | 0/2 | Planned | |
+| 17. Package & Distribution | 3/3 | Complete | 2026-05-24 |
+| 18. CI/CD Pipeline | 1/2 | In Progress | |
 | 19. Interactive Routing Suggestions | 0/3 | Planned | |
