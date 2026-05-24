@@ -1,7 +1,9 @@
-"""Simulation command parser for LTspice directives.
+"""Simulation command parser and serializer for LTspice directives.
 
 Parses SPICE simulation commands (.tran, .ac, .dc, .noise, .op) from
 directive text into frozen dataclasses with engineering notation support.
+Also provides serialize_sim_command() to convert dataclasses back to
+LTspice directive text strings for round-trip fidelity.
 """
 
 from __future__ import annotations
@@ -23,7 +25,12 @@ _SI_PREFIXES: dict[str, float] = {
 }
 
 # Regex for engineering notation: number + optional SI prefix + optional trailing unit chars
-_ENG_VALUE_RE = re.compile(r"^([\d.]+)\s*([TGMkmunpf])([a-zA-Z]*)$|^([\d.]+)$")
+# Also matches scientific notation (e.g. "1e-06", "3.3E+5") as standalone numbers.
+_ENG_VALUE_RE = re.compile(
+    r"^([\d.]+)\s*([TGMkmunpf])([a-zA-Z]*)$"
+    r"|^([\d.]+[eE][+-]?\d+)$"
+    r"|^([\d.]+)$"
+)
 
 
 @dataclass(frozen=True)
@@ -112,10 +119,14 @@ def parse_eng_value(text: str) -> float:
         raise ValueError(f"Cannot parse engineering value: {text!r}")
 
     # Group 1: number with prefix, Group 2: prefix, Group 3: trailing unit
-    # Group 4: standalone number
+    # Group 4: scientific notation (e.g. "1e-06")
+    # Group 5: standalone number
     if match.group(4) is not None:
-        # Standalone number, no prefix
+        # Scientific notation
         return float(match.group(4))
+    if match.group(5) is not None:
+        # Standalone number, no prefix
+        return float(match.group(5))
 
     number_str = match.group(1)
     prefix = match.group(2)
@@ -238,3 +249,35 @@ def _parse_noise(args: list[str]) -> NoiseCommand:
         fstart=parse_eng_value(args[4]),
         fstop=parse_eng_value(args[5]),
     )
+
+
+def serialize_sim_command(cmd: SimulationCommand) -> str:
+    """Serialize a simulation command dataclass to LTspice directive text.
+
+    Inverse of parse_simulation_command(): produces a directive string
+    that LTspice can execute and parse_simulation_command() can parse back.
+
+    Uses plain float formatting (not engineering notation). LTspice accepts
+    both "1ms" and "0.001". Plain floats keep output simple and deterministic.
+
+    Args:
+        cmd: A SimulationCommand dataclass instance.
+
+    Returns:
+        Directive text string (e.g., ".tran 0 0.001 0 1e-06").
+
+    Raises:
+        ValueError: If the command type is not recognized.
+    """
+    if isinstance(cmd, TranCommand):
+        return f".tran {cmd.tstart} {cmd.tstop} {cmd.tstart_meas} {cmd.tstep}"
+    elif isinstance(cmd, AcCommand):
+        return f".ac {cmd.sweep} {cmd.npoints} {cmd.fstart} {cmd.fstop}"
+    elif isinstance(cmd, DcCommand):
+        return f".dc {cmd.source} {cmd.start} {cmd.stop} {cmd.step}"
+    elif isinstance(cmd, NoiseCommand):
+        return f".noise {cmd.output} {cmd.source} {cmd.sweep} {cmd.npoints} {cmd.fstart} {cmd.fstop}"
+    elif isinstance(cmd, OpCommand):
+        return ".op"
+    else:
+        raise ValueError(f"Unknown simulation command type: {type(cmd)}")

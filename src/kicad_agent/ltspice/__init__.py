@@ -15,6 +15,7 @@ from kicad_agent.ltspice.sim_commands import (
     OpCommand,
     TranCommand,
     parse_simulation_command,
+    serialize_sim_command,
 )
 from kicad_agent.ltspice.symbol_mapper import SymbolMapper
 from kicad_agent.ltspice.types import (
@@ -45,6 +46,7 @@ __all__ = [
     "OpCommand",
     "SimulationResult",
     "SymbolMapper",
+    "serialize_sim_command",
     "SymbolMappingResult",
     "SymbolMappingType",
     "TranCommand",
