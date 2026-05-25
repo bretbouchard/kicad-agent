@@ -756,3 +756,155 @@ class TestInteractiveSession:
         assert not session.is_complete
         session.approve("SIG")
         assert session.is_complete
+
+
+# ---------------------------------------------------------------------------
+# Routing bridge: RouteResult → KiCad track segments
+# ---------------------------------------------------------------------------
+
+
+class TestRoutingBridge:
+    """Bridge from routing results to KiCad PCB track segments."""
+
+    def test_route_to_segments_basic(self) -> None:
+        """route_to_segments converts routing results into TrackSegments."""
+        from kicad_agent.routing.bridge import route_to_segments
+
+        results = {
+            "VCC": RouteResult(
+                net_name="VCC",
+                path=((0.0, 0.0), (5.0, 0.0), (5.0, 5.0)),
+                length_mm=10.0,
+                success=True,
+            ),
+        }
+        segments = route_to_segments(results)
+        assert len(segments) == 2
+        # First segment: (0,0) -> (5,0)
+        assert segments[0].start_x == 0.0
+        assert segments[0].end_x == 5.0
+        assert segments[0].net == "VCC"
+        assert segments[0].layer == "F.Cu"
+        # Second segment: (5,0) -> (5,5)
+        assert segments[1].start_x == 5.0
+        assert segments[1].end_y == 5.0
+
+    def test_route_to_segments_skips_failed(self) -> None:
+        """Failed routes are skipped."""
+        from kicad_agent.routing.bridge import route_to_segments
+
+        results = {
+            "VCC": RouteResult("VCC", ((0.0, 0.0),), 0.0, success=False),
+            "GND": RouteResult("GND", ((0.0, 0.0), (5.0, 5.0)), 7.07, success=True),
+        }
+        segments = route_to_segments(results)
+        assert len(segments) == 1
+        assert segments[0].net == "GND"
+
+    def test_route_to_segments_custom_layer(self) -> None:
+        """Custom layer parameter is passed through."""
+        from kicad_agent.routing.bridge import route_to_segments
+
+        results = {
+            "SIG": RouteResult("SIG", ((0.0, 0.0), (10.0, 0.0)), 10.0, success=True),
+        }
+        segments = route_to_segments(results, layer="B.Cu")
+        assert segments[0].layer == "B.Cu"
+
+    def test_track_segment_to_sexpr(self) -> None:
+        """TrackSegment serializes to valid KiCad S-expression."""
+        from kicad_agent.routing.bridge import TrackSegment
+
+        seg = TrackSegment(
+            start_x=1.0, start_y=2.0,
+            end_x=3.0, end_y=4.0,
+            width=0.25, layer="F.Cu", net="VCC",
+        )
+        sexpr = seg.to_sexpr(uuid_tag="abc-123")
+        assert "(segment" in sexpr
+        assert "(start 1.0000 2.0000)" in sexpr
+        assert "(end 3.0000 4.0000)" in sexpr
+        assert "(width 0.2500)" in sexpr
+        assert '"F.Cu"' in sexpr
+        assert '"VCC"' in sexpr
+        assert "(uuid abc-123)" in sexpr
+
+    def test_segments_to_sexpr_block(self) -> None:
+        """segments_to_sexpr produces a multi-segment S-expression block."""
+        from kicad_agent.routing.bridge import (
+            TrackSegment,
+            route_to_segments,
+            segments_to_sexpr,
+        )
+
+        results = {
+            "VCC": RouteResult("VCC", ((0.0, 0.0), (5.0, 0.0)), 5.0, success=True),
+            "GND": RouteResult("GND", ((0.0, 5.0), (5.0, 5.0)), 5.0, success=True),
+        }
+        segments = route_to_segments(results)
+        block = segments_to_sexpr(segments)
+        assert block.count("(segment") == 2
+
+    def test_track_segment_no_net(self) -> None:
+        """TrackSegment with empty net omits net field."""
+        from kicad_agent.routing.bridge import TrackSegment
+
+        seg = TrackSegment(
+            start_x=0.0, start_y=0.0,
+            end_x=1.0, end_y=1.0,
+            width=0.25, layer="F.Cu", net="",
+        )
+        sexpr = seg.to_sexpr()
+        assert "(net" not in sexpr
+
+
+# ---------------------------------------------------------------------------
+# RoutingGraph.mark_path_as_obstacle
+# ---------------------------------------------------------------------------
+
+
+class TestMarkPathAsObstacle:
+    """Progressive obstacle marking for multi-net routing."""
+
+    def test_edges_removed_along_path(self) -> None:
+        """Edges along a routed path are removed from the graph."""
+        graph = RoutingGraph(
+            board_bounds=(0, 0, 20, 20),
+            obstacles=[],
+            constraints=RoutingConstraints(grid_resolution_mm=1.0),
+        )
+        # Verify edge exists before marking.
+        assert graph.graph.has_edge((5.0, 5.0), (6.0, 5.0))
+        graph.mark_path_as_obstacle(((5.0, 5.0), (6.0, 5.0), (7.0, 5.0)))
+        # Edges (5,5)-(6,5) and (6,5)-(7,5) should be removed.
+        assert not graph.graph.has_edge((5.0, 5.0), (6.0, 5.0))
+        assert not graph.graph.has_edge((6.0, 5.0), (7.0, 5.0))
+        # Adjacent edge (4,5)-(5,5) should still exist.
+        assert graph.graph.has_edge((4.0, 5.0), (5.0, 5.0))
+
+    def test_multi_net_obstacle_marking(self) -> None:
+        """route_all_nets marks paths as obstacles, preventing reuse."""
+        graph = RoutingGraph(
+            board_bounds=(0, 0, 20, 20),
+            obstacles=[],
+            constraints=RoutingConstraints(grid_resolution_mm=1.0),
+        )
+        netlist = {
+            "NET1": [(0, 5), (10, 5)],
+            "NET2": [(0, 5), (10, 5)],  # Same route — must find alternative
+        }
+        results = route_all_nets(graph, netlist)
+        # Both nets should still route (detour available).
+        assert len(results) == 2
+        # The two nets should take different paths since NET1 blocked the direct route.
+        if results["NET1"].success and results["NET2"].success:
+            assert results["NET1"].path != results["NET2"].path
+
+    def test_empty_path_no_error(self) -> None:
+        """Empty path doesn't cause errors."""
+        graph = RoutingGraph(
+            board_bounds=(0, 0, 10, 10),
+            obstacles=[],
+            constraints=RoutingConstraints(grid_resolution_mm=1.0),
+        )
+        graph.mark_path_as_obstacle(())  # Should not raise

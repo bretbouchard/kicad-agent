@@ -261,3 +261,18 @@ class RoutingGraph:
         if best_node is not None and best_dist <= tolerance:
             return best_node
         return None
+
+    def mark_path_as_obstacle(self, path: tuple[tuple[float, float], ...]) -> None:
+        """Remove edges along a routed path so subsequent nets avoid it.
+
+        This provides single-layer multi-net routing by progressively blocking
+        already-routed paths. Nodes are kept (they may be needed for other
+        nets' endpoints) but edges along the path are removed.
+
+        Args:
+            path: Ordered tuple of (x, y) waypoints forming a routed path.
+        """
+        for i in range(len(path) - 1):
+            u, v = path[i], path[i + 1]
+            if self._graph.has_edge(u, v):
+                self._graph.remove_edge(u, v)

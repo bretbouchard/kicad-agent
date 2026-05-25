@@ -136,6 +136,8 @@ def route_all_nets(
         result = route_net(graph, first_pin, last_pin, net_name)
         if result is not None:
             results[net_name] = result
+            # Mark routed path as obstacle for subsequent nets.
+            graph.mark_path_as_obstacle(result.path)
 
     return results
 

@@ -387,6 +387,51 @@ class OperationExecutor:
                 net_class_name=op.net_class_name,
             )
 
+        if op_type == "auto_route":
+            from kicad_agent.routing.bridge import route_to_segments, segments_to_sexpr
+            from kicad_agent.routing.constraints import RoutingConstraints
+            from kicad_agent.routing.pathfinder import build_routing_graph, route_all_nets
+
+            # Build routing constraints (use defaults or from op if extended later)
+            constraints = RoutingConstraints()
+
+            # Extract board bounds from PcbIR
+            bounds = ir.get_board_bounds()
+            if bounds is None:
+                raise ValueError("Cannot auto-route: board outline not set")
+
+            # Build netlist from PcbIR pad positions
+            netlist = ir.extract_netlist()
+            if not netlist:
+                return {"routed_nets": 0, "segments": 0, "message": "No nets to route"}
+
+            # Filter to requested nets if specified
+            if op.nets:
+                netlist = {n: pins for n, pins in netlist.items() if n in op.nets}
+
+            # Build routing graph and route
+            routing_graph = build_routing_graph(bounds, constraints=constraints)
+            results = route_all_nets(routing_graph, netlist)
+
+            # Convert to track segments
+            segments = route_to_segments(results, constraints, layer=op.layer)
+            segment_count = len(segments)
+            routed_nets = len(segments) and len({s.net for s in segments})
+
+            # Insert track segments into PCB
+            if segments:
+                sexpr_block = segments_to_sexpr(segments)
+                ir.insert_track_segments(sexpr_block)
+
+            return {
+                "routed_nets": routed_nets,
+                "segments": segment_count,
+                "failed_nets": [
+                    n for n in netlist
+                    if n not in results or not results[n].success
+                ],
+            }
+
         raise ValueError(f"Unknown PCB op_type: {op_type!r}")
 
     def _execute_project(self, op: Operation, file_path: Path) -> dict[str, Any]:

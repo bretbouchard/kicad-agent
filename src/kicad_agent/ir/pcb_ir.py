@@ -447,6 +447,85 @@ class PcbIR(BaseIR):
             result.append((pad.number, net_name))
         return result
 
+    def get_board_bounds(self) -> tuple[float, float, float, float] | None:
+        """Extract board outline bounds as (x_min, y_min, x_max, y_max).
+
+        Uses the first graphic line on Edge.Cuts to approximate bounds.
+        Returns None if no board outline is found.
+
+        Returns:
+            Tuple of (x_min, y_min, x_max, y_max) in mm, or None.
+        """
+        segments: list[tuple[float, float]] = []
+        for graphic in self.board.graphicItems:
+            if hasattr(graphic, 'layer') and graphic.layer == "Edge.Cuts":
+                if hasattr(graphic, 'start') and hasattr(graphic, 'end'):
+                    segments.append((graphic.start.X, graphic.start.Y))
+                    segments.append((graphic.end.X, graphic.end.Y))
+                elif hasattr(graphic, 'center'):
+                    cx, cy = graphic.center.X, graphic.center.Y
+                    r = getattr(graphic, 'radius', getattr(graphic, 'end', None))
+                    if r is not None:
+                        radius = r.X - cx if hasattr(r, 'X') else float(r)
+                        segments.append((cx - radius, cy - radius))
+                        segments.append((cx + radius, cy + radius))
+
+        # Also check footprint graphics on Edge.Cuts
+        for fp in self.footprints:
+            for graphic in fp.graphicItems:
+                if hasattr(graphic, 'layer') and graphic.layer == "Edge.Cuts":
+                    if hasattr(graphic, 'start') and hasattr(graphic, 'end'):
+                        fp_x = fp.position.X if hasattr(fp.position, 'X') else 0
+                        fp_y = fp.position.Y if hasattr(fp.position, 'Y') else 0
+                        segments.append((graphic.start.X + fp_x, graphic.start.Y + fp_y))
+                        segments.append((graphic.end.X + fp_x, graphic.end.Y + fp_y))
+
+        if not segments:
+            return None
+
+        xs = [s[0] for s in segments]
+        ys = [s[1] for s in segments]
+        return (min(xs), min(ys), max(xs), max(ys))
+
+    def extract_netlist(self) -> dict[str, list[tuple[float, float]]]:
+        """Extract netlist mapping net names to pad positions.
+
+        Returns:
+            Dict mapping net name to list of (x, y) pad positions in mm.
+        """
+        netlist: dict[str, list[tuple[float, float]]] = {}
+        for fp in self.footprints:
+            fp_x = fp.position.X if hasattr(fp.position, 'X') else 0
+            fp_y = fp.position.Y if hasattr(fp.position, 'Y') else 0
+            for pad in fp.pads:
+                if pad.net is not None and pad.net.name:
+                    pad_x = fp_x + (pad.position.X if hasattr(pad.position, 'X') else 0)
+                    pad_y = fp_y + (pad.position.Y if hasattr(pad.position, 'Y') else 0)
+                    net_name = pad.net.name
+                    if net_name not in netlist:
+                        netlist[net_name] = []
+                    netlist[net_name].append((round(pad_x, 4), round(pad_y, 4)))
+        return netlist
+
+    def insert_track_segments(self, sexpr_block: str) -> None:
+        """Insert track segment S-expressions into the PCB file.
+
+        Appends the segments before the closing ) of the .kicad_pcb file.
+
+        Args:
+            sexpr_block: Block of (segment ...) S-expressions.
+        """
+        raw = self._parse_result.raw_content
+        # Find the last closing paren of the file
+        last_close = raw.rfind(')')
+        if last_close == -1:
+            return
+        insertion = "\n" + sexpr_block + "\n"
+        new_raw = raw[:last_close] + insertion + raw[last_close:]
+        self._parse_result = self._parse_result._replace(raw_content=new_raw)
+        self._raw_written = True
+        self._mark_dirty()
+
 
 def _restore_properties(
     fp: Footprint, reference: str, value: str

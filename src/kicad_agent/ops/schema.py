@@ -1015,6 +1015,22 @@ class AssignNetClassOp(BaseModel):
     net_class_name: str = Field(min_length=1, max_length=64, description="Net class name")
 
 
+class AutoRouteOp(BaseModel):
+    """Auto-route nets on a PCB using A* pathfinding.
+
+    Attributes:
+        op_type: Discriminator literal ``"auto_route"``.
+        target_file: Relative path to the target KiCad PCB file (H-01 validated).
+        nets: Optional list of specific net names to route. Routes all nets if empty.
+        layer: Copper layer for routed traces. Default "F.Cu".
+    """
+
+    op_type: Literal["auto_route"] = "auto_route"
+    target_file: TargetFile
+    nets: list[str] = Field(default_factory=list, description="Net names to route (empty = all)")
+    layer: str = Field(default="F.Cu", pattern=r"^[FB]\.Cu|In[1-9]\d*\.Cu$", description="Target copper layer")
+
+
 # ---------------------------------------------------------------------------
 # Discriminated union (D-01, D-02, D-03)
 # ---------------------------------------------------------------------------
@@ -1062,7 +1078,8 @@ class Operation(BaseModel):
         | ValidatePowerNetsOp
         | AddCopperZoneOp
         | SetBoardOutlineOp
-        | AssignNetClassOp,
+        | AssignNetClassOp
+        | AutoRouteOp,
         Field(discriminator="op_type"),
     ]
 
