@@ -18,7 +18,13 @@ from pathlib import Path
 
 from kicad_agent.crawler.file_fetcher import FileFetcher
 from kicad_agent.crawler.github_discovery import GithubDiscovery, KicadFilePair, RepoInfo
-from kicad_agent.training.graph_builder import BoardGraphResult, build_board_graph
+from kicad_agent.training.graph_builder import (
+    MIN_KICAD_VERSION,
+    BoardGraphResult,
+    build_board_graph,
+    detect_kicad_version,
+    is_likely_parseable,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -439,5 +445,161 @@ def run_pipeline(
         val_ds.to_jsonl(output_dir / "val.jsonl")
         test_ds.to_jsonl(output_dir / "test.jsonl")
         logger.info("Wrote splits to %s", output_dir)
+
+    return dataset
+
+
+def _find_pcb_sch_pairs(staging_dir: Path) -> list[tuple[Path, Path]]:
+    """Find all valid .kicad_pcb + .kicad_sch pairs in a staging directory.
+
+    Pairs by matching base name within the same directory. Skips empty files
+    and files with KiCad version < MIN_KICAD_VERSION.
+
+    Args:
+        staging_dir: Root directory to scan recursively.
+
+    Returns:
+        List of (sch_path, pcb_path) tuples.
+    """
+    pairs: list[tuple[Path, Path]] = []
+
+    for pcb_path in sorted(staging_dir.rglob("*.kicad_pcb")):
+        if pcb_path.stat().st_size == 0:
+            continue
+
+        # Check version
+        try:
+            pcb_text = pcb_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if not is_likely_parseable(pcb_text):
+            continue
+        pcb_ver = detect_kicad_version(pcb_text)
+        if pcb_ver is None or pcb_ver < MIN_KICAD_VERSION:
+            continue
+
+        # Find matching schematic (same base name, same directory)
+        sch_path = pcb_path.with_suffix(".kicad_sch")
+        if not sch_path.exists() or sch_path.stat().st_size == 0:
+            continue
+
+        try:
+            sch_text = sch_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if not is_likely_parseable(sch_text):
+            continue
+        sch_ver = detect_kicad_version(sch_text)
+        if sch_ver is None or sch_ver < MIN_KICAD_VERSION:
+            continue
+
+        pairs.append((sch_path, pcb_path))
+
+    return pairs
+
+
+def run_local_pipeline(
+    staging_dir: Path,
+    output_dir: Path | None = None,
+) -> RealBoardDataset:
+    """Ingest local KiCad files into a RealBoardDataset.
+
+    Scans staging_dir for .kicad_pcb + .kicad_sch pairs, parses each into a
+    board graph, deduplicates, quality-filters, and optionally writes
+    train/val/test JSONL splits.
+
+    No GitHub token or network access required — processes files already on disk.
+
+    Args:
+        staging_dir: Directory containing KiCad project subdirectories.
+        output_dir: If provided, write train.jsonl, val.jsonl, test.jsonl
+            splits to this directory.
+
+    Returns:
+        RealBoardDataset with metadata including discovery and filter counts.
+    """
+    staging_dir = Path(staging_dir)
+    if not staging_dir.is_dir():
+        raise FileNotFoundError(f"Staging directory not found: {staging_dir}")
+
+    # 1. Find all valid PCB+SCH pairs
+    file_pairs = _find_pcb_sch_pairs(staging_dir)
+    n_discovered = len(file_pairs)
+    logger.info("Found %d valid PCB+SCH pairs in %s", n_discovered, staging_dir)
+
+    if n_discovered == 0:
+        logger.warning("No valid file pairs found — check KiCad version (need v7+)")
+        return RealBoardDataset(metadata={"n_discovered": 0, "difficulty_counts": {}})
+
+    # 2. Parse each pair into a board graph
+    raw_samples: list[RealBoardSample] = []
+    n_parsed = 0
+    n_failed = 0
+
+    for idx, (sch_path, pcb_path) in enumerate(file_pairs):
+        try:
+            # Derive repo name from directory structure
+            rel = pcb_path.relative_to(staging_dir)
+            repo_name = str(rel.parts[0]) if len(rel.parts) > 1 else ""
+
+            result = build_board_graph(
+                sch_path=sch_path,
+                pcb_path=pcb_path,
+                sample_id=idx,
+                repo_url="",
+                repo_name=repo_name,
+                sch_repo_path=str(rel.with_suffix(".kicad_sch")),
+                pcb_repo_path=str(rel),
+            )
+
+            if result is None:
+                n_failed += 1
+                continue
+
+            raw_samples.append(_graph_result_to_sample(result, idx))
+            n_parsed += 1
+
+        except Exception as e:
+            logger.warning("Failed to parse %s: %s", pcb_path.name, e)
+            n_failed += 1
+
+    # 3. Dedup
+    n_before_dedup = len(raw_samples)
+    deduped = dedup_by_hash(raw_samples)
+    n_deduped = len(deduped)
+
+    # 4. Quality filter
+    n_before_filter = len(deduped)
+    filtered = filter_quality(deduped)
+    n_filtered = len(filtered)
+
+    # 5. Build dataset with metadata
+    difficulty_counts = dict(Counter(s.difficulty for s in filtered))
+    metadata = {
+        "source": "local",
+        "staging_dir": str(staging_dir),
+        "n_discovered": n_discovered,
+        "n_parsed": n_parsed,
+        "n_failed": n_failed,
+        "n_duplicates_removed": n_before_dedup - n_deduped,
+        "n_quality_removed": n_before_filter - n_filtered,
+        "difficulty_counts": difficulty_counts,
+    }
+
+    dataset = RealBoardDataset(samples=filtered, metadata=metadata)
+
+    logger.info(
+        "Local pipeline: %d discovered -> %d parsed -> %d deduped -> %d filtered",
+        n_discovered, n_parsed, n_deduped, n_filtered,
+    )
+
+    # 6. Write JSONL splits if output_dir provided
+    if output_dir is not None:
+        output_dir = Path(output_dir)
+        train_ds, val_ds, test_ds = dataset.split()
+        n_train = train_ds.to_jsonl(output_dir / "train.jsonl")
+        n_val = val_ds.to_jsonl(output_dir / "val.jsonl")
+        n_test = test_ds.to_jsonl(output_dir / "test.jsonl")
+        logger.info("Wrote splits to %s (train=%d, val=%d, test=%d)", output_dir, n_train, n_val, n_test)
 
     return dataset
