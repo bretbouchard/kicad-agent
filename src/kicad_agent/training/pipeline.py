@@ -1,8 +1,12 @@
-"""Single-command training pipeline for GRPO spatial reasoning.
+"""Single-command training pipeline for spatial reasoning reward model.
 
-GRPO-07: Reproducible end-to-end pipeline — dataset generation, chain synthesis,
-reward model training, GRPO training, and evaluation — with configurable
+Reproducible end-to-end pipeline — dataset generation, chain synthesis,
+supervised reward model training, and evaluation — with configurable
 hyperparameters and deterministic seeding.
+
+Previously named "GRPO" but refactored to honest supervised training:
+the reward model is trained via MSE against ground-truth chain scores,
+not through a circular policy-gradient loop (Council C1-C3 fix).
 
 Usage:
     from kicad_agent.training.pipeline import run_pipeline, TrainingPipelineConfig
@@ -22,7 +26,6 @@ from pathlib import Path
 from kicad_agent.training.chains import synthesize_maze_chain
 from kicad_agent.training.dataset import MazeDataset, generate_dataset
 from kicad_agent.training.evaluation import EvaluationHarness, run_baseline
-from kicad_agent.training.grpo import GRPOConfig, GRPOTrainer
 from kicad_agent.training.reward import RewardConfig, score_chain
 from kicad_agent.training.reward_model import RewardModel, train_reward_model
 from kicad_agent.training.tokenizer import ChainTokenizer
@@ -55,8 +58,7 @@ class TrainingPipelineConfig:
     device: str = "cpu"
     output_dir: str = "training_output/"
     reward_config: RewardConfig | None = None
-    grpo_config: GRPOConfig | None = None
-    n_grpo_epochs: int = 5
+    n_epochs: int = 5
     max_train_chains: int = 0
     hard_board_ratio: float = 0.4
     lr_schedule: str = "cosine"
@@ -104,18 +106,17 @@ def _build_board_configs(hard_ratio: float) -> list[dict]:
 
 
 def run_pipeline(config: TrainingPipelineConfig) -> dict:
-    """Execute the full GRPO training pipeline.
+    """Execute the supervised reward model training pipeline.
 
     Steps:
       1. Generate dataset (with hard board mix)
       2. Split train/val/test
-      3. Synthesize chains and score (ground truth)
-      4. Train reward model
+      3. Synthesize chains and score (ground truth) for train + val
+      4. Train tokenizer + reward model (supervised MSE)
       5. Evaluate baseline
-      6. GRPO train (multi-epoch with LR schedule)
-      7. Evaluate trained model
-      8. Compare results
-      9. Save report
+      6. Evaluate trained model
+      7. Compare results
+      8. Save report
 
     Args:
         config: Pipeline configuration.
@@ -132,10 +133,8 @@ def run_pipeline(config: TrainingPipelineConfig) -> dict:
             "n_samples": config.n_samples,
             "seed": config.seed,
             "device": config.device,
-            "n_grpo_epochs": config.n_grpo_epochs,
+            "n_epochs": config.n_epochs,
             "hard_board_ratio": config.hard_board_ratio,
-            "lr_schedule": config.lr_schedule,
-            "warmup_steps": config.warmup_steps,
         },
         "steps": {},
     }
@@ -184,13 +183,26 @@ def run_pipeline(config: TrainingPipelineConfig) -> dict:
 
     report["steps"]["chains"] = {"n_scored": len(train_texts)}
 
-    # Step 4: Train tokenizer + reward model
+    # Step 3b: Score validation chains (for early stopping)
+    logger.info("Step 3b: Scoring %d validation chains...", len(val_ds.samples))
+    val_texts: list[str] = []
+    val_labels: list[tuple[float, float, float]] = []
+    for sample in val_ds.samples:
+        chain = synthesize_maze_chain(sample)
+        chain_reward = score_chain(chain, sample, reward_config)
+        val_texts.append(chain.chain_text)
+        fmt_avg = sum(sr.format_score for sr in chain_reward.step_rewards) / max(len(chain_reward.step_rewards), 1)
+        qual_avg = sum(sr.quality_score for sr in chain_reward.step_rewards) / max(len(chain_reward.step_rewards), 1)
+        acc_avg = sum(sr.accuracy_score for sr in chain_reward.step_rewards) / max(len(chain_reward.step_rewards), 1)
+        val_labels.append((fmt_avg, qual_avg, acc_avg))
+
+    # Step 4: Train tokenizer + reward model (supervised, not circular GRPO)
     logger.info("Step 4: Training tokenizer on %d texts...", len(train_texts))
     tokenizer = ChainTokenizer(vocab_size=8000)
     tokenizer.train(train_texts)
     logger.info("Tokenizer vocab size: %d", tokenizer.vocab_size_actual)
 
-    logger.info("Step 4: Training reward model on %d samples...", len(train_texts))
+    logger.info("Step 4: Training reward model (supervised) on %d samples...", len(train_texts))
     reward_model = RewardModel(device=config.device)
     reward_model.set_tokenizer(tokenizer)
     if reward_model.is_available:
@@ -198,13 +210,17 @@ def run_pipeline(config: TrainingPipelineConfig) -> dict:
             reward_model,
             train_texts,
             train_labels,
-            n_epochs=3,
+            val_texts=val_texts,
+            val_labels=val_labels,
+            n_epochs=config.n_epochs,
             learning_rate=1e-4,
             batch_size=32,
         )
         report["steps"]["reward_model"] = {
             "final_loss": rm_history["losses"][-1] if rm_history.get("losses") else None,
+            "final_val_loss": rm_history["val_losses"][-1] if rm_history.get("val_losses") else None,
             "tokenizer_vocab_size": tokenizer.vocab_size_actual,
+            "training_type": "supervised",
         }
     else:
         report["steps"]["reward_model"] = {"status": "PyTorch not available"}
@@ -219,37 +235,7 @@ def run_pipeline(config: TrainingPipelineConfig) -> dict:
         "n_samples": baseline_result.n_samples,
     }
 
-    # Step 6: GRPO training (multi-epoch with LR schedule)
-    logger.info("Step 6: GRPO training (%d epochs, %s LR schedule)...",
-                config.n_grpo_epochs, config.lr_schedule)
-    grpo_config = config.grpo_config or GRPOConfig(
-        seed=config.seed,
-        output_dir=str(output_dir / "checkpoints"),
-    )
-
-    # Use a frozen copy of the reward model as reference (same tokenizer)
-    ref_model = RewardModel(device=config.device)
-    ref_model.set_tokenizer(tokenizer)
-    trainer = GRPOTrainer(
-        policy_model=reward_model,
-        reward_model=reward_model,
-        ref_model=ref_model,
-        config=grpo_config,
-    )
-
-    grpo_history = trainer.train(
-        train_ds,
-        n_epochs=config.n_grpo_epochs,
-        batch_size=8,
-    )
-    report["steps"]["grpo"] = {
-        "n_epochs": config.n_grpo_epochs,
-        "n_steps": len(grpo_history["losses"]),
-        "final_loss": grpo_history["losses"][-1] if grpo_history["losses"] else None,
-        "final_reward_mean": grpo_history["reward_means"][-1] if grpo_history["reward_means"] else None,
-    }
-
-    # Step 7: Evaluate trained model
+    # Step 6: Evaluate trained model (no more circular GRPO loop)
     logger.info("Step 7: Evaluating trained model...")
     harness = EvaluationHarness(test_ds, reward_model)
     trained_result = harness.evaluate(model=reward_model)

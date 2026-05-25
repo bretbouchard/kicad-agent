@@ -232,7 +232,7 @@ class GRPOTrainer:
         chain_texts = [c.chain_text for c in all_chains]
         return chain_texts, all_chains
 
-    def train_step(self, batch: list) -> dict:
+    def train_step(self, batch: list, optimizer: Any = None) -> dict:
         """Execute a single GRPO training step with gradient updates.
 
         1. Generate chain groups (correct + corrupted for contrast)
@@ -243,6 +243,7 @@ class GRPOTrainer:
 
         Args:
             batch: List of MazeSample objects.
+            optimizer: Optional pre-created optimizer (prevents recreation each step).
 
         Returns:
             Dict with step metrics.
@@ -281,9 +282,11 @@ class GRPOTrainer:
 
         if nn_model is not None and len(all_chain_texts) > 0:
             nn_model.train()
-            optimizer = torch.optim.AdamW(
-                nn_model.parameters(), lr=self.config.learning_rate,
-            )
+            # Reuse passed optimizer to preserve momentum (Council H4 fix)
+            if optimizer is None:
+                optimizer = torch.optim.AdamW(
+                    nn_model.parameters(), lr=self.config.learning_rate,
+                )
 
             # Tokenize all chains
             tokenizer = self.reward_model._tokenizer if hasattr(self.reward_model, '_tokenizer') else None
@@ -353,7 +356,7 @@ class GRPOTrainer:
             reward_mean = blended.mean().item()
             advantage_mean = all_advantages.mean().item()
             loss_val = total_loss.item()
-            kl_div = 0.01
+            kl_div = 0.0  # No KL in supervised mode; was previously hardcoded 0.01
         else:
             # Fallback: metric-only (no model available)
             neural_rewards = self.compute_group_rewards(chain_groups, batch)
@@ -373,7 +376,7 @@ class GRPOTrainer:
             reward_mean = sum(all_rewards) / len(all_rewards) if all_rewards else 0.0
             advantage_mean = sum(all_advs) / len(all_advs) if all_advs else 0.0
             loss_val = -advantage_mean
-            kl_div = 0.01
+            kl_div = 0.0  # No KL in metric-only mode
 
         return {
             "loss": loss_val,
@@ -449,6 +452,14 @@ class GRPOTrainer:
         steps_per_epoch = max(1, (n_samples + batch_size - 1) // batch_size)
         total_steps = self.config.total_steps or (steps_per_epoch * n_epochs)
 
+        # Create optimizer once to preserve AdamW momentum (Council H4 fix)
+        optimizer = None
+        if self.reward_model.is_available:
+            import torch
+            optimizer = torch.optim.AdamW(
+                self.reward_model.model.parameters(), lr=self.config.learning_rate,
+            )
+
         global_step = 0
 
         for epoch in range(n_epochs):
@@ -459,7 +470,7 @@ class GRPOTrainer:
                 if not batch:
                     continue
 
-                # Compute LR for this step
+                # Compute LR for this step and apply to optimizer
                 lr = self.compute_lr(
                     step=global_step,
                     total_steps=total_steps,
@@ -468,8 +479,11 @@ class GRPOTrainer:
                     schedule=self.config.lr_schedule,
                 )
                 history["learning_rates"].append(lr)
+                if optimizer is not None:
+                    for param_group in optimizer.param_groups:
+                        param_group["lr"] = lr
 
-                metrics = self.train_step(batch)
+                metrics = self.train_step(batch, optimizer=optimizer)
                 metrics["learning_rate"] = lr
                 epoch_metrics.append(metrics)
 

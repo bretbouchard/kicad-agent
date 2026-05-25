@@ -338,18 +338,16 @@ class TestTrainingPipelineConfigNewFields:
     """New pipeline config fields."""
 
     def test_new_defaults(self) -> None:
-        """New pipeline config defaults."""
+        """Pipeline config defaults."""
         config = TrainingPipelineConfig()
-        assert config.n_grpo_epochs == 5
+        assert config.n_epochs == 5
         assert config.max_train_chains == 0
         assert config.hard_board_ratio == 0.4
-        assert config.lr_schedule == "cosine"
-        assert config.warmup_steps == 100
 
     def test_custom_epochs(self) -> None:
-        """Custom GRPO epoch count."""
-        config = TrainingPipelineConfig(n_grpo_epochs=10)
-        assert config.n_grpo_epochs == 10
+        """Custom epoch count."""
+        config = TrainingPipelineConfig(n_epochs=10)
+        assert config.n_epochs == 10
 
 
 # ======================================================================
