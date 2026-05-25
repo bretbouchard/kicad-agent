@@ -115,7 +115,7 @@ The skill routes natural language requests through the Python backend — Claude
 
 ## Operations Reference
 
-19 operations across 5 categories:
+34 operations across 5 categories:
 
 ### Component Operations
 
@@ -203,7 +203,7 @@ LLM / CLI
 +-------------+     +-------------+     +-------------+     +-------------+
 |   Parser     |---->|     IR      |---->|   Ops       |---->|  Serializer |
 |              |     |             |     |             |     |             |
-| S-expression |     | Intermediate|     | 19 atomic   |     | Valid KiCad |
+| S-expression |     | Intermediate|     | 34 atomic   |     | Valid KiCad |
 | -> AST       |     | representation   | operations  |     | S-expression|
 |              |     | + mutation  |     | + executor  |     | + normalize |
 | 4 file types |     | tracking    |     |             |     |             |
@@ -225,7 +225,7 @@ LLM / CLI
 |--------|---------|
 | `kicad_agent.parser` | Parse KiCad files into structured AST (schematic, PCB, symbol, footprint) |
 | `kicad_agent.ir` | Intermediate representation with mutation tracking and transactions |
-| `kicad_agent.ops` | 19 operation handlers, Pydantic schema, operation executor |
+| `kicad_agent.ops` | 34 operation handlers, Pydantic schema, operation executor |
 | `kicad_agent.serializer` | Write valid KiCad files with UUID re-injection and normalization |
 | `kicad_agent.validation` | ERC/DRC gates via kicad-cli, structural validation, round-trip checks |
 | `kicad_agent.analysis` | Net connectivity graph analysis via networkx |

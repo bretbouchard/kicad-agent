@@ -19,6 +19,7 @@ Usage:
     footprints = ir.footprints
 """
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -469,7 +470,6 @@ def _find_footprint_block(content: str, reference: str) -> tuple[Optional[int], 
     Scans for ``(footprint ...`` blocks and checks their Reference property.
     Returns (start, end) byte offsets, or (None, None) if not found.
     """
-    import re
 
     # Find all top-level footprint blocks (one tab indent)
     for match in re.finditer(r'^\t\(footprint ', content, re.MULTILINE):
@@ -529,7 +529,6 @@ def _strip_library_metadata(sexp: str) -> str:
     KiCad library .kicad_mod files include version/generator/compatibility fields
     that are not valid inside a PCB's embedded footprint blocks.
     """
-    import re
     # Remove (version ...), (generator "..."), (generator_version "...")
     # In the library file these are at single-tab indent under (footprint ...)
     for pattern in [
@@ -544,7 +543,6 @@ def _strip_library_metadata(sexp: str) -> str:
 
 def _inject_lib_id(sexp: str, lib_id: str) -> str:
     """Replace the footprint's lib_id in the (footprint "LIB:NAME" ...) S-expression."""
-    import re
     return re.sub(
         r'^\(footprint "([^"]*)"',
         f'(footprint "{lib_id}"',
@@ -558,7 +556,6 @@ def _inject_at_position(sexp: str, at_sexp: str) -> str:
 
     Library footprints don't have (at ...), so we insert it after (layer "...").
     """
-    import re
 
     # Try to replace existing (at ...)
     at_pattern = re.compile(r'^\t\(at [^\)]*\)', re.MULTILINE)
@@ -582,7 +579,6 @@ def _inject_at_position(sexp: str, at_sexp: str) -> str:
 
 def _inject_layer(sexp: str, layer: str) -> str:
     """Replace the (layer "...") in the footprint S-expression."""
-    import re
     return re.sub(
         r'^\t\(layer "[^"]*"\)',
         f'\t(layer "{layer}")',
@@ -592,12 +588,17 @@ def _inject_layer(sexp: str, layer: str) -> str:
     )
 
 
+def _escape_sexpr_value(s: str) -> str:
+    """Escape special characters for safe embedding in S-expression strings."""
+    return s.replace("\\", "\\\\").replace('"', '\\"')
+
+
 def _inject_reference(sexp: str, reference: str) -> str:
     """Replace the Reference property value in the footprint S-expression."""
-    import re
+    safe = _escape_sexpr_value(reference)
     return re.sub(
         r'\(property "Reference" "[^"]*"',
-        f'(property "Reference" "{reference}"',
+        f'(property "Reference" "{safe}"',
         sexp,
         count=1,
     )
@@ -605,10 +606,10 @@ def _inject_reference(sexp: str, reference: str) -> str:
 
 def _inject_value(sexp: str, value: str) -> str:
     """Replace the Value property value in the footprint S-expression."""
-    import re
+    safe = _escape_sexpr_value(value)
     return re.sub(
         r'\(property "Value" "[^"]*"',
-        f'(property "Value" "{value}"',
+        f'(property "Value" "{safe}"',
         sexp,
         count=1,
     )
@@ -620,7 +621,6 @@ def _inject_pad_net(sexp: str, pad_number: str, net_name: str) -> Optional[str]:
     Finds the pad by number and injects/replaces its net assignment.
     Returns the modified sexp, or None if the pad wasn't found.
     """
-    import re
 
     # Find pad blocks by number - pads look like (pad "N" ...  )
     # We need to find the specific pad and inject (net "name") before its closing paren
@@ -661,20 +661,17 @@ def _inject_pad_net(sexp: str, pad_number: str, net_name: str) -> Optional[str]:
 
 def _extract_pad_numbers(sexp: str) -> list[str]:
     """Extract all pad numbers from a footprint S-expression."""
-    import re
     return re.findall(r'\(pad "([^"]+)"', sexp)
 
 
 def _extract_field(block: str, pattern: str, desc: str = "") -> Optional[str]:
     """Extract a single captured group from a regex match in a block."""
-    import re
     match = re.search(pattern, block, re.MULTILINE)
     return match.group(1) if match else None
 
 
 def _extract_raw_line(block: str, pattern: str) -> Optional[str]:
     """Extract a full matching line from a block."""
-    import re
     match = re.search(pattern + r'[^\n]*', block, re.MULTILINE)
     return match.group(0) if match else None
 
@@ -696,7 +693,6 @@ def _dedent_one_tab(text: Optional[str]) -> Optional[str]:
 
 def _extract_raw_block(block: str, start_pattern: str) -> Optional[str]:
     """Extract a balanced S-expression block starting with the given pattern."""
-    import re
     match = re.search(start_pattern, block, re.MULTILINE)
     if not match:
         return None
@@ -709,7 +705,6 @@ def _extract_raw_block(block: str, start_pattern: str) -> Optional[str]:
 
 def _insert_after_field(sexp: str, field_pattern: str, insertion: str) -> str:
     """Insert text after the line matching field_pattern."""
-    import re
     match = re.search(field_pattern, sexp, re.MULTILINE)
     if match:
         pos = match.end()
@@ -719,7 +714,6 @@ def _insert_after_field(sexp: str, field_pattern: str, insertion: str) -> str:
 
 def _insert_before_attr(sexp: str, line_to_insert: str) -> str:
     """Insert a line before the (attr ...) line in the footprint."""
-    import re
     attr_match = re.search(r'^\t\(attr ', sexp, re.MULTILINE)
     if attr_match:
         pos = attr_match.start()

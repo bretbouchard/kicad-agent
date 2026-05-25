@@ -159,13 +159,18 @@ class RealBoardDataset:
             raise ValueError(f"Split fractions must sum to 1.0, got {total}")
 
         n = len(self.samples)
+        indices = list(range(n))
+        import random
+        rng = random.Random(42)
+        rng.shuffle(indices)
+        shuffled = [self.samples[i] for i in indices]
         train_end = int(n * train)
         val_end = train_end + int(n * val)
 
         return (
-            RealBoardDataset(samples=self.samples[:train_end]),
-            RealBoardDataset(samples=self.samples[train_end:val_end]),
-            RealBoardDataset(samples=self.samples[val_end:]),
+            RealBoardDataset(samples=shuffled[:train_end]),
+            RealBoardDataset(samples=shuffled[train_end:val_end]),
+            RealBoardDataset(samples=shuffled[val_end:]),
         )
 
 
@@ -338,6 +343,9 @@ def run_pipeline(
     Returns:
         RealBoardDataset with metadata including discovery and filter counts.
     """
+    if not token or not token.strip():
+        raise ValueError("GitHub token must be a non-empty string")
+
     # 1. Discover repos with KiCad file pairs
     discovery = GithubDiscovery(token)
     repo_pairs = discovery.discover_pairs(max_repos=max_repos)

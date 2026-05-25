@@ -37,7 +37,7 @@ def _fix_pad_net_syntax(content: str) -> str:
     # Match pad-level net refs: tab-indented (net "name") without a number
     # Board-level nets have the format (net N "name") at the top level
     return re.sub(
-        r'^(\t+\(net )"([^"]+)"\)$',
+        r'^(\t{1,20}\(net )"([^"]+)"\)$',
         r'\g<1>0 "\2")',
         content,
         flags=re.MULTILINE,

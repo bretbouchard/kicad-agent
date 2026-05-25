@@ -440,7 +440,7 @@ def build_board_graph(
         _ir_registry.difference_update(_registered_ids)
         return result
 
-    except Exception as e:
+    except (ValueError, OSError, KeyError, AttributeError, RuntimeError) as e:
         # Clean up IR registry entries even on failure
         _ir_registry.difference_update(_registered_ids)
         logger.warning(
@@ -448,5 +448,15 @@ def build_board_graph(
             sch_path,
             pcb_path,
             e,
+        )
+        return None
+    except Exception as e:
+        _ir_registry.difference_update(_registered_ids)
+        logger.warning(
+            "Unexpected error building board graph for %s + %s: %s",
+            sch_path,
+            pcb_path,
+            e,
+            exc_info=True,
         )
         return None

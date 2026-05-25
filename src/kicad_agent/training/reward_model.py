@@ -140,10 +140,16 @@ def _build_model(vocab_size: int = _MAX_VOCAB + 2):
             positions = torch.arange(seq_len, device=input_ids.device).unsqueeze(0).expand(batch_size, -1)
             x = self.embedding(input_ids) + self.pos_embedding(positions)
 
-            # Padding mask: skip on MPS (unsupported nested-tensor op), use on CUDA/CPU
+            # Padding mask: use boolean mask on CUDA/CPU, float large-negative on MPS
             device_type = input_ids.device.type
             if attention_mask is not None and device_type not in ("mps",):
                 padding_mask = attention_mask == 0  # True = ignore
+            elif attention_mask is not None and device_type == "mps":
+                # MPS doesn't support nested boolean tensors; mask by zeroing
+                # out padded positions in the embedding space instead.
+                mask_expanded = attention_mask.unsqueeze(-1).float()
+                x = x * mask_expanded  # zero out padded positions
+                padding_mask = None
             else:
                 padding_mask = None
 

@@ -187,13 +187,18 @@ class MazeDataset:
             raise ValueError(f"Split fractions must sum to 1.0, got {total}")
 
         n = len(self.samples)
+        indices = list(range(n))
+        import random
+        rng = random.Random(self.samples[0].seed if self.samples else 42)
+        rng.shuffle(indices)
+        shuffled = [self.samples[i] for i in indices]
         train_end = int(n * train)
         val_end = train_end + int(n * val)
 
         return (
-            MazeDataset(samples=self.samples[:train_end]),
-            MazeDataset(samples=self.samples[train_end:val_end]),
-            MazeDataset(samples=self.samples[val_end:]),
+            MazeDataset(samples=shuffled[:train_end]),
+            MazeDataset(samples=shuffled[train_end:val_end]),
+            MazeDataset(samples=shuffled[val_end:]),
         )
 
 

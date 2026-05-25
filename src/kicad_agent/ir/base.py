@@ -19,6 +19,7 @@ Usage:
 """
 
 import logging
+import threading
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -30,12 +31,15 @@ logger = logging.getLogger(__name__)
 
 # Council HIGH: Registry to enforce one-IR-per-ParseResult invariant.
 # Uses id() of ParseResult for lookup since dataclass IR instances are unhashable.
+# Thread-safe for concurrent access.
 _ir_registry: set[int] = set()
+_ir_registry_lock = threading.Lock()
 
 
 def _clear_registry() -> None:
     """Clear the IR registry. For testing only."""
-    _ir_registry.clear()
+    with _ir_registry_lock:
+        _ir_registry.clear()
 
 
 @dataclass
@@ -64,12 +68,13 @@ class BaseIR:
     def __post_init__(self) -> None:
         """Enforce one-IR-per-ParseResult invariant (Council HIGH)."""
         pr_id = id(self._parse_result)
-        if pr_id in _ir_registry:
-            raise RuntimeError(
-                "ParseResult already has an IR wrapper. "
-                "Create only one IR per ParseResult to prevent shared-reference bugs."
-            )
-        _ir_registry.add(pr_id)
+        with _ir_registry_lock:
+            if pr_id in _ir_registry:
+                raise RuntimeError(
+                    "ParseResult already has an IR wrapper. "
+                    "Create only one IR per ParseResult to prevent shared-reference bugs."
+                )
+            _ir_registry.add(pr_id)
 
     @property
     def file_path(self) -> Any:

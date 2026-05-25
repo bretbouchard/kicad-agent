@@ -281,12 +281,12 @@ class OperationExecutor:
             )
             return result
 
-        # Bus ops: schema-only for now (IR methods not yet implemented)
+        # Bus ops: not yet implemented
         if op_type == "add_bus":
-            return {"bus_name": op.bus_name, "member_count": len(op.member_nets)}
+            raise NotImplementedError("Bus operations not yet implemented")
 
         if op_type == "remove_bus":
-            return {"removed_bus": op.bus_name}
+            raise NotImplementedError("Bus operations not yet implemented")
 
         # Phase 10 ops: schematic repair and power validation
         if op_type == "repair_schematic":

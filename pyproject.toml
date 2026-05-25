@@ -39,6 +39,9 @@ dev = [
 llm = [
     "anthropic>=0.61.0",
 ]
+training = [
+    "torch>=2.0",
+]
 docs = [
     "mkdocs-material>=9.7",
     "mkdocstrings-python>=2.0",

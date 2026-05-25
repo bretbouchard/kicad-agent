@@ -56,9 +56,10 @@ Run the validated operation through the kicad-agent pipeline:
 cd ~/apps/kicad-agent && python3 -c "
 import json, sys
 from kicad_agent.ops.schema import Operation
-from kicad_agent.executor import execute_operation
+from kicad_agent.ops.executor import OperationExecutor
 op = Operation.model_validate_json(sys.stdin.read())
-result = execute_operation(op, project_dir='.')
+executor = OperationExecutor(project_dir='.')
+result = executor.execute(op)
 print(json.dumps(result, indent=2))
 " <<< '$OPERATION_JSON'
 ```
