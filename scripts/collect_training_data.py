@@ -63,39 +63,67 @@ def _run_bulk(
     args: argparse.Namespace,
     repos: list,
     staging_dir: Path,
+    discovery: GithubDiscovery,
 ) -> int:
-    """Bulk mode: git clone repos, scan locally, parse, and write splits.
+    """Bulk mode: pre-filter repos via tree API, sparse-clone, parse, write splits.
 
-    Uses ``git clone --depth 1`` instead of the Contents API. Orders of
-    magnitude faster for large crawls because we get the entire repo in
-    one operation and scan for KiCad files locally.
+    Uses ``find_kicad_pairs()`` to check each repo's tree via the GitHub API
+    *before* cloning. Only repos with actual KiCad file pairs are fetched via
+    sparse clone, reducing disk usage from ~50-200MB/repo to ~50-500KB/repo.
 
     Args:
         args: Parsed CLI arguments.
         repos: List of RepoInfo from discovery.
         staging_dir: Local directory for cloned repos.
+        discovery: GithubDiscovery instance for tree lookups.
 
     Returns:
         Exit code (0 = success).
     """
+    import shutil
     from collections import Counter
 
+    # Phase 1: Pre-filter — check repo trees via GitHub API
+    logger.info("Pre-filtering %d repos via GitHub tree API...", len(repos))
+    repos_with_pairs: dict[str, list] = {}  # repo_name -> [KicadFilePair, ...]
+    n_no_pairs = 0
+
+    for i, repo_info in enumerate(repos):
+        if (i + 1) % 100 == 0:
+            logger.info("Pre-filter progress: %d/%d (%d with pairs so far)",
+                        i + 1, len(repos), len(repos_with_pairs))
+
+        pairs = discovery.find_kicad_pairs(repo_info)
+        if pairs:
+            repos_with_pairs[repo_info.full_name] = pairs
+        else:
+            n_no_pairs += 1
+
+    logger.info(
+        "Pre-filter: %d/%d repos have KiCad pairs (%d skipped)",
+        len(repos_with_pairs), len(repos), n_no_pairs,
+    )
+
+    if not repos_with_pairs:
+        logger.warning("No repos with KiCad pairs found")
+        return 0
+
+    # Phase 2: Sparse clone only the repos with pairs
     fetcher = BulkFetcher(staging_dir=staging_dir, timeout=args.clone_timeout)
-    repo_names = [r.full_name for r in repos]
+    logger.info("Sparse cloning %d repos with KiCad pairs...", len(repos_with_pairs))
+    batch_results = fetcher.sparse_clone_batch(
+        repos_with_pairs, skip_existing=args.skip_existing,
+    )
 
-    logger.info("Bulk cloning %d repos (timeout=%ds)...", len(repo_names), args.clone_timeout)
-    batch_results = fetcher.clone_batch(repo_names, skip_existing=args.skip_existing)
+    logger.info("Cloned %d repos, parsing...", len(batch_results))
 
-    logger.info("Cloned %d repos with KiCad pairs, parsing...", len(batch_results))
-
+    # Phase 3: Parse all pairs
     raw_samples: list[RealBoardSample] = []
     n_parsed = 0
     n_failed = 0
-    n_no_pairs = 0
     sample_id = 0
     n_discovered = 0
 
-    # Build lookup from repo_name -> RepoInfo for metadata
     repo_info_map = {r.full_name: r for r in repos}
 
     for repo_name, pairs in batch_results.items():
@@ -143,9 +171,11 @@ def _run_bulk(
 
     difficulty_counts = dict(Counter(s.difficulty for s in filtered))
     metadata = {
-        "strategy": f"{args.strategy}-bulk",
+        "strategy": f"{args.strategy}-sparse",
         "n_repos_scanned": len(repos),
-        "n_repos_with_pairs": len(batch_results),
+        "n_repos_with_pairs": len(repos_with_pairs),
+        "n_repos_no_pairs": n_no_pairs,
+        "n_repos_cloned": len(batch_results),
         "n_discovered": n_discovered,
         "n_parsed": n_parsed,
         "n_failed": n_failed,
@@ -163,10 +193,11 @@ def _run_bulk(
     test_ds.to_jsonl(output_dir / "test.jsonl")
 
     print(f"\n{'='*60}")
-    print(f"Bulk collection complete: {len(dataset)} samples")
-    print(f"  Strategy:      {args.strategy}-bulk")
+    print(f"Sparse collection complete: {len(dataset)} samples")
+    print(f"  Strategy:      {args.strategy}-sparse")
     print(f"  Repos scanned: {len(repos)}")
-    print(f"  Repos cloned:  {len(batch_results)} with pairs")
+    print(f"  Pre-filtered:  {len(repos_with_pairs)} with pairs ({n_no_pairs} skipped)")
+    print(f"  Repos cloned:  {len(batch_results)}")
     print(f"  Discovered:    {n_discovered} file pairs")
     print(f"  Parsed:        {n_parsed} boards")
     print(f"  Failed:        {n_failed}")
@@ -178,6 +209,50 @@ def _run_bulk(
     print(f"{'='*60}")
 
     return 0
+
+
+def _cleanup_staging(staging_dir: Path) -> int:
+    """Remove staging dirs that contain no KiCad files.
+
+    Scans kicad_staging/ and removes repos that have no .kicad_pcb files,
+    freeing disk space wasted by blind bulk clones.
+
+    Returns:
+        Number of directories removed.
+    """
+    import shutil
+
+    if not staging_dir.is_dir():
+        logger.error("Staging dir does not exist: %s", staging_dir)
+        return 0
+
+    removed = 0
+    kept = 0
+    total_freed = 0
+
+    for repo_dir in sorted(staging_dir.iterdir()):
+        if not repo_dir.is_dir():
+            continue
+
+        # Check for any .kicad_pcb files
+        has_kicad = any(repo_dir.rglob("*.kicad_pcb"))
+
+        if not has_kicad:
+            size = sum(f.stat().st_size for f in repo_dir.rglob("*") if f.is_file())
+            total_freed += size
+            shutil.rmtree(repo_dir)
+            removed += 1
+            if removed % 50 == 0:
+                logger.info("Cleanup: removed %d dirs (%.1f MB freed so far)",
+                            removed, total_freed / 1e6)
+        else:
+            kept += 1
+
+    logger.info(
+        "Cleanup complete: removed %d dirs, kept %d dirs, freed %.1f MB",
+        removed, kept, total_freed / 1e6,
+    )
+    return removed
 
 
 def main() -> int:
@@ -221,7 +296,12 @@ def main() -> int:
     parser.add_argument(
         "--bulk",
         action="store_true",
-        help="Use git clone --depth 1 instead of Contents API (much faster for large crawls)",
+        help="Use sparse git clone instead of Contents API (much faster, less disk)",
+    )
+    parser.add_argument(
+        "--cleanup",
+        action="store_true",
+        help="Remove staging dirs with no KiCad files, then exit",
     )
     parser.add_argument(
         "--clone-timeout",
@@ -231,12 +311,17 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    staging_dir = Path(args.staging_dir)
+    staging_dir.mkdir(parents=True, exist_ok=True)
+
+    # Cleanup mode: remove dirs with no KiCad files, then exit (no token needed)
+    if args.cleanup:
+        _cleanup_staging(staging_dir)
+        return 0
+
     if not args.token:
         logger.error("GITHUB_TOKEN not set. Use --token or set GITHUB_TOKEN env var.")
         return 1
-
-    staging_dir = Path(args.staging_dir)
-    staging_dir.mkdir(parents=True, exist_ok=True)
 
     # Discover repos
     discovery = GithubDiscovery(args.token)
@@ -271,7 +356,7 @@ def main() -> int:
 
     # Choose fetch mode
     if args.bulk:
-        return _run_bulk(args, repos, staging_dir)
+        return _run_bulk(args, repos, staging_dir, discovery)
 
     # Set up file fetcher (Contents API mode)
     fetcher = FileFetcher(

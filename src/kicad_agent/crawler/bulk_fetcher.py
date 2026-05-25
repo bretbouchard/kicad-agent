@@ -1,14 +1,16 @@
 """Bulk repo fetching via git clone for high-scale data collection.
 
-Uses `git clone --depth 1` to fetch entire repos in a single operation,
-then scans for .kicad_pcb + .kicad_sch file pairs locally. Orders of
-magnitude faster than the Contents API for repos with many KiCad files.
+Uses `git clone --depth 1 --filter=blob:none --sparse` to fetch only
+KiCad files from repos, dramatically reducing disk usage. Supports both
+full clones and sparse checkouts where only specified paths are fetched.
 
 Usage:
     from kicad_agent.crawler.bulk_fetcher import BulkFetcher
 
     fetcher = BulkFetcher(staging_dir=Path("kicad_staging"))
-    pairs = fetcher.clone_and_scan("user/kicad-project")
+    # Sparse: only fetch specific KiCad files
+    pairs = fetcher.sparse_clone("user/kicad-project",
+                                  kicad_paths=["board.kicad_sch", "board.kicad_pcb"])
 """
 
 from __future__ import annotations
@@ -177,6 +179,95 @@ class BulkFetcher:
             return []
         return self.scan_for_pairs(repo_dir, repo_name)
 
+    def sparse_clone(
+        self,
+        repo_name: str,
+        kicad_paths: list[str],
+        repo_url: str | None = None,
+    ) -> Path | None:
+        """Sparse-clone only the directories containing KiCad files.
+
+        Uses git's blobless clone + sparse-checkout to fetch only the
+        directories that contain .kicad_sch/.kicad_pcb files. This
+        reduces per-repo disk usage from ~50-200MB to ~50-500KB.
+
+        Args:
+            repo_name: GitHub owner/repo string.
+            kicad_paths: List of repo-relative paths to KiCad files
+                (e.g. ['board.kicad_sch', 'board.kicad_pcb']).
+            repo_url: Optional full clone URL.
+
+        Returns:
+            Path to cloned repo directory, or None if clone failed.
+        """
+        target = self._repo_dir(repo_name)
+
+        # Skip if already cloned
+        if target.is_dir() and any(target.iterdir()):
+            logger.debug("Already cloned: %s -> %s", repo_name, target)
+            return target
+
+        if repo_url is None:
+            repo_url = f"https://github.com/{repo_name}.git"
+
+        # Extract unique directories from the file paths
+        dirs = sorted({p.rsplit("/", 1)[0] for p in kicad_paths if "/" in p})
+        # If paths have no directory component, use root (no sparse needed)
+        has_root_files = any("/" not in p for p in kicad_paths)
+
+        try:
+            # Step 1: blobless sparse clone
+            result = subprocess.run(
+                [
+                    "git", "clone", "--depth", "1",
+                    "--filter=blob:none", "--sparse",
+                    repo_url, str(target),
+                ],
+                capture_output=True, text=True, timeout=self._timeout,
+            )
+
+            if result.returncode != 0:
+                stderr = result.stderr.strip()
+                logger.warning("Sparse clone failed for %s: %s", repo_name, stderr[:200])
+                if target.is_dir():
+                    shutil.rmtree(target, ignore_errors=True)
+                return None
+
+            # Step 2: set sparse-checkout paths
+            if dirs and not has_root_files:
+                checkout_result = subprocess.run(
+                    ["git", "sparse-checkout", "set", "--cone"] + dirs,
+                    capture_output=True, text=True, timeout=30,
+                    cwd=str(target),
+                )
+                if checkout_result.returncode != 0:
+                    logger.warning(
+                        "Sparse checkout set failed for %s: %s",
+                        repo_name, checkout_result.stderr[:200],
+                    )
+            elif has_root_files and dirs:
+                # Both root-level and nested files — checkout everything needed
+                all_dirs = dirs + ["."]
+                subprocess.run(
+                    ["git", "sparse-checkout", "set", "--cone"] + all_dirs,
+                    capture_output=True, text=True, timeout=30,
+                    cwd=str(target),
+                )
+
+            logger.info("Sparse cloned: %s -> %s", repo_name, target)
+            return target
+
+        except subprocess.TimeoutExpired:
+            logger.warning("Sparse clone timed out for %s (%ds)", repo_name, self._timeout)
+            if target.is_dir():
+                shutil.rmtree(target, ignore_errors=True)
+            return None
+        except Exception as e:
+            logger.warning("Sparse clone error for %s: %s", repo_name, e)
+            if target.is_dir():
+                shutil.rmtree(target, ignore_errors=True)
+            return None
+
     def clone_batch(
         self,
         repo_names: list[str],
@@ -207,5 +298,54 @@ class BulkFetcher:
         logger.info(
             "Bulk fetch: %d/%d repos had KiCad pairs",
             len(results), len(repo_names),
+        )
+        return results
+
+    def sparse_clone_batch(
+        self,
+        repos_with_pairs: dict[str, list],
+        skip_existing: bool = True,
+    ) -> dict[str, list[LocalFilePair]]:
+        """Sparse-clone multiple repos using pre-discovered file paths.
+
+        Takes a dict of repo_name -> KicadFilePair list (from
+        GithubDiscovery.find_kicad_pairs()) and only fetches the
+        directories containing KiCad files.
+
+        Args:
+            repos_with_pairs: Dict mapping repo_name -> list of
+                KicadFilePair with schematic_path and pcb_path.
+            skip_existing: Skip repos already in staging_dir.
+
+        Returns:
+            Dict mapping repo_name -> list of LocalFilePair.
+        """
+        results: dict[str, list[LocalFilePair]] = {}
+
+        for repo_name, pairs in repos_with_pairs.items():
+            target = self._repo_dir(repo_name)
+
+            if skip_existing and target.is_dir() and any(target.iterdir()):
+                # Already cloned, scan for pairs
+                local_pairs = self.scan_for_pairs(target, repo_name)
+            else:
+                # Collect all file paths for sparse checkout
+                kicad_paths = []
+                for p in pairs:
+                    kicad_paths.append(p.schematic_path)
+                    kicad_paths.append(p.pcb_path)
+
+                repo_dir = self.sparse_clone(repo_name, kicad_paths)
+                if repo_dir is None:
+                    continue
+
+                local_pairs = self.scan_for_pairs(repo_dir, repo_name)
+
+            if local_pairs:
+                results[repo_name] = local_pairs
+
+        logger.info(
+            "Sparse batch: %d/%d repos yielded KiCad pairs",
+            len(results), len(repos_with_pairs),
         )
         return results
