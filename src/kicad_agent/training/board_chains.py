@@ -16,10 +16,27 @@ Usage:
 from __future__ import annotations
 
 import json
+import logging
 import math
+import re
 from dataclasses import dataclass
+from typing import Sequence
 
 from kicad_agent.training.real_dataset import RealBoardSample
+
+logger = logging.getLogger(__name__)
+
+# Coordinate format regex (shared with maze reward module)
+_COORD_RE = re.compile(r"<point\s+[\d.]+,\s*[\d.]+>")
+
+# Board-relevant reasoning terms
+_REASONING_TERMS = {
+    "component", "net", "layer", "routing", "trace", "via",
+    "clearance", "impedance", "placement", "connectivity", "footprint",
+    "fanout", "density", "cluster", "centroid", "spread", "quadrant",
+    "buried", "through-hole", "smd", "pad", "pin", "signal", "power",
+    "ground", "requires", "connections", "assessment",
+}
 
 
 @dataclass(frozen=True)
@@ -361,4 +378,135 @@ def _corrupt_vague_reasoning(sample: RealBoardSample) -> BoardReasoningChain:
         steps=steps,
         coordinates_referenced=(),
         is_correct=False,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Batch processing
+# ---------------------------------------------------------------------------
+
+
+def synthesize_board_chains(
+    samples: Sequence[RealBoardSample],
+) -> tuple[list[str], list[tuple[float, float, float]]]:
+    """Synthesize chains and compute ground-truth labels for a batch of samples.
+
+    For each sample, generates a correct chain and a corrupted variant,
+    then computes (format, quality, accuracy) labels from chain features.
+
+    Args:
+        samples: RealBoardSample objects to process.
+
+    Returns:
+        (texts, labels) where texts is a list of chain_text strings
+        and labels is a list of (format, quality, accuracy) tuples.
+    """
+    import random
+
+    rng = random.Random(42)
+    texts: list[str] = []
+    labels: list[tuple[float, float, float]] = []
+
+    for sample in samples:
+        # Correct chain
+        correct = synthesize_board_chain(sample)
+        texts.append(correct.chain_text)
+        c_labels = _compute_chain_labels(correct, sample)
+        labels.append(c_labels)
+
+        # Corrupted chain (contrastive training signal)
+        corruption = rng.choice(["wrong_coords", "missing_steps", "vague_reasoning"])
+        corrupted = synthesize_corrupted_board_chain(sample, corruption)
+        texts.append(corrupted.chain_text)
+        x_labels = _compute_chain_labels(corrupted, sample)
+        labels.append(x_labels)
+
+    return texts, labels
+
+
+def _compute_chain_labels(
+    chain: BoardReasoningChain,
+    sample: RealBoardSample,
+) -> tuple[float, float, float]:
+    """Compute ground-truth (format, quality, accuracy) labels for a chain.
+
+    These labels are what the reward model learns to predict.
+
+    Args:
+        chain: BoardReasoningChain to score.
+        sample: Source RealBoardSample for ground-truth reference.
+
+    Returns:
+        (format_score, quality_score, accuracy_score) tuple.
+    """
+    n_steps = len(chain.steps)
+    fmt_scores = []
+    qual_scores = []
+    acc_scores = []
+
+    for step in chain.steps:
+        text = step.get("text", "")
+
+        # Format: coordinate refs + step structure
+        fmt = 0.0
+        if _COORD_RE.search(text):
+            fmt += 0.5
+        if step.get("step_type") in {
+            "observation", "component_analysis", "connectivity_analysis",
+            "spatial_analysis", "routing_assessment",
+        }:
+            fmt += 0.25
+        if len(text) > 20:
+            fmt += 0.25
+        fmt_scores.append(min(1.0, fmt))
+
+        # Quality: reasoning terms + specificity
+        qual = 0.0
+        text_lower = text.lower()
+        term_count = sum(1 for term in _REASONING_TERMS if term in text_lower)
+        if term_count >= 3:
+            qual += 0.4
+        elif term_count >= 1:
+            qual += 0.2
+        coord_count = len(_COORD_RE.findall(text))
+        if coord_count >= 2:
+            qual += 0.4
+        elif coord_count >= 1:
+            qual += 0.2
+        if len(text) > 50:
+            qual += 0.2
+        qual_scores.append(min(1.0, qual))
+
+        # Accuracy: coordinates match ground truth graph data
+        coords = step.get("coordinates", [])
+        if not coords:
+            acc_scores.append(0.5)  # neutral for non-spatial steps
+        else:
+            # Check referenced coords against graph data
+            graph_data = _extract_graph_data(sample)
+            valid_coords = []
+            for node in graph_data.get("nodes", []):
+                if "x_mm" in node and "y_mm" in node:
+                    valid_coords.append((node["x_mm"], node["y_mm"]))
+
+            if not valid_coords:
+                acc_scores.append(0.5)
+            else:
+                correct = 0
+                for coord in coords:
+                    if isinstance(coord, (list, tuple)) and len(coord) == 2:
+                        cx, cy = float(coord[0]), float(coord[1])
+                        for vx, vy in valid_coords:
+                            dist = math.sqrt((cx - vx) ** 2 + (cy - vy) ** 2)
+                            if dist <= 5.0:  # 5mm tolerance for board-scale
+                                correct += 1
+                                break
+                acc_scores.append(min(1.0, correct / max(len(coords), 1)))
+
+    # Average across steps
+    n = max(n_steps, 1)
+    return (
+        round(sum(fmt_scores) / n, 4),
+        round(sum(qual_scores) / n, 4),
+        round(sum(acc_scores) / n, 4),
     )
