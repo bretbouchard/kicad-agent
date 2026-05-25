@@ -137,6 +137,7 @@ class GithubDiscovery:
         self,
         max_repos: int = 500,
         queries: list[str] | None = None,
+        max_pages: int = 3,
     ) -> list[RepoInfo]:
         """Search GitHub for repositories containing KiCad files.
 
@@ -146,6 +147,8 @@ class GithubDiscovery:
         Args:
             max_repos: Maximum number of repos to return.
             queries: Search queries. Defaults to _DEFAULT_QUERIES.
+            max_pages: Max pages per query to avoid burning search API quota.
+                Search API allows 30 req/hr; each page = 1 request.
 
         Returns:
             Deduplicated list of RepoInfo, truncated to max_repos.
@@ -162,6 +165,7 @@ class GithubDiscovery:
                 results = self._client.search_repositories(
                     query, sort="stars", order="desc"
                 )
+                page_count = 0
                 for repo in results:
                     if repo.full_name in seen:
                         continue
@@ -174,6 +178,14 @@ class GithubDiscovery:
                     )
                     if len(seen) >= max_repos:
                         break
+                    # PyGithub auto-pages; track pages to limit API spend
+                    page_count += 1
+                    if page_count % 100 == 0:
+                        page_count_within = page_count
+                        if page_count_within >= max_pages * 100:
+                            logger.info("Query '%s': hit max_pages=%d, stopping", query, max_pages)
+                            break
+
             except GithubException as e:
                 logger.warning("Search query '%s' failed: %s", query, e)
                 continue
@@ -271,6 +283,7 @@ class GithubDiscovery:
         self,
         max_repos: int = 2000,
         topics: list[str] | None = None,
+        max_pages: int = 5,
     ) -> list[RepoInfo]:
         """Enumerate repos by GitHub topics using Search API.
 
@@ -281,6 +294,7 @@ class GithubDiscovery:
         Args:
             max_repos: Maximum number of unique repos to return.
             topics: Topic strings to search. Defaults to _DISCOVERY_TOPICS.
+            max_pages: Max pages per topic query (each page = 1 search API call).
 
         Returns:
             Deduplicated list of RepoInfo, sorted by stars (desc).
@@ -298,7 +312,9 @@ class GithubDiscovery:
                 results = self._client.search_repositories(
                     query, sort="stars", order="desc"
                 )
+                count = 0
                 for repo in results:
+                    count += 1
                     if repo.full_name in seen:
                         continue
                     seen[repo.full_name] = RepoInfo(
@@ -309,6 +325,9 @@ class GithubDiscovery:
                         default_branch=repo.default_branch,
                     )
                     if len(seen) >= max_repos:
+                        break
+                    # Stop after max_pages worth of results to save quota
+                    if count >= max_pages * 100:
                         break
 
                 logger.info("Topic '%s': found %d total unique repos so far", topic, len(seen))
@@ -329,16 +348,17 @@ class GithubDiscovery:
         max_repos: int = 500,
         orgs: list[str] | None = None,
     ) -> list[RepoInfo]:
-        """Discover repos from known KiCad-heavy GitHub organizations.
+        """Discover repos from known KiCad-heavy GitHub orgs/users.
 
-        Enumerates public repos in curated orgs and filters for those
+        Enumerates public repos in curated accounts and filters for those
         likely to contain KiCad files (by name, description, or topic).
+        Falls back to get_user() when get_organization() 404s.
 
         Uses the core API (5000/hr rate limit) not the search API.
 
         Args:
             max_repos: Maximum number of repos to return.
-            orgs: GitHub org names to scan. Defaults to _CURATED_ORGS.
+            orgs: GitHub account names to scan. Defaults to _CURATED_ORGS.
 
         Returns:
             List of RepoInfo for repos likely to contain KiCad files.
@@ -348,14 +368,18 @@ class GithubDiscovery:
 
         _KICAD_KEYWORDS = {"kicad", "pcb", "schematic", "footprint", "hardware", "eda"}
 
-        seen: list[RepoInfo] = []
+        seen: dict[str, RepoInfo] = {}
 
         for org_name in orgs:
             self._rate_limiter.wait_if_needed("core")
 
             try:
-                org = self._client.get_organization(org_name)
-                repos_page = org.get_repos(sort="stars", direction="desc")
+                try:
+                    account = self._client.get_organization(org_name)
+                except GithubException:
+                    # Not an org — try as a user account
+                    account = self._client.get_user(org_name)
+                repos_page = account.get_repos(sort="stars", direction="desc")
 
                 for repo in repos_page:
                     # Check if repo is likely to have KiCad files
@@ -367,93 +391,103 @@ class GithubDiscovery:
                     has_kicad_signal = any(kw in text for kw in _KICAD_KEYWORDS)
 
                     if has_kicad_signal or repo.fork:
-                        # Include forks too — they often have modified KiCad files
-                        seen.append(RepoInfo(
-                            full_name=repo.full_name,
-                            html_url=repo.html_url,
-                            stars=repo.stargazers_count,
-                            description=repo.description,
-                            default_branch=repo.default_branch,
-                        ))
+                        if repo.full_name not in seen:
+                            seen[repo.full_name] = RepoInfo(
+                                full_name=repo.full_name,
+                                html_url=repo.html_url,
+                                stars=repo.stargazers_count,
+                                description=repo.description,
+                                default_branch=repo.default_branch,
+                            )
 
                     if len(seen) >= max_repos:
                         break
 
             except GithubException as e:
-                logger.warning("Failed to scan org '%s': %s", org_name, e)
+                logger.warning("Failed to scan account '%s': %s", org_name, e)
                 continue
 
             if len(seen) >= max_repos:
                 break
 
-        return seen[:max_repos]
+        return list(seen.values())[:max_repos]
 
     def discover_from_forks(
         self,
         repos: list[RepoInfo],
-        min_stars: int = 10,
-        max_forks_per_repo: int = 50,
+        min_stars: int = 0,
+        max_forks_per_repo: int = 100,
+        depth: int = 2,
     ) -> list[RepoInfo]:
-        """Scan fork networks of popular repos for additional KiCad projects.
+        """Scan fork networks of repos for additional KiCad projects.
 
         For each repo with sufficient stars, lists its forks and includes
         those likely to contain KiCad files. Uses core API (5000/hr).
+        With depth > 1, scans forks-of-forks recursively.
 
         Args:
             repos: Already-discovered repos to scan forks of.
             min_stars: Only scan forks of repos with this many stars.
             max_forks_per_repo: Max forks to enumerate per parent repo.
+            depth: Recursion depth. 1 = direct forks only, 2 = forks of forks.
 
         Returns:
             List of RepoInfo for fork repos.
         """
-        _KICAD_KEYWORDS = {"kicad", "pcb", "schematic", "footprint", "hardware", "eda"}
         results: list[RepoInfo] = []
         seen_names: set[str] = {r.full_name for r in repos}
 
-        popular = [r for r in repos if r.stars >= min_stars]
-        logger.info("Scanning forks of %d popular repos (stars >= %d)",
-                     len(popular), min_stars)
+        to_scan = [r for r in repos if r.stars >= min_stars]
+        logger.info("Scanning forks of %d repos (stars >= %d, depth=%d)",
+                     len(to_scan), min_stars, depth)
 
-        for i, repo_info in enumerate(popular):
-            if (i + 1) % 20 == 0:
-                logger.info("Fork scan progress: %d/%d (%d forks found)",
-                            i + 1, len(popular), len(results))
+        for current_depth in range(depth):
+            if not to_scan:
+                break
+            logger.info("Fork depth %d: scanning %d repos", current_depth + 1, len(to_scan))
 
-            try:
-                self._rate_limiter.wait_if_needed("core")
-                repo = self._client.get_repo(repo_info.full_name)
+            next_round: list[RepoInfo] = []
 
-                forks = repo.get_forks()
-                count = 0
-                for fork in forks:
-                    if count >= max_forks_per_repo:
-                        break
-                    if fork.full_name in seen_names:
-                        continue
+            for i, repo_info in enumerate(to_scan):
+                if (i + 1) % 50 == 0:
+                    logger.info("Fork scan progress: %d/%d (%d total forks found)",
+                                i + 1, len(to_scan), len(results))
 
-                    # Quick signal check
-                    name_lower = (fork.name or "").lower()
-                    desc_lower = (fork.description or "").lower()
-                    topics = [t.lower() for t in (fork.topics or [])]
-                    text = f"{name_lower} {desc_lower} {' '.join(topics)}"
-                    has_signal = any(kw in text for kw in _KICAD_KEYWORDS)
+                try:
+                    self._rate_limiter.wait_if_needed("core")
+                    repo = self._client.get_repo(repo_info.full_name)
 
-                    # Include forks of KiCad repos — they likely still have KiCad files
-                    if has_signal or True:  # parent was KiCad, so fork likely is too
-                        results.append(RepoInfo(
+                    forks = repo.get_forks()
+                    count = 0
+                    for fork in forks:
+                        if count >= max_forks_per_repo:
+                            break
+                        if fork.full_name in seen_names:
+                            continue
+
+                        # Parent was KiCad, so fork likely is too
+                        fork_info = RepoInfo(
                             full_name=fork.full_name,
                             html_url=fork.html_url,
                             stars=fork.stargazers_count,
                             description=fork.description,
                             default_branch=fork.default_branch,
-                        ))
+                        )
+                        results.append(fork_info)
                         seen_names.add(fork.full_name)
-                    count += 1
+                        count += 1
 
-            except GithubException as e:
-                logger.warning("Failed to scan forks of %s: %s", repo_info.full_name, e)
-                continue
+                        # Queue for next depth round
+                        if current_depth < depth - 1 and fork.stargazers_count >= 1:
+                            next_round.append(fork_info)
+
+                except GithubException as e:
+                    logger.warning("Failed to scan forks of %s: %s", repo_info.full_name, e)
+                    continue
+
+            to_scan = next_round
+            logger.info("Fork depth %d complete: %d total forks, %d queued for next depth",
+                        current_depth + 1, len(results), len(to_scan))
 
         logger.info("Fork scan found %d additional repos", len(results))
         return results
