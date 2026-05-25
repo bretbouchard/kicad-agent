@@ -1,13 +1,24 @@
 #!/usr/bin/env python3
 """Collect real-world KiCad training data from GitHub.
 
-Discovers public KiCad repositories, downloads schematic+PCB pairs,
-parses them into structured graph data, deduplicates, quality-filters,
-and writes train/val/test JSONL splits.
+Discovers public KiCad repositories using multiple strategies, downloads
+schematic+PCB pairs, parses them into structured graph data, deduplicates,
+quality-filters, and writes train/val/test JSONL splits.
 
 Usage:
     export GITHUB_TOKEN="ghp_..."
-    python scripts/collect_training_data.py --max-repos 100 --output-dir training_data
+
+    # Default: search API only (backward compat)
+    python scripts/collect_training_data.py --max-repos 500 --output-dir training_data
+
+    # Multi-strategy discovery (topics + search + curated orgs)
+    python scripts/collect_training_data.py --strategy all --max-repos 2000
+
+    # Topic-only (faster, broader coverage)
+    python scripts/collect_training_data.py --strategy topics --max-repos 2000
+
+    # Skip repos already downloaded
+    python scripts/collect_training_data.py --strategy all --max-repos 2000 --skip-existing
 """
 
 from __future__ import annotations
@@ -21,7 +32,16 @@ from pathlib import Path
 # Add src to path so this script works without installing the package
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.training.real_dataset import run_pipeline  # noqa: E402
+from kicad_agent.crawler.github_discovery import GithubDiscovery  # noqa: E402
+from kicad_agent.crawler.file_fetcher import FileFetcher  # noqa: E402
+from kicad_agent.training.graph_builder import build_board_graph  # noqa: E402
+from kicad_agent.training.real_dataset import (  # noqa: E402
+    RealBoardDataset,
+    RealBoardSample,
+    _graph_result_to_sample,
+    dedup_by_hash,
+    filter_quality,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,6 +49,13 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger("collect_training_data")
+
+
+def _get_existing_repos(staging_dir: Path) -> set[str]:
+    """Get set of repo directory names already in staging."""
+    if not staging_dir.is_dir():
+        return set()
+    return {d.name for d in staging_dir.iterdir() if d.is_dir()}
 
 
 def main() -> int:
@@ -58,37 +85,157 @@ def main() -> int:
         default=Path("training_data"),
         help="Output dir for train.jsonl, val.jsonl, test.jsonl (default: training_data)",
     )
+    parser.add_argument(
+        "--strategy",
+        default="search",
+        choices=["search", "topics", "curated", "all"],
+        help="Discovery strategy: search (default), topics, curated, or all",
+    )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip repos already present in staging-dir",
+    )
     args = parser.parse_args()
 
     if not args.token:
         logger.error("GITHUB_TOKEN not set. Use --token or set GITHUB_TOKEN env var.")
         return 1
 
-    logger.info(
-        "Starting pipeline: max_repos=%d, staging=%s, output=%s",
-        args.max_repos,
-        args.staging_dir,
-        args.output_dir,
+    staging_dir = Path(args.staging_dir)
+    staging_dir.mkdir(parents=True, exist_ok=True)
+
+    # Discover repos
+    discovery = GithubDiscovery(args.token)
+
+    if args.strategy == "all":
+        logger.info("Discovering repos with ALL strategies (max=%d)", args.max_repos)
+        repos = discovery.discover_all(max_repos=args.max_repos)
+    elif args.strategy == "topics":
+        logger.info("Discovering repos by TOPICS (max=%d)", args.max_repos)
+        repos = discovery.discover_by_topics(max_repos=args.max_repos)
+    elif args.strategy == "curated":
+        logger.info("Discovering repos from CURATED orgs (max=%d)", args.max_repos)
+        repos = discovery.discover_from_curated(max_repos=args.max_repos)
+    else:
+        logger.info("Discovering repos via SEARCH queries (max=%d)", args.max_repos)
+        repos = discovery.discover_repos(max_repos=args.max_repos)
+
+    logger.info("Discovered %d unique repos", len(repos))
+
+    # Filter out existing repos if requested
+    if args.skip_existing:
+        existing = _get_existing_repos(staging_dir)
+        before = len(repos)
+        repos = [r for r in repos if r.full_name.replace("/", "_") not in existing]
+        skipped = before - len(repos)
+        if skipped > 0:
+            logger.info("Skipped %d already-downloaded repos (%d remaining)", skipped, len(repos))
+
+    if not repos:
+        logger.warning("No new repos to process")
+        return 0
+
+    # Set up file fetcher
+    fetcher = FileFetcher(
+        github_client=discovery._client,
+        staging_dir=staging_dir,
+        rate_limiter=discovery._rate_limiter,
     )
 
-    dataset = run_pipeline(
-        token=args.token,
-        staging_dir=args.staging_dir,
-        max_repos=args.max_repos,
-        output_dir=args.output_dir,
-    )
+    # Stream: discover pairs -> fetch -> parse -> collect samples
+    raw_samples: list[RealBoardSample] = []
+    n_parsed = 0
+    n_failed = 0
+    n_no_pairs = 0
+    sample_id = 0
+    n_discovered = 0
 
-    meta = dataset.metadata
-    print(f"\n{'='*50}")
+    for repo_info in repos:
+        pairs = discovery.find_kicad_pairs(repo_info)
+        if not pairs:
+            n_no_pairs += 1
+            continue
+
+        n_discovered += len(pairs)
+
+        for pair in pairs:
+            try:
+                sch_file, pcb_file = fetcher.fetch_pair(repo_info.full_name, pair)
+
+                if sch_file is None or pcb_file is None:
+                    n_failed += 1
+                    continue
+
+                result = build_board_graph(
+                    sch_path=sch_file.local_path,
+                    pcb_path=pcb_file.local_path,
+                    sample_id=sample_id,
+                    repo_url=repo_info.html_url,
+                    repo_name=repo_info.full_name,
+                    sch_repo_path=pair.schematic_path,
+                    pcb_repo_path=pair.pcb_path,
+                )
+
+                if result is None:
+                    n_failed += 1
+                    continue
+
+                raw_samples.append(_graph_result_to_sample(result, sample_id))
+                sample_id += 1
+                n_parsed += 1
+
+            except Exception as e:
+                logger.warning("Failed for %s/%s: %s", repo_info.full_name, pair.base_name, e)
+                n_failed += 1
+
+    # Dedup and quality filter
+    n_before_dedup = len(raw_samples)
+    deduped = dedup_by_hash(raw_samples)
+    n_deduped = len(deduped)
+
+    n_before_filter = len(deduped)
+    filtered = filter_quality(deduped)
+    n_filtered = len(filtered)
+
+    # Build dataset
+    from collections import Counter
+
+    difficulty_counts = dict(Counter(s.difficulty for s in filtered))
+    metadata = {
+        "strategy": args.strategy,
+        "n_repos_scanned": len(repos),
+        "n_repos_no_pairs": n_no_pairs,
+        "n_discovered": n_discovered,
+        "n_parsed": n_parsed,
+        "n_failed": n_failed,
+        "n_duplicates_removed": n_before_dedup - n_deduped,
+        "n_quality_removed": n_before_filter - n_filtered,
+        "difficulty_counts": difficulty_counts,
+    }
+
+    dataset = RealBoardDataset(samples=filtered, metadata=metadata)
+
+    # Write splits
+    output_dir = Path(args.output_dir)
+    train_ds, val_ds, test_ds = dataset.split()
+    train_ds.to_jsonl(output_dir / "train.jsonl")
+    val_ds.to_jsonl(output_dir / "val.jsonl")
+    test_ds.to_jsonl(output_dir / "test.jsonl")
+
+    print(f"\n{'='*60}")
     print(f"Collection complete: {len(dataset)} samples")
-    print(f"  Discovered:    {meta.get('n_discovered', 0)} file pairs")
-    print(f"  Parsed:        {meta.get('n_parsed', 0)} boards")
-    print(f"  Failed:        {meta.get('n_failed', 0)}")
-    print(f"  Duplicates:    {meta.get('n_duplicates_removed', 0)} removed")
-    print(f"  Low quality:   {meta.get('n_quality_removed', 0)} removed")
-    print(f"  Difficulty:    {dataset.difficulty_counts}")
-    print(f"  Output:        {args.output_dir}/")
-    print(f"{'='*50}")
+    print(f"  Strategy:      {args.strategy}")
+    print(f"  Repos scanned: {len(repos)} ({n_no_pairs} had no KiCad pairs)")
+    print(f"  Discovered:    {n_discovered} file pairs")
+    print(f"  Parsed:        {n_parsed} boards")
+    print(f"  Failed:        {n_failed}")
+    print(f"  Duplicates:    {n_before_dedup - n_deduped} removed")
+    print(f"  Low quality:   {n_before_filter - n_filtered} removed")
+    print(f"  Difficulty:    {difficulty_counts}")
+    print(f"  Splits:        {len(train_ds)} train / {len(val_ds)} val / {len(test_ds)} test")
+    print(f"  Output:        {output_dir}/")
+    print(f"{'='*60}")
 
     return 0
 

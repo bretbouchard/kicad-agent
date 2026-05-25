@@ -18,16 +18,48 @@ from kicad_agent.crawler.rate_limiter import RateLimiter
 logger = logging.getLogger(__name__)
 
 _DEFAULT_QUERIES: list[str] = [
+    # Core KiCad file queries
     "kicad_pcb filename:kicad_pcb",
     "kicad_sch filename:kicad_sch",
     "extension:kicad_pcb extension:kicad_sch",
+    # Topic queries
     "topic:kicad",
     "topic:pcb-design",
     "topic:hardware",
     "topic:electronics",
+    # Star-filtered for quality
     "kicad_pcb language:html",  # matches repos with KiCad web viewers
     "pcb kicad stars:>1",
     "hardware kicad stars:>0",
+    # Board-specific queries (MCU dev boards)
+    "arduino filename:kicad_pcb",
+    "stm32 filename:kicad_pcb",
+    "esp32 filename:kicad_pcb",
+    "rp2040 filename:kicad_pcb",
+    # More star tiers for breadth
+    "kicad_pcb stars:>5",
+    "kicad_pcb stars:>10",
+    # Design tool combos
+    "kicad_pcb language:python",
+    "pcb-design kicad stars:>2",
+    "open-hardware kicad",
+]
+
+# Topics for Layer 1 discovery (search API, broader coverage)
+_DISCOVERY_TOPICS: list[str] = [
+    "kicad", "pcb-design", "hardware", "electronics",
+    "eda", "circuit-design", "pcb", "schematic",
+    "footprint", "hardware-design", "open-hardware",
+    "embedded", "mcu", "pcb-layout",
+]
+
+# Known KiCad-heavy GitHub organizations for curated discovery
+_CURATED_ORGS: list[str] = [
+    "KiCad",
+    "open-source-hardware",
+    "electroniceel",
+    "kitspace",
+    "adamws",
 ]
 
 
@@ -215,3 +247,175 @@ class GithubDiscovery:
         )
 
         return results
+
+    def discover_by_topics(
+        self,
+        max_repos: int = 2000,
+        topics: list[str] | None = None,
+    ) -> list[RepoInfo]:
+        """Enumerate repos by GitHub topics using Search API.
+
+        Uses topic-based queries to find repos that self-identify as
+        KiCad or hardware projects. Each topic query can return up to
+        1000 results. Uses the search API rate limit (30 req/hr).
+
+        Args:
+            max_repos: Maximum number of unique repos to return.
+            topics: Topic strings to search. Defaults to _DISCOVERY_TOPICS.
+
+        Returns:
+            Deduplicated list of RepoInfo, sorted by stars (desc).
+        """
+        if topics is None:
+            topics = _DISCOVERY_TOPICS
+
+        seen: dict[str, RepoInfo] = {}
+
+        for topic in topics:
+            self._rate_limiter.wait_if_needed("search")
+
+            try:
+                query = f"topic:{topic}"
+                results = self._client.search_repositories(
+                    query, sort="stars", order="desc"
+                )
+                for repo in results:
+                    if repo.full_name in seen:
+                        continue
+                    seen[repo.full_name] = RepoInfo(
+                        full_name=repo.full_name,
+                        html_url=repo.html_url,
+                        stars=repo.stargazers_count,
+                        description=repo.description,
+                        default_branch=repo.default_branch,
+                    )
+                    if len(seen) >= max_repos:
+                        break
+
+                logger.info("Topic '%s': found %d total unique repos so far", topic, len(seen))
+
+            except GithubException as e:
+                logger.warning("Topic query '%s' failed: %s", topic, e)
+                continue
+
+            if len(seen) >= max_repos:
+                break
+
+        # Sort by stars descending
+        repos = sorted(seen.values(), key=lambda r: r.stars, reverse=True)
+        return repos[:max_repos]
+
+    def discover_from_curated(
+        self,
+        max_repos: int = 500,
+        orgs: list[str] | None = None,
+    ) -> list[RepoInfo]:
+        """Discover repos from known KiCad-heavy GitHub organizations.
+
+        Enumerates public repos in curated orgs and filters for those
+        likely to contain KiCad files (by name, description, or topic).
+
+        Uses the core API (5000/hr rate limit) not the search API.
+
+        Args:
+            max_repos: Maximum number of repos to return.
+            orgs: GitHub org names to scan. Defaults to _CURATED_ORGS.
+
+        Returns:
+            List of RepoInfo for repos likely to contain KiCad files.
+        """
+        if orgs is None:
+            orgs = _CURATED_ORGS
+
+        _KICAD_KEYWORDS = {"kicad", "pcb", "schematic", "footprint", "hardware", "eda"}
+
+        seen: dict[str, RepoInfo] = []
+
+        for org_name in orgs:
+            self._rate_limiter.wait_if_needed("core")
+
+            try:
+                org = self._client.get_organization(org_name)
+                repos_page = org.get_repos(sort="stars", direction="desc")
+
+                for repo in repos_page:
+                    # Check if repo is likely to have KiCad files
+                    name_lower = (repo.name or "").lower()
+                    desc_lower = (repo.description or "").lower()
+                    topics = [t.lower() for t in (repo.topics or [])]
+
+                    text = f"{name_lower} {desc_lower} {' '.join(topics)}"
+                    has_kicad_signal = any(kw in text for kw in _KICAD_KEYWORDS)
+
+                    if has_kicad_signal or repo.fork:
+                        # Include forks too — they often have modified KiCad files
+                        seen.append(RepoInfo(
+                            full_name=repo.full_name,
+                            html_url=repo.html_url,
+                            stars=repo.stargazers_count,
+                            description=repo.description,
+                            default_branch=repo.default_branch,
+                        ))
+
+                    if len(seen) >= max_repos:
+                        break
+
+            except GithubException as e:
+                logger.warning("Failed to scan org '%s': %s", org_name, e)
+                continue
+
+            if len(seen) >= max_repos:
+                break
+
+        return seen[:max_repos]
+
+    def discover_all(
+        self,
+        max_repos: int = 2000,
+        strategies: list[str] | None = None,
+    ) -> list[RepoInfo]:
+        """Run multiple discovery strategies, deduplicate, sort by stars.
+
+        Args:
+            max_repos: Maximum total unique repos to return.
+            strategies: Which strategies to run. Defaults to all.
+                Options: "search", "topics", "curated".
+
+        Returns:
+            Deduplicated list of RepoInfo sorted by stars (desc).
+        """
+        if strategies is None:
+            strategies = ["search", "topics", "curated"]
+
+        seen: dict[str, RepoInfo] = {}
+
+        # Allocate budget per strategy
+        per_strategy = max_repos * 2  # over-allocate, dedup at end
+
+        if "search" in strategies:
+            logger.info("Strategy: search queries (%d budget)", per_strategy)
+            repos = self.discover_repos(max_repos=per_strategy)
+            for r in repos:
+                if r.full_name not in seen:
+                    seen[r.full_name] = r
+            logger.info("After search: %d unique repos", len(seen))
+
+        if "topics" in strategies and len(seen) < max_repos:
+            logger.info("Strategy: topic enumeration (%d budget)", per_strategy)
+            repos = self.discover_by_topics(max_repos=per_strategy)
+            for r in repos:
+                if r.full_name not in seen:
+                    seen[r.full_name] = r
+            logger.info("After topics: %d unique repos", len(seen))
+
+        if "curated" in strategies and len(seen) < max_repos:
+            logger.info("Strategy: curated orgs (%d budget)", per_strategy)
+            repos = self.discover_from_curated(max_repos=per_strategy)
+            for r in repos:
+                if r.full_name not in seen:
+                    seen[r.full_name] = r
+            logger.info("After curated: %d unique repos", len(seen))
+
+        # Sort by stars, truncate
+        all_repos = sorted(seen.values(), key=lambda r: r.stars, reverse=True)
+        return all_repos[:max_repos]
