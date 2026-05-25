@@ -285,8 +285,8 @@ def main() -> int:
     parser.add_argument(
         "--strategy",
         default="search",
-        choices=["search", "topics", "curated", "all"],
-        help="Discovery strategy: search (default), topics, curated, or all",
+        choices=["search", "topics", "curated", "code_search", "forks", "all"],
+        help="Discovery strategy: search (default), topics, curated, code_search, forks, or all",
     )
     parser.add_argument(
         "--skip-existing",
@@ -335,6 +335,19 @@ def main() -> int:
     elif args.strategy == "curated":
         logger.info("Discovering repos from CURATED orgs (max=%d)", args.max_repos)
         repos = discovery.discover_from_curated(max_repos=args.max_repos)
+    elif args.strategy == "code_search":
+        logger.info("Discovering repos via CODE SEARCH (max=%d)", args.max_repos)
+        repos = discovery.discover_from_code_search(max_repos=args.max_repos)
+    elif args.strategy == "forks":
+        # Forks needs a base set — do search first, then fork scan
+        logger.info("Discovering repos via SEARCH + FORKS (max=%d)", args.max_repos)
+        base_repos = discovery.discover_repos(max_repos=args.max_repos)
+        fork_repos = discovery.discover_from_forks(base_repos)
+        seen = {r.full_name: r for r in base_repos}
+        for r in fork_repos:
+            if r.full_name not in seen:
+                seen[r.full_name] = r
+        repos = sorted(seen.values(), key=lambda r: r.stars, reverse=True)
     else:
         logger.info("Discovering repos via SEARCH queries (max=%d)", args.max_repos)
         repos = discovery.discover_repos(max_repos=args.max_repos)

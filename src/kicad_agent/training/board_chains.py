@@ -259,13 +259,15 @@ def synthesize_corrupted_board_chain(
     sample: RealBoardSample,
     corruption_type: str = "random",
     rng_seed: int | None = None,
+    hard_negative_weight: float = 0.4,
 ) -> BoardReasoningChain:
     """Build an intentionally imperfect chain for contrast training.
 
     Args:
         sample: RealBoardSample to generate a corrupted chain for.
-        corruption_type: "wrong_coords", "vague_reasoning", "missing_steps", "random".
+        corruption_type: Corruption type name, or "random" for weighted selection.
         rng_seed: Optional seed for deterministic corruption.
+        hard_negative_weight: Probability of hard negative when random (default 0.4).
 
     Returns:
         BoardReasoningChain with introduced errors.
@@ -275,12 +277,25 @@ def synthesize_corrupted_board_chain(
     rng = random.Random(rng_seed)
 
     if corruption_type == "random":
-        corruption_type = rng.choice(["wrong_coords", "vague_reasoning", "missing_steps"])
+        if rng.random() < hard_negative_weight:
+            corruption_type = rng.choice(_HARD_CORRUPTIONS)
+        else:
+            corruption_type = rng.choice(_EASY_CORRUPTIONS)
 
     if corruption_type == "wrong_coords":
         return _corrupt_wrong_coords(sample, rng)
     elif corruption_type == "missing_steps":
         return _corrupt_missing_steps(sample)
+    elif corruption_type == "subtle_coord_drift":
+        return _corrupt_subtle_coord_drift(sample, rng)
+    elif corruption_type == "swapped_components":
+        return _corrupt_swapped_components(sample, rng)
+    elif corruption_type == "wrong_net_count":
+        return _corrupt_wrong_net_count(sample, rng)
+    elif corruption_type == "plausible_wrong_analysis":
+        return _corrupt_plausible_wrong_analysis(sample, rng)
+    elif corruption_type == "layer_confusion":
+        return _corrupt_layer_confusion(sample, rng)
     else:
         return _corrupt_vague_reasoning(sample)
 
@@ -381,6 +396,268 @@ def _corrupt_vague_reasoning(sample: RealBoardSample) -> BoardReasoningChain:
     )
 
 
+def _corrupt_subtle_coord_drift(
+    sample: RealBoardSample, rng,
+) -> BoardReasoningChain:
+    """Shift coordinates 1-3mm toward nearest neighbor's position.
+
+    Produces a full correct chain then nudges each coordinate toward
+    an adjacent component. The drift is small enough to look plausible
+    but large enough to fail the 5mm accuracy tolerance.
+    """
+    correct = synthesize_board_chain(sample)
+    graph_data = _extract_graph_data(sample)
+    components = _get_component_nodes(graph_data)
+
+    # Collect all valid component positions for neighbor lookup
+    valid_positions = [
+        (c["x_mm"], c["y_mm"]) for c in components
+        if "x_mm" in c and "y_mm" in c
+    ]
+
+    # Build coordinate shift map
+    coord_map: dict[tuple[float, float], tuple[float, float]] = {}
+    for cx, cy in valid_positions:
+        # Find nearest *different* position
+        best_dist = float("inf")
+        best_pos = None
+        for ox, oy in valid_positions:
+            if ox == cx and oy == cy:
+                continue
+            d = math.sqrt((cx - ox) ** 2 + (cy - oy) ** 2)
+            if d < best_dist:
+                best_dist = d
+                best_pos = (ox, oy)
+
+        if best_pos and best_dist < 20.0:
+            # Drift toward neighbor: 40-70% of the way
+            ratio = rng.uniform(0.4, 0.7)
+            nx = cx + (best_pos[0] - cx) * ratio
+            ny = cy + (best_pos[1] - cy) * ratio
+            coord_map[(cx, cy)] = (nx, ny)
+        else:
+            # Small random drift fallback
+            dx = rng.uniform(1.5, 3.0) * rng.choice([-1, 1])
+            dy = rng.uniform(1.5, 3.0) * rng.choice([-1, 1])
+            coord_map[(cx, cy)] = (max(0, cx + dx), max(0, cy + dy))
+
+    # Apply shifts to chain text
+    shifted_text = correct.chain_text
+    for old, new in coord_map.items():
+        shifted_text = shifted_text.replace(
+            _point_str(old[0], old[1]),
+            _point_str(new[0], new[1]),
+        )
+
+    # Update step coordinates
+    shifted_steps = []
+    for step in correct.steps:
+        new_coords = []
+        for coord in step.get("coordinates", []):
+            key = (float(coord[0]), float(coord[1]))
+            if key in coord_map:
+                new_coords.append(coord_map[key])
+            else:
+                new_coords.append(coord)
+        shifted_steps.append({**step, "coordinates": new_coords})
+
+    shifted_all = tuple(
+        coord_map.get(c, c) for c in correct.coordinates_referenced
+    )
+
+    return BoardReasoningChain(
+        sample_id=sample.sample_id,
+        difficulty=sample.difficulty,
+        chain_text=shifted_text,
+        steps=tuple(shifted_steps),
+        coordinates_referenced=shifted_all,
+        is_correct=False,
+    )
+
+
+def _corrupt_swapped_components(
+    sample: RealBoardSample, rng,
+) -> BoardReasoningChain:
+    """Swap coordinates of two components. Chain looks perfect otherwise."""
+    correct = synthesize_board_chain(sample)
+    graph_data = _extract_graph_data(sample)
+    components = _get_component_nodes(graph_data)
+
+    with_coords = [c for c in components if "x_mm" in c and "y_mm" in c]
+    if len(with_coords) < 2:
+        # Fallback: not enough components to swap
+        return _corrupt_subtle_coord_drift(sample, rng)
+
+    # Pick two random components and swap positions
+    a, b = rng.sample(with_coords, 2)
+    a_pos = (a["x_mm"], a["y_mm"])
+    b_pos = (b["x_mm"], b["y_mm"])
+
+    swapped_text = correct.chain_text
+    # Use temp markers to avoid double-replace
+    temp_a = _point_str(-999.0, -998.0)
+    temp_b = _point_str(-998.0, -999.0)
+    swapped_text = swapped_text.replace(_point_str(a_pos[0], a_pos[1]), temp_a)
+    swapped_text = swapped_text.replace(_point_str(b_pos[0], b_pos[1]), temp_b)
+    swapped_text = swapped_text.replace(temp_a, _point_str(b_pos[0], b_pos[1]))
+    swapped_text = swapped_text.replace(temp_b, _point_str(a_pos[0], a_pos[1]))
+
+    # Update step coordinates
+    swapped_steps = []
+    for step in correct.steps:
+        new_coords = []
+        for coord in step.get("coordinates", []):
+            c = (float(coord[0]), float(coord[1]))
+            if c == a_pos:
+                new_coords.append(b_pos)
+            elif c == b_pos:
+                new_coords.append(a_pos)
+            else:
+                new_coords.append(coord)
+        swapped_steps.append({**step, "coordinates": new_coords})
+
+    return BoardReasoningChain(
+        sample_id=sample.sample_id,
+        difficulty=sample.difficulty,
+        chain_text=swapped_text,
+        steps=tuple(swapped_steps),
+        coordinates_referenced=correct.coordinates_referenced,
+        is_correct=False,
+    )
+
+
+def _corrupt_wrong_net_count(
+    sample: RealBoardSample, rng,
+) -> BoardReasoningChain:
+    """Full correct chain but perturb net/connection counts."""
+    correct = synthesize_board_chain(sample)
+
+    # Perturb counts by ±10-25%
+    net_factor = rng.uniform(0.75, 1.25)
+    edge_factor = rng.uniform(0.80, 1.20)
+    fake_nets = max(1, round(sample.net_count * net_factor))
+
+    graph_data = _extract_graph_data(sample)
+    edges = _get_net_edges(graph_data)
+    fake_edges = max(1, round(len(edges) * edge_factor))
+
+    text = correct.chain_text
+    # Replace net count claims
+    text = re.sub(
+        rf"{sample.net_count}\s+nets",
+        f"{fake_nets} nets",
+        text,
+    )
+    text = re.sub(
+        rf"{sample.net_count}\s+net",
+        f"{fake_nets} net",
+        text,
+    )
+    # Replace connection count claims
+    text = re.sub(
+        rf"{len(edges)}\s+connections",
+        f"{fake_edges} connections",
+        text,
+    )
+    text = re.sub(
+        rf"{len(edges)}\s+trace connections",
+        f"{fake_edges} trace connections",
+        text,
+    )
+
+    return BoardReasoningChain(
+        sample_id=sample.sample_id,
+        difficulty=sample.difficulty,
+        chain_text=text,
+        steps=correct.steps,
+        coordinates_referenced=correct.coordinates_referenced,
+        is_correct=False,
+    )
+
+
+def _corrupt_plausible_wrong_analysis(
+    sample: RealBoardSample, rng,
+) -> BoardReasoningChain:
+    """Correct coordinates but wrong analytical conclusions."""
+    correct = synthesize_board_chain(sample)
+
+    text = correct.chain_text
+
+    # Swap densest quadrant: Q1<->Q3, Q2<->Q4
+    text = text.replace("Densest region: Q1(top-right)", "Densest region: Q3(bottom-left)")
+    text = text.replace("Densest region: Q2(top-left)", "Densest region: Q4(bottom-right)")
+    text = text.replace("Densest region: Q3(bottom-left)", "Densest region: Q1(top-right)")
+    text = text.replace("Densest region: Q4(bottom-right)", "Densest region: Q2(top-left)")
+
+    # Reverse complexity assessment
+    text = text.replace(
+        "High net count suggests careful trace width and clearance planning needed.",
+        "Simple routing with minimal design constraints.",
+    )
+    text = text.replace(
+        "Moderate complexity routing with standard design rules.",
+        "Complex routing requiring careful impedance management.",
+    )
+
+    return BoardReasoningChain(
+        sample_id=sample.sample_id,
+        difficulty=sample.difficulty,
+        chain_text=text,
+        steps=correct.steps,
+        coordinates_referenced=correct.coordinates_referenced,
+        is_correct=False,
+    )
+
+
+def _corrupt_layer_confusion(
+    sample: RealBoardSample, rng,
+) -> BoardReasoningChain:
+    """Correct chain but wrong layer count claim."""
+    correct = synthesize_board_chain(sample)
+    real_layers = sample.layer_count
+
+    # Pick plausible wrong layer count
+    layer_map = {1: 2, 2: 4, 4: rng.choice([2, 6]), 6: rng.choice([4, 8]),
+                 8: rng.choice([6, 10]), 10: 8}
+    fake_layers = layer_map.get(real_layers, real_layers + rng.choice([-2, 2]))
+    fake_layers = max(1, fake_layers)
+
+    text = correct.chain_text
+    text = text.replace(
+        f"{real_layers}-layer PCB",
+        f"{fake_layers}-layer PCB",
+    )
+    text = text.replace(
+        f"{real_layers} layers",
+        f"{fake_layers} layers",
+    )
+    # Adjust multi-layer routing claims
+    if fake_layers > 2 and "buried vias" not in text:
+        text = text.replace(
+            "Routing assessment:",
+            "Routing assessment: Multi-layer design enables buried vias.",
+        )
+    elif fake_layers <= 2:
+        text = text.replace(" enables buried vias.", ".")
+
+    return BoardReasoningChain(
+        sample_id=sample.sample_id,
+        difficulty=sample.difficulty,
+        chain_text=text,
+        steps=correct.steps,
+        coordinates_referenced=correct.coordinates_referenced,
+        is_correct=False,
+    )
+
+
+# Corruption type pools
+_EASY_CORRUPTIONS = ["wrong_coords", "missing_steps", "vague_reasoning"]
+_HARD_CORRUPTIONS = [
+    "subtle_coord_drift", "swapped_components", "wrong_net_count",
+    "plausible_wrong_analysis", "layer_confusion",
+]
+
+
 # ---------------------------------------------------------------------------
 # Batch processing
 # ---------------------------------------------------------------------------
@@ -388,6 +665,7 @@ def _corrupt_vague_reasoning(sample: RealBoardSample) -> BoardReasoningChain:
 
 def synthesize_board_chains(
     samples: Sequence[RealBoardSample],
+    hard_negative_weight: float = 0.4,
 ) -> tuple[list[str], list[tuple[float, float, float]]]:
     """Synthesize chains and compute ground-truth labels for a batch of samples.
 
@@ -396,6 +674,8 @@ def synthesize_board_chains(
 
     Args:
         samples: RealBoardSample objects to process.
+        hard_negative_weight: Probability of selecting a hard negative
+            corruption (0.0-1.0). Default 0.4 = 40% hard, 60% easy.
 
     Returns:
         (texts, labels) where texts is a list of chain_text strings
@@ -414,14 +694,46 @@ def synthesize_board_chains(
         c_labels = _compute_chain_labels(correct, sample)
         labels.append(c_labels)
 
-        # Corrupted chain (contrastive training signal)
-        corruption = rng.choice(["wrong_coords", "missing_steps", "vague_reasoning"])
+        # Corrupted chain — weighted easy/hard selection
+        if rng.random() < hard_negative_weight:
+            corruption = rng.choice(_HARD_CORRUPTIONS)
+        else:
+            corruption = rng.choice(_EASY_CORRUPTIONS)
         corrupted = synthesize_corrupted_board_chain(sample, corruption)
         texts.append(corrupted.chain_text)
         x_labels = _compute_chain_labels(corrupted, sample)
         labels.append(x_labels)
 
     return texts, labels
+
+
+def _check_factual_accuracy(
+    text: str,
+    sample: RealBoardSample,
+    base_acc: float,
+) -> float:
+    """Penalize factual errors in chain text (wrong counts, wrong layers)."""
+    acc = base_acc
+
+    # Check component count claims
+    comp_match = re.search(r"(\d+)\s+components?", text)
+    if comp_match and int(comp_match.group(1)) != sample.component_count:
+        acc *= 0.5
+
+    # Check net count claims
+    net_match = re.search(r"(\d+)\s+nets?", text)
+    if net_match and int(net_match.group(1)) != sample.net_count:
+        acc *= 0.5
+
+    # Check layer count claims
+    layer_match = re.search(r"(\d+)-layer", text)
+    if layer_match and int(layer_match.group(1)) != sample.layer_count:
+        acc *= 0.5
+    layer_match2 = re.search(r"(\d+)\s+layers", text)
+    if layer_match2 and int(layer_match2.group(1)) != sample.layer_count:
+        acc *= 0.5
+
+    return max(0.0, acc)
 
 
 def _compute_chain_labels(
@@ -480,7 +792,11 @@ def _compute_chain_labels(
         # Accuracy: coordinates match ground truth graph data
         coords = step.get("coordinates", [])
         if not coords:
-            acc_scores.append(0.5)  # neutral for non-spatial steps
+            acc = 0.5  # neutral for non-spatial steps
+            # Factual accuracy: check claimed counts match reality
+            if step.get("step_type") in ("observation", "connectivity_analysis"):
+                acc = _check_factual_accuracy(text, sample, acc)
+            acc_scores.append(acc)
         else:
             # Check referenced coords against graph data
             graph_data = _extract_graph_data(sample)
@@ -490,18 +806,24 @@ def _compute_chain_labels(
                     valid_coords.append((node["x_mm"], node["y_mm"]))
 
             if not valid_coords:
-                acc_scores.append(0.5)
+                acc = 0.5
             else:
-                correct = 0
+                coord_correct = 0
                 for coord in coords:
                     if isinstance(coord, (list, tuple)) and len(coord) == 2:
                         cx, cy = float(coord[0]), float(coord[1])
                         for vx, vy in valid_coords:
                             dist = math.sqrt((cx - vx) ** 2 + (cy - vy) ** 2)
                             if dist <= 5.0:  # 5mm tolerance for board-scale
-                                correct += 1
+                                coord_correct += 1
                                 break
-                acc_scores.append(min(1.0, correct / max(len(coords), 1)))
+                acc = min(1.0, coord_correct / max(len(coords), 1))
+
+            # Also check factual accuracy on spatial/routing steps
+            if step.get("step_type") in ("spatial_analysis", "routing_assessment"):
+                acc = _check_factual_accuracy(text, sample, acc)
+
+            acc_scores.append(acc)
 
     # Average across steps
     n = max(n_steps, 1)

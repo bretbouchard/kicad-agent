@@ -78,6 +78,12 @@ def main() -> int:
         default="cpu",
         help="Device: cpu, mps, cuda (default: cpu, auto-detects)",
     )
+    parser.add_argument(
+        "--corruption-weight",
+        type=float,
+        default=0.4,
+        help="Probability of hard negative corruption (0.0-1.0, default: 0.4)",
+    )
     args = parser.parse_args()
     start = time.time()
 
@@ -119,9 +125,9 @@ def main() -> int:
     logger.info("Phase 2: Synthesizing board reasoning chains...")
     from kicad_agent.training.board_chains import synthesize_board_chains  # noqa: E402
 
-    train_texts, train_labels = synthesize_board_chains(train_ds.samples)
-    val_texts, val_labels = synthesize_board_chains(val_ds.samples)
-    test_texts, test_labels = synthesize_board_chains(test_ds.samples)
+    train_texts, train_labels = synthesize_board_chains(train_ds.samples, hard_negative_weight=args.corruption_weight)
+    val_texts, val_labels = synthesize_board_chains(val_ds.samples, hard_negative_weight=args.corruption_weight)
+    test_texts, test_labels = synthesize_board_chains(test_ds.samples, hard_negative_weight=args.corruption_weight)
     logger.info("Chains: %d train / %d val / %d test",
                 len(train_texts), len(val_texts), len(test_texts))
 
@@ -167,7 +173,7 @@ def main() -> int:
 
     corrupted_scores = []
     for sample in test_ds.samples:
-        corrupted = synthesize_corrupted_board_chain(sample, "random")
+        corrupted = synthesize_corrupted_board_chain(sample, "random", hard_negative_weight=args.corruption_weight)
         if corrupted:
             pred = predict_reward(reward_model, corrupted.chain_text)
             corrupted_scores.append((pred.format_score + pred.quality_score + pred.accuracy_score) / 3)
@@ -187,6 +193,7 @@ def main() -> int:
             "staging_dir": str(args.staging_dir),
             "n_epochs": args.n_epochs,
             "device": reward_model._device,
+            "corruption_weight": args.corruption_weight,
         },
         "dataset": meta,
         "splits": {"train": len(train_ds), "val": len(val_ds), "test": len(test_ds)},

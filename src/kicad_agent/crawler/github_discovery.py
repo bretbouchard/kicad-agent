@@ -55,11 +55,30 @@ _DISCOVERY_TOPICS: list[str] = [
 
 # Known KiCad-heavy GitHub organizations for curated discovery
 _CURATED_ORGS: list[str] = [
+    # Original
     "KiCad",
     "open-source-hardware",
     "electroniceel",
     "kitspace",
     "adamws",
+    # Major hardware vendors
+    "arduino",
+    "raspberrypi",
+    "Adafruit",
+    "SparkFun",
+    "SeeedStudio",
+    # Keyboard / input device designers (prolific KiCad users)
+    "foostan",
+    "ai03-2725",
+    "perigoso",
+    # Open hardware projects
+    "tinkerforge",
+    "greatscottgadgets",
+    "mossmann",
+    "secworks",
+    # KiCad tooling / libraries
+    "sunzhengwu-kicad",
+    "XBain",
 ]
 
 
@@ -329,7 +348,7 @@ class GithubDiscovery:
 
         _KICAD_KEYWORDS = {"kicad", "pcb", "schematic", "footprint", "hardware", "eda"}
 
-        seen: dict[str, RepoInfo] = []
+        seen: list[RepoInfo] = []
 
         for org_name in orgs:
             self._rate_limiter.wait_if_needed("core")
@@ -369,6 +388,138 @@ class GithubDiscovery:
 
         return seen[:max_repos]
 
+    def discover_from_forks(
+        self,
+        repos: list[RepoInfo],
+        min_stars: int = 10,
+        max_forks_per_repo: int = 50,
+    ) -> list[RepoInfo]:
+        """Scan fork networks of popular repos for additional KiCad projects.
+
+        For each repo with sufficient stars, lists its forks and includes
+        those likely to contain KiCad files. Uses core API (5000/hr).
+
+        Args:
+            repos: Already-discovered repos to scan forks of.
+            min_stars: Only scan forks of repos with this many stars.
+            max_forks_per_repo: Max forks to enumerate per parent repo.
+
+        Returns:
+            List of RepoInfo for fork repos.
+        """
+        _KICAD_KEYWORDS = {"kicad", "pcb", "schematic", "footprint", "hardware", "eda"}
+        results: list[RepoInfo] = []
+        seen_names: set[str] = {r.full_name for r in repos}
+
+        popular = [r for r in repos if r.stars >= min_stars]
+        logger.info("Scanning forks of %d popular repos (stars >= %d)",
+                     len(popular), min_stars)
+
+        for i, repo_info in enumerate(popular):
+            if (i + 1) % 20 == 0:
+                logger.info("Fork scan progress: %d/%d (%d forks found)",
+                            i + 1, len(popular), len(results))
+
+            try:
+                self._rate_limiter.wait_if_needed("core")
+                repo = self._client.get_repo(repo_info.full_name)
+
+                forks = repo.get_forks()
+                count = 0
+                for fork in forks:
+                    if count >= max_forks_per_repo:
+                        break
+                    if fork.full_name in seen_names:
+                        continue
+
+                    # Quick signal check
+                    name_lower = (fork.name or "").lower()
+                    desc_lower = (fork.description or "").lower()
+                    topics = [t.lower() for t in (fork.topics or [])]
+                    text = f"{name_lower} {desc_lower} {' '.join(topics)}"
+                    has_signal = any(kw in text for kw in _KICAD_KEYWORDS)
+
+                    # Include forks of KiCad repos — they likely still have KiCad files
+                    if has_signal or True:  # parent was KiCad, so fork likely is too
+                        results.append(RepoInfo(
+                            full_name=fork.full_name,
+                            html_url=fork.html_url,
+                            stars=fork.stargazers_count,
+                            description=fork.description,
+                            default_branch=fork.default_branch,
+                        ))
+                        seen_names.add(fork.full_name)
+                    count += 1
+
+            except GithubException as e:
+                logger.warning("Failed to scan forks of %s: %s", repo_info.full_name, e)
+                continue
+
+        logger.info("Fork scan found %d additional repos", len(results))
+        return results
+
+    def discover_from_code_search(
+        self,
+        max_repos: int = 2000,
+    ) -> list[RepoInfo]:
+        """Discover repos via GitHub code search for KiCad file paths.
+
+        Uses search_code() with path/filename filters to find repos
+        containing actual .kicad_pcb files. Shares the search API rate
+        limit (30 req/hr). Each query can return up to 1000 results.
+
+        Args:
+            max_repos: Maximum number of unique repos to return.
+
+        Returns:
+            Deduplicated list of RepoInfo sorted by stars (desc).
+        """
+        code_queries = [
+            "filename:kicad_pcb",
+            "path:.kicad_pcb",
+            "filename:kicad_sch path:.",
+            "extension:kicad_pcb",
+            "extension:kicad_sch",
+            "filename:kicad_pcb board",
+            "path:pcb filename:kicad",
+            "path:hardware filename:kicad_pcb",
+        ]
+
+        seen: dict[str, RepoInfo] = {}
+
+        for query in code_queries:
+            self._rate_limiter.wait_if_needed("search")
+
+            try:
+                results = self._client.search_code(query)
+                for code_result in results:
+                    full_name = code_result.repository.full_name
+                    if full_name in seen:
+                        continue
+
+                    repo = code_result.repository
+                    seen[full_name] = RepoInfo(
+                        full_name=repo.full_name,
+                        html_url=repo.html_url,
+                        stars=repo.stargazers_count,
+                        description=repo.description,
+                        default_branch=repo.default_branch,
+                    )
+                    if len(seen) >= max_repos:
+                        break
+
+                logger.info("Code search '%s': %d unique repos so far", query, len(seen))
+
+            except GithubException as e:
+                logger.warning("Code search '%s' failed: %s", query, e)
+                continue
+
+            if len(seen) >= max_repos:
+                break
+
+        repos = sorted(seen.values(), key=lambda r: r.stars, reverse=True)
+        return repos[:max_repos]
+
     def discover_all(
         self,
         max_repos: int = 2000,
@@ -379,20 +530,30 @@ class GithubDiscovery:
         Args:
             max_repos: Maximum total unique repos to return.
             strategies: Which strategies to run. Defaults to all.
-                Options: "search", "topics", "curated".
+                Options: "search", "topics", "curated", "code_search", "forks".
+                Order matters: forks amplifies earlier results.
 
         Returns:
             Deduplicated list of RepoInfo sorted by stars (desc).
         """
         if strategies is None:
-            strategies = ["search", "topics", "curated"]
+            strategies = ["curated", "search", "topics", "code_search", "forks"]
 
         seen: dict[str, RepoInfo] = {}
 
         # Allocate budget per strategy
         per_strategy = max_repos * 2  # over-allocate, dedup at end
 
-        if "search" in strategies:
+        # Curated first: uses core API (5000/hr), fast, high-quality
+        if "curated" in strategies:
+            logger.info("Strategy: curated orgs (%d budget)", per_strategy)
+            repos = self.discover_from_curated(max_repos=per_strategy)
+            for r in repos:
+                if r.full_name not in seen:
+                    seen[r.full_name] = r
+            logger.info("After curated: %d unique repos", len(seen))
+
+        if "search" in strategies and len(seen) < max_repos:
             logger.info("Strategy: search queries (%d budget)", per_strategy)
             repos = self.discover_repos(max_repos=per_strategy)
             for r in repos:
@@ -408,13 +569,23 @@ class GithubDiscovery:
                     seen[r.full_name] = r
             logger.info("After topics: %d unique repos", len(seen))
 
-        if "curated" in strategies and len(seen) < max_repos:
-            logger.info("Strategy: curated orgs (%d budget)", per_strategy)
-            repos = self.discover_from_curated(max_repos=per_strategy)
+        if "code_search" in strategies and len(seen) < max_repos:
+            logger.info("Strategy: code search (%d budget)", per_strategy)
+            repos = self.discover_from_code_search(max_repos=per_strategy)
             for r in repos:
                 if r.full_name not in seen:
                     seen[r.full_name] = r
-            logger.info("After curated: %d unique repos", len(seen))
+            logger.info("After code_search: %d unique repos", len(seen))
+
+        # Forks last: amplifies earlier results via fork networks
+        if "forks" in strategies and len(seen) < max_repos:
+            logger.info("Strategy: fork scanning (amplifying %d repos)", len(seen))
+            existing = list(seen.values())
+            fork_repos = self.discover_from_forks(existing)
+            for r in fork_repos:
+                if r.full_name not in seen:
+                    seen[r.full_name] = r
+            logger.info("After forks: %d unique repos", len(seen))
 
         # Sort by stars, truncate
         all_repos = sorted(seen.values(), key=lambda r: r.stars, reverse=True)
