@@ -27,13 +27,14 @@ import argparse
 import json
 import logging
 import os
+import subprocess
 import sys
 from pathlib import Path
 
 from kicad_agent.handler import format_result, handle_operation, validate_operation
 from kicad_agent.ops.schema import get_operation_schema
 
-_SUBCOMMANDS = {"collect"}
+_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route"}
 
 
 def _build_operation_parser() -> argparse.ArgumentParser:
@@ -183,6 +184,229 @@ def _handle_collect(argv: list[str]) -> None:
     sys.exit(0)
 
 
+def _run_kicad_cli(args: list[str], capture: bool = False) -> subprocess.CompletedProcess | None:
+    """Run kicad-cli if available, print friendly error if not.
+
+    Args:
+        args: Arguments to pass to kicad-cli.
+        capture: If True, return the CompletedProcess instead of printing.
+
+    Returns:
+        CompletedProcess if capture=True, None otherwise.
+    """
+    try:
+        result = subprocess.run(
+            ["kicad-cli"] + args,
+            capture_output=capture,
+            text=True,
+            timeout=120,
+        )
+        if capture:
+            return result
+        print(result.stdout)
+        if result.returncode != 0:
+            print(result.stderr, file=sys.stderr)
+        return None
+    except FileNotFoundError:
+        print("Error: kicad-cli not found. Install KiCad 8+ and ensure kicad-cli is on PATH.", file=sys.stderr)
+        sys.exit(1)
+    except subprocess.TimeoutExpired:
+        print("Error: kicad-cli timed out after 120s.", file=sys.stderr)
+        sys.exit(1)
+
+
+def _handle_erc(argv: list[str]) -> None:
+    """Handle the 'erc' subcommand — run Electrical Rules Check on a schematic."""
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent erc",
+        description="Run ERC (Electrical Rules Check) on a KiCad schematic.",
+    )
+    parser.add_argument("schematic", type=Path, help="Path to .kicad_sch file")
+    parser.add_argument("-o", "--output", type=Path, default=None, help="Output report file (default: stdout)")
+    args = parser.parse_args(argv)
+
+    if not args.schematic.exists():
+        print(f"Error: schematic not found: {args.schematic}", file=sys.stderr)
+        sys.exit(1)
+
+    cmd = ["erc", str(args.schematic)]
+    if args.output:
+        cmd.extend(["-o", str(args.output)])
+
+    _run_kicad_cli(cmd)
+    sys.exit(0)
+
+
+def _handle_drc(argv: list[str]) -> None:
+    """Handle the 'drc' subcommand — run Design Rules Check on a PCB."""
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent drc",
+        description="Run DRC (Design Rules Check) on a KiCad PCB.",
+    )
+    parser.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
+    parser.add_argument("-o", "--output", type=Path, default=None, help="Output report file (default: stdout)")
+    args = parser.parse_args(argv)
+
+    if not args.pcb.exists():
+        print(f"Error: PCB file not found: {args.pcb}", file=sys.stderr)
+        sys.exit(1)
+
+    cmd = ["drc", str(args.pcb)]
+    if args.output:
+        cmd.extend(["-o", str(args.output)])
+
+    _run_kicad_cli(cmd)
+    sys.exit(0)
+
+
+def _handle_export(argv: list[str]) -> None:
+    """Handle the 'export' subcommand — export PCB to various formats."""
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent export",
+        description="Export a KiCad PCB to Gerber, BOM, position, or STEP format.",
+    )
+    parser.add_argument("format", choices=["gerber", "bom", "position", "step"],
+                        help="Export format")
+    parser.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
+    parser.add_argument("-o", "--output-dir", type=Path, default=None,
+                        help="Output directory (default: same as PCB file)")
+    args = parser.parse_args(argv)
+
+    if not args.pcb.exists():
+        print(f"Error: PCB file not found: {args.pcb}", file=sys.stderr)
+        sys.exit(1)
+
+    output_dir = args.output_dir or args.pcb.parent
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    format_cmds = {
+        "gerber": ["pcb", "export", "gerbers", "-o", str(output_dir), str(args.pcb)],
+        "bom": ["pcb", "export", "bom", "-o", str(output_dir / "bom.csv"), str(args.pcb)],
+        "position": ["pcb", "export", "pos", "--format", "csv", "-o", str(output_dir / "position.csv"), str(args.pcb)],
+        "step": ["pcb", "export", "step", "-o", str(output_dir / (args.pcb.stem + ".step")), str(args.pcb)],
+    }
+
+    _run_kicad_cli(format_cmds[args.format])
+    sys.exit(0)
+
+
+def _handle_context(argv: list[str]) -> None:
+    """Handle the 'context' subcommand — show project summary."""
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent context",
+        description="Show a summary of a KiCad project.",
+    )
+    parser.add_argument("project_dir", type=Path, nargs="?", default=Path("."),
+                        help="Path to KiCad project directory (default: current dir)")
+    args = parser.parse_args(argv)
+
+    if not args.project_dir.exists():
+        print(f"Error: directory not found: {args.project_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    # Find project files
+    pro_files = list(args.project_dir.glob("*.kicad_pro"))
+    sch_files = list(args.project_dir.glob("*.kicad_sch"))
+    pcb_files = list(args.project_dir.glob("*.kicad_pcb"))
+
+    if not pro_files and not sch_files and not pcb_files:
+        print(f"No KiCad files found in {args.project_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Project: {args.project_dir.resolve().name}")
+    print(f"  Project files: {len(pro_files)}")
+    print(f"  Schematics:    {len(sch_files)}")
+    print(f"  PCBs:          {len(pcb_files)}")
+
+    # Parse first schematic for component summary
+    if sch_files:
+        try:
+            from kicad_agent.parser import parse_schematic
+            from kicad_agent.ir.schematic_ir import SchematicIR
+
+            result = parse_schematic(sch_files[0])
+            ir = SchematicIR(_parse_result=result)
+            components = ir.components
+            print(f"\n  Schematic: {sch_files[0].name}")
+            print(f"    Components: {len(components)}")
+
+            # Count by prefix
+            prefix_counts: dict[str, int] = {}
+            for comp in components:
+                ref = getattr(comp, 'reference', '') or ''
+                prefix = ''.join(c for c in ref if c.isalpha())
+                prefix_counts[prefix] = prefix_counts.get(prefix, 0) + 1
+            for prefix, count in sorted(prefix_counts.items()):
+                print(f"      {prefix or '(unref)'}: {count}")
+        except Exception as exc:
+            print(f"    (Could not parse schematic: {exc})")
+
+    # Parse first PCB for board summary
+    if pcb_files:
+        try:
+            from kicad_agent.parser import parse_pcb
+            from kicad_agent.parser.uuid_extractor import extract_uuids
+            from kicad_agent.ir.pcb_ir import PcbIR
+
+            result = parse_pcb(pcb_files[0])
+            uuid_map = extract_uuids(result.raw_content, "pcb")
+            ir = PcbIR(_parse_result=result, _uuid_map=uuid_map)
+
+            fps = ir.footprints
+            nets = ir.nets
+            bounds = ir.get_board_bounds()
+            print(f"\n  PCB: {pcb_files[0].name}")
+            print(f"    Footprints: {len(fps)}")
+            print(f"    Nets: {len(nets)}")
+            if bounds:
+                w = bounds[2] - bounds[0]
+                h = bounds[3] - bounds[1]
+                print(f"    Board size: {w:.1f} x {h:.1f} mm")
+        except Exception as exc:
+            print(f"    (Could not parse PCB: {exc})")
+
+    sys.exit(0)
+
+
+def _handle_route(argv: list[str]) -> None:
+    """Handle the 'route' subcommand — auto-route nets on a PCB."""
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent route",
+        description="Auto-route nets on a KiCad PCB using A* pathfinding.",
+    )
+    parser.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
+    parser.add_argument("--nets", nargs="*", default=[], help="Net names to route (default: all)")
+    parser.add_argument("--layer", default="F.Cu", help="Target copper layer (default: F.Cu)")
+    args = parser.parse_args(argv)
+
+    if not args.pcb.exists():
+        print(f"Error: PCB file not found: {args.pcb}", file=sys.stderr)
+        sys.exit(1)
+
+    # Build and execute auto_route operation
+    op_json = json.dumps({
+        "op_type": "auto_route",
+        "target_file": str(args.pcb),
+        "nets": args.nets,
+        "layer": args.layer,
+    })
+
+    from kicad_agent.handler import handle_operation, format_result
+    result = handle_operation(op_json)
+
+    if result.success:
+        print(f"Routing complete: {result.details.get('routed_nets', 0)} nets, "
+              f"{result.details.get('segments', 0)} segments")
+        failed = result.details.get("failed_nets", [])
+        if failed:
+            print(f"  Failed nets: {', '.join(failed)}")
+    else:
+        print(format_result(result), file=sys.stderr)
+        sys.exit(1)
+
+    sys.exit(0)
+
+
 def main(argv: list[str] | None = None) -> None:
     """Entry point for the kicad-agent CLI."""
     if argv is None:
@@ -194,6 +418,16 @@ def main(argv: list[str] | None = None) -> None:
         subcmd_argv = argv[1:]
         if subcmd == "collect":
             _handle_collect(subcmd_argv)
+        elif subcmd == "erc":
+            _handle_erc(subcmd_argv)
+        elif subcmd == "drc":
+            _handle_drc(subcmd_argv)
+        elif subcmd == "export":
+            _handle_export(subcmd_argv)
+        elif subcmd == "context":
+            _handle_context(subcmd_argv)
+        elif subcmd == "route":
+            _handle_route(subcmd_argv)
         return
 
     # Legacy operation mode

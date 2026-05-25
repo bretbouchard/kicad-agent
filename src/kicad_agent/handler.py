@@ -67,9 +67,20 @@ def validate_operation(
         if "path" in str(msg).lower() or "traversal" in str(msg).lower() or "'.'" in str(msg):
             suggestion = "Use a relative path without '..' components. Only .kicad_sch, .kicad_pcb, .kicad_sym, and .kicad_mod files are allowed."
         elif error_type == "missing":
-            suggestion = f"Add the required field '{field_name}' to your operation. Check the operation schema for required fields."
+            # Designer-friendly field descriptions
+            _field_names = {
+                "position": "component position",
+                "target_file": "target file path",
+                "reference": "reference designator (e.g. R1, U3)",
+                "footprint_lib_id": "footprint library ID (e.g. Resistor_SMD:R_0805)",
+                "net_name": "net name",
+                "lib_id": "symbol library ID",
+                "op_type": "operation type",
+            }
+            friendly = _field_names.get(str(field_name), str(field_name))
+            suggestion = f"Missing {friendly}. Add '{field_name}' to your operation."
         elif "literal" in error_type.lower() or "op_type" in str(field):
-            suggestion = f"'{parsed.get('op_type', '?')}' is not a valid op_type. Use one of the supported operation types (e.g., add_component, remove_component, move_component)."
+            suggestion = f"Unknown operation '{parsed.get('op_type', '?')}'. Use one of: add_component, remove_component, move_component, auto_route, etc."
         else:
             suggestion = f"Check the operation fields against the schema. Error in '{field_name}': {msg}"
 
@@ -132,7 +143,15 @@ def handle_operation(
             success=False,
             operation_type=concrete.op_type,
             error=str(exc),
-            suggestion="Ensure the target_file path is correct relative to the project directory.",
+            suggestion=f"File '{concrete.target_file}' not found. Check the path is correct relative to the project directory.",
+        )
+    except NotImplementedError as exc:
+        concrete = op.root
+        return OperationError(
+            success=False,
+            operation_type=concrete.op_type,
+            error=str(exc),
+            suggestion="This operation is not yet available. Try a different approach.",
         )
     except ValueError as exc:
         concrete = op.root
