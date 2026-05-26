@@ -338,7 +338,9 @@ Qwen2.5-0.5B-Instruct fine-tuned with LoRA (rank=16) on Apple Silicon via mlx-lm
 | SFT | Supervised fine-tuning | 6,696 | 1,000 | 2.20 -> 0.69 | ChatML, reward-filtered |
 | GRPO | Rejection sampling (ReST) | 200/gen round | 500/round | 0.46 -> 0.28 | 2 iterations, top-50% filter |
 
-**Adapters:** `training_output/sft/` (SFT), `training_output/grpo/iter_2/` (GRPO, best)
+**Adapters:** [bretbouchard/kicad-agent-pcb-adapter](https://huggingface.co/bretbouchard/kicad-agent-pcb-adapter) (HuggingFace Hub), or locally at `training_output/sft/` (SFT), `training_output/grpo/iter_2/` (GRPO, best)
+
+LocalLLMClient auto-downloads adapters from HuggingFace Hub on first use if no local training output is found.
 
 **Reward model:** Custom neural reward model trained on 14,912 PCB reasoning chains. Scores chains on format quality, reasoning quality, and factual accuracy. 75% discrimination rate between correct and corrupted chains.
 
