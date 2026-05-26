@@ -31,7 +31,9 @@ kicad-agent solves this with **constrained structural editing** — the AI emits
 - LTspice integration: .asc file parsing, simulation command injection, raw waveform analysis
 - ADI footprint library: Analog Devices symbol/footprint resolution with ZIP-based cache
 
-**v2.1 (in progress):**
+**v2.1 (latest):**
+- **Component search MCP server** — search JLCPCB/EasyEDA components from any AI agent (anonymous, no API key)
+- **File creation operations** — create_schematic, create_pcb, create_project, create_symbol
 - Real-world training data from open-source KiCad projects (71K repos discovered)
 - Schematic-only graph builder: connectivity from net labels + wires (no PCB required)
 - Domain knowledge corpus: Douglas Self textbooks + DeepSeek visual primitives paper
@@ -64,6 +66,9 @@ pip install "kicad-agent[docs]"
 
 # With development tools
 pip install "kicad-agent[dev]"
+
+# With MCP server support
+pip install "kicad-agent[mcp]"
 
 # From source
 git clone https://github.com/bretbouchard/kicad-agent.git
@@ -143,6 +148,44 @@ print(result.content[0].text)
 
 No API key required. Runs on Apple Silicon GPU (~5 GB memory, ~3s per analysis).
 
+### Component Search MCP Server
+
+Search JLCPCB/EasyEDA components from any MCP-compatible AI agent. No API key required.
+
+```bash
+# Install with MCP support
+pip install "kicad-agent[mcp]"
+
+# Start the MCP server (stdio transport)
+kicad-component-search
+
+# Or via CLI
+kicad-agent component-search
+```
+
+Add to your Claude Code or Claude Desktop MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "kicad-component-search": {
+      "command": "kicad-component-search"
+    }
+  }
+}
+```
+
+**4 tools available:**
+
+| Tool | Description |
+|------|-------------|
+| `search_components` | Search by keyword, returns LCSC numbers, packages, stock, price, datasheets |
+| `get_component_details` | Full pin/pad CAD data for a specific LCSC part |
+| `search_and_detail` | Combined search + detail in one call |
+| `get_component_suggestions` | Lightweight autocomplete suggestions |
+
+Pin types returned as KiCad-compatible strings (`input`, `output`, `bidirectional`, `power_in`, `passive`).
+
 ## Claude Code Skill
 
 kicad-agent ships as a Claude Code skill for AI-assisted KiCad editing. Install it by copying the skill definition:
@@ -167,7 +210,7 @@ The skill routes natural language requests through the Python backend — Claude
 
 ## Operations Reference
 
-34 operations across 5 categories:
+39 operations across 6 categories:
 
 ### Component Operations
 
@@ -213,6 +256,15 @@ The skill routes natural language requests through the Python backend — Claude
 | `validate_footprint` | all | Verify a footprint exists in available libraries |
 | `verify_pin_map` | all | Check symbol pin numbers match footprint pad numbers |
 
+### File Creation Operations
+
+| Operation | Files | Description |
+|-----------|-------|-------------|
+| `create_schematic` | new sch | Create a new empty schematic |
+| `create_pcb` | new pcb | Create a new empty PCB |
+| `create_project` | new pro | Create a new KiCad project file |
+| `create_symbol` | new sym | Create a symbol definition in a library |
+
 ### Example: Add a Component
 
 ```json
@@ -255,7 +307,7 @@ LLM / CLI
 +-------------+     +-------------+     +-------------+     +-------------+
 |   Parser     |---->|     IR      |---->|   Ops       |---->|  Serializer |
 |              |     |             |     |             |     |             |
-| S-expression |     | Intermediate|     | 34 atomic   |     | Valid KiCad |
+| S-expression |     | Intermediate|     | 39 atomic   |     | Valid KiCad |
 | -> AST       |     | representation   | operations  |     | S-expression|
 |              |     | + mutation  |     | + executor  |     | + normalize |
 | 4 file types |     | tracking    |     |             |     |             |
@@ -277,7 +329,7 @@ LLM / CLI
 |--------|---------|
 | `kicad_agent.parser` | Parse KiCad files into structured AST (schematic, PCB, symbol, footprint) |
 | `kicad_agent.ir` | Intermediate representation with mutation tracking and transactions |
-| `kicad_agent.ops` | 34 operation handlers, Pydantic schema, operation executor |
+| `kicad_agent.ops` | 39 operation handlers, Pydantic schema, operation executor |
 | `kicad_agent.serializer` | Write valid KiCad files with UUID re-injection and normalization |
 | `kicad_agent.validation` | ERC/DRC gates via kicad-cli, structural validation, round-trip checks |
 | `kicad_agent.analysis` | Net connectivity graph analysis via networkx |
@@ -290,6 +342,7 @@ LLM / CLI
 | `kicad_agent.project` | Project-level operations and Analog Devices footprint library |
 | `kicad_agent.placement` | Attention-based component placement with hybrid ML/geometric engine |
 | `kicad_agent.llm` | LLM integration: Anthropic client, local fine-tuned inference (LocalLLMClient), design critique, intent parsing |
+| `kicad_agent.mcp` | Component search MCP server (JLCPCB/EasyEDA, anonymous, stdio transport) |
 | `kicad_agent.handler` | Operation validation, execution, and result formatting |
 | `kicad_agent.cli` | Terminal interface with schema export, dry-run, and verbose modes |
 
