@@ -34,7 +34,7 @@ from pathlib import Path
 from kicad_agent.handler import format_result, handle_operation, validate_operation
 from kicad_agent.ops.schema import get_operation_schema
 
-_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze"}
+_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search"}
 
 
 def _build_operation_parser() -> argparse.ArgumentParser:
@@ -507,6 +507,12 @@ def _handle_analyze(argv: list[str]) -> None:
     print(analysis)
 
 
+def _handle_component_search(argv: list[str]) -> None:
+    """Handle the 'component-search' subcommand — start MCP server."""
+    from kicad_agent.mcp.server import main as mcp_main
+    mcp_main()
+
+
 def main(argv: list[str] | None = None) -> None:
     """Entry point for the kicad-agent CLI."""
     if argv is None:
@@ -530,6 +536,8 @@ def main(argv: list[str] | None = None) -> None:
             _handle_route(subcmd_argv)
         elif subcmd == "analyze":
             _handle_analyze(subcmd_argv)
+        elif subcmd == "component-search":
+            _handle_component_search(subcmd_argv)
         return
 
     # Legacy operation mode

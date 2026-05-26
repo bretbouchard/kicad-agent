@@ -42,6 +42,12 @@ _PCB_HANDLERS: dict[str, Callable] = {}
 # Project handlers: (op, file_path) -> dict
 _PROJECT_HANDLERS: dict[str, Callable] = {}
 
+# Create handlers: (op, file_path) -> dict -- no IR, no Transaction
+_CREATE_HANDLERS: dict[str, Callable] = {}
+
+# Set of op_types that create new files (bypass file-existence check)
+_CREATE_OP_TYPES = {"create_schematic", "create_pcb", "create_project", "create_symbol"}
+
 
 def register_schematic(op_type: str) -> Callable:
     """Decorator to register a schematic operation handler."""
@@ -63,6 +69,14 @@ def register_project(op_type: str) -> Callable:
     """Decorator to register a project-file operation handler."""
     def decorator(fn: Callable) -> Callable:
         _PROJECT_HANDLERS[op_type] = fn
+        return fn
+    return decorator
+
+
+def register_create(op_type: str) -> Callable:
+    """Decorator to register a file-creation operation handler."""
+    def decorator(fn: Callable) -> Callable:
+        _CREATE_HANDLERS[op_type] = fn
         return fn
     return decorator
 
@@ -435,6 +449,35 @@ def _handle_add_design_rule(op: Any, file_path: Path) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Create handler implementations (no IR, no Transaction)
+# ---------------------------------------------------------------------------
+
+
+@register_create("create_schematic")
+def _handle_create_schematic(op: Any, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.create_file import create_schematic
+    return create_schematic(op, file_path)
+
+
+@register_create("create_pcb")
+def _handle_create_pcb(op: Any, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.create_file import create_pcb
+    return create_pcb(op, file_path)
+
+
+@register_create("create_project")
+def _handle_create_project(op: Any, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.create_file import create_project
+    return create_project(op, file_path)
+
+
+@register_create("create_symbol")
+def _handle_create_symbol(op: Any, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.create_file import create_symbol
+    return create_symbol(op, file_path)
+
+
+# ---------------------------------------------------------------------------
 # Executor class
 # ---------------------------------------------------------------------------
 
@@ -471,6 +514,10 @@ class OperationExecutor:
         root = op.root
         file_path = self._base_dir / root.target_file
 
+        # Create operations: file does not exist yet (bypass existence check)
+        if root.op_type in _CREATE_OP_TYPES:
+            return self._execute_create(op, file_path)
+
         if not file_path.exists():
             raise FileNotFoundError(f"Target file not found: {file_path}")
 
@@ -495,6 +542,32 @@ class OperationExecutor:
             name in ("sym-lib-table", "fp-lib-table")
             or suffix in (".kicad_dru", ".kicad_pro")
         )
+
+    def _execute_create(self, op: Operation, file_path: Path) -> dict[str, Any]:
+        """Execute a file-creation operation (no Transaction, no IR).
+
+        Create operations generate new files from scratch. They do not need
+        Transaction wrapping since there is nothing to roll back to.
+
+        Args:
+            op: Validated Operation from the schema.
+            file_path: Resolved path for the new file.
+
+        Returns:
+            Dict with: success, operation, target_file, details.
+        """
+        root = op.root
+        handler = _CREATE_HANDLERS.get(root.op_type)
+        if handler is None:
+            raise ValueError(f"Unknown create op_type: {root.op_type!r}")
+
+        details = handler(root, file_path)
+        return {
+            "success": True,
+            "operation": root.op_type,
+            "target_file": root.target_file,
+            "details": details,
+        }
 
     def _execute_schematic(self, op: Operation, file_path: Path) -> dict[str, Any]:
         """Execute an operation targeting a schematic file."""

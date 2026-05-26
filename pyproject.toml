@@ -39,6 +39,9 @@ dev = [
 llm = [
     "anthropic>=0.61.0",
 ]
+mcp = [
+    "mcp>=1.0.0",
+]
 training = [
     "torch>=2.0",
 ]
@@ -49,6 +52,7 @@ docs = [
 
 [project.scripts]
 kicad-agent = "kicad_agent.cli:main"
+kicad-component-search = "kicad_agent.mcp.server:main"
 
 [project.urls]
 Homepage = "https://github.com/bretbouchard/kicad-agent"
@@ -78,7 +82,7 @@ python_version = "3.11"
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["kiutils.*", "sexpdata.*", "networkx.*", "shapely.*"]
+module = ["kiutils.*", "sexpdata.*", "networkx.*", "shapely.*", "mcp.*"]
 ignore_missing_imports = true
 
 [tool.coverage.run]

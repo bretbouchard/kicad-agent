@@ -92,6 +92,36 @@ class PropertySpec(BaseModel):
     value: str = Field(max_length=1024)
 
 
+class PinSpec(BaseModel):
+    """Pin definition for symbol creation.
+
+    Attributes:
+        number: Pin number (e.g. ``"1"``, ``"A1"``).
+        name: Pin name (e.g. ``"VCC"``, ``"DOUT"``).
+        electrical_type: KiCad pin electrical type.
+        position: Pin position relative to symbol origin.
+        length: Pin length in mm (default 2.54).
+        graphical_style: Pin graphical style.
+        hide: Whether the pin is hidden.
+    """
+
+    number: str = Field(min_length=1, max_length=32, description="Pin number")
+    name: str = Field(min_length=1, max_length=128, description="Pin name")
+    electrical_type: Literal[
+        "input", "output", "bidirectional", "tri_state", "passive",
+        "free", "unspecified", "power_in", "power_out",
+        "open_collector", "open_emitter", "no_connect",
+    ] = Field(default="passive", description="Pin electrical type")
+    position: PositionSpec
+    length: float = Field(default=2.54, gt=0, le=50, description="Pin length in mm")
+    graphical_style: Literal[
+        "line", "inverted", "clock", "inverted_clock",
+        "input_low", "clock_low", "output_low", "edge_clock_high",
+        "non_logic",
+    ] = Field(default="line", description="Pin graphical style")
+    hide: bool = Field(default=False, description="Whether pin is hidden")
+
+
 # ---------------------------------------------------------------------------
 # TargetFile -- path-safe type (Council H-01)
 # ---------------------------------------------------------------------------
@@ -1032,6 +1062,109 @@ class AutoRouteOp(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# File creation operations
+# ---------------------------------------------------------------------------
+
+
+class CreateSchematicOp(BaseModel):
+    """Create a new empty .kicad_sch file.
+
+    Attributes:
+        op_type: Discriminator literal ``"create_schematic"``.
+        target_file: Relative path for the new .kicad_sch file (must not exist).
+        paper: Paper size (default ``"A4"``).
+        title: Optional title block title.
+    """
+
+    op_type: Literal["create_schematic"] = "create_schematic"
+    target_file: TargetFile
+    paper: str = Field(default="A4", max_length=16, description="Paper size (A4, A3, etc.)")
+    title: str = Field(default="", max_length=256, description="Schematic title")
+
+
+class CreatePcbOp(BaseModel):
+    """Create a new empty .kicad_pcb file.
+
+    Attributes:
+        op_type: Discriminator literal ``"create_pcb"``.
+        target_file: Relative path for the new .kicad_pcb file (must not exist).
+        title: Optional title block title.
+    """
+
+    op_type: Literal["create_pcb"] = "create_pcb"
+    target_file: TargetFile
+    title: str = Field(default="", max_length=256, description="PCB title")
+
+
+class CreateProjectOp(BaseModel):
+    """Create a new empty .kicad_pro project file.
+
+    Attributes:
+        op_type: Discriminator literal ``"create_project"``.
+        target_file: Relative path for the new .kicad_pro file (must not exist).
+    """
+
+    op_type: Literal["create_project"] = "create_project"
+    target_file: TargetFile
+
+
+class CreateSymbolOp(BaseModel):
+    """Create a new symbol definition in a .kicad_sym library file.
+
+    If the library file does not exist, it is created. If it exists, the
+    symbol is appended. Duplicate symbol names are rejected.
+
+    Attributes:
+        op_type: Discriminator literal ``"create_symbol"``.
+        target_file: Relative path to the .kicad_sym library file.
+        symbol_name: Name of the new symbol.
+        reference_prefix: Reference prefix (e.g. ``"R"``, ``"U"``, ``"C"``).
+        value: Default value for the symbol.
+        pins: List of pin definitions.
+        properties: Additional custom properties.
+        body_width: Width of the default rectangle body in mm.
+        body_height: Height of the default rectangle body in mm.
+    """
+
+    op_type: Literal["create_symbol"] = "create_symbol"
+    target_file: TargetFile
+    symbol_name: str = Field(min_length=1, max_length=128, description="Symbol name")
+    reference_prefix: str = Field(
+        default="U", min_length=1, max_length=8,
+        description="Reference prefix (e.g. R, U, C)",
+    )
+    value: str = Field(default="", max_length=256, description="Default symbol value")
+    pins: list[PinSpec] = Field(
+        default_factory=list,
+        max_length=200,
+        description="Pin definitions",
+    )
+    properties: list[PropertySpec] = Field(
+        default_factory=list,
+        max_length=50,
+        description="Additional custom properties",
+    )
+    body_width: float = Field(
+        default=10.16, gt=0, le=200,
+        description="Body rectangle width in mm",
+    )
+    body_height: float = Field(
+        default=10.16, gt=0, le=200,
+        description="Body rectangle height in mm",
+    )
+
+    @field_validator("symbol_name")
+    @classmethod
+    def _validate_symbol_name(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "symbol_name")
+
+    @field_validator("reference_prefix")
+    @classmethod
+    def _validate_reference_prefix(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "reference_prefix")
+
+
+# ---------------------------------------------------------------------------
 # Discriminated union (D-01, D-02, D-03)
 # ---------------------------------------------------------------------------
 
@@ -1079,7 +1212,11 @@ class Operation(BaseModel):
         | AddCopperZoneOp
         | SetBoardOutlineOp
         | AssignNetClassOp
-        | AutoRouteOp,
+        | AutoRouteOp
+        | CreateSchematicOp
+        | CreatePcbOp
+        | CreateProjectOp
+        | CreateSymbolOp,
         Field(discriminator="op_type"),
     ]
 

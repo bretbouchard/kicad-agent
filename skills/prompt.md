@@ -599,6 +599,544 @@ Verify that symbol pin numbers match footprint pad numbers.
 
 ---
 
+#### update_footprint_from_library
+
+Reload a PCB footprint's geometry from the library, preserving placement, reference, value, and pad-to-net connections. Equivalent to KiCad's GUI "Tools > Update Footprints from Library".
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"update_footprint_from_library"` |
+| `target_file` | string | Relative path to `.kicad_pcb` file |
+| `reference` | string | Reference designator of the footprint to update |
+
+**Optional fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `footprint_lib_id` | string | `null` | Override lib_id to swap + update. Omit to refresh from same library. |
+
+---
+
+#### add_wire
+
+Add a wire segment between two points in a schematic.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"add_wire"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+| `start_x` | float | Start X coordinate in mm |
+| `start_y` | float | Start Y coordinate in mm |
+| `end_x` | float | End X coordinate in mm |
+| `end_y` | float | End Y coordinate in mm |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "add_wire",
+    "target_file": "motor-driver.kicad_sch",
+    "start_x": 50.0,
+    "start_y": 30.0,
+    "end_x": 80.0,
+    "end_y": 30.0
+  }
+}
+```
+
+---
+
+#### add_label
+
+Add a net label to a schematic (local, global, or hierarchical).
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"add_label"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+| `name` | string | Label text (e.g. `"SDA"`, `"+5V"`) |
+| `position` | object | Placement coordinates `{x, y}` with optional `angle` |
+
+**Optional fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `label_type` | string | `"local"` | Scope: `local`, `global`, or `hierarchical` |
+| `shape` | string | `"input"` | Shape for global/hierarchical: input, output, bidirectional, tri_state, passive |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "add_label",
+    "target_file": "motor-driver.kicad_sch",
+    "name": "SDA",
+    "label_type": "global",
+    "position": {"x": 50.0, "y": 30.0}
+  }
+}
+```
+
+---
+
+#### add_power
+
+Add a power symbol to a schematic (e.g. +5V, GND, +3V3). Places a `power:<name>` library symbol at the specified position.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"add_power"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+| `name` | string | Power net name (e.g. `"+5V"`, `"GND"`, `"+3V3"`) |
+| `position` | object | Placement coordinates `{x, y}` |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "add_power",
+    "target_file": "motor-driver.kicad_sch",
+    "name": "+3V3",
+    "position": {"x": 25.0, "y": 50.0}
+  }
+}
+```
+
+---
+
+#### add_no_connect
+
+Add a no-connect flag to an unconnected schematic pin.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"add_no_connect"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+| `position` | object | Placement coordinates `{x, y}` |
+
+---
+
+#### add_junction
+
+Add a junction dot at a wire intersection in a schematic.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"add_junction"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+| `position` | object | Placement coordinates `{x, y}` |
+
+---
+
+#### add_lib_entry
+
+Add a library entry to `sym-lib-table` or `fp-lib-table`.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"add_lib_entry"` |
+| `target_file` | string | Relative path to `sym-lib-table` or `fp-lib-table` |
+| `lib_name` | string | Library name (e.g. `"Device"`, `"MyLib"`) |
+| `uri` | string | Library URI path (may use `${KIPRJMOD}`) |
+
+**Optional fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `lib_type` | string | `"KiCad"` | Library type: `"KiCad"` or `"Legacy"` |
+| `options` | string | `""` | Library options |
+| `description` | string | `""` | Library description |
+
+---
+
+#### remove_lib_entry
+
+Remove a library entry from `sym-lib-table` or `fp-lib-table`.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"remove_lib_entry"` |
+| `target_file` | string | Relative path to `sym-lib-table` or `fp-lib-table` |
+| `lib_name` | string | Library name to remove |
+
+---
+
+#### add_net_class
+
+Add a net class with track/via/clearance dimensions to a `.kicad_dru` file.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"add_net_class"` |
+| `target_file` | string | Relative path to `.kicad_dru` file |
+| `name` | string | Net class name |
+| `clearance` | float | Clearance in mm (must be > 0) |
+| `track_width` | float | Track width in mm (must be > 0) |
+| `via_diameter` | float | Via diameter in mm (must be > 0) |
+| `via_drill` | float | Via drill in mm (must be > 0) |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "add_net_class",
+    "target_file": "motor-driver.kicad_dru",
+    "name": "Power",
+    "clearance": 0.3,
+    "track_width": 0.5,
+    "via_diameter": 0.8,
+    "via_drill": 0.4
+  }
+}
+```
+
+---
+
+#### assign_net_class
+
+Assign a net class to a specific net in the PCB.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"assign_net_class"` |
+| `target_file` | string | Relative path to `.kicad_pcb` file |
+| `net_name` | string | Net name to assign |
+| `net_class_name` | string | Net class name to assign |
+
+---
+
+#### add_design_rule
+
+Add a custom DRC rule to `.kicad_dru`.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"add_design_rule"` |
+| `target_file` | string | Relative path to `.kicad_dru` file |
+| `name` | string | Rule name |
+| `constraint_type` | string | Constraint type (e.g. `"clearance"`, `"width"`) |
+
+**Optional fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `constraint_values` | object | `{}` | Key-value constraint parameters |
+| `condition` | string | `""` | KiCad condition expression |
+
+---
+
+#### add_copper_zone
+
+Add a copper zone/ground pour to a PCB.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"add_copper_zone"` |
+| `target_file` | string | Relative path to `.kicad_pcb` file |
+| `net_name` | string | Net name for the zone (e.g. `"GND"`) |
+
+**Optional fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `layer` | string | `"F.Cu"` | Copper layer |
+| `clearance` | float | `0.5` | Zone clearance in mm |
+| `min_width` | float | `0.25` | Minimum fill width in mm |
+| `priority` | int | `0` | Zone priority (higher = filled first) |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "add_copper_zone",
+    "target_file": "motor-driver.kicad_pcb",
+    "net_name": "GND",
+    "layer": "B.Cu",
+    "clearance": 0.3
+  }
+}
+```
+
+---
+
+#### set_board_outline
+
+Define PCB board shape as a rectangle on Edge.Cuts.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"set_board_outline"` |
+| `target_file` | string | Relative path to `.kicad_pcb` file |
+| `width` | float | Board width in mm |
+| `height` | float | Board height in mm |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "set_board_outline",
+    "target_file": "motor-driver.kicad_pcb",
+    "width": 50.0,
+    "height": 30.0
+  }
+}
+```
+
+---
+
+#### repair_schematic
+
+Auto-repair common ERC errors in a schematic.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"repair_schematic"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+
+**Optional fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `snap_wires` | bool | `true` | Snap wire endpoints to nearest pin positions |
+| `remove_orphans` | bool | `true` | Remove labels not connected to any wire or pin |
+| `place_no_connects` | bool | `true` | Place no-connect markers on unconnected pins |
+
+---
+
+#### validate_power_nets
+
+Check that all power pins have connected power symbols.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"validate_power_nets"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+
+---
+
+#### auto_route
+
+Auto-route nets on a PCB using A* pathfinding.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"auto_route"` |
+| `target_file` | string | Relative path to `.kicad_pcb` file |
+
+**Optional fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `nets` | array | `[]` | Specific net names to route. Empty = route all. |
+| `layer` | string | `"F.Cu"` | Target copper layer (e.g. `"F.Cu"`, `"B.Cu"`, `"In1.Cu"`) |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "auto_route",
+    "target_file": "motor-driver.kicad_pcb",
+    "nets": ["SDA", "SCL"],
+    "layer": "F.Cu"
+  }
+}
+```
+
+---
+
+### File Creation Operations
+
+#### create_schematic
+
+Create a new empty `.kicad_sch` file. The file must not already exist. Generates a valid KiCad schematic with proper header, UUID, paper size, and optional title block.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"create_schematic"` |
+| `target_file` | string | Relative path for the new `.kicad_sch` file |
+
+**Optional fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `paper` | string | `"A4"` | Paper size (A4, A3, A2, A1, A0, or custom) |
+| `title` | string | `""` | Title block title (max 256 chars) |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "create_schematic",
+    "target_file": "motor-driver.kicad_sch",
+    "paper": "A3",
+    "title": "Motor Driver Schematic"
+  }
+}
+```
+
+---
+
+#### create_pcb
+
+Create a new empty `.kicad_pcb` file. The file must not already exist. Generates a valid KiCad PCB with standard layer stack.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"create_pcb"` |
+| `target_file` | string | Relative path for the new `.kicad_pcb` file |
+
+**Optional fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `title` | string | `""` | Board title (max 256 chars) |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "create_pcb",
+    "target_file": "motor-driver.kicad_pcb"
+  }
+}
+```
+
+---
+
+#### create_project
+
+Create a new empty `.kicad_pro` project file. The file must not already exist.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"create_project"` |
+| `target_file` | string | Relative path for the new `.kicad_pro` file |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "create_project",
+    "target_file": "motor-driver.kicad_pro"
+  }
+}
+```
+
+---
+
+#### create_symbol
+
+Create a new symbol definition in a `.kicad_sym` library file. If the library does not exist, it is created. If it exists, the symbol is appended. Duplicate symbol names are rejected.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"create_symbol"` |
+| `target_file` | string | Relative path to the `.kicad_sym` library file |
+| `symbol_name` | string | Symbol name (1-128 chars, alphanumeric/dash/underscore only) |
+
+**Optional fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `reference_prefix` | string | `"U"` | Reference prefix (e.g. R, U, C, D, J) |
+| `value` | string | `""` | Default value (max 256 chars) |
+| `pins` | array | `[]` | Pin definitions (max 200) |
+| `properties` | array | `[]` | Custom properties (max 50) |
+| `body_width` | float | `10.16` | Body rectangle width in mm |
+| `body_height` | float | `10.16` | Body rectangle height in mm |
+
+**Pin definition (`pins` array items):**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `number` | string | (required) | Pin number (1-32 chars) |
+| `name` | string | (required) | Pin name (1-128 chars) |
+| `electrical_type` | string | `"passive"` | One of: input, output, bidirectional, tri_state, passive, free, unspecified, power_in, power_out, open_collector, open_emitter, no_connect |
+| `position` | object | (required) | `{x, y}` coordinates in mm, optional `angle` |
+| `length` | float | `2.54` | Pin length in mm |
+| `graphical_style` | string | `"line"` | One of: line, inverted, clock, inverted_clock, input_low, clock_low, output_low, edge_clock_high, non_logic |
+| `hide` | bool | `false` | Whether pin is hidden |
+
+**Example -- IC with power and I/O pins:**
+
+```json
+{
+  "root": {
+    "op_type": "create_symbol",
+    "target_file": "my-lib.kicad_sym",
+    "symbol_name": "AK4619VN",
+    "reference_prefix": "U",
+    "value": "AK4619VN",
+    "pins": [
+      {"number": "1", "name": "VCC", "electrical_type": "power_in", "position": {"x": 0, "y": 5.08}},
+      {"number": "2", "name": "GND", "electrical_type": "power_in", "position": {"x": 0, "y": -5.08}},
+      {"number": "3", "name": "SDIN", "electrical_type": "input", "position": {"x": -5.08, "y": 2.54}},
+      {"number": "4", "name": "SDOUT", "electrical_type": "output", "position": {"x": 5.08, "y": 2.54}},
+      {"number": "5", "name": "BCLK", "electrical_type": "input", "graphical_style": "clock", "position": {"x": -5.08, "y": 0}},
+      {"number": "6", "name": "LRCK", "electrical_type": "input", "position": {"x": -5.08, "y": -2.54}}
+    ],
+    "properties": [
+      {"name": "Manufacturer", "value": "AKM"},
+      {"name": "MPN", "value": "AK4619VN"}
+    ],
+    "body_width": 10.16,
+    "body_height": 10.16
+  }
+}
+```
+
+---
+
 ## Constraints
 
 All operations must satisfy these constraints. Violations produce clear error messages from the Pydantic validator.
@@ -714,3 +1252,94 @@ Net names and bus names reject whitespace-only strings. If a name is `"   "` (sp
 | `swap_footprint` | pcb | target_file, reference, new_footprint_lib_id |
 | `validate_footprint` | all | target_file, footprint_lib_id |
 | `verify_pin_map` | all | target_file, reference, footprint_lib_id |
+| `update_footprint_from_library` | pcb | target_file, reference |
+| `add_wire` | sch | target_file, start_x, start_y, end_x, end_y |
+| `add_label` | sch | target_file, name, position |
+| `add_power` | sch | target_file, name, position |
+| `add_no_connect` | sch | target_file, position |
+| `add_junction` | sch | target_file, position |
+| `add_lib_entry` | lib-table | target_file, lib_name, uri |
+| `remove_lib_entry` | lib-table | target_file, lib_name |
+| `add_net_class` | dru | target_file, name, clearance, track_width, via_diameter, via_drill |
+| `assign_net_class` | pcb | target_file, net_name, net_class_name |
+| `add_design_rule` | dru | target_file, name, constraint_type |
+| `repair_schematic` | sch | target_file |
+| `validate_power_nets` | sch | target_file |
+| `add_copper_zone` | pcb | target_file, net_name |
+| `set_board_outline` | pcb | target_file, width, height |
+| `auto_route` | pcb | target_file |
+| `create_schematic` | new sch | target_file |
+| `create_pcb` | new pcb | target_file |
+| `create_project` | new pro | target_file |
+| `create_symbol` | sym | target_file, symbol_name |
+
+---
+
+## Component Search MCP Server
+
+kicad-agent includes an MCP server for searching electronic components via JLCPCB/EasyEDA. This allows AI agents to find parts, retrieve pin/pad data, and get datasheet URLs without leaving the conversation.
+
+### Setup
+
+Add to your MCP settings (Claude Code or Claude Desktop):
+
+```json
+{
+  "mcpServers": {
+    "kicad-component-search": {
+      "command": "kicad-component-search"
+    }
+  }
+}
+```
+
+Or via the CLI: `kicad-agent component-search`
+
+No API key required — all endpoints are anonymous.
+
+### Available Tools
+
+#### search_components
+
+Search JLCPCB by keyword. Returns LCSC numbers, names, packages, stock, price, and datasheet URLs.
+
+```
+keyword (required): Search query (e.g., "STM32", "NE555", "100nF 0402")
+limit: Maximum results, 1-50 (default: 10)
+part_type: "basic" for stocked basics, "extended" for extended parts
+```
+
+#### get_component_details
+
+Get full CAD data for a specific LCSC part — schematic pins (with KiCad-compatible electrical types) and footprint pads.
+
+```
+lcsc_id (required): LCSC part number (e.g., "C83700")
+```
+
+Pin types returned as KiCad-compatible strings: `passive`, `input`, `output`, `bidirectional`, `power_in`.
+
+#### search_and_detail
+
+Combined search + detail in one call. Returns top N results with full pin/pad data.
+
+```
+keyword (required): Search query
+detail_limit: Number of top results to get CAD data for (default: 3)
+search_limit: Total search results (default: 10)
+```
+
+#### get_component_suggestions
+
+Quick suggestion list — LCSC, name, package, stock only. Useful for autocomplete.
+
+```
+keyword (required): Search query
+limit: Maximum suggestions (default: 5)
+```
+
+### Example Workflow
+
+1. `search_components("STM32F103")` → get LCSC number + datasheet
+2. `get_component_details("C83700")` → get pin names/types and footprint pads
+3. Use pin data with `create_symbol` to build a KiCad symbol library entry
