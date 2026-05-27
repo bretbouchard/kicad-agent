@@ -950,6 +950,41 @@ Check that all power pins have connected power symbols.
 
 ---
 
+#### validate_schematic
+
+Comprehensive schematic validation combining format, symbol resolution, power nets, and annotation checks.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"validate_schematic"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+
+**Optional fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `check_symbol_resolution` | bool | `true` | Verify all lib_ids resolve to symbol definitions (catches question-mark boxes) |
+| `check_format` | bool | `true` | Validate KiCad 10 S-expression format rules (tabs, comments, pin format, etc.) |
+| `check_power_nets` | bool | `true` | Check power pin connectivity |
+| `check_annotation` | bool | `true` | Check for unannotated components (R?, C?) |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "validate_schematic",
+    "target_file": "backplane.kicad_sch",
+    "check_symbol_resolution": true,
+    "check_format": true
+  }
+}
+```
+
+---
+
 #### auto_route
 
 Auto-route nets on a PCB using A* pathfinding.
@@ -1265,6 +1300,7 @@ Net names and bus names reject whitespace-only strings. If a name is `"   "` (sp
 | `add_design_rule` | dru | target_file, name, constraint_type |
 | `repair_schematic` | sch | target_file |
 | `validate_power_nets` | sch | target_file |
+| `validate_schematic` | sch | target_file, check_symbol_resolution, check_format, check_power_nets, check_annotation |
 | `add_copper_zone` | pcb | target_file, net_name |
 | `set_board_outline` | pcb | target_file, width, height |
 | `auto_route` | pcb | target_file |

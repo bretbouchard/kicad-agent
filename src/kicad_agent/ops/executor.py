@@ -258,6 +258,18 @@ def _handle_validate_power_nets(op: Any, ir: SchematicIR, file_path: Path) -> di
     return validate_power_nets(ir)
 
 
+@register_schematic("validate_schematic")
+def _handle_validate_schematic(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.validation_gates import validate_schematic_completeness
+    return validate_schematic_completeness(
+        file_path,
+        check_symbol_resolution=op.check_symbol_resolution,
+        check_format=op.check_format,
+        check_power_nets=op.check_power_nets,
+        check_annotation=op.check_annotation,
+    )
+
+
 # ---------------------------------------------------------------------------
 # PCB handler implementations
 # ---------------------------------------------------------------------------

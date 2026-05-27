@@ -51,7 +51,7 @@ KICAD_VERSION_9 = 20241129  # KiCad 9.0
 KICAD_VERSION_10 = 20250114  # KiCad 10.0
 
 # Minimum version we support for parsing
-MIN_KICAD_VERSION = KICAD_VERSION_6
+MIN_KICAD_VERSION = KICAD_VERSION_7
 
 _VERSION_RE = re.compile(r"\(version\s+(\d{8})\)")
 

@@ -247,6 +247,82 @@ def pre_pcb_gate(project_dir: Path) -> dict[str, Any]:
     }
 
 
+def check_sheet_pin_labels(ir: SchematicIR, sch_path: Path) -> dict[str, Any]:
+    """Check sheet pins have matching hierarchical labels in sub-sheets.
+
+    For each sheet reference in the root schematic, verifies every sheet pin
+    has a corresponding hierarchical label inside the sub-sheet file.
+
+    Args:
+        ir: SchematicIR for the root schematic.
+        sch_path: Path to the root .kicad_sch file.
+
+    Returns:
+        Dict with:
+        - passed: bool -- True if all sheet pins have matching labels.
+        - unmatched_pins: list of dicts with sheet_name, pin_name, pin_type.
+    """
+    sch = ir.schematic
+    unmatched: list[dict[str, Any]] = []
+
+    for sheet in sch.sheets:
+        sheet_file_name = sheet.fileName.value if sheet.fileName else ""
+        if not sheet_file_name:
+            continue
+
+        # Resolve sub-sheet path relative to the parent schematic
+        sub_sch_path = sch_path.resolve().parent / sheet_file_name
+
+        if not sub_sch_path.exists():
+            logger.debug(
+                "Sub-sheet not found, skipping pin label check: %s", sub_sch_path
+            )
+            continue
+
+        # Parse the sub-sheet to find its hierarchical labels
+        try:
+            from kicad_agent.parser import parse_schematic
+
+            sub_result = parse_schematic(sub_sch_path)
+            sub_ir = SchematicIR(_parse_result=sub_result)
+        except Exception as exc:
+            logger.warning(
+                "Cannot parse sub-sheet %s for label matching: %s",
+                sub_sch_path,
+                exc,
+            )
+            continue
+
+        # Collect hierarchical label names from the sub-sheet
+        sub_hier_labels: set[str] = set()
+        for label in sub_ir.schematic.hierarchicalLabels:
+            if label.text:
+                sub_hier_labels.add(label.text)
+
+        # Check each sheet pin against sub-sheet labels
+        sheet_name = sheet.sheetName.value if sheet.sheetName else sheet_file_name
+        for pin in sheet.pins:
+            pin_name = pin.name if pin.name else ""
+            if pin_name and pin_name not in sub_hier_labels:
+                unmatched.append({
+                    "sheet_name": sheet_name,
+                    "pin_name": pin_name,
+                    "pin_type": pin.connectionType,
+                })
+
+    passed = len(unmatched) == 0
+
+    if not passed:
+        logger.info(
+            "Sheet pin label check: %d unmatched pin(s)", len(unmatched)
+        )
+
+    return {
+        "passed": passed,
+        "unmatched_pins": unmatched,
+    }
+
+
 def _distance(x1: float, y1: float, x2: float, y2: float) -> float:
     """Euclidean distance between two points."""
     return ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
@@ -255,3 +331,189 @@ def _distance(x1: float, y1: float, x2: float, y2: float) -> float:
 def _round_pos(x: float, y: float) -> tuple[float, float]:
     """Round position to 0.01mm precision for grouping."""
     return (round(x, 2), round(y, 2))
+
+
+def validate_schematic_completeness(
+    sch_path: Path,
+    *,
+    check_symbol_resolution: bool = True,
+    check_format: bool = True,
+    check_power_nets: bool = True,
+    check_annotation: bool = True,
+    check_grid: bool = True,
+    check_symbol_mismatch: bool = True,
+    check_sheet_pins: bool = True,
+) -> dict[str, Any]:
+    """Comprehensive schematic validation combining all checks.
+
+    Runs KiCad 10 format validation, symbol resolution, power net checks,
+    annotation completeness, grid alignment, symbol copy mismatch, and
+    sheet pin matching on a schematic file.
+
+    Args:
+        sch_path: Path to the .kicad_sch file.
+        check_symbol_resolution: Verify all lib_ids resolve to symbol definitions.
+        check_format: Validate KiCad 10 S-expression format rules.
+        check_power_nets: Check power pin connectivity.
+        check_annotation: Check for unannotated components.
+        check_grid: Check pin/wire grid alignment.
+        check_symbol_mismatch: Check embedded symbols match library originals.
+        check_sheet_pins: Check sheet pins have matching hierarchical labels.
+
+    Returns:
+        Dict with:
+        - pass: bool -- True if all enabled checks pass
+        - format: dict -- Format check results (if enabled)
+        - symbol_resolution: dict -- Symbol resolution results (if enabled)
+        - power: dict -- Power net validation results (if enabled)
+        - annotation: dict -- Annotation completeness results (if enabled)
+        - grid: dict -- Grid alignment results (if enabled)
+        - symbol_mismatch: dict -- Symbol copy mismatch results (if enabled)
+        - sheet_pins: dict -- Sheet pin matching results (if enabled)
+        - recommendations: list of actionable recommendations
+    """
+    from kicad_agent.parser import parse_schematic
+    from kicad_agent.ir.schematic_ir import SchematicIR
+
+    results: dict[str, Any] = {
+        "pass": True,
+        "recommendations": [],
+    }
+
+    # 1. Format check (KiCad 10 S-expression rules)
+    if check_format:
+        from kicad_agent.validation.format_check import validate_kicad10_format
+
+        content = sch_path.read_text(encoding="utf-8")
+        format_result = validate_kicad10_format(content, sch_path)
+        results["format"] = {
+            "pass": format_result.passed,
+            "checks": [
+                {"name": c.name, "passed": c.passed, "detail": c.detail}
+                for c in format_result.checks
+            ],
+        }
+        if not format_result.passed:
+            results["pass"] = False
+            failed_checks = [c for c in format_result.checks if not c.passed]
+            results["recommendations"].append(
+                f"Fix {len(failed_checks)} format issue(s): "
+                + ", ".join(c.name for c in failed_checks)
+            )
+
+    # Parse the schematic for remaining checks
+    parse_result = parse_schematic(sch_path)
+    ir = SchematicIR(_parse_result=parse_result)
+
+    # 2. Symbol resolution (no question marks)
+    if check_symbol_resolution:
+        from kicad_agent.validation.symbol_resolution import validate_symbol_resolution
+
+        sym_result = validate_symbol_resolution(ir, sch_path)
+        results["symbol_resolution"] = {
+            "pass": sym_result.passed,
+            "resolved_count": len(sym_result.resolved),
+            "unresolved_count": len(sym_result.unresolved),
+            "unresolved": [
+                {"lib_id": u.lib_id, "reference": u.reference, "detail": u.detail}
+                for u in sym_result.unresolved
+            ],
+        }
+        if not sym_result.passed:
+            results["pass"] = False
+            unresolved_names = sorted(set(u.lib_id for u in sym_result.unresolved))
+            results["recommendations"].append(
+                f"Add symbol definitions for {len(unresolved_names)} unresolved lib_id(s): "
+                + ", ".join(unresolved_names)
+            )
+
+    # 3. Power net validation
+    if check_power_nets:
+        power_result = validate_power_nets(ir)
+        results["power"] = power_result
+        if not power_result["valid"]:
+            results["pass"] = False
+            if power_result["unconnected_power_pins"]:
+                results["recommendations"].append(
+                    f"Connect {len(power_result['unconnected_power_pins'])} unconnected power pins"
+                )
+            if power_result["missing_power_symbols"]:
+                symbols = ", ".join(power_result["missing_power_symbols"])
+                results["recommendations"].append(f"Add power symbols for: {symbols}")
+
+    # 4. Annotation completeness
+    if check_annotation:
+        unannotated: list[str] = []
+        ref_pattern = re.compile(r"^[A-Za-z]+\?$")
+        for ref, _lib_id in ir.get_all_references():
+            if ref_pattern.match(ref):
+                unannotated.append(ref)
+
+        results["annotation"] = {
+            "complete": len(unannotated) == 0,
+            "unannotated": unannotated,
+        }
+        if unannotated:
+            results["pass"] = False
+            results["recommendations"].append(
+                f"Annotate {len(unannotated)} unannotated components"
+            )
+
+    # 5. Grid alignment (off-grid pins and wire endpoints)
+    if check_grid:
+        from kicad_agent.validation.grid_check import check_grid_alignment
+
+        grid_result = check_grid_alignment(ir)
+        results["grid"] = {
+            "pass": grid_result.passed,
+            "off_grid_pins": [
+                {"reference": p["reference"], "pin_name": p["pin_name"],
+                 "x": p["x"], "y": p["y"]}
+                for p in grid_result.off_grid_pins
+            ],
+            "off_grid_wire_endpoints": [
+                {"x": w["x"], "y": w["y"], "endpoint_type": w["endpoint_type"]}
+                for w in grid_result.off_grid_wire_endpoints
+            ],
+        }
+        if not grid_result.passed:
+            results["pass"] = False
+            total = len(grid_result.off_grid_pins) + len(grid_result.off_grid_wire_endpoints)
+            results["recommendations"].append(
+                f"Fix {total} off-grid element(s): "
+                f"{len(grid_result.off_grid_pins)} pin(s), "
+                f"{len(grid_result.off_grid_wire_endpoints)} wire endpoint(s)"
+            )
+
+    # 6. Symbol copy mismatch (embedded vs library originals)
+    if check_symbol_mismatch:
+        from kicad_agent.validation.symbol_mismatch import check_symbol_copy_mismatch
+
+        mismatch_result = check_symbol_copy_mismatch(ir, sch_path)
+        results["symbol_mismatch"] = {
+            "pass": mismatch_result.passed,
+            "mismatches": [
+                {"lib_id": m["lib_id"], "reference": m["reference"],
+                 "differences": m["differences"]}
+                for m in mismatch_result.mismatches
+            ],
+        }
+        if not mismatch_result.passed:
+            results["pass"] = False
+            results["recommendations"].append(
+                f"Resolve {len(mismatch_result.mismatches)} symbol copy mismatch(es): "
+                + ", ".join(m["lib_id"] for m in mismatch_result.mismatches)
+            )
+
+    # 7. Sheet pin / hierarchical label matching
+    if check_sheet_pins:
+        sheet_pin_result = check_sheet_pin_labels(ir, sch_path)
+        results["sheet_pins"] = sheet_pin_result
+        if not sheet_pin_result["passed"]:
+            results["pass"] = False
+            results["recommendations"].append(
+                f"Fix {len(sheet_pin_result['unmatched_pins'])} sheet pin(s) "
+                "with missing hierarchical labels in sub-sheets"
+            )
+
+    return results

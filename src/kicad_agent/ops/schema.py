@@ -991,6 +991,30 @@ class ValidatePowerNetsOp(BaseModel):
     target_file: TargetFile
 
 
+class ValidateSchematicOp(BaseModel):
+    """Comprehensive schematic validation combining multiple checks.
+
+    Runs KiCad 10 format validation, symbol resolution, power net checks,
+    and annotation completeness in a single operation. Returns structured
+    results for each check category.
+
+    Attributes:
+        op_type: Discriminator literal ``"validate_schematic"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        check_symbol_resolution: Verify all lib_ids resolve to symbol definitions (default True).
+        check_format: Validate KiCad 10 S-expression format rules (default True).
+        check_power_nets: Check power pin connectivity (default True).
+        check_annotation: Check for unannotated components (default True).
+    """
+
+    op_type: Literal["validate_schematic"] = "validate_schematic"
+    target_file: TargetFile
+    check_symbol_resolution: bool = Field(default=True, description="Check all lib_ids resolve to symbol definitions")
+    check_format: bool = Field(default=True, description="Validate KiCad 10 format rules")
+    check_power_nets: bool = Field(default=True, description="Check power pin connectivity")
+    check_annotation: bool = Field(default=True, description="Check for unannotated components")
+
+
 class AddCopperZoneOp(BaseModel):
     """Add a copper zone/ground pour to a PCB.
 
@@ -1209,6 +1233,7 @@ class Operation(BaseModel):
         | AddDesignRuleOp
         | RepairSchematicOp
         | ValidatePowerNetsOp
+        | ValidateSchematicOp
         | AddCopperZoneOp
         | SetBoardOutlineOp
         | AssignNetClassOp
