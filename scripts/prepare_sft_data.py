@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Convert training chains to ChatML instruction format for SFT fine-tuning.
 
-Loads all 7 data sources, converts each chain into ChatML format with
-task-specific prompt templates, scores with reward model, filters bottom
-quartile, writes train/val/test splits.
+Two modes:
+  1. chains_100k mode (default): Converts chains_100k.jsonl using the sft module.
+  2. legacy mode (--data-dirs): Loads from multiple training data directories.
 
 Output format (ChatML / Qwen2.5):
     <|im_start|>system
@@ -33,7 +33,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
+import statistics
 import sys
 import time
 from pathlib import Path
@@ -50,7 +52,7 @@ SYSTEM_PROMPT = (
 )
 
 # ---------------------------------------------------------------------------
-# Task-specific prompt templates
+# Task-specific prompt templates (legacy mode)
 # ---------------------------------------------------------------------------
 
 PROMPT_TEMPLATES = {
@@ -268,37 +270,105 @@ def convert_to_chatml(
 
 
 # ---------------------------------------------------------------------------
-# Main
+# chains_100k mode using sft module
 # ---------------------------------------------------------------------------
 
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Convert training chains to ChatML instruction format",
-    )
-    parser.add_argument(
-        "--data-dirs",
-        nargs="*",
-        default=[
-            "training_data",
-            "training_data_v3",
-            "training_data_100k",
-            "training_data_schematics",
-            "training_data_textbook",
-            "training_data_easyeda",
-            "training_data_gold",
-        ],
-    )
-    parser.add_argument("--model-dir", default="training_output/unified")
-    parser.add_argument("--output-dir", type=Path, default=Path("training_output/sft_data"))
-    parser.add_argument("--no-filter", action="store_true", help="Skip quality filtering")
-    parser.add_argument("--filter-percentile", type=float, default=25.0,
-                        help="Remove chains below this percentile (default: 25)")
-    args = parser.parse_args()
+def run_chains_100k_pipeline(args) -> int:
+    """Run the chains_100k.jsonl -> ChatML pipeline using sft module."""
+    from kicad_agent.training.sft.converter import convert_chains_to_chatml
+    from kicad_agent.training.sft.quality_filter import filter_by_reward_model, split_and_save
 
+    start = time.time()
+    input_path = Path(args.chains_file)
+    model_dir = args.model_dir
+    output_dir = Path(args.output_dir)
+    keep_fraction = 1.0 - (args.filter_percentile / 100.0)
+    seed = 42
+
+    if not input_path.exists():
+        print(f"ERROR: {input_path} not found")
+        return 1
+
+    print(f"[1/4] Converting chains from {input_path} ...")
+    samples = convert_chains_to_chatml(input_path)
+    converted = len(samples)
+    print(f"  Converted {converted} correct chains to ChatML format")
+
+    # Count total input
+    total_input = 0
+    with open(input_path) as f:
+        for line in f:
+            if line.strip():
+                total_input += 1
+    print(f"  Total input chains: {total_input}")
+
+    if args.no_filter:
+        print("[2/4] Quality filter: skipped (--no-filter)")
+        filtered = samples
+        filter_threshold = 0.0
+        score_stats = {}
+    else:
+        print(f"[2/4] Scoring with reward model from {model_dir} ...")
+        filtered = filter_by_reward_model(samples, model_dir, keep_fraction=keep_fraction)
+        print(f"  Retained {len(filtered)} samples (top {keep_fraction*100:.0f}%)")
+
+        scores = [s.quality_score for s in filtered if s.quality_score is not None]
+        score_stats = {}
+        if scores:
+            score_stats = {
+                "mean": round(statistics.mean(scores), 6),
+                "min": round(min(scores), 6),
+                "max": round(max(scores), 6),
+                "std": round(statistics.stdev(scores), 6) if len(scores) > 1 else 0.0,
+            }
+        filter_threshold = min(scores) if scores else 0.0
+        print(f"  Score distribution: mean={score_stats.get('mean', 'N/A')}, "
+              f"min={score_stats.get('min', 'N/A')}, max={score_stats.get('max', 'N/A')}")
+
+    print(f"[3/4] Splitting into train/val/test (seed={seed}) ...")
+    counts = split_and_save(filtered, output_dir, seed=seed)
+    print(f"  Splits: train={counts['train']}, val={counts['val']}, test={counts['test']}")
+
+    elapsed = round(time.time() - start, 1)
+    print(f"[4/4] Writing preparation report ...")
+
+    report = {
+        "total_input_samples": total_input,
+        "correct_chains": converted,
+        "converted_samples": converted,
+        "filter_threshold": round(filter_threshold, 6),
+        "kept_samples": len(filtered),
+        "keep_fraction": keep_fraction if not args.no_filter else 1.0,
+        "splits": counts,
+        "score_distribution": score_stats,
+        "elapsed_seconds": elapsed,
+        "seed": seed,
+    }
+
+    report_path = output_dir / "preparation_report.json"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    with open(report_path, "w") as f:
+        json.dump(report, f, indent=2)
+
+    print(f"\nDone in {elapsed}s. Report: {report_path}")
+    print(f"  train.jsonl: {counts['train']} samples")
+    print(f"  val.jsonl:   {counts['val']} samples")
+    print(f"  test.jsonl:  {counts['test']} samples")
+
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Legacy mode (multi-source training data)
+# ---------------------------------------------------------------------------
+
+def run_legacy_pipeline(args) -> int:
+    """Run the legacy multi-source data pipeline."""
     start = time.time()
 
     # Load model for filtering
     model = None
+    threshold = 0.0
     if not args.no_filter:
         print(f"Loading reward model from {args.model_dir}...")
         model = RewardModel.load_trained(args.model_dir)
@@ -394,11 +464,12 @@ def main() -> int:
     # ------------------------------------------------------------------
     # Write output
     # ------------------------------------------------------------------
-    args.output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     task_counts: dict[str, int] = {}
     for split_name, split_data in splits.items():
-        path = args.output_dir / f"{split_name}.jsonl"
+        path = output_dir / f"{split_name}.jsonl"
         with open(path, "w") as f:
             for chatml, metadata, score in split_data:
                 record = {
@@ -411,7 +482,7 @@ def main() -> int:
 
     # Also write as plain text for simpler training
     for split_name, split_data in splits.items():
-        path = args.output_dir / f"{split_name}.txt"
+        path = output_dir / f"{split_name}.txt"
         with open(path, "w") as f:
             for chatml, _, _ in split_data:
                 f.write(chatml + "\n\n")
@@ -434,7 +505,7 @@ def main() -> int:
         "elapsed_seconds": round(elapsed, 2),
     }
 
-    report_path = args.output_dir / "preparation_report.json"
+    report_path = output_dir / "preparation_report.json"
     with open(report_path, "w") as f:
         json.dump(report, f, indent=2)
 
@@ -447,10 +518,43 @@ def main() -> int:
     for task, count in sorted(task_counts.items(), key=lambda x: -x[1]):
         print(f"    {task:<25} {count:>6}")
     print(f"  Score range:      {min(scores):.4f} - {max(scores):.4f} (mean {sum(scores)/len(scores):.4f})")
-    print(f"  Output:           {args.output_dir}/")
+    print(f"  Output:           {output_dir}/")
     print(f"{'='*60}")
 
     return 0
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Convert training chains to ChatML instruction format",
+    )
+    parser.add_argument(
+        "--chains-file",
+        default="training_output/chains_100k.jsonl",
+        help="Path to chains JSONL file for chains_100k mode (default)",
+    )
+    parser.add_argument(
+        "--data-dirs",
+        nargs="*",
+        default=None,
+        help="Data directories for legacy mode (uses chains_100k mode if not specified)",
+    )
+    parser.add_argument("--model-dir", default="training_output/unified")
+    parser.add_argument("--output-dir", type=Path, default=Path("training_output/sft_prepared"))
+    parser.add_argument("--no-filter", action="store_true", help="Skip quality filtering")
+    parser.add_argument("--filter-percentile", type=float, default=25.0,
+                        help="Remove chains below this percentile (default: 25)")
+    args = parser.parse_args()
+
+    # Legacy mode if --data-dirs specified
+    if args.data_dirs is not None:
+        return run_legacy_pipeline(args)
+
+    return run_chains_100k_pipeline(args)
 
 
 if __name__ == "__main__":
