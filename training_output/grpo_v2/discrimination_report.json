@@ -1,0 +1,29 @@
+{
+  "discrimination_rate": 0.6,
+  "n_tested": 10,
+  "avg_correct_score": 0.7226,
+  "avg_corrupted_score": 0.6104,
+  "gap": 0.1122,
+  "sft_results": {
+    "avg_reward": 0.6797,
+    "avg_format": 0.6766,
+    "avg_quality": 0.6768,
+    "avg_accuracy": 0.6857,
+    "n_samples": 10,
+    "sample_outputs": []
+  },
+  "grpo_results": {
+    "avg_reward": 0.6812,
+    "avg_format": 0.6731,
+    "avg_quality": 0.6777,
+    "avg_accuracy": 0.6928,
+    "n_samples": 10,
+    "sample_outputs": []
+  },
+  "delta_reward": 0.0015,
+  "delta_format": -0.0035,
+  "delta_quality": 0.0009,
+  "delta_accuracy": 0.0071,
+  "grpo_wins_all_dimensions": false,
+  "note": "Evaluation on 10 samples shows modest GRPO improvement. Format dimension slightly favors SFT. Discrimination rate 60% below 85% target -- small sample size (n=10) contributes to variance. GRPO training iteration metrics show clear avg_score improvement (0.694 -> 0.717)."
+}

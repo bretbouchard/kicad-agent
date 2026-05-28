@@ -1,0 +1,12 @@
+{
+  "rest_iteration": 1,
+  "prompts_used": 100,
+  "completions_generated": 400,
+  "samples_kept": 200,
+  "avg_reward_score": 0.6940503391375148,
+  "sft_iters": 500,
+  "base_model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "lora_rank": 16,
+  "lora_scale": 32.0,
+  "adapter_path": "training_output/grpo/iter_1/adapters.safetensors"
+}

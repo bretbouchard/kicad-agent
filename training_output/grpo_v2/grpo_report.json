@@ -1,0 +1,27 @@
+{
+  "base_model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "n_rest_iterations": 2,
+  "group_size": 4,
+  "filter_top_k": 0.5,
+  "sft_iters_per_round": 500,
+  "learning_rate": 5e-06,
+  "final_adapter": "training_output/grpo_v2/iter_2",
+  "iteration_metrics": [
+    {
+      "iteration": 1,
+      "generated": 400,
+      "kept": 200,
+      "avg_score": 0.6940503391375148,
+      "elapsed_seconds": 1849.3
+    },
+    {
+      "iteration": 2,
+      "generated": 400,
+      "kept": 200,
+      "avg_score": 0.7165424672265847,
+      "elapsed_seconds": 1740.1
+    }
+  ],
+  "total_elapsed_seconds": 3594.2,
+  "note": "Artifacts from successful GRPO run (training_output/grpo/) copied to grpo_v2. Attempted fresh training with reduced params hit Metal timeout at iter 50."
+}
