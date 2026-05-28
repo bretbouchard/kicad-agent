@@ -270,6 +270,31 @@ def _handle_validate_schematic(op: Any, ir: SchematicIR, file_path: Path) -> dic
     )
 
 
+@register_schematic("parse_erc")
+def _handle_parse_erc(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    import dataclasses
+    from kicad_agent.ops.erc_parser import parse_erc
+    violations = parse_erc(file_path)
+    return {"violations": [dataclasses.asdict(v) for v in violations]}
+
+
+@register_schematic("extract_violation_positions")
+def _handle_extract_violation_positions(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    import dataclasses
+    from kicad_agent.ops.erc_parser import extract_violation_positions
+    positions = extract_violation_positions(file_path, op.violation_type)
+    return {"positions": [dataclasses.asdict(p) for p in positions], "count": len(positions)}
+
+
+@register_schematic("validate_hlabels")
+def _handle_validate_hlabels(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    import dataclasses
+    from kicad_agent.ops.hlabel_guard import validate_hlabels
+    expected = set(op.expected_labels) if op.expected_labels else None
+    result = validate_hlabels(ir, expected_labels=expected)
+    return dataclasses.asdict(result)
+
+
 # ---------------------------------------------------------------------------
 # PCB handler implementations
 # ---------------------------------------------------------------------------

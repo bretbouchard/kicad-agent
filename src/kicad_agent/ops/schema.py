@@ -1015,6 +1015,60 @@ class ValidateSchematicOp(BaseModel):
     check_annotation: bool = Field(default=True, description="Check for unannotated components")
 
 
+class ParseErcOp(BaseModel):
+    """Parse ERC results for a schematic file.
+
+    SCHREPAIR-01: Returns structured violation data from kicad-cli ERC JSON output.
+
+    Attributes:
+        op_type: Discriminator literal ``"parse_erc"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+    """
+
+    op_type: Literal["parse_erc"] = "parse_erc"
+    target_file: TargetFile
+
+
+class ExtractViolationPositionsOp(BaseModel):
+    """Extract positions for a specific ERC violation type.
+
+    SCHREPAIR-02: Filters violations by type and returns (x,y) positions.
+
+    Attributes:
+        op_type: Discriminator literal ``"extract_violation_positions"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        violation_type: Violation type to filter for (e.g. "pin_not_connected").
+    """
+
+    op_type: Literal["extract_violation_positions"] = "extract_violation_positions"
+    target_file: TargetFile
+    violation_type: str = Field(
+        min_length=1,
+        max_length=128,
+        description="Violation type to filter for (e.g. 'pin_not_connected')",
+    )
+
+
+class ValidateHlabelsOp(BaseModel):
+    """Validate hierarchical labels in a schematic.
+
+    SCHREPAIR-03: Compares actual hlabels against expected set.
+
+    Attributes:
+        op_type: Discriminator literal ``"validate_hlabels"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        expected_labels: List of expected hierarchical label names. Empty means count only.
+    """
+
+    op_type: Literal["validate_hlabels"] = "validate_hlabels"
+    target_file: TargetFile
+    expected_labels: list[str] = Field(
+        default_factory=list,
+        max_length=200,
+        description="Expected hierarchical label names. Empty = count only.",
+    )
+
+
 class AddCopperZoneOp(BaseModel):
     """Add a copper zone/ground pour to a PCB.
 
@@ -1234,6 +1288,9 @@ class Operation(BaseModel):
         | RepairSchematicOp
         | ValidatePowerNetsOp
         | ValidateSchematicOp
+        | ParseErcOp
+        | ExtractViolationPositionsOp
+        | ValidateHlabelsOp
         | AddCopperZoneOp
         | SetBoardOutlineOp
         | AssignNetClassOp
