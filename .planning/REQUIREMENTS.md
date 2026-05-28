@@ -191,7 +191,7 @@ Wire the fine-tuned model into kicad-agent as its reasoning engine.
 - [ ] **LLM-09**: Inference wrapper loads GRPO model and generates PCB reasoning chains in <2s per chain on MPS
 - [ ] **LLM-10**: Best-of-N selection (N=4) picks chains scoring 20%+ higher than single-sample generation
 - [ ] **LLM-11**: kicad-agent CLI `analyze` subcommand and Python API `generate_analysis(pcb_path)` expose fine-tuned model
-- [ ] **LLM-12**: GSD Skill integration: Claude invokes `/kicad-agent analyze <pcb>` and receives scored spatial reasoning chain
+- [x] **LLM-12**: GSD Skill integration: Claude invokes `/kicad-agent analyze <pcb>` and receives scored spatial reasoning chain
 
 ## Out of Scope
 
@@ -331,7 +331,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LLM-09 | Phase 22: Agent Integration | Pending | 22-01 |
 | LLM-10 | Phase 22: Agent Integration | Pending | 22-01 |
 | LLM-11 | Phase 22: Agent Integration | Pending | 22-01 |
-| LLM-12 | Phase 22: Agent Integration | Pending | 22-02 |
+| LLM-12 | Phase 22: Agent Integration | Complete | 22-02 |
 
 **Coverage:**
 - Total requirements: 98 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10 + 5 Phase 11 + 4 Phase 12 + 5 Phase 13 + 4 Phase 14 + 5 Phase 16 + 4 Phase 19)

@@ -79,12 +79,12 @@ Plans:
   4. Python API exposes `generate_analysis(pcb_path)` returning scored chains
   5. GSD Skill: Claude can invoke `/kicad-agent analyze <pcb>` and get spatial reasoning
   6. End-to-end demo: analyze HackRF One and produce quality reasoning chain
-**Plans**: 2 plans
+**Plans**: 2 plans (2/2 complete)
 **Council review gate**: Final review after integration
 
 Plans:
 - [x] 22-01-PLAN.md -- Inference wrapper + best-of-N + kicad-agent wiring (LLM-09, LLM-10, LLM-11)
-- [ ] 22-02-PLAN.md -- End-to-end evaluation + Council review + documentation (LLM-12)
+- [x] 22-02-PLAN.md -- End-to-end evaluation + Council review + documentation (LLM-12)
 
 ### Phase 23: Schematic Repair Operations
 **Goal**: 8 schematic manipulation operations discovered from real backplane repair sessions -- ERC parsing, format conversion, mutation repairs, and root sheet generation

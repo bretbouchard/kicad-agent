@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: production-ai
 status: in-progress
-stopped_at: "22-01 complete -- inference wrapper with best-of-N selection and CLI integration"
-last_updated: "2026-05-28T08:08:35Z"
+stopped_at: "22-02 complete -- GSD Skill analyze integration and e2e evaluation module"
+last_updated: "2026-05-28T08:16:47Z"
 last_activity: 2026-05-28
 progress:
   total_phases: 23
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 21 GRPO RL Fine-Tuning — 2/2 plans complete
+**Current focus:** Phase 22 Agent Integration + End-to-End Evaluation — 2/2 plans complete
 Last activity: 2026-05-28
 
 ## Current Position
 
 Phase: 22 of 23 (Agent Integration + End-to-End Evaluation)
-Plan: 1 of 2 complete
+Plan: 2 of 2 complete
 Status: **IN PROGRESS**
 Last activity: 2026-05-28
 
-Progress: [█████░░░░░] 50% (Phase 22)
+Progress: [██████████] 100% (Phase 22)
 
 ## Performance Metrics
 
@@ -82,6 +82,7 @@ Progress: [█████░░░░░] 50% (Phase 22)
 | Phase 21 P01 | 14min | 1 task | 3 files |
 | Phase 21 P02 | 32min | 1 task | 8 files |
 | Phase 22 P01 | 12min | 2 tasks | 7 files |
+| Phase 22 P02 | 4min | 1 task | 5 files |
 
 ## Accumulated Context
 
@@ -157,6 +158,9 @@ Recent decisions affecting current work:
 - [Phase 22]: Board stats extraction via InferenceWrapper._extract_board_stats() shared by CLI and Python API
 - [Phase 22]: Chains generated sequentially (not batched) to limit MPS peak memory per T-22-04
 - [Phase 22]: n_best capped at 16 to prevent DoS per T-22-02
+- [Phase 22]: EvaluationReport uses tuple for per_file_results (immutable, hashable)
+- [Phase 22]: run_e2e_evaluation skips missing files with warning instead of failing
+- [Phase 22]: best_of_n_improvement computed as (best_mean - single_mean) / single_mean * 100
 
 ### Roadmap Evolution
 
@@ -180,5 +184,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Phase 22 Plan 1 complete -- inference wrapper with best-of-N selection and CLI integration
-Resume file: None (continue with plan 22-02)
+Stopped at: Phase 22 Plan 2 complete -- GSD Skill analyze integration and e2e evaluation module
+Resume file: None (Phase 22 complete, proceed to verification)
