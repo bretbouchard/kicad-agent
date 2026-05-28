@@ -241,6 +241,7 @@ def _handle_repair_schematic(op: Any, ir: SchematicIR, file_path: Path) -> dict[
         place_no_connects,
         remove_orphaned_labels,
         repair_wire_snapping,
+        snap_to_grid,
     )
     details: dict[str, Any] = {}
     if op.snap_wires:
@@ -249,6 +250,8 @@ def _handle_repair_schematic(op: Any, ir: SchematicIR, file_path: Path) -> dict[
         details["orphan_removal"] = remove_orphaned_labels(ir)
     if op.place_no_connects:
         details["no_connects"] = place_no_connects(ir)
+    if op.snap_to_grid:
+        details["snap_to_grid"] = snap_to_grid(ir, grid_mm=0.01)
     return details
 
 
@@ -302,6 +305,18 @@ def _handle_convert_kicad6_to_10(op: Any, ir: SchematicIR, file_path: Path) -> d
     converted = convert_kicad6_to_10(content)
     file_path.write_text(converted, encoding="utf-8")
     return {"converted": True, "file_path": str(file_path)}
+
+
+@register_schematic("snap_to_grid")
+def _handle_snap_to_grid(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.repair import snap_to_grid
+    return snap_to_grid(ir, grid_mm=op.grid_mm)
+
+
+@register_schematic("add_power_flag")
+def _handle_add_power_flag(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.repair import add_power_flags
+    return add_power_flags(ir, file_path)
 
 
 # ---------------------------------------------------------------------------

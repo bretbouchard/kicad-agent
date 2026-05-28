@@ -967,6 +967,7 @@ class RepairSchematicOp(BaseModel):
         snap_wires: Snap wire endpoints to nearest pin positions (default True).
         remove_orphans: Remove labels not connected to any wire or pin (default True).
         place_no_connects: Place no-connect markers on unconnected pins (default True).
+        snap_to_grid: Snap off-grid wire endpoints to nearest grid point (default False).
     """
 
     op_type: Literal["repair_schematic"] = "repair_schematic"
@@ -974,6 +975,7 @@ class RepairSchematicOp(BaseModel):
     snap_wires: bool = Field(default=True, description="Snap wire endpoints to pins")
     remove_orphans: bool = Field(default=True, description="Remove orphaned labels")
     place_no_connects: bool = Field(default=True, description="Place no-connect markers")
+    snap_to_grid: bool = Field(default=False, description="Snap off-grid wire endpoints to grid")
 
 
 class ValidatePowerNetsOp(BaseModel):
@@ -1080,6 +1082,39 @@ class ConvertKicad6To10Op(BaseModel):
     """
 
     op_type: Literal["convert_kicad6_to_10"] = "convert_kicad6_to_10"
+    target_file: TargetFile
+
+
+class SnapToGridOp(BaseModel):
+    """Snap off-grid wire endpoints to the nearest grid point.
+
+    SCHREPAIR-05: Grid-snapping with connectivity preservation.
+
+    Attributes:
+        op_type: Discriminator literal ``"snap_to_grid"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        grid_mm: Grid spacing in mm. Default 0.01mm for KiCad 8+.
+    """
+
+    op_type: Literal["snap_to_grid"] = "snap_to_grid"
+    target_file: TargetFile
+    grid_mm: float = Field(
+        default=0.01, gt=0, le=100,
+        description="Grid spacing in mm. Default 0.01mm for KiCad 8+.",
+    )
+
+
+class AddPowerFlagOp(BaseModel):
+    """Place PWR_FLAG symbols at power_pin_not_driven ERC violation positions.
+
+    SCHREPAIR-06: ERC-driven power flag placement.
+
+    Attributes:
+        op_type: Discriminator literal ``"add_power_flag"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+    """
+
+    op_type: Literal["add_power_flag"] = "add_power_flag"
     target_file: TargetFile
 
 
@@ -1306,6 +1341,8 @@ class Operation(BaseModel):
         | ExtractViolationPositionsOp
         | ValidateHlabelsOp
         | ConvertKicad6To10Op
+        | SnapToGridOp
+        | AddPowerFlagOp
         | AddCopperZoneOp
         | SetBoardOutlineOp
         | AssignNetClassOp

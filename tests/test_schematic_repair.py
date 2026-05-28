@@ -7,6 +7,7 @@ control, then run repair operations and verify corrections.
 import math
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 from kiutils.items.common import Position
@@ -16,10 +17,13 @@ from kiutils.schematic import Schematic
 from kicad_agent.ir.schematic_ir import SchematicIR
 from kicad_agent.ops.repair import (
     SNAP_TOLERANCE,
+    add_power_flags,
     detect_shorted_nets,
     place_no_connects,
+    place_no_connects_from_erc,
     remove_orphaned_labels,
     repair_wire_snapping,
+    snap_to_grid,
 )
 from kicad_agent.parser import parse_schematic
 
@@ -303,3 +307,260 @@ class TestRepairSchematicOperation:
             assert "wire_snapping" in details
             assert "orphan_removal" in details
             assert "no_connects" in details
+
+
+# ---------------------------------------------------------------------------
+# Phase 23: ERC-driven repair operation tests
+# ---------------------------------------------------------------------------
+
+
+class TestSnapToGrid:
+    """Test grid-snapping for off-grid wire endpoints."""
+
+    def test_snap_to_grid_off_grid_wire(self):
+        """Off-grid wire endpoints snap to nearest grid point."""
+        ir = MagicMock()
+        wire = MagicMock()
+        point1 = MagicMock()
+        point1.X = 25.41
+        point1.Y = 30.5  # on-grid for 0.1mm
+        point2 = MagicMock()
+        point2.X = 50.8
+        point2.Y = 30.5
+        wire.points = [point1, point2]
+        ir.schematic.graphicalItems = [wire]
+        ir.get_wire_endpoints.return_value = [
+            {"wire_index": 0, "start_x": 25.41, "start_y": 30.5,
+             "end_x": 50.8, "end_y": 30.5, "uuid": "test-uuid"},
+        ]
+
+        result = snap_to_grid(ir, grid_mm=0.1)
+
+        assert result["snapped_count"] >= 1
+        assert result["grid_mm"] == 0.1
+        # Verify the off-grid X was snapped to nearest 0.1mm grid
+        assert abs(point1.X - round(25.41 / 0.1) * 0.1) < 0.001
+        # Y was already on-grid, should not change
+        assert abs(point1.Y - 30.5) < 0.001
+
+    def test_snap_to_grid_preserves_connectivity(self):
+        """Two wires meeting at an off-grid point snap to the SAME grid point."""
+        ir = MagicMock()
+
+        # Wire 1: (25.41, 30.43) -> (50.8, 30.48)
+        wire1 = MagicMock()
+        p1a = MagicMock()
+        p1a.X = 25.41
+        p1a.Y = 30.43
+        p1b = MagicMock()
+        p1b.X = 50.8
+        p1b.Y = 30.48
+        wire1.points = [p1a, p1b]
+
+        # Wire 2: (25.41, 30.43) -> (25.41, 50.8)
+        wire2 = MagicMock()
+        p2a = MagicMock()
+        p2a.X = 25.41
+        p2a.Y = 30.43
+        p2b = MagicMock()
+        p2b.X = 25.41
+        p2b.Y = 50.8
+        wire2.points = [p2a, p2b]
+
+        ir.schematic.graphicalItems = [wire1, wire2]
+        ir.get_wire_endpoints.return_value = [
+            {"wire_index": 0, "start_x": 25.41, "start_y": 30.43,
+             "end_x": 50.8, "end_y": 30.48, "uuid": "w1"},
+            {"wire_index": 1, "start_x": 25.41, "start_y": 30.43,
+             "end_x": 25.41, "end_y": 50.8, "uuid": "w2"},
+        ]
+
+        result = snap_to_grid(ir, grid_mm=0.1)
+
+        # Both wires' off-grid endpoints must snap to the same target
+        assert abs(p1a.X - p2a.X) < 0.001
+        assert abs(p1a.Y - p2a.Y) < 0.001
+
+    def test_snap_to_grid_all_on_grid(self):
+        """All-on-grid wires result in no changes."""
+        ir = MagicMock()
+        wire = MagicMock()
+        point1 = MagicMock()
+        point1.X = 25.4
+        point1.Y = 30.48
+        point2 = MagicMock()
+        point2.X = 50.8
+        point2.Y = 30.48
+        wire.points = [point1, point2]
+        ir.schematic.graphicalItems = [wire]
+        ir.get_wire_endpoints.return_value = [
+            {"wire_index": 0, "start_x": 25.4, "start_y": 30.48,
+             "end_x": 50.8, "end_y": 30.48, "uuid": "test"},
+        ]
+
+        result = snap_to_grid(ir, grid_mm=0.01)
+
+        assert result["snapped_count"] == 0
+
+    def test_snap_to_grid_custom_grid(self):
+        """Custom grid_mm=2.54 snaps to 2.54mm grid."""
+        ir = MagicMock()
+        wire = MagicMock()
+        point1 = MagicMock()
+        point1.X = 24.13
+        point1.Y = 29.37
+        point2 = MagicMock()
+        point2.X = 50.8
+        point2.Y = 30.48
+        wire.points = [point1, point2]
+        ir.schematic.graphicalItems = [wire]
+        ir.get_wire_endpoints.return_value = [
+            {"wire_index": 0, "start_x": 24.13, "start_y": 29.37,
+             "end_x": 50.8, "end_y": 30.48, "uuid": "test"},
+        ]
+
+        result = snap_to_grid(ir, grid_mm=2.54)
+
+        assert result["grid_mm"] == 2.54
+        assert result["snapped_count"] >= 1
+
+
+class TestAddPowerFlags:
+    """Test ERC-driven power flag placement."""
+
+    def test_add_power_flags_places_pwr_flag(self):
+        """PWR_FLAG is placed at power_pin_not_driven positions."""
+        from kicad_agent.ops.erc_parser import ViolationPosition
+
+        ir = MagicMock()
+        ir.get_label_positions.return_value = [
+            {"name": "+5V", "x": 50.0, "y": 30.0},
+        ]
+
+        mock_positions = [
+            ViolationPosition(x=50.0, y=30.0, sheet="/", description="Power pin not driven"),
+        ]
+
+        with patch("kicad_agent.ops.erc_parser.extract_violation_positions", return_value=mock_positions):
+            result = add_power_flags(ir, Path("test.kicad_sch"))
+
+        assert result["placed"] == 1
+        assert "+5V" in result["net_names"]
+        ir.add_power_symbol.assert_called_once_with("PWR_FLAG", 52.54, 30.0, 0.0)
+
+    def test_add_power_flags_no_violations(self):
+        """No violations means no symbols placed."""
+        ir = MagicMock()
+
+        with patch("kicad_agent.ops.erc_parser.extract_violation_positions", return_value=[]):
+            result = add_power_flags(ir, Path("test.kicad_sch"))
+
+        assert result["placed"] == 0
+        assert result["skipped"] == 0
+
+
+class TestPlaceNoConnectsFromErc:
+    """Test ERC-driven no-connect placement."""
+
+    def test_places_at_violation_positions(self):
+        """No-connect markers placed at each violation position."""
+        from kicad_agent.ops.erc_parser import ViolationPosition
+
+        ir = MagicMock()
+        ir.schematic.noConnects = []
+
+        mock_positions = [
+            ViolationPosition(x=10.0, y=20.0, sheet="/", description="Pin not connected"),
+            ViolationPosition(x=30.0, y=40.0, sheet="/", description="Pin not connected"),
+            ViolationPosition(x=50.0, y=60.0, sheet="/", description="Pin not connected"),
+        ]
+
+        with patch("kicad_agent.ops.erc_parser.extract_violation_positions", return_value=mock_positions):
+            result = place_no_connects_from_erc(ir, Path("test.kicad_sch"))
+
+        assert result["placed"] == 3
+        assert ir.add_no_connect.call_count == 3
+
+    def test_skips_existing_no_connects(self):
+        """Existing no-connect markers at positions are skipped."""
+        from kicad_agent.ops.erc_parser import ViolationPosition
+
+        ir = MagicMock()
+        # Existing no-connect at (10.0, 20.0)
+        existing_nc = MagicMock()
+        existing_nc.position.X = 10.0
+        existing_nc.position.Y = 20.0
+        ir.schematic.noConnects = [existing_nc]
+
+        mock_positions = [
+            ViolationPosition(x=10.0, y=20.0, sheet="/", description="Pin not connected"),
+            ViolationPosition(x=30.0, y=40.0, sheet="/", description="Pin not connected"),
+        ]
+
+        with patch("kicad_agent.ops.erc_parser.extract_violation_positions", return_value=mock_positions):
+            result = place_no_connects_from_erc(ir, Path("test.kicad_sch"))
+
+        assert result["placed"] == 1
+        assert result["skipped_duplicates"] == 1
+
+    def test_no_violations(self):
+        """Empty violation list returns placed=0."""
+        ir = MagicMock()
+
+        with patch("kicad_agent.ops.erc_parser.extract_violation_positions", return_value=[]):
+            result = place_no_connects_from_erc(ir, Path("test.kicad_sch"))
+
+        assert result["placed"] == 0
+        assert result["skipped_duplicates"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Schema validation tests for Phase 23 mutation operations
+# ---------------------------------------------------------------------------
+
+
+def test_snap_to_grid_op_schema():
+    """SnapToGridOp validates correctly."""
+    from kicad_agent.ops.schema import Operation, SnapToGridOp
+
+    op = SnapToGridOp(op_type="snap_to_grid", target_file="test.kicad_sch")
+    assert op.grid_mm == 0.01
+
+    wrapped = Operation.model_validate({
+        "root": {"op_type": "snap_to_grid", "target_file": "test.kicad_sch"}
+    })
+    assert wrapped.root.op_type == "snap_to_grid"
+
+    # Custom grid
+    op_custom = SnapToGridOp(op_type="snap_to_grid", target_file="test.kicad_sch", grid_mm=2.54)
+    assert op_custom.grid_mm == 2.54
+
+
+def test_add_power_flag_op_schema():
+    """AddPowerFlagOp validates correctly."""
+    from kicad_agent.ops.schema import AddPowerFlagOp, Operation
+
+    op = AddPowerFlagOp(op_type="add_power_flag", target_file="test.kicad_sch")
+    assert op.op_type == "add_power_flag"
+
+    wrapped = Operation.model_validate({
+        "root": {"op_type": "add_power_flag", "target_file": "test.kicad_sch"}
+    })
+    assert wrapped.root.op_type == "add_power_flag"
+
+
+def test_repair_schematic_with_snap_to_grid():
+    """RepairSchematicOp with snap_to_grid=True validates correctly."""
+    from kicad_agent.ops.schema import Operation
+
+    op = Operation.model_validate({
+        "root": {
+            "op_type": "repair_schematic",
+            "target_file": "test.kicad_sch",
+            "snap_wires": False,
+            "remove_orphans": False,
+            "place_no_connects": False,
+            "snap_to_grid": True,
+        }
+    })
+    assert op.root.snap_to_grid is True

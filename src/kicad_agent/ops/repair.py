@@ -322,3 +322,190 @@ def _round_pos(x: float, y: float) -> tuple[float, float]:
     """Round position to SNAP_TOLERANCE precision for grouping."""
     precision = 2  # 0.01mm precision
     return (round(x, precision), round(y, precision))
+
+
+# ---------------------------------------------------------------------------
+# ERC-driven repair operations (Phase 23)
+# ---------------------------------------------------------------------------
+
+
+def snap_to_grid(ir: SchematicIR, grid_mm: float = 0.01) -> dict[str, Any]:
+    """Snap off-grid wire endpoints to the nearest grid point.
+
+    Groups wire endpoints by proximity first so that co-located endpoints
+    (where two wires meet at an off-grid point) all snap to the SAME grid
+    point, preserving connectivity.
+
+    SCHREPAIR-05: Grid-snapping for off-grid wire endpoints.
+
+    Args:
+        ir: SchematicIR for the target schematic.
+        grid_mm: Grid spacing in mm (default 0.01 for KiCad 8+).
+
+    Returns:
+        Dict with snapped_count and grid_mm.
+    """
+    from kicad_agent.validation.grid_check import _is_on_grid
+
+    sch = ir.schematic
+    wire_endpoints = ir.get_wire_endpoints()
+    if not wire_endpoints:
+        return {"snapped_count": 0, "grid_mm": grid_mm}
+
+    # First pass: collect all endpoint positions and their wire/point references
+    endpoint_groups: dict[tuple[float, float], list[tuple[int, int]]] = {}
+    # key = rounded position, value = list of (wire_index, point_index)
+
+    for wire_info in wire_endpoints:
+        wi = wire_info["wire_index"]
+        wire = sch.graphicalItems[wi]
+        if not hasattr(wire, "points"):
+            continue
+        for pi, point in enumerate(wire.points):
+            key = (round(point.X, 2), round(point.Y, 2))
+            endpoint_groups.setdefault(key, []).append((wi, pi))
+
+    # Second pass: for each group, compute shared snap target and apply
+    snapped_count = 0
+    for key, refs in endpoint_groups.items():
+        x, y = key
+        if not _is_on_grid(x, grid_mm) or not _is_on_grid(y, grid_mm):
+            snap_x = round(x / grid_mm) * grid_mm
+            snap_y = round(y / grid_mm) * grid_mm
+            for wi, pi in refs:
+                wire = sch.graphicalItems[wi]
+                wire.points[pi].X = snap_x
+                wire.points[pi].Y = snap_y
+            snapped_count += 1
+            ir._record_mutation("snap_to_grid", {
+                "group_at": [x, y],
+                "snapped_to": [snap_x, snap_y],
+            })
+
+    return {"snapped_count": snapped_count, "grid_mm": grid_mm}
+
+
+def add_power_flags(ir: SchematicIR, sch_path: Path) -> dict[str, Any]:
+    """Place PWR_FLAG symbols at power_pin_not_driven ERC violation positions.
+
+    SCHREPAIR-06: ERC-driven power flag placement.
+
+    Args:
+        ir: SchematicIR for the target schematic.
+        sch_path: Path to the schematic file (for ERC invocation).
+
+    Returns:
+        Dict with placed count, positions, skipped count, and net names.
+    """
+    from kicad_agent.ops.erc_parser import extract_violation_positions
+
+    positions = extract_violation_positions(sch_path, "power_pin_not_driven")
+    if not positions:
+        return {"placed": 0, "positions": [], "skipped": 0, "net_names": []}
+
+    # Get label positions to determine net names at violation points
+    label_positions = ir.get_label_positions()
+    placed_count = 0
+    skipped_count = 0
+    placed_positions: list[tuple[float, float]] = []
+    net_names: list[str] = []
+
+    for vp in positions:
+        # Find which label is at or near this position
+        net_name = _find_net_name_at_position(vp.x, vp.y, label_positions)
+        if net_name is None:
+            logger.warning(
+                "Could not determine net name at (%.2f, %.2f), skipping power flag",
+                vp.x, vp.y,
+            )
+            skipped_count += 1
+            continue
+
+        # Place PWR_FLAG offset to the right to avoid overlapping
+        offset_x = vp.x + 2.54
+        offset_y = vp.y
+        ir.add_power_symbol("PWR_FLAG", offset_x, offset_y, 0.0)
+        placed_count += 1
+        placed_positions.append((round(offset_x, 4), round(offset_y, 4)))
+        net_names.append(net_name)
+        ir._record_mutation("add_power_flag", {
+            "net_name": net_name,
+            "position": [offset_x, offset_y],
+        })
+
+    return {
+        "placed": placed_count,
+        "positions": placed_positions,
+        "skipped": skipped_count,
+        "net_names": net_names,
+    }
+
+
+def place_no_connects_from_erc(ir: SchematicIR, sch_path: Path) -> dict[str, Any]:
+    """Place no-connect markers at pin_not_connected ERC violation positions.
+
+    SCHREPAIR-07: ERC-driven no-connect placement.
+
+    Args:
+        ir: SchematicIR for the target schematic.
+        sch_path: Path to the schematic file (for ERC invocation).
+
+    Returns:
+        Dict with placed count, skipped duplicates count, and positions.
+    """
+    from kicad_agent.ops.erc_parser import extract_violation_positions
+
+    positions = extract_violation_positions(sch_path, "pin_not_connected")
+    if not positions:
+        return {"placed": 0, "skipped_duplicates": 0, "positions": []}
+
+    # Check existing no-connect positions to avoid duplicates
+    sch = ir.schematic
+    existing_nc: set[tuple[float, float]] = set()
+    for nc in sch.noConnects:
+        existing_nc.add((round(nc.position.X, 2), round(nc.position.Y, 2)))
+
+    placed_count = 0
+    dup_count = 0
+    placed_positions: list[tuple[float, float]] = []
+
+    for vp in positions:
+        pos_key = (round(vp.x, 2), round(vp.y, 2))
+        if pos_key in existing_nc:
+            dup_count += 1
+            continue
+
+        ir.add_no_connect(x=vp.x, y=vp.y)
+        placed_count += 1
+        placed_positions.append((round(vp.x, 4), round(vp.y, 4)))
+        # Add to existing set to prevent duplicates within this batch
+        existing_nc.add(pos_key)
+
+    return {
+        "placed": placed_count,
+        "skipped_duplicates": dup_count,
+        "positions": placed_positions,
+    }
+
+
+def _find_net_name_at_position(
+    x: float,
+    y: float,
+    label_positions: list[dict[str, Any]],
+    tolerance: float = 0.01,
+) -> str | None:
+    """Find the net label name at or near a given position.
+
+    Args:
+        x: X coordinate to search.
+        y: Y coordinate to search.
+        label_positions: List of label position dicts from get_label_positions().
+        tolerance: Maximum distance in mm for a match.
+
+    Returns:
+        Net name string if found, None otherwise.
+    """
+    for lp in label_positions:
+        if _distance(x, y, lp["x"], lp["y"]) <= tolerance:
+            return lp["name"]
+    return None
