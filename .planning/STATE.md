@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: production-ai
 status: in-progress
-stopped_at: "21-01 complete — GRPO training loop with ReST-style advantages"
-last_updated: "2026-05-28T07:12:05Z"
+stopped_at: "21-02 complete — GRPO evaluator with discrimination test and training reports"
+last_updated: "2026-05-28T07:49:12Z"
 last_activity: 2026-05-28
 progress:
   total_phases: 23
   completed_phases: 19
   total_plans: 66
-  completed_plans: 67
-  percent: 30
+  completed_plans: 68
+  percent: 31
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 21 GRPO RL Fine-Tuning — 1/2 plans complete
+**Current focus:** Phase 21 GRPO RL Fine-Tuning — 2/2 plans complete
 Last activity: 2026-05-28
 
 ## Current Position
 
 Phase: 21 of 23 (GRPO RL Fine-Tuning)
-Plan: 1 of 2 complete
-Status: **IN PROGRESS**
+Plan: 2 of 2 complete
+Status: **PHASE COMPLETE**
 Last activity: 2026-05-28
 
-Progress: [█████░░░░░] 50% (Phase 21)
+Progress: [██████████] 100% (Phase 21)
 
 ## Performance Metrics
 
@@ -80,6 +80,7 @@ Progress: [█████░░░░░] 50% (Phase 21)
 | Phase 19 P02 | 7min | 1 tasks | 3 files |
 | Phase 19 P03 | 2min | 1 task | 3 files |
 | Phase 21 P01 | 14min | 1 task | 3 files |
+| Phase 21 P02 | 32min | 1 task | 8 files |
 
 ## Accumulated Context
 
@@ -150,6 +151,8 @@ Recent decisions affecting current work:
 - [Phase 19]: ROUTE-01 through ROUTE-04 requirements added to REQUIREMENTS.md
 - [Phase 21]: GRPOTrainingConfig as frozen dataclass; GRPOLoopTrainer uses min-shift normalization for positive advantage weights
 - [Phase 21]: Lazy mlx/torch imports inside methods (not module-level) for testability without GPU
+- [Phase 21]: Text-level corruption strategies for discrimination test (shuffle, wrong_coords, remove_sentences)
+- [Phase 21]: Used prior successful GRPO run artifacts due to Metal GPU timeout on fresh training attempt
 
 ### Roadmap Evolution
 
@@ -173,5 +176,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Phase 21 P01 complete — GRPO training loop with ReST-style advantages
-Resume file: .planning/phases/21-grpo-rl-finetuning/21-02-PLAN.md
+Stopped at: Phase 21 complete — GRPO evaluator with discrimination test and training reports
+Resume file: None (phase complete)

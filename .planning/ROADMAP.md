@@ -66,7 +66,7 @@ Plans:
 
 Plans:
 - [x] 21-01-PLAN.md -- GRPO training loop implementation (generate -> score -> update) (LLM-05, LLM-06)
-- [ ] 21-02-PLAN.md -- GRPO training run + evaluation + Council review gate (LLM-07, LLM-08)
+- [x] 21-02-PLAN.md -- GRPO training run + evaluation + Council review gate (LLM-07, LLM-08)
 
 ### Phase 22: Agent Integration + End-to-End Evaluation
 **Goal**: Wire the GRPO-trained LLM into kicad-agent as its reasoning engine with best-of-N generation and reward model quality gate
@@ -472,7 +472,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 17. Package & Distribution | 3/3 | Complete | 2026-05-24 |
 | 18. CI/CD Pipeline | 2/2 | Complete | 2026-05-23 |
 | 19. Interactive Routing Suggestions | 3/3 | Complete | 2026-05-24 |
-| 20. SFT Data Preparation + Training Infrastructure | 0/3 | Pending | |
-| 21. GRPO RL Fine-Tuning | 1/2 | In Progress | |
+| 20. SFT Data Preparation + Training Infrastructure | 3/3 | Complete | 2026-05-26 |
+| 21. GRPO RL Fine-Tuning | 2/2 | Complete | 2026-05-28 |
 | 22. Agent Integration + End-to-End Evaluation | 0/2 | Pending | |
 | 23. Schematic Repair Operations | 0/4 | Pending | |
