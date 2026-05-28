@@ -1069,6 +1069,20 @@ class ValidateHlabelsOp(BaseModel):
     )
 
 
+class ConvertKicad6To10Op(BaseModel):
+    """Convert a KiCad 5/6 format schematic to KiCad 10 format.
+
+    SCHREPAIR-04: Multi-pass format conversion using section-based reassembly.
+
+    Attributes:
+        op_type: Discriminator literal ``"convert_kicad6_to_10"``.
+        target_file: Relative path to the KiCad 5/6 schematic file (H-01 validated).
+    """
+
+    op_type: Literal["convert_kicad6_to_10"] = "convert_kicad6_to_10"
+    target_file: TargetFile
+
+
 class AddCopperZoneOp(BaseModel):
     """Add a copper zone/ground pour to a PCB.
 
@@ -1291,6 +1305,7 @@ class Operation(BaseModel):
         | ParseErcOp
         | ExtractViolationPositionsOp
         | ValidateHlabelsOp
+        | ConvertKicad6To10Op
         | AddCopperZoneOp
         | SetBoardOutlineOp
         | AssignNetClassOp

@@ -295,6 +295,15 @@ def _handle_validate_hlabels(op: Any, ir: SchematicIR, file_path: Path) -> dict[
     return dataclasses.asdict(result)
 
 
+@register_schematic("convert_kicad6_to_10")
+def _handle_convert_kicad6_to_10(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.format_convert import convert_kicad6_to_10
+    content = file_path.read_text(encoding="utf-8")
+    converted = convert_kicad6_to_10(content)
+    file_path.write_text(converted, encoding="utf-8")
+    return {"converted": True, "file_path": str(file_path)}
+
+
 # ---------------------------------------------------------------------------
 # PCB handler implementations
 # ---------------------------------------------------------------------------
