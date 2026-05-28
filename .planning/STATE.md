@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: production-ai
-status: complete
-stopped_at: "v2.1 milestone COMPLETE — 19/19 phases, 66/66 plans, 1246 tests passing"
-last_updated: "2026-05-24T02:30:00Z"
-last_activity: 2026-05-24
+status: in-progress
+stopped_at: "21-01 complete — GRPO training loop with ReST-style advantages"
+last_updated: "2026-05-28T07:12:05Z"
+last_activity: 2026-05-28
 progress:
-  total_phases: 19
+  total_phases: 23
   completed_phases: 19
   total_plans: 66
-  completed_plans: 66
-  percent: 100
+  completed_plans: 67
+  percent: 30
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** v2.1 milestone "production-ai" COMPLETE — 19/19 phases, 1246 tests passing.
-Last activity: 2026-05-24
+**Current focus:** Phase 21 GRPO RL Fine-Tuning — 1/2 plans complete
+Last activity: 2026-05-28
 
 ## Current Position
 
-Phase: 19 of 19 (Interactive Routing Suggestions)
-Plan: 3 of 3 complete
-Status: **MILESTONE COMPLETE**
-Last activity: 2026-05-24
+Phase: 21 of 23 (GRPO RL Fine-Tuning)
+Plan: 1 of 2 complete
+Status: **IN PROGRESS**
+Last activity: 2026-05-28
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 50% (Phase 21)
 
 ## Performance Metrics
 
@@ -79,6 +79,7 @@ Progress: [██████████] 100%
 | Phase 19 P01 | 4min | 1 task | 5 files |
 | Phase 19 P02 | 7min | 1 tasks | 3 files |
 | Phase 19 P03 | 2min | 1 task | 3 files |
+| Phase 21 P01 | 14min | 1 task | 3 files |
 
 ## Accumulated Context
 
@@ -147,6 +148,8 @@ Recent decisions affecting current work:
 - [Phase 19]: Accordion serpentining caps at 50 bumps per segment; amplitude bounded to 2x target_spacing_mm
 - [Phase 19]: InteractiveRoutingSession rebuilds graph on reroute when per-net clearance constraints increase
 - [Phase 19]: ROUTE-01 through ROUTE-04 requirements added to REQUIREMENTS.md
+- [Phase 21]: GRPOTrainingConfig as frozen dataclass; GRPOLoopTrainer uses min-shift normalization for positive advantage weights
+- [Phase 21]: Lazy mlx/torch imports inside methods (not module-level) for testability without GPU
 
 ### Roadmap Evolution
 
@@ -160,7 +163,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- Pre-existing test failures resolved -- 1246 passed, 1 skipped, 0 failures as of Phase 19 P03 (v2.1 complete)
+- 1402 tests passing, 1 skipped, 0 failures as of Phase 21 P01
 
 ## Deferred Items
 
@@ -170,5 +173,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: v2.1 milestone COMPLETE — 19/19 phases, 1246 tests passing
-Resume file: None
+Stopped at: Phase 21 P01 complete — GRPO training loop with ReST-style advantages
+Resume file: .planning/phases/21-grpo-rl-finetuning/21-02-PLAN.md

@@ -44,13 +44,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. SFT training completes on Qwen2.5-1.5B with LoRA (fp16 on Apple MPS)
   4. SFT model generates valid PCB reasoning chains on held-out test set
   5. SFT model scores higher than base model on reward model evaluation
-**Plans**: 3 plans
+**Plans**: 3 plans (3/3 complete)
 **Council review gate**: After SFT training, before GRPO
 
 Plans:
-- [ ] 20-01-PLAN.md -- Convert 136K correct chains to ChatML + reward model quality filter (LLM-01, LLM-02)
-- [ ] 20-02-PLAN.md -- TRL SFTTrainer + LoRA training on Qwen2.5-1.5B on Apple MPS (LLM-03, LLM-04)
-- [ ] 20-03-PLAN.md -- SFT evaluation: base vs trained model comparison + eval report (LLM-04)
+- [x] 20-01-PLAN.md -- Convert 136K correct chains to ChatML + reward model quality filter (LLM-01, LLM-02)
+- [x] 20-02-PLAN.md -- TRL SFTTrainer + LoRA training on Qwen2.5-1.5B on Apple MPS (LLM-03, LLM-04)
+- [x] 20-03-PLAN.md -- SFT evaluation: base vs trained model comparison + eval report (LLM-04)
 
 ### Phase 21: GRPO RL Fine-Tuning
 **Goal**: Fine-tune SFT model using GRPO with the trained reward model as critic -- the model learns to generate chains that score highest on (format, quality, accuracy)
@@ -65,7 +65,7 @@ Plans:
 **Council review gate**: After GRPO training, before agent integration
 
 Plans:
-- [ ] 21-01-PLAN.md -- GRPO training loop implementation (generate -> score -> update) (LLM-05, LLM-06)
+- [x] 21-01-PLAN.md -- GRPO training loop implementation (generate -> score -> update) (LLM-05, LLM-06)
 - [ ] 21-02-PLAN.md -- GRPO training run + evaluation + Council review gate (LLM-07, LLM-08)
 
 ### Phase 22: Agent Integration + End-to-End Evaluation
@@ -473,6 +473,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 18. CI/CD Pipeline | 2/2 | Complete | 2026-05-23 |
 | 19. Interactive Routing Suggestions | 3/3 | Complete | 2026-05-24 |
 | 20. SFT Data Preparation + Training Infrastructure | 0/3 | Pending | |
-| 21. GRPO RL Fine-Tuning | 0/2 | Pending | |
+| 21. GRPO RL Fine-Tuning | 1/2 | In Progress | |
 | 22. Agent Integration + End-to-End Evaluation | 0/2 | Pending | |
 | 23. Schematic Repair Operations | 0/4 | Pending | |
