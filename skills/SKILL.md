@@ -31,7 +31,40 @@ Determine the user's intent:
 - **"help"** -- Print available operations from prompt.md. List all 19 operation types with brief descriptions.
 - **"status"** -- Report current project context. Look for KiCad files in the working directory and summarize what was found (schematic, PCB, symbol libs, footprint libs).
 - **"context"** -- Render a project summary. Parse any .kicad_pro file found, list schematics, PCBs, and libraries with component counts.
+- **"analyze <path>"** -- Analyze a KiCad PCB/schematic using the fine-tuned spatial reasoning model. Runs best-of-N generation with reward model scoring and returns the highest-quality reasoning chain.
 - **JSON operation** -- Treat as an operation to execute. Must conform to the operation schema documented in prompt.md.
+
+## Step 2a: Handle analyze request
+
+If the argument starts with "analyze ":
+
+1. Extract the file path from the argument (after "analyze ")
+2. Verify the file exists and has a valid KiCad extension (.kicad_pcb or .kicad_sch)
+3. Run the analysis:
+
+```bash
+cd ~/apps/kicad-agent && python3 -c "
+import json, sys
+from kicad_agent.inference import generate_analysis
+
+result = generate_analysis(sys.argv[1])
+print(json.dumps({
+    'chain_text': result.chain_text,
+    'composite_score': result.composite_score,
+    'format_score': result.format_score,
+    'quality_score': result.quality_score,
+    'accuracy_score': result.accuracy_score,
+    'generation_time_s': result.generation_time_s,
+}, indent=2))
+" '<file_path>'
+```
+
+4. Present the analysis to the user:
+   - Show the reasoning chain text
+   - Show the quality scores (format, quality, accuracy, composite)
+   - Note the generation time
+
+Skip to Step 4 (do not proceed to Step 2/3 for JSON operations).
 
 ## Step 2: Validate the JSON operation
 

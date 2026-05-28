@@ -83,7 +83,9 @@ class TestRunE2EEvaluation:
 
         with patch(
             "kicad_agent.inference.wrapper.InferenceWrapper.analyze"
-        ) as mock_analyze:
+        ) as mock_analyze, patch(
+            "kicad_agent.inference.evaluator.Path.exists", return_value=True,
+        ):
             # First call (single baseline), then second call (best-of-N)
             mock_analyze.side_effect = [single_chain, best_chain]
 
@@ -126,7 +128,9 @@ class TestRunE2EEvaluation:
 
         with patch(
             "kicad_agent.inference.wrapper.InferenceWrapper.analyze"
-        ) as mock_analyze:
+        ) as mock_analyze, patch(
+            "kicad_agent.inference.evaluator.Path.exists", return_value=True,
+        ):
             mock_analyze.side_effect = [single_chain, best_chain]
 
             report = run_e2e_evaluation(

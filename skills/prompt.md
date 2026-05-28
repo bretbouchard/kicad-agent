@@ -1172,6 +1172,216 @@ Create a new symbol definition in a `.kicad_sym` library file. If the library do
 
 ---
 
+### Schematic Repair Operations
+
+#### parse_erc
+
+Parse an ERC (Electrical Rules Check) JSON report and return structured violations.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"parse_erc"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+| `erc_report_path` | string | Path to the ERC JSON report file |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "parse_erc",
+    "target_file": "motor-driver.kicad_sch",
+    "erc_report_path": "erc_report.json"
+  }
+}
+```
+
+---
+
+#### extract_violation_positions
+
+Extract violation positions from an ERC report, filtered by violation type.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"extract_violation_positions"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+| `erc_report_path` | string | Path to the ERC JSON report file |
+| `violation_type` | string | Type of violation to filter (e.g. `"ERC_ERROR"`, `"ERC_WARNING"`) |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "extract_violation_positions",
+    "target_file": "motor-driver.kicad_sch",
+    "erc_report_path": "erc_report.json",
+    "violation_type": "ERC_ERROR"
+  }
+}
+```
+
+---
+
+#### validate_hlabels
+
+Validate that hierarchical labels in sub-sheets match expected labels.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"validate_hlabels"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+| `expected_labels` | array | List of expected label names to verify |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "validate_hlabels",
+    "target_file": "motor-driver.kicad_sch",
+    "expected_labels": ["VCC", "GND", "SDIN", "SDOUT"]
+  }
+}
+```
+
+---
+
+#### convert_kicad6_to_10
+
+Convert a KiCad 5/6 format schematic to KiCad 10 format. Handles header conversion, UUID quoting, legacy element removal, and format fixes.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"convert_kicad6_to_10"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "convert_kicad6_to_10",
+    "target_file": "legacy-schematic.kicad_sch"
+  }
+}
+```
+
+---
+
+#### snap_to_grid
+
+Snap all coordinates in a schematic to the specified grid size.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"snap_to_grid"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+| `grid_size` | float | Grid size in mm (default 0.01, min 0.001) |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "snap_to_grid",
+    "target_file": "motor-driver.kicad_sch",
+    "grid_size": 0.254
+  }
+}
+```
+
+---
+
+#### add_power_flag
+
+Add power flags (PWR_FLAG) to undriven power pins identified by an ERC report.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"add_power_flag"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+| `erc_report_path` | string | Path to the ERC JSON report file |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "add_power_flag",
+    "target_file": "motor-driver.kicad_sch",
+    "erc_report_path": "erc_report.json"
+  }
+}
+```
+
+---
+
+#### place_no_connects_from_erc
+
+Place no-connect markers on unconnected pins identified by an ERC report.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"place_no_connects_from_erc"` |
+| `target_file` | string | Relative path to `.kicad_sch` file |
+| `erc_report_path` | string | Path to the ERC JSON report file |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "place_no_connects_from_erc",
+    "target_file": "motor-driver.kicad_sch",
+    "erc_report_path": "erc_report.json"
+  }
+}
+```
+
+---
+
+#### rebuild_root_sheet
+
+Rebuild root schematic sheet pins from sub-sheet hierarchical labels. Reads all sub-sheets referenced by the root schematic, extracts hierarchical labels, classifies them as input/output/bidirectional, and regenerates sheet pins with correct positioning on LEFT (inputs) or RIGHT (outputs) of each sheet symbol.
+
+**Required fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `op_type` | string | Must be `"rebuild_root_sheet"` |
+| `target_file` | string | Relative path to the root `.kicad_sch` file |
+
+**Example:**
+
+```json
+{
+  "root": {
+    "op_type": "rebuild_root_sheet",
+    "target_file": "motor-driver.kicad_sch"
+  }
+}
+```
+
+**Returns:** List of results per sub-sheet with `sheet_name`, `pins_placed`, `labels_placed`, and `pin_details` including positioning.
+
+---
+
 ## Constraints
 
 All operations must satisfy these constraints. Violations produce clear error messages from the Pydantic validator.
@@ -1308,6 +1518,14 @@ Net names and bus names reject whitespace-only strings. If a name is `"   "` (sp
 | `create_pcb` | new pcb | target_file |
 | `create_project` | new pro | target_file |
 | `create_symbol` | sym | target_file, symbol_name |
+| `parse_erc` | sch | target_file, erc_report_path |
+| `extract_violation_positions` | sch | target_file, erc_report_path, violation_type |
+| `validate_hlabels` | sch | target_file, expected_labels |
+| `convert_kicad6_to_10` | sch | target_file |
+| `snap_to_grid` | sch | target_file, grid_size |
+| `add_power_flag` | sch | target_file, erc_report_path |
+| `place_no_connects_from_erc` | sch | target_file, erc_report_path |
+| `rebuild_root_sheet` | sch | target_file |
 
 ---
 
@@ -1379,3 +1597,31 @@ limit: Maximum suggestions (default: 5)
 1. `search_components("STM32F103")` → get LCSC number + datasheet
 2. `get_component_details("C83700")` → get pin names/types and footprint pads
 3. Use pin data with `create_symbol` to build a KiCad symbol library entry
+
+---
+
+## Analyze Operation
+
+Analyze a KiCad PCB or schematic file using the fine-tuned spatial reasoning model.
+
+**Usage:** `/kicad-agent analyze <path-to-kicad-file>`
+
+**What it does:**
+1. Parses the KiCad file to extract board statistics (components, nets, dimensions)
+2. Constructs a PCB analysis prompt
+3. Generates N reasoning chains (default: 4) using the GRPO-trained model
+4. Scores each chain with the neural reward model (format, quality, accuracy)
+5. Returns the highest-scoring chain
+
+**Output includes:**
+- Coordinate-grounded reasoning chain with `<point x,y>` spatial references
+- Component analysis and connectivity assessment
+- Spatial analysis and routing assessment
+- Quality scores (format, quality, accuracy, composite)
+
+**CLI flags (direct invocation):**
+- `--n-best N`: Number of chains to generate (default: 4, max: 16)
+- `--reward-model DIR`: Explicit reward model directory
+- `--adapter DIR`: Explicit LoRA adapter directory
+- `--max-tokens N`: Max tokens per chain (default: 1024)
+- `--verbose`: Show per-chain scores and timing
