@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -121,3 +122,85 @@ def test_path_traversal_exits_nonzero() -> None:
     result = _run(PATH_TRAVERSAL)
     assert result.returncode != 0
     assert "[ERROR]" in result.stdout or "traversal" in result.stdout.lower() or "traversal" in result.stderr.lower()
+
+
+# ---------------------------------------------------------------------------
+# Analyze subcommand tests (in-process for mocking)
+# ---------------------------------------------------------------------------
+
+
+def _make_mock_result(**overrides) -> MagicMock:
+    """Create a mock ScoredChain-like result for analyze tests."""
+    defaults = dict(
+        chain_text="Observation: Board has 50 components",
+        format_score=0.85,
+        quality_score=0.72,
+        accuracy_score=0.78,
+        composite_score=0.783,
+        generation_time_s=1.2,
+    )
+    defaults.update(overrides)
+    m = MagicMock()
+    for k, v in defaults.items():
+        setattr(m, k, v)
+    return m
+
+
+def test_analyze_subcommand_calls_generate_analysis(tmp_path: Path, capsys) -> None:
+    """`kicad-agent analyze board.kicad_pcb` calls generate_analysis and prints chain."""
+    pcb_file = tmp_path / "board.kicad_pcb"
+    pcb_file.write_text("(kicad_pcb (version 20221018))")
+
+    mock_result = _make_mock_result()
+
+    with patch("kicad_agent.inference.wrapper.generate_analysis", return_value=mock_result) as mock_gen:
+        from kicad_agent.cli import main
+        main(["analyze", str(pcb_file)])
+
+    captured = capsys.readouterr()
+    assert "Observation" in captured.out
+    mock_gen.assert_called_once()
+
+
+def test_analyze_n_best_flag(tmp_path: Path, capsys) -> None:
+    """`kicad-agent analyze board.kicad_pcb --n-best 8` passes n_best=8."""
+    pcb_file = tmp_path / "board.kicad_pcb"
+    pcb_file.write_text("(kicad_pcb (version 20221018))")
+
+    mock_result = _make_mock_result()
+
+    with patch("kicad_agent.inference.wrapper.generate_analysis", return_value=mock_result) as mock_gen:
+        from kicad_agent.cli import main
+        main(["analyze", str(pcb_file), "--n-best", "8"])
+
+    _, call_kwargs = mock_gen.call_args
+    assert call_kwargs.get("n_best") == 8
+
+
+def test_analyze_missing_file_exits_nonzero() -> None:
+    """`kicad-agent analyze missing.kicad_pcb` exits with error code 1."""
+    result = _run("analyze", "/nonexistent/path.kicad_pcb")
+    assert result.returncode != 0
+    assert "not found" in result.stderr.lower() or "error" in result.stderr.lower()
+
+
+def test_analyze_verbose_shows_scores(tmp_path: Path, capsys) -> None:
+    """`kicad-agent analyze board.kicad_pcb --verbose` prints per-chain scores."""
+    pcb_file = tmp_path / "board.kicad_pcb"
+    pcb_file.write_text("(kicad_pcb (version 20221018))")
+
+    mock_result = _make_mock_result(
+        chain_text="Detailed analysis with coordinates",
+        format_score=0.9,
+        quality_score=0.8,
+        accuracy_score=0.7,
+        composite_score=0.8,
+        generation_time_s=1.8,
+    )
+
+    with patch("kicad_agent.inference.wrapper.generate_analysis", return_value=mock_result):
+        from kicad_agent.cli import main
+        main(["analyze", str(pcb_file), "--verbose"])
+
+    captured = capsys.readouterr()
+    assert "Score" in captured.out

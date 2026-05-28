@@ -408,7 +408,7 @@ def _handle_route(argv: list[str]) -> None:
 
 
 def _build_analyze_parser() -> argparse.ArgumentParser:
-    """Parser for the 'analyze' subcommand — local PCB reasoning."""
+    """Parser for the 'analyze' subcommand -- local PCB reasoning."""
     parser = argparse.ArgumentParser(
         prog="kicad-agent analyze",
         description="Analyze a PCB or schematic using the fine-tuned local model.",
@@ -435,11 +435,30 @@ def _build_analyze_parser() -> argparse.ArgumentParser:
         default=1024,
         help="Max generation tokens (default: 1024).",
     )
+    parser.add_argument(
+        "--n-best",
+        type=int,
+        default=4,
+        help="Number of chains for best-of-N selection (default: 4).",
+    )
+    parser.add_argument(
+        "--reward-model",
+        type=Path,
+        default=None,
+        help="Reward model directory (default: training_output/unified).",
+    )
+    parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        help="Print per-chain scores and timing.",
+    )
     return parser
 
 
 def _handle_analyze(argv: list[str]) -> None:
-    """Handle the 'analyze' subcommand."""
+    """Handle the 'analyze' subcommand using generate_analysis with best-of-N."""
+    from kicad_agent.inference.wrapper import generate_analysis
+
     parser = _build_analyze_parser()
     args = parser.parse_args(argv)
 
@@ -447,64 +466,58 @@ def _handle_analyze(argv: list[str]) -> None:
         print(f"Error: file not found: {args.file}", file=sys.stderr)
         sys.exit(1)
 
-    # Parse the file to extract board stats
     file_path = args.file
-    suffix = file_path.suffix.lower()
-    board_name = file_path.stem
-    n_components = 0
-    n_nets = 0
-    n_layers = 4
-    width_mm = 0.0
-    height_mm = 0.0
 
+    # Extract board stats for display header
     try:
-        if suffix == ".kicad_pcb":
-            from kicad_agent.parser.pcb_parser import parse_pcb
-            pcb = parse_pcb(str(file_path.resolve()))
-            n_components = len(pcb.modules)
-            n_nets = len(pcb.nets)
-            # Try to get board dimensions
-            try:
-                from kicad_agent.training.graph_builder import _extract_board_dims
-                width_mm, height_mm = _extract_board_dims(pcb)
-            except Exception:
-                pass
-        elif suffix == ".kicad_sch":
-            from kicad_agent.parser.schematic_parser import parse_schematic
-            sch = parse_schematic(str(file_path.resolve()))
-            comps = sch.get_components()
-            n_components = len(comps)
-            n_nets = len(sch.get_nets())
-    except Exception as e:
-        print(f"Warning: Could not parse file ({e}), using defaults.", file=sys.stderr)
-
-    # Run local inference
-    from kicad_agent.llm.local_client import LocalLLMClient
-
-    client = LocalLLMClient(
-        model=args.model,
-        adapter_dir=args.adapter,
-        max_tokens=args.max_tokens,
-    )
+        from kicad_agent.inference.wrapper import InferenceWrapper
+        stats = InferenceWrapper._extract_board_stats(file_path)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as exc:
+        print(f"Warning: Could not parse file ({exc}), using defaults.", file=sys.stderr)
+        stats = None
 
     print(f"Analyzing {file_path.name}...")
-    print(f"  Components: {n_components}, Nets: {n_nets}, Layers: {n_layers}")
-    if width_mm > 0:
-        print(f"  Board size: {width_mm:.1f} x {height_mm:.1f} mm")
-    print(f"  Model: {client.model}")
-    print(f"  Adapter: {client.adapter_path}")
+    if stats:
+        print(f"  Components: {stats.n_components}, Nets: {stats.n_nets}, Layers: {stats.n_layers}")
+        if stats.width_mm > 0:
+            print(f"  Board size: {stats.width_mm:.1f} x {stats.height_mm:.1f} mm")
+    print(f"  Best-of-N: {args.n_best} chains generated")
     print()
 
-    analysis = client.analyze_board(
-        board_name=board_name,
-        n_components=n_components,
-        n_nets=n_nets,
-        n_layers=n_layers,
-        width_mm=width_mm,
-        height_mm=height_mm,
-        source=str(file_path),
+    # Run inference via generate_analysis
+    try:
+        result = generate_analysis(
+            file_path=str(file_path),
+            model=args.model,
+            adapter_dir=args.adapter,
+            reward_model_dir=args.reward_model,
+            n_best=args.n_best,
+            max_tokens=args.max_tokens,
+        )
+    except FileNotFoundError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    # Print chain text
+    print(result.chain_text)
+    print()
+
+    # Print scores
+    print(
+        f"Score: {result.composite_score:.3f} "
+        f"(format={result.format_score:.2f}, "
+        f"quality={result.quality_score:.2f}, "
+        f"accuracy={result.accuracy_score:.2f})"
     )
-    print(analysis)
+
+    if args.verbose:
+        print(f"  Generation time: {result.generation_time_s:.1f}s")
 
 
 def _handle_component_search(argv: list[str]) -> None:
