@@ -19,17 +19,17 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Net, Reference, and Footprint Operations** - Net CRUD, bus operations, reference management, footprint assignment
 - [x] **Phase 6: Cross-File Operations and Analysis** - Schematic-to-PCB consistency, library propagation, structural diffs, connectivity analysis
 - [x] **Phase 7: GSD Skill Integration** - Claude skill manifest, handler, CLI wrapper, and project context renderer
-- [x] **Phase 8: Visual Primitives for PCB Spatial Reasoning** - AI that points while it reasons — coordinate-grounded DRC, routing guidance, and spatial analysis
+- [x] **Phase 8: Visual Primitives for PCB Spatial Reasoning** - AI that points while it reasons -- coordinate-grounded DRC, routing guidance, and spatial analysis
 - [x] **Phase 9: GRPO Spatial Reasoning Training** - DeepSeek-style RL training with coordinate-grounded reward signals on synthetic PCB maze data
 - [x] **Phase 10: AI-Driven PCB Generation** - Generative AI that creates schematics and PCB layouts from natural language intent, closing the gap from critic to creator
 - [x] **Phase 11: LTspice Integration** - Parse LTspice .asc schematics, extract components/nets/simulation commands, bridge KiCad-LTspice workflows
 - [x] **Phase 12: ADI Footprint Library** - On-demand ADI footprint/symbol download, library management, and manufacturer part integration
 - [x] **Phase 13: Real-World PCB Training Pipeline** - GitHub crawler for KiCad repos, parse schematic+PCB pairs into structured graph datasets for real-world training
-- [x] **Phase 14: Bidirectional KiCad↔LTspice** - KiCad schematic → .asc writer, close the simulation loop for design-simulate-iterate workflows
+- [x] **Phase 14: Bidirectional KiCad-LTspice** - KiCad schematic to .asc writer, close the simulation loop for design-simulate-iterate workflows
 - [x] **Phase 15: AI Generation Wiring** - LLM-driven component suggestion, schematic drafting, design critique, and natural language to operations pipeline
-- [ ] **Phase 16: Component Placement AI** - Predict optimal component placement from schematic netlist using spatial reasoning and training data
+- [x] **Phase 16: Component Placement AI** - Predict optimal component placement from schematic netlist using spatial reasoning and training data (4/4 plans complete)
 - [x] **Phase 17: Package & Distribution** - PyPI publish, CLI entry point, pip install kicad-agent, documentation site (3/3 plans complete)
-- [ ] **Phase 18: CI/CD Pipeline** - GitHub Actions for test suite, linting, coverage gate, and release automation (1/2 plans complete)
+- [x] **Phase 18: CI/CD Pipeline** - GitHub Actions for test suite, linting, coverage gate, and release automation (2/2 plans complete)
 - [x] **Phase 19: Interactive Routing Suggestions** - Use spatial primitives + training data to suggest trace routing on real boards (3/3 plans complete)
 
 ## Phase Details
@@ -53,7 +53,7 @@ Plans:
 - [ ] 20-03-PLAN.md -- SFT evaluation + Council review gate
 
 ### Phase 21: GRPO RL Fine-Tuning
-**Goal**: Fine-tune SFT model using GRPO with the trained reward model as critic — the model learns to generate chains that score highest on (format, quality, accuracy)
+**Goal**: Fine-tune SFT model using GRPO with the trained reward model as critic -- the model learns to generate chains that score highest on (format, quality, accuracy)
 **Depends on**: Phase 20 (SFT baseline), Phase 9 (reward model)
 **Requirements**: LLM-05, LLM-06, LLM-07, LLM-08
 **Success Criteria** (what must be TRUE):
@@ -65,7 +65,7 @@ Plans:
 **Council review gate**: After GRPO training, before agent integration
 
 Plans:
-- [ ] 21-01-PLAN.md -- GRPO training loop implementation (generate → score → update) (LLM-05, LLM-06)
+- [ ] 21-01-PLAN.md -- GRPO training loop implementation (generate -> score -> update) (LLM-05, LLM-06)
 - [ ] 21-02-PLAN.md -- GRPO training run + evaluation + Council review gate (LLM-07, LLM-08)
 
 ### Phase 22: Agent Integration + End-to-End Evaluation
@@ -85,6 +85,27 @@ Plans:
 Plans:
 - [ ] 22-01-PLAN.md -- Inference wrapper + best-of-N + kicad-agent wiring (LLM-09, LLM-10, LLM-11)
 - [ ] 22-02-PLAN.md -- End-to-end evaluation + Council review + documentation (LLM-12)
+
+### Phase 23: Schematic Repair Operations
+**Goal**: 8 schematic manipulation operations discovered from real backplane repair sessions -- ERC parsing, format conversion, mutation repairs, and root sheet generation
+**Depends on**: Phase 10 (schematic repair infrastructure), Phase 3 (validation pipeline)
+**Requirements**: SCHREPAIR-01, SCHREPAIR-02, SCHREPAIR-03, SCHREPAIR-04, SCHREPAIR-05, SCHREPAIR-06, SCHREPAIR-07, SCHREPAIR-08
+**Success Criteria** (what must be TRUE):
+  1. ERC JSON output parses into structured violation list with positions for targeted repair
+  2. Violation positions extractable by type for automated fix workflows
+  3. Hierarchical labels validatable against expected set to catch agent deletion
+  4. KiCad 6 format schematics convert to valid KiCad 10 passing all 9 format checks
+  5. No-connect markers placed at pin_not_connected positions without file corruption
+  6. Power flag symbols placed at power_pin_not_driven positions with correct lib definition
+  7. Off-grid wire endpoints snapped to grid while preserving connectivity
+  8. Root sheet generated from sub-sheet hierarchical labels with correct pin positioning
+**Plans**: 4 plans
+
+Plans:
+- [ ] 23-01-PLAN.md -- ERC parser, violation position extractor, hierarchical label guard (SCHREPAIR-01, SCHREPAIR-02, SCHREPAIR-03)
+- [ ] 23-02-PLAN.md -- KiCad 6 to KiCad 10 format converter with section-based reassembly (SCHREPAIR-04)
+- [ ] 23-03-PLAN.md -- Schematic mutation operations: snap_to_grid, add_power_flag, place_no_connects_from_erc (SCHREPAIR-05, SCHREPAIR-06, SCHREPAIR-07)
+- [ ] 23-04-PLAN.md -- Root sheet generator from sub-sheet hierarchical labels (SCHREPAIR-08)
 
 ### Phase 1: Foundation -- Parse, Serialize, Round-trip
 **Goal**: All four KiCad file types parse into structured AST and serialize back to byte-identical or semantically equivalent output
@@ -326,8 +347,8 @@ Plans:
 - [x] 13-02-PLAN.md -- Schematic+PCB graph parser with spatial feature extraction (RW-02, RW-03)
 - [x] 13-03-PLAN.md -- Dataset normalization, deduplication, and GRPO training format export (RW-04, RW-05)
 
-### Phase 14: Bidirectional KiCad↔LTspice
-**Goal**: Complete the LTspice bridge by adding KiCad → .asc export, enabling design in KiCad, simulate in LTspice, results flow back. Phase 11 reads LTspice; Phase 14 writes to it.
+### Phase 14: Bidirectional KiCad-LTspice
+**Goal**: Complete the LTspice bridge by adding KiCad -> .asc export, enabling design in KiCad, simulate in LTspice, results flow back. Phase 11 reads LTspice; Phase 14 writes to it.
 **Depends on**: Phase 11 (LTspice reader), Phase 2 (operation schema)
 **Requirements**: BIDI-01, BIDI-02, BIDI-03, BIDI-04
 **Success Criteria** (what must be TRUE):
@@ -338,19 +359,19 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [x] 14-01-PLAN.md -- KiCad component → LTspice symbol mapping table and converter (BIDI-02)
+- [x] 14-01-PLAN.md -- KiCad component -> LTspice symbol mapping table and converter (BIDI-02)
 - [x] 14-02-PLAN.md -- .asc writer: KiCad schematic to LTspice .asc export (BIDI-01, BIDI-03)
 - [x] 14-03-PLAN.md -- Simulation command injection and round-trip validation (BIDI-04)
 
 ### Phase 15: AI Generation Wiring
-**Goal**: Wire an actual LLM into the Phase 10 generation pipeline — component suggestions from natural language, schematic drafting from netlists, design critique with spatial reasoning, and iterative refinement loop
+**Goal**: Wire an actual LLM into the Phase 10 generation pipeline -- component suggestions from natural language, schematic drafting from netlists, design critique with spatial reasoning, and iterative refinement loop
 **Depends on**: Phase 10 (generation scaffolding), Phase 8 (spatial primitives)
 **Requirements**: AIGEN-01, AIGEN-02, AIGEN-03, AIGEN-04, AIGEN-05
 **Success Criteria** (what must be TRUE):
   1. Natural language design intent produces a structured GenerationIntent with validated operations
   2. LLM suggests components given a functional description with pin/footprint compatibility checking
   3. Design critique identifies spatial issues (clearance violations, routing congestion, thermal hotspots)
-  4. Iterative refinement loop: generate → validate (ERC/DRC) → LLM fix → repeat until clean
+  4. Iterative refinement loop: generate -> validate (ERC/DRC) -> LLM fix -> repeat until clean
   5. End-to-end demo: "design a voltage regulator circuit" produces a valid .kicad_sch passing ERC
 **Plans**: 4 plans
 
@@ -402,7 +423,7 @@ Plans:
   1. Every PR runs full test suite (917+ tests) with pass/fail gate
   2. Linting (ruff) and type checking (mypy) run on every push
   3. Coverage report generated and 80%+ gate enforced
-  4. Release workflow: tag push → build → test → PyPI publish
+  4. Release workflow: tag push -> build -> test -> PyPI publish
 **Plans**: 2 plans
 
 Plans:
@@ -428,7 +449,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18 -> 19
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18 -> 19 -> 20 -> 21 -> 22 -> 23
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -445,12 +466,13 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 11. LTspice Integration | 3/3 | Complete | 2026-05-23 |
 | 12. ADI Footprint Library | 3/3 | Complete | 2026-05-23 |
 | 13. Real-World PCB Training Pipeline | 3/3 | Complete | 2026-05-23 |
-| 14. Bidirectional KiCad↔LTspice | 3/3 | Complete | 2026-05-24 |
+| 14. Bidirectional KiCad-LTspice | 3/3 | Complete | 2026-05-24 |
 | 15. AI Generation Wiring | 4/4 | Complete | 2026-05-24 |
 | 16. Component Placement AI | 4/4 | Complete | 2026-05-24 |
 | 17. Package & Distribution | 3/3 | Complete | 2026-05-24 |
-| 18. CI/CD Pipeline | 1/2 | In Progress | |
+| 18. CI/CD Pipeline | 2/2 | Complete | 2026-05-23 |
 | 19. Interactive Routing Suggestions | 3/3 | Complete | 2026-05-24 |
 | 20. SFT Data Preparation + Training Infrastructure | 0/3 | Pending | |
 | 21. GRPO RL Fine-Tuning | 0/2 | Pending | |
 | 22. Agent Integration + End-to-End Evaluation | 0/2 | Pending | |
+| 23. Schematic Repair Operations | 0/4 | Pending | |
