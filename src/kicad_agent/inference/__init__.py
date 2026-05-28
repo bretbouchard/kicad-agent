@@ -1,0 +1,16 @@
+"""Inference module -- GRPO model reasoning engine with best-of-N selection.
+
+Usage:
+    from kicad_agent.inference import generate_analysis, InferenceWrapper
+
+    result = generate_analysis("path/to/board.kicad_pcb")
+    print(result.chain_text)
+    print(f"Score: {result.composite_score:.3f}")
+"""
+
+from __future__ import annotations
+
+from kicad_agent.inference.wrapper import InferenceWrapper, generate_analysis
+from kicad_agent.inference.best_of_n import ScoredChain, best_of_n_select
+
+__all__ = ["InferenceWrapper", "generate_analysis", "ScoredChain", "best_of_n_select"]
