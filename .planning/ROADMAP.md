@@ -35,22 +35,22 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 20: SFT Data Preparation + Training Infrastructure
-**Goal**: Convert 15K training chains to instruction format, quality-filter with reward model, and train SFT baseline on Qwen2.5-1.5B with QLoRA
+**Goal**: Convert 136K correct training chains to ChatML instruction format, quality-filter with reward model, and train SFT baseline on Qwen2.5-1.5B with LoRA on Apple MPS
 **Depends on**: Phase 9 (reward model), Phase 13 (real-world training data)
 **Requirements**: LLM-01, LLM-02, LLM-03, LLM-04
 **Success Criteria** (what must be TRUE):
-  1. 15K chains converted to ChatML instruction format with task-specific prompt templates
-  2. Bottom quartile filtered out using reward model scoring (retain ~11K high-quality samples)
-  3. SFT training completes on Qwen2.5-1.5B with QLoRA (4-bit on consumer hardware or MPS)
+  1. 136K correct chains converted to ChatML instruction format with task-specific prompt templates
+  2. Bottom quartile filtered out using reward model scoring (retain ~102K high-quality samples)
+  3. SFT training completes on Qwen2.5-1.5B with LoRA (fp16 on Apple MPS)
   4. SFT model generates valid PCB reasoning chains on held-out test set
   5. SFT model scores higher than base model on reward model evaluation
 **Plans**: 3 plans
 **Council review gate**: After SFT training, before GRPO
 
 Plans:
-- [ ] 20-01-PLAN.md -- Convert 15K chains to ChatML instruction format + reward model quality filter (LLM-01, LLM-02)
-- [ ] 20-02-PLAN.md -- HuggingFace QLoRA training infrastructure + SFT baseline training on Qwen2.5-1.5B (LLM-03, LLM-04)
-- [ ] 20-03-PLAN.md -- SFT evaluation + Council review gate
+- [ ] 20-01-PLAN.md -- Convert 136K correct chains to ChatML + reward model quality filter (LLM-01, LLM-02)
+- [ ] 20-02-PLAN.md -- TRL SFTTrainer + LoRA training on Qwen2.5-1.5B on Apple MPS (LLM-03, LLM-04)
+- [ ] 20-03-PLAN.md -- SFT evaluation: base vs trained model comparison + eval report (LLM-04)
 
 ### Phase 21: GRPO RL Fine-Tuning
 **Goal**: Fine-tune SFT model using GRPO with the trained reward model as critic -- the model learns to generate chains that score highest on (format, quality, accuracy)
