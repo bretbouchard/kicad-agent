@@ -61,7 +61,7 @@ Plans:
   2. Policy updates via PPO-clip with KL divergence penalty
   3. GRPO model achieves >85% discrimination rate (up from 75% SFT baseline)
   4. GRPO model scores higher than SFT on all three reward dimensions
-**Plans**: 2 plans
+**Plans**: 2 plans (2/2 complete)
 **Council review gate**: After GRPO training, before agent integration
 
 Plans:
@@ -83,7 +83,7 @@ Plans:
 **Council review gate**: Final review after integration
 
 Plans:
-- [ ] 22-01-PLAN.md -- Inference wrapper + best-of-N + kicad-agent wiring (LLM-09, LLM-10, LLM-11)
+- [x] 22-01-PLAN.md -- Inference wrapper + best-of-N + kicad-agent wiring (LLM-09, LLM-10, LLM-11)
 - [ ] 22-02-PLAN.md -- End-to-end evaluation + Council review + documentation (LLM-12)
 
 ### Phase 23: Schematic Repair Operations
@@ -474,5 +474,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 19. Interactive Routing Suggestions | 3/3 | Complete | 2026-05-24 |
 | 20. SFT Data Preparation + Training Infrastructure | 3/3 | Complete | 2026-05-26 |
 | 21. GRPO RL Fine-Tuning | 2/2 | Complete | 2026-05-28 |
-| 22. Agent Integration + End-to-End Evaluation | 0/2 | Pending | |
+| 22. Agent Integration + End-to-End Evaluation | 1/2 | In Progress | |
 | 23. Schematic Repair Operations | 0/4 | Pending | |

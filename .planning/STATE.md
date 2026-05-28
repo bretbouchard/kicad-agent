@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: production-ai
 status: in-progress
-stopped_at: "21-02 complete — GRPO evaluator with discrimination test and training reports"
-last_updated: "2026-05-28T07:49:12Z"
+stopped_at: "22-01 complete -- inference wrapper with best-of-N selection and CLI integration"
+last_updated: "2026-05-28T08:08:35Z"
 last_activity: 2026-05-28
 progress:
   total_phases: 23
   completed_phases: 19
   total_plans: 66
-  completed_plans: 68
-  percent: 31
+  completed_plans: 69
+  percent: 32
 ---
 
 # Project State
@@ -26,12 +26,12 @@ Last activity: 2026-05-28
 
 ## Current Position
 
-Phase: 21 of 23 (GRPO RL Fine-Tuning)
-Plan: 2 of 2 complete
-Status: **PHASE COMPLETE**
+Phase: 22 of 23 (Agent Integration + End-to-End Evaluation)
+Plan: 1 of 2 complete
+Status: **IN PROGRESS**
 Last activity: 2026-05-28
 
-Progress: [██████████] 100% (Phase 21)
+Progress: [█████░░░░░] 50% (Phase 22)
 
 ## Performance Metrics
 
@@ -81,6 +81,7 @@ Progress: [██████████] 100% (Phase 21)
 | Phase 19 P03 | 2min | 1 task | 3 files |
 | Phase 21 P01 | 14min | 1 task | 3 files |
 | Phase 21 P02 | 32min | 1 task | 8 files |
+| Phase 22 P01 | 12min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -151,8 +152,11 @@ Recent decisions affecting current work:
 - [Phase 19]: ROUTE-01 through ROUTE-04 requirements added to REQUIREMENTS.md
 - [Phase 21]: GRPOTrainingConfig as frozen dataclass; GRPOLoopTrainer uses min-shift normalization for positive advantage weights
 - [Phase 21]: Lazy mlx/torch imports inside methods (not module-level) for testability without GPU
-- [Phase 21]: Text-level corruption strategies for discrimination test (shuffle, wrong_coords, remove_sentences)
 - [Phase 21]: Used prior successful GRPO run artifacts due to Metal GPU timeout on fresh training attempt
+- [Phase 22]: InferenceWrapper accesses ParseResult.kiutils_obj.footprints (not .modules) for correct kiutils Board API
+- [Phase 22]: Board stats extraction via InferenceWrapper._extract_board_stats() shared by CLI and Python API
+- [Phase 22]: Chains generated sequentially (not batched) to limit MPS peak memory per T-22-04
+- [Phase 22]: n_best capped at 16 to prevent DoS per T-22-02
 
 ### Roadmap Evolution
 
@@ -176,5 +180,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Phase 21 complete — GRPO evaluator with discrimination test and training reports
-Resume file: None (phase complete)
+Stopped at: Phase 22 Plan 1 complete -- inference wrapper with best-of-N selection and CLI integration
+Resume file: None (continue with plan 22-02)
