@@ -20,6 +20,7 @@ import asyncio
 import json
 import logging
 import time
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -250,8 +251,12 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
     except ValueError as e:
         return [types.TextContent(type="text", text=f"Error: {e}")]
     except Exception as e:
-        logger.exception("Tool %s failed", name)
-        return [types.TextContent(type="text", text=f"Internal error: {e}")]
+        correlation_id = str(uuid.uuid4())[:8]
+        logger.exception("Tool %s failed [ref=%s]", name, correlation_id)
+        return [types.TextContent(
+            type="text",
+            text=f"Internal error (ref: {correlation_id}). See server logs for details.",
+        )]
 
 
 # ---------------------------------------------------------------------------

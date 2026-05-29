@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from kicad_agent.generation.intent import GenerationIntent
 from kicad_agent.llm.client import LLMClient
+from kicad_agent.llm.context_builder import ContextBuilder
 from kicad_agent.llm.tools import INTENT_TOOL
 
 if TYPE_CHECKING:
@@ -52,6 +53,9 @@ class IntentParser:
             ValueError: If the LLM does not return a tool_use block.
             pydantic.ValidationError: If the LLM output fails schema validation.
         """
+        # Security (T-24-04): sanitize user input before passing to LLM
+        description = ContextBuilder.sanitize(description)
+
         response = self._client.create_message(
             max_tokens=4096,
             tools=[INTENT_TOOL],

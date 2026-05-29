@@ -386,7 +386,7 @@ def _handle_route(argv: list[str]) -> None:
     # Build and execute auto_route operation
     op_json = json.dumps({
         "op_type": "auto_route",
-        "target_file": str(args.pcb),
+        "target_file": str(args.pcb.resolve().relative_to(Path.cwd())),
         "nets": args.nets,
         "layer": args.layer,
     })

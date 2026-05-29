@@ -12,6 +12,8 @@ Handlers:
 """
 
 import json
+import os
+import tempfile
 import uuid
 from pathlib import Path
 from typing import Any
@@ -33,6 +35,25 @@ from kiutils.symbol import (
 from kiutils.items.common import ColorRGBA
 
 from kicad_agent.serializer import normalize_kicad_output
+
+
+def _atomic_write(file_path: Path, content: str) -> None:
+    """Write content atomically via temp file + rename to prevent TOCTOU races."""
+    fd, tmp_path = tempfile.mkstemp(
+        dir=file_path.parent,
+        prefix=".kicad_",
+        suffix=".tmp",
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        os.rename(tmp_path, str(file_path))
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +130,7 @@ def create_schematic(op: Any, file_path: Path) -> dict[str, Any]:
     # Normalize S-expression formatting
     content = file_path.read_text(encoding="utf-8")
     normalized = normalize_kicad_output(content)
-    file_path.write_text(normalized, encoding="utf-8")
+    _atomic_write(file_path, normalized)
 
     return {
         "target_file": op.target_file,
@@ -198,10 +219,7 @@ def create_project(op: Any, file_path: Path) -> dict[str, Any]:
         "text_variables": {},
     }
 
-    file_path.write_text(
-        json.dumps(project, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    _atomic_write(file_path, json.dumps(project, indent=2) + "\n")
 
     return {
         "target_file": op.target_file,

@@ -30,6 +30,7 @@ Usage::
 
 from pathlib import Path
 from typing import Annotated, Literal, Optional
+import re
 
 from pydantic import BaseModel, BeforeValidator, Field, field_validator
 
@@ -44,11 +45,23 @@ _SAFE_ID_PATTERN = r'^[A-Za-z0-9_\-:.#/]+$'
 
 def _validate_safe_identifier(v: str, field_name: str) -> str:
     """Reject strings containing characters unsafe for S-expression output."""
-    import re
     if not re.match(_SAFE_ID_PATTERN, v):
         raise ValueError(
             f"{field_name} contains unsafe characters. "
             f"Allowed: alphanumeric, underscore, dash, colon, dot, hash, forward slash."
+        )
+    return v
+
+
+_UNSAFE_SEXPR_CHARS = re.compile(r'[\(\)\"\n]')
+
+
+def _validate_sexpr_safe_string(v: str) -> str:
+    """Reject strings containing characters that break S-expression parsing."""
+    if _UNSAFE_SEXPR_CHARS.search(v):
+        raise ValueError(
+            "Value contains unsafe S-expression characters "
+            "(parentheses, quotes, or newlines)"
         )
     return v
 
@@ -200,6 +213,10 @@ class AddComponentOp(BaseModel):
     def _validate_reference(cls, v: str) -> str:
         return _validate_safe_identifier(v, "reference")
 
+    @field_validator("value")
+    @classmethod
+    def _validate_value_sexpr(cls, v: str) -> str:
+        return _validate_sexpr_safe_string(v)
 
 class RemoveComponentOp(BaseModel):
     """Remove a component by reference designator.
@@ -271,6 +288,11 @@ class ModifyPropertyOp(BaseModel):
     @classmethod
     def _validate_property_name(cls, v: str) -> str:
         return _validate_safe_identifier(v, "property_name")
+
+    @field_validator("new_value")
+    @classmethod
+    def _validate_new_value_sexpr(cls, v: str) -> str:
+        return _validate_sexpr_safe_string(v)
 
 
 class DuplicateComponentOp(BaseModel):
@@ -791,6 +813,11 @@ class AddLabelOp(BaseModel):
         description="Shape for global/hierarchical labels (input, output, bidirectional, tri_state, passive)",
     )
 
+    @field_validator("name")
+    @classmethod
+    def _validate_name_sexpr(cls, v: str) -> str:
+        return _validate_sexpr_safe_string(v)
+
 
 class AddPowerOp(BaseModel):
     """Add a power symbol to a schematic (e.g. +5V, GND, +3V3).
@@ -813,6 +840,11 @@ class AddPowerOp(BaseModel):
         description="Power net name (e.g. '+5V', 'GND', '+3V3')",
     )
     position: PositionSpec
+
+    @field_validator("name")
+    @classmethod
+    def _validate_name_sexpr(cls, v: str) -> str:
+        return _validate_sexpr_safe_string(v)
 
 
 class AddNoConnectOp(BaseModel):
@@ -953,6 +985,11 @@ class AddDesignRuleOp(BaseModel):
     )
     constraint_values: dict[str, str] = Field(default_factory=dict)
     condition: str = Field(default="", max_length=512)
+
+    @field_validator("condition")
+    @classmethod
+    def _validate_condition_sexpr(cls, v: str) -> str:
+        return _validate_sexpr_safe_string(v)
 
 
 class RepairSchematicOp(BaseModel):

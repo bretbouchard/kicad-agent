@@ -598,6 +598,14 @@ class OperationExecutor:
         root = op.root
         file_path = self._base_dir / root.target_file
 
+        # Security (T-24-01): path confinement — reject paths that escape project dir
+        resolved = file_path.resolve()
+        base_resolved = self._base_dir.resolve()
+        if not resolved.is_relative_to(base_resolved):
+            raise ValueError(
+                f"Security: path escapes project directory: {root.target_file}"
+            )
+
         # Create operations: file does not exist yet (bypass existence check)
         if root.op_type in _CREATE_OP_TYPES:
             return self._execute_create(op, file_path)
@@ -640,6 +648,14 @@ class OperationExecutor:
         Returns:
             Dict with: success, operation, target_file, details.
         """
+        # Security (T-24-01): path confinement for create operations too
+        resolved = file_path.resolve()
+        base_resolved = self._base_dir.resolve()
+        if not resolved.is_relative_to(base_resolved):
+            raise ValueError(
+                f"Security: path escapes project directory: {op.root.target_file}"
+            )
+
         root = op.root
         handler = _CREATE_HANDLERS.get(root.op_type)
         if handler is None:

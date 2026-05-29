@@ -8,6 +8,7 @@ Uses GitHub Git Tree API (single request per repo) for efficient file listing.
 """
 
 import logging
+import os
 from dataclasses import dataclass
 from typing import Optional
 
@@ -123,15 +124,21 @@ class GithubDiscovery:
     and extracts schematic+PCB file pairs from repo trees.
     """
 
-    def __init__(self, token: str) -> None:
+    def __init__(self, token: str = "") -> None:
         """Initialize with a GitHub personal access token.
 
         Args:
-            token: GitHub PAT with public_repo scope. Never logged.
+            token: GitHub PAT with public_repo scope. If empty, reads from
+                   GITHUB_TOKEN environment variable on each access.
         """
-        self._token = token
-        self._client = Github(auth=Auth.Token(token))
+        self._init_token = token
+        self._client = Github(auth=Auth.Token(token or os.environ.get("GITHUB_TOKEN", "")))
         self._rate_limiter = RateLimiter(self._client)
+
+    @property
+    def _token(self) -> str:
+        """Read GitHub token from environment to avoid persistent storage."""
+        return self._init_token or os.environ.get("GITHUB_TOKEN", "")
 
     def discover_repos(
         self,

@@ -625,9 +625,10 @@ def _strip_library_metadata(sexp: str) -> str:
 
 def _inject_lib_id(sexp: str, lib_id: str) -> str:
     """Replace the footprint's lib_id in the (footprint "LIB:NAME" ...) S-expression."""
+    safe = _escape_sexpr_value(lib_id)
     return re.sub(
         r'^\(footprint "([^"]*)"',
-        f'(footprint "{lib_id}"',
+        f'(footprint "{safe}"',
         sexp,
         count=1,
     )
@@ -661,9 +662,10 @@ def _inject_at_position(sexp: str, at_sexp: str) -> str:
 
 def _inject_layer(sexp: str, layer: str) -> str:
     """Replace the (layer "...") in the footprint S-expression."""
+    safe = _escape_sexpr_value(layer)
     return re.sub(
         r'^\t\(layer "[^"]*"\)',
-        f'\t(layer "{layer}")',
+        f'\t(layer "{safe}")',
         sexp,
         count=1,
         flags=re.MULTILINE,
@@ -722,11 +724,12 @@ def _inject_pad_net(sexp: str, pad_number: str, net_name: str) -> Optional[str]:
         pad_block = sexp[pad_start:pad_end + 1]
 
         # Check if pad already has a net assignment
+        safe_net = _escape_sexpr_value(net_name)
         if '(net ' in pad_block:
             # Replace existing net
             new_pad = re.sub(
                 r'\(net "[^"]*"\)',
-                f'(net "{net_name}")',
+                f'(net "{safe_net}")',
                 pad_block,
                 count=1,
             )
@@ -734,7 +737,7 @@ def _inject_pad_net(sexp: str, pad_number: str, net_name: str) -> Optional[str]:
             # Insert net before the closing paren
             # Strip trailing whitespace, remove closing ), then add net + closing
             trimmed = pad_block.rstrip()
-            new_pad = trimmed[:-1] + f'\n\t\t(net "{net_name}")\n\t)'
+            new_pad = trimmed[:-1] + f'\n\t\t(net "{safe_net}")\n\t)'
 
         return sexp[:pad_start] + new_pad + sexp[pad_end + 1:]
 
