@@ -39,6 +39,10 @@ dev = [
 llm = [
     "anthropic>=0.61.0",
 ]
+local = [
+    "mlx-lm>=0.20",
+    "huggingface_hub>=0.20",
+]
 mcp = [
     "mcp>=1.0.0",
 ]

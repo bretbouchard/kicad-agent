@@ -20,10 +20,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from kicad_agent.llm.client import LLMClient
 from kicad_agent.llm.context_builder import ContextBuilder
+
+if TYPE_CHECKING:
+    from kicad_agent.llm.backend import LLMBackend
 
 
 # ---------------------------------------------------------------------------
@@ -217,8 +220,12 @@ class DesignCritic:
         model: Optional model override for LLMClient.
     """
 
-    def __init__(self, model: str | None = None) -> None:
-        self._client = LLMClient(model=model)
+    def __init__(
+        self,
+        model: str | None = None,
+        client: LLMBackend | None = None,
+    ) -> None:
+        self._client = client or LLMClient(model=model)
 
     def critique(
         self,

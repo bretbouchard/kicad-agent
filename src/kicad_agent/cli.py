@@ -34,7 +34,7 @@ from pathlib import Path
 from kicad_agent.handler import format_result, handle_operation, validate_operation
 from kicad_agent.ops.schema import get_operation_schema
 
-_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search"}
+_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats"}
 
 
 def _build_operation_parser() -> argparse.ArgumentParser:
@@ -526,6 +526,51 @@ def _handle_component_search(argv: list[str]) -> None:
     mcp_main()
 
 
+def _handle_ai_stats(argv: list[str]) -> None:
+    """Handle the 'ai-stats' subcommand — show local-first AI intervention metrics."""
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent ai-stats",
+        description="Show local-first AI intervention metrics and training gaps.",
+    )
+    parser.add_argument(
+        "--dir",
+        type=Path,
+        default=Path(".kicad_agent_tracking"),
+        help="Tracking data directory (default: .kicad_agent_tracking)",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output raw JSON instead of formatted report.",
+    )
+    args = parser.parse_args(argv)
+
+    if not args.dir.exists():
+        print(f"No tracking data found at {args.dir}", file=sys.stderr)
+        print("Run some LLM operations with KICAD_AGENT_LLM_MODE=local_first first.", file=sys.stderr)
+        sys.exit(1)
+
+    from kicad_agent.ai_tracking.tracker import InterventionTracker
+    from kicad_agent.ai_tracking.gap_analyzer import GapAnalyzer
+    from kicad_agent.ai_tracking.stats import format_stats_report
+
+    tracker = InterventionTracker(directory=args.dir)
+    events = tracker.query()
+
+    if not events:
+        print("No intervention events recorded yet.", file=sys.stderr)
+        sys.exit(0)
+
+    analyzer = GapAnalyzer()
+    report = analyzer.analyze(events)
+
+    if args.json:
+        import dataclasses
+        print(json.dumps(dataclasses.asdict(report), indent=2, default=str))
+    else:
+        print(format_stats_report(report))
+
+
 def main(argv: list[str] | None = None) -> None:
     """Entry point for the kicad-agent CLI."""
     if argv is None:
@@ -551,6 +596,8 @@ def main(argv: list[str] | None = None) -> None:
             _handle_analyze(subcmd_argv)
         elif subcmd == "component-search":
             _handle_component_search(subcmd_argv)
+        elif subcmd == "ai-stats":
+            _handle_ai_stats(subcmd_argv)
         return
 
     # Legacy operation mode

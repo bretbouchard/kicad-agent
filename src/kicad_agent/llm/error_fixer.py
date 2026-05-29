@@ -15,10 +15,13 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from kicad_agent.llm.client import LLMClient
 from kicad_agent.ops.schema import get_operation_schema
+
+if TYPE_CHECKING:
+    from kicad_agent.llm.backend import LLMBackend
 
 logger = logging.getLogger(__name__)
 
@@ -82,8 +85,12 @@ class ErrorFixer:
         model: Optional model override for the LLM client.
     """
 
-    def __init__(self, model: str | None = None) -> None:
-        self._client = LLMClient(model=model)
+    def __init__(
+        self,
+        model: str | None = None,
+        client: LLMBackend | None = None,
+    ) -> None:
+        self._client = client or LLMClient(model=model)
 
     def fix(
         self,

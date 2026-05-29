@@ -78,6 +78,8 @@ def llm_generate(
     intent_parser: Any | None = None,
     design_critic: Any | None = None,
     error_fixer: Any | None = None,
+    llm_mode: str | None = None,
+    confidence_threshold: float | None = None,
 ) -> LLMGenerationResult:
     """Execute the full LLM generation pipeline: NL -> KiCad project.
 
@@ -92,6 +94,10 @@ def llm_generate(
     accepts injected components (intent_parser, design_critic, error_fixer)
     for testability.
 
+    When ``llm_mode`` is set (or ``KICAD_AGENT_LLM_MODE`` env var is set),
+    a HybridLLMClient is created and wired to all stages, enabling local-first
+    inference with cloud fallback.
+
     Args:
         description: Natural language circuit description.
         output_dir: Parent directory for the generated project.
@@ -102,19 +108,27 @@ def llm_generate(
         intent_parser: Optional IntentParser instance (creates fresh if None).
         design_critic: Optional DesignCritic instance (creates fresh if None).
         error_fixer: Optional ErrorFixer instance (creates fresh if None).
+        llm_mode: Optional LLM mode override: "local_first", "cloud_only", "local_only".
+        confidence_threshold: Optional confidence threshold for local-to-cloud fallback.
 
     Returns:
         LLMGenerationResult with all intermediate outputs and accumulated errors.
     """
     errors: list[str] = []
 
+    # --- Resolve LLM backend ---
+    hybrid_client = _resolve_hybrid_client(llm_mode, confidence_threshold)
+
     # --- Stage 1: Intent Parsing ---
     intent = None
     try:
         if intent_parser is None:
-            from kicad_agent.llm.intent_parser import IntentParser
-
-            intent_parser = IntentParser()
+            if hybrid_client is not None:
+                from kicad_agent.llm.unified_parsers import UnifiedIntentParser
+                intent_parser = UnifiedIntentParser(hybrid_client)
+            else:
+                from kicad_agent.llm.intent_parser import IntentParser
+                intent_parser = IntentParser()
 
         intent = intent_parser.parse(description)
         logger.info("Parsed intent: %s", intent.name)
@@ -173,11 +187,17 @@ def llm_generate(
         pcb_path = generation_result.pcb_path
 
         if sch_path is not None and sch_path.exists():
+            # Wire error fixer through hybrid client
+            fixer = error_fixer
+            if fixer is None and hybrid_client is not None:
+                from kicad_agent.llm.unified_parsers import UnifiedErrorFixer
+                fixer = UnifiedErrorFixer(hybrid_client)
+
             refinement_result = llm_refine_design(
                 sch_path,
                 pcb_path=pcb_path,
                 max_iterations=max_refinement_iterations,
-                error_fixer=error_fixer,
+                error_fixer=fixer,
             )
             if refinement_result.final_erc_pass:
                 erc_passed = True
@@ -194,9 +214,13 @@ def llm_generate(
     if run_critique and generation_result.pcb_path is not None and generation_result.pcb_path.exists():
         try:
             if design_critic is None:
-                from kicad_agent.llm.design_critic import DesignCritic
-
-                design_critic = DesignCritic()
+                critic_client = hybrid_client  # will be None for pure cloud
+                if critic_client is not None:
+                    from kicad_agent.llm.design_critic import DesignCritic
+                    design_critic = DesignCritic(client=critic_client)
+                else:
+                    from kicad_agent.llm.design_critic import DesignCritic
+                    design_critic = DesignCritic()
 
             # Parse PCB and build spatial data
             from kicad_agent.parser import parse_pcb
@@ -264,6 +288,53 @@ def llm_generate(
         evaluation_result=evaluation_result,
         errors=tuple(errors),
     )
+
+
+# ---------------------------------------------------------------------------
+# Hybrid client resolution
+# ---------------------------------------------------------------------------
+
+
+def _resolve_hybrid_client(
+    llm_mode: str | None,
+    confidence_threshold: float | None,
+) -> Any | None:
+    """Create a HybridLLMClient if local inference is configured.
+
+    Returns None if neither llm_mode nor KICAD_AGENT_LLM_MODE is set,
+    preserving the existing cloud-only behavior.
+    """
+    import os
+
+    env_mode = os.environ.get("KICAD_AGENT_LLM_MODE", "").strip().lower()
+    mode = llm_mode or env_mode or ""
+
+    if not mode:
+        return None
+
+    try:
+        from kicad_agent.ai_tracking.tracker import InterventionTracker
+        from kicad_agent.llm.backend import HybridLLMClient
+
+        tracker = InterventionTracker()
+
+        kwargs: dict[str, Any] = {
+            "fallback_mode": mode,
+            "tracker": tracker,
+        }
+        if confidence_threshold is not None:
+            kwargs["confidence_threshold"] = confidence_threshold
+
+        client = HybridLLMClient(**kwargs)
+        logger.info(
+            "HybridLLMClient created: mode=%s, threshold=%.2f",
+            client.fallback_mode,
+            client.confidence_threshold,
+        )
+        return client
+    except Exception as exc:
+        logger.warning("Could not create HybridLLMClient: %s", exc)
+        return None
 
 
 # ---------------------------------------------------------------------------

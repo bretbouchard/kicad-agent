@@ -10,9 +10,14 @@ Security (threat model):
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from kicad_agent.generation.intent import GenerationIntent
 from kicad_agent.llm.client import LLMClient
 from kicad_agent.llm.tools import INTENT_TOOL
+
+if TYPE_CHECKING:
+    from kicad_agent.llm.backend import LLMBackend
 
 
 class IntentParser:
@@ -23,10 +28,16 @@ class IntentParser:
 
     Args:
         model: Optional model override. If None, uses LLMClient default.
+        client: Optional LLMBackend instance. If provided, used instead of
+                creating a new LLMClient (enables hybrid local/cloud).
     """
 
-    def __init__(self, model: str | None = None) -> None:
-        self._client = LLMClient(model=model)
+    def __init__(
+        self,
+        model: str | None = None,
+        client: LLMBackend | None = None,
+    ) -> None:
+        self._client = client or LLMClient(model=model)
 
     def parse(self, description: str) -> GenerationIntent:
         """Convert a natural language circuit description to a GenerationIntent.
