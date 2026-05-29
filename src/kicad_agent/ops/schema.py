@@ -442,76 +442,6 @@ class RenameNetOp(BaseModel):
         return v
 
 
-class AddBusOp(BaseModel):
-    """Add a bus to a schematic with member nets.
-
-    Attributes:
-        op_type: Discriminator literal ``"add_bus"``.
-        target_file: Relative path to the target KiCad schematic file (H-01 validated).
-        bus_name: Bus name.
-        member_nets: List of net names that belong to this bus.
-    """
-
-    op_type: Literal["add_bus"] = "add_bus"
-    target_file: TargetFile
-    bus_name: str = Field(
-        min_length=1,
-        max_length=64,
-        description="Bus name",
-    )
-    member_nets: list[str] = Field(
-        min_length=1,
-        max_length=32,
-        description="Member net names (1-32 members)",
-    )
-
-    @field_validator("bus_name")
-    @classmethod
-    def _reject_whitespace_only(cls, v: str) -> str:
-        if v.strip() == "":
-            raise ValueError("Bus name must not be whitespace-only")
-        return v
-
-    @field_validator("member_nets")
-    @classmethod
-    def _validate_member_nets(cls, v: list[str]) -> list[str]:
-        for i, net in enumerate(v):
-            if len(net) > 64:
-                raise ValueError(
-                    f"Member net at index {i} exceeds 64 characters"
-                )
-            if net.strip() == "" and len(net) > 0:
-                raise ValueError(
-                    f"Member net at index {i} must not be whitespace-only"
-                )
-        return v
-
-
-class RemoveBusOp(BaseModel):
-    """Remove a bus from a schematic.
-
-    Attributes:
-        op_type: Discriminator literal ``"remove_bus"``.
-        target_file: Relative path to the target KiCad schematic file (H-01 validated).
-        bus_name: Bus name to remove.
-    """
-
-    op_type: Literal["remove_bus"] = "remove_bus"
-    target_file: TargetFile
-    bus_name: str = Field(
-        min_length=1,
-        max_length=64,
-        description="Bus name to remove",
-    )
-
-    @field_validator("bus_name")
-    @classmethod
-    def _reject_whitespace_only(cls, v: str) -> str:
-        if v.strip() == "":
-            raise ValueError("Bus name must not be whitespace-only")
-        return v
-
-
 class RenumberRefsOp(BaseModel):
     """Renumber component references with configurable prefix and sequencing.
 
@@ -1452,8 +1382,6 @@ class Operation(BaseModel):
         | AddNetOp
         | RemoveNetOp
         | RenameNetOp
-        | AddBusOp
-        | RemoveBusOp
         | RenumberRefsOp
         | ValidateRefsOp
         | AnnotateOp

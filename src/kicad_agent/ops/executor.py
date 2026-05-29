@@ -82,6 +82,41 @@ def register_create(op_type: str) -> Callable:
 
 
 # ---------------------------------------------------------------------------
+# Shared handler helpers
+# ---------------------------------------------------------------------------
+
+
+def _validate_footprint_impl(footprint_lib_id: str, file_path: Path) -> dict[str, Any]:
+    """Validate that a footprint exists in the available libraries.
+
+    Parses the fp-lib-table to resolve the library nickname and checks
+    if the footprint .kicad_mod file exists on disk.
+
+    Args:
+        footprint_lib_id: Footprint library reference, e.g. "Library:Footprint".
+        file_path: Path to the target KiCad file (used to locate fp-lib-table).
+
+    Returns:
+        Dict with footprint_lib_id, valid (bool), and library_path or error.
+    """
+    from kicad_agent.lib_resolver import resolve_footprint_path
+
+    try:
+        resolved = resolve_footprint_path(footprint_lib_id, file_path)
+        return {
+            "footprint_lib_id": footprint_lib_id,
+            "valid": True,
+            "library_path": str(resolved),
+        }
+    except (ValueError, FileNotFoundError) as exc:
+        return {
+            "footprint_lib_id": footprint_lib_id,
+            "valid": False,
+            "error": str(exc),
+        }
+
+
+# ---------------------------------------------------------------------------
 # Schematic handler implementations
 # ---------------------------------------------------------------------------
 
@@ -179,7 +214,7 @@ def _handle_sch_swap_footprint(op: Any, ir: SchematicIR, file_path: Path) -> dic
 
 @register_schematic("validate_footprint")
 def _handle_sch_validate_footprint(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    return {"footprint_lib_id": op.footprint_lib_id, "valid": True}
+    return _validate_footprint_impl(op.footprint_lib_id, file_path)
 
 
 @register_schematic("verify_pin_map")
@@ -223,16 +258,6 @@ def _handle_add_no_connect(op: Any, ir: SchematicIR, file_path: Path) -> dict[st
 @register_schematic("add_junction")
 def _handle_add_junction(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     return ir.add_junction(x=op.position.x, y=op.position.y)
-
-
-@register_schematic("add_bus")
-def _handle_add_bus(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    raise NotImplementedError("Bus operations not yet implemented")
-
-
-@register_schematic("remove_bus")
-def _handle_remove_bus(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    raise NotImplementedError("Bus operations not yet implemented")
 
 
 @register_schematic("repair_schematic")
@@ -384,7 +409,7 @@ def _handle_pcb_rename_net(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any
 
 @register_pcb("validate_footprint")
 def _handle_pcb_validate_footprint(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
-    return {"footprint_lib_id": op.footprint_lib_id, "valid": True}
+    return _validate_footprint_impl(op.footprint_lib_id, file_path)
 
 
 @register_pcb("add_copper_zone")
