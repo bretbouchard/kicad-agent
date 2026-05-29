@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: complete-ops
 status: in-progress
-stopped_at: "Roadmap created for v2.2 complete-ops -- phases 25-29 defined"
-last_updated: "2026-05-29T12:00:00Z"
+stopped_at: "Completed 25-01 (remove operation schemas & dispatch)"
+last_updated: "2026-05-29T18:56:13Z"
 last_activity: 2026-05-29
 progress:
   total_phases: 29
   completed_phases: 24
   total_plans: 76
-  completed_plans: 71
-  percent: 93
+  completed_plans: 72
+  percent: 95
 ---
 
 # Project State
@@ -27,11 +27,11 @@ Last activity: 2026-05-29
 ## Current Position
 
 Phase: 25 of 29 (Remove Operations)
-Plan: 0 of 2 started
-Status: **Ready to plan**
-Last activity: 2026-05-29 -- Roadmap created for v2.2 complete-ops milestone
+Plan: 1 of 2 started
+Status: **In progress**
+Last activity: 2026-05-29 -- Completed 25-01 (remove operation schemas & dispatch)
 
-Progress: [█████████░] 93% (24/29 phases complete, 5 phases remaining)
+Progress: [█████████░] 95% (24/29 phases complete, 5 phases remaining)
 
 ## Performance Metrics
 
@@ -74,5 +74,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Roadmap created for v2.2 complete-ops (phases 25-29), ready to plan Phase 25
-Resume file: None
+Stopped at: Completed 25-01 (remove operation schemas & dispatch), next: 25-02
+Resume file: .planning/phases/25-remove-operations/25-02-PLAN.md

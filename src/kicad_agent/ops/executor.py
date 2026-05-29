@@ -366,22 +366,26 @@ def _handle_swap_symbol(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, 
 
 @register_schematic("remove_wire")
 def _handle_remove_wire(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    raise NotImplementedError("Handler not yet implemented (Plan 25-02)")
+    from kicad_agent.ops.remove_ops import remove_wire
+    return remove_wire(op, ir, file_path, file_path.parent)
 
 
 @register_schematic("remove_label")
 def _handle_remove_label(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    raise NotImplementedError("Handler not yet implemented (Plan 25-02)")
+    from kicad_agent.ops.remove_ops import remove_label
+    return remove_label(op, ir, file_path, file_path.parent)
 
 
 @register_schematic("remove_junction")
 def _handle_remove_junction(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    raise NotImplementedError("Handler not yet implemented (Plan 25-02)")
+    from kicad_agent.ops.remove_ops import remove_junction
+    return remove_junction(op, ir, file_path, file_path.parent)
 
 
 @register_schematic("remove_no_connect")
 def _handle_remove_no_connect(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    raise NotImplementedError("Handler not yet implemented (Plan 25-02)")
+    from kicad_agent.ops.remove_ops import remove_no_connect
+    return remove_no_connect(op, ir, file_path, file_path.parent)
 
 
 # ---------------------------------------------------------------------------
