@@ -3,7 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/kicad-agent.svg)](https://pypi.org/project/kicad-agent/)
 [![Python versions](https://img.shields.io/pypi/pyversions/kicad-agent.svg)](https://pypi.org/project/kicad-agent/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-918+-green.svg)]()
+[![Tests](https://img.shields.io/badge/tests-1382+-green.svg)]()
 
 Structural editing of KiCad schematic, PCB, symbol library, and footprint files. The LLM never directly edits KiCad files — it emits structured JSON intents, and the Python backend mutates the AST, serializes valid output, and validates via ERC/DRC gates.
 
@@ -41,6 +41,7 @@ kicad-agent solves this with **constrained structural editing** — the AI emits
 - `kicad-agent analyze` — local PCB analysis, no API key needed
 - AI wiring and net routing
 - Component placement with attention-based model
+- Schematic repair operations: ERC parsing, KiCad 6→10 conversion, automated no-connect/power-flag placement, grid snapping, root sheet generation
 - Package distribution (PyPI, docs site)
 - CI/CD pipeline
 
@@ -210,7 +211,7 @@ The skill routes natural language requests through the Python backend — Claude
 
 ## Operations Reference
 
-39 operations across 6 categories:
+47 operations across 6 categories:
 
 ### Component Operations
 
@@ -230,13 +231,6 @@ The skill routes natural language requests through the Python backend — Claude
 | `add_net` | pcb | Add a named or auto-named net |
 | `remove_net` | pcb | Remove a net and disconnect all pads |
 | `rename_net` | pcb | Rename a net across all connected pads |
-
-### Bus Operations
-
-| Operation | Files | Description |
-|-----------|-------|-------------|
-| `add_bus` | sch | Add a bus with member nets |
-| `remove_bus` | sch | Remove a bus from the schematic |
 
 ### Reference Operations
 
@@ -264,6 +258,17 @@ The skill routes natural language requests through the Python backend — Claude
 | `create_pcb` | new pcb | Create a new empty PCB |
 | `create_project` | new pro | Create a new KiCad project file |
 | `create_symbol` | new sym | Create a symbol definition in a library |
+
+### Schematic Repair Operations
+
+| Operation | Files | Description |
+|-----------|-------|-------------|
+| `parse_erc` | sch | Parse kicad-cli ERC JSON output into structured violation list with positions |
+| `extract_violation_positions` | sch | Extract (x,y) positions for specific ERC violation types (pin_not_connected, power_pin_not_driven, etc.) |
+| `validate_hlabels` | sch | Verify hierarchical labels match expected set to catch agent deletion |
+| `convert_kicad6_to_10` | sch | Convert KiCad 5/6 format schematics to KiCad 10 (headers, UUID quoting, stroke format, 13 fixes) |
+| `snap_to_grid` | sch | Move off-grid wire endpoints to nearest grid point while preserving connectivity |
+| `add_power_flag` | sch | Place PWR_FLAG symbols at power_pin_not_driven positions with correct lib definition |
 
 ### Example: Add a Component
 
@@ -307,7 +312,7 @@ LLM / CLI
 +-------------+     +-------------+     +-------------+     +-------------+
 |   Parser     |---->|     IR      |---->|   Ops       |---->|  Serializer |
 |              |     |             |     |             |     |             |
-| S-expression |     | Intermediate|     | 39 atomic   |     | Valid KiCad |
+| S-expression |     | Intermediate|     | 47 atomic   |     | Valid KiCad |
 | -> AST       |     | representation   | operations  |     | S-expression|
 |              |     | + mutation  |     | + executor  |     | + normalize |
 | 4 file types |     | tracking    |     |             |     |             |
@@ -329,7 +334,7 @@ LLM / CLI
 |--------|---------|
 | `kicad_agent.parser` | Parse KiCad files into structured AST (schematic, PCB, symbol, footprint) |
 | `kicad_agent.ir` | Intermediate representation with mutation tracking and transactions |
-| `kicad_agent.ops` | 39 operation handlers, Pydantic schema, operation executor |
+| `kicad_agent.ops` | 47 operation handlers, Pydantic schema, operation executor |
 | `kicad_agent.serializer` | Write valid KiCad files with UUID re-injection and normalization |
 | `kicad_agent.validation` | ERC/DRC gates via kicad-cli, structural validation, round-trip checks |
 | `kicad_agent.analysis` | Net connectivity graph analysis via networkx |
@@ -402,7 +407,7 @@ One of the training sources is DeepSeek's paper on spatial reasoning — the met
 # Install with dev dependencies
 pip install ".[dev]"
 
-# Run tests (918+ tests)
+# Run tests (1382+ tests)
 pytest
 
 # Run with coverage
@@ -417,7 +422,7 @@ mypy src/
 
 ## Project Status
 
-v2.0 complete. v2.1 (production-ai) phases 13-22 complete. 918+ tests passing.
+v2.0 complete. v2.1 (production-ai) phases 13-22 complete. v2.2 (schematic repair) Phase 23 complete. 1382+ tests passing.
 
 | Phase | Description | Status |
 |-------|-------------|--------|
@@ -437,6 +442,7 @@ v2.0 complete. v2.1 (production-ai) phases 13-22 complete. 918+ tests passing.
 | 20 | SFT fine-tuning (data prep + mlx-lm LoRA training) | Complete |
 | 21 | GRPO RL fine-tuning (ReST rejection sampling) | Complete |
 | 22 | Agent integration (local inference, `analyze` CLI) | Complete |
+| 23 | Schematic repair operations (ERC parsing, format conversion, automated fixes, root sheet generation) | Complete |
 
 ## License
 

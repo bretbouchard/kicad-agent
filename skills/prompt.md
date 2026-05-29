@@ -380,62 +380,6 @@ Rename a net, propagating to all connected pads.
 
 ---
 
-### Bus Operations
-
-#### add_bus
-
-Add a bus to a schematic with member nets.
-
-**Required fields:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `op_type` | string | Must be `"add_bus"` |
-| `target_file` | string | Relative path to KiCad schematic file (`.kicad_sch`) |
-| `bus_name` | string | Bus name (1-64 chars) |
-| `member_nets` | array | List of net names that belong to this bus (1-32 members, each max 64 chars) |
-
-**Example:**
-
-```json
-{
-  "root": {
-    "op_type": "add_bus",
-    "target_file": "motor-driver.kicad_sch",
-    "bus_name": "SPI_BUS",
-    "member_nets": ["SPI_MOSI", "SPI_MISO", "SPI_SCK", "SPI_CS"]
-  }
-}
-```
-
----
-
-#### remove_bus
-
-Remove a bus from a schematic.
-
-**Required fields:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `op_type` | string | Must be `"remove_bus"` |
-| `target_file` | string | Relative path to KiCad schematic file |
-| `bus_name` | string | Bus name to remove (1-64 chars) |
-
-**Example:**
-
-```json
-{
-  "root": {
-    "op_type": "remove_bus",
-    "target_file": "motor-driver.kicad_sch",
-    "bus_name": "SPI_BUS"
-  }
-}
-```
-
----
-
 ### Reference Operations
 
 #### renumber_refs
@@ -1249,7 +1193,6 @@ Parse an ERC (Electrical Rules Check) JSON report and return structured violatio
 |-------|------|-------------|
 | `op_type` | string | Must be `"parse_erc"` |
 | `target_file` | string | Relative path to `.kicad_sch` file |
-| `erc_report_path` | string | Path to the ERC JSON report file |
 
 **Example:**
 
@@ -1257,8 +1200,7 @@ Parse an ERC (Electrical Rules Check) JSON report and return structured violatio
 {
   "root": {
     "op_type": "parse_erc",
-    "target_file": "motor-driver.kicad_sch",
-    "erc_report_path": "erc_report.json"
+    "target_file": "motor-driver.kicad_sch"
   }
 }
 ```
@@ -1275,7 +1217,6 @@ Extract violation positions from an ERC report, filtered by violation type.
 |-------|------|-------------|
 | `op_type` | string | Must be `"extract_violation_positions"` |
 | `target_file` | string | Relative path to `.kicad_sch` file |
-| `erc_report_path` | string | Path to the ERC JSON report file |
 | `violation_type` | string | Type of violation to filter (e.g. `"ERC_ERROR"`, `"ERC_WARNING"`) |
 
 **Example:**
@@ -1285,7 +1226,6 @@ Extract violation positions from an ERC report, filtered by violation type.
   "root": {
     "op_type": "extract_violation_positions",
     "target_file": "motor-driver.kicad_sch",
-    "erc_report_path": "erc_report.json",
     "violation_type": "ERC_ERROR"
   }
 }
@@ -1345,7 +1285,7 @@ Convert a KiCad 5/6 format schematic to KiCad 10 format. Handles header conversi
 
 #### snap_to_grid
 
-Snap all coordinates in a schematic to the specified grid size.
+Snap all coordinates in a schematic to the specified grid.
 
 **Required fields:**
 
@@ -1353,7 +1293,12 @@ Snap all coordinates in a schematic to the specified grid size.
 |-------|------|-------------|
 | `op_type` | string | Must be `"snap_to_grid"` |
 | `target_file` | string | Relative path to `.kicad_sch` file |
-| `grid_size` | float | Grid size in mm (default 0.01, min 0.001) |
+
+**Optional fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `grid_mm` | float | `0.01` | Grid spacing in mm (min > 0, max 100) |
 
 **Example:**
 
@@ -1362,7 +1307,7 @@ Snap all coordinates in a schematic to the specified grid size.
   "root": {
     "op_type": "snap_to_grid",
     "target_file": "motor-driver.kicad_sch",
-    "grid_size": 0.254
+    "grid_mm": 0.254
   }
 }
 ```
@@ -1371,7 +1316,7 @@ Snap all coordinates in a schematic to the specified grid size.
 
 #### add_power_flag
 
-Add power flags (PWR_FLAG) to undriven power pins identified by an ERC report.
+Add power flags (PWR_FLAG) to undriven power pins.
 
 **Required fields:**
 
@@ -1379,7 +1324,6 @@ Add power flags (PWR_FLAG) to undriven power pins identified by an ERC report.
 |-------|------|-------------|
 | `op_type` | string | Must be `"add_power_flag"` |
 | `target_file` | string | Relative path to `.kicad_sch` file |
-| `erc_report_path` | string | Path to the ERC JSON report file |
 
 **Example:**
 
@@ -1387,34 +1331,7 @@ Add power flags (PWR_FLAG) to undriven power pins identified by an ERC report.
 {
   "root": {
     "op_type": "add_power_flag",
-    "target_file": "motor-driver.kicad_sch",
-    "erc_report_path": "erc_report.json"
-  }
-}
-```
-
----
-
-#### place_no_connects_from_erc
-
-Place no-connect markers on unconnected pins identified by an ERC report.
-
-**Required fields:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `op_type` | string | Must be `"place_no_connects_from_erc"` |
-| `target_file` | string | Relative path to `.kicad_sch` file |
-| `erc_report_path` | string | Path to the ERC JSON report file |
-
-**Example:**
-
-```json
-{
-  "root": {
-    "op_type": "place_no_connects_from_erc",
-    "target_file": "motor-driver.kicad_sch",
-    "erc_report_path": "erc_report.json"
+    "target_file": "motor-driver.kicad_sch"
   }
 }
 ```
@@ -1469,8 +1386,6 @@ All operations must satisfy these constraints. Violations produce clear error me
 | `property_name` | 1 | 128 |
 | `new_value` | 0 | 1024 |
 | `net_name` | 0 | 64 |
-| `bus_name` | 1 | 64 |
-| `member_nets` items | 0 | 64 |
 | `footprint_lib_id` | 1 | 256 |
 | `prefix` / `prefix_filter` | 0 | 16 |
 
@@ -1484,7 +1399,6 @@ All operations must satisfy these constraints. Violations produce clear error me
 
 - `duplicate_component.count`: 1-100
 - `array_replicate.count`: 1-100
-- `add_bus.member_nets`: 1-32 items
 
 ---
 
@@ -1535,7 +1449,7 @@ If execution fails after validation passes, the error includes:
 
 ### Net name validation
 
-Net names and bus names reject whitespace-only strings. If a name is `"   "` (spaces only), the validator raises a clear error. Empty string `""` for `add_net.net_name` triggers auto-generation.
+Net names reject whitespace-only strings. If a name is `"   "` (spaces only), the validator raises a clear error. Empty string `""` for `add_net.net_name` triggers auto-generation.
 
 ---
 
@@ -1552,8 +1466,6 @@ Net names and bus names reject whitespace-only strings. If a name is `"   "` (sp
 | `add_net` | pcb | target_file |
 | `remove_net` | pcb | target_file, net_name |
 | `rename_net` | pcb | target_file, old_name, new_name |
-| `add_bus` | sch | target_file, bus_name, member_nets |
-| `remove_bus` | sch | target_file, bus_name |
 | `renumber_refs` | sch | target_file |
 | `validate_refs` | sch | target_file |
 | `annotate` | sch | target_file |
@@ -1583,13 +1495,12 @@ Net names and bus names reject whitespace-only strings. If a name is `"   "` (sp
 | `create_pcb` | new pcb | target_file |
 | `create_project` | new pro | target_file |
 | `create_symbol` | sym | target_file, symbol_name |
-| `parse_erc` | sch | target_file, erc_report_path |
-| `extract_violation_positions` | sch | target_file, erc_report_path, violation_type |
+| `parse_erc` | sch | target_file |
+| `extract_violation_positions` | sch | target_file, violation_type |
 | `validate_hlabels` | sch | target_file, expected_labels |
 | `convert_kicad6_to_10` | sch | target_file |
-| `snap_to_grid` | sch | target_file, grid_size |
-| `add_power_flag` | sch | target_file, erc_report_path |
-| `place_no_connects_from_erc` | sch | target_file, erc_report_path |
+| `snap_to_grid` | sch | target_file, grid_mm |
+| `add_power_flag` | sch | target_file |
 | `rebuild_root_sheet` | sch | target_file |
 | `embed_symbol` | sch | target_file, lib_id, library_path |
 | `swap_symbol` | sch | target_file, reference, new_lib_id |

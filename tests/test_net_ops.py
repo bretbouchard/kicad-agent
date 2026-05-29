@@ -1,7 +1,7 @@
-"""Tests for net and bus operation schema validation and IR mutation methods.
+"""Tests for net operation schema validation and IR mutation methods.
 
 Tests cover:
-  - Schema validation for AddNetOp, RemoveNetOp, RenameNetOp, AddBusOp, RemoveBusOp
+  - Schema validation for AddNetOp, RemoveNetOp, RenameNetOp
   - PcbIR net CRUD operations (add, remove, rename, query)
   - SchematicIR label and bus accessors
 """
@@ -13,9 +13,7 @@ from kicad_agent.ir.base import _clear_registry
 from kicad_agent.ir.pcb_ir import PcbIR
 from kicad_agent.ir.schematic_ir import SchematicIR
 from kicad_agent.ops.schema import (
-    AddBusOp,
     AddNetOp,
-    RemoveBusOp,
     RemoveNetOp,
     RenameNetOp,
     Operation,
@@ -58,29 +56,6 @@ def _make_rename_net_op(**overrides) -> Operation:
         "target_file": "board.kicad_pcb",
         "old_name": "VCC",
         "new_name": "3V3",
-    }
-    data.update(overrides)
-    return Operation.model_validate({"root": data})
-
-
-def _make_add_bus_op(**overrides) -> Operation:
-    """Create a valid AddBusOp Operation."""
-    data = {
-        "op_type": "add_bus",
-        "target_file": "schematic.kicad_sch",
-        "bus_name": "DATA_BUS",
-        "member_nets": ["D0", "D1", "D2"],
-    }
-    data.update(overrides)
-    return Operation.model_validate({"root": data})
-
-
-def _make_remove_bus_op(**overrides) -> Operation:
-    """Create a valid RemoveBusOp Operation."""
-    data = {
-        "op_type": "remove_bus",
-        "target_file": "schematic.kicad_sch",
-        "bus_name": "DATA_BUS",
     }
     data.update(overrides)
     return Operation.model_validate({"root": data})
@@ -142,27 +117,6 @@ class TestRenameNetOpSchema:
         assert op.root.new_name == "3V3"
 
 
-class TestAddBusOpSchema:
-    """AddBusOp schema validation."""
-
-    def test_validates(self) -> None:
-        """Test 5: AddBusOp validates with bus_name and member_nets."""
-        op = _make_add_bus_op()
-        assert op.root.op_type == "add_bus"
-        assert op.root.bus_name == "DATA_BUS"
-        assert op.root.member_nets == ["D0", "D1", "D2"]
-
-
-class TestRemoveBusOpSchema:
-    """RemoveBusOp schema validation."""
-
-    def test_validates(self) -> None:
-        """Test 6: RemoveBusOp validates with bus_name."""
-        op = _make_remove_bus_op()
-        assert op.root.op_type == "remove_bus"
-        assert op.root.bus_name == "DATA_BUS"
-
-
 class TestSchemaValidation:
     """Edge cases and cross-cutting validation."""
 
@@ -190,7 +144,7 @@ class TestSchemaValidation:
         """Test 10: get_operation_schema() includes all five new types."""
         schema = get_operation_schema()
         schema_str = str(schema)
-        for op_name in ("AddNetOp", "RemoveNetOp", "RenameNetOp", "AddBusOp", "RemoveBusOp"):
+        for op_name in ("AddNetOp", "RemoveNetOp", "RenameNetOp"):
             assert op_name in schema_str, f"{op_name} missing from schema export"
 
 
