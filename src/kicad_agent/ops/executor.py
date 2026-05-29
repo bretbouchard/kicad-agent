@@ -399,6 +399,24 @@ def _handle_remove_no_connect(op: Any, ir: SchematicIR, file_path: Path) -> dict
     return remove_no_connect(op, ir, file_path, file_path.parent)
 
 
+@register_schematic("add_sheet")
+def _handle_add_sheet(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.sheet_ops import add_sheet
+    return add_sheet(op, ir, file_path)
+
+
+@register_schematic("add_sheet_pin")
+def _handle_add_sheet_pin(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.sheet_ops import add_sheet_pin
+    return add_sheet_pin(op, ir, file_path)
+
+
+@register_schematic("navigate_hierarchy")
+def _handle_navigate_hierarchy(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.sheet_ops import navigate_hierarchy
+    return navigate_hierarchy(op, ir, file_path)
+
+
 # ---------------------------------------------------------------------------
 # PCB handler implementations
 # ---------------------------------------------------------------------------

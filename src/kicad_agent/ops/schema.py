@@ -248,6 +248,11 @@ from kicad_agent.ops._schema_repair import (  # noqa: E402
     RebuildRootSheetOp,
     SwapSymbolOp,
 )
+from kicad_agent.ops._schema_sheet import (  # noqa: E402
+    AddSheetOp,
+    AddSheetPinOp,
+    NavigateSheetsOp,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -315,6 +320,9 @@ class Operation(BaseModel):
         | RemoveLabelOp
         | RemoveJunctionOp
         | RemoveNoConnectOp
+        | AddSheetOp
+        | AddSheetPinOp
+        | NavigateSheetsOp
         | QueryConnectivityOp
         | CreateFootprintOp,
         Field(discriminator="op_type"),
@@ -406,6 +414,10 @@ __all__ = [
     "AddPowerFlagOp",
     "RebuildRootSheetOp",
     "SwapSymbolOp",
+    # Sheet ops
+    "AddSheetOp",
+    "AddSheetPinOp",
+    "NavigateSheetsOp",
     # Query ops
     "QueryConnectivityOp",
     # Union and helpers

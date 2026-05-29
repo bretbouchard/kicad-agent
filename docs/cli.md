@@ -20,7 +20,7 @@ The operation argument can be either an inline JSON string or a path to a JSON f
 
 ### `--schema`
 
-Print the complete operation JSON Schema and exit. The schema defines all 19 operation types, their required and optional fields, value constraints, and validation rules.
+Print the complete operation JSON Schema and exit. The schema defines all 46 operation types, their required and optional fields, value constraints, and validation rules.
 
 ```bash
 kicad-agent --schema

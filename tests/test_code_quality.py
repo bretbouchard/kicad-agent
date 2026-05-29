@@ -67,6 +67,7 @@ class TestSchemaSplit:
             "auto_route",
             "create_schematic", "create_pcb", "create_project",
             "create_symbol", "embed_symbol", "swap_symbol",
+            "add_sheet", "add_sheet_pin", "navigate_hierarchy",
         }
         assert expected_ops.issubset(op_types), (
             f"Missing op_types: {expected_ops - op_types}"
@@ -80,10 +81,10 @@ class TestSchemaSplit:
         assert "properties" in schema or "$defs" in schema
 
     def test_submodules_exist(self) -> None:
-        """12 _schema_*.py sub-modules exist."""
+        """13 _schema_*.py sub-modules exist."""
         submods = sorted(SCHEMA_DIR.glob("_schema_*.py"))
-        assert len(submods) == 12, (
-            f"Expected 12 sub-modules, found {len(submods)}: "
+        assert len(submods) == 13, (
+            f"Expected 13 sub-modules, found {len(submods)}: "
             f"{[p.name for p in submods]}"
         )
 
