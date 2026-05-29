@@ -40,7 +40,7 @@ from pydantic import BaseModel, BeforeValidator, Field, field_validator
 # ---------------------------------------------------------------------------
 
 # Safe characters for KiCad identifiers: alphanumeric, underscore, dash, colon, dot, hash
-_SAFE_ID_PATTERN = r'^[A-Za-z0-9_\-:.#/]+$'
+_SAFE_ID_PATTERN = r'^[A-Za-z0-9_\-:.#+/]+$'
 
 
 def _validate_safe_identifier(v: str, field_name: str) -> str:
@@ -253,6 +253,9 @@ from kicad_agent.ops._schema_sheet import (  # noqa: E402
     AddSheetPinOp,
     NavigateSheetsOp,
 )
+from kicad_agent.ops._schema_crossfile import (  # noqa: E402
+    PropagateSymbolChangeOp,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -324,7 +327,8 @@ class Operation(BaseModel):
         | AddSheetPinOp
         | NavigateSheetsOp
         | QueryConnectivityOp
-        | CreateFootprintOp,
+        | CreateFootprintOp
+        | PropagateSymbolChangeOp,
         Field(discriminator="op_type"),
     ]
 
@@ -420,6 +424,8 @@ __all__ = [
     "NavigateSheetsOp",
     # Query ops
     "QueryConnectivityOp",
+    # Cross-file ops
+    "PropagateSymbolChangeOp",
     # Union and helpers
     "Operation",
     "get_operation_schema",

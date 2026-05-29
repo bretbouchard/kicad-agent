@@ -20,6 +20,8 @@ import logging
 from pathlib import Path
 from typing import Any, Callable
 
+from kicad_agent.crossfile.atomic import AtomicOperation
+from kicad_agent.ir.base import _clear_registry
 from kicad_agent.ir.pcb_ir import PcbIR
 from kicad_agent.ir.schematic_ir import SchematicIR
 from kicad_agent.ir.transaction import Transaction
@@ -48,6 +50,12 @@ _CREATE_HANDLERS: dict[str, Callable] = {}
 
 # Query handlers: (op, PcbIR, file_path) -> dict -- read-only, no Transaction, no serialization
 _QUERY_HANDLERS: dict[str, Callable] = {}
+
+# Cross-file handlers: (op, dict[Path, BaseIR], base_dir) -> dict
+_CROSSFILE_HANDLERS: dict[str, Callable] = {}
+
+# Set of op_types that use cross-file dispatch path
+_CROSS_FILE_OP_TYPES = {"propagate_symbol_change"}
 
 # Set of op_types that create new files (bypass file-existence check)
 _CREATE_OP_TYPES = {"create_schematic", "create_pcb", "create_project", "create_symbol", "create_footprint"}
@@ -89,6 +97,14 @@ def register_query(op_type: str) -> Callable:
     """Decorator to register a read-only query operation handler."""
     def decorator(fn: Callable) -> Callable:
         _QUERY_HANDLERS[op_type] = fn
+        return fn
+    return decorator
+
+
+def register_crossfile(op_type: str) -> Callable:
+    """Decorator to register a cross-file operation handler."""
+    def decorator(fn: Callable) -> Callable:
+        _CROSSFILE_HANDLERS[op_type] = fn
         return fn
     return decorator
 
@@ -654,6 +670,33 @@ def _handle_query_connectivity(op: Any, ir: PcbIR, file_path: Path) -> dict[str,
 
 
 # ---------------------------------------------------------------------------
+# Cross-file handler implementations
+# ---------------------------------------------------------------------------
+
+
+@register_crossfile("propagate_symbol_change")
+def _handle_propagate_symbol_change(
+    op: Any, ir_map: dict[Path, Any], base_dir: Path
+) -> dict[str, Any]:
+    from kicad_agent.crossfile.propagation import (
+        propagate_footprint_ref,
+        propagate_symbol_ref,
+    )
+    from kicad_agent.ir.pcb_ir import PcbIR
+    from kicad_agent.ir.schematic_ir import SchematicIR
+
+    results = []
+    for file_path, ir in ir_map.items():
+        if isinstance(ir, SchematicIR):
+            result = propagate_symbol_ref(ir, op.old_lib_id, op.new_lib_id)
+            results.append({"file": str(file_path.name), "type": "schematic", "updated": result.updated_count})
+        elif isinstance(ir, PcbIR):
+            result = propagate_footprint_ref(ir, op.old_lib_id, op.new_lib_id)
+            results.append({"file": str(file_path.name), "type": "pcb", "updated": result.updated_count})
+    return {"files_modified": results, "total_updated": sum(r["updated"] for r in results)}
+
+
+# ---------------------------------------------------------------------------
 # Executor class
 # ---------------------------------------------------------------------------
 
@@ -698,6 +741,10 @@ class OperationExecutor:
                 f"Security: path escapes project directory: {root.target_file}"
             )
 
+        # Cross-file operations: coordinate multiple files atomically
+        if root.op_type in _CROSS_FILE_OP_TYPES:
+            return self._execute_cross_file(op, file_path)
+
         # Create operations: file does not exist yet (bypass existence check)
         if root.op_type in _CREATE_OP_TYPES:
             return self._execute_create(op, file_path)
@@ -710,7 +757,6 @@ class OperationExecutor:
             return self._execute_query(op, file_path)
 
         # Clear IR registry to avoid stale registrations across operations
-        from kicad_agent.ir.base import _clear_registry
         _clear_registry()
 
         # Branch on file type
@@ -962,3 +1008,82 @@ class OperationExecutor:
         if handler is not None:
             return handler(op, file_path)
         raise ValueError(f"Unknown project op_type: {op_type!r}")
+
+    def _execute_cross_file(self, op: Operation, file_path: Path) -> dict[str, Any]:
+        """Execute a cross-file operation targeting multiple files atomically."""
+        root = op.root
+
+        # Resolve all target file paths relative to base_dir
+        file_paths = self._resolve_cross_file_paths(root)
+        if not file_paths:
+            raise ValueError(f"Cross-file operation {root.op_type!r} requires at least one target file")
+
+        # Security (T-24-01): path confinement for ALL files in cross-file operation
+        base_resolved = self._base_dir.resolve()
+        for fp in file_paths:
+            if not fp.resolve().is_relative_to(base_resolved):
+                raise ValueError(
+                    f"Security: path escapes project directory in cross-file op: {fp}"
+                )
+            if not fp.exists():
+                raise FileNotFoundError(f"Cross-file target not found: {fp}")
+
+        # Clear IR registry to avoid stale registrations
+        _clear_registry()
+
+        # Phase 1: Parse all files and build IR map (XFILE-07: validate before Transaction)
+        ir_map: dict[Path, Any] = {}
+        for fp in file_paths:
+            if fp.suffix == ".kicad_pcb":
+                parse_result = parse_pcb(fp)
+                uuid_map = extract_uuids(parse_result.raw_content, "pcb")
+                ir_map[fp] = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
+            elif fp.suffix == ".kicad_sch":
+                parse_result = parse_schematic(fp)
+                ir_map[fp] = SchematicIR(_parse_result=parse_result)
+            else:
+                raise ValueError(f"Cross-file operation unsupported file type: {fp.suffix}")
+
+        # Phase 2: Open AtomicOperation and execute handler
+        with AtomicOperation(file_paths) as atomic:
+            handler = _CROSSFILE_HANDLERS.get(root.op_type)
+            if handler is None:
+                raise ValueError(f"Unknown cross-file op_type: {root.op_type!r}")
+
+            details = handler(root, ir_map, self._base_dir)
+
+            # Phase 3: Serialize all dirty IRs
+            for fp, ir in ir_map.items():
+                if ir.dirty:
+                    if isinstance(ir, PcbIR):
+                        parse_result = ir._parse_result
+                        uuid_map = ir.uuid_map
+                        if not ir._raw_written:
+                            serialize_pcb(parse_result, fp, uuid_map=uuid_map)
+                    elif isinstance(ir, SchematicIR):
+                        serialize_schematic(ir._parse_result, fp)
+                        content = fp.read_text(encoding="utf-8")
+                        normalized = normalize_kicad_output(content)
+                        fp.write_text(normalized, encoding="utf-8")
+
+            # Phase 4: Commit atomic operation
+            atomic_result = atomic.commit()
+            if not atomic_result.success:
+                return {
+                    "success": False,
+                    "operation": root.op_type,
+                    "details": details,
+                    "error": atomic_result.error,
+                }
+
+        return {
+            "success": True,
+            "operation": root.op_type,
+            "details": details,
+        }
+
+    def _resolve_cross_file_paths(self, op: Any) -> list[Path]:
+        """Resolve file paths from a cross-file operation schema."""
+        if hasattr(op, "target_files"):
+            return [self._base_dir / tf for tf in op.target_files]
+        return []
