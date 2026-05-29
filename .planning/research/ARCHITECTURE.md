@@ -1,688 +1,399 @@
-# Architecture Research
+# Architecture: complete-ops Milestone (v2.2)
 
-**Domain:** KiCad automation agent (structural S-expression editing via AI-safe operations)
-**Researched:** 2026-05-17
-**Confidence:** HIGH
+**Domain:** Integration architecture for 5 feature gaps in existing kicad-agent
+**Researched:** 2026-05-29
+**Confidence:** HIGH (direct codebase analysis, no external dependencies)
 
----
+## Executive Summary
 
-## System Overview
+The existing kicad-agent follows a strict pipeline: **Parser -> IR -> Operation Handler -> Serializer -> Transaction**. Every operation flows through the executor, which dispatches by `op_type` to registered handlers using one of four registries (`_SCHEMATIC_HANDLERS`, `_PCB_HANDLERS`, `_PROJECT_HANDLERS`, `_CREATE_HANDLERS`). Each handler receives the appropriate IR object and returns a dict. All mutations are wrapped in `Transaction` for rollback safety.
 
-```
-+-------------------------------------------------------------------+
-|                        GSD Skill Layer                             |
-|   Claude Code skill at ~/.claude/skills/kicad-agent/               |
-|   Invoked via /kicad-agent from any KiCad project                  |
-+-------+---------------------------+-------------------------------+
-        |                           |
-        v                           v
-+-------------------+   +------------------------+
-| Operation Schema  |   |  Result Renderer        |
-| (JSON intent API) |   |  (diff, summary, ERC/DRC|
-| AddComponent,     |   |   report formatting)    |
-| DeleteNet, etc.   |   +------------------------+
-+-------+-----------+
-        |
-        v
-+-------------------------------------------------------------------+
-|                     Intermediate Representation (IR)               |
-|   Canonical Python dataclasses: Component, Net, Pin, Sheet, Bus,  |
-|   Footprint, Placement, Constraint, Hierarchy                     |
-|   Bidirectional: KiCad S-expr <--> IR <--> Operation intent       |
-+-------+---------------------------+-------------------------------+
-        |                           |
-        v                           v
-+-------------------+   +------------------------+
-|  Parser Layer     |   |  Serializer Layer       |
-|  kiutils primary  |   |  kiutils to_sexpr()     |
-|  sexpdata fallback|   |  sexpdata dumps()        |
-|  for edge cases   |   |  for raw patching        |
-+-------+-----------+   +-----------+------------+
-        |                           |
-        v                           v
-+-------------------------------------------------------------------+
-|                        KiCad Files on Disk                         |
-|   .kicad_sch  .kicad_pcb  .kicad_sym  .kicad_mod                 |
-+---------------------------------+---------------------------------+
-                                  |
-                                  v
-+-------------------------------------------------------------------+
-|                     Validation Pipeline                            |
-|   kicad-cli erc  |  kicad-cli drc  |  kicad-cli drc --erc        |
-|   Structural: round-trip fidelity, UUID integrity, net consistency|
-|   Every edit must pass ALL gates before committing changes        |
-+-------------------------------------------------------------------+
-```
+The 5 new features fit into this pipeline with varying degrees of disruption. Two features (remove operations, connectivity query) are straightforward additions to existing registries. Two features (hierarchical sheets, footprint creation) require new schema sub-modules and handler modules but no pipeline changes. One feature (cross-file wiring) is the most complex because it requires a new execution path in the executor that coordinates multiple files atomically.
 
-### Why This Architecture
+No new IR layer is needed for any feature. The existing `SchematicIR` already wraps kiutils `Schematic` which has `sheets` and `sheetInstances` attributes. The existing `FootprintIR` wraps kiutils `Footprint`. The existing `PcbIR` and `NetGraph` provide everything connectivity queries need.
 
-The core insight is that the LLM must never produce or modify raw S-expressions. The architecture enforces this by inserting two insulating layers between the AI and the file system:
+## Recommended Architecture
 
-1. **Operation Schema** -- The LLM emits structured JSON intents, not text. Each intent is validated against a schema before any mutation occurs.
-
-2. **IR Layer** -- The parser converts KiCad S-expressions into canonical Python objects. Mutations happen on these objects, not on text. The serializer converts them back. This guarantees structural validity at every step.
-
-kiutils provides the heavy lifting for parsing and serialization because it already understands KiCad's data model (dataclasses with `from_sexpr()` / `to_sexpr()`). sexpdata serves as a fallback for edge cases kiutils cannot handle (custom or future KiCad syntax). networkx provides graph analysis for net connectivity, dependency ordering, and change impact analysis.
-
----
-
-## Component Responsibilities
-
-| Component | Responsibility | Implementation |
-|-----------|----------------|----------------|
-| **GSD Skill** | Entry point for Claude Code invocations; skill manifest + prompt template at `~/.claude/skills/kicad-agent/` | YAML manifest + Markdown prompt |
-| **Operation Schema** | Defines the JSON operation format the LLM emits; validates intents before execution | Pydantic models, JSON Schema |
-| **Operation Router** | Dispatches validated operations to the correct IR mutator; handles operation composition and transactions | Python dispatcher pattern |
-| **IR Layer** | Canonical Python dataclass representation of KiCad entities; bidirectional mapping to/from S-expressions | Python dataclasses, `@dataclass` |
-| **Parser Layer** | Converts KiCad S-expression files into IR objects; handles all file types | kiutils (primary), sexpdata (fallback) |
-| **Serializer Layer** | Converts IR objects back to valid KiCad S-expression files; preserves ordering and formatting | kiutils `to_sexpr()` (primary) |
-| **Mutator Layer** | Applies operations to IR objects; enforces invariants (UUID uniqueness, ref uniqueness, net consistency) | Pure functions on IR dataclasses |
-| **Validation Pipeline** | Runs ERC, DRC, structural checks after every mutation; rejects changes that fail any gate | kicad-cli subprocess + Python checks |
-| **Diff Engine** | Produces structural diffs between original and modified files; syntax-aware, not line-based | difftastic (external), fallback to custom S-expr differ |
-| **Graph Analyzer** | Net connectivity analysis, dependency graphs, change impact analysis | networkx directed graphs |
-| **Result Renderer** | Formats results (diffs, summaries, error reports) for return to the LLM | Python string formatting |
-
----
-
-## Recommended Project Structure
+### Data Flow (Unchanged Pipeline)
 
 ```
-~/apps/kicad-agent/
-+-- pyproject.toml                  # Project metadata, dependencies, entry points
-+-- src/
-|   +-- kicad_agent/
-|       +-- __init__.py
-|       +-- schema/                 # Operation schema definitions
-|       |   +-- __init__.py
-|       |   +-- operations.py       # Pydantic models for all operation types
-|       |   +-- types.py            # Shared types (FileRef, ComponentRef, NetRef, etc.)
-|       |   +-- validators.py       # Pre-mutation validation rules
-|       +-- ir/                     # Intermediate representation
-|       |   +-- __init__.py
-|       |   +-- schematic.py        # Schematic IR: Component, Net, Pin, Sheet, Bus, Label
-|       |   +-- pcb.py              # PCB IR: Footprint, Pad, Trace, Via, Zone
-|       |   +-- library.py          # Library IR: Symbol, FootprintLib
-|       |   +-- common.py           # Shared IR: Position, UUID, Property, Constraint
-|       |   +-- mapping.py          # Bidirectional S-expr <--> IR converters
-|       +-- parser/                 # File parsing
-|       |   +-- __init__.py
-|       |   +-- schematic_parser.py # .kicad_sch parsing via kiutils
-|       |   +-- pcb_parser.py       # .kicad_pcb parsing via kiutils
-|       |   +-- symbol_parser.py    # .kicad_sym parsing via kiutils
-|       |   +-- footprint_parser.py # .kicad_mod parsing via kiutils
-|       |   +-- raw_parser.py       # sexpdata fallback for edge cases
-|       +-- serializer/             # File serialization
-|       |   +-- __init__.py
-|       |   +-- schematic_ser.py    # IR -> .kicad_sch
-|       |   +-- pcb_ser.py          # IR -> .kicad_pcb
-|       |   +-- symbol_ser.py       # IR -> .kicad_sym
-|       |   +-- footprint_ser.py    # IR -> .kicad_mod
-|       +-- mutator/                # IR mutation operations
-|       |   +-- __init__.py
-|       |   +-- component_ops.py    # add, delete, duplicate, array, move components
-|       |   +-- net_ops.py          # add, delete, reroute nets, bus operations
-|       |   +-- footprint_ops.py    # assign, swap, validate footprints
-|       |   +-- reference_ops.py    # renumber, validate, cross-reference
-|       |   +-- hierarchy_ops.py    # hierarchical sheet operations
-|       |   +-- transaction.py      # Transaction wrapper (commit/rollback)
-|       +-- validation/             # Validation pipeline
-|       |   +-- __init__.py
-|       |   +-- erc.py              # ERC via kicad-cli
-|       |   +-- drc.py              # DRC via kicad-cli
-|       |   +-- structural.py       # UUID integrity, ref uniqueness, net consistency
-|       |   +-- roundtrip.py        # Parse-serialize-parse identity check
-|       |   +-- pipeline.py         # Orchestrates all validation gates
-|       +-- analysis/               # Graph and diff analysis
-|       |   +-- __init__.py
-|       |   +-- connectivity.py     # Net connectivity graph (networkx)
-|       |   +-- dependency.py       # Component dependency ordering
-|       |   +-- impact.py           # Change impact analysis
-|       |   +-- differ.py           # Structural S-expression diffing
-|       +-- skill/                  # GSD Skill integration
-|       |   +-- __init__.py
-|       |   +-- handler.py          # Main entry point called by Claude Code
-|       |   +-- renderer.py         # Result formatting for LLM consumption
-|       |   +-- context.py          # Project context detection and loading
-|       +-- utils/                  # Shared utilities
-|           +-- __init__.py
-|           +-- sexpr_helpers.py    # S-expression manipulation helpers
-|           +-- file_utils.py       # File I/O, backup, atomic writes
-|           +-- errors.py           # Custom exception hierarchy
-+-- tests/
-|   +-- conftest.py                 # Shared fixtures, test KiCad files
-|   +-- fixtures/                   # Sample .kicad_sch, .kicad_pcb files for testing
-|   +-- test_schema/
-|   +-- test_ir/
-|   +-- test_parser/
-|   +-- test_serializer/
-|   +-- test_mutator/
-|   +-- test_validation/
-|   +-- test_analysis/
-|   +-- test_roundtrip/             # Critical: parse -> modify -> serialize -> parse
-+-- skills/                         # GSD Skill definition
-    +-- kicad-agent/
-        +-- manifest.yaml           # Skill metadata
-        +-- prompt.md               # System prompt template
+LLM JSON -> Operation (Pydantic validate) -> OperationExecutor.execute()
+    -> [branch by file type]
+    -> Parse file -> Build IR -> Transaction wraps handler call
+    -> Handler mutates IR -> Serialize -> Normalize -> Commit
 ```
 
-### Structure Rationale
+No pipeline changes needed for any of the 5 features. The executor's existing 4-registry dispatch pattern accommodates all of them.
 
-- **`schema/` first** -- The operation schema is the contract between LLM and tool layer. Everything else depends on it. Build it first, validate it independently.
+### Component Boundaries
 
-- **`ir/` second** -- The IR layer is the heart of the system. Once schema defines what operations exist, IR defines what they operate on. The `mapping.py` module handles bidirectional conversion between kiutils objects and IR dataclasses.
+| Component | Responsibility | Status |
+|-----------|---------------|--------|
+| `ops/_schema_sheet.py` | NEW: Pydantic models for sheet ops (add_sheet, add_sheet_pin) | Must create |
+| `ops/sheet_ops.py` | NEW: Handler implementations for sheet operations | Must create |
+| `ops/_schema_wire.py` | MODIFIED: Add RemoveWireOp, RemoveLabelOp, RemoveJunctionOp | Extend existing |
+| `ops/_schema_create.py` | MODIFIED: Add CreateFootprintOp | Extend existing |
+| `ops/create_file.py` | MODIFIED: Add create_footprint handler | Extend existing |
+| `ops/_schema_query.py` | NEW: Pydantic model for connectivity query | Must create |
+| `ops/connectivity_query.py` | NEW: Handler that wraps NetGraph.from_pcb_ir | Must create |
+| `ops/executor.py` | MODIFIED: Wire new handlers, add _CROSS_FILE_OPS path | Extend existing |
+| `ops/schema.py` | MODIFIED: Import and re-export new Op classes | Extend existing |
+| `ir/schematic_ir.py` | MODIFIED: Add remove_wire, remove_label, remove_junction methods | Extend existing |
+| `crossfile/atomic.py` | UNCHANGED: Already built, just needs wiring | Wire, don't modify |
+| `analysis/connectivity.py` | UNCHANGED: Already built, just needs operation exposure | Wire, don't modify |
 
-- **`parser/` and `serializer/` are separated** -- Parsing reads files into IR; serialization writes IR back to files. They have different error modes and testing strategies. Keep them separate even though they share the kiutils dependency.
+## Feature Integration Plans
 
-- **`mutator/` depends on IR only** -- Mutators are pure functions that take IR objects and return new IR objects (immutable pattern). They never touch files directly. This makes them trivially testable.
+### Feature 1: Hierarchical Sheet Operations
 
-- **`validation/` is a pipeline, not a monolith** -- Each validation type (ERC, DRC, structural, round-trip) is independent. The `pipeline.py` orchestrates them. This lets us run subsets of validation during development and the full pipeline before commit.
+**What:** `add_sheet` and `add_sheet_pin` operations to create and modify hierarchical schematic sheets.
 
-- **`analysis/` is optional for v1** -- networkx graph analysis adds value but is not on the critical path. Can be added incrementally.
+**KiCad Representation:**
+Sheets in `.kicad_sch` are `HierarchicalSheet` objects stored in `Schematic.sheets` (a list). Each sheet has:
+- `position` (Position), `width` (float), `height` (float)
+- `sheetName` (Property with key "Sheet name")
+- `fileName` (Property with key "Sheet file") -- the referenced `.kicad_sch` file
+- `pins` (list of `HierarchicalPin`) -- the connection points on the sheet symbol
+- `uuid`, `stroke`, `fill`, `properties`, `instances`
 
-- **`skill/` is thin** -- The GSD Skill handler is a thin adapter. It parses the LLM's operation JSON, routes through the system, and formats the result. No business logic here.
+**Integration approach:**
 
----
+1. **New schema module:** `ops/_schema_sheet.py`
+   - `AddSheetOp(BaseModel)`: op_type="add_sheet", target_file, sheet_name, file_name, position, width, height
+   - `AddSheetPinOp(BaseModel)`: op_type="add_sheet_pin", target_file, sheet_name (or sheet_uuid), pin_name, connection_type, position
 
-## Architectural Patterns
+2. **New handler module:** `ops/sheet_ops.py`
+   - `add_sheet(op, ir, file_path)`: Creates a `HierarchicalSheet` via kiutils, appends to `ir.schematic.sheets`, creates the referenced sub-sheet file if it doesn't exist
+   - `add_sheet_pin(op, ir, file_path)`: Finds sheet by name, creates `HierarchicalPin`, appends to sheet.pins
 
-### Pattern 1: Intent-Based Mutation (Never Raw Text)
+3. **Registry:** Both register as `_SCHEMATIC_HANDLERS`
 
-**What:** The LLM emits a JSON operation intent. The tool layer validates the intent, loads the file into IR, applies the mutation, serializes, and validates the result. The LLM never sees or produces S-expression text.
+4. **SchematicIR additions:** None needed -- kiutils `Schematic.sheets` is already accessible via `ir.schematic`
 
-**When to use:** Always. This is the core invariant of the system.
+5. **Sub-sheet file creation:** `add_sheet` should auto-create the referenced `.kicad_sch` file using the existing `create_schematic()` from `create_file.py`. This is a cross-file concern but within the same project, so path resolution via `file_path.parent` suffices.
 
-**Trade-offs:**
-- Pro: Guarantees structural validity. Impossible to produce malformed S-expressions from the LLM side.
-- Pro: Operations are auditable, replayable, and composable.
-- Con: Every new operation type requires schema definition + IR mutator + tests before the LLM can use it.
-- Con: Unusual operations not covered by the schema require extending the system.
+**No new IR layer needed.** The kiutils `HierarchicalSheet` object is fully typed. The existing `SchematicIR.schematic` property provides direct access to `schematic.sheets`.
 
-**Example operation:**
-```python
-# LLM emits this JSON:
-{
-    "operation": "add_component",
-    "file": "motor-driver.kicad_sch",
-    "component": {
-        "library_id": "Device:R_Small_US",
-        "reference": "R?",
-        "value": "10k",
-        "position": {"x": 50.0, "y": 30.0, "angle": 0}
-    }
-}
+**Dependencies:** None. Can be built independently.
 
-# Schema validates it (Pydantic):
-class AddComponentOp(BaseModel):
-    operation: Literal["add_component"]
-    file: str
-    component: ComponentSpec
-
-# Router dispatches to mutator:
-def add_component(schematic: SchematicIR, spec: ComponentSpec) -> SchematicIR:
-    # 1. Load symbol from library
-    # 2. Create IR Component with UUID
-    # 3. Append to schematic.components
-    # 4. Return new schematic (immutable)
-    ...
-
-# Serializer writes result:
-schematic.to_file()
-# Validation pipeline runs:
-# kicad-cli erc, structural checks, round-trip check
+```
+add_sheet flow:
+  Executor -> _dispatch("add_sheet") -> sheet_ops.add_sheet()
+    -> kiutils HierarchicalSheet(position, width, height, sheetName, fileName)
+    -> ir.schematic.sheets.append(sheet)
+    -> create_file.create_schematic(sub_sheet_path)  # auto-create sub-sheet
+    -> return {"sheet_name", "file_name", "pins": []}
 ```
 
-### Pattern 2: Bidirectional IR Mapping
+### Feature 2: Remove Operations (Wire, Label, Junction)
 
-**What:** Every KiCad entity has a canonical IR representation. The mapping between IR and S-expressions is bidirectional and lossless. Parse to IR, mutate IR, serialize from IR.
+**What:** `remove_wire`, `remove_label`, `remove_junction` operations -- the inverse of existing add operations.
 
-**When to use:** For all file types. The IR is the single source of truth during mutation.
+**Integration approach:**
 
-**Trade-offs:**
-- Pro: Mutations operate on clean Python objects, not nested lists.
-- Pro: Type-safe, IDE-friendly, testable.
-- Pro: Can add derived fields (computed connectivity, validation state) without polluting the S-expression model.
-- Con: Must maintain mapping for every KiCad entity type.
-- Con: kiutils already provides dataclass-like objects; the IR adds a second layer. Justified because kiutils objects closely mirror S-expression structure (which is implementation-oriented, not operation-oriented).
+1. **Extend schema:** `ops/_schema_wire.py`
+   - `RemoveWireOp(BaseModel)`: op_type="remove_wire", target_file, start_x, start_y, end_x, end_y (match by coordinates) OR uuid
+   - `RemoveLabelOp(BaseModel)`: op_type="remove_label", target_file, name, label_type, position
+   - `RemoveJunctionOp(BaseModel)`: op_type="remove_junction", target_file, position
 
-**Example mapping:**
-```python
-# kiutils gives us this (implementation-oriented):
-# board.footprints[0].pads[0].position.X
+2. **SchematicIR additions:**
+   - `remove_wire(start_x, start_y, end_x, end_y)`: Find Connection with type="wire" in `graphicalItems`, remove matching entry. Match by coordinates (within tolerance) or by UUID.
+   - `remove_label(name, label_type, x, y)`: Remove from appropriate list (`labels`, `globalLabels`, `hierarchicalLabels`)
+   - `remove_junction(x, y)`: Remove from `junctions` by position match
 
-# IR gives us this (operation-oriented):
-# component = schematic_ir.get_component_by_ref("R1")
-# component.position.x, component.position.y
-# component.pins["1"].net_name
+3. **Registry:** All three register as `_SCHEMATIC_HANDLERS`
 
-# The mapping layer:
-class SchematicMapping:
-    @staticmethod
-    def from_kiutils(sch: kiutils.schematic.Schematic) -> SchematicIR:
-        """Convert kiutils schematic to canonical IR."""
-        components = [
-            ComponentIR(
-                uuid=sym.uuid,
-                reference=...,  # extract from properties
-                lib_id=sym.libId,
-                position=PositionIR(x=sym.position.X, y=sym.position.Y),
-                pins=[PinIR(...) for pin in sym.pins],
-            )
-            for sym in sch.schematicSymbols
-        ]
-        return SchematicIR(components=components, ...)
+4. **Matching strategy:** Position-based matching with tolerance (0.01mm grid snap). UUID matching as optional alternative for unambiguous removal.
 
-    @staticmethod
-    def to_kiutils(ir: SchematicIR) -> kiutils.schematic.Schematic:
-        """Convert IR back to kiutils object for serialization."""
-        ...
+**Dependencies:** None. Can be built independently.
+
+```
+remove_wire flow:
+  Executor -> _dispatch("remove_wire") -> handler calls ir.remove_wire()
+    -> iterate graphicalItems, find Connection with type="wire"
+    -> match by coordinates (within tolerance) or UUID
+    -> remove from list, record mutation
+    -> return {"removed": true, "start": [...], "end": [...]}
 ```
 
-### Pattern 3: Transaction-Based Mutation
+### Feature 3: Footprint Creation
 
-**What:** Mutations are wrapped in transactions. A transaction captures the original state, applies mutations, runs validation, and either commits (writes to disk) or rolls back (restores original).
+**What:** `create_footprint` operation -- mirrors existing `create_symbol` but for `.kicad_mod` files.
 
-**When to use:** For every file-modifying operation.
+**KiCad Representation:**
+Footprints are stored as individual `.kicad_mod` files (one footprint per file) OR within `.kicad_sym`-style library collections. The kiutils `Footprint` dataclass has fields: `libraryNickname`, `entryName`, `layer`, `position`, `properties` (dict), `pads`, `graphicItems`, `zones`, `models`, etc.
 
-**Trade-offs:**
-- Pro: Failed validation never leaves the file in a broken state.
-- Pro: Enables operation composition (batch multiple operations, validate once).
-- Pro: Natural rollback on any failure.
-- Con: Memory overhead from keeping original state. Acceptable for KiCad file sizes.
+**Integration approach:**
 
+1. **Extend schema:** `ops/_schema_create.py`
+   - `CreateFootprintOp(BaseModel)`: op_type="create_footprint", target_file, footprint_name, pads (list of PadSpec), courtyards, reference_prefix, value
+   - New `FootprintPadSpec` for footprint pads (different fields than symbol pins): number, shape, size_x, size_y, drill_diameter, pad_type, layer_set
+
+2. **Extend create handler:** `ops/create_file.py`
+   - `create_footprint(op, file_path)`: Create kiutils `Footprint`, set properties, add pads, write to file
+   - Follow same pattern as `create_symbol`: if file exists, check for duplicate name; if not, create fresh
+
+3. **Registry:** Register in `_CREATE_HANDLERS`, add "create_footprint" to `_CREATE_OP_TYPES`
+
+4. **Serializer:** Already exists in `serializer/footprint_ser.py` for footprint files
+
+**Important distinction from create_symbol:** Footprint pads have physical properties (drill size, copper layers, pad shape) that symbol pins do not. The PadSpec for footprints needs different fields.
+
+**Dependencies:** None. Can be built independently.
+
+```
+create_footprint flow:
+  Executor -> _execute_create(op, file_path)
+    -> create_file.create_footprint(op, file_path)
+    -> kiutils Footprint(libraryNickname, entryName, layer="F.Cu")
+    -> Add Reference/Value properties
+    -> Build pads from op.pads
+    -> Footprint.to_file()
+    -> return {"footprint_name", "pad_count"}
+```
+
+### Feature 4: Connectivity Query
+
+**What:** Read-only operation to query net connectivity. Exposes existing `NetGraph` from `analysis/connectivity.py`.
+
+**Integration approach:**
+
+1. **New schema module:** `ops/_schema_query.py`
+   - `QueryConnectivityOp(BaseModel)`: op_type="query_connectivity", target_file (must be .kicad_pcb), query_type (one of: "net_pads", "path", "components", "stats"), parameters (query-specific: net_name, source_pad, target_pad)
+
+2. **New handler module:** `ops/connectivity_query.py`
+   - Build `NetGraph.from_pcb_ir(ir)` inside handler
+   - Dispatch by query_type:
+     - "net_pads": `graph.get_connected_pads(net_name)`
+     - "path": `graph.shortest_path(source, target)`
+     - "components": `graph.get_connectivity_components()`
+     - "stats": `graph.get_net_stats()`
+
+3. **Registry:** Register in `_PCB_HANDLERS` (targets .kicad_pcb files)
+
+4. **Read-only semantics:** This operation does NOT mutate the IR. No `_record_mutation()` call. The Transaction still wraps it (executor pattern), but the commit just cleans up the snapshot without changes.
+
+**Why not a separate read-only registry:** Adding a 5th registry for read-only ops would add complexity for no benefit. The existing Transaction pattern handles non-mutations correctly -- the snapshot is taken and discarded on commit, which is a clean no-op. Keeping it in `_PCB_HANDLERS` follows the established pattern.
+
+**Dependencies:** None. Can be built independently.
+
+```
+query_connectivity flow:
+  Executor -> _execute_pcb(op, file_path)
+    -> parse_pcb, build PcbIR
+    -> Transaction wraps (no mutation will occur)
+    -> connectivity_query.handle(op, ir, file_path)
+      -> NetGraph.from_pcb_ir(ir)
+      -> dispatch by query_type
+      -> return results dict
+    -> serialize (no-op, no changes)
+    -> Transaction.commit()
+```
+
+### Feature 5: Cross-file Wiring
+
+**What:** Wire `crossfile/atomic.py` to the executor so operations can atomically modify multiple files.
+
+**The core problem:** The executor currently handles one file per operation. `AtomicOperation` already exists and handles multi-file transactions, but no operation uses it. The wiring requires a new execution path.
+
+**Integration approach:**
+
+1. **New execution path in executor:** `_execute_cross_file()`
+   - Triggered by operations with `op_type` in a new `_CROSS_FILE_OP_TYPES` set
+   - Coordinates parsing multiple files, building IRs, calling handlers, serializing all files
+   - Uses `AtomicOperation` for rollback coordination
+
+2. **New handler registry:** `_CROSS_FILE_HANDLERS`
+   - Handlers receive `dict[Path, BaseIR]` instead of single IR
+   - Handler signature: `(op, ir_map, base_dir) -> dict`
+
+3. **New schema:** `ops/_schema_crossfile.py`
+   - `SyncSchematicPcbOp`: op_type="sync_schematic_pcb", schematic_file, pcb_file -- sync net names between schematic and PCB
+   - `PropagateLibRefOp`: op_type="propagate_lib_ref", target_files, old_ref, new_ref -- propagate a library reference change across files
+
+4. **Executor changes:**
+   ```python
+   _CROSS_FILE_OP_TYPES = {"sync_schematic_pcb", "propagate_lib_ref"}
+
+   def execute(self, op):
+       # ... existing path confinement ...
+       if root.op_type in _CROSS_FILE_OP_TYPES:
+           return self._execute_cross_file(op, file_path)
+       # ... rest of existing logic ...
+   ```
+
+5. **_execute_cross_file implementation:**
+   ```python
+   def _execute_cross_file(self, op, file_path):
+       # 1. Determine file paths from operation
+       file_paths = self._resolve_cross_file_paths(op)
+       # 2. Parse all files, build IR map
+       ir_map = {}
+       for fp in file_paths:
+           parse_result = parse_schematic(fp) or parse_pcb(fp)
+           ir_map[fp] = build_ir(parse_result)
+       # 3. Open AtomicOperation for all files
+       with AtomicOperation(file_paths) as atomic:
+           details = handler(op, ir_map, self._base_dir)
+           # Serialize all modified IRs
+           for fp, ir in ir_map.items():
+               if ir.dirty:
+                   serialize(ir, fp)
+           result = atomic.commit()
+       return {...}
+   ```
+
+6. **Wire existing propagation functions:** `crossfile/propagation.py` already has `propagate_symbol_ref()` and `propagate_footprint_ref()`. These become the handler implementations for `propagate_lib_ref`.
+
+**Dependencies:** This is the most complex feature. It depends on `crossfile/atomic.py` (built), `crossfile/propagation.py` (built), and requires executor modifications. It should be built LAST.
+
+```
+propagate_lib_ref flow:
+  Executor -> _execute_cross_file(op)
+    -> resolve file paths (schematic + pcb)
+    -> parse both files, build ir_map
+    -> AtomicOperation wraps both files
+    -> handler calls propagate_symbol_ref() + propagate_footprint_ref()
+    -> serialize both files if dirty
+    -> AtomicOperation.commit()
+    -> return {"schematic_updated": N, "pcb_updated": M}
+```
+
+## Patterns to Follow
+
+### Pattern 1: Schema Sub-module Extension
+**What:** Each operation domain gets its own `_schema_*.py` file imported by `schema.py`
+**When:** Adding any new operation type
 **Example:**
 ```python
-class Transaction:
-    def __init__(self, file_path: Path):
-        self.file_path = file_path
-        self.original_content = file_path.read_text()
-        self.ir_original = parse(file_path)
-        self.ir_modified = self.ir_original
-        self.operations: list[Operation] = []
-
-    def apply(self, operation: Operation) -> 'Transaction':
-        """Apply an operation, return new transaction (immutable)."""
-        self.ir_modified = execute_op(self.ir_modified, operation)
-        self.operations.append(operation)
-        return self
-
-    def commit(self) -> TransactionResult:
-        """Serialize, validate, write. Rollback on any failure."""
-        try:
-            serialized = serialize(self.ir_modified, self.file_path)
-            result = validation_pipeline.run(self.file_path)
-            if result.passed:
-                return TransactionResult(success=True, validation=result)
-            else:
-                self.rollback()
-                return TransactionResult(success=False, validation=result)
-        except Exception:
-            self.rollback()
-            raise
-
-    def rollback(self):
-        """Restore original file content."""
-        self.file_path.write_text(self.original_content)
+# ops/_schema_sheet.py
+class AddSheetOp(BaseModel):
+    op_type: Literal["add_sheet"] = "add_sheet"
+    target_file: TargetFile
+    sheet_name: str = Field(min_length=1, max_length=128)
+    file_name: str = Field(min_length=1, max_length=256)
+    position: PositionSpec
+    width: float = Field(default=30.0, gt=0, le=500)
+    height: float = Field(default=20.0, gt=0, le=500)
 ```
 
-### Pattern 4: Validation Pipeline with Hard Gates
-
-**What:** Every mutation passes through a multi-stage validation pipeline. If any stage fails, the change is rejected and rolled back. Validation is non-negotiable.
-
-**When to use:** After every `commit()`. Different pipelines for different file types (schematics get ERC, PCBs get DRC).
-
-**Trade-offs:**
-- Pro: Catches errors before they compound across files.
-- Pro: kicad-cli is the official validation -- no reimplementing KiCad's own rules.
-- Con: kicad-cli invocation has latency (~1-5 seconds per check).
-- Con: Requires KiCad 10+ installed on the system.
-
-**Validation stages:**
-```
-1. Structural checks (fast, Python-only)
-   - UUID uniqueness
-   - Reference uniqueness
-   - Required fields present
-   - S-expression well-formedness
-
-2. Round-trip fidelity (fast, Python-only)
-   - parse(file) -> serialize() -> parse(serialized) -> compare IR
-   - Catches serializer bugs immediately
-
-3. ERC (schematic files only, ~1-5s)
-   - kicad-cli erc <file>
-   - Parses output for errors (warnings are informational)
-
-4. DRC (PCB files only, ~5-30s depending on board complexity)
-   - kicad-cli drc <file>
-   - Parses output for errors
-
-5. Net consistency (when both sch and pcb exist)
-   - Compare netlists between schematic and PCB
-   - Flag unmatched nets, missing connections
-```
-
-### Pattern 5: kiutils-First, sexpdata-Fallback Parsing
-
-**What:** Use kiutils as the primary parser for all standard KiCad file types. Fall back to sexpdata only when kiutils cannot parse a construct (custom properties, future syntax, non-standard elements).
-
-**When to use:** Always start with kiutils. Only use sexpdata when kiutils raises a parse error or returns incomplete data.
-
-**Trade-offs:**
-- Pro: kiutils understands KiCad's data model natively -- dataclasses, types, named fields.
-- Pro: No need to manually parse S-expression lists into structured objects.
-- Pro: kiutils is maintained alongside KiCad releases.
-- Con: kiutils may lag behind KiCad 10 syntax additions.
-- Con: sexpdata fallback requires manual S-expression list traversal.
-
-**Implementation strategy:**
+### Pattern 2: Handler Registration
+**What:** Decorator-based registration in executor.py
+**When:** Adding any new operation handler
+**Example:**
 ```python
-def parse_kicad_file(path: Path) -> IR:
-    """Try kiutils first, fall back to sexpdata."""
-    try:
-        return parse_with_kiutils(path)
-    except kiutilsParseError:
-        logger.warning(f"kiutils failed on {path}, trying sexpdata fallback")
-        return parse_with_sexpdata(path)
-
-def parse_with_kiutils(path: Path) -> IR:
-    """Parse using kiutils typed accessors."""
-    suffix = path.suffix
-    if suffix == '.kicad_sch':
-        raw = kiutils.schematic.Schematic.from_file(str(path))
-        return SchematicMapping.from_kiutils(raw)
-    elif suffix == '.kicad_pcb':
-        raw = kiutils.board.Board.from_file(str(path))
-        return BoardMapping.from_kiutils(raw)
-    # ... etc.
-
-def parse_with_sexpdata(path: Path) -> IR:
-    """Fallback: parse raw S-expressions, manually extract fields."""
-    content = path.read_text()
-    parsed = sexpdata.loads(content)
-    return SExpressionMapping.from_raw(parsed)
+@register_schematic("add_sheet")
+def _handle_add_sheet(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.sheet_ops import add_sheet
+    return add_sheet(op, ir, file_path)
 ```
 
----
-
-## Data Flow
-
-### Edit Operation Flow (Primary Path)
-
-```
-LLM emits JSON intent
-    |
-    v
-[Schema Validation] -- invalid? --> Return error to LLM
-    |
-    v
-[Transaction begins] -- capture original file state
-    |
-    v
-[Parser] -- kiutils/sexpdata --> IR objects
-    |
-    v
-[Mutator] -- apply operation to IR --> Modified IR
-    |
-    v
-[Serializer] -- IR back to S-expression --> Temporary file
-    |
-    v
-[Validation Pipeline]
-    |-- Structural checks
-    |-- Round-trip fidelity
-    |-- kicad-cli ERC/DRC
-    |
-    +-- PASS --> [Commit: atomic write to disk]
-    |                |
-    |                v
-    |           [Diff Engine] --> Structural diff
-    |                |
-    |                v
-    |           [Result Renderer] --> Formatted result to LLM
-    |
-    +-- FAIL --> [Rollback: restore original]
-                     |
-                     v
-                [Result Renderer] --> Error report to LLM
-```
-
-### Read/Query Operation Flow
-
-```
-LLM emits JSON query
-    |
-    v
-[Schema Validation]
-    |
-    v
-[Parser] -- kiutils --> IR objects
-    |
-    v
-[Query Engine] -- traverse IR --> Extracted data
-    |
-    v
-[Graph Analyzer] (optional) -- networkx --> Connectivity info
-    |
-    v
-[Result Renderer] --> Formatted result to LLM
-```
-
-### Project Context Detection Flow
-
-```
-/kicad-agent invoked
-    |
-    v
-[Context Detection] -- scan cwd for KiCad files
-    |
-    +-- Found .kicad_sch --> Schematic context
-    +-- Found .kicad_pcb --> PCB context
-    +-- Found .kicad_sym --> Symbol library context
-    +-- Found .kicad_mod --> Footprint library context
-    +-- Found .kicad_pro --> Project root detected
-    |
-    v
-[Context Object] -- file paths, project name, KiCad version
-    |
-    v
-[Skill Handler] -- pass context to all operations
-```
-
-### State Management
-
-```
-No persistent state between invocations.
-
-Each invocation:
-1. Loads files from disk into IR (fresh)
-2. Applies mutations in memory
-3. Validates
-4. Writes to disk (or rolls back)
-5. Returns result
-
-Rationale: KiCad files are the source of truth.
-No database, no cache, no state file needed.
-```
-
----
-
-## Build Order and Dependency Analysis
-
-### Dependency Graph (What Must Be Built First)
-
-```
-schema/          (no dependencies -- pure Pydantic models)
-    |
-    v
-ir/common.py     (depends on: schema types)
-    |
-    +---> ir/schematic.py  (depends on: ir/common.py)
-    +---> ir/pcb.py        (depends on: ir/common.py)
-    +---> ir/library.py    (depends on: ir/common.py)
-              |
-              v
-         ir/mapping.py      (depends on: all ir/*, kiutils knowledge)
-              |
-              v
-    +---> parser/*          (depends on: ir/mapping.py, kiutils, sexpdata)
-    +---> serializer/*      (depends on: ir/mapping.py, kiutils)
-              |
-              v
-         mutator/*          (depends on: ir/*, schema/*)
-              |
-              v
-         validation/structural.py  (depends on: ir/*)
-         validation/roundtrip.py   (depends on: parser/*, serializer/*)
-         validation/erc.py         (depends on: kicad-cli binary)
-         validation/drc.py         (depends on: kicad-cli binary)
-         validation/pipeline.py    (depends on: all validation/*)
-              |
-              v
-         skill/handler.py   (depends on: everything above)
-         analysis/*         (depends on: ir/*, networkx) [can be deferred]
-```
-
-### Recommended Build Order
-
-| Phase | What to Build | Why This Order |
-|-------|---------------|----------------|
-| **1a** | `schema/operations.py`, `schema/types.py` | Contract-first. Everything depends on operation definitions. Testable immediately with Pydantic validation. |
-| **1b** | `ir/common.py` | Position, UUID, Property -- shared by all IR types. Small, foundational. |
-| **1c** | `ir/schematic.py` | First concrete IR. Schematics are the most common edit target. |
-| **2a** | `ir/mapping.py` (schematic only) | Bidirectional conversion for schematics. Enables parser and serializer. |
-| **2b** | `parser/schematic_parser.py` | Read .kicad_sch files into IR. Can test with real KiCad files immediately. |
-| **2c** | `serializer/schematic_ser.py` | Write IR back to .kicad_sch. Enables round-trip testing. |
-| **2d** | `validation/roundtrip.py` | Critical early test: parse -> serialize -> parse must be identity. |
-| **3a** | `mutator/component_ops.py` | First mutation: add_component. Proves the full pipeline works. |
-| **3b** | `validation/structural.py` | UUID uniqueness, ref checks. Needed before complex mutations. |
-| **3c** | `validation/erc.py`, `validation/pipeline.py` | kicad-cli integration. Full validation after every edit. |
-| **4a** | `mutator/net_ops.py`, `mutator/reference_ops.py` | Net and reference operations build on component foundation. |
-| **4b** | `ir/pcb.py`, `parser/pcb_parser.py`, `serializer/pcb_ser.py` | Extend to PCB files. Reuses patterns from schematic. |
-| **4c** | `mutator/footprint_ops.py` | Footprint management requires PCB IR. |
-| **5a** | `ir/library.py`, `parser/symbol_parser.py`, `parser/footprint_parser.py` | Library file support. |
-| **5b** | `analysis/*` | Graph analysis. Optional but valuable. networkx integration. |
-| **6a** | `skill/handler.py`, `skill/renderer.py`, `skill/context.py` | GSD Skill integration. Thin layer over the core library. |
-| **6b** | `analysis/differ.py` | Structural diffs. Depends on stable parser/serializer. |
-
-### Key Build Order Insight
-
-**Schematics first, PCBs second, libraries third.** Schematics are the most frequently edited file type and have the richest structure (components, nets, hierarchy, buses). Building the full pipeline for schematics first proves the architecture works end-to-end. PCBs reuse most patterns. Libraries are simpler (CRUD on symbol/footprint definitions).
-
-**Round-trip testing must come early.** The `validation/roundtrip.py` check is the single most important test in the system. If parse -> serialize -> parse does not produce identical IR, nothing else matters. Build it in Phase 2d, before any mutations.
-
----
-
-## Anti-Patterns
-
-### Anti-Pattern 1: String-Based S-Expression Editing
-
-**What people do:** Use regex or string replacement to modify KiCad files directly.
-
-**Why it is wrong:** KiCad S-expressions have deep nesting, ordering constraints, and context-sensitive syntax. A regex that replaces `(at 50 30)` will match inside property text, graphic items, and pad definitions simultaneously. String editing corrupts files.
-
-**Do this instead:** Parse into IR, mutate IR objects, serialize back. Never touch the text representation.
-
-### Anti-Pattern 2: Bypassing Validation for "Simple" Changes
-
-**What people do:** Skip ERC/DRC for "obviously safe" changes like moving a component.
-
-**Why it is wrong:** Moving a component can overlap another component, violate clearance rules, or break a differential pair. No change is safe without validation.
-
-**Do this instead:** Every mutation goes through the full validation pipeline. No exceptions. The pipeline is the safety net.
-
-### Anti-Pattern 3: Mutable IR Objects
-
-**What people do:** Modify IR objects in place (e.g., `component.position.x = 100`).
-
-**Why it is wrong:** Makes rollback impossible. Makes change tracking unreliable. Makes testing harder (shared mutable state).
-
-**Do this instead:** Mutators return new IR objects. Use `dataclasses.replace()` or frozen dataclasses.
-
+### Pattern 3: IR Mutation Method
+**What:** All mutations go through IR methods that call `_record_mutation()`
+**When:** Adding any data-modifying capability
+**Example:**
 ```python
-# Wrong:
-component.position.x = 100  # mutation in place
-
-# Right:
-moved = dataclasses.replace(
-    component,
-    position=PositionIR(x=100, y=component.position.y)
-)
+def remove_wire(self, start_x, start_y, end_x, end_y) -> dict[str, Any]:
+    # ... find and remove matching wire ...
+    self._record_mutation("remove_wire", {"start": [...], "end": [...]})
+    return {"removed": True, ...}
 ```
 
-### Anti-Pattern 4: UUID Generation Without Registry
+### Pattern 4: Lazy Import in Handlers
+**What:** Handler functions use lazy imports for their implementation modules
+**When:** Always (avoids circular imports, keeps executor lightweight)
+**Example:** `from kicad_agent.ops.sheet_ops import add_sheet` inside the handler function body
 
-**What people do:** Generate a random UUID for each new entity without tracking what exists.
+## Anti-Patterns to Avoid
 
-**Why it is wrong:** UUID collisions are theoretically rare but practically possible in large projects. Duplicate UUIDs corrupt KiCad files silently.
+### Anti-Pattern 1: New IR Layer for Sheets
+**What:** Creating a SheetIR class separate from SchematicIR
+**Why bad:** kiutils `HierarchicalSheet` is a child of `Schematic`, not a separate file type. Sheets are stored within `.kicad_sch` files. A separate IR would break the one-IR-per-ParseResult invariant enforced by `BaseIR.__post_init__`.
+**Instead:** Access sheets through `SchematicIR.schematic.sheets` property, add mutation methods to SchematicIR.
 
-**Do this instead:** Maintain a UUID registry from the parsed file. Check for collisions before assigning. Use deterministic UUID generation where possible (namespace-based).
+### Anti-Pattern 2: Cross-file Operations Without AtomicOperation
+**What:** Having handlers directly call propagation functions without atomic coordination
+**Why bad:** If the schematic update succeeds but the PCB update fails, references are inconsistent with no rollback.
+**Instead:** Always use `crossfile.AtomicOperation` for multi-file operations. The infrastructure is already built.
 
-### Anti-Pattern 5: Monolithic File Handling
+### Anti-Pattern 3: Separate Read-only Executor Path
+**What:** Adding a `_READ_ONLY_HANDLERS` registry that skips Transaction wrapping
+**Why bad:** Creates two execution paths for no real benefit. Transaction on a non-mutated file is a clean no-op (snapshot created and discarded). The existing path handles it correctly.
+**Instead:** Register read-only operations in the appropriate existing registry (`_PCB_HANDLERS` for connectivity).
 
-**What people do:** Write one parser that handles all KiCad file types.
+### Anti-Pattern 4: Footprint Pads Reusing Symbol PinSpec
+**What:** Using the existing `PinSpec` from schema.py for footprint pad definitions
+**Why bad:** Symbol pins have electrical_type and graphical_style. Footprint pads have shape (SMD/Thru-Hole/Connect), drill diameter, copper layers, and pad-to-net assignments. The fields are fundamentally different.
+**Instead:** Create a new `FootprintPadSpec` in `_schema_create.py` with pad-specific fields.
 
-**Why it is wrong:** Schematics, PCBs, symbol libraries, and footprint libraries have fundamentally different structures. A monolith becomes unmaintainable.
+## Scalability Considerations
 
-**Do this instead:** Separate parsers per file type, unified IR interfaces, shared validation pipeline.
+| Concern | Current | After complete-ops | Impact |
+|---------|---------|-------------------|--------|
+| Operation count | 47 types | ~54 types (+7) | Minimal -- dict dispatch is O(1) |
+| Executor imports | ~20 lazy imports | ~27 lazy imports | No performance impact (all lazy) |
+| Schema union size | ~35 Op variants | ~42 Op variants | Pydantic union discrimination still fast |
+| Cross-file ops | 0 | 2-3 | New execution path but isolated |
 
----
+## Build Order (Dependency-Aware)
 
-## Integration Points
+The build order respects the constraint that cross-file wiring requires executor modifications and should come last. The other four features are independent and can be built in any order.
 
-### External Services
+```
+Phase A (independent, any order):
+  1. Remove operations (wire, label, junction)
+     - Extend _schema_wire.py
+     - Add methods to SchematicIR
+     - Register in executor
+     - Tests
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| **kicad-cli** | Subprocess invocation (`subprocess.run`) | Must be on PATH. Used for ERC, DRC, netlist export. Parse stdout/stderr for structured results. KiCad 10+ required. |
-| **kiutils** | Direct Python import | v1.4.8+ installed. Primary parser for all file types. `from_file()` / `to_file()` / `from_sexpr()` / `to_sexpr()` API. |
-| **sexpdata** | Direct Python import | v1.0.0+ installed. Fallback parser for edge cases. `loads()` / `dumps()` API. Returns nested Python lists. |
-| **networkx** | Direct Python import | v3.4.2+ installed. Directed graphs for net connectivity and dependency analysis. |
-| **difftastic** | Subprocess invocation | Syntax-aware diff tool. Optional but recommended for structural diffs. Falls back to custom differ. |
-| **Claude Code Skill API** | YAML manifest + prompt template | Skill definition at `~/.claude/skills/kicad-agent/`. Invoked via `/kicad-agent` command. |
+  2. Footprint creation
+     - Add FootprintPadSpec to _schema_create.py
+     - Add create_footprint to create_file.py
+     - Register in executor, add to _CREATE_OP_TYPES
+     - Tests
 
-### Internal Boundaries
+  3. Connectivity query
+     - Create _schema_query.py
+     - Create connectivity_query.py handler
+     - Register in executor as PCB handler
+     - Tests (NetGraph already tested)
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Skill Handler <-> Operation Router | Function call (in-process) | Synchronous. Handler validates JSON, router dispatches. |
-| Operation Router <-> Mutators | Function call (in-process) | Pure functions. Input IR + operation, output modified IR. |
-| Mutators <-> Validation Pipeline | Function call (in-process) | Mutators produce modified IR, pipeline validates serialized output. |
-| Validation Pipeline <-> kicad-cli | Subprocess (out-of-process) | Spawn process, capture stdout/stderr, parse results. |
-| Parser <-> kiutils | Direct API calls | `kiutils.schematic.Schematic.from_file()` etc. |
-| Parser <-> sexpdata | Direct API calls | `sexpdata.loads()` for fallback parsing. |
-| IR <-> Graph Analyzer | Function call (in-process) | IR objects fed to networkx graph constructors. |
+  4. Hierarchical sheet operations
+     - Create _schema_sheet.py
+     - Create sheet_ops.py handler
+     - Register in executor
+     - Tests
 
----
+Phase B (depends on executor being stable):
+  5. Cross-file wiring
+     - Create _schema_crossfile.py
+     - Add _execute_cross_file() to executor
+     - Create cross-file handlers using AtomicOperation + propagation
+     - Integration tests
+```
 
-## Scaling Considerations
+**Rationale for ordering:**
+- Remove operations and footprint creation are the simplest (extend existing modules)
+- Connectivity query is simple but creates a new schema module
+- Sheet operations are the most complex of the independent features (new module + auto-create sub-sheets)
+- Cross-file wiring touches the executor core and must come last
 
-KiCad files are fundamentally different from web-scale systems. A "large" KiCad project might have 10,000 components. This is not a scaling challenge in the traditional sense.
+## Impact on Existing Code
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| Small (< 100 components) | In-memory IR, full file parse/serialize each time. No optimization needed. |
-| Medium (100-1,000 components) | Same architecture. kicad-cli DRC may take 5-15 seconds. Acceptable. |
-| Large (1,000-10,000 components) | Consider incremental parsing (only re-parse modified sections). Cache IR between operations in the same session. DRC may take 30-60 seconds. |
-| Very Large (10,000+ components) | Rare. Consider lazy loading of hierarchical sheets. Batch validation (skip intermediate checks, validate only at session end). |
-
-### Scaling Priorities
-
-1. **First bottleneck: kicad-cli latency.** DRC on a dense board can take 30+ seconds. Mitigation: run validation only at commit time, not after every intermediate mutation. Batch mutations in a single transaction.
-
-2. **Second bottleneck: memory for full-file IR.** A 10,000-component schematic parsed into IR dataclasses might use 50-100MB. Acceptable for modern machines. Only optimize if this becomes a real problem.
-
-3. **Third bottleneck: round-trip check time.** Parse -> serialize -> parse comparison is O(file size). For very large files, consider hashing the serialized output and comparing hashes instead of full IR comparison.
-
----
+| File Modified | Lines Changed (est.) | Risk |
+|---------------|----------------------|------|
+| `ops/executor.py` | +50 (new handlers, cross-file path) | LOW (additive, no existing code changes) |
+| `ops/schema.py` | +30 (imports, union variants, __all__) | LOW (additive) |
+| `ops/_schema_wire.py` | +50 (3 new Op classes) | LOW (additive) |
+| `ops/_schema_create.py` | +40 (1 new Op class + PadSpec) | LOW (additive) |
+| `ir/schematic_ir.py` | +60 (3 remove methods) | LOW (additive, no existing method changes) |
+| **Total modified** | ~230 lines across 5 files | **LOW risk** |
+| **Total new** | ~400 lines across 5 new files | **No risk to existing** |
 
 ## Sources
 
-- kiutils documentation (via Context7): https://github.com/mvnmgrx/kiutils -- `from_file()`, `to_file()`, `from_sexpr()`, `to_sexpr()` patterns, dataclass-based API for all KiCad file types
-- KiCad 10 file format specification: https://dev-docs.kicad.org/en/file-formats/sexpr-schematic/ -- S-expression structure for schematics
-- sexpdata documentation: https://github.com/tkf/sexpdata -- Generic S-expression parser for Python
-- PROJECT.md at `~/apps/kicad-agent/.planning/PROJECT.md` -- Project requirements and constraints
-- Verified local installations: kiutils 1.4.8, sexpdata 1.0.0, networkx 3.4.2
-
----
-*Architecture research for: KiCad automation agent*
-*Researched: 2026-05-17*
+- Direct codebase analysis of all files in `src/kicad_agent/`
+- kiutils `HierarchicalSheet` dataclass fields (verified via Python introspection)
+- kiutils `Footprint` dataclass fields (verified via Python introspection)
+- KNOWN_LIMITATIONS.md from Council audit (H-1, M-1, M-3, M-4, M-6)

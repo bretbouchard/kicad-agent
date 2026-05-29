@@ -1,138 +1,233 @@
-# Stack Research
+# Stack Research -- Milestone v2.2 complete-ops
 
-**Domain:** KiCad 10+ automation agent (Python library + GSD Skill)
-**Researched:** 2026-05-17
+**Domain:** KiCad 10+ automation agent -- new operation capabilities
+**Researched:** 2026-05-29
 **Confidence:** HIGH
 
-## Recommended Stack
+## Executive Summary
 
-### Core Technologies
+All five new capabilities (hierarchical sheets, remove operations, footprint creation, connectivity query, cross-file wiring) can be built entirely with the **existing stack**. No new dependencies are required. The work is integration, not invention -- kiutils already provides `HierarchicalSheet`, `HierarchicalPin`, `Footprint.create_new()`, and `Pad` classes; `crossfile/atomic.py` is already built; `analysis/connectivity.py` already has the `NetGraph`. The gap is wiring these to the operation executor.
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| Python | 3.11+ | Runtime | Best KiCad library ecosystem, dataclass support, type hints, match statements. 3.11 is the sweet spot of features and compatibility. |
-| kiutils | 1.4.8 | Primary KiCad file parser/serializer | KiCad-specific dataclass-based AST. Handles .kicad_sch, .kicad_pcb, .kicad_sym, .kicad_mod natively. SCM-friendly (deterministic output). Actively maintained with KiCad 10 format additions (knockout, net_tie_pad_groups, private_layers, bus_alias). HIGH confidence. |
-| pydantic | 2.12.5 | JSON operation schema validation | Validates LLM intent JSON against strict schemas before any AST mutation. Generates JSON Schema for skill definitions. v2 is significantly faster than v1 with Rust core. HIGH confidence. |
-| kicad-cli | 10.0.1 | ERC/DRC validation gates | Official KiCad CLI tool. Runs ERC on schematics and DRC on PCBs. The authoritative validation source — not reimplemented checks. Installed locally at /usr/local/bin/kicad-cli. HIGH confidence. |
+## Existing Stack (No Changes Needed)
 
-### Supporting Libraries
+| Technology | Version | Status | Role in New Features |
+|------------|---------|--------|---------------------|
+| kiutils | 1.4.8 | INSTALLED | Provides `HierarchicalSheet`, `HierarchicalPin`, `Footprint`, `Pad`, `Schematic.sheets` -- all needed APIs verified present |
+| pydantic | 2.12.5 | INSTALLED | New operation schemas follow existing `_schema_*.py` pattern |
+| networkx | 3.6.1 | INSTALLED | `NetGraph` in `analysis/connectivity.py` already built on networkx |
+| sexpdata | 1.0.0 | INSTALLED | Fallback if kiutils gaps found (unlikely for these features) |
 
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| sexpdata | 1.0.0 | Raw S-expression parser/serializer | Fallback for KiCad file structures kiutils does not yet cover. Handles arbitrary S-expressions when you need to parse unknown or custom KiCad syntax. Also useful for parsing kicad-cli output. MEDIUM confidence (stable but not KiCad-specific). |
-| networkx | 3.4.2 | Graph analysis for net connectivity | Analyzing net connectivity, component relationships, bus topology, and dependency graphs. Essential for net consistency verification between schematic and PCB. HIGH confidence. |
-| difftastic | latest | Syntax-aware diffs | Structural diffs for S-expressions. Far superior to text-based diff for deeply nested KiCad files. Not yet installed locally — needs `brew install difftastic`. HIGH confidence for the tool, LOW confidence on exact version (not yet installed). |
+**Verdict: Zero new pip installs.** The entire milestone is wiring existing infrastructure to the executor.
 
-### Development Tools
+---
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| pytest | Test framework | Use with pytest-cov for coverage reporting. Test fixtures should include sample .kicad_sch, .kicad_pcb files for round-trip validation. |
-| mypy | Static type checking | Enforce type safety on Pydantic models and kiutils dataclass interactions. Use `--strict` mode. |
-| ruff | Linter + formatter | Replaces both flake8 and black. Fast, opinionated, zero-config. |
-| kicad-cli | Validation gate | Run ERC/DRC in test suite via subprocess. Available on PATH at /usr/local/bin/kicad-cli. |
+## Feature-by-Feature Stack Analysis
 
-## Installation
+### 1. Hierarchical Sheet Operations (add_sheet, add_sheet_pin, sheet navigation)
 
-```bash
-# Core parsing and validation
-pip install kiutils==1.4.8 pydantic==2.12.5
+**kiutils API verified present:**
 
-# S-expression fallback and graph analysis
-pip install sexpdata==1.0.0 networkx==3.4.2
+| Class | Module | Constructor Fields |
+|-------|--------|-------------------|
+| `HierarchicalSheet` | `kiutils.items.schitems` | `position`, `width`, `height`, `sheetName`, `fileName`, `properties`, `pins` (list of HierarchicalPin), `instances` |
+| `HierarchicalPin` | `kiutils.items.schitems` | `name`, `connectionType` (str: "input"/"output"/"bidirectional"/"passive"/"tri_state"), `position`, `effects`, `uuid` |
 
-# Dev dependencies
-pip install -D pytest pytest-cov mypy ruff
-
-# System dependencies (macOS)
-brew install difftastic
-# kicad-cli is already installed with KiCad 10.0.1
+**Access pattern on Schematic object:**
+```python
+sch = Schematic.create_new()
+sch.sheets          # list[HierarchicalSheet] -- sheet instances on root
+sch.sheetInstances  # list[HierarchicalSheetInstance] -- instance tracking
 ```
 
-## Alternatives Considered
+**Existing precedent:** `root_sheet.py` already demonstrates sheet iteration (`for sheet in sch.sheets`), pin creation via `HierarchicalPin`, and pin rebuilding via `_rebuild_sheet_pins()`. The `rebuild_root_sheet` operation already works -- the new operations add/create/navigate instead of rebuild.
 
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| kiutils | sexpdata (alone) | Only if kiutils cannot parse a specific KiCad 10 construct. sexpdata is lower-level and requires you to build your own AST layer. Never as primary parser. |
-| kiutils | kigadgets | kigadgets wraps the pcbnew SWIG bindings, providing a higher-level scripting API. It is NOT an AST-level parser — it operates through KiCad's internal API. Different paradigm entirely. Useful if you need interactive scripting, not file-level editing. |
-| kiutils | pcbnew Python API | The pcbnew module (SWIG bindings) requires a running KiCad instance or at minimum the KiCad Python environment. Not suitable for headless CI/CD or standalone tooling. Use only for interactive plugin development. |
-| pydantic v2 | marshmallow | marshmallow is more flexible for complex serialization but slower and less type-safe. Pydantic v2's Rust core and native JSON Schema generation make it the clear choice for LLM intent validation. |
-| pydantic v2 | jsonschema (stdlib) | jsonschema only validates — it does not give you typed Python objects with IDE autocomplete. Pydantic gives both validation AND typed access. |
-| kicad-cli | Custom ERC/DRC implementation | Reimplementing KiCad's electrical and design rule checks is a multi-year project. kicad-cli is the official, maintained, authoritative source. No contest. |
-| difftastic | standard git diff | Standard diff treats S-expressions as text, producing noisy, meaningless line-level changes. difftastic understands syntax structure, producing meaningful structural diffs. |
+**What to build:**
+- `AddSheetOp` schema -- target_file, sheet_name, file_name, position, width, height
+- `AddSheetPinOp` schema -- target_file, sheet_index (or sheet_file_name), pin_name, connection_type, side ("left"/"right"), pin_index
+- `NavigateSheetsOp` schema -- target_file (returns sheet hierarchy)
+- Handler implementations using kiutils `HierarchicalSheet` / `HierarchicalPin` constructors
+- Sheet file creation: when adding a sheet, also create the referenced `.kicad_sch` via existing `create_schematic` pattern
 
-## What NOT to Use
+**Confidence: HIGH** -- kiutils API is complete, existing code demonstrates the pattern.
 
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| Regex-based KiCad parsing | KiCad S-expressions are deeply nested with context-dependent syntax. Regex cannot handle arbitrary nesting depth. Every edge case becomes a new regex bug. | kiutils for structured parsing, sexpdata for raw S-expression handling |
-| Direct text/string manipulation of KiCad files | A single misplaced parenthesis corrupts the entire file. UUID references, symbol links, and net connections are fragile. The LLM must never emit raw text edits. | AST mutation via kiutils objects, validated through operation schema |
-| Raw LLM text output as KiCad content | LLMs cannot reliably produce valid S-expressions. Parentheses nesting, UUID format, ordering constraints, and symbol references will all break. | JSON operation schema (Pydantic) that the tool layer translates to AST mutations |
-| kigadgets as primary parser | It wraps pcbnew SWIG bindings, not the file format. Requires KiCad runtime. Not suitable for headless file editing. | kiutils for file-level parsing and serialization |
-| circuit-synth | Different paradigm — it generates KiCad files from Python code (code-to-KiCad), not edits existing files (KiCad-to-AST-to-KiCad). Not applicable to this project's mutation-focused architecture. | kiutils + pydantic operation schema |
-| atopile | Declarative HDL for PCB design. Generates designs from descriptions. Not a KiCad file editor. Different problem space entirely. | kiutils + pydantic operation schema |
-| BeautifulSoup / HTML parsers | Not S-expression parsers. Will not work on KiCad file format. | kiutils or sexpdata |
-| dataclasses (stdlib) for operation schema | No built-in validation, no JSON Schema generation, no serialization control. | pydantic v2 — dataclasses with validation superpowers |
+### 2. Remove Operations (remove_wire, remove_label, remove_junction, remove_no_connect)
 
-## Stack Patterns by Variant
+**kiutils access points:**
+```python
+# Wires: Connection objects in graphicalItems with type="wire"
+sch.graphicalItems    # list -- filter for Connection(type="wire")
+# Labels: separate lists per type
+sch.labels            # list[LocalLabel]
+sch.globalLabels      # list[GlobalLabel]
+sch.hierarchicalLabels # list[HierarchicalLabel]
+# Junctions
+sch.junctions         # list[Junction]
+# No-connects
+sch.noConnects        # list[NoConnect]
+```
 
-**If kiutils cannot parse a specific KiCad 10 construct:**
-- Use sexpdata to parse the raw S-expression
-- Build a minimal internal representation
-- Report the gap upstream to kiutils
-- This should be rare — kiutils 1.4.8 covers KiCad 10 format additions
+**Existing precedent:** `add_wire`, `add_label`, `add_junction`, `add_no_connect` all exist in `SchematicIR` and are registered in the executor. The remove operations are the symmetric inverse -- find by UUID or position, remove from the list.
 
-**If a file type is not supported by kiutils:**
-- Use sexpdata as the universal fallback parser
-- Build a thin dataclass wrapper for the unknown file type
-- Serialize back through sexpdata
-- Contribute the parser back to kiutils if it proves useful
+**Removal strategy:**
+- By UUID (preferred): each element has a `uuid` field. Filter the list, remove matching.
+- By position (fallback): match on `(x, y)` coordinates with tolerance.
+- By name (for labels): match on `text` field.
 
-**If running in CI/CD without KiCad installed:**
-- All parsing and mutation works without KiCad (kiutils is standalone)
-- ERC/DRC validation is the only step requiring kicad-cli
-- Structure tests as: parse, mutate, serialize, validate-structure
-- Skip ERC/DRC gates in CI if kicad-cli unavailable, but flag it
+**What to build:**
+- `RemoveWireOp` schema -- target_file, uuid OR (start_x, start_y, end_x, end_y with tolerance)
+- `RemoveLabelOp` schema -- target_file, name, label_type (optional filter)
+- `RemoveJunctionOp` schema -- target_file, uuid OR (x, y with tolerance)
+- `RemoveNoConnectOp` schema -- target_file, uuid OR (x, y with tolerance)
+- Handler implementations: filter list, remove match, record mutation
 
-**If difftastic is not available:**
-- Fall back to standard git diff with increased context lines (-U10)
-- Accept noisier diffs as a temporary compromise
-- Install difftastic as soon as possible
+**Confidence: HIGH** -- pure list manipulation on kiutils objects. No API gaps.
 
-## Version Compatibility
+### 3. Footprint Creation (create_footprint)
 
-| Package | Compatible With | Notes |
-|---------|-----------------|-------|
-| kiutils 1.4.8 | KiCad 10.0.x | Latest release includes KiCad 10 format additions. Track releases for new KiCad format features. |
-| kiutils 1.4.8 | Python 3.8+ | Requires Python 3.8 minimum, but 3.11+ recommended for this project. |
-| pydantic 2.12.x | Python 3.8+ | v2 is a major breaking change from v1. Use v2 exclusively. |
-| sexpdata 1.0.0 | Python 3.x | Stable, simple, no compatibility concerns. |
-| networkx 3.4.x | Python 3.10+ | v3.x dropped Python 3.9 support. Compatible with 3.11+. |
-| kicad-cli 10.0.1 | KiCad 10.0.x | Ships with KiCad installation. Version matches KiCad installation. |
-| difftastic | Any | System tool, no Python dependency. Install via brew on macOS. |
+**kiutils API verified present:**
+
+| Class | Module | Key Fields |
+|-------|--------|-----------|
+| `Footprint` | `kiutils.footprint` | `libraryNickname`, `entryName`, `pads` (list of `Pad`), `graphicItems`, `description`, `tags`, `layer` |
+| `Pad` | `kiutils.footprint` | `number`, `type` ("smd"/"thru_hole"/"connect"/"np_thru_hole"), `shape` ("rect"/"circle"/"oval"/...), `position`, `size`, `drill`, `layers`, `net` |
+
+**Footprint.create_new()** signature:
+```python
+Footprint.create_new(library_id, value, type="other", reference="REF**")
+```
+
+**Existing precedent:** `create_symbol` in `create_file.py` demonstrates the exact pattern: create via kiutils constructor, build child objects (pins/pads), set properties, write to file, normalize output. `create_footprint` follows the same structure with `Footprint` + `Pad` instead of `Symbol` + `SymbolPin`.
+
+**Target file type:** `.kicad_mod` -- already in `TargetFile` valid extensions (verified in `schema.py:153`).
+
+**What to build:**
+- `CreateFootprintOp` schema -- target_file (.kicad_mod), footprint_name, pads list (PadSpec reuse), description, graphic body items
+- `PadSpec` reuse: the existing `PinSpec` in `schema.py` is symbol-specific. Need a new `FootprintPadSpec` with `number`, `type` (smd/thru_hole/connect/np_thru_hole), `shape`, `position`, `size`, `drill_diameter`, `layers`
+- Handler: `Footprint.create_new()`, add pads, write to file, normalize
+
+**Key difference from create_symbol:** Footprints need pad drill specification (for thru-hole), layer assignment, and courtyard/assembly outline. The schema must capture these.
+
+**Confidence: HIGH** -- kiutils `Footprint` and `Pad` are complete. Pattern follows `create_symbol` exactly.
+
+### 4. Connectivity/Netlist Query Operation
+
+**Existing infrastructure (already built, not wired):**
+
+```python
+# analysis/connectivity.py -- fully functional NetGraph
+graph = NetGraph.from_pcb_ir(pcb_ir)
+connected = graph.get_connected_pads("GND")
+path = graph.shortest_path(("J1", "1"), ("U1", "5"))
+components = graph.are_connected(("R1", "1"), ("R2", "2"))
+islands = graph.get_connectivity_components()
+stats = graph.get_net_stats()
+```
+
+**What to build:**
+- `QueryConnectivityOp` schema -- target_file (.kicad_pcb), query_type ("net_pads"/"shortest_path"/"are_connected"/"components"/"stats"), query_params (net_name, source_pad, target_pad depending on query_type)
+- Handler: parse PCB, build PcbIR, create NetGraph, run query, return results
+- Registration: PCB handler in executor (like `auto_route` which also creates analysis objects)
+
+**Confidence: HIGH** -- `NetGraph` is already built and tested. Just needs schema + handler + registration.
+
+### 5. Cross-file Atomic Operations Wiring
+
+**Existing infrastructure (already built, not wired):**
+
+```python
+# crossfile/atomic.py -- fully functional AtomicOperation
+with AtomicOperation([schematic_path, pcb_path]) as atomic:
+    # ... perform mutations on both files ...
+    result = atomic.commit()
+```
+
+**What to build:**
+- Cross-file operation schemas that accept multiple target files
+- Handler that instantiates `AtomicOperation`, parses each file, creates IRs per file, dispatches sub-operations, commits
+- Registration: new handler category in executor (or extension of existing pattern)
+
+**Key integration point:** The executor currently handles one file per operation (`D-03: Single file per operation`). Cross-file ops break this constraint. Two approaches:
+1. **New handler category** (recommended): Add `_CROSSFILE_HANDLERS` registry alongside existing `_SCHEMATIC_HANDLERS`/`_PCB_HANDLERS`/`_CREATE_HANDLERS`. Cross-file ops bypass single-file constraint.
+2. **Compound operation wrapper**: Wrap multiple operations in a single cross-file envelope.
+
+Approach 1 is cleaner -- it extends the existing decorator pattern without modifying the atomic operation constraint.
+
+**Confidence: MEDIUM** -- the `AtomicOperation` infrastructure works, but the executor routing needs careful design to maintain the single-file security model while allowing multi-file atomicity. The path confinement checks (T-24-01) must be applied to each file individually.
+
+---
+
+## New Schema Files Needed
+
+| File | Operations | Pattern Follows |
+|------|-----------|----------------|
+| `_schema_sheet.py` | `AddSheetOp`, `AddSheetPinOp`, `NavigateSheetsOp` | `_schema_create.py` (has CreateSchematicOp) |
+| `_schema_remove.py` | `RemoveWireOp`, `RemoveLabelOp`, `RemoveJunctionOp`, `RemoveNoConnectOp` | `_schema_wire.py` (symmetric inverse) |
+| `_schema_create.py` (extend) | `CreateFootprintOp` | Existing `CreateSymbolOp` pattern |
+| `_schema_connectivity.py` | `QueryConnectivityOp` | `_schema_validation.py` (query-only ops) |
+| `_schema_crossfile.py` | Cross-file compound operations | New pattern (multi-target_file) |
+
+## New Handler Files Needed
+
+| File | Registration Type | Notes |
+|------|------------------|-------|
+| `ops/sheet_ops.py` | `register_schematic` | Sheet/pin creation and navigation |
+| `ops/remove_ops.py` | `register_schematic` | Wire/label/junction/no-connect removal |
+| `ops/create_file.py` (extend) | `register_create` | Add `create_footprint` to existing file |
+| `ops/connectivity_query.py` | `register_pcb` | NetGraph query wrapper |
+| `ops/crossfile_ops.py` | New `_CROSSFILE_HANDLERS` | Multi-file atomic operations |
+
+## What NOT to Add
+
+| Avoid | Why |
+|-------|-----|
+| Any new pip dependency | All five features use existing kiutils, networkx, pydantic APIs. No gaps found. |
+| New parser layer | kiutils handles all needed file types. No raw sexpdata needed. |
+| Custom footprint library format | kiutils `Footprint` produces standard `.kicad_mod` files. No custom format. |
+| Graph database for connectivity | networkx `NetGraph` is already built and sufficient for query operations. |
+| Separate microservice for cross-file ops | `AtomicOperation` runs in-process. No network overhead needed. |
+| New validation engine | ERC/DRC via kicad-cli covers validation. Cross-file ops use same gates per file. |
+| KiCad Python API (pcbnew module) | Requires KiCad runtime. kiutils is standalone. |
+
+---
+
+## Version Verification
+
+| Package | Version | Required For | Status |
+|---------|---------|-------------|--------|
+| kiutils | 1.4.8 | HierarchicalSheet, HierarchicalPin, Footprint, Pad | Verified -- all APIs present |
+| pydantic | 2.12.5 | New operation schemas | Verified -- discriminated union pattern works |
+| networkx | 3.6.1 | NetGraph connectivity queries | Verified -- already in analysis/connectivity.py |
+| sexpdata | 1.0.0 | Fallback parser | Not needed for these features |
+| kicad-cli | 10.0.1 | Post-edit validation | Already used for ERC/DRC gates |
+
+## Integration Risk Assessment
+
+| Risk | Severity | Mitigation |
+|------|----------|------------|
+| kiutils HierarchicalSheet serialization differs from KiCad's format | MEDIUM | Round-trip test: create sheet, write, read back, compare. `root_sheet.py` already does this successfully. |
+| Footprint.create_new() output missing courtyard | LOW | Add courtyard outline as graphic items. Standard KiCad practice. |
+| Cross-file ops break executor's single-file security model | MEDIUM | New handler category with per-file path confinement checks. |
+| Remove-by-position fails with floating-point precision | LOW | Use UUID-based removal as primary, position as fallback with tolerance. |
+| NetGraph query on large PCBs is slow | LOW | networkx handles thousands of nodes efficiently. Add caching if needed. |
+
+---
 
 ## Confidence Assessment
 
-| Technology | Confidence | Justification |
-|------------|------------|---------------|
-| kiutils as primary parser | HIGH | Context7 docs confirm KiCad-specific AST, active maintenance, KiCad 10 support. Verified locally installed v1.4.8. |
-| pydantic v2 for schema | HIGH | Industry standard, verified locally at v2.12.5. Rust core for performance. JSON Schema generation for skill definitions. |
-| kicad-cli for validation | HIGH | Official KiCad tool. Verified locally at v10.0.1. Only authoritative ERC/DRC source. |
-| sexpdata as fallback | MEDIUM | Stable generic S-expression parser, but not KiCad-specific. May need wrapper logic for KiCad-specific constructs. |
-| networkx for graph analysis | HIGH | Standard Python graph library. Net connectivity and topology analysis is a textbook graph problem. Verified locally at v3.4.2. |
-| difftastic for diffs | HIGH (tool) / LOW (install) | Tool is correct for the job. Not yet installed locally — needs `brew install difftastic`. |
+| Feature | Confidence | Reason |
+|---------|------------|--------|
+| Hierarchical sheets | HIGH | kiutils API verified, existing root_sheet.py demonstrates the pattern |
+| Remove operations | HIGH | Symmetric inverse of existing add operations, pure list manipulation |
+| Footprint creation | HIGH | kiutils Footprint+Pad API verified, follows create_symbol pattern exactly |
+| Connectivity query | HIGH | NetGraph already built, just needs schema+handler wiring |
+| Cross-file wiring | MEDIUM | AtomicOperation works, but executor routing needs design care |
 
 ## Sources
 
-- Context7 library `kiutils` — fetched parser API, file type support, SCM-friendly design
-- Context7 library `pydantic` — fetched v2 model validation, JSON Schema generation
-- Context7 library `networkx` — fetched graph analysis APIs
-- GitHub `manufactureq/kiutils` releases — confirmed v1.4.8 latest, KiCad 10 format additions
-- GitHub `oilshell/oilseed` (sexpdata) — confirmed v1.0.0, stable maintenance
-- Local verification — `pip show kiutils sexpdata networkx pydantic`, `kicad-cli --version`, `which difftastic`
-- KiCad 10.0.0 release notes — confirmed release date 2026-03-20
-- kiutils README — confirmed .kicad_sch, .kicad_pcb, .kicad_sym, .kicad_mod support
+- Live Python inspection of kiutils 1.4.8: `HierarchicalSheet`, `HierarchicalPin`, `Footprint`, `Pad`, `Schematic.sheets` APIs
+- Existing codebase: `executor.py` (handler registration pattern), `schema.py` (Pydantic schema pattern), `create_file.py` (create_symbol precedent), `root_sheet.py` (sheet iteration precedent), `schematic_ir.py` (add_wire/label/junction pattern), `crossfile/atomic.py` (atomic operation infrastructure), `analysis/connectivity.py` (NetGraph infrastructure)
+- KNOWN_LIMITATIONS.md: H-1, M-1, M-3, M-4, M-6 -- documented gaps this milestone addresses
 
 ---
-*Stack research for: kicad-agent (KiCad 10+ automation agent)*
-*Researched: 2026-05-17*
+*Stack research for: kicad-agent milestone v2.2 complete-ops*
+*Researched: 2026-05-29*
