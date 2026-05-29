@@ -32,7 +32,7 @@ class GRPOLoopTrainer:
       3. Generate group_size completions per prompt
       4. Score completions with reward model
       5. Compute group-relative advantages per prompt
-      6. Filter to top-K by advantage (PPO-clip weighting)
+      6. Filter to top-K by advantage (advantage-clip weighting)
       7. Apply KL divergence penalty to downweight completions far from reference
       8. Re-train (SFT) on filtered, advantage-weighted data
       9. Save updated adapter
@@ -55,7 +55,13 @@ class GRPOLoopTrainer:
         """Compute advantage weights from raw scores with KL penalty.
 
         Group-relative advantage: (score - mean) / (std + eps)
-        Clipped by PPO range: clip(advantage, -clip_range, clip_range)
+        Advantage clipping: clip(advantage, -clip_range, clip_range)
+
+        Note: This applies clipping directly to group-relative advantages,
+        not to probability ratios as in standard PPO. This is a valid GRPO
+        variant where advantage clipping prevents large weight divergence
+        within groups.
+
         KL penalty applied: weight = clip(advantage) - kl_coefficient * kl_penalty
 
         Args:
@@ -74,7 +80,7 @@ class GRPOLoopTrainer:
         std = math.sqrt(variance) + eps
         raw_advantages = [(s - mean) / std for s in scores]
 
-        # PPO clip
+        # Advantage clipping (GRPO variant, not PPO ratio clipping)
         clip_range = self.config.clip_range
         clipped = [max(-clip_range, min(clip_range, a)) for a in raw_advantages]
 

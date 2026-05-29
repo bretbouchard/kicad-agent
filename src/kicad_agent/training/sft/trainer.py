@@ -185,10 +185,12 @@ def run_sft_training(config: SFTTrainingConfig | None = None) -> dict:
     print(f"Using device: {device}")
 
     # Load model
-    print(f"Loading model: {config.model_name}")
+    # MPS does not support float16 well; use float32 to prevent NaN losses
+    dtype = torch.float32 if device == "mps" else torch.float16
+    print(f"Loading model: {config.model_name} (dtype={dtype})")
     model = AutoModelForCausalLM.from_pretrained(
         config.model_name,
-        torch_dtype=torch.float16,
+        torch_dtype=dtype,
         device_map=device,
     )
 

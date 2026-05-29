@@ -86,13 +86,9 @@ def test_best_of_n_empty_raises() -> None:
 
 
 def test_best_of_n_no_reward_model() -> None:
-    """No reward model returns first chain with neutral (0.5) scores."""
-    result = best_of_n_select(["chain1", "chain2"], None)
-    assert result.chain_text == "chain1"
-    assert result.format_score == 0.5
-    assert result.quality_score == 0.5
-    assert result.accuracy_score == 0.5
-    assert result.composite_score == 0.5
+    """No reward model raises ValueError instead of returning fake scores."""
+    with pytest.raises(ValueError, match="reward model"):
+        best_of_n_select(["chain1", "chain2"], None)
 
 
 def test_best_of_n_improves_over_single() -> None:

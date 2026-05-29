@@ -48,13 +48,7 @@ def best_of_n_select(
         raise ValueError("chains list must not be empty")
 
     if reward_model is None:
-        return ScoredChain(
-            chain_text=chains[0],
-            format_score=0.5,
-            quality_score=0.5,
-            accuracy_score=0.5,
-            composite_score=0.5,
-        )
+        raise ValueError("best_of_n_select requires a reward model (reward_model=None)")
 
     best: ScoredChain | None = None
     best_composite = -1.0

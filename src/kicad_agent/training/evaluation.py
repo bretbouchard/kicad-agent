@@ -201,20 +201,3 @@ def run_baseline(test_dataset: MazeDataset) -> EvalResult:
     """
     harness = EvaluationHarness(test_dataset)
     return harness.evaluate(model=None)
-
-
-def run_ablation(
-    test_dataset: MazeDataset,
-    variant_name: str = "no_kl",
-) -> EvalResult:
-    """Evaluate with a modified configuration for ablation studies.
-
-    Args:
-        test_dataset: Test dataset to evaluate.
-        variant_name: Name of the ablation variant.
-
-    Returns:
-        EvalResult for the ablation variant.
-    """
-    harness = EvaluationHarness(test_dataset)
-    return harness.evaluate(model=None)

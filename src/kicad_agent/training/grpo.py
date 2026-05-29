@@ -255,7 +255,7 @@ class GRPOTrainer:
         from kicad_agent.training.reward import score_chain
         from kicad_agent.training.reward_model import predict_reward
 
-        rng = random.Random(self.config.seed)
+        rng = random.Random()
 
         chain_groups: list[list[str]] = []
         all_chains_by_sample: list[list] = []

@@ -28,20 +28,37 @@ TASK_TEMPLATES: dict[str, str] = {
     "spatial_reasoning": (
         "Perform a spatial analysis of this PCB routing problem:\n{context}"
     ),
+    "routing": (
+        "Analyze the routing path between two points on this PCB:\n{context}"
+    ),
+    "placement": (
+        "Determine optimal component placement on this PCB layout:\n{context}"
+    ),
+    "clearance": (
+        "Check clearance and DRC compliance for this PCB design:\n{context}"
+    ),
 }
 
 
 def get_template_for_chain(chain_dict: dict) -> str:
     """Return the appropriate task template key based on chain metadata.
 
-    Maze chains default to 'spatial_reasoning'. Future chain types
-    (real board, component, schematic) can select different templates
-    based on metadata fields.
+    Selects a template based on task type indicators in the chain metadata.
+    Falls back to 'spatial_reasoning' for unrecognized or missing task types.
 
     Args:
-        chain_dict: Chain dictionary from chains_100k.jsonl.
+        chain_dict: Chain dictionary with optional 'task_type' or 'task' field.
 
     Returns:
         Template key string matching TASK_TEMPLATES.
     """
+    task = chain_dict.get("task_type", "") or chain_dict.get("task", "")
+    task_lower = task.lower()
+
+    if "route" in task_lower or "trace" in task_lower:
+        return "routing"
+    elif "place" in task_lower or "layout" in task_lower:
+        return "placement"
+    elif "clearance" in task_lower or "drc" in task_lower:
+        return "clearance"
     return "spatial_reasoning"

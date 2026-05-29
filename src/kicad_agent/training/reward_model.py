@@ -14,11 +14,14 @@ Usage:
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from kicad_agent.training.tokenizer import ChainTokenizer
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -413,6 +416,24 @@ def train_reward_model(
     attn_mask_t = torch.tensor(all_masks, dtype=torch.long, device=device)
     labels_t = torch.tensor(train_labels, dtype=torch.float32, device=device)
 
+    # Tokenize validation data if provided
+    val_input_ids_t = None
+    val_attn_mask_t = None
+    val_labels_t = None
+    if val_texts and val_labels:
+        val_ids = []
+        val_masks = []
+        for text in val_texts:
+            if model._tokenizer and model._tokenizer.is_trained:
+                ids, mask = model._tokenizer.encode(text)
+            else:
+                ids, mask = _simple_tokenize(text)
+            val_ids.append(ids)
+            val_masks.append(mask)
+        val_input_ids_t = torch.tensor(val_ids, dtype=torch.long, device=device)
+        val_attn_mask_t = torch.tensor(val_masks, dtype=torch.long, device=device)
+        val_labels_t = torch.tensor(val_labels, dtype=torch.float32, device=device)
+
     history: dict[str, list] = {"losses": [], "val_losses": []}
 
     for epoch in range(n_epochs):
@@ -441,6 +462,25 @@ def train_reward_model(
 
         avg_loss = epoch_loss / max(n_batches, 1)
         history["losses"].append(avg_loss)
+
+        # Compute validation loss if validation data is provided
+        if val_input_ids_t is not None:
+            nn_model.eval()
+            with torch.no_grad():
+                val_loss_sum = 0.0
+                val_n_batches = 0
+                for i in range(0, len(val_texts), batch_size):
+                    batch_ids = val_input_ids_t[i:i + batch_size]
+                    batch_mask = val_attn_mask_t[i:i + batch_size]
+                    batch_labels = val_labels_t[i:i + batch_size]
+                    fmt, qual, acc = nn_model(batch_ids, batch_mask)
+                    preds = torch.cat([fmt, qual, acc], dim=1)
+                    val_loss = loss_fn(preds, batch_labels)
+                    val_loss_sum += val_loss.item()
+                    val_n_batches += 1
+                avg_val_loss = val_loss_sum / max(val_n_batches, 1)
+                history["val_losses"].append(avg_val_loss)
+            logger.info("Epoch %d: train_loss=%.4f val_loss=%.4f", epoch + 1, avg_loss, avg_val_loss)
 
     nn_model.eval()
     return history
