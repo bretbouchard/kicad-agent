@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: complete-ops
 status: in-progress
-stopped_at: "Completed 25-01 (remove operation schemas & dispatch)"
-last_updated: "2026-05-29T18:56:13Z"
+stopped_at: "Completed 25-02 (remove operation handlers with wire adjacency check)"
+last_updated: "2026-05-29T19:40:00Z"
 last_activity: 2026-05-29
 progress:
   total_phases: 29
   completed_phases: 24
   total_plans: 76
-  completed_plans: 72
+  completed_plans: 73
   percent: 95
 ---
 
@@ -27,16 +27,16 @@ Last activity: 2026-05-29
 ## Current Position
 
 Phase: 25 of 29 (Remove Operations)
-Plan: 1 of 2 started
+Plan: 2 of 2 completed
 Status: **In progress**
-Last activity: 2026-05-29 -- Completed 25-01 (remove operation schemas & dispatch)
+Last activity: 2026-05-29 -- Completed 25-02 (remove operation handlers with wire adjacency check)
 
 Progress: [█████████░] 95% (24/29 phases complete, 5 phases remaining)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 71
+- Total plans completed: 73
 - Average duration: 5 min
 - Total execution time: 4.1 hours
 
@@ -74,5 +74,5 @@ None yet.
 
 ## Session Continuity
 
-Stopped at: Completed 25-01 (remove operation schemas & dispatch), next: 25-02
-Resume file: .planning/phases/25-remove-operations/25-02-PLAN.md
+Stopped at: Completed 25-02 (remove operation handlers with wire adjacency check), phase 25 complete
+Resume file: None -- proceed to next phase

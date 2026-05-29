@@ -546,8 +546,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 25-01-PLAN.md -- Remove operation schemas (RemoveWireOp, RemoveLabelOp, RemoveJunctionOp, RemoveNoConnectOp) and executor registration (REMOVE-05)
-- [ ] 25-02-PLAN.md -- Remove handlers with list-filter pattern, wire adjacency check, net membership validation, and tests (REMOVE-01, REMOVE-02, REMOVE-03, REMOVE-04)
+- [x] 25-01-PLAN.md -- Remove operation schemas (RemoveWireOp, RemoveLabelOp, RemoveJunctionOp, RemoveNoConnectOp) and executor registration (REMOVE-05)
+- [x] 25-02-PLAN.md -- Remove handlers with list-filter pattern, wire adjacency check, net membership validation, and tests (REMOVE-01, REMOVE-02, REMOVE-03, REMOVE-04)
 
 ### Phase 26: Connectivity Query
 **Goal**: Users can query PCB connectivity through the operation executor using the existing NetGraph, with structured JSON results compatible with LLM reasoning chains
@@ -641,7 +641,7 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 24 -> 25 -> 26 -> 27 -> 28 -> 
 | 22. Agent Integration | 2/2 | Complete | 2026-05-28 |
 | 23. Schematic Repair | 0/4 | Pending | - |
 | 24. Council Audit Remediation | 5/5 | Complete | 2026-05-29 |
-| 25. Remove Operations | 0/2 | Not started | - |
+| 25. Remove Operations | 2/2 | Complete | 2026-05-29 |
 | 26. Connectivity Query | 0/1 | Not started | - |
 | 27. Footprint Creation | 0/2 | Not started | - |
 | 28. Hierarchical Sheet Ops | 0/3 | Not started | - |
