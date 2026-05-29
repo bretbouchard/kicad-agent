@@ -165,6 +165,16 @@ def handle_operation(
             error=f"Execution failed: {exc}",
             suggestion="The operation validated but failed during execution. Check the file format and parameters.",
         )
+    except Exception as exc:
+        # Catch custom operation errors (e.g., MoveComponentError) that
+        # inherit directly from Exception rather than ValueError/RuntimeError.
+        concrete = op.root
+        return OperationError(
+            success=False,
+            operation_type=concrete.op_type,
+            error=f"Execution failed: {exc}",
+            suggestion="The operation validated but failed during execution. Check the file format and parameters.",
+        )
 
 
 def format_result(result: Union[OperationResult, OperationError]) -> str:
