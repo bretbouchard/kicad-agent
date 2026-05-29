@@ -209,6 +209,9 @@ from kicad_agent.ops._schema_remove import (  # noqa: E402
     RemoveJunctionOp,
     RemoveNoConnectOp,
 )
+from kicad_agent.ops._schema_query import (  # noqa: E402
+    QueryConnectivityOp,
+)
 from kicad_agent.ops._schema_library import (  # noqa: E402
     AddLibEntryOp,
     RemoveLibEntryOp,
@@ -309,7 +312,8 @@ class Operation(BaseModel):
         | RemoveWireOp
         | RemoveLabelOp
         | RemoveJunctionOp
-        | RemoveNoConnectOp,
+        | RemoveNoConnectOp
+        | QueryConnectivityOp,
         Field(discriminator="op_type"),
     ]
 
@@ -397,6 +401,8 @@ __all__ = [
     "AddPowerFlagOp",
     "RebuildRootSheetOp",
     "SwapSymbolOp",
+    # Query ops
+    "QueryConnectivityOp",
     # Union and helpers
     "Operation",
     "get_operation_schema",

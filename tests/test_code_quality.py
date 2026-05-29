@@ -80,10 +80,10 @@ class TestSchemaSplit:
         assert "properties" in schema or "$defs" in schema
 
     def test_submodules_exist(self) -> None:
-        """11 _schema_*.py sub-modules exist."""
+        """12 _schema_*.py sub-modules exist."""
         submods = sorted(SCHEMA_DIR.glob("_schema_*.py"))
-        assert len(submods) == 11, (
-            f"Expected 11 sub-modules, found {len(submods)}: "
+        assert len(submods) == 12, (
+            f"Expected 12 sub-modules, found {len(submods)}: "
             f"{[p.name for p in submods]}"
         )
 

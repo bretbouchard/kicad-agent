@@ -46,6 +46,9 @@ _PROJECT_HANDLERS: dict[str, Callable] = {}
 # Create handlers: (op, file_path) -> dict -- no IR, no Transaction
 _CREATE_HANDLERS: dict[str, Callable] = {}
 
+# Query handlers: (op, PcbIR, file_path) -> dict -- read-only, no Transaction, no serialization
+_QUERY_HANDLERS: dict[str, Callable] = {}
+
 # Set of op_types that create new files (bypass file-existence check)
 _CREATE_OP_TYPES = {"create_schematic", "create_pcb", "create_project", "create_symbol"}
 
@@ -78,6 +81,14 @@ def register_create(op_type: str) -> Callable:
     """Decorator to register a file-creation operation handler."""
     def decorator(fn: Callable) -> Callable:
         _CREATE_HANDLERS[op_type] = fn
+        return fn
+    return decorator
+
+
+def register_query(op_type: str) -> Callable:
+    """Decorator to register a read-only query operation handler."""
+    def decorator(fn: Callable) -> Callable:
+        _QUERY_HANDLERS[op_type] = fn
         return fn
     return decorator
 
@@ -608,6 +619,17 @@ def _handle_create_symbol(op: Any, file_path: Path) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Query handler implementations (read-only, no Transaction, no serialization)
+# ---------------------------------------------------------------------------
+
+
+@register_query("query_connectivity")
+def _handle_query_connectivity(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.connectivity_query import handle_connectivity_query
+    return handle_connectivity_query(op, ir, file_path)
+
+
+# ---------------------------------------------------------------------------
 # Executor class
 # ---------------------------------------------------------------------------
 
@@ -659,6 +681,10 @@ class OperationExecutor:
         if not file_path.exists():
             raise FileNotFoundError(f"Target file not found: {file_path}")
 
+        # Query operations: read-only, no Transaction, no serialization
+        if root.op_type in _QUERY_HANDLERS:
+            return self._execute_query(op, file_path)
+
         # Clear IR registry to avoid stale registrations across operations
         from kicad_agent.ir.base import _clear_registry
         _clear_registry()
@@ -680,6 +706,57 @@ class OperationExecutor:
             name in ("sym-lib-table", "fp-lib-table")
             or suffix in (".kicad_dru", ".kicad_pro")
         )
+
+    def _execute_query(self, op: Operation, file_path: Path) -> dict[str, Any]:
+        """Execute a read-only query operation (no Transaction, no serialization).
+
+        Query operations parse the file and build IR, but skip Transaction
+        wrapping, serialization, and file writes. The file mtime is unchanged.
+
+        Args:
+            op: Validated Operation from the schema.
+            file_path: Resolved path to the target file.
+
+        Returns:
+            Dict with: success, operation, target_file, details.
+        """
+        root = op.root
+        parse_result = parse_pcb(file_path)
+        uuid_map = extract_uuids(parse_result.raw_content, "pcb")
+        ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
+        details = self._dispatch_query(root.op_type, root, ir, file_path)
+        return {
+            "success": True,
+            "operation": root.op_type,
+            "target_file": root.target_file,
+            "details": details,
+        }
+
+    def _dispatch_query(
+        self,
+        op_type: str,
+        op: Any,
+        ir: PcbIR,
+        file_path: Path,
+    ) -> dict[str, Any]:
+        """Dispatch query operations via registry.
+
+        Args:
+            op_type: The operation type string.
+            op: The operation's root model.
+            ir: PcbIR for the target PCB file.
+            file_path: Resolved path to the target file.
+
+        Returns:
+            Handler result dict.
+
+        Raises:
+            ValueError: For unknown op_type.
+        """
+        handler = _QUERY_HANDLERS.get(op_type)
+        if handler is not None:
+            return handler(op, ir, file_path)
+        raise ValueError(f"Unknown query op_type: {op_type!r}")
 
     def _execute_create(self, op: Operation, file_path: Path) -> dict[str, Any]:
         """Execute a file-creation operation (no Transaction, no IR).
