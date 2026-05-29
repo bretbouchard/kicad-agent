@@ -10,7 +10,8 @@ Build an AI-safe KiCad structural editing tool across multiple milestones. First
 - **v1.1 Ecosystem** - Phases 8-12 (shipped 2026-05-23)
 - **v2.0 Production AI** - Phases 13-22 (shipped 2026-05-28)
 - **v2.1 Audit** - Phases 23-24 (shipped 2026-05-29)
-- **v2.2 Complete-Ops** - Phases 25-29 (current)
+- **v2.2 Complete-Ops** - Phases 25-29 (shipped 2026-05-29)
+- **v2.3 MCP-Server** - Phases 30-31
 
 ## Phases
 
@@ -68,15 +69,22 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 </details>
 
-### v2.2 Complete-Ops (Current)
+### v2.2 Complete-Ops (SHIPPED 2026-05-29)
 
-**Milestone Goal:** Fill the five operation gaps so kicad-agent handles real-world KiCad projects with hierarchical designs and full CRUD capabilities. Zero new dependencies.
+**Milestone Goal:** Fill the five operation gaps so kicad-agent handles real-world KiCad projects with hierarchical designs and full CRUD capabilities. Zero new dependencies. **1673 tests, 57 operation types, 14 schema sub-modules.**
 
-- [ ] **Phase 25: Remove Operations** - remove_wire, remove_label, remove_junction, remove_no_connect with adjacency checks and list-filter pattern
-- [ ] **Phase 26: Connectivity Query** - query_connectivity exposing existing NetGraph through read-only handler with 5 query types
-- [ ] **Phase 27: Footprint Creation** - create_footprint with PadSpec schema, UUID-preserving serialization, courtyard generation
-- [ ] **Phase 28: Hierarchical Sheet Operations** - add_sheet, add_sheet_pin, navigate_hierarchy with UUID path management and nested hierarchy
-- [ ] **Phase 29: Cross-File Atomic Operations** - propagate_symbol_change via AtomicOperation, new cross-file executor dispatch path
+- [x] **Phase 25: Remove Operations** - remove_wire, remove_label, remove_junction, remove_no_connect with adjacency checks and list-filter pattern
+- [x] **Phase 26: Connectivity Query** - query_connectivity exposing existing NetGraph through read-only handler with 5 query types
+- [x] **Phase 27: Footprint Creation** - create_footprint with PadSpec schema, UUID-preserving serialization, courtyard generation
+- [x] **Phase 28: Hierarchical Sheet Operations** - add_sheet, add_sheet_pin, navigate_hierarchy with UUID path management and nested hierarchy
+- [x] **Phase 29: Cross-File Atomic Operations** - propagate_symbol_change via AtomicOperation, new cross-file executor dispatch path
+
+### v2.3 MCP Server
+
+**Milestone Goal:** Expose all 57 kicad-agent operations as MCP tools so any AI agent (Claude, Cursor, etc.) can invoke KiCad file edits directly. Zero new dependencies. ~250 lines new code.
+
+- [ ] **Phase 30: MCP Operations Server** - Dynamic tool generation from Pydantic schemas, stdio transport, meta-tools for schema discovery and project context
+- [ ] **Phase 31: Validation Integration** - erc_check and drc_check convenience MCP tools wrapping kicad-cli
 
 ## Phase Details
 
@@ -499,13 +507,13 @@ Plans:
   6. Power flag symbols placed at power_pin_not_driven positions with correct lib definition
   7. Off-grid wire endpoints snapped to grid while preserving connectivity
   8. Root sheet generated from sub-sheet hierarchical labels with correct pin positioning
-**Plans**: 4 plans (0/4 complete)
+**Plans**: 4 plans (4/4 complete)
 
 Plans:
-- [ ] 23-01-PLAN.md -- ERC parser, violation position extractor, hierarchical label guard
-- [ ] 23-02-PLAN.md -- KiCad 6 to KiCad 10 format converter with section-based reassembly
-- [ ] 23-03-PLAN.md -- Schematic mutation operations: snap_to_grid, add_power_flag, place_no_connects_from_erc
-- [ ] 23-04-PLAN.md -- Root sheet generator from sub-sheet hierarchical labels
+- [x] 23-01-PLAN.md -- ERC parser, violation position extractor, hierarchical label guard
+- [x] 23-02-PLAN.md -- KiCad 6 to KiCad 10 format converter with section-based reassembly
+- [x] 23-03-PLAN.md -- Schematic mutation operations: snap_to_grid, add_power_flag, place_no_connects_from_erc
+- [x] 23-04-PLAN.md -- Root sheet generator from sub-sheet hierarchical labels
 
 ### Phase 24: Council Audit Remediation & Security Hardening
 **Goal**: Fix all 56 findings from Council of Ricks all-hands audit
@@ -561,7 +569,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 26-01-PLAN.md -- QueryConnectivityOp schema, read-only handler wrapping NetGraph, 5 query types, JSON result formatting, and tests (QUERY-01, QUERY-02, QUERY-03, QUERY-04)
+- [x] 26-01-PLAN.md -- QueryConnectivityOp schema, read-only handler wrapping NetGraph, 5 query types, JSON result formatting, and tests (QUERY-01, QUERY-02, QUERY-03, QUERY-04)
 
 ### Phase 27: Footprint Creation
 **Goal**: Users can create .kicad_mod footprint files from JSON PadSpec definitions with UUID-preserving serialization and automatic courtyard generation
@@ -575,8 +583,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 27-01-PLAN.md -- CreateFootprintOp schema with PadSpec, layer validation via Literal type, executor registration (FOOT-01, FOOT-04)
-- [ ] 27-02-PLAN.md -- Footprint handler with UUID-preserving raw S-expression serialization, courtyard generation, and tests (FOOT-02, FOOT-03)
+- [x] 27-01-PLAN.md -- CreateFootprintOp schema with PadSpec, layer validation via Literal type, executor registration (FOOT-01, FOOT-04)
+- [x] 27-02-PLAN.md -- Footprint handler with UUID-preserving raw S-expression serialization, courtyard generation, and tests (FOOT-02, FOOT-03)
 
 ### Phase 28: Hierarchical Sheet Operations
 **Goal**: Users can create hierarchical sheet instances and pins, navigate sheet hierarchies, and manage nested sub-sheets with correct path resolution and instance tracking
@@ -592,9 +600,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 28-01-PLAN.md -- AddSheetOp and NavigateSheetsOp schemas, sheet instance tracking, and executor registration (SHEET-01, SHEET-04)
-- [ ] 28-02-PLAN.md -- add_sheet handler with fileName resolution relative to parent, sheetInstances update, sub-sheet file creation, and navigate_hierarchy handler (SHEET-01, SHEET-03, SHEET-04, SHEET-05, SHEET-06)
-- [ ] 28-03-PLAN.md -- AddSheetPinOp schema, add_sheet_pin handler with exact-match label validation, nested hierarchy support, and tests (SHEET-02, SHEET-06)
+- [x] 28-01-PLAN.md -- AddSheetOp and NavigateSheetsOp schemas, sheet instance tracking, and executor registration (SHEET-01, SHEET-04)
+- [x] 28-02-PLAN.md -- add_sheet handler with fileName resolution relative to parent, sheetInstances update, sub-sheet file creation, and navigate_hierarchy handler (SHEET-01, SHEET-03, SHEET-04, SHEET-05, SHEET-06)
+- [x] 28-03-PLAN.md -- AddSheetPinOp schema, add_sheet_pin handler with exact-match label validation, nested hierarchy support, and tests (SHEET-02, SHEET-06)
 
 ### Phase 29: Cross-File Atomic Operations
 **Goal**: Users can propagate symbol changes across all referencing files atomically, with partial failure guarantee that rolls back ALL files if any single mutation fails
@@ -607,13 +615,52 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 29-01-PLAN.md -- `_CROSSFILE_HANDLERS` registry and `_execute_cross_file()` dispatch path in executor, PropagateSymbolChangeOp schema (XFILE-05, XFILE-06)
-- [ ] 29-02-PLAN.md -- propagate_symbol_change handler wiring AtomicOperation, partial failure guarantee with pre-validation, and tests (XFILE-05, XFILE-07)
+- [x] 29-01-PLAN.md -- `_CROSSFILE_HANDLERS` registry and `_execute_cross_file()` dispatch path in executor, PropagateSymbolChangeOp schema (XFILE-05, XFILE-06)
+- [x] 29-02-PLAN.md -- propagate_symbol_change handler wiring AtomicOperation, partial failure guarantee with pre-validation, and tests (XFILE-05, XFILE-07)
+
+</details>
+
+### v2.3 MCP-Server Phase Details
+
+### Phase 30: MCP Operations Server
+**Goal**: New MCP server binary exposing all 57 kicad-agent operations as individually named tools, with dynamic schema generation, structured error handling, and meta-tools for schema discovery and project context
+**Depends on**: Phase 29 (all 57 operations complete and tested)
+**Requirements**: MCPSRV-01, MCPSRV-02, MCPSRV-03, MCPSRV-04, MCPSRV-05, MCPSRV-06, MCPSRV-07, META-01, META-02, META-03, PKG-01, PKG-02
+**Success Criteria** (what must be TRUE):
+  1. All 57 operation types appear as individually named MCP tools with correct input schemas from `model_json_schema()`
+  2. MCP server runs on stdio transport via `kicad-agent-edit` CLI entry point
+  3. Project base directory configurable via `KICAD_PROJECT_DIR` env var, defaulting to `Path.cwd()`
+  4. Synchronous executor calls wrapped in `asyncio.to_thread()` -- event loop never blocks
+  5. Failed operations return `CallToolResult` with `isError=True` and structured error JSON
+  6. Successful operations return structured JSON matching executor return format
+  7. Tool responses exceeding 50KB are truncated with summary trailer
+  8. ToolAnnotations auto-assigned: readOnlyHint for query/validation, destructiveHint for remove, idempotentHint for create
+  9. `get_operation_schema` meta-tool returns full JSON Schema for all 57 operations
+  10. `get_project_context` meta-tool returns project structure, file inventory, and board statistics
+  11. `kicad-agent-edit` entry point registered in pyproject.toml with no new dependencies
+**Plans**: 3 plans
+
+Plans:
+- [ ] 30-01-PLAN.md -- Server skeleton: edit_server.py with dynamic tool generation from Operation union, stdio transport, base_dir config, pyproject.toml entry point (MCPSRV-01, MCPSRV-02, MCPSRV-03, PKG-01, PKG-02)
+- [ ] 30-02-PLAN.md -- Call dispatcher: single call_tool() handler with Pydantic validation, asyncio.to_thread() wrapping, isError error handling, 50KB response capping, ToolAnnotations per category (MCPSRV-04, MCPSRV-05, MCPSRV-06, MCPSRV-07, META-01)
+- [ ] 30-03-PLAN.md -- Meta-tools and tests: get_operation_schema, get_project_context, full test suite covering startup/dispatch/errors/capping (META-02, META-03)
+
+### Phase 31: Validation Integration
+**Goal**: ERC/DRC convenience tools wrapping kicad-cli for MCP clients that want one-call validation without running separate operations
+**Depends on**: Phase 30 (MCP server operational)
+**Requirements**: MCPVAL-01, MCPVAL-02
+**Success Criteria** (what must be TRUE):
+  1. `erc_check` MCP tool runs `kicad-cli sch erc` and returns structured violation results (pass/fail/warning with positions)
+  2. `drc_check` MCP tool runs `kicad-cli pcb drc` and returns structured violation results (pass/fail/warning with positions)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 31-01-PLAN.md -- erc_check and drc_check MCP tools wrapping kicad-cli validation, structured result parsing, ToolAnnotations (readOnlyHint=True), and tests (MCPVAL-01, MCPVAL-02)
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> ... -> 24 -> 25 -> 26 -> 27 -> 28 -> 29
+Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -639,10 +686,12 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 24 -> 25 -> 26 -> 27 -> 28 -> 
 | 20. SFT Data Prep | 3/3 | Complete | 2026-05-26 |
 | 21. GRPO RL Fine-Tuning | 2/2 | Complete | 2026-05-28 |
 | 22. Agent Integration | 2/2 | Complete | 2026-05-28 |
-| 23. Schematic Repair | 0/4 | Pending | - |
+| 23. Schematic Repair | 4/4 | Complete | 2026-05-29 |
 | 24. Council Audit Remediation | 5/5 | Complete | 2026-05-29 |
 | 25. Remove Operations | 2/2 | Complete | 2026-05-29 |
-| 26. Connectivity Query | 0/1 | Not started | - |
-| 27. Footprint Creation | 0/2 | Not started | - |
-| 28. Hierarchical Sheet Ops | 0/3 | Not started | - |
-| 29. Cross-File Atomic Ops | 0/2 | Not started | - |
+| 26. Connectivity Query | 1/1 | Complete | 2026-05-29 |
+| 27. Footprint Creation | 2/2 | Complete | 2026-05-29 |
+| 28. Hierarchical Sheet Ops | 3/3 | Complete | 2026-05-29 |
+| 29. Cross-File Atomic Ops | 2/2 | Complete | 2026-05-29 |
+| 30. MCP Operations Server | 0/3 | Pending | |
+| 31. Validation Integration | 0/1 | Pending | |

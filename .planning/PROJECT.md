@@ -50,16 +50,18 @@ If the AI can't produce structurally valid KiCad files through the tool layer, n
 - Existing tools: kiutils (Python), sexpdata (Python), kicad-cli for validation, difftastic for diffs
 - The tool lives at ~/apps/kicad-agent/ (Python backend) with a skill definition at ~/.claude/skills/kicad-agent/
 
-## Current Milestone: v2.2 complete-ops
+## Current Milestone: v2.3 mcp-server
 
-**Goal:** Fill the operations gaps so kicad-agent can handle real-world KiCad projects with hierarchical designs and full CRUD capabilities.
+**Goal:** Expose all 57 kicad-agent operations as MCP tools so any AI agent (Claude, Cursor, etc.) can invoke KiCad file edits directly.
+
+**What exists:** Component-search MCP server (4 tools, stdio transport) — only covers JLCPCB search, not file editing.
 
 **Target features:**
-- Hierarchical sheet operations (add_sheet, add_sheet_pin, sheet navigation)
-- Remove operations for wires, labels, junctions
-- Footprint creation operation (create_footprint)
-- Connectivity/netlist query operation
-- Cross-file atomic operations wired to executor
+- New MCP server exposing execute/analyze/status as tools
+- Dynamic tool generation from the 57-operation Pydantic schema
+- Project resources (ERC/DRC results, board analysis) as MCP resources
+- stdio transport, registered as CLI entry point
+- Schema discovery tool for dynamic operation introspection
 
 ## Constraints
 
@@ -98,4 +100,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-29 — Milestone v2.2 started*
+*Last updated: 2026-05-29 — Milestone v2.3 mcp-server started*

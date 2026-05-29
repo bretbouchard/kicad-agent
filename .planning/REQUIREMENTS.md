@@ -354,10 +354,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 | XFILE-05 | Phase 29: Cross-File Atomic Operations | Pending |
 | XFILE-06 | Phase 29: Cross-File Atomic Operations | Pending |
 | XFILE-07 | Phase 29: Cross-File Atomic Operations | Pending |
+| MCPSRV-01 | Phase 30: MCP Operations Server | Pending | 30-01 |
+| MCPSRV-02 | Phase 30: MCP Operations Server | Pending | 30-01 |
+| MCPSRV-03 | Phase 30: MCP Operations Server | Pending | 30-01 |
+| MCPSRV-04 | Phase 30: MCP Operations Server | Pending | 30-02 |
+| MCPSRV-05 | Phase 30: MCP Operations Server | Pending | 30-02 |
+| MCPSRV-06 | Phase 30: MCP Operations Server | Pending | 30-02 |
+| MCPSRV-07 | Phase 30: MCP Operations Server | Pending | 30-02 |
+| META-01 | Phase 30: MCP Operations Server | Pending | 30-02 |
+| META-02 | Phase 30: MCP Operations Server | Pending | 30-03 |
+| META-03 | Phase 30: MCP Operations Server | Pending | 30-03 |
+| PKG-01 | Phase 30: MCP Operations Server | Pending | 30-01 |
+| PKG-02 | Phase 30: MCP Operations Server | Pending | 30-01 |
+| MCPVAL-01 | Phase 31: Validation Integration | Pending | 31-01 |
+| MCPVAL-02 | Phase 31: Validation Integration | Pending | 31-01 |
 
 **Coverage:**
-- Total requirements: 120 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10 + 5 Phase 11 + 4 Phase 12 + 5 Phase 13 + 4 Phase 14 + 5 Phase 16 + 4 Phase 19 + 22 v2.2)
-- Mapped to phases: 120
+- Total requirements: 134 (44 v1 + 8 Phase 8 + 7 Phase 9 + 12 Phase 10 + 5 Phase 11 + 4 Phase 12 + 5 Phase 13 + 4 Phase 14 + 5 Phase 16 + 4 Phase 19 + 22 v2.2 + 14 v2.3)
+- Mapped to phases: 134
 - Unmapped: 0
 
 ---
@@ -417,7 +431,7 @@ Fill five operation gaps identified by Phase 24 Council audit (KNOWN_LIMITATIONS
 
 ---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-29 — v2.2 complete-ops requirements added (REMOVE, QUERY, FOOT, SHEET, XFILE)*
+*Last updated: 2026-05-29 — v2.3 mcp-server requirements added (MCPSRV, META, MCPVAL, PKG)*
 
 ### Bidirectional KiCad-LTspice (Phase 14)
 
@@ -454,3 +468,35 @@ Fill five operation gaps identified by Phase 24 Council audit (KNOWN_LIMITATIONS
 - [x] **ROUTE-02**: A* pathfinding routes nets individually and in batch (shortest first), producing immutable RouteResult with path waypoints and length
 - [x] **ROUTE-03**: Differential pair routing with length matching via accordion serpentining, configurable spacing and mismatch tolerance
 - [x] **ROUTE-04**: Interactive routing session with approve/reject/reroute cycles, per-net constraint adaptation, and differential pair coupling
+
+---
+
+## v2.3 Requirements — mcp-server
+
+Expose all 57 kicad-agent operations as MCP tools so any AI agent (Claude, Cursor, etc.) can invoke KiCad file edits directly. Zero new dependencies.
+
+### MCP Core (Phase 30)
+
+- [ ] **MCPSRV-01**: All 57 operation types exposed as individually named MCP tools, auto-generated from Pydantic `model_json_schema()`
+- [ ] **MCPSRV-02**: MCP server uses stdio transport, matching existing component-search server pattern
+- [ ] **MCPSRV-03**: Project base directory configurable via `KICAD_PROJECT_DIR` env var, defaulting to `Path.cwd()`
+- [ ] **MCPSRV-04**: Synchronous `OperationExecutor.execute()` calls wrapped in `asyncio.to_thread()` to prevent blocking MCP event loop
+- [ ] **MCPSRV-05**: Failed operations return `CallToolResult` with `isError=True` and structured error JSON
+- [ ] **MCPSRV-06**: Successful operations return `CallToolResult` with structured JSON matching executor return format
+- [ ] **MCPSRV-07**: Tool responses exceeding 50KB are truncated with summary trailer to prevent LLM context overflow
+
+### Tool Metadata (Phase 30)
+
+- [ ] **META-01**: MCP ToolAnnotations auto-assigned per category: `readOnlyHint` for query/validation, `destructiveHint` for remove, `idempotentHint` for create
+- [ ] **META-02**: `get_operation_schema` tool returns full JSON Schema for all 57 operations for dynamic client introspection
+- [ ] **META-03**: `get_project_context` tool returns project structure, file inventory, and board statistics
+
+### Validation Integration (Phase 31)
+
+- [ ] **MCPVAL-01**: `erc_check` MCP tool runs `kicad-cli sch erc` and returns structured violation results
+- [ ] **MCPVAL-02**: `drc_check` MCP tool runs `kicad-cli pcb drc` and returns structured violation results
+
+### Packaging (Phase 30)
+
+- [ ] **PKG-01**: New CLI entry point `kicad-agent-edit` registered in `pyproject.toml`
+- [ ] **PKG-02**: Server runs standalone with no additional dependencies beyond existing `mcp` package
