@@ -732,3 +732,132 @@ class SchematicIR(BaseIR):
             })
 
         return result
+
+    # -------------------------------------------------------------------
+    # UUID-based lookup helpers (for remove operations)
+    # -------------------------------------------------------------------
+
+    def get_wire_by_uuid(self, uuid: str) -> Optional[Any]:
+        """Find a wire Connection object by its UUID.
+
+        Wires are Connection objects with type='wire' stored in graphicalItems.
+
+        Args:
+            uuid: The UUID string to search for.
+
+        Returns:
+            The matching kiutils Connection (wire), or None if not found.
+        """
+        from kiutils.items.schitems import Connection
+
+        for item in self._parse_result.kiutils_obj.graphicalItems:
+            if isinstance(item, Connection) and item.type == "wire":
+                if item.uuid == uuid:
+                    return item
+        return None
+
+    def get_label_by_uuid(self, uuid: str) -> Optional[Any]:
+        """Find a label object by its UUID.
+
+        Searches local labels, global labels, and hierarchical labels.
+
+        Args:
+            uuid: The UUID string to search for.
+
+        Returns:
+            The matching kiutils label object, or None if not found.
+        """
+        sch = self._parse_result.kiutils_obj
+
+        for label in sch.labels:
+            if label.uuid == uuid:
+                return label
+
+        for label in sch.globalLabels:
+            if label.uuid == uuid:
+                return label
+
+        for label in sch.hierarchicalLabels:
+            if label.uuid == uuid:
+                return label
+
+        return None
+
+    def get_junction_by_uuid(self, uuid: str) -> Optional[Any]:
+        """Find a Junction object by its UUID.
+
+        Args:
+            uuid: The UUID string to search for.
+
+        Returns:
+            The matching kiutils Junction, or None if not found.
+        """
+        for jct in self._parse_result.kiutils_obj.junctions:
+            if jct.uuid == uuid:
+                return jct
+        return None
+
+    def get_no_connect_by_uuid(self, uuid: str) -> Optional[Any]:
+        """Find a NoConnect object by its UUID.
+
+        Args:
+            uuid: The UUID string to search for.
+
+        Returns:
+            The matching kiutils NoConnect, or None if not found.
+        """
+        for nc in self._parse_result.kiutils_obj.noConnects:
+            if nc.uuid == uuid:
+                return nc
+        return None
+
+    def get_adjacent_wires(
+        self, wire_uuid: str, tolerance: float = 0.0001
+    ) -> list:
+        """Find wires that share an endpoint with the specified wire.
+
+        Two wires are adjacent when the start or end coordinates of one
+        match the start or end coordinates of the other within tolerance.
+
+        Args:
+            wire_uuid: UUID of the reference wire.
+            tolerance: Maximum coordinate distance to consider as touching
+                       (default 0.0001 mm).
+
+        Returns:
+            List of kiutils Connection (wire) objects adjacent to the
+            reference wire, excluding the reference wire itself.
+        """
+        from kiutils.items.schitems import Connection
+
+        ref = self.get_wire_by_uuid(wire_uuid)
+        if ref is None or len(ref.points) < 2:
+            return []
+
+        ref_coords = {
+            (ref.points[0].X, ref.points[0].Y),
+            (ref.points[1].X, ref.points[1].Y),
+        }
+
+        adjacent: list = []
+        for item in self._parse_result.kiutils_obj.graphicalItems:
+            if not isinstance(item, Connection) or item.type != "wire":
+                continue
+            if item.uuid == wire_uuid or len(item.points) < 2:
+                continue
+
+            item_coords = [
+                (item.points[0].X, item.points[0].Y),
+                (item.points[1].X, item.points[1].Y),
+            ]
+
+            for ix, iy in item_coords:
+                for rx, ry in ref_coords:
+                    if abs(ix - rx) <= tolerance and abs(iy - ry) <= tolerance:
+                        adjacent.append(item)
+                        break
+                else:
+                    continue
+                break
+
+        return adjacent

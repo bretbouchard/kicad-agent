@@ -364,6 +364,26 @@ def _handle_swap_symbol(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, 
     return swap_symbol(op, ir, file_path)
 
 
+@register_schematic("remove_wire")
+def _handle_remove_wire(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    raise NotImplementedError("Handler not yet implemented (Plan 25-02)")
+
+
+@register_schematic("remove_label")
+def _handle_remove_label(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    raise NotImplementedError("Handler not yet implemented (Plan 25-02)")
+
+
+@register_schematic("remove_junction")
+def _handle_remove_junction(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    raise NotImplementedError("Handler not yet implemented (Plan 25-02)")
+
+
+@register_schematic("remove_no_connect")
+def _handle_remove_no_connect(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    raise NotImplementedError("Handler not yet implemented (Plan 25-02)")
+
+
 # ---------------------------------------------------------------------------
 # PCB handler implementations
 # ---------------------------------------------------------------------------

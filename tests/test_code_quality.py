@@ -80,10 +80,10 @@ class TestSchemaSplit:
         assert "properties" in schema or "$defs" in schema
 
     def test_submodules_exist(self) -> None:
-        """10 _schema_*.py sub-modules exist."""
+        """11 _schema_*.py sub-modules exist."""
         submods = sorted(SCHEMA_DIR.glob("_schema_*.py"))
-        assert len(submods) == 10, (
-            f"Expected 10 sub-modules, found {len(submods)}: "
+        assert len(submods) == 11, (
+            f"Expected 11 sub-modules, found {len(submods)}: "
             f"{[p.name for p in submods]}"
         )
 
@@ -120,6 +120,9 @@ class TestSchemaSplit:
         from kicad_agent.ops._schema_repair import (
             RepairSchematicOp, ConvertKicad6To10Op, SnapToGridOp,
             AddPowerFlagOp, RebuildRootSheetOp, SwapSymbolOp,
+        )
+        from kicad_agent.ops._schema_remove import (
+            RemoveWireOp, RemoveLabelOp, RemoveJunctionOp, RemoveNoConnectOp,
         )
 
     def test_safe_id_pattern_in_schema_only(self) -> None:
