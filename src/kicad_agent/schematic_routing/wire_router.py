@@ -63,39 +63,25 @@ def generate_fixes(
             wire_eps = (target.wire_start, target.wire_end)
 
         if target.routing_type == "same_axis":
-            is_label = target.target_ref.startswith("label:")
-            if is_label:
-                # Labels are first-class connection points — new wire segment works.
-                fixes.append(WireFix(
-                    file=target.file,
-                    fix_type="new_segment",
-                    old_endpoint=violation_pos,
-                    new_endpoint=target_pos,
-                    new_wire_points=[violation_pos, target_pos],
-                    net_name=target.net_name,
-                    target_ref=target.target_ref,
-                    target_pin=target.target_pin,
-                    distance=target.distance,
-                    sheet=target.sheet,
-                    wire_endpoints=wire_eps,
-                ))
-            else:
-                # Pin targets: extend existing wire endpoint.
-                # The violation endpoint is dangling (nothing else connected),
-                # so extending it is safe and avoids creating extra unconnected
-                # endpoints that new_segment causes.
-                fixes.append(WireFix(
-                    file=target.file,
-                    fix_type="extend",
-                    old_endpoint=violation_pos,
-                    new_endpoint=target_pos,
-                    net_name=target.net_name,
-                    target_ref=target.target_ref,
-                    target_pin=target.target_pin,
-                    distance=target.distance,
-                    sheet=target.sheet,
-                    wire_endpoints=wire_eps,
-                ))
+            # Extend the DANGLING wire endpoint to the target position.
+            # The violation is at the pin body (connection point). The wire
+            # connects the pin to a dangling endpoint. We extend the dangling
+            # end, NOT the pin end — extending the pin end would disconnect it.
+            dangling_ep = _find_dangling_endpoint(
+                violation_pos, target.wire_start, target.wire_end,
+            )
+            fixes.append(WireFix(
+                file=target.file,
+                fix_type="extend",
+                old_endpoint=dangling_ep,
+                new_endpoint=target_pos,
+                net_name=target.net_name,
+                target_ref=target.target_ref,
+                target_pin=target.target_pin,
+                distance=target.distance,
+                sheet=target.sheet,
+                wire_endpoints=wire_eps,
+            ))
 
         elif target.routing_type == "l_shape":
             # L-shaped routing disabled for safety — same_axis only for now.
@@ -104,6 +90,28 @@ def generate_fixes(
             pass
 
     return fixes
+
+
+def _find_dangling_endpoint(
+    violation_pos: tuple[float, float],
+    wire_start: Optional[tuple[float, float]],
+    wire_end: Optional[tuple[float, float]],
+) -> tuple[float, float]:
+    """Find the dangling endpoint of the wire (not at the violation/pin position).
+
+    The violation is at the pin body (connection point). The wire has two
+    endpoints: one at the pin and one dangling. We return the dangling one.
+    """
+    if wire_start and wire_end:
+        ws = _round_pos(wire_start)
+        we = _round_pos(wire_end)
+        vp = _round_pos(violation_pos)
+        if ws == vp:
+            return we
+        elif we == vp:
+            return ws
+    # Fallback: return violation position (shouldn't happen with valid data)
+    return violation_pos
 
 
 def _snap_to_grid(pos: tuple[float, float], grid: float) -> tuple[float, float]:

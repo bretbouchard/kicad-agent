@@ -93,6 +93,14 @@ def find_targets(
         best_target: Optional[RoutingTarget] = None
         best_dist = float("inf")
 
+        # Determine the wire's other endpoint (the non-violation end)
+        other_wire_ep = None
+        if wire_start and wire_end:
+            if _round_pos(wire_start) == _round_pos(violation_pos):
+                other_wire_ep = _round_pos(wire_end)
+            elif _round_pos(wire_end) == _round_pos(violation_pos):
+                other_wire_ep = _round_pos(wire_start)
+
         # Strategy 1: Netlist pins (most reliable)
         for ref, pin_num in net_pins:
             # Only consider pins in the same sheet
@@ -106,6 +114,14 @@ def find_targets(
 
             # Skip if this is the pin the wire is already (almost) touching
             if _round_pos(pin_pos) == _round_pos(violation_pos):
+                continue
+
+            # Skip if the wire ALREADY reaches this target (other endpoint is there)
+            if other_wire_ep and _round_pos(pin_pos) == other_wire_ep:
+                continue
+
+            # Skip pins with no-connect markers (intentionally unconnected)
+            if _round_pos(pin_pos) in graph.no_connects:
                 continue
 
             # Calculate distance
@@ -138,6 +154,9 @@ def find_targets(
                     continue
                 label_pos = _round_pos(label.position)
                 if label_pos == _round_pos(violation_pos):
+                    continue
+                # Skip if wire already reaches this label
+                if other_wire_ep and label_pos == other_wire_ep:
                     continue
                 dist = _distance(violation_pos, label_pos)
                 if dist < best_dist and dist <= max_distance:
@@ -177,10 +196,14 @@ def _find_graph_by_file(
 
 
 def _find_pin_position(graph: SchematicGraph, ref: str, pin_number: str) -> Optional[tuple[float, float]]:
-    """Find the wire-end position of a specific pin in a graph."""
+    """Find the connection position of a specific pin in a graph.
+
+    Returns body_position (the pin base where wires connect), not the
+    computed wire-end. KiCad connects wires at the pin base.
+    """
     for pin in graph.pins:
         if pin.ref == ref and pin.pin_number == pin_number:
-            return pin.position
+            return pin.body_position
     return None
 
 

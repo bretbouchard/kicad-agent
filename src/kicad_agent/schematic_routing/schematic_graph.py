@@ -68,6 +68,7 @@ class SchematicGraph:
     pins: list[PinPosition] = field(default_factory=list)
     labels: list[Label] = field(default_factory=list)
     junctions: set[Pos] = field(default_factory=set)
+    no_connects: set[Pos] = field(default_factory=set)
     ref_to_libid: dict[str, str] = field(default_factory=dict)
 
     # Derived indexes
@@ -111,6 +112,9 @@ class SchematicGraph:
 
         # Parse junctions
         graph.junctions = _parse_junctions(body)
+
+        # Parse no-connect markers
+        graph.no_connects = _parse_no_connects(body)
 
         return graph
 
@@ -475,3 +479,11 @@ def _parse_junctions(body: str) -> set[Pos]:
     for m in re.finditer(r'\(junction\s+\(at\s+([\d.]+)\s+([\d.]+)\)', body):
         junctions.add((round(float(m.group(1)), 2), round(float(m.group(2)), 2)))
     return junctions
+
+
+def _parse_no_connects(body: str) -> set[Pos]:
+    """Parse no-connect marker positions."""
+    no_connects = set()
+    for m in re.finditer(r'\(no_connect\s+\(at\s+([\d.]+)\s+([\d.]+)\)', body):
+        no_connects.add((round(float(m.group(1)), 2), round(float(m.group(2)), 2)))
+    return no_connects
