@@ -18,7 +18,7 @@ Usage:
 import dataclasses
 import logging
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from kicad_agent.crossfile.atomic import AtomicOperation
 from kicad_agent.ir.base import _clear_registry
@@ -28,6 +28,7 @@ from kicad_agent.ir.transaction import Transaction
 from kicad_agent.ops.schema import Operation
 from kicad_agent.parser import parse_pcb, parse_schematic
 from kicad_agent.parser.uuid_extractor import extract_uuids
+from kicad_agent.ops.ir_cache import CacheEntry, IRCache
 from kicad_agent.serializer import normalize_kicad_output, serialize_pcb, serialize_schematic
 
 logger = logging.getLogger(__name__)
@@ -712,8 +713,9 @@ class OperationExecutor:
         base_dir: Base directory for resolving relative target_file paths.
     """
 
-    def __init__(self, base_dir: Path) -> None:
+    def __init__(self, base_dir: Path, *, cache: Optional[IRCache] = None) -> None:
         self._base_dir = base_dir
+        self._cache = cache
 
     def execute(self, op: Operation) -> dict[str, Any]:
         """Execute a validated operation with Transaction wrapping.
@@ -791,8 +793,17 @@ class OperationExecutor:
             Dict with: success, operation, target_file, details.
         """
         root = op.root
-        parse_result = parse_pcb(file_path)
-        uuid_map = extract_uuids(parse_result.raw_content, "pcb")
+
+        cached_entry = self._cache.get(file_path) if self._cache else None
+        if cached_entry is not None:
+            parse_result = cached_entry.parse_result
+            uuid_map = cached_entry.uuid_map
+        else:
+            parse_result = parse_pcb(file_path)
+            uuid_map = extract_uuids(parse_result.raw_content, "pcb")
+            if self._cache:
+                self._cache.put(file_path, CacheEntry(parse_result=parse_result, uuid_map=uuid_map))
+
         ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
         details = self._dispatch_query(root.op_type, root, ir, file_path)
         return {
@@ -866,7 +877,14 @@ class OperationExecutor:
         """Execute an operation targeting a schematic file."""
         root = op.root
 
-        parse_result = parse_schematic(file_path)
+        cached_entry = self._cache.get(file_path) if self._cache else None
+        if cached_entry is not None:
+            parse_result = cached_entry.parse_result
+        else:
+            parse_result = parse_schematic(file_path)
+            if self._cache:
+                self._cache.put(file_path, CacheEntry(parse_result=parse_result))
+
         ir = SchematicIR(_parse_result=parse_result)
 
         with Transaction(file_path) as txn:
@@ -876,6 +894,11 @@ class OperationExecutor:
             normalized = normalize_kicad_output(content)
             file_path.write_text(normalized, encoding="utf-8")
             txn.commit()
+
+        # Invalidate old cache entry and store fresh one after write
+        if self._cache:
+            self._cache.invalidate(file_path)
+            self._cache.put(file_path, CacheEntry(parse_result=parse_result))
 
         return {
             "success": True,
@@ -888,8 +911,16 @@ class OperationExecutor:
         """Execute an operation targeting a PCB file."""
         root = op.root
 
-        parse_result = parse_pcb(file_path)
-        uuid_map = extract_uuids(parse_result.raw_content, "pcb")
+        cached_entry = self._cache.get(file_path) if self._cache else None
+        if cached_entry is not None:
+            parse_result = cached_entry.parse_result
+            uuid_map = cached_entry.uuid_map
+        else:
+            parse_result = parse_pcb(file_path)
+            uuid_map = extract_uuids(parse_result.raw_content, "pcb")
+            if self._cache:
+                self._cache.put(file_path, CacheEntry(parse_result=parse_result, uuid_map=uuid_map))
+
         ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
 
         with Transaction(file_path) as txn:
@@ -901,6 +932,11 @@ class OperationExecutor:
                 serialize_pcb(parse_result, file_path, uuid_map=uuid_map)
 
             txn.commit()
+
+        # Invalidate old cache entry and store fresh one after write
+        if self._cache:
+            self._cache.invalidate(file_path)
+            self._cache.put(file_path, CacheEntry(parse_result=parse_result, uuid_map=uuid_map))
 
         return {
             "success": True,
