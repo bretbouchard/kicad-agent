@@ -1123,3 +1123,198 @@ class OperationExecutor:
         if hasattr(op, "target_files"):
             return [self._base_dir / tf for tf in op.target_files]
         return []
+
+    # ------------------------------------------------------------------
+    # Batch execution: single parse/write per file
+    # ------------------------------------------------------------------
+
+    def execute_batch(self, ops: list[Operation]) -> dict[str, Any]:
+        """Execute multiple operations with single parse/write per file.
+
+        Groups ops by target file, parses each once, applies all mutations,
+        serializes once per file. Validates ALL operations before executing ANY.
+
+        Not supported: cross-file ops and create ops -- use execute() for those.
+
+        Args:
+            ops: List of validated Operation instances to execute.
+
+        Returns:
+            Dict with: success, results (list of per-op result dicts).
+            On validation failure: success=False, validation_errors list.
+        """
+        # Early return for empty batch
+        if not ops:
+            return {"success": True, "results": []}
+
+        # Reject unsupported op types
+        unsupported: list[str] = []
+        for op in ops:
+            root = op.root
+            if root.op_type in _CROSS_FILE_OP_TYPES:
+                unsupported.append(root.op_type)
+            elif root.op_type in _CREATE_OP_TYPES:
+                unsupported.append(root.op_type)
+        if unsupported:
+            return {
+                "success": False,
+                "results": [],
+                "error": f"Batch rejected: unsupported op types: {sorted(set(unsupported))}",
+            }
+
+        # Security (T-24-01): path confinement — validate all paths first
+        base_resolved = self._base_dir.resolve()
+        for op in ops:
+            file_path = self._base_dir / op.root.target_file
+            resolved = file_path.resolve()
+            if not resolved.is_relative_to(base_resolved):
+                return {
+                    "success": False,
+                    "results": [],
+                    "error": f"Security: path escapes project directory: {op.root.target_file}",
+                }
+
+        # Group by target file
+        file_ops: dict[Path, list[Operation]] = {}
+        file_order: list[Path] = []
+        for op in ops:
+            fp = (self._base_dir / op.root.target_file).resolve()
+            if fp not in file_ops:
+                file_ops[fp] = []
+                file_order.append(fp)
+            file_ops[fp].append(op)
+
+        # Clear IR registry once for the entire batch
+        _clear_registry()
+
+        # Phase 1 — Parse and validate ALL operations
+        ir_map: dict[Path, Any] = {}
+        parse_result_map: dict[Path, Any] = {}  # file_path -> parse_result
+        uuid_map_store: dict[Path, Any] = {}  # file_path -> uuid_map (PCB only)
+        validation_errors: list[str] = []
+
+        for file_path in file_order:
+            ops_for_file = file_ops[file_path]
+
+            if not file_path.exists():
+                for op in ops_for_file:
+                    validation_errors.append(
+                        f"Target file not found: {op.root.target_file}"
+                    )
+                continue
+
+            # Parse the file (with cache if available)
+            if file_path.suffix == ".kicad_pcb":
+                cached_entry = self._cache.get(file_path) if self._cache else None
+                if cached_entry is not None:
+                    parse_result = cached_entry.parse_result
+                    uuid_map = cached_entry.uuid_map
+                else:
+                    parse_result = parse_pcb(file_path)
+                    uuid_map = extract_uuids(parse_result.raw_content, "pcb")
+                    if self._cache:
+                        self._cache.put(
+                            file_path,
+                            CacheEntry(parse_result=parse_result, uuid_map=uuid_map),
+                        )
+                parse_result_map[file_path] = parse_result
+                uuid_map_store[file_path] = uuid_map
+                ir_map[file_path] = PcbIR(
+                    _parse_result=parse_result, _uuid_map=uuid_map
+                )
+            else:
+                # Schematic (default)
+                cached_entry = self._cache.get(file_path) if self._cache else None
+                if cached_entry is not None:
+                    parse_result = cached_entry.parse_result
+                else:
+                    parse_result = parse_schematic(file_path)
+                    if self._cache:
+                        self._cache.put(
+                            file_path, CacheEntry(parse_result=parse_result)
+                        )
+                parse_result_map[file_path] = parse_result
+                ir_map[file_path] = SchematicIR(_parse_result=parse_result)
+
+            # Validate handlers exist for all ops targeting this file
+            for op in ops_for_file:
+                root = op.root
+                if file_path.suffix == ".kicad_pcb":
+                    handler = _PCB_HANDLERS.get(root.op_type)
+                elif self._is_project_file(file_path):
+                    handler = _PROJECT_HANDLERS.get(root.op_type)
+                else:
+                    handler = _SCHEMATIC_HANDLERS.get(root.op_type)
+
+                if handler is None:
+                    validation_errors.append(
+                        f"No handler for op_type '{root.op_type}' on "
+                        f"{file_path.suffix or file_path.name}"
+                    )
+
+        if validation_errors:
+            return {
+                "success": False,
+                "results": [],
+                "validation_errors": validation_errors,
+                "error": f"Batch rejected: {len(validation_errors)} validation "
+                f"failure{'s' if len(validation_errors) != 1 else ''}",
+            }
+
+        # Phase 2 — Apply mutations and serialize (once per file)
+        all_results: list[dict[str, Any]] = []
+
+        for file_path in file_order:
+            ops_for_file = file_ops[file_path]
+            ir = ir_map[file_path]
+            parse_result = parse_result_map[file_path]
+
+            with Transaction(file_path) as txn:
+                for op in ops_for_file:
+                    root = op.root
+                    if file_path.suffix == ".kicad_pcb":
+                        details = self._dispatch_pcb(root.op_type, root, ir, file_path)
+                    elif self._is_project_file(file_path):
+                        details = self._dispatch_project(
+                            root.op_type, root, file_path
+                        )
+                    else:
+                        details = self._dispatch(root.op_type, root, ir, file_path)
+
+                    all_results.append({
+                        "success": True,
+                        "operation": root.op_type,
+                        "target_file": root.target_file,
+                        "details": details,
+                    })
+
+                # Serialize once per file
+                if file_path.suffix == ".kicad_pcb":
+                    uuid_map = uuid_map_store.get(file_path)
+                    if not ir._raw_written:
+                        serialize_pcb(parse_result, file_path, uuid_map=uuid_map)
+                elif not self._is_project_file(file_path):
+                    serialize_schematic(parse_result, file_path)
+                    content = file_path.read_text(encoding="utf-8")
+                    normalized = normalize_kicad_output(content)
+                    file_path.write_text(normalized, encoding="utf-8")
+
+                txn.commit()
+
+            # Invalidate old cache entry and store fresh one after write
+            if self._cache:
+                self._cache.invalidate(file_path)
+                if file_path.suffix == ".kicad_pcb":
+                    self._cache.put(
+                        file_path,
+                        CacheEntry(
+                            parse_result=parse_result,
+                            uuid_map=uuid_map_store.get(file_path),
+                        ),
+                    )
+                elif not self._is_project_file(file_path):
+                    self._cache.put(
+                        file_path, CacheEntry(parse_result=parse_result)
+                    )
+
+        return {"success": True, "results": all_results}
