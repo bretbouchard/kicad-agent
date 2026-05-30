@@ -365,6 +365,130 @@ def _find_project_name(sch_path: Path) -> str:
     return "analog-board"
 
 
+def _extract_lib_symbol_block(content: str, lib_id: str) -> Optional[str]:
+    """Extract a complete lib symbol definition block from a schematic file.
+
+    Finds (symbol "lib_id" ...) at depth 1 inside the (lib_symbols ...) section
+    and returns the full S-expression block including closing paren.
+    """
+    pattern = re.compile(r'\(\s*symbol\s+"' + re.escape(lib_id) + r'"')
+    for m in pattern.finditer(content):
+        # Walk backward to ensure this is inside lib_symbols (depth 1)
+        pre = content[:m.start()]
+        open_parens = pre.count("(") - pre.count(")")
+        # We want the symbol definition at the correct nesting level
+        # Inside lib_symbols, these are at depth 2 (lib_symbols > symbol)
+        start = m.start()
+        depth = 0
+        end = start
+        for i in range(start, len(content)):
+            if content[i] == "(":
+                depth += 1
+            elif content[i] == ")":
+                depth -= 1
+                if depth == 0:
+                    end = i + 1
+                    break
+        return content[start:end]
+    return None
+
+
+def _lib_symbol_exists(content: str, lib_id: str) -> bool:
+    """Check if a lib symbol definition exists in the file's lib_symbols section."""
+    pattern = re.compile(r'\(\s*symbol\s+"' + re.escape(lib_id) + r'"')
+    # Find the lib_symbols section boundaries
+    ls_start = content.find("(lib_symbols")
+    if ls_start == -1:
+        return False
+    # Find the end of lib_symbols section
+    depth = 0
+    ls_end = ls_start
+    for i in range(ls_start, len(content)):
+        if content[i] == "(":
+            depth += 1
+        elif content[i] == ")":
+            depth -= 1
+            if depth == 0:
+                ls_end = i + 1
+                break
+    lib_symbols_section = content[ls_start:ls_end]
+    return bool(pattern.search(lib_symbols_section))
+
+
+def _inject_missing_lib_symbols(
+    content: str, needed_lib_ids: set[str], sch_dir: Path
+) -> str:
+    """Add missing lib symbol definitions to a sheet's lib_symbols section.
+
+    Searches sibling sheets for the definition if the current sheet lacks it.
+    Falls back to generating a minimal power symbol definition.
+
+    Args:
+        content: The schematic file content.
+        needed_lib_ids: Set of lib_id strings (e.g. {"power:GNDA", "power:+9V"}).
+        sch_dir: Directory containing all .kad_sch files (for cross-sheet lookup).
+
+    Returns:
+        Updated content with missing lib symbol definitions injected.
+    """
+    missing = {lid for lid in needed_lib_ids if not _lib_symbol_exists(content, lid)}
+    if not missing:
+        return content
+
+    # Collect definitions from sibling sheets
+    definitions: dict[str, str] = {}
+    for lid in missing:
+        # First try the current file itself (shouldn't happen but defensive)
+        block = _extract_lib_symbol_block(content, lid)
+        if block:
+            definitions[lid] = block
+            continue
+        # Search sibling sheets
+        for sch_file in sorted(sch_dir.glob("*.kicad_sch")):
+            sibling_content = sch_file.read_text()
+            block = _extract_lib_symbol_block(sibling_content, lid)
+            if block:
+                definitions[lid] = block
+                break
+
+    if not definitions:
+        return content
+
+    # Find the end of the lib_symbols section
+    ls_start = content.find("(lib_symbols")
+    if ls_start == -1:
+        # No lib_symbols section — shouldn't happen for valid KiCad files
+        return content
+
+    depth = 0
+    ls_end = ls_start
+    for i in range(ls_start, len(content)):
+        if content[i] == "(":
+            depth += 1
+        elif content[i] == ")":
+            depth -= 1
+            if depth == 0:
+                ls_end = i
+                break
+
+    # Build insertion text
+    insertion = ""
+    for lid in sorted(definitions.keys()):
+        block = definitions[lid]
+        # Ensure consistent indentation (2 tabs for depth-2 inside lib_symbols)
+        lines = block.split("\n")
+        normalized = []
+        for line in lines:
+            stripped = line.lstrip()
+            if stripped:
+                normalized.append("\t\t" + stripped)
+        insertion += "\n" + "\n".join(normalized)
+
+    # Insert before the closing paren of lib_symbols
+    new_content = content[:ls_end] + insertion + "\n\t" + content[ls_end:]
+    return new_content
+
+
 def place_power_units(sch_dir: str, refs: Optional[list[str]] = None) -> dict:
     """Place missing power units for specified ICs (or all missing ones).
 
@@ -453,6 +577,8 @@ def place_power_units(sch_dir: str, refs: Optional[list[str]] = None) -> dict:
     # Phase 2: For each IC, insert power unit + power symbols + wires
     # Group by sheet to minimize file writes
     sheets_modified: dict[str, list[str]] = {}
+    # Track which power symbol lib_ids each sheet needs (for lib_symbols injection)
+    sheets_needed_libs: dict[str, set[str]] = {}
 
     for ref, ic in sorted(all_ic_info.items()):
         config = _get_power_config(ic.lib_id)
@@ -494,23 +620,32 @@ def place_power_units(sch_dir: str, refs: Optional[list[str]] = None) -> dict:
                 )
             )
 
+            # Track that this sheet needs this power symbol's lib definition
+            sheets_needed_libs.setdefault(ic.sheet, set()).add(pin_cfg["power_sym"])
+
         block_text = "\n".join(additions)
         sheets_modified.setdefault(ic.sheet, []).append(block_text)
         placed += 1
 
-    # Phase 3: Write to files
+    # Phase 3: Write to files — inject missing lib_symbols THEN add placements
     for sheet, blocks in sheets_modified.items():
         sch_file = sch_path / f"{sheet}.kicad_sch"
         content = sch_file.read_text()
 
-        # Insert before the closing ')'
+        # Inject missing lib symbol definitions for power symbols
+        needed = sheets_needed_libs.get(sheet, set())
+        if needed:
+            content = _inject_missing_lib_symbols(content, needed, sch_path)
+
+        # Insert placements before the closing ')'
         insert_text = "\n".join(blocks)
         # Find the last closing paren (end of schematic)
         last_close = content.rfind(")")
         new_content = content[:last_close] + insert_text + "\n)"
 
         sch_file.write_text(new_content)
-        print(f"  Modified {sheet}.kicad_sch: placed {len(blocks) // 3} power units")
+        lib_injected = len(needed) if needed else 0
+        print(f"  Modified {sheet}.kicad_sch: placed {len(blocks) // 3} power units, injected {lib_injected} lib symbols")
 
     return {"placed": placed, "skipped": skipped}
 
