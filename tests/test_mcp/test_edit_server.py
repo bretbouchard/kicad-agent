@@ -37,13 +37,13 @@ class TestToolGeneration:
     def test_generates_57_operation_tools(self) -> None:
         assert len(_OPERATION_TOOLS) == 57
 
-    def test_generates_2_meta_tools(self) -> None:
-        assert len(_META_TOOLS) == 2
+    def test_generates_4_meta_tools(self) -> None:
+        assert len(_META_TOOLS) == 4
         meta_names = {t.name for t in _META_TOOLS}
-        assert meta_names == {"get_operation_schema", "get_project_context"}
+        assert meta_names == {"get_operation_schema", "get_project_context", "erc_check", "drc_check"}
 
     def test_total_tool_count(self) -> None:
-        assert len(_ALL_TOOLS) == 59  # 57 ops + 2 meta
+        assert len(_ALL_TOOLS) == 61  # 57 ops + 4 meta
 
     def test_all_tools_have_names(self) -> None:
         for tool in _ALL_TOOLS:
@@ -342,3 +342,66 @@ class TestServerSetup:
         names1 = [t.name for t in tools1]
         names2 = [t.name for t in tools2]
         assert names1 == names2
+
+
+class TestValidationTools:
+    """Test erc_check and drc_check dispatch with mocked run_erc/run_drc."""
+
+    @pytest.fixture
+    def mock_executor(self, tmp_path: Path) -> tuple[MagicMock, Path]:
+        executor = MagicMock(spec=OperationExecutor)
+        return executor, tmp_path
+
+    @pytest.mark.asyncio
+    async def test_erc_check_returns_structured_result(self, mock_executor: tuple) -> None:
+        from dataclasses import dataclass
+        from kicad_agent.validation.erc_drc import ErcResult
+        executor, base_dir = mock_executor
+        erc_result = ErcResult(passed=True, file_path=base_dir / "test.kicad_sch", violations=())
+        with patch("kicad_agent.mcp.edit_server.run_erc", return_value=erc_result):
+            result = await dispatch_tool("erc_check", {"schematic_file": "test.kicad_sch"}, executor, base_dir)
+        assert result.isError is not True
+        body = json.loads(result.content[0].text)
+        assert body["passed"] is True
+        assert body["violation_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_erc_check_with_violations(self, mock_executor: tuple) -> None:
+        from kicad_agent.validation.erc_drc import ErcResult, Violation, Severity
+        executor, base_dir = mock_executor
+        violations = (Violation(description="Pin not driven", severity=Severity.ERROR, type="pin_not_driven"),)
+        erc_result = ErcResult(passed=False, file_path=base_dir / "test.kicad_sch", violations=violations)
+        with patch("kicad_agent.mcp.edit_server.run_erc", return_value=erc_result):
+            result = await dispatch_tool("erc_check", {"schematic_file": "test.kicad_sch"}, executor, base_dir)
+        body = json.loads(result.content[0].text)
+        assert body["passed"] is False
+        assert body["violation_count"] == 1
+        assert body["violations"][0]["description"] == "Pin not driven"
+
+    @pytest.mark.asyncio
+    async def test_drc_check_returns_structured_result(self, mock_executor: tuple) -> None:
+        from kicad_agent.validation.erc_drc import DrcResult
+        executor, base_dir = mock_executor
+        drc_result = DrcResult(passed=True, file_path=base_dir / "test.kicad_pcb", violations=(), unconnected_items=())
+        with patch("kicad_agent.mcp.edit_server.run_drc", return_value=drc_result):
+            result = await dispatch_tool("drc_check", {"pcb_file": "test.kicad_pcb"}, executor, base_dir)
+        assert result.isError is not True
+        body = json.loads(result.content[0].text)
+        assert body["passed"] is True
+        assert body["unconnected_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_erc_check_missing_file_param(self, mock_executor: tuple) -> None:
+        executor, base_dir = mock_executor
+        result = await dispatch_tool("erc_check", {}, executor, base_dir)
+        assert result.isError is True
+        body = json.loads(result.content[0].text)
+        assert body["error_type"] == "erc_error"
+
+    @pytest.mark.asyncio
+    async def test_drc_check_annotations_are_read_only(self) -> None:
+        """erc_check and drc_check tools have readOnlyHint=True."""
+        erc_tool = next(t for t in _META_TOOLS if t.name == "erc_check")
+        drc_tool = next(t for t in _META_TOOLS if t.name == "drc_check")
+        assert erc_tool.annotations.readOnlyHint is True
+        assert drc_tool.annotations.readOnlyHint is True

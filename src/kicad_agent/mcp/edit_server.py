@@ -29,6 +29,7 @@ from mcp.server.stdio import stdio_server
 from kicad_agent.context import render_project_context
 from kicad_agent.ops.executor import OperationExecutor
 from kicad_agent.ops.schema import Operation
+from kicad_agent.validation.erc_drc import run_erc, run_drc
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +137,47 @@ _META_TOOLS = [
         },
         annotations=types.ToolAnnotations(readOnlyHint=True),
     ),
+    types.Tool(
+        name="erc_check",
+        description=(
+            "Run Electrical Rules Check (ERC) on a KiCad schematic using kicad-cli. "
+            "Returns structured results: pass/fail status, violation count, and "
+            "violation details with positions. Equivalent to kicad-cli sch erc."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "schematic_file": {
+                    "type": "string",
+                    "description": "Relative path to .kicad_sch file (e.g. 'motor-driver.kicad_sch')",
+                    "minLength": 1,
+                },
+            },
+            "required": ["schematic_file"],
+        },
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
+    types.Tool(
+        name="drc_check",
+        description=(
+            "Run Design Rules Check (DRC) on a KiCad PCB using kicad-cli. "
+            "Returns structured results: pass/fail status, violation count, "
+            "unconnected items, and violation details with positions. "
+            "Equivalent to kicad-cli pcb drc."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "pcb_file": {
+                    "type": "string",
+                    "description": "Relative path to .kicad_pcb file (e.g. 'motor-driver.kicad_pcb')",
+                    "minLength": 1,
+                },
+            },
+            "required": ["pcb_file"],
+        },
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
 ]
 
 
@@ -197,7 +239,7 @@ app = Server("kicad-agent-edit", version="0.1.0", lifespan=server_lifespan)
 
 @app.list_tools()
 async def list_tools() -> list[types.Tool]:
-    """Return all available MCP tools (57 operations + 2 meta-tools)."""
+    """Return all available MCP tools (57 operations + 4 meta-tools)."""
     return _ALL_TOOLS
 
 
@@ -232,6 +274,64 @@ async def dispatch_tool(
             )
         except Exception as e:
             return _error_result("context_error", str(e))
+
+    # --- Validation tools ---
+    if name == "erc_check":
+        try:
+            sch_file = arguments["schematic_file"]
+            sch_path = base_dir / sch_file
+            result = await asyncio.to_thread(run_erc, sch_path)
+            text = _cap_response(json.dumps({
+                "passed": result.passed,
+                "file": str(result.file_path),
+                "violation_count": len(result.violations),
+                "errors": len(result.errors),
+                "warnings": len(result.warnings),
+                "violations": [
+                    {"severity": v.severity.value, "type": v.type,
+                     "description": v.description, "sheet": v.sheet_path}
+                    for v in result.violations[:50]
+                ],
+                "kicad_version": result.kicad_version,
+                "error_message": result.error_message,
+            }, indent=2, default=str))
+            return types.CallToolResult(
+                content=[types.TextContent(type="text", text=text)],
+            )
+        except Exception as e:
+            return _error_result(
+                "erc_error", str(e), "Verify the schematic file path is correct."
+            )
+
+    if name == "drc_check":
+        try:
+            pcb_file = arguments["pcb_file"]
+            pcb_path = base_dir / pcb_file
+            result = await asyncio.to_thread(run_drc, pcb_path)
+            text = _cap_response(json.dumps({
+                "passed": result.passed,
+                "file": str(result.file_path),
+                "violation_count": len(result.violations),
+                "unconnected_count": len(result.unconnected_items),
+                "violations": [
+                    {"severity": v.severity.value, "type": v.type,
+                     "description": v.description}
+                    for v in result.violations[:50]
+                ],
+                "unconnected_items": [
+                    {"description": v.description, "type": v.type}
+                    for v in result.unconnected_items[:20]
+                ],
+                "kicad_version": result.kicad_version,
+                "error_message": result.error_message,
+            }, indent=2, default=str))
+            return types.CallToolResult(
+                content=[types.TextContent(type="text", text=text)],
+            )
+        except Exception as e:
+            return _error_result(
+                "drc_error", str(e), "Verify the PCB file path is correct."
+            )
 
     # --- Operation tools ---
     if name not in _OP_NAMES:

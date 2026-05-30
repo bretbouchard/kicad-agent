@@ -11,7 +11,7 @@ Build an AI-safe KiCad structural editing tool across multiple milestones. First
 - **v2.0 Production AI** - Phases 13-22 (shipped 2026-05-28)
 - **v2.1 Audit** - Phases 23-24 (shipped 2026-05-29)
 - **v2.2 Complete-Ops** - Phases 25-29 (shipped 2026-05-29)
-- **v2.3 MCP-Server** - Phases 30-31
+- **v2.3 MCP-Server** - Phases 30-31 (shipped 2026-05-29)
 
 ## Phases
 
@@ -653,7 +653,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 31-01-PLAN.md -- erc_check and drc_check MCP tools wrapping kicad-cli validation, structured result parsing, ToolAnnotations (readOnlyHint=True), and tests (MCPVAL-01, MCPVAL-02)
+- [x] 31-01-PLAN.md -- erc_check and drc_check MCP tools wrapping kicad-cli validation, structured result parsing, ToolAnnotations (readOnlyHint=True), and tests (MCPVAL-01, MCPVAL-02)
 
 ## Progress
 
@@ -692,4 +692,4 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 28. Hierarchical Sheet Ops | 3/3 | Complete | 2026-05-29 |
 | 29. Cross-File Atomic Ops | 2/2 | Complete | 2026-05-29 |
 | 30. MCP Operations Server | 1/1 | Complete | 2026-05-29 |
-| 31. Validation Integration | 0/1 | Pending | |
+| 31. Validation Integration | 1/1 | Complete | 2026-05-29 |
