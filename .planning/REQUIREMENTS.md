@@ -430,8 +430,64 @@ Fill five operation gaps identified by Phase 24 Council audit (KNOWN_LIMITATIONS
 - [x] **RW-05**: JSONL output format compatible with Phase 9 GRPO training pipeline with train/val/test split
 
 ---
+
+## v2.4 Requirements — production-hardening
+
+Production hardening, undo/redo, LLM provider abstraction, remaining ops gaps, and training infrastructure.
+
+### Executor Performance (Phase 32) — COMPLETE
+
+- [x] **PERF-01**: IRCache module with LRU eviction, thread-safe via threading.Lock, keyed by (resolved_path, mtime_ns)
+- [x] **PERF-02**: execute_batch() groups ops by file, parses each once, validates ALL before executing ANY
+- [x] **PERF-03**: Batch rejects entire batch on any validation failure, reports ALL errors
+- [x] **PERF-04**: 100 property modifications via batch complete in under 10 seconds
+
+### Undo/Redo Stack (Phase 33)
+
+- [ ] **UNDO-01**: UndoStack class with bounded deque(maxlen=50), stores file content snapshots (not Operation objects)
+- [ ] **UNDO-02**: undo() restores pre-mutation file content, redo() restores post-mutation content; standard undo/redo semantics (new op clears redo)
+- [ ] **UNDO-03**: MCP undo and redo meta-tools exposed with destructiveHint=True, dispatch through existing dispatch_tool()
+- [ ] **UNDO-04**: Per-file isolation — concurrent project edits don't interfere with each other's undo stacks
+- [ ] **UNDO-05**: Oldest entries pruned when stack exceeds configurable max_size (default 50, env var KICAD_UNDO_MAX_SIZE)
+
+### LLM Provider Abstraction (Phase 34)
+
+- [ ] **LLM-13**: Provider protocol with generate(prompt, system) -> str and embed(text) -> list[float] methods
+- [ ] **LLM-14**: AnthropicProvider implements protocol using anthropic SDK (already installed)
+- [ ] **LLM-15**: Existing LLM calls migrated to provider protocol (llm/ directory)
+- [ ] **LLM-16**: Provider selection via KICAD_LLM_PROVIDER env var (default "anthropic")
+- [ ] **LLM-17**: MockProvider for deterministic testing without API calls
+
+### Remaining Ops Gaps (Phase 35)
+
+- [ ] **GEN-01**: Parse and modify project-level files: sym-lib-table, fp-lib-table, .kicad_dru, .kicad_pro
+- [ ] **GEN-03**: Schematic ERC repair: auto-fix wire snapping, orphaned labels, shorted nets, pin_not_connected
+- [ ] **GEN-04**: Power net validation: check all power pins connected, verify across hierarchical sheets
+- [ ] **GEN-05**: PCB copper zone operations: add/modify/fill copper pour zones
+- [ ] **GEN-06**: Net class and design rule operations: assign net classes, custom DRC rules, board outline
+
+### Multi-Layer Routing (Phase 36)
+
+- [ ] **ROUTE-05**: Multi-layer routing with layer transition cost model and via placement optimization
+- [ ] **ROUTE-06**: Impedance-controlled routing with stackup-aware trace width calculation
+- [ ] **ROUTE-07**: Length-matching engine with serpentine and sawtooth patterns for high-speed signals
+
+### Training Infrastructure (Phase 37)
+
+- [ ] **TRAIN-01**: Training data versioning with SHA256 content addressing and reproducible splits
+- [ ] **TRAIN-02**: Evaluation harness with automated benchmarking, regression detection, and baseline comparison
+- [ ] **TRAIN-03**: Training pipeline smoke tests: end-to-end SFT + GRPO with tiny model on synthetic data
+- [ ] **TRAIN-04**: Training output cleanup: remove stale checkpoints, consolidate evaluation reports
+
+### Infrastructure
+
+- [ ] **INFRA-01**: Structured logging with configurable levels (DEBUG, INFO, WARNING, ERROR)
+- [ ] **INFRA-02**: Health check endpoint for MCP server (liveness probe)
+- [ ] **INFRA-03**: Graceful shutdown handler for MCP server with in-flight operation completion
+
+---
 *Requirements defined: 2026-05-17*
-*Last updated: 2026-05-29 — v2.3 mcp-server requirements added (MCPSRV, META, MCPVAL, PKG)*
+*Last updated: 2026-05-30 — v2.4 production-hardening requirements added (PERF, UNDO, LLM, GEN, ROUTE, TRAIN, INFRA)*
 
 ### Bidirectional KiCad-LTspice (Phase 14)
 

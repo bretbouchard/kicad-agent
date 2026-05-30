@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.3
-milestone_name: mcp-server
-status: executing
-stopped_at: "Completed 32-02-PLAN.md"
-last_updated: "2026-05-30T01:58:00Z"
+milestone: v2.4
+milestone_name: production-hardening
+status: planning
+stopped_at: "Planning Phase 33 (Undo/Redo Stack)"
+last_updated: "2026-05-30T02:15:00Z"
 last_activity: 2026-05-30
 progress:
-  total_phases: 32
-  completed_phases: 29
-  total_plans: 84
-  completed_plans: 80
+  total_phases: 37
+  completed_phases: 32
+  total_plans: 86
+  completed_plans: 82
   percent: 95
 ---
 
@@ -21,14 +21,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** v2.3 mcp-server -- expose all 57 operations as MCP tools for AI agent integration.
-Last activity: 2026-05-29
+**Current focus:** v2.4 production-hardening -- undo/redo, LLM abstraction, remaining ops, training infrastructure.
+Last activity: 2026-05-30
 
 ## Current Position
 
-Phase: 32 (Executor Performance) — in progress
-Status: **Executing** -- 32-02 complete
-Last activity: 2026-05-30 -- Batch executor complete (32-02)
+Phase: 33 (Undo/Redo Stack) — planning in progress
+Status: **Planning** -- research complete, spawning planner agent
+Last activity: 2026-05-30 -- Phase 33 research complete
+
+## Previous Milestone (v2.3)
+
+**Final: 1710 tests, 57 operation types, MCP server with 59+ tools**
 
 ## Previous Milestone (v2.2)
 
@@ -37,12 +41,12 @@ Last activity: 2026-05-30 -- Batch executor complete (32-02)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 80
+- Total plans completed: 82
 - Average duration: 5 min
-- Total execution time: 4.7 hours
+- Total execution time: 4.8 hours
 
 **Recent Trend:**
-- Last 10 plans: 25-01 through 32-02 (all first-execution pass)
+- Last 10 plans: 30-01 through 32-02 (all first-execution pass)
 - Trend: Stable -- all plans passing on first execution
 
 ## Accumulated Context
@@ -52,11 +56,11 @@ Last activity: 2026-05-30 -- Batch executor complete (32-02)
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- [v2.3]: Separate server binary (kicad-agent-edit) alongside existing component-search server
-- [v2.3]: Low-level `mcp.server.Server` API (not FastMCP) for direct schema control
-- [v2.3]: Flat 57-tool registration (not categorized dispatch) for unambiguous LLM tool selection
-- [v2.3]: Zero new dependencies -- `mcp` 1.12.3 already installed
-- [v2.3]: ~250 lines new code in single file (mcp/edit_server.py)
+- [v2.4]: File content snapshots for undo (not Operation objects -- re-execution produces different UUIDs)
+- [v2.4]: collections.deque(maxlen=N) for bounded O(1) undo stack
+- [v2.4]: Per-executor undo stack keyed by resolved file path
+- [v2.4]: Standard undo/redo semantics (new operation clears redo stack)
+- [v2.4]: Session-scoped undo (lost on MCP server restart, same as KiCad)
 
 ### Pending Todos
 
@@ -64,7 +68,7 @@ None.
 
 ### Blockers/Concerns
 
-None. Roadmap defined, ready to plan.
+None. Phase 33 research complete, ready for planning.
 
 ## Deferred Items
 
@@ -72,5 +76,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed 32-02-PLAN.md (batch executor). Phase 32 complete.
-Resume with: /gsd-progress
+Stopped at: Phase 33 research complete, spawning planner agent
+Resume with: /gsd-plan-phase 33
