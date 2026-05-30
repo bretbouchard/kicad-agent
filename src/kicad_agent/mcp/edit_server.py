@@ -29,6 +29,7 @@ from mcp.server.stdio import stdio_server
 from kicad_agent.context import render_project_context
 from kicad_agent.ops.executor import OperationExecutor
 from kicad_agent.ops.schema import Operation
+from kicad_agent.ops.undo_stack import UndoStack
 from kicad_agent.validation.erc_drc import run_erc, run_drc
 
 logger = logging.getLogger(__name__)
@@ -178,6 +179,49 @@ _META_TOOLS = [
         },
         annotations=types.ToolAnnotations(readOnlyHint=True),
     ),
+    types.Tool(
+        name="undo",
+        description=(
+            "Undo the most recent file mutation. Restores the file to its state "
+            "before the last operation. Session-scoped -- undo history is lost on "
+            "server restart. Create operations (create_schematic, create_pcb, etc.) "
+            "are not undoable."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "target_file": {
+                    "type": "string",
+                    "description": (
+                        "Relative path to the file to undo (e.g. 'motor-driver.kicad_sch'). "
+                        "Optional -- when omitted, undoes the most recently modified file."
+                    ),
+                },
+            },
+        },
+        annotations=types.ToolAnnotations(destructiveHint=True),
+    ),
+    types.Tool(
+        name="redo",
+        description=(
+            "Redo the most recently undone operation. Restores the file to its state "
+            "after the undone operation. Session-scoped -- redo history is lost on "
+            "server restart."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "target_file": {
+                    "type": "string",
+                    "description": (
+                        "Relative path to the file to redo (e.g. 'motor-driver.kicad_sch'). "
+                        "Optional -- when omitted, redoes the most recently undone file."
+                    ),
+                },
+            },
+        },
+        annotations=types.ToolAnnotations(destructiveHint=True),
+    ),
 ]
 
 
@@ -230,7 +274,13 @@ async def server_lifespan(server: Server):  # type: ignore[type-arg]
     if not base_dir.is_dir():
         logger.warning("KICAD_PROJECT_DIR does not exist: %s", base_dir)
 
-    executor = OperationExecutor(base_dir=base_dir)
+    # M-02: Parse KICAD_UNDO_MAX_SIZE with error handling
+    try:
+        max_undo = max(1, int(os.environ.get("KICAD_UNDO_MAX_SIZE", "50")))
+    except (ValueError, TypeError):
+        max_undo = 50
+    undo_stack = UndoStack(max_size=max_undo)
+    executor = OperationExecutor(base_dir=base_dir, undo_stack=undo_stack)
     yield {"executor": executor, "base_dir": base_dir}
 
 
@@ -239,7 +289,7 @@ app = Server("kicad-agent-edit", version="0.1.0", lifespan=server_lifespan)
 
 @app.list_tools()
 async def list_tools() -> list[types.Tool]:
-    """Return all available MCP tools (57 operations + 4 meta-tools)."""
+    """Return all available MCP tools (57 operations + 6 meta-tools)."""
     return _ALL_TOOLS
 
 
@@ -332,6 +382,33 @@ async def dispatch_tool(
             return _error_result(
                 "drc_error", str(e), "Verify the PCB file path is correct."
             )
+
+    # --- Undo/Redo tools ---
+    if name == "undo":
+        try:
+            target_file = arguments.get("target_file")
+            result = await asyncio.to_thread(executor.undo, target_file)
+            if result.get("success"):
+                text = _cap_response(json.dumps(result, indent=2, default=str))
+                return types.CallToolResult(
+                    content=[types.TextContent(type="text", text=text)],
+                )
+            return _error_result("undo_error", result.get("error", "No operations to undo"))
+        except Exception as e:
+            return _error_result("undo_error", str(e), "No operations to undo.")
+
+    if name == "redo":
+        try:
+            target_file = arguments.get("target_file")
+            result = await asyncio.to_thread(executor.redo, target_file)
+            if result.get("success"):
+                text = _cap_response(json.dumps(result, indent=2, default=str))
+                return types.CallToolResult(
+                    content=[types.TextContent(type="text", text=text)],
+                )
+            return _error_result("redo_error", result.get("error", "No operations to redo"))
+        except Exception as e:
+            return _error_result("redo_error", str(e), "No operations to redo.")
 
     # --- Operation tools ---
     if name not in _OP_NAMES:

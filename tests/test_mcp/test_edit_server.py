@@ -5,6 +5,7 @@ meta-tools, and ToolAnnotations assignment.
 """
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -37,13 +38,13 @@ class TestToolGeneration:
     def test_generates_57_operation_tools(self) -> None:
         assert len(_OPERATION_TOOLS) == 57
 
-    def test_generates_4_meta_tools(self) -> None:
-        assert len(_META_TOOLS) == 4
+    def test_generates_6_meta_tools(self) -> None:
+        assert len(_META_TOOLS) == 6
         meta_names = {t.name for t in _META_TOOLS}
-        assert meta_names == {"get_operation_schema", "get_project_context", "erc_check", "drc_check"}
+        assert meta_names == {"get_operation_schema", "get_project_context", "erc_check", "drc_check", "undo", "redo"}
 
     def test_total_tool_count(self) -> None:
-        assert len(_ALL_TOOLS) == 61  # 57 ops + 4 meta
+        assert len(_ALL_TOOLS) == 63  # 57 ops + 6 meta
 
     def test_all_tools_have_names(self) -> None:
         for tool in _ALL_TOOLS:
@@ -114,9 +115,20 @@ class TestToolAnnotations:
                 assert tool.annotations.idempotentHint is True, f"{tool.name} should be idempotent"
 
     def test_meta_tools_are_read_only(self) -> None:
-        for tool in _META_TOOLS:
+        read_only_meta = [t for t in _META_TOOLS if t.name not in {"undo", "redo"}]
+        for tool in read_only_meta:
             assert tool.annotations is not None
             assert tool.annotations.readOnlyHint is True
+
+    def test_undo_redo_have_destructive_hint(self) -> None:
+        undo_tool = next(t for t in _META_TOOLS if t.name == "undo")
+        redo_tool = next(t for t in _META_TOOLS if t.name == "redo")
+        assert undo_tool.annotations is not None
+        assert undo_tool.annotations.destructiveHint is True
+        assert undo_tool.annotations.readOnlyHint is not True
+        assert redo_tool.annotations is not None
+        assert redo_tool.annotations.destructiveHint is True
+        assert redo_tool.annotations.readOnlyHint is not True
 
 
 # ---------------------------------------------------------------------------
@@ -405,3 +417,112 @@ class TestValidationTools:
         drc_tool = next(t for t in _META_TOOLS if t.name == "drc_check")
         assert erc_tool.annotations.readOnlyHint is True
         assert drc_tool.annotations.readOnlyHint is True
+
+
+class TestUndoRedoDispatch:
+    """Test undo/redo dispatch with mock executor."""
+
+    @pytest.fixture
+    def mock_executor(self, tmp_path: Path) -> tuple[MagicMock, Path]:
+        executor = MagicMock(spec=OperationExecutor)
+        return executor, tmp_path
+
+    @pytest.mark.asyncio
+    async def test_undo_dispatch_calls_executor(self, mock_executor: tuple) -> None:
+        executor, base_dir = mock_executor
+        executor.undo = MagicMock(return_value={
+            "success": True,
+            "undone_op": "add_component",
+            "target_file": "test.kicad_sch",
+        })
+        result = await dispatch_tool("undo", {"target_file": "test.kicad_sch"}, executor, base_dir)
+        executor.undo.assert_called_once_with("test.kicad_sch")
+        assert result.isError is not True
+        body = json.loads(result.content[0].text)
+        assert body["success"] is True
+        assert body["undone_op"] == "add_component"
+
+    @pytest.mark.asyncio
+    async def test_redo_dispatch_calls_executor(self, mock_executor: tuple) -> None:
+        executor, base_dir = mock_executor
+        executor.redo = MagicMock(return_value={
+            "success": True,
+            "redone_op": "add_component",
+            "target_file": "test.kicad_sch",
+        })
+        result = await dispatch_tool("redo", {"target_file": "test.kicad_sch"}, executor, base_dir)
+        executor.redo.assert_called_once_with("test.kicad_sch")
+        assert result.isError is not True
+        body = json.loads(result.content[0].text)
+        assert body["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_undo_no_history_returns_error(self, mock_executor: tuple) -> None:
+        executor, base_dir = mock_executor
+        executor.undo = MagicMock(return_value={
+            "success": False,
+            "error": "No operations to undo",
+        })
+        result = await dispatch_tool("undo", {}, executor, base_dir)
+        assert result.isError is True
+        body = json.loads(result.content[0].text)
+        assert body["error_type"] == "undo_error"
+
+    @pytest.mark.asyncio
+    async def test_redo_no_history_returns_error(self, mock_executor: tuple) -> None:
+        executor, base_dir = mock_executor
+        executor.redo = MagicMock(return_value={
+            "success": False,
+            "error": "No operations to redo",
+        })
+        result = await dispatch_tool("redo", {}, executor, base_dir)
+        assert result.isError is True
+        body = json.loads(result.content[0].text)
+        assert body["error_type"] == "redo_error"
+
+    @pytest.mark.asyncio
+    async def test_undo_without_target_file(self, mock_executor: tuple) -> None:
+        executor, base_dir = mock_executor
+        executor.undo = MagicMock(return_value={
+            "success": True,
+            "undone_op": "move_component",
+            "target_file": "test.kicad_sch",
+        })
+        result = await dispatch_tool("undo", {}, executor, base_dir)
+        executor.undo.assert_called_once_with(None)
+        assert result.isError is not True
+
+
+class TestLifespanUndoStack:
+    """Test server_lifespan creates UndoStack and passes to executor."""
+
+    @pytest.mark.asyncio
+    async def test_lifespan_creates_undo_stack(self, tmp_path: Path) -> None:
+        from kicad_agent.mcp.edit_server import server_lifespan
+        with patch.dict(os.environ, {"KICAD_PROJECT_DIR": str(tmp_path)}):
+            async with server_lifespan(app) as ctx:
+                executor = ctx["executor"]
+                assert executor._undo_stack is not None
+                assert executor._undo_stack._max_size == 50
+
+    @pytest.mark.asyncio
+    async def test_lifespan_custom_max_size(self, tmp_path: Path) -> None:
+        from kicad_agent.mcp.edit_server import server_lifespan
+        with patch.dict(os.environ, {
+            "KICAD_PROJECT_DIR": str(tmp_path),
+            "KICAD_UNDO_MAX_SIZE": "25",
+        }):
+            async with server_lifespan(app) as ctx:
+                executor = ctx["executor"]
+                assert executor._undo_stack._max_size == 25
+
+    @pytest.mark.asyncio
+    async def test_lifespan_invalid_max_size_defaults(self, tmp_path: Path) -> None:
+        from kicad_agent.mcp.edit_server import server_lifespan
+        with patch.dict(os.environ, {
+            "KICAD_PROJECT_DIR": str(tmp_path),
+            "KICAD_UNDO_MAX_SIZE": "not_a_number",
+        }):
+            async with server_lifespan(app) as ctx:
+                executor = ctx["executor"]
+                assert executor._undo_stack._max_size == 50
