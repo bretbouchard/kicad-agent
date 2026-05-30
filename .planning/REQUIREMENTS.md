@@ -444,11 +444,11 @@ Production hardening, undo/redo, LLM provider abstraction, remaining ops gaps, a
 
 ### Undo/Redo Stack (Phase 33)
 
-- [ ] **UNDO-01**: UndoStack class with bounded deque(maxlen=50), stores file content snapshots (not Operation objects)
-- [ ] **UNDO-02**: undo() restores pre-mutation file content, redo() restores post-mutation content; standard undo/redo semantics (new op clears redo)
+- [x] **UNDO-01**: UndoStack class with bounded deque(maxlen=50), stores file content snapshots (not Operation objects)
+- [x] **UNDO-02**: undo() restores pre-mutation file content, redo() restores post-mutation content; standard undo/redo semantics (new op clears redo)
 - [ ] **UNDO-03**: MCP undo and redo meta-tools exposed with destructiveHint=True, dispatch through existing dispatch_tool()
-- [ ] **UNDO-04**: Per-file isolation — concurrent project edits don't interfere with each other's undo stacks
-- [ ] **UNDO-05**: Oldest entries pruned when stack exceeds configurable max_size (default 50, env var KICAD_UNDO_MAX_SIZE)
+- [x] **UNDO-04**: Per-file isolation — concurrent project edits don't interfere with each other's undo stacks
+- [x] **UNDO-05**: Oldest entries pruned when stack exceeds configurable max_size (default 50, env var KICAD_UNDO_MAX_SIZE)
 
 ### LLM Provider Abstraction (Phase 34)
 
