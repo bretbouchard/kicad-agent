@@ -638,12 +638,10 @@ Plans:
   9. `get_operation_schema` meta-tool returns full JSON Schema for all 57 operations
   10. `get_project_context` meta-tool returns project structure, file inventory, and board statistics
   11. `kicad-agent-edit` entry point registered in pyproject.toml with no new dependencies
-**Plans**: 3 plans
+**Plans**: 1 plan (3 merged)
 
 Plans:
-- [ ] 30-01-PLAN.md -- Server skeleton: edit_server.py with dynamic tool generation from Operation union, stdio transport, base_dir config, pyproject.toml entry point (MCPSRV-01, MCPSRV-02, MCPSRV-03, PKG-01, PKG-02)
-- [ ] 30-02-PLAN.md -- Call dispatcher: single call_tool() handler with Pydantic validation, asyncio.to_thread() wrapping, isError error handling, 50KB response capping, ToolAnnotations per category (MCPSRV-04, MCPSRV-05, MCPSRV-06, MCPSRV-07, META-01)
-- [ ] 30-03-PLAN.md -- Meta-tools and tests: get_operation_schema, get_project_context, full test suite covering startup/dispatch/errors/capping (META-02, META-03)
+- [x] 30-01-PLAN.md -- All 3 plans merged: server skeleton + dispatcher + meta-tools + tests (MCPSRV-01 through MCPSRV-07, META-01 through META-03, PKG-01, PKG-02)
 
 ### Phase 31: Validation Integration
 **Goal**: ERC/DRC convenience tools wrapping kicad-cli for MCP clients that want one-call validation without running separate operations
@@ -693,5 +691,5 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 27. Footprint Creation | 2/2 | Complete | 2026-05-29 |
 | 28. Hierarchical Sheet Ops | 3/3 | Complete | 2026-05-29 |
 | 29. Cross-File Atomic Ops | 2/2 | Complete | 2026-05-29 |
-| 30. MCP Operations Server | 0/3 | Pending | |
+| 30. MCP Operations Server | 1/1 | Complete | 2026-05-29 |
 | 31. Validation Integration | 0/1 | Pending | |

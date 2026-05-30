@@ -62,6 +62,7 @@ docs = [
 [project.scripts]
 kicad-agent = "kicad_agent.cli:main"
 kicad-component-search = "kicad_agent.mcp.server:main"
+kicad-agent-edit = "kicad_agent.mcp.edit_server:main"
 
 [project.urls]
 Homepage = "https://github.com/bretbouchard/kicad-agent"
