@@ -435,6 +435,59 @@ def _handle_navigate_hierarchy(op: Any, ir: SchematicIR, file_path: Path) -> dic
     return navigate_hierarchy(op, ir, file_path)
 
 
+@register_schematic("update_symbols_from_library")
+def _handle_update_symbols_from_library(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.repair import update_symbols_from_library
+    return update_symbols_from_library(
+        ir, file_path,
+        references=op.references,
+        dry_run=op.dry_run,
+    )
+
+
+@register_schematic("fix_shorted_nets")
+def _handle_fix_shorted_nets(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.repair import fix_shorted_nets
+    return fix_shorted_nets(
+        ir, file_path,
+        strategy=op.strategy,
+        keep_nets=op.keep_nets,
+        dry_run=op.dry_run,
+    )
+
+
+@register_schematic("fix_pin_type_mismatches")
+def _handle_fix_pin_type_mismatches(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.repair import fix_pin_type_mismatches
+    return fix_pin_type_mismatches(
+        ir, file_path,
+        pin_type_map=op.pin_type_map,
+        dry_run=op.dry_run,
+    )
+
+
+@register_schematic("place_missing_units")
+def _handle_place_missing_units(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.repair import place_missing_units
+    return place_missing_units(
+        ir, file_path,
+        references=op.references,
+        offset_x=op.offset_x,
+        offset_y=op.offset_y,
+        dry_run=op.dry_run,
+    )
+
+
+@register_schematic("remove_dangling_wires")
+def _handle_remove_dangling_wires(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.repair import remove_dangling_wires
+    return remove_dangling_wires(
+        ir, file_path,
+        max_length_mm=op.max_length_mm,
+        dry_run=op.dry_run,
+    )
+
+
 # ---------------------------------------------------------------------------
 # PCB handler implementations
 # ---------------------------------------------------------------------------
@@ -1424,7 +1477,12 @@ class OperationExecutor:
                 )
 
         # L-04: Use newline="" to preserve exact byte content (LF line endings)
-        entry.file_path.write_text(entry.pre_content, encoding="utf-8", newline="")
+        try:
+            entry.file_path.write_text(entry.pre_content, encoding="utf-8", newline="")
+        except OSError as e:
+            # Reverse: pop_redo moves entry back to undo so user can retry
+            self._undo_stack.pop_redo(entry.file_path)
+            return {"success": False, "error": f"Write error during undo: {e}"}
 
         # Invalidate cache for this file
         if self._cache:
@@ -1467,8 +1525,22 @@ class OperationExecutor:
         if not entry.file_path.parent.exists():
             return {"success": False, "error": "Cannot redo: parent directory no longer exists"}
 
+        # L-05: Warn if file was modified externally since snapshot
+        if entry.post_mtime and entry.file_path.exists():
+            current_mtime = entry.file_path.stat().st_mtime_ns
+            if current_mtime != entry.post_mtime:
+                logger.warning(
+                    "Redo: file modified externally since snapshot: %s",
+                    entry.file_path,
+                )
+
         # L-04: Use newline="" to preserve exact byte content
-        entry.file_path.write_text(entry.post_content, encoding="utf-8", newline="")
+        try:
+            entry.file_path.write_text(entry.post_content, encoding="utf-8", newline="")
+        except OSError as e:
+            # Reverse: pop_undo moves entry back to redo so user can retry
+            self._undo_stack.pop_undo(entry.file_path)
+            return {"success": False, "error": f"Write error during redo: {e}"}
 
         # Invalidate cache for this file
         if self._cache:

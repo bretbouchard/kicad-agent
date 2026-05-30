@@ -1,4 +1,6 @@
-"""Repair operation schemas -- repair, convert, snap, power flag, rebuild root sheet, swap symbol."""
+"""Repair operation schemas -- repair, convert, snap, power flag, rebuild root sheet, swap symbol,
+update symbols from library, fix shorted nets, fix pin type mismatches, place missing units,
+remove dangling wires."""
 
 from typing import Literal, Optional
 
@@ -145,3 +147,146 @@ class SwapSymbolOp(BaseModel):
     @classmethod
     def _validate_new_lib_id(cls, v: str) -> str:
         return _validate_safe_identifier(v, "new_lib_id")
+
+
+class UpdateSymbolsFromLibraryOp(BaseModel):
+    """Re-embed all mismatched symbols from their libraries.
+
+    Equivalent to KiCad GUI's "Update Symbol from Library" for all symbols
+    whose embedded lib_symbols definition diverges from the library version.
+
+    Attributes:
+        op_type: Discriminator literal ``"update_symbols_from_library"``.
+        target_file: Relative path to the .kicad_sch file.
+        references: Optional list of specific references to update. If None, updates all mismatches.
+        dry_run: If True, report what would change without modifying the file.
+    """
+
+    op_type: Literal["update_symbols_from_library"] = "update_symbols_from_library"
+    target_file: TargetFile
+    references: Optional[list[str]] = Field(
+        default=None,
+        description="Specific references to update, or None for all mismatches",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Report mismatches without modifying the file",
+    )
+
+
+class FixShortedNetsOp(BaseModel):
+    """Fix positions where multiple net names connect to the same items.
+
+    Detects short circuits where wires from different named nets overlap,
+    then removes the "losing" label based on the chosen strategy.
+
+    Attributes:
+        op_type: Discriminator literal ``"fix_shorted_nets"``.
+        target_file: Relative path to the .kicad_sch file.
+        strategy: Which label to keep. "keep_first" keeps the first alphabetically,
+            "keep_last" keeps the last, "manual" uses keep_nets list.
+        keep_nets: For "manual" strategy, which net names to keep.
+        dry_run: If True, report shorts without modifying the file.
+    """
+
+    op_type: Literal["fix_shorted_nets"] = "fix_shorted_nets"
+    target_file: TargetFile
+    strategy: Literal["keep_first", "keep_last", "manual"] = Field(
+        default="keep_first",
+        description="Which label to keep at short positions",
+    )
+    keep_nets: Optional[list[str]] = Field(
+        default=None,
+        description="For manual strategy, which net names to keep",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Report shorts without modifying the file",
+    )
+
+
+class FixPinTypeMismatchesOp(BaseModel):
+    """Fix pin electrical type mismatches in embedded lib_symbols.
+
+    Updates pin electrical types in the embedded symbol definitions to resolve
+    pin_to_pin ERC violations. Common fix: change "Unspecified" to "Passive"
+    for analog switch pins connected to passive components.
+
+    Attributes:
+        op_type: Discriminator literal ``"fix_pin_type_mismatches"``.
+        target_file: Relative path to the .kicad_sch file.
+        pin_type_map: Override map from old type to new type. Defaults to {"unspecified": "passive"}.
+        dry_run: If True, report what would change without modifying the file.
+    """
+
+    op_type: Literal["fix_pin_type_mismatches"] = "fix_pin_type_mismatches"
+    target_file: TargetFile
+    pin_type_map: Optional[dict[str, str]] = Field(
+        default=None,
+        description='Map from old type to new type, e.g. {"unspecified": "passive"}',
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Report mismatches without modifying the file",
+    )
+
+
+class PlaceMissingUnitsOp(BaseModel):
+    """Place all unplaced units of multi-unit symbols.
+
+    For multi-unit symbols like CD4066BE (quad bilateral switch), places all
+    units that KiCad ERC reports as missing. Units are placed adjacent to the
+    existing unit with configurable spacing.
+
+    Attributes:
+        op_type: Discriminator literal ``"place_missing_units"``.
+        target_file: Relative path to the .kicad_sch file.
+        references: Optional list of specific references. If None, fixes all.
+        offset_x: Horizontal spacing between units in mm (default 25.4 = 1 inch).
+        offset_y: Vertical spacing between units in mm.
+        dry_run: If True, report what would be placed without modifying.
+    """
+
+    op_type: Literal["place_missing_units"] = "place_missing_units"
+    target_file: TargetFile
+    references: Optional[list[str]] = Field(
+        default=None,
+        description="Specific references to fix, or None for all",
+    )
+    offset_x: float = Field(
+        default=25.4, gt=0, le=254,
+        description="Horizontal spacing between units in mm",
+    )
+    offset_y: float = Field(
+        default=0.0, ge=0, le=254,
+        description="Vertical spacing between units in mm",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Report placements without modifying the file",
+    )
+
+
+class RemoveDanglingWiresOp(BaseModel):
+    """Remove wire segments with unconnected endpoints.
+
+    Identifies and removes wires where at least one endpoint is not connected
+    to any pin, label, junction, or other wire intersection.
+
+    Attributes:
+        op_type: Discriminator literal ``"remove_dangling_wires"``.
+        target_file: Relative path to the .kicad_sch file.
+        max_length_mm: Only remove wires shorter than this (safety). None = no limit.
+        dry_run: If True, report what would be removed without modifying.
+    """
+
+    op_type: Literal["remove_dangling_wires"] = "remove_dangling_wires"
+    target_file: TargetFile
+    max_length_mm: Optional[float] = Field(
+        default=None, gt=0, le=1000,
+        description="Only remove wires shorter than this (mm). None = no limit.",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Report removals without modifying the file",
+    )

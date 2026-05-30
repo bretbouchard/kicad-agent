@@ -556,3 +556,620 @@ def _find_net_name_at_position(
         if _distance(x, y, lp["x"], lp["y"]) <= tolerance:
             return lp["name"]
     return None
+
+
+# ---------------------------------------------------------------------------
+# ERC auto-fix operations (Phase 35)
+# ---------------------------------------------------------------------------
+
+
+def update_symbols_from_library(
+    ir: SchematicIR, file_path: Path, *,
+    references: list[str] | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Re-embed mismatched symbols from their libraries.
+
+    Equivalent to KiCad GUI's "Update Symbol from Library" for all symbols
+    whose embedded lib_symbols definition diverges from the library version.
+
+    Args:
+        ir: SchematicIR for the target schematic.
+        file_path: Resolved path to the schematic file.
+        references: Specific references to update, or None for all.
+        dry_run: If True, report mismatches without modifying.
+
+    Returns:
+        Dict with updated (list), skipped (list), and total_mismatches.
+    """
+    import copy
+
+    from kiutils.symbol import SymbolLib
+
+    from kicad_agent.validation.symbol_mismatch import (
+        _get_embedded_pin_signature,
+        _get_library_pin_signature,
+    )
+
+    sch = ir._parse_result.kiutils_obj
+
+    # Get all unique lib_ids used by placed symbols
+    try:
+        all_refs = ir.get_all_references()
+    except Exception as exc:
+        return {"updated": [], "skipped": [], "total_mismatches": 0, "error": str(exc)}
+
+    # Deduplicate lib_ids while tracking references
+    seen_lib_ids: dict[str, list[str]] = {}
+    for reference, lib_id in all_refs:
+        if lib_id and ":" in lib_id:
+            seen_lib_ids.setdefault(lib_id, []).append(reference)
+
+    # Filter by requested references
+    if references is not None:
+        ref_set = set(references)
+        filtered: dict[str, list[str]] = {}
+        for lib_id, refs in seen_lib_ids.items():
+            matching = [r for r in refs if r in ref_set]
+            if matching:
+                filtered[lib_id] = matching
+        seen_lib_ids = filtered
+
+    updated: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+
+    for lib_id, refs in seen_lib_ids.items():
+        embedded_pins = _get_embedded_pin_signature(ir, lib_id)
+        library_pins = _get_library_pin_signature(lib_id, file_path)
+
+        if library_pins is None:
+            skipped.append({
+                "lib_id": lib_id,
+                "references": refs,
+                "reason": "library_not_found",
+            })
+            continue
+
+        if embedded_pins == library_pins:
+            continue  # No mismatch
+
+        if dry_run:
+            updated.append({
+                "lib_id": lib_id,
+                "references": refs,
+                "action": "would_update",
+            })
+            continue
+
+        # Re-embed: find the library, load symbol, replace embedded version
+        library_name, _, symbol_name = lib_id.partition(":")
+        try:
+            from kicad_agent.project.lib_table import parse_lib_table
+
+            schematic_dir = file_path.resolve().parent
+            library_uri: str | None = None
+
+            for table_path in [
+                schematic_dir / "sym-lib-table",
+                Path.home() / "Library" / "Preferences" / "kicad" / "10.0" / "sym-lib-table",
+                Path("/Applications/KiCad/KiCad.app/Contents/SharedSupport/template/sym-lib-table"),
+            ]:
+                if not table_path.exists():
+                    continue
+                try:
+                    table = parse_lib_table(table_path)
+                    entry = table.get(library_name)
+                    library_uri = entry.uri.replace(
+                        "${KIPRJMOD}", str(schematic_dir.resolve())
+                    )
+                    break
+                except (KeyError, ValueError, FileNotFoundError, OSError):
+                    continue
+
+            if library_uri is None:
+                skipped.append({
+                    "lib_id": lib_id,
+                    "references": refs,
+                    "reason": "library_path_not_resolved",
+                })
+                continue
+
+            lib_path = Path(library_uri)
+            if not lib_path.exists():
+                skipped.append({
+                    "lib_id": lib_id,
+                    "references": refs,
+                    "reason": "library_file_not_found",
+                })
+                continue
+
+            lib = SymbolLib.from_file(str(lib_path))
+
+            source_symbol = None
+            for sym in lib.symbols:
+                if sym.libId == lib_id or sym.name == symbol_name:
+                    source_symbol = sym
+                    break
+
+            if source_symbol is None:
+                skipped.append({
+                    "lib_id": lib_id,
+                    "references": refs,
+                    "reason": "symbol_not_in_library",
+                })
+                continue
+
+            # Replace embedded symbol
+            new_symbol = copy.deepcopy(source_symbol)
+            new_symbol.libraryNickname = library_name
+
+            for i, existing in enumerate(sch.libSymbols):
+                if getattr(existing, "libId", "") == lib_id:
+                    sch.libSymbols[i] = new_symbol
+                    break
+
+            ir._record_mutation("update_symbols_from_library", {
+                "lib_id": lib_id,
+                "references": refs,
+            })
+
+            updated.append({
+                "lib_id": lib_id,
+                "references": refs,
+                "action": "updated",
+            })
+
+        except Exception as exc:
+            skipped.append({
+                "lib_id": lib_id,
+                "references": refs,
+                "reason": f"error: {exc}",
+            })
+
+    return {
+        "updated": updated,
+        "skipped": skipped,
+        "total_mismatches": len(updated) + len(skipped),
+    }
+
+
+def fix_shorted_nets(
+    ir: SchematicIR, file_path: Path, *,
+    strategy: str = "keep_first",
+    keep_nets: list[str] | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Fix positions where multiple net names connect to the same items.
+
+    Args:
+        ir: SchematicIR for the target schematic.
+        file_path: Resolved path to the schematic file.
+        strategy: "keep_first", "keep_last", or "manual".
+        keep_nets: For "manual" strategy, which net names to keep.
+        dry_run: If True, report shorts without modifying.
+
+    Returns:
+        Dict with shorts_found, labels_removed, and details.
+    """
+    short_result = detect_shorted_nets(ir)
+    shorts = short_result["shorts"]
+
+    if not shorts:
+        return {"shorts_found": 0, "labels_removed": [], "clean": True}
+
+    label_positions = ir.get_label_positions()
+    sch = ir.schematic
+
+    labels_removed: list[dict[str, Any]] = []
+
+    for short in shorts:
+        nets = short["nets"]
+        if len(nets) < 2:
+            continue
+
+        # Decide which net to keep
+        if strategy == "keep_first":
+            keep_net = nets[0]
+        elif strategy == "keep_last":
+            keep_net = nets[-1]
+        elif strategy == "manual":
+            if keep_nets is None:
+                continue
+            keep_net = None
+            for kn in keep_nets:
+                if kn in nets:
+                    keep_net = kn
+                    break
+            if keep_net is None:
+                continue
+        else:
+            continue
+
+        # Remove labels for the non-kept nets
+        remove_nets = set(nets) - {keep_net}
+
+        for label in list(sch.labels):
+            if label.text in remove_nets:
+                pos_key = _round_pos(label.position.X, label.position.Y)
+                short_pos = (round(short["position"][0], 2), round(short["position"][1], 2))
+                if pos_key == short_pos or _distance(
+                    label.position.X, label.position.Y,
+                    short["position"][0], short["position"][1],
+                ) <= SNAP_TOLERANCE:
+                    if not dry_run:
+                        labels_removed.append({
+                            "name": label.text,
+                            "position": [label.position.X, label.position.Y],
+                            "kept": keep_net,
+                        })
+                        sch.labels.remove(label)
+                        ir._record_mutation("fix_shorted_net", {
+                            "removed_label": label.text,
+                            "kept_net": keep_net,
+                        })
+                    else:
+                        labels_removed.append({
+                            "name": label.text,
+                            "position": [label.position.X, label.position.Y],
+                            "kept": keep_net,
+                            "dry_run": True,
+                        })
+
+        for label in list(sch.globalLabels):
+            if label.text in remove_nets:
+                pos_key = _round_pos(label.position.X, label.position.Y)
+                short_pos = (round(short["position"][0], 2), round(short["position"][1], 2))
+                if pos_key == short_pos or _distance(
+                    label.position.X, label.position.Y,
+                    short["position"][0], short["position"][1],
+                ) <= SNAP_TOLERANCE:
+                    if not dry_run:
+                        labels_removed.append({
+                            "name": label.text,
+                            "position": [label.position.X, label.position.Y],
+                            "kept": keep_net,
+                        })
+                        sch.globalLabels.remove(label)
+                        ir._record_mutation("fix_shorted_net", {
+                            "removed_label": label.text,
+                            "kept_net": keep_net,
+                        })
+                    else:
+                        labels_removed.append({
+                            "name": label.text,
+                            "position": [label.position.X, label.position.Y],
+                            "kept": keep_net,
+                            "dry_run": True,
+                        })
+
+    return {
+        "shorts_found": len(shorts),
+        "labels_removed": labels_removed,
+        "clean": len(labels_removed) == 0,
+    }
+
+
+def fix_pin_type_mismatches(
+    ir: SchematicIR, file_path: Path, *,
+    pin_type_map: dict[str, str] | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Fix pin electrical type mismatches in embedded lib_symbols.
+
+    Updates pin electrical types to resolve pin_to_pin ERC violations.
+    Default: change "unspecified" to "passive".
+
+    Args:
+        ir: SchematicIR for the target schematic.
+        file_path: Resolved path to the schematic file.
+        pin_type_map: Override map, defaults to {"unspecified": "passive"}.
+        dry_run: If True, report without modifying.
+
+    Returns:
+        Dict with pins_changed, details, and lib_ids_affected.
+    """
+    if pin_type_map is None:
+        pin_type_map = {"unspecified": "passive"}
+
+    sch = ir._parse_result.kiutils_obj
+    pins_changed: list[dict[str, Any]] = []
+    lib_ids_affected: set[str] = set()
+
+    for lib_sym in sch.libSymbols:
+        lib_id = getattr(lib_sym, "libId", "")
+        for unit in lib_sym.units:
+            for pin in unit.pins:
+                old_type = pin.electricalType
+                new_type = pin_type_map.get(old_type)
+                if new_type is not None:
+                    if dry_run:
+                        pins_changed.append({
+                            "lib_id": lib_id,
+                            "pin_number": pin.number,
+                            "pin_name": pin.name,
+                            "old_type": old_type,
+                            "new_type": new_type,
+                            "dry_run": True,
+                        })
+                    else:
+                        pin.electricalType = new_type
+                        pins_changed.append({
+                            "lib_id": lib_id,
+                            "pin_number": pin.number,
+                            "pin_name": pin.name,
+                            "old_type": old_type,
+                            "new_type": new_type,
+                        })
+                    lib_ids_affected.add(lib_id)
+
+    if pins_changed and not dry_run:
+        ir._record_mutation("fix_pin_type_mismatches", {
+            "pins_changed": len(pins_changed),
+            "lib_ids": sorted(lib_ids_affected),
+        })
+
+    return {
+        "pins_changed": pins_changed,
+        "total": len(pins_changed),
+        "lib_ids_affected": sorted(lib_ids_affected),
+    }
+
+
+def place_missing_units(
+    ir: SchematicIR, file_path: Path, *,
+    references: list[str] | None = None,
+    offset_x: float = 25.4,
+    offset_y: float = 0.0,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Place all unplaced units of multi-unit symbols.
+
+    For multi-unit symbols, finds units reported as missing by ERC and places
+    them adjacent to the existing unit with configurable spacing.
+
+    Args:
+        ir: SchematicIR for the target schematic.
+        file_path: Resolved path to the schematic file.
+        references: Specific references to fix, or None for all.
+        offset_x: Horizontal spacing between units in mm.
+        offset_y: Vertical spacing between units in mm.
+        dry_run: If True, report without modifying.
+
+    Returns:
+        Dict with units_placed and details.
+    """
+    import uuid
+
+    sch = ir._parse_result.kiutils_obj
+
+    # Find all components, grouped by reference prefix (multi-unit symbols
+    # share the same base reference like U4 with units A, B, C, D)
+    components_by_ref: dict[str, list[Any]] = {}
+    for comp in sch.schematicSymbols:
+        ref_prop = None
+        for prop in comp.properties:
+            if prop.key == "Reference":
+                ref_prop = prop.value
+                break
+        if ref_prop is None:
+            continue
+
+        # Multi-unit references: U4A, U4B etc. Base is U4
+        base_ref = ref_prop.rstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+        components_by_ref.setdefault(base_ref, []).append(comp)
+
+    # Filter by requested references
+    if references is not None:
+        ref_set = set(references)
+        components_by_ref = {
+            k: v for k, v in components_by_ref.items() if k in ref_set
+        }
+
+    units_placed: list[dict[str, Any]] = []
+
+    for base_ref, components in components_by_ref.items():
+        if len(components) == 0:
+            continue
+
+        # Get the lib_id from the first component
+        lib_id = components[0].libId
+
+        # Find the embedded symbol definition
+        lib_sym = None
+        for ls in sch.libSymbols:
+            if getattr(ls, "libId", "") == lib_id:
+                lib_sym = ls
+                break
+
+        if lib_sym is None:
+            continue
+
+        # Count available units
+        available_units = list(lib_sym.units)
+        if len(available_units) <= 1:
+            continue  # Single-unit symbol
+
+        # Count placed units
+        placed_count = len(components)
+
+        if placed_count >= len(available_units):
+            continue  # All units already placed
+
+        # Get position of first (placed) component
+        first_comp = components[0]
+        base_x = first_comp.position.X
+        base_y = first_comp.position.Y
+        rotation = first_comp.position.angle
+
+        # Place missing units
+        for i in range(placed_count, len(available_units)):
+            unit_index = i
+            offset_idx = unit_index - 0  # Offset from first unit
+            new_x = base_x + offset_idx * offset_x
+            new_y = base_y + offset_idx * offset_y
+
+            if dry_run:
+                units_placed.append({
+                    "base_reference": base_ref,
+                    "unit_index": unit_index,
+                    "position": [new_x, new_y],
+                    "dry_run": True,
+                })
+                continue
+
+            # Create a new component S-expression for this unit
+            # This is a simplified approach — we clone the first component
+            # and update position, UUID, and unit reference
+            import copy
+
+            new_comp = copy.deepcopy(first_comp)
+            new_uuid = str(uuid.uuid4())
+            new_comp.position.X = new_x
+            new_comp.position.Y = new_y
+            new_comp.position.angle = rotation
+
+            # Update UUID
+            if hasattr(new_comp, "uuid"):
+                new_comp.uuid = new_uuid
+
+            # Update reference to include unit letter (A=1, B=2, etc.)
+            unit_letter = chr(ord("A") + unit_index)
+            for prop in new_comp.properties:
+                if prop.key == "Reference":
+                    prop.value = f"{base_ref}{unit_letter}"
+                    break
+
+            sch.schematicSymbols.append(new_comp)
+
+            ir._record_mutation("place_missing_unit", {
+                "base_reference": base_ref,
+                "unit_index": unit_index,
+                "unit_letter": unit_letter,
+                "position": [new_x, new_y],
+                "uuid": new_uuid,
+            })
+
+            units_placed.append({
+                "base_reference": base_ref,
+                "unit_index": unit_index,
+                "unit_letter": unit_letter,
+                "position": [new_x, new_y],
+                "uuid": new_uuid,
+            })
+
+    return {
+        "units_placed": units_placed,
+        "total": len(units_placed),
+    }
+
+
+def remove_dangling_wires(
+    ir: SchematicIR, file_path: Path, *,
+    max_length_mm: float | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Remove wire segments with unconnected endpoints.
+
+    A dangling wire has at least one endpoint not connected to any pin,
+    label, junction, or other wire intersection.
+
+    Args:
+        ir: SchematicIR for the target schematic.
+        file_path: Resolved path to the schematic file.
+        max_length_mm: Only remove wires shorter than this. None = no limit.
+        dry_run: If True, report without modifying.
+
+    Returns:
+        Dict with removed_count and details.
+    """
+    pin_positions = ir.get_pin_positions()
+    label_positions = ir.get_label_positions()
+    wire_endpoints = ir.get_wire_endpoints()
+    sch = ir.schematic
+
+    # Collect all "connected" positions
+    connected: set[tuple[float, float]] = set()
+    for pp in pin_positions:
+        connected.add(_round_pos(pp["x"], pp["y"]))
+    for lp in label_positions:
+        connected.add(_round_pos(lp["x"], lp["y"]))
+
+    # Also collect junction positions
+    for junction in sch.junctions:
+        connected.add(_round_pos(junction.position.X, junction.position.Y))
+
+    # Build wire intersection map: positions where multiple wires meet
+    wire_pos_count: dict[tuple[float, float], int] = {}
+    for we in wire_endpoints:
+        start_key = _round_pos(we["start_x"], we["start_y"])
+        end_key = _round_pos(we["end_x"], we["end_y"])
+        wire_pos_count[start_key] = wire_pos_count.get(start_key, 0) + 1
+        wire_pos_count[end_key] = wire_pos_count.get(end_key, 0) + 1
+
+    # A position is "anchored" if it has a pin, label, junction, or 2+ wires
+    anchored: set[tuple[float, float]] = set()
+    anchored.update(connected)
+    for pos, count in wire_pos_count.items():
+        if count >= 2:
+            anchored.add(pos)
+
+    # Find dangling wires: both endpoints unanchored
+    removed: list[dict[str, Any]] = []
+    wires_to_remove: list[int] = []
+
+    for wire_info in wire_endpoints:
+        start_key = _round_pos(wire_info["start_x"], wire_info["start_y"])
+        end_key = _round_pos(wire_info["end_x"], wire_info["end_y"])
+
+        start_anchored = start_key in anchored
+        end_anchored = end_key in anchored
+
+        # Dangling if both endpoints unanchored
+        if not start_anchored and not end_anchored:
+            wire_idx = wire_info["wire_index"]
+            wire = sch.graphicalItems[wire_idx]
+
+            # Check max_length filter
+            if max_length_mm is not None:
+                length = _distance(
+                    wire_info["start_x"], wire_info["start_y"],
+                    wire_info["end_x"], wire_info["end_y"],
+                )
+                if length > max_length_mm:
+                    continue
+
+            if dry_run:
+                removed.append({
+                    "position": [wire_info["start_x"], wire_info["start_y"]],
+                    "length": round(_distance(
+                        wire_info["start_x"], wire_info["start_y"],
+                        wire_info["end_x"], wire_info["end_y"],
+                    ), 4),
+                    "dry_run": True,
+                })
+            else:
+                wires_to_remove.append(wire_idx)
+                removed.append({
+                    "position": [wire_info["start_x"], wire_info["start_y"]],
+                    "length": round(_distance(
+                        wire_info["start_x"], wire_info["start_y"],
+                        wire_info["end_x"], wire_info["end_y"],
+                    ), 4),
+                })
+
+    if wires_to_remove and not dry_run:
+        # Remove in reverse order to preserve indices
+        for idx in sorted(wires_to_remove, reverse=True):
+            wire = sch.graphicalItems[idx]
+            sch.graphicalItems.pop(idx)
+            ir._record_mutation("remove_dangling_wire", {
+                "position": [
+                    wire.points[0].X if hasattr(wire, "points") and wire.points else 0,
+                    wire.points[0].Y if hasattr(wire, "points") and wire.points else 0,
+                ],
+            })
+
+    return {
+        "removed_count": len(removed),
+        "details": removed,
+    }
