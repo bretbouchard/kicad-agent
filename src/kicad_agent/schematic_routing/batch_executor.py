@@ -160,57 +160,67 @@ def _apply_extend(body: str, fix: WireFix) -> tuple[str, bool]:
     """Extend a wire endpoint to a new position using exact wire coordinates.
 
     Uses wire_endpoints (actual file coordinates from SchematicGraph) to find
-    the exact wire to modify. Falls back to ERC-coordinate matching if
-    wire_endpoints is not available.
+    the exact wire by matching BOTH endpoints. Only replaces the endpoint
+    that is near the violation position (old_endpoint).
     """
-    old_x, old_y = fix.old_endpoint
     new_x, new_y = fix.new_endpoint
 
     # Skip if old == new
-    if abs(old_x - new_x) < 0.01 and abs(old_y - new_y) < 0.01:
+    if abs(fix.old_endpoint[0] - new_x) < 0.01 and abs(fix.old_endpoint[1] - new_y) < 0.01:
         return body, False
 
+    if not fix.wire_endpoints:
+        return body, False
+
+    ws, we = fix.wire_endpoints
+    ws_str = f"(xy {ws[0]:g} {ws[1]:g})"
+    we_str = f"(xy {we[0]:g} {we[1]:g})"
     new_str = f"(xy {new_x:g} {new_y:g})"
+
     pattern = re.compile(
         r'\(wire\s+\(pts\s+\(xy\s+([\d.]+)\s+([\d.]+)\)\s+\(xy\s+([\d.]+)\s+([\d.]+)\)'
     )
 
-    # Strategy 1: Use actual wire coordinates from SchematicGraph for exact match
-    if fix.wire_endpoints:
-        ws, we = fix.wire_endpoints
-        ws_str = f"(xy {ws[0]:g} {ws[1]:g})"
-        we_str = f"(xy {we[0]:g} {we[1]:g})"
-
-        for m in pattern.finditer(body):
-            match_text = body[m.start():m.end()]
-            # Check which endpoint matches the violation (old_endpoint)
-            for ep_str in [ws_str, we_str]:
-                pos = match_text.find(ep_str)
-                if pos >= 0:
-                    # Verify this is the right endpoint by checking proximity to old_endpoint
-                    ep_x, ep_y = float(ep_str.split()[1]), float(ep_str.split()[2].rstrip(")"))
-                    if abs(ep_x - old_x) < 0.5 and abs(ep_y - old_y) < 0.5:
-                        abs_start = m.start() + pos
-                        abs_end = abs_start + len(ep_str)
-                        # Safety: check the other endpoint won't create zero-length wire
-                        other_str = we_str if ep_str == ws_str else ws_str
-                        other_x = float(other_str.split()[1])
-                        other_y = float(other_str.split()[2].rstrip(")"))
-                        if abs(other_x - new_x) < 0.01 and abs(other_y - new_y) < 0.01:
-                            return body, False
-                        new_body = body[:abs_start] + new_str + body[abs_end:]
-                        return new_body, True
-
-    # Strategy 2: Fallback — find wire by matching old_endpoint string exactly
-    old_str = f"(xy {old_x:g} {old_y:g})"
     for m in pattern.finditer(body):
+        x1, y1 = float(m.group(1)), float(m.group(2))
+        x2, y2 = float(m.group(3)), float(m.group(4))
+
+        # Match BOTH endpoints exactly — this uniquely identifies the wire
+        file_ep1 = f"(xy {m.group(1)} {m.group(2)})"
+        file_ep2 = f"(xy {m.group(3)} {m.group(4)})"
+
+        # Check if this wire matches our wire endpoints (in either order)
+        if not ((file_ep1 == ws_str and file_ep2 == we_str) or
+                (file_ep1 == we_str and file_ep2 == ws_str)):
+            continue
+
+        # Found the exact wire. Determine which endpoint to replace:
+        # The one closer to old_endpoint (the violation position)
+        ox, oy = fix.old_endpoint
+        d1 = ((x1 - ox) ** 2 + (y1 - oy) ** 2) ** 0.5
+        d2 = ((x2 - ox) ** 2 + (y2 - oy) ** 2) ** 0.5
+
+        if d1 <= d2:
+            target_ep_str = file_ep1
+            other_x, other_y = x2, y2
+        else:
+            target_ep_str = file_ep2
+            other_x, other_y = x1, y1
+
+        # Safety: never create a zero-length wire
+        if abs(other_x - new_x) < 0.01 and abs(other_y - new_y) < 0.01:
+            return body, False
+
+        # Find and replace the target endpoint in this match
         match_text = body[m.start():m.end()]
-        pos = match_text.find(old_str)
-        if pos >= 0:
-            abs_start = m.start() + pos
-            abs_end = abs_start + len(old_str)
-            new_body = body[:abs_start] + new_str + body[abs_end:]
-            return new_body, True
+        pos = match_text.find(target_ep_str)
+        if pos < 0:
+            return body, False
+
+        abs_start = m.start() + pos
+        abs_end = abs_start + len(target_ep_str)
+        new_body = body[:abs_start] + new_str + body[abs_end:]
+        return new_body, True
 
     return body, False
 

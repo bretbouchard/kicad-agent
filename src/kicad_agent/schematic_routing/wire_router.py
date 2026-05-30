@@ -63,19 +63,39 @@ def generate_fixes(
             wire_eps = (target.wire_start, target.wire_end)
 
         if target.routing_type == "same_axis":
-            # Just extend the existing wire to the target pin
-            fixes.append(WireFix(
-                file=target.file,
-                fix_type="extend",
-                old_endpoint=violation_pos,
-                new_endpoint=target_pos,
-                net_name=target.net_name,
-                target_ref=target.target_ref,
-                target_pin=target.target_pin,
-                distance=target.distance,
-                sheet=target.sheet,
-                wire_endpoints=wire_eps,
-            ))
+            is_label = target.target_ref.startswith("label:")
+            if is_label:
+                # Labels are first-class connection points — new wire segment works.
+                fixes.append(WireFix(
+                    file=target.file,
+                    fix_type="new_segment",
+                    old_endpoint=violation_pos,
+                    new_endpoint=target_pos,
+                    new_wire_points=[violation_pos, target_pos],
+                    net_name=target.net_name,
+                    target_ref=target.target_ref,
+                    target_pin=target.target_pin,
+                    distance=target.distance,
+                    sheet=target.sheet,
+                    wire_endpoints=wire_eps,
+                ))
+            else:
+                # Pin targets: extend existing wire endpoint.
+                # The violation endpoint is dangling (nothing else connected),
+                # so extending it is safe and avoids creating extra unconnected
+                # endpoints that new_segment causes.
+                fixes.append(WireFix(
+                    file=target.file,
+                    fix_type="extend",
+                    old_endpoint=violation_pos,
+                    new_endpoint=target_pos,
+                    net_name=target.net_name,
+                    target_ref=target.target_ref,
+                    target_pin=target.target_pin,
+                    distance=target.distance,
+                    sheet=target.sheet,
+                    wire_endpoints=wire_eps,
+                ))
 
         elif target.routing_type == "l_shape":
             # L-shaped routing disabled for safety — same_axis only for now.

@@ -203,6 +203,6 @@ def _classify_routing(
 
     # If one axis aligns (within 1.27mm = half grid unit), it's a straight extension.
     # KiCad considers pins connected within this tolerance.
-    if dx < 1.27 or dy < 1.27:
+    if dx < 0.01 or dy < 0.01:
         return "same_axis"
     return "l_shape"
