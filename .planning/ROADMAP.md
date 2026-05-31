@@ -720,8 +720,8 @@ Plans:
 
 Plans:
 - [x] 35-01-PLAN.md -- Full CRUD for project files: list/modify/remove lib entries, net classes, design rules, project settings (GEN-01, GEN-06)
-- [ ] 35-02-PLAN.md -- erc_auto_fix meta-operation with violation-to-repair dispatch and iteration control (GEN-03)
-- [ ] 35-03-PLAN.md -- Hierarchical power validation + copper zone modify/delete (GEN-04, GEN-05)
+- [x] 35-02-PLAN.md -- erc_auto_fix meta-operation with violation-to-repair dispatch and iteration control (GEN-03)
+- [x] 35-03-PLAN.md -- Hierarchical power validation + copper zone modify/delete (GEN-04, GEN-05)
 
 ### Phase 36: Multi-Layer Routing
 **Goal**: Multi-layer routing with impedance control and length matching
@@ -776,4 +776,4 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 32. Executor Performance | 2/2 | Complete | 2026-05-30 |
 | 33. Undo/Redo Stack | 2/2 | Complete | 2026-05-30 |
 | 34. LLM Provider Abstraction | 2/2 | Complete | 2026-05-31 |
-| 35. Remaining Ops Gaps | 2/3 | In Progress | -- |
+| 35. Remaining Ops Gaps | 3/3 | Complete | 2026-05-31 |
