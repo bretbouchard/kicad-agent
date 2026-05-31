@@ -12,6 +12,8 @@ Build an AI-safe KiCad structural editing tool across multiple milestones. First
 - **v2.1 Audit** - Phases 23-24 (shipped 2026-05-29)
 - **v2.2 Complete-Ops** - Phases 25-29 (shipped 2026-05-29)
 - **v2.3 MCP-Server** - Phases 30-31 (shipped 2026-05-29)
+- **v2.4 Schematic Intelligence** - Phases 38-40 (planned)
+- **v3.0 Full-Stack EDA** - Future (schematic DRC, layout-aware placement, constraint propagation)
 
 ## Phases
 
@@ -761,6 +763,71 @@ Plans:
 - [x] 37-02-PLAN.md -- Training data versioning, regression detection, output cleanup (TRAIN-01, TRAIN-02, TRAIN-04)
 - [x] 37-03-PLAN.md -- MCP health check, graceful shutdown, training pipeline smoke tests (INFRA-02, INFRA-03, TRAIN-03)
 
+---
+
+<details>
+<summary>v2.4 Schematic Intelligence (Phases 38-40) - PLANNED</summary>
+
+- [ ] **Phase 38: Schematic Routing Engine** - Pin position resolution, collision-aware wire routing, net-based batch wiring, full schematic regeneration from netlist. Born from real-world pain: Bret spent 3 sessions manually writing Python scripts to regenerate a 43-component compressor schematic. See `38-CONTEXT.md` for the complete hands-on experience dump.
+- [ ] **Phase 39: Schematic Intelligence** - Net extraction from existing schematics, net name conflict detection, automatic name suggestion from topology. Eliminates the manual net-name-to-global-label alignment work.
+- [ ] **Phase 40: ERC Root Cause Analysis** - Violation classification (fixable vs pre-existing vs benign), root cause diagnosis, enhanced erc_auto_fix with root cause mode. Moves from symptom patching to actual fix generation.
+
+</details>
+
+### Phase 38: Schematic Routing Engine
+**Goal**: Pin position resolution for multi-unit/named-pin ICs, collision-aware schematic wire routing, net-based batch wiring, and full schematic regeneration from a netlist definition. The PCB auto-router exists; this is its schematic counterpart.
+**Depends on**: Phase 25 (remove operations), Phase 32 (executor batch), Phase 35 (remaining ops gaps)
+**Context**: See `38-CONTEXT.md` — real-world pain points, test cases, implementation formulas from hands-on wiring work
+**Requirements**: SCH-ROUTE-01, SCH-ROUTE-02, SCH-ROUTE-03, SCH-ROUTE-04
+**Success Criteria** (what must be TRUE):
+  1. `resolve_pin_positions` correctly resolves pins for multi-unit ICs (CD4066BE, NE5532), named-pin ICs (THAT4301), R/C passives, and power symbols with rotation transforms
+  2. `detect_pin_overlaps` finds R55/R56 overlap in compressor-stage at position (59.69, 78.74)
+  3. `detect_routing_collisions` identifies U22 pin columns (x=95.25, x=105.41) as collision zones
+  4. `connect_pins` generates wires with collision avoidance and net labels for guaranteed connectivity
+  5. `batch_connect` processes 45 nets for compressor-stage without error
+  6. `regenerate_wiring` produces a schematic with ≤33 ERC violations (matching manual script result)
+  7. Parent schematic ERC does not regress (≤209 violations for analog-board)
+**Plans**: 4 plans
+
+Plans:
+- [ ] 38-01-PLAN.md -- Pin position resolution operation (SCH-ROUTE-01)
+- [ ] 38-02-PLAN.md -- Collision detection + pin overlap detection operations (SCH-ROUTE-02)
+- [ ] 38-03-PLAN.md -- connect_pins operation with hybrid wire/label routing (SCH-ROUTE-03)
+- [ ] 38-04-PLAN.md -- batch_connect + regenerate_wiring high-level operations (SCH-ROUTE-04)
+
+### Phase 39: Schematic Intelligence
+**Goal**: Extract existing net topology, detect naming conflicts, suggest canonical names based on global labels and circuit function. Eliminate manual net-name alignment work.
+**Depends on**: Phase 38
+**Requirements**: SCH-INTEL-01, SCH-INTEL-02, SCH-INTEL-03
+**Success Criteria** (what must be TRUE):
+  1. `extract_nets` correctly identifies all 45 nets in compressor-stage with pin membership
+  2. `detect_net_conflicts` finds the R55/R56 pin overlap and all case-mismatch conflicts
+  3. `suggest_net_names` correctly maps internal names to global label names
+  4. No regression in existing operations
+**Plans**: 3 plans
+
+Plans:
+- [ ] 39-01-PLAN.md -- Net extraction from existing schematics (SCH-INTEL-01)
+- [ ] 39-02-PLAN.md -- Net name conflict detection (SCH-INTEL-02)
+- [ ] 39-03-PLAN.md -- Auto-name nets from topology (SCH-INTEL-03)
+
+### Phase 40: ERC Root Cause Analysis
+**Goal**: Upgrade erc_auto_fix from symptom patching to root cause analysis. Classify violations (fixable, pre-existing, benign, config), diagnose root causes, generate targeted fixes.
+**Depends on**: Phase 38, Phase 39
+**Requirements**: ERC-SMART-01, ERC-SMART-02, ERC-SMART-03
+**Success Criteria** (what must be TRUE):
+  1. `classify_violations` correctly categorizes all 33 compressor-stage violations
+  2. `diagnose_violations` identifies R55/R56 pin overlap as root cause of multiple_net_names
+  3. Enhanced `erc_auto_fix` fixes the pin overlap, reducing violations from 33 to 32
+  4. Pre-existing violations are documented with root cause explanations, not silently ignored
+  5. No regression in existing auto-fix test suite
+**Plans**: 3 plans
+
+Plans:
+- [ ] 40-01-PLAN.md -- ERC violation classification (ERC-SMART-01)
+- [ ] 40-02-PLAN.md -- Root cause diagnosis for fixable violations (ERC-SMART-02)
+- [ ] 40-03-PLAN.md -- Enhanced erc_auto_fix with root cause mode (ERC-SMART-03)
+
 ## Progress
 
 **Execution Order:**
@@ -805,3 +872,6 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 35. Remaining Ops Gaps | 3/3 | Complete | 2026-05-31 |
 | 36. Multi-Layer Routing | 3/3 | Complete | 2026-05-31 |
 | 37. Training + Infrastructure | 3/3 | Complete | 2026-05-31 |
+| 38. Schematic Routing Engine | 0/4 | Planned | — |
+| 39. Schematic Intelligence | 0/3 | Planned | — |
+| 40. ERC Root Cause Analysis | 0/3 | Planned | — |

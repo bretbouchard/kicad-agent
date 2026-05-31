@@ -556,3 +556,26 @@ Expose all 57 kicad-agent operations as MCP tools so any AI agent (Claude, Curso
 
 - [ ] **PKG-01**: New CLI entry point `kicad-agent-edit` registered in `pyproject.toml`
 - [ ] **PKG-02**: Server runs standalone with no additional dependencies beyond existing `mcp` package
+
+## v2.4 Requirements — Schematic Intelligence
+
+Born from real-world pain: Bret spent 3+ sessions manually writing Python scripts to regenerate a 43-component THAT4301 compressor schematic. Every requirement below maps to a task that was done by hand because kicad-agent couldn't do it.
+
+### Schematic Routing Engine (Phase 38)
+
+- [ ] **SCH-ROUTE-01**: `resolve_pin_positions` operation returns absolute coordinates for every pin of any component, handling multi-unit symbols (CD4066BE 5 units), named pins (THAT4301), numbered pins, R/C passives (Device:R/C ±3.81mm), power symbols, and rotation transforms (0/90/180/270°)
+- [ ] **SCH-ROUTE-02**: `detect_routing_collisions` operation identifies x-column collision zones where vertical wires would short multiple pins; `detect_pin_overlaps` operation finds pins from different nets sharing the same position (layout bugs)
+- [ ] **SCH-ROUTE-03**: `connect_pins` operation connects a list of pins into a named net with L-shaped wire routing, collision avoidance, and net labels at every pin position for guaranteed connectivity; supports `wire_first`, `label_only`, and `hybrid` strategies
+- [ ] **SCH-ROUTE-04**: `batch_connect` operation processes multiple net definitions in one call; `regenerate_wiring` operation removes all wires/labels/no_connects and regenerates from a netlist definition, optionally running ERC after
+
+### Schematic Intelligence (Phase 39)
+
+- [ ] **SCH-INTEL-01**: `extract_nets` operation parses existing schematic wires, labels, and power symbols to produce a complete net topology with pin membership, wire counts, and global/local classification
+- [ ] **SCH-INTEL-02**: `detect_net_conflicts` operation finds multiple_net_names, local/global mismatches, power net name mismatches, and case-only differences before running ERC
+- [ ] **SCH-INTEL-03**: `suggest_net_names` operation maps internal net names to canonical names based on global labels, power symbol net names, and IC pin functions
+
+### ERC Root Cause Analysis (Phase 40)
+
+- [ ] **ERC-SMART-01**: `classify_violations` operation categorizes ERC violations as fixable, pre-existing, benign, or config_issue with confidence levels and root cause explanations
+- [ ] **ERC-SMART-02**: `diagnose_violations` operation generates targeted fix operations for fixable violations with multiple fix options, side effect analysis, and recommended fix index
+- [ ] **ERC-SMART-03**: Enhanced `erc_auto_fix` with `root_cause` mode that classifies violations first, fixes only fixable ones, documents pre-existing issues, and suppresses benign warnings
