@@ -824,7 +824,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 40-01-PLAN.md -- ERC violation classification (ERC-SMART-01)
+- [x] 40-01-PLAN.md -- ERC violation classification (ERC-SMART-01)
 - [ ] 40-02-PLAN.md -- Root cause diagnosis for fixable violations (ERC-SMART-02)
 - [ ] 40-03-PLAN.md -- Enhanced erc_auto_fix with root cause mode (ERC-SMART-03)
 

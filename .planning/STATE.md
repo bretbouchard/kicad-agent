@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: schematic-intelligence
 status: executing
-stopped_at: "Phase 39 complete (net naming). Next: Phase 40"
-last_updated: "2026-05-31T23:20:45Z"
+stopped_at: "Phase 40 Plan 01 complete (violation classification). Next: 40-02"
+last_updated: "2026-05-31T23:29:34Z"
 last_activity: 2026-05-31
 progress:
   total_phases: 40
   completed_phases: 37
   total_plans: 116
-  completed_plans: 109
-  percent: 93
+  completed_plans: 110
+  percent: 95
 ---
 
 # Project State
@@ -110,10 +110,13 @@ Recent decisions affecting current work:
 - [v2.4-SI]: Voltage pattern regex matches both +3.3V and +3V3 KiCad power naming conventions
 - [v2.4-SI]: Power convention detection uses pin_name only, not lib_id -- SchematicGraph filters power symbols
 - [v2.4-SI]: Passive components identified by lib_id containing Device:R, Device:C, Device:L
+- [v2.4-SI]: Violation classification uses _CLASSIFICATION_RULES ordered list (match_fn, category, root_cause, confidence) -- first match wins
+- [v2.4-SI]: ClassifyViolationsOp in _schema_erc_smart.py (separate from _schema_repair.py per D-01)
+- [v2.4-SI]: IR position data (pin/wire/label positions) distinguishes #PWR symbols from regular components
 
 ### Pending Todos
 
-- Execute Phase 40 (3 plans, 3 waves)
+- Execute Phase 40 Plans 02-03 (diagnosis + enhanced fix, 2 waves)
 
 ### Blockers/Concerns
 
@@ -125,5 +128,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 39 complete (net naming). Next: Phase 40
-Resume with: Execute Phase 40 (3 plans, 3 waves)
+Stopped at: Phase 40 Plan 01 complete (violation classification). Next: 40-02
+Resume with: Execute Phase 40 Plan 02 (diagnose_violations)

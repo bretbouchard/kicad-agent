@@ -576,7 +576,7 @@ Born from real-world pain: Bret spent 3+ sessions manually writing Python script
 
 ### ERC Root Cause Analysis (Phase 40)
 
-- [ ] **ERC-SMART-01**: `classify_violations` operation categorizes ERC violations as fixable, pre-existing, benign, or config_issue with confidence levels and root cause explanations
+- [x] **ERC-SMART-01**: `classify_violations` operation categorizes ERC violations as fixable, pre-existing, benign, or config_issue with confidence levels and root cause explanations
 - [ ] **ERC-SMART-02**: `diagnose_violations` operation generates targeted fix operations for fixable violations with multiple fix options, side effect analysis, and recommended fix index
 - [ ] **ERC-SMART-03**: Enhanced `erc_auto_fix` with `root_cause` mode that classifies violations first, fixes only fixable ones, documents pre-existing issues, and suppresses benign warnings
 
