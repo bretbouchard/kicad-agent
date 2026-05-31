@@ -1512,7 +1512,8 @@ class TestImpedance:
         """Bisection solver converges for stripline model."""
         from kicad_agent.routing.impedance import solve_trace_width
         r = solve_trace_width(
-            target_z0=50.0, h=0.15, t=0.035, er=4.5, model="stripline"
+            target_z0=50.0, h=0.15, t=0.035, er=4.5, model="stripline",
+            min_width=0.05,
         )
         assert r.valid is True
         assert r.impedance_error_percent < 1.0
