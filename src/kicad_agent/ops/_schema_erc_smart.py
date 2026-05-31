@@ -30,3 +30,23 @@ class ClassifyViolationsOp(BaseModel):
         max_length=512,
         description="Pre-generated ERC report path. If None, runs ERC via parse_erc.",
     )
+
+
+class DiagnoseViolationsOp(BaseModel):
+    """Diagnose root causes for fixable ERC violations and propose targeted fixes.
+
+    Takes classified violations (from classify_violations) and generates
+    concrete fix options with side effect analysis and confidence ratings.
+
+    Attributes:
+        op_type: Discriminator literal ``"diagnose_violations"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        violation_types: Specific violation types to diagnose. None = all fixable types.
+    """
+
+    op_type: Literal["diagnose_violations"] = "diagnose_violations"
+    target_file: TargetFile
+    violation_types: Optional[list[str]] = Field(
+        default=None,
+        description="Specific violation types to diagnose. None = all fixable types.",
+    )
