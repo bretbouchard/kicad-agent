@@ -499,6 +499,12 @@ def _handle_break_wire_shorts(op: Any, ir: SchematicIR, file_path: Path) -> dict
     )
 
 
+@register_schematic("erc_auto_fix")
+def _handle_erc_auto_fix(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+    return erc_auto_fix(ir, file_path, max_iterations=op.max_iterations)
+
+
 # ---------------------------------------------------------------------------
 # PCB handler implementations
 # ---------------------------------------------------------------------------

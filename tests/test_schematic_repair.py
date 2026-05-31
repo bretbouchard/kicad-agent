@@ -564,3 +564,162 @@ def test_repair_schematic_with_snap_to_grid():
         }
     })
     assert op.root.snap_to_grid is True
+
+
+# ---------------------------------------------------------------------------
+# Phase 35: erc_auto_fix meta-operation tests
+# ---------------------------------------------------------------------------
+
+
+class TestErcAutoFix:
+    """Test erc_auto_fix meta-operation with violation dispatch and iteration control."""
+
+    def _make_violation(self, vtype: str, count: int = 1) -> list:
+        """Create mock ErcViolation instances for testing."""
+        from kicad_agent.ops.erc_parser import ErcViolation
+        return [
+            ErcViolation(
+                sheet="/",
+                type=vtype,
+                severity="error",
+                description=f"Test {vtype} violation {i}",
+                positions=[(float(i), float(i))],
+            )
+            for i in range(count)
+        ]
+
+    def test_no_violations(self):
+        """erc_auto_fix with empty ERC results returns fixes_applied=[] and iterations=0."""
+        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+
+        ir = MagicMock()
+        with patch("kicad_agent.ops.erc_auto_fix.parse_erc", return_value=[]):
+            result = erc_auto_fix(ir, Path("test.kicad_sch"), max_iterations=3)
+
+        assert result["fixes_applied"] == []
+        assert result["iterations"] == 0
+        assert result["remaining_violations"] == 0
+        assert result["unhandled_violations"] == []
+
+    def test_pin_not_connected_fix(self):
+        """erc_auto_fix maps pin_not_connected violations to place_no_connects_from_erc."""
+        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+
+        ir = MagicMock()
+        violations = self._make_violation("pin_not_connected", count=3)
+        # Iteration 1: violations, iteration 2: empty, final check: empty
+        with patch("kicad_agent.ops.erc_auto_fix.parse_erc", side_effect=[violations, [], []]), \
+             patch("kicad_agent.ops.repair.place_no_connects_from_erc", return_value={"placed": 3, "skipped_duplicates": 0}) as mock_nc:
+            result = erc_auto_fix(ir, Path("test.kicad_sch"))
+
+        mock_nc.assert_called_once()
+        assert any(f["type"] == "pin_not_connected" for f in result["fixes_applied"])
+
+    def test_power_pin_not_driven_fix(self):
+        """erc_auto_fix maps power_pin_not_driven violations to add_power_flags."""
+        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+
+        ir = MagicMock()
+        violations = self._make_violation("power_pin_not_driven", count=2)
+        # Iteration 1: violations, iteration 2: empty, final check: empty
+        with patch("kicad_agent.ops.erc_auto_fix.parse_erc", side_effect=[violations, [], []]), \
+             patch("kicad_agent.ops.repair.add_power_flags", return_value={"placed": 2, "skipped": 0, "positions": [], "net_names": []}) as mock_pf:
+            result = erc_auto_fix(ir, Path("test.kicad_sch"))
+
+        mock_pf.assert_called_once()
+        assert any(f["type"] == "power_pin_not_driven" for f in result["fixes_applied"])
+
+    def test_max_iterations_respected(self):
+        """erc_auto_fix respects max_iterations and stops after that many rounds."""
+        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+
+        ir = MagicMock()
+        violations = self._make_violation("pin_not_connected", count=5)
+        # parse_erc always returns violations (never decreases)
+        with patch("kicad_agent.ops.erc_auto_fix.parse_erc", return_value=violations), \
+             patch("kicad_agent.ops.repair.place_no_connects_from_erc", return_value={"placed": 5, "skipped_duplicates": 0}):
+            result = erc_auto_fix(ir, Path("test.kicad_sch"), max_iterations=2)
+
+        # Should run exactly 2 iterations (stops when count doesn't decrease after iteration 1,
+        # or hits max_iterations=2)
+        assert result["iterations"] <= 2
+
+    def test_early_stop_no_decrease(self):
+        """erc_auto_fix stops early when violation count does not decrease."""
+        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+
+        ir = MagicMock()
+        violations = self._make_violation("pin_not_connected", count=5)
+        # Always returns same violations -- count never decreases
+        with patch("kicad_agent.ops.erc_auto_fix.parse_erc", return_value=violations), \
+             patch("kicad_agent.ops.repair.place_no_connects_from_erc", return_value={"placed": 0, "skipped_duplicates": 0}):
+            result = erc_auto_fix(ir, Path("test.kicad_sch"), max_iterations=10)
+
+        # Should stop after 2 iterations: first runs repairs, second sees no decrease and stops
+        assert result["iterations"] == 2
+
+    def test_unhandled_violations_reported(self):
+        """Unmapped violation types appear in unhandled_violations in return value."""
+        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+
+        ir = MagicMock()
+        violations = self._make_violation("unknown_violation_type", count=2)
+        # Iteration 1: unhandled violations, iteration 2: same count -> early stop, final check: empty
+        with patch("kicad_agent.ops.erc_auto_fix.parse_erc", side_effect=[violations, violations, []]):
+            result = erc_auto_fix(ir, Path("test.kicad_sch"))
+
+        assert len(result["unhandled_violations"]) == 1
+        assert result["unhandled_violations"][0]["type"] == "unknown_violation_type"
+        assert result["unhandled_violations"][0]["count"] == 2
+
+    def test_schema_validates(self):
+        """ErcAutoFixOp validates with op_type='erc_auto_fix' through Operation.model_validate."""
+        from kicad_agent.ops.schema import Operation
+
+        op = Operation.model_validate({
+            "root": {
+                "op_type": "erc_auto_fix",
+                "target_file": "test.kicad_sch",
+            }
+        })
+        assert op.root.op_type == "erc_auto_fix"
+        assert op.root.max_iterations == 3  # default
+
+        # Custom max_iterations
+        op2 = Operation.model_validate({
+            "root": {
+                "op_type": "erc_auto_fix",
+                "target_file": "test.kicad_sch",
+                "max_iterations": 5,
+            }
+        })
+        assert op2.root.max_iterations == 5
+
+    def test_priority_order(self):
+        """Repairs execute in priority order: shorts first, then type fixes, then cosmetic."""
+        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+
+        ir = MagicMock()
+        violations = [
+            *self._make_violation("pin_not_connected", count=2),
+            *self._make_violation("power_pin_not_driven", count=1),
+        ]
+        call_order = []
+
+        def track_call(name):
+            def wrapper(*args, **kwargs):
+                call_order.append(name)
+                return {"placed": 0, "skipped": 0}
+            return wrapper
+
+        with patch("kicad_agent.ops.erc_auto_fix.parse_erc", side_effect=[violations, [], []]), \
+             patch("kicad_agent.ops.repair.add_power_flags", side_effect=track_call("power_flags")), \
+             patch("kicad_agent.ops.repair.place_no_connects_from_erc", side_effect=track_call("no_connects")):
+            result = erc_auto_fix(ir, Path("test.kicad_sch"))
+
+        # power_pin_not_driven should be called before pin_not_connected
+        # (power flags > no-connects in priority)
+        if "power_flags" in call_order and "no_connects" in call_order:
+            pf_idx = call_order.index("power_flags")
+            nc_idx = call_order.index("no_connects")
+            assert pf_idx < nc_idx, f"power_flags (idx={pf_idx}) should come before no_connects (idx={nc_idx})"

@@ -255,6 +255,7 @@ from kicad_agent.ops._schema_repair import (  # noqa: E402
     AddPowerFlagOp,
     RebuildRootSheetOp,
     SwapSymbolOp,
+    ErcAutoFixOp,
 )
 from kicad_agent.ops._schema_sheet import (  # noqa: E402
     AddSheetOp,
@@ -344,7 +345,8 @@ class Operation(BaseModel):
         | ModifyDesignRuleOp
         | RemoveDesignRuleOp
         | ListDesignRulesOp
-        | ModifyProjectSettingsOp,
+        | ModifyProjectSettingsOp
+        | ErcAutoFixOp,
         Field(discriminator="op_type"),
     ]
 
@@ -442,6 +444,7 @@ __all__ = [
     "AddPowerFlagOp",
     "RebuildRootSheetOp",
     "SwapSymbolOp",
+    "ErcAutoFixOp",
     # Sheet ops
     "AddSheetOp",
     "AddSheetPinOp",

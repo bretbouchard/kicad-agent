@@ -325,3 +325,26 @@ class BreakWireShortsOp(BaseModel):
         default=False,
         description="Report bridge wires without modifying the file",
     )
+
+
+class ErcAutoFixOp(BaseModel):
+    """Meta-operation: run ERC, dispatch repairs by violation type, iterate.
+
+    Chains parse_erc to violation-type analysis to repair dispatch, with
+    iteration limits and structured result reporting. LLM agents and MCP
+    callers can use this single operation instead of manually chaining
+    parse_erc + individual repair ops.
+
+    Attributes:
+        op_type: Discriminator literal ``"erc_auto_fix"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        max_iterations: Maximum repair iterations (default 3, max 10). Each
+            iteration runs ERC then dispatches all applicable repairs.
+    """
+
+    op_type: Literal["erc_auto_fix"] = "erc_auto_fix"
+    target_file: TargetFile
+    max_iterations: int = Field(
+        default=3, ge=1, le=10,
+        description="Maximum repair iterations (default 3)",
+    )
