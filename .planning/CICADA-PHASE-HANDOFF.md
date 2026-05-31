@@ -11,7 +11,7 @@
 
 **Shipped:** 37 phases, 7 milestones (v1.0 through v2.3)
 **In progress:** Phase 38 (Schematic Routing Engine) — 3/4 plans complete
-**Planned:** Phases 39-40 (Schematic Intelligence + ERC Root Cause)
+**Planned:** Phases 39-40 (v2.4), Phases 41-44 (v2.5 Benchmark Suite)
 **Total:** 74 operations, 1392+ tests, 57,275 source lines
 
 ### Phase 38 Status
@@ -60,7 +60,7 @@ We have no standardized way to measure kicad-agent's intelligence. This is the #
 
 **Why it matters:** No professional takes an AI tool seriously without published benchmarks. This is how we prove we're not vaporware.
 
-**Phase plan:** Phases 41-44 in STRATEGIC-EXPANSION-PLAN.md
+**Full execution plans written.** See `.planning/phases/41-pcb-mmlu-benchmark/`, `.planning/phases/42-circuit-qa-dataset/`, `.planning/phases/43-regression-benchmark-suite/`, `.planning/phases/44-adversarial-test-generation/`.
 
 ### 2. Domain Intelligence (Currently 2/10)
 
@@ -108,16 +108,38 @@ Execute these in order:
 
 After Phase 40, ship **v2.4 milestone**.
 
-### Priority 2: PCB MMLU Benchmark (Phase 41)
+### Priority 2: Benchmark Suite (Phases 41-44) — v2.5
 
-This is the next critical milestone after v2.4. The benchmark suite needs:
-- 500+ multi-choice questions across 8 categories
-- Sourced from real schematics in analog-ecosystem (55 modules)
-- Ground truth from datasheets + ERC reports + netlists
-- Baseline: run Qwen2.5-0.5B LoRA against it, measure accuracy
-- Target: >70% accuracy after fine-tuning
+Full execution plans are written and ready. Execute after v2.4 ships.
 
-The benchmark is how we prove to the world that kicad-agent understands circuits, not just S-expressions.
+**Phase 41: PCB MMLU Benchmark** (2 plans)
+| Plan | Deliverable | Files |
+|------|-------------|-------|
+| 41-01 | 500+ multi-choice questions across 8 categories | `benchmarks/question_generator.py`, `benchmarks/dataset_builder.py`, `benchmarks/pcb-mmlu-v1.json` |
+| 41-02 | Benchmark runner + baseline models (random/heuristic/LoRA/API) + CLI | `benchmarks/runner.py`, `benchmarks/models.py`, `benchmarks/__main__.py` |
+
+8 categories: component_identification, topology_recognition, signal_flow, power_design, pin_function, net_purpose, design_rules, troubleshooting. Template-based generation from real schematics (no LLM needed). Random baseline ~25%, heuristic ~30-40%, target >70% after fine-tuning.
+
+**Phase 42: Circuit QA Dataset** (1 plan)
+| Plan | Deliverable | Files |
+|------|-------------|-------|
+| 42-01 | 2000+ open-ended QA pairs for fine-tuning | `benchmarks/qa_generator.py`, `benchmarks/circuit-qa-v1.json` |
+
+6 QA types: violation_diagnosis, signal_flow, component_function, net_purpose, design_review, value_calculation. This is the training data that makes benchmark scores go up.
+
+**Phase 43: Regression Benchmark Suite** (1 plan)
+| Plan | Deliverable | Files |
+|------|-------------|-------|
+| 43-01 | Regression detection + CI workflow | `benchmarks/regression.py`, `.github/workflows/benchmark.yml` |
+
+RegressionDetector flags >2% drops in any category. GitHub Actions runs on every PR. Historical tracking in `benchmarks/results/`.
+
+**Phase 44: Adversarial Test Generation** (1 plan)
+| Plan | Deliverable | Files |
+|------|-------------|-------|
+| 44-01 | 750+ adversarial test cases | `benchmarks/mutation_engine.py`, `benchmarks/adversarial.py`, `benchmarks/adversarial-v1.json` |
+
+Three types: mutation testing (200 — deliberately broken schematics), property-based testing (50 — invariant verification), parser fuzzing (500 — random S-expression mutations). All seeded for reproducibility.
 
 ### Priority 3: Circuit Semantics (Phase 45)
 
@@ -174,6 +196,32 @@ src/kicad_agent/ops/
 
 Tests in `tests/` follow the pattern `test_<module>.py`. Each plan has test specifications in its PLAN.md.
 
+### New benchmarks/ package (Phases 41-44 will create)
+
+```
+src/kicad_agent/benchmarks/
+├── __init__.py
+├── __main__.py               # CLI: python -m kicad_agent.benchmarks
+├── schemas.py                # BenchmarkQuestion, BenchmarkDataset
+├── question_generator.py     # Template-based question generation (8 categories)
+├── dataset_builder.py        # Orchestrates generation from real schematics
+├── runner.py                 # BenchmarkRunner + BenchmarkResult
+├── models.py                 # BaselineRandom, BaselineHeuristic, LocalLoRA, APIModel
+├── qa_schemas.py             # CircuitQAPair, CircuitQADataset
+├── qa_generator.py           # Open-ended QA pair generation (6 types)
+├── regression.py             # RegressionDetector + CI integration
+├── mutation_engine.py        # SchematicMutation (7 mutation types)
+└── adversarial.py            # AdversarialTestSuite (mutation + property + fuzz)
+
+benchmarks/
+├── pcb-mmlu-v1.json          # 500+ multi-choice questions
+├── circuit-qa-v1.json        # 2000+ open-ended QA pairs
+├── adversarial-v1.json       # 750+ adversarial test cases
+└── results/
+    ├── baseline.json         # Best-known baseline result
+    └── *.json                # Historical run results
+```
+
 ---
 
 ## What Success Looks Like
@@ -206,3 +254,7 @@ Tests in `tests/` follow the pattern `test_<module>.py`. Each plan has test spec
 - `.planning/phases/38-*/` — Phase 38 plans and summaries
 - `.planning/phases/39-*/` — Phase 39 plans (ready to execute)
 - `.planning/phases/40-*/` — Phase 40 plans (ready to execute)
+- `.planning/phases/41-pcb-mmlu-benchmark/` — PCB MMLU dataset + runner (full plans ready)
+- `.planning/phases/42-circuit-qa-dataset/` — Circuit QA fine-tuning dataset (full plan ready)
+- `.planning/phases/43-regression-benchmark-suite/` — CI regression detection (full plan ready)
+- `.planning/phases/44-adversarial-test-generation/` — Mutation/fuzz adversarial tests (full plan ready)
