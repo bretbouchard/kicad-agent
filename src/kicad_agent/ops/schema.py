@@ -274,11 +274,15 @@ from kicad_agent.ops._schema_crossfile import (  # noqa: E402
     PropagateSymbolChangeOp,
 )
 from kicad_agent.ops._schema_schematic_routing import (  # noqa: E402
+    BatchConnectOp,
     ConnectPinsOp,
     DetectPinOverlapsOp,
     DetectRoutingCollisionsOp,
+    GlobalLabelSpec,
+    NetDef,
     PinRef,
     CollisionZone,
+    RegenerateWiringOp,
     ResolvePinPositionsOp,
 )
 
@@ -374,7 +378,9 @@ class Operation(BaseModel):
         | ResolvePinPositionsOp
         | DetectRoutingCollisionsOp
         | DetectPinOverlapsOp
-        | ConnectPinsOp,
+        | ConnectPinsOp
+        | BatchConnectOp
+        | RegenerateWiringOp,
         Field(discriminator="op_type"),
     ]
 
@@ -494,8 +500,12 @@ __all__ = [
     "DetectRoutingCollisionsOp",
     "DetectPinOverlapsOp",
     "ConnectPinsOp",
+    "BatchConnectOp",
+    "RegenerateWiringOp",
     "PinRef",
     "CollisionZone",
+    "NetDef",
+    "GlobalLabelSpec",
     # Union and helpers
     "Operation",
     "get_operation_schema",

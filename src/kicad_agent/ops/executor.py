@@ -567,6 +567,66 @@ def _handle_connect_pins(op: Any, ir: SchematicIR, file_path: Path) -> dict[str,
     }
 
 
+@register_schematic("batch_connect")
+def _handle_batch_connect(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.schematic_routing.batch_wiring import BatchWiring
+    wiring = BatchWiring(file_path)
+    result = wiring.batch_connect(
+        nets=[{"name": n.name, "pins": [{"ref": p.ref, "pin": p.pin} for p in n.pins]} for n in op.nets],
+        global_labels=[{"name": g.name, "position": (g.position.x, g.position.y), "shape": g.shape} for g in op.global_labels],
+        strategy=op.strategy,
+        collision_zones=[z.model_dump() for z in op.collision_zones],
+        auto_detect_collisions=op.auto_detect_collisions,
+        max_wire_length=op.max_wire_length,
+    )
+    # Apply generated wires to IR
+    for wire in result.get("wires", []):
+        ir.add_wire(start_x=wire["start"][0], start_y=wire["start"][1],
+                    end_x=wire["end"][0], end_y=wire["end"][1])
+    # Apply generated labels to IR
+    for label in result.get("labels", []):
+        ir.add_label(name=label.get("net_name", op.nets[0].name if op.nets else ""),
+                     label_type="local",
+                     x=label["position"][0], y=label["position"][1],
+                     angle=0, shape="input")
+    # Apply global labels to IR
+    for gl in result.get("global_labels", []):
+        ir.add_label(name=gl["name"], label_type="global",
+                     x=gl["position"][0], y=gl["position"][1],
+                     angle=0, shape=gl.get("shape", "bidirectional"))
+    return {
+        "nets_processed": result["nets_processed"],
+        "wires_generated": result["wires_generated"],
+        "labels_generated": result["labels_generated"],
+        "global_labels_generated": result["global_labels_generated"],
+        "collisions_detected": result["collisions_detected"],
+        "notes": result.get("notes", []),
+    }
+
+
+@register_schematic("regenerate_wiring")
+def _handle_regenerate_wiring(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.schematic_routing.batch_wiring import BatchWiring
+    wiring = BatchWiring(file_path)
+    result = wiring.regenerate_wiring(
+        nets=[{"name": n.name, "pins": [{"ref": p.ref, "pin": p.pin} for p in n.pins]} for n in op.nets],
+        global_labels=[{"name": g.name, "position": (g.position.x, g.position.y), "shape": g.shape} for g in op.global_labels],
+        no_connect_positions=[{"x": p.x, "y": p.y} for p in op.no_connect_positions],
+        strategy=op.strategy,
+        collision_zones=[z.model_dump() for z in op.collision_zones],
+        auto_detect_collisions=op.auto_detect_collisions,
+        max_wire_length=op.max_wire_length,
+    )
+    # The regenerate_wiring method strips and reconnects via kiutils directly.
+    # Mark IR as dirty so the executor's Transaction block re-serializes.
+    ir._dirty = True
+    return {
+        "removed": result["removed"],
+        "generated": result["generated"],
+        "notes": result.get("notes", []),
+    }
+
+
 # ---------------------------------------------------------------------------
 # PCB handler implementations
 # ---------------------------------------------------------------------------
