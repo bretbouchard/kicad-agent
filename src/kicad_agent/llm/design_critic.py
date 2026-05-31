@@ -22,7 +22,6 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from kicad_agent.llm.client import LLMClient
 from kicad_agent.llm.context_builder import ContextBuilder
 
 if TYPE_CHECKING:
@@ -234,6 +233,7 @@ class DesignCritic:
         if provider is not None:
             self._client = provider
         else:
+            from kicad_agent.llm.client import LLMClient
             self._client = client or LLMClient(model=model)
 
     def critique(

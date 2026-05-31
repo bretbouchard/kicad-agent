@@ -14,7 +14,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from kicad_agent.generation.intent import _SAFE_ID_PATTERN
-from kicad_agent.llm.client import LLMClient
 from kicad_agent.llm.tools import COMPONENT_SYSTEM_PROMPT, SUGGEST_TOOL
 
 if TYPE_CHECKING:
@@ -64,6 +63,7 @@ class ComponentSuggester:
         elif client is not None:
             self._client = client
         else:
+            from kicad_agent.llm.client import LLMClient
             self._client = LLMClient(model=model)
 
     def suggest(self, functional_description: str) -> list[ComponentSuggestion]:

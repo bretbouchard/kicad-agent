@@ -90,6 +90,8 @@ class AnthropicProvider:
         if system is not None:
             kwargs["system"] = system
         response = self._client.create_message(**kwargs)
+        if not response.content:
+            raise ValueError("LLM returned empty content")
         return response.content[0].text
 
     def embed(self, text: str) -> list[float]:

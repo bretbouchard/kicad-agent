@@ -13,7 +13,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from kicad_agent.generation.intent import GenerationIntent
-from kicad_agent.llm.client import LLMClient
 from kicad_agent.llm.context_builder import ContextBuilder
 from kicad_agent.llm.tools import INTENT_TOOL
 
@@ -45,6 +44,7 @@ class IntentParser:
         if provider is not None:
             self._client = provider
         else:
+            from kicad_agent.llm.client import LLMClient
             self._client = client or LLMClient(model=model)
 
     def parse(self, description: str) -> GenerationIntent:

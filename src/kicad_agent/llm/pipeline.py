@@ -223,6 +223,8 @@ def llm_generate(
                 if hybrid_client is not None:
                     from kicad_agent.llm.design_critic import DesignCritic
                     design_critic = DesignCritic(client=hybrid_client)
+                    # NOTE: HybridLLMClient satisfies LLMBackend (has .model + .create_message)
+                    # but NOT LLMProvider (lacks .generate/.embed), so client= is correct here.
                 else:
                     from kicad_agent.llm.design_critic import DesignCritic
                     from kicad_agent.llm.provider import get_provider

@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 
 from kicad_agent.generation.intent import GenerationIntent
 from kicad_agent.llm.error_fixer import FixResult
-from kicad_agent.llm.text_prompts import build_text_prompt, extract_json_from_text
+from kicad_agent.llm.text_prompts import extract_json_from_text
 from kicad_agent.llm.tools import INTENT_TOOL
 
 if TYPE_CHECKING:
@@ -106,7 +106,6 @@ class UnifiedIntentParser:
         # Local path: extract JSON from text
         text = _get_text(response)
         if text:
-            full_prompt = build_text_prompt("intent_parse", description)
             # The local model already received the prompt, just extract from its text
             data = extract_json_from_text(text)
             if data is not None:
@@ -224,7 +223,6 @@ class UnifiedErrorFixer:
         # Local path: extract JSON from text
         text = _get_text(response)
         if text:
-            full_prompt = build_text_prompt("error_fix", user_content)
             data = extract_json_from_text(text)
             if data is not None:
                 ops = data.get("operations", [])

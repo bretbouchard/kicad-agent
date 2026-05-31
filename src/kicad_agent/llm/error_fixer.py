@@ -17,7 +17,6 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from kicad_agent.llm.client import LLMClient
 from kicad_agent.ops.schema import get_operation_schema
 
 if TYPE_CHECKING:
@@ -99,6 +98,7 @@ class ErrorFixer:
         if provider is not None:
             self._client = provider
         else:
+            from kicad_agent.llm.client import LLMClient
             self._client = client or LLMClient(model=model)
 
     def fix(
