@@ -1,5 +1,6 @@
 """PCB-specific operation schemas -- net class, design rule, copper zone, board outline, auto-route."""
 
+import re
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -172,8 +173,6 @@ class AutoRouteOp(BaseModel):
     @classmethod
     def _validate_layer_names(cls, v: list[str]) -> list[str]:
         """Validate that all layer names match KiCad copper layer naming."""
-        import re
-
         pattern = r"^(?:[FB]\.Cu|In[1-9]\d*\.Cu)$"
         for layer_name in v:
             if not re.match(pattern, layer_name):
