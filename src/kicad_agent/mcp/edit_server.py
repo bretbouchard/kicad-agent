@@ -17,6 +17,8 @@ import asyncio
 import json
 import logging
 import os
+import signal
+import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -33,6 +35,14 @@ from kicad_agent.ops.undo_stack import UndoStack
 from kicad_agent.validation.erc_drc import run_erc, run_drc
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Server lifecycle state
+# ---------------------------------------------------------------------------
+
+_started_at = time.time()
+_shutdown_requested = False
+_in_flight_count = 0
 
 # ---------------------------------------------------------------------------
 # Response size limit
@@ -110,6 +120,15 @@ def _generate_operation_tools() -> list[types.Tool]:
 
 # Meta-tool definitions (static)
 _META_TOOLS = [
+    types.Tool(
+        name="health_check",
+        description=(
+            "Returns server health status including uptime, operation count, "
+            "and executor readiness. Use for liveness probing."
+        ),
+        inputSchema={"type": "object", "properties": {}},
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
     types.Tool(
         name="get_operation_schema",
         description=(
@@ -304,7 +323,27 @@ async def dispatch_tool(
     Separated from the MCP handler for testability — tests can call this
     directly without needing a live MCP request context.
     """
+    global _in_flight_count
+
     # --- Meta-tools ---
+    if name == "health_check":
+        uptime = time.time() - _started_at
+        health = {
+            "status": "shutting_down" if _shutdown_requested else "healthy",
+            "uptime_seconds": round(uptime, 1),
+            "executor_ready": executor is not None,
+            "project_dir": str(base_dir),
+            "in_flight_operations": _in_flight_count,
+            "total_tools_available": len(_ALL_TOOLS),
+        }
+        return types.CallToolResult(
+            content=[types.TextContent(type="text", text=json.dumps(health, indent=2))],
+        )
+
+    # Reject all other operations during shutdown
+    if _shutdown_requested:
+        return _error_result("shutting_down", "Server is shutting down, not accepting new operations")
+
     if name == "get_operation_schema":
         schema = Operation.model_json_schema()
         text = _cap_response(json.dumps(schema, indent=2))
@@ -418,6 +457,7 @@ async def dispatch_tool(
             f"Available tools: {', '.join(sorted(_OP_NAMES)[:10])}...",
         )
 
+    _in_flight_count += 1
     try:
         # Inject op_type and resolve target_file against base_dir
         payload = {**arguments, "op_type": name}
@@ -461,6 +501,8 @@ async def dispatch_tool(
             f"{message} [ref: {correlation_id}]",
             suggestion,
         )
+    finally:
+        _in_flight_count -= 1
 
 
 @app.call_tool()
@@ -491,7 +533,28 @@ def main() -> None:
     """CLI entry point for kicad-agent-edit."""
     from kicad_agent.logging_config import configure_logging
     configure_logging()
-    asyncio.run(_run_server())
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    def _request_shutdown():
+        global _shutdown_requested
+        _shutdown_requested = True
+        logger.info("Shutdown signal received, draining in-flight ops...")
+
+    try:
+        loop.add_signal_handler(signal.SIGTERM, _request_shutdown)
+        loop.add_signal_handler(signal.SIGINT, _request_shutdown)
+    except NotImplementedError:
+        # Windows fallback -- signal.signal works but is less clean
+        import signal as sig_mod
+        sig_mod.signal(sig_mod.SIGTERM, lambda s, f: _request_shutdown())
+        sig_mod.signal(sig_mod.SIGINT, lambda s, f: _request_shutdown())
+
+    try:
+        loop.run_until_complete(_run_server())
+    finally:
+        loop.close()
 
 
 if __name__ == "__main__":
