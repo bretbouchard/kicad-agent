@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: schematic-intelligence
 status: executing
-stopped_at: "Phase 38-01 complete, next: 38-02"
-last_updated: "2026-05-31T21:53:00Z"
+stopped_at: "Phase 38-02 complete, next: 38-03"
+last_updated: "2026-05-31T22:05:00Z"
 last_activity: 2026-05-31
 progress:
   total_phases: 40
   completed_phases: 37
   total_plans: 116
-  completed_plans: 104
+  completed_plans: 105
   percent: 90
 ---
 
@@ -100,10 +100,12 @@ Recent decisions affecting current work:
 - [v2.4-SI]: Schemas in _schema_schematic_routing.py and _schema_schematic_intel.py (new files)
 - [v2.4-SI]: Schematic ops extend existing @register_schematic pattern in executor.py
 - [v2.4-SI]: PinResolver uses unit-aware lib symbol indexing via _build_unit_index() for multi-unit IC pin resolution
+- [v2.4-SI]: Collision zones use >=2 pins threshold (not >=2 refs) -- vertical wire through IC pin column shorts all pins regardless of component count
+- [v2.4-SI]: Pin overlap severity: error (different nets from netlist), warning (same net or unknown) -- defaults to warning without netlist
 
 ### Pending Todos
 
-- Execute Phase 38 remaining plans (38-02, 38-03, 38-04)
+- Execute Phase 38 remaining plans (38-03, 38-04)
 - Execute Phase 39 (3 plans, 2 waves)
 - Execute Phase 40 (3 plans, 3 waves)
 
@@ -117,5 +119,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 38-01 complete (pin resolution), next: 38-02 (collision detection)
-Resume with: Execute 38-02, then 38-03, 38-04 (Wave 1-3 of Phase 38)
+Stopped at: Phase 38-02 complete (collision detection), next: 38-03 (connect_pins)
+Resume with: Execute 38-03, then 38-04 (Wave 2-3 of Phase 38)
