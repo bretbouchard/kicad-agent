@@ -274,6 +274,8 @@ from kicad_agent.ops._schema_crossfile import (  # noqa: E402
     PropagateSymbolChangeOp,
 )
 from kicad_agent.ops._schema_schematic_routing import (  # noqa: E402
+    DetectPinOverlapsOp,
+    DetectRoutingCollisionsOp,
     ResolvePinPositionsOp,
 )
 
@@ -366,7 +368,9 @@ class Operation(BaseModel):
         | ErcAutoFixOp
         | ModifyCopperZoneOp
         | RemoveCopperZoneOp
-        | ResolvePinPositionsOp,
+        | ResolvePinPositionsOp
+        | DetectRoutingCollisionsOp
+        | DetectPinOverlapsOp,
         Field(discriminator="op_type"),
     ]
 
@@ -483,6 +487,8 @@ __all__ = [
     "PropagateSymbolChangeOp",
     # Schematic routing ops
     "ResolvePinPositionsOp",
+    "DetectRoutingCollisionsOp",
+    "DetectPinOverlapsOp",
     # Union and helpers
     "Operation",
     "get_operation_schema",

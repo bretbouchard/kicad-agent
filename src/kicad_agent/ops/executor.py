@@ -518,6 +518,22 @@ def _handle_resolve_pin_positions(op: Any, ir: SchematicIR, file_path: Path) -> 
         return resolver.resolve_all()
 
 
+@register_schematic("detect_routing_collisions")
+def _handle_detect_routing_collisions(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.schematic_routing.collision_detector import CollisionDetector
+    detector = CollisionDetector(file_path)
+    zones = detector.detect_routing_collisions(tolerance=op.collision_tolerance)
+    return {"collision_zones": zones, "count": len(zones)}
+
+
+@register_schematic("detect_pin_overlaps")
+def _handle_detect_pin_overlaps(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.schematic_routing.collision_detector import CollisionDetector
+    detector = CollisionDetector(file_path)
+    overlaps = detector.detect_pin_overlaps(tolerance=op.tolerance)
+    return {"overlaps": overlaps, "count": len(overlaps)}
+
+
 # ---------------------------------------------------------------------------
 # PCB handler implementations
 # ---------------------------------------------------------------------------
