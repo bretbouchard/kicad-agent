@@ -47,3 +47,29 @@ class DetectNetConflictsOp(BaseModel):
     check_case_variants: bool = Field(default=True, description="Detect case-variant net names")
     check_mixed_labels: bool = Field(default=True, description="Detect mixed label types on same net")
     check_unlabeled_junctions: bool = Field(default=True, description="Detect junctions merging unnamed nets")
+
+
+class SuggestNetNamesOp(BaseModel):
+    """Suggest canonical net names based on labels and topology.
+
+    SCH-INTEL-03: Returns name suggestions for unnamed or poorly named nets.
+
+    Attributes:
+        op_type: Discriminator literal "suggest_net_names".
+        target_file: Relative path to the target .kicad_sch file.
+        netlist_path: Optional path to .net file for better net name resolution.
+        naming_convention: Naming convention for component-ref-based suggestions.
+            "ref_pin" produces "U1_SDA", "ref_pin_number" produces "U1_Pin5".
+    """
+
+    op_type: Literal["suggest_net_names"] = "suggest_net_names"
+    target_file: TargetFile
+    netlist_path: Optional[str] = Field(
+        default=None,
+        max_length=512,
+        description="Optional path to .net file for net name resolution",
+    )
+    naming_convention: Literal["ref_pin", "ref_pin_number"] = Field(
+        default="ref_pin",
+        description="Naming convention for component-ref-based suggestions",
+    )

@@ -25,6 +25,7 @@ from kicad_agent.schematic_routing.wire_router import generate_fixes
 from kicad_agent.schematic_routing.batch_executor import apply_fixes
 from kicad_agent.schematic_routing.net_extractor import extract_nets
 from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
+from kicad_agent.schematic_routing.net_namer import suggest_net_names
 
 __all__ = [
     "parse_netlist",
@@ -35,6 +36,7 @@ __all__ = [
     "apply_fixes",
     "extract_nets",
     "detect_net_conflicts",
+    "suggest_net_names",
     "run_router",
 ]
 

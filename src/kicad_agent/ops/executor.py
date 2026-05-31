@@ -526,6 +526,16 @@ def _handle_detect_net_conflicts(op: Any, ir: SchematicIR, file_path: Path) -> d
     )
 
 
+@register_schematic("suggest_net_names")
+def _handle_suggest_net_names(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.schematic_routing.net_namer import suggest_net_names
+    return suggest_net_names(
+        sch_path=file_path,
+        netlist_path=op.netlist_path,
+        naming_convention=op.naming_convention,
+    )
+
+
 @register_schematic("resolve_pin_positions")
 def _handle_resolve_pin_positions(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.schematic_routing.pin_resolver import PinResolver
