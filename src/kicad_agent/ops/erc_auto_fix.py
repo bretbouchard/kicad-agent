@@ -98,20 +98,65 @@ def _violation_type_to_repair_name(vtype: str) -> str | None:
     return None
 
 
+# ---------------------------------------------------------------------------
+# Root cause mode helpers
+# ---------------------------------------------------------------------------
+
+# Maps diagnosis action names to existing repair function names.
+_ACTION_TO_REPAIR_MAP: dict[str, str] = {
+    "place_no_connect": "place_no_connects_from_erc",
+    "break_wire_shorts": "break_wire_shorts",
+    "fix_shorted_nets": "fix_shorted_nets",
+    "add_power_flag": "add_power_flags",
+    "snap_to_grid": "snap_to_grid",
+    "fix_pin_type_mismatches": "fix_pin_type_mismatches",
+}
+
+
+def _action_to_repair_name(action: str) -> str | None:
+    """Map a diagnosis action name to an existing repair function name.
+
+    Returns None for actions that have no direct repair function mapping
+    (e.g. "erc_auto_fix" from generic fallback, "add_wire" from diagnosis).
+    """
+    return _ACTION_TO_REPAIR_MAP.get(action)
+
+
+def _empty_root_cause_result() -> dict[str, Any]:
+    """Return the empty result structure for root cause mode with no violations."""
+    return {
+        "mode": "root_cause",
+        "fixes_applied": [],
+        "iterations": 0,
+        "remaining_violations": 0,
+        "pre_existing_documented": [],
+        "benign_suppressed": 0,
+        "config_issues": [],
+        "summary": {"total": 0, "fixable": 0, "pre_existing": 0, "benign": 0, "config": 0},
+    }
+
+
 def erc_auto_fix(
     ir: SchematicIR,
     file_path: Path,
     max_iterations: int = 3,
+    mode: str = "symptom",
+    fix_classes: list[str] | None = None,
 ) -> dict[str, Any]:
     """Run ERC, dispatch repairs by violation type, iterate until resolved.
 
-    Chains parse_erc to violation-type analysis to repair dispatch, with
-    iteration limits and early stopping when no progress is made.
+    Supports two modes:
+    - ``symptom`` (default): existing iteration-based repair. Groups violations
+      by type and dispatches repair functions in priority order.
+    - ``root_cause``: classify first, diagnose fixable violations, apply targeted
+      fixes, document pre-existing issues, suppress benign noise. Single-pass.
 
     Args:
         ir: SchematicIR for the target schematic.
         file_path: Path to the schematic file (for ERC invocation).
         max_iterations: Maximum repair iterations (default 3, max 10 enforced by schema).
+        mode: ``"symptom"`` for existing behavior, ``"root_cause"`` for classify-diagnose-fix.
+        fix_classes: In root_cause mode, only fix these classes. None = fixable only.
 
     Returns:
         Dict with:
@@ -119,7 +164,13 @@ def erc_auto_fix(
             iterations: Number of iterations actually run.
             remaining_violations: Count of violations after last iteration.
             unhandled_violations: List of {type, count} for unmapped violation types.
+            (root_cause mode adds: mode, pre_existing_documented, benign_suppressed,
+             config_issues, summary)
     """
+    if mode == "root_cause":
+        return erc_auto_fix_root_cause(ir, file_path, max_iterations, fix_classes)
+
+    # --- Symptom mode: existing iteration-based repair ---
     all_fixes: list[dict[str, Any]] = []
     all_unhandled: dict[str, int] = {}
     iteration_count = 0
@@ -210,4 +261,110 @@ def erc_auto_fix(
             {"type": vtype, "count": count}
             for vtype, count in sorted(all_unhandled.items())
         ],
+    }
+
+
+def erc_auto_fix_root_cause(
+    ir: SchematicIR,
+    file_path: Path,
+    max_iterations: int = 3,
+    fix_classes: list[str] | None = None,
+) -> dict[str, Any]:
+    """Root cause mode: classify -> diagnose -> targeted fix -> document.
+
+    Instead of blindly iterating repairs, this mode:
+    1. Classifies all violations into fixable/pre-existing/benign/config_issue
+    2. Diagnoses root causes for fixable violations only
+    3. Applies targeted fixes using recommended repair actions
+    4. Documents pre-existing violations with root cause explanations
+    5. Suppresses benign violations from the detailed report (count only)
+    6. Reports config issues for user action
+
+    Single-pass by design (diagnosis replaces iteration).
+
+    Args:
+        ir: SchematicIR for the target schematic.
+        file_path: Path to the schematic file (for ERC invocation).
+        max_iterations: Kept for API consistency; root cause mode is single-pass.
+        fix_classes: Only fix these violation classes. None = fixable only.
+
+    Returns:
+        Dict with mode, fixes_applied, iterations, remaining_violations,
+        pre_existing_documented, benign_suppressed, config_issues, summary.
+    """
+    from kicad_agent.ops.violation_classifier import classify_violations
+    from kicad_agent.ops.violation_diagnostic import diagnose_violations
+
+    violations = parse_erc(file_path)
+    if not violations:
+        return _empty_root_cause_result()
+
+    # Step 1: Classify all violations
+    classified = classify_violations(violations, ir, file_path)
+    fixable = classified["fixable"]
+    pre_existing = classified["pre_existing"]
+    benign = classified["benign"]
+    config = classified["config_issues"]
+
+    # Step 2: Diagnose fixable violations
+    diagnoses = diagnose_violations(fixable, ir, file_path)
+
+    # Step 3: Apply targeted fixes using existing repair functions
+    fixes_applied: list[dict[str, Any]] = []
+    for diagnosis in diagnoses.get("diagnoses", []):
+        fix_options = diagnosis.get("fix_options", [])
+        if not fix_options:
+            continue
+
+        rec_idx = diagnosis.get("recommended_fix_index", 0)
+        recommended = fix_options[rec_idx]
+        repair_name = _action_to_repair_name(recommended["action"])
+        if repair_name is None:
+            logger.debug(
+                "No repair mapping for action '%s', skipping",
+                recommended["action"],
+            )
+            continue
+
+        try:
+            func = _get_repair_function(repair_name)
+            func(ir, file_path)
+            fixes_applied.append({
+                "type": diagnosis["violation_type"],
+                "action": recommended["action"],
+                "description": recommended["description"],
+                "confidence": recommended["confidence"],
+            })
+            logger.info(
+                "Root cause fix applied: %s for %s",
+                recommended["action"], diagnosis["violation_type"],
+            )
+        except Exception as exc:
+            logger.warning(
+                "Root cause fix %s failed: %s", recommended["action"], exc,
+            )
+
+    # Step 4: Re-run ERC for final count
+    final_violations = parse_erc(file_path)
+
+    return {
+        "mode": "root_cause",
+        "fixes_applied": fixes_applied,
+        "iterations": 1,  # Single-pass: diagnosis replaces iteration
+        "remaining_violations": len(final_violations),
+        "pre_existing_documented": [
+            {
+                "type": v["violation"]["type"],
+                "root_cause": v["root_cause"],
+                "details": v["details"],
+                "confidence": v["confidence"],
+            }
+            for v in pre_existing
+        ],
+        "benign_suppressed": len(benign),
+        "config_issues": [
+            {"type": v["violation"]["type"], "details": v["details"]}
+            for v in config
+        ],
+        "summary": classified["summary"],
     }

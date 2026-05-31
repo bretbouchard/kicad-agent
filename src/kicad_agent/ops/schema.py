@@ -263,8 +263,8 @@ from kicad_agent.ops._schema_repair import (  # noqa: E402
     PlaceMissingUnitsOp,
     RemoveDanglingWiresOp,
     BreakWireShortsOp,
-    ErcAutoFixOp,
 )
+# ErcAutoFixOp migrated to _schema_erc_smart.py (Council H-02: atomic schema migration)
 from kicad_agent.ops._schema_sheet import (  # noqa: E402
     AddSheetOp,
     AddSheetPinOp,
@@ -293,6 +293,7 @@ from kicad_agent.ops._schema_schematic_intel import (  # noqa: E402
 from kicad_agent.ops._schema_erc_smart import (  # noqa: E402
     ClassifyViolationsOp,
     DiagnoseViolationsOp,
+    ErcAutoFixOp,
 )
 
 

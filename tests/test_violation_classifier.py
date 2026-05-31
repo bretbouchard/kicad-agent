@@ -367,7 +367,7 @@ class TestExecutorRegistration:
 
     def test_existing_erc_auto_fix_tests_still_pass(self):
         """Verify no regression -- import and validate ErcAutoFixOp."""
-        from kicad_agent.ops._schema_repair import ErcAutoFixOp
+        from kicad_agent.ops._schema_erc_smart import ErcAutoFixOp
         op = ErcAutoFixOp(target_file="test.kicad_sch")
         assert op.op_type == "erc_auto_fix"
         assert op.max_iterations == 3
