@@ -757,9 +757,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 37-01-PLAN.md -- Structured logging via structlog with env-var controlled output format (INFRA-01)
-- [ ] 37-02-PLAN.md -- Training data versioning, regression detection, output cleanup (TRAIN-01, TRAIN-02, TRAIN-04)
-- [ ] 37-03-PLAN.md -- MCP health check, graceful shutdown, training pipeline smoke tests (INFRA-02, INFRA-03, TRAIN-03)
+- [x] 37-01-PLAN.md -- Structured logging via structlog with env-var controlled output format (INFRA-01)
+- [x] 37-02-PLAN.md -- Training data versioning, regression detection, output cleanup (TRAIN-01, TRAIN-02, TRAIN-04)
+- [x] 37-03-PLAN.md -- MCP health check, graceful shutdown, training pipeline smoke tests (INFRA-02, INFRA-03, TRAIN-03)
 
 ## Progress
 
@@ -804,4 +804,4 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 34. LLM Provider Abstraction | 2/2 | Complete | 2026-05-31 |
 | 35. Remaining Ops Gaps | 3/3 | Complete | 2026-05-31 |
 | 36. Multi-Layer Routing | 3/3 | Complete | 2026-05-31 |
-| 37. Training + Infrastructure | 0/3 | Planned | |
+| 37. Training + Infrastructure | 3/3 | Complete | 2026-05-31 |
