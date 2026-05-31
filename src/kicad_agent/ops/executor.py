@@ -505,6 +505,19 @@ def _handle_erc_auto_fix(op: Any, ir: SchematicIR, file_path: Path) -> dict[str,
     return erc_auto_fix(ir, file_path, max_iterations=op.max_iterations)
 
 
+@register_schematic("resolve_pin_positions")
+def _handle_resolve_pin_positions(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.schematic_routing.pin_resolver import PinResolver
+    resolver = PinResolver(file_path)
+    if op.ref:
+        result = resolver.resolve(op.ref)
+        if result is None:
+            return {"ref": op.ref, "pins": {}}
+        return {"ref": op.ref, "pins": result.get("pins", {})}
+    else:
+        return resolver.resolve_all()
+
+
 # ---------------------------------------------------------------------------
 # PCB handler implementations
 # ---------------------------------------------------------------------------

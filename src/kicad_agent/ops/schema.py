@@ -273,6 +273,9 @@ from kicad_agent.ops._schema_sheet import (  # noqa: E402
 from kicad_agent.ops._schema_crossfile import (  # noqa: E402
     PropagateSymbolChangeOp,
 )
+from kicad_agent.ops._schema_schematic_routing import (  # noqa: E402
+    ResolvePinPositionsOp,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -362,7 +365,8 @@ class Operation(BaseModel):
         | BreakWireShortsOp
         | ErcAutoFixOp
         | ModifyCopperZoneOp
-        | RemoveCopperZoneOp,
+        | RemoveCopperZoneOp
+        | ResolvePinPositionsOp,
         Field(discriminator="op_type"),
     ]
 
@@ -477,6 +481,8 @@ __all__ = [
     "QueryConnectivityOp",
     # Cross-file ops
     "PropagateSymbolChangeOp",
+    # Schematic routing ops
+    "ResolvePinPositionsOp",
     # Union and helpers
     "Operation",
     "get_operation_schema",
