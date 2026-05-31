@@ -724,10 +724,23 @@ Plans:
 - [x] 35-03-PLAN.md -- Hierarchical power validation + copper zone modify/delete (GEN-04, GEN-05)
 
 ### Phase 36: Multi-Layer Routing
-**Goal**: Multi-layer routing with impedance control and length matching
+**Goal**: Multi-layer routing with 3D graph (x,y,layer) nodes, IPC-2141 impedance-controlled trace width calculation, and sawtooth length matching for high-speed signals
 **Depends on**: Phase 35
 **Requirements**: ROUTE-05, ROUTE-06, ROUTE-07
-**Plans**: TBD
+**Success Criteria** (what must be TRUE):
+  1. RoutingGraph builds 3D (x,y,layer) nodes with via edges between adjacent layers
+  2. A* pathfinding routes through layer transitions when direct path is blocked
+  3. IPC-2141 microstrip and stripline impedance formulas return correct Z0 values
+  4. Bisection solver finds trace width for target impedance within 1% tolerance
+  5. Sawtooth length matching converges to target delta within 10 refinement iterations
+  6. AutoRouteOp accepts layers, impedance_target, length_match_pairs fields
+  7. Executor handler produces TrackSegments with impedance-adjusted widths, ViaSegments at layer transitions, and length-matched net pairs
+**Plans**: 3 plans
+
+Plans:
+- [ ] 36-01-PLAN.md -- 3D routing graph, via cost model, pathfinder 3D, ViaSegment, geometry extraction (ROUTE-05)
+- [ ] 36-02-PLAN.md -- IPC-2141 impedance calculator, sawtooth length matching engine (ROUTE-06, ROUTE-07)
+- [ ] 36-03-PLAN.md -- AutoRouteOp schema extension, executor handler integration, end-to-end tests (ROUTE-05, ROUTE-06, ROUTE-07)
 
 ### Phase 37: Training + Infrastructure
 **Goal**: Training pipeline hardening and MCP server infrastructure
