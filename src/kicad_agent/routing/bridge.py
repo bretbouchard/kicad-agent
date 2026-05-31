@@ -121,3 +121,111 @@ def segments_to_sexpr(segments: list[TrackSegment]) -> str:
         S-expression string block suitable for insertion into a .kicad_pcb file.
     """
     return "\n".join(seg.to_sexpr() for seg in segments)
+
+
+@dataclass(frozen=True)
+class ViaSegment:
+    """A KiCad via connecting two copper layers.
+
+    Attributes:
+        x: X coordinate in mm.
+        y: Y coordinate in mm.
+        from_layer: Starting copper layer name.
+        to_layer: Ending copper layer name.
+        diameter: Via pad diameter in mm.
+        drill: Via drill hole diameter in mm.
+        net: Net name (may be "" for unconnected).
+    """
+
+    x: float
+    y: float
+    from_layer: str
+    to_layer: str
+    diameter: float
+    drill: float
+    net: str
+
+    def to_sexpr(self, uuid_tag: str = "") -> str:
+        """Serialize to KiCad via S-expression format.
+
+        Args:
+            uuid_tag: Optional UUID for the via.
+
+        Returns:
+            S-expression string like (via (at ...) ...).
+        """
+        parts = [
+            "  (via",
+            f"    (at {self.x:.4f} {self.y:.4f})",
+            f"    (size {self.diameter:.4f})",
+            f"    (drill {self.drill:.4f})",
+            f'    (layers "{self.from_layer}" "{self.to_layer}")',
+        ]
+        if self.net:
+            parts.append(f'    (net 0 "{self.net}")')
+        if uuid_tag:
+            parts.append(f"    (uuid {uuid_tag})")
+        parts.append("  )")
+        return "\n".join(parts)
+
+
+def route_to_segments_multilayer(
+    results: dict[str, RouteResult],
+    constraints: RoutingConstraints | None = None,
+) -> list[TrackSegment | ViaSegment]:
+    """Convert 3D routing results into track segments and vias.
+
+    For each RouteResult with 3D (x, y, layer) path waypoints, produces:
+    - TrackSegment for consecutive same-layer points
+    - ViaSegment at layer transitions
+
+    Uses constraints.effective_trace_width(layer) for per-layer trace widths
+    and constraints.via_diameter_mm / via_drill_mm for via dimensions.
+
+    Args:
+        results: Dict mapping net names to RouteResult objects with 3D paths.
+        constraints: Routing constraints for trace/via dimensions.
+            Uses defaults if None.
+
+    Returns:
+        List of TrackSegment and ViaSegment objects.
+    """
+    constraints = constraints or RoutingConstraints()
+    segments: list[TrackSegment | ViaSegment] = []
+
+    for net_name, result in results.items():
+        if not result.success or len(result.path) < 2:
+            continue
+
+        for i in range(len(result.path) - 1):
+            p0 = result.path[i]
+            p1 = result.path[i + 1]
+
+            # Check for layer transition.
+            if len(p0) >= 3 and len(p1) >= 3 and p0[2] != p1[2]:
+                # Layer transition -- create a via.
+                segments.append(ViaSegment(
+                    x=round(p1[0], 4),
+                    y=round(p1[1], 4),
+                    from_layer=p0[2],
+                    to_layer=p1[2],
+                    diameter=constraints.via_diameter_mm,
+                    drill=constraints.via_drill_mm,
+                    net=net_name,
+                ))
+            else:
+                # Same-layer segment.
+                sx, sy = p0[0], p0[1]
+                ex, ey = p1[0], p1[1]
+                layer = p0[2] if len(p0) >= 3 else "F.Cu"
+                segments.append(TrackSegment(
+                    start_x=round(sx, 4),
+                    start_y=round(sy, 4),
+                    end_x=round(ex, 4),
+                    end_y=round(ey, 4),
+                    width=constraints.effective_trace_width(layer),
+                    layer=layer,
+                    net=net_name,
+                ))
+
+    return segments
