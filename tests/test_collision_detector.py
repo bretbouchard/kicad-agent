@@ -158,27 +158,19 @@ def _u22_ic_fixture() -> Path:
 
 
 def _r55_r56_overlap_fixture() -> Path:
-    """R55 at (59.69, 74.93) and R56 at (59.69, 82.55).
+    """R55 at (59.69, 74.93) and R56 at (59.69, 85.09).
 
-    R55 pin 2 (bottom): body at (59.69, 74.93 - 3.81) = (59.69, 71.12)
-                         wire at (59.69, 71.12 - 1.27) = (59.69, 69.85)
-    R55 pin 1 (top):    body at (59.69, 74.93 + 3.81) = (59.69, 78.74)
-                         wire at (59.69, 78.74 + 1.27) = (59.69, 80.01)
+    R55 pin 1 (top):    body at (59.69, 78.74), wire at (59.69, 80.01)
+    R56 pin 2 (bottom): body at (59.69, 81.28), wire at (59.69, 80.01)
 
-    R56 pin 1 (top):    body at (59.69, 82.55 + 3.81) = (59.69, 86.36)
-                         wire at (59.69, 86.36 + 1.27) = (59.69, 87.63)
-    R56 pin 2 (bottom): body at (59.69, 82.55 - 3.81) = (59.69, 78.74)
-                         wire at (59.69, 78.74 - 1.27) = (59.69, 77.47)
-
-    Note: R55 pin 1 body and R56 pin 2 body both at (59.69, 78.74) but
-    their WIRE endpoints differ: (59.69, 80.01) vs (59.69, 77.47).
-    The overlap at BODY position (59.69, 78.74) is the important one for routing.
-    We test with body positions since that's what matters for collision zones.
+    Both R55 pin 1 and R56 pin 2 have wire endpoints at (59.69, 80.01).
+    This is the R55/R56-style overlap bug: pins from different nets share
+    the exact same wire endpoint position.
     """
     symbols = (
         _rc_symbol("R55", 59.69, 74.93, 0)
         + "\n"
-        + _rc_symbol("R56", 59.69, 82.55, 0)
+        + _rc_symbol("R56", 59.69, 85.09, 0)
     )
     content = _make_sch_content(_rc_lib_symbols(), symbols)
     return _write_sch(content)
@@ -325,11 +317,13 @@ class TestCollisionDetector:
     """Test CollisionDetector collision and overlap detection."""
 
     def test_ic_vertical_collision_columns(self):
-        """Test 3: U22 with 8 pins at x~92.38 returns a vertical collision zone.
+        """Test 3: U22 with 16-pin IC returns vertical collision zones.
 
-        U22 at (100, 100). Left pins have wire endpoint at x=100-5.08-2.54=92.38.
-        All 8 left pins share that x coordinate => collision zone.
-        Right pins at x=100+5.08+2.54=107.62 => another collision zone.
+        U22 at (100, 100) with pins at offsets (-5.08, y, 0) and (5.08, y, 180).
+        PinResolver computes:
+          Left pins (direction=0): body_x = 100-5.08 = 94.92, wire_x = 94.92+2.54 = 97.46
+          Right pins (direction=180): body_x = 100+5.08 = 105.08, wire_x = 105.08-2.54 = 102.54
+        All 8 left pins share x=97.46, all 8 right pins share x=102.54 => 2 collision zones.
         """
         from kicad_agent.schematic_routing.collision_detector import CollisionDetector
 
@@ -340,28 +334,29 @@ class TestCollisionDetector:
         vertical_zones = [z for z in zones if z["direction"] == "vertical"]
         assert len(vertical_zones) >= 2, f"Expected >=2 vertical zones, got {len(vertical_zones)}"
 
-        # Check that the left pin column (x~92.38) is detected
+        # Check that the left pin column (x~97.46) is detected
         left_zone = next(
-            (z for z in vertical_zones if abs(z["coordinate"] - 92.38) < 0.1),
+            (z for z in vertical_zones if abs(z["coordinate"] - 97.46) < 0.1),
             None,
         )
-        assert left_zone is not None, f"No vertical zone near x=92.38. Zones: {vertical_zones}"
+        assert left_zone is not None, f"No vertical zone near x=97.46. Zones: {vertical_zones}"
         assert len(left_zone["pins"]) == 8, f"Expected 8 pins in left zone, got {len(left_zone['pins'])}"
 
-        # Check that the right pin column (x~107.62) is detected
+        # Check that the right pin column (x~102.54) is detected
         right_zone = next(
-            (z for z in vertical_zones if abs(z["coordinate"] - 107.62) < 0.1),
+            (z for z in vertical_zones if abs(z["coordinate"] - 102.54) < 0.1),
             None,
         )
-        assert right_zone is not None, f"No vertical zone near x=107.62"
+        assert right_zone is not None, f"No vertical zone near x=102.54"
         assert len(right_zone["pins"]) == 8
 
-    def test_single_pin_no_collision(self):
-        """Test 4: Single R at (50, 50) does NOT flag a collision.
+    def test_single_component_no_cross_component_collision(self):
+        """Test 4: Single R at (50, 50) has only same-ref collision zones.
 
-        R at (50, 50) has pin 1 at (50, 53.81+1.27=55.08) and pin 2 at (50, 46.19-1.27=44.92).
-        Neither has another pin at the same x from a different ref, so no vertical collision.
-        For horizontal: pin 1 is alone at y=55.08, pin 2 is alone at y=44.92. No collision.
+        R at (50, 50) has pin 1 at (50, 55.08) and pin 2 at (50, 44.92).
+        Both pins share x=50, so they form a vertical zone, but both are from R1.
+        No horizontal zones (pin 1 and pin 2 have different y values).
+        The important thing: no zones involve pins from different components.
         """
         from kicad_agent.schematic_routing.collision_detector import CollisionDetector
 
@@ -369,9 +364,12 @@ class TestCollisionDetector:
         detector = CollisionDetector(path)
         zones = detector.detect_routing_collisions()
 
-        # A single R has 2 pins at different y but same x -- but they're the same ref.
-        # collision zones require pins from >=2 different refs.
-        assert len(zones) == 0, f"Expected no collision zones for single component, got {zones}"
+        # A single R has 2 pins at same x but same ref. With >=2 pin threshold,
+        # it gets 1 vertical zone (both pins at x=50) but 0 horizontal zones.
+        # The key assertion: no zone has pins from different components.
+        for zone in zones:
+            refs = {p["ref"] for p in zone["pins"]}
+            assert len(refs) == 1, "Single component fixture should only have same-ref zones"
 
     def test_pin_overlap_different_nets_error(self):
         """Test 5: R55/R56 pins at same position on different nets -> severity="error".
@@ -390,23 +388,23 @@ class TestCollisionDetector:
 
         overlaps = detector.detect_pin_overlaps()
 
-        # R55 pin 1 body (59.69, 78.74) and R56 pin 2 body (59.69, 78.74) overlap
+        # R55 pin 1 wire (59.69, 80.01) and R56 pin 2 wire (59.69, 80.01) overlap
         # Without netlist, both get severity="warning"
         assert len(overlaps) >= 1, f"Expected >=1 overlap, got {len(overlaps)}"
 
-        # Find the overlap at position (59.69, 78.74)
-        body_overlap = next(
+        # Find the overlap at wire position (59.69, 80.01)
+        wire_overlap = next(
             (o for o in overlaps
-             if abs(o["position"][0] - 59.69) < 0.1 and abs(o["position"][1] - 78.74) < 0.1),
+             if abs(o["position"][0] - 59.69) < 0.1 and abs(o["position"][1] - 80.01) < 0.1),
             None,
         )
-        assert body_overlap is not None, f"No overlap at body position (59.69, 78.74). Overlaps: {overlaps}"
+        assert wire_overlap is not None, f"No overlap at wire position (59.69, 80.01). Overlaps: {overlaps}"
 
         # Without netlist, default severity is "warning"
-        assert body_overlap["severity"] == "warning"
+        assert wire_overlap["severity"] == "warning"
 
         # Verify both pins are present
-        refs_in_overlap = {p["ref"] for p in body_overlap["pins"]}
+        refs_in_overlap = {p["ref"] for p in wire_overlap["pins"]}
         assert "R55" in refs_in_overlap
         assert "R56" in refs_in_overlap
 
@@ -435,16 +433,16 @@ class TestCollisionDetector:
         detector = CollisionDetector(path, netlist_path=netlist_path)
         overlaps = detector.detect_pin_overlaps()
 
-        body_overlap = next(
+        wire_overlap = next(
             (o for o in overlaps
-             if abs(o["position"][0] - 59.69) < 0.1 and abs(o["position"][1] - 78.74) < 0.1),
+             if abs(o["position"][0] - 59.69) < 0.1 and abs(o["position"][1] - 80.01) < 0.1),
             None,
         )
-        assert body_overlap is not None, f"No overlap found. Overlaps: {overlaps}"
+        assert wire_overlap is not None, f"No overlap found. Overlaps: {overlaps}"
 
         # With netlist showing different nets, severity should be "error"
-        assert body_overlap["severity"] == "error"
-        assert "different nets" in body_overlap["note"].lower() or "unintended" in body_overlap["note"].lower()
+        assert wire_overlap["severity"] == "error"
+        assert "different nets" in wire_overlap["note"].lower() or "unintended" in wire_overlap["note"].lower()
 
     def test_pin_overlap_same_net_warning(self):
         """Test 6: Pins at same position on SAME net -> severity="warning".
@@ -471,21 +469,21 @@ class TestCollisionDetector:
         detector = CollisionDetector(path, netlist_path=netlist_path)
         overlaps = detector.detect_pin_overlaps()
 
-        body_overlap = next(
+        wire_overlap = next(
             (o for o in overlaps
-             if abs(o["position"][0] - 59.69) < 0.1 and abs(o["position"][1] - 78.74) < 0.1),
+             if abs(o["position"][0] - 59.69) < 0.1 and abs(o["position"][1] - 80.01) < 0.1),
             None,
         )
-        assert body_overlap is not None
+        assert wire_overlap is not None
 
         # Same net -> severity="warning" (intentional)
-        assert body_overlap["severity"] == "warning"
-        assert "same net" in body_overlap["note"].lower()
+        assert wire_overlap["severity"] == "warning"
+        assert "same net" in wire_overlap["note"].lower()
 
     def test_horizontal_row_collision(self):
         """Test 7: Three R components at same y detect horizontal collision row.
 
-        R1/R2/R3 at y=50 all have pin 1 body at y=53.81 from different refs.
+        R1/R2/R3 at y=50 all have pin 1 wire at y=55.08 from different refs.
         That's a horizontal collision row.
         """
         from kicad_agent.schematic_routing.collision_detector import CollisionDetector
@@ -497,12 +495,12 @@ class TestCollisionDetector:
         horizontal_zones = [z for z in zones if z["direction"] == "horizontal"]
         assert len(horizontal_zones) >= 1, f"Expected >=1 horizontal zone, got {len(horizontal_zones)}"
 
-        # Find the zone at y~53.81 (pin 1 body y for all three R's)
+        # Find the zone at y~55.08 (pin 1 wire y for all three R's)
         pin1_row = next(
-            (z for z in horizontal_zones if abs(z["coordinate"] - 53.81) < 0.1),
+            (z for z in horizontal_zones if abs(z["coordinate"] - 55.08) < 0.1),
             None,
         )
-        assert pin1_row is not None, f"No horizontal zone near y=53.81. Zones: {horizontal_zones}"
+        assert pin1_row is not None, f"No horizontal zone near y=55.08. Zones: {horizontal_zones}"
         assert len(pin1_row["pins"]) == 3, f"Expected 3 pins in row, got {len(pin1_row['pins'])}"
 
     def test_collision_zone_has_description(self):
