@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: schematic-intelligence
 status: executing
-stopped_at: "Phase 39-02 complete (net conflict detection). Next: Phase 39-03"
-last_updated: "2026-05-31T22:59:01Z"
+stopped_at: "Phase 39 complete (net naming). Next: Phase 40"
+last_updated: "2026-05-31T23:20:45Z"
 last_activity: 2026-05-31
 progress:
   total_phases: 40
   completed_phases: 37
   total_plans: 116
-  completed_plans: 108
-  percent: 92
+  completed_plans: 109
+  percent: 93
 ---
 
 # Project State
@@ -27,7 +27,7 @@ Last activity: 2026-06-01
 ## Current Position
 
 Phase: 38-40 (Schematic Routing Engine + Net Intelligence + ERC Root Cause)
-Status: **10 execution-ready plans written, Council review pending**
+Status: **Phase 39 complete. Phase 40 ready to execute (3 plans, 3 waves)**
 Plans: 38-01..04, 39-01..03, 40-01..03
 Last activity: 2026-06-01
 
@@ -58,13 +58,13 @@ Last activity: 2026-06-01
 
 **Velocity:**
 
-- Total plans completed: 107
+- Total plans completed: 109
 - Average duration: 5 min
 - Total execution time: 5.5 hours
 
 **Recent Trend:**
 
-- Last 10 plans: 38-01 through 38-04 (all first-execution pass)
+- Last 10 plans: 38-01 through 39-03 (all first-execution pass)
 - Trend: Stable -- all plans passing on first execution
 
 ## Accumulated Context
@@ -107,10 +107,12 @@ Recent decisions affecting current work:
 - [v2.4-SI]: BatchWiring uses kiutils from_file/to_file for element stripping (not raw S-expression manipulation)
 - [v2.4-SI]: Auto-detection of collision zones inside batch_connect when none explicitly provided
 - [v2.4-SI]: regenerate_wiring strips wires/labels/no_connects via kiutils, reconnects via NetConnector per-net
+- [v2.4-SI]: Voltage pattern regex matches both +3.3V and +3V3 KiCad power naming conventions
+- [v2.4-SI]: Power convention detection uses pin_name only, not lib_id -- SchematicGraph filters power symbols
+- [v2.4-SI]: Passive components identified by lib_id containing Device:R, Device:C, Device:L
 
 ### Pending Todos
 
-- Execute Phase 39 remaining plan (39-03)
 - Execute Phase 40 (3 plans, 3 waves)
 
 ### Blockers/Concerns
@@ -123,5 +125,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 39-02 complete (net conflict detection). Next: Phase 39-03
-Resume with: Execute Phase 39 remaining plan (39-03)
+Stopped at: Phase 39 complete (net naming). Next: Phase 40
+Resume with: Execute Phase 40 (3 plans, 3 waves)

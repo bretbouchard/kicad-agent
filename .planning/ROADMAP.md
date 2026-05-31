@@ -809,7 +809,7 @@ Plans:
 Plans:
 - [x] 39-01-PLAN.md -- Net extraction from existing schematics (SCH-INTEL-01)
 - [x] 39-02-PLAN.md -- Net name conflict detection (SCH-INTEL-02)
-- [ ] 39-03-PLAN.md -- Auto-name nets from topology (SCH-INTEL-03)
+- [x] 39-03-PLAN.md -- Auto-name nets from topology (SCH-INTEL-03)
 
 ### Phase 40: ERC Root Cause Analysis
 **Goal**: Upgrade erc_auto_fix from symptom patching to root cause analysis. Classify violations (fixable, pre-existing, benign, config), diagnose root causes, generate targeted fixes.
@@ -873,5 +873,5 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 36. Multi-Layer Routing | 3/3 | Complete | 2026-05-31 |
 | 37. Training + Infrastructure | 3/3 | Complete | 2026-05-31 |
 | 38. Schematic Routing Engine | 0/4 | Planned | — |
-| 39. Schematic Intelligence | 0/3 | Planned | — |
+| 39. Schematic Intelligence | 3/3 | Complete | 2026-05-31 |
 | 40. ERC Root Cause Analysis | 0/3 | Planned | — |
