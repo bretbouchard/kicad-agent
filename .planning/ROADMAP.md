@@ -776,4 +776,4 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 32. Executor Performance | 2/2 | Complete | 2026-05-30 |
 | 33. Undo/Redo Stack | 2/2 | Complete | 2026-05-30 |
 | 34. LLM Provider Abstraction | 2/2 | Complete | 2026-05-31 |
-| 35. Remaining Ops Gaps | 1/3 | In Progress | -- |
+| 35. Remaining Ops Gaps | 2/3 | In Progress | -- |

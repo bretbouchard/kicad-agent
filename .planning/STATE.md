@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: production-hardening
 status: executing
-stopped_at: Completed 35-01-PLAN.md
-last_updated: "2026-05-31T16:04:15Z"
+stopped_at: Completed 35-02-PLAN.md
+last_updated: "2026-05-31T16:17:47Z"
 last_activity: 2026-05-31
 progress:
   total_phases: 37
   completed_phases: 34
   total_plans: 94
-  completed_plans: 92
-  percent: 98
+  completed_plans: 93
+  percent: 99
 ---
 
 # Project State
@@ -27,8 +27,8 @@ Last activity: 2026-05-31
 ## Current Position
 
 Phase: 35 (Remaining Ops Gaps) -- EXECUTING
-Status: **Plan 01 complete** -- 8 new project CRUD operations (71 total). Plans 02-03 remaining.
-Last activity: 2026-05-31 -- Completed 35-01-PLAN.md
+Status: **Plan 02 complete** -- erc_auto_fix meta-operation with violation dispatch (72 total). Plan 03 remaining.
+Last activity: 2026-05-31 -- Completed 35-02-PLAN.md
 
 ## Previous Milestone (v2.3)
 
@@ -71,6 +71,8 @@ Recent decisions affecting current work:
 - [v2.4]: write_project_settings operates on raw JSON dict to preserve unknown keys
 - [v2.4]: List handlers are read-only (no serialize), returning {items, count}
 - [v2.4]: Atomic write via tempfile+os.replace for .kicad_pro (Council FE-02)
+- [v2.4]: erc_auto_fix meta-op chains parse_erc to violation dispatch with iteration control (GEN-03)
+- [v2.4]: parse_erc imported at module level in erc_auto_fix.py for test mockability
 
 ### Pending Todos
 
@@ -86,5 +88,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed 35-01-PLAN.md
-Resume with: /gsd-execute-phase 35 (plans 02-03 remaining)
+Stopped at: Completed 35-02-PLAN.md
+Resume with: /gsd-execute-phase 35 (plan 03 remaining)
