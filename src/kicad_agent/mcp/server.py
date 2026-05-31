@@ -20,6 +20,7 @@ import asyncio
 import json
 import logging
 import signal
+import threading
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -46,8 +47,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _started_at = time.time()
-_shutdown_requested = False
+_shutdown_event = threading.Event()
 _in_flight_count = 0
+_in_flight_lock = threading.Lock()
 
 # ---------------------------------------------------------------------------
 # Tool schema definitions
@@ -175,6 +177,7 @@ _TOOL_DEFINITIONS = [
 # ---------------------------------------------------------------------------
 
 _last_call_time: float = 0.0
+_rate_limit_lock = threading.Lock()
 _MIN_CALL_INTERVAL = 0.3
 
 
@@ -182,11 +185,13 @@ async def _rate_limited_thread_call(fn: Any, *args: Any, **kwargs: Any) -> Any:
     """Run a synchronous function in a thread with rate limiting."""
     global _last_call_time
     now = time.monotonic()
-    elapsed = now - _last_call_time
+    with _rate_limit_lock:
+        elapsed = now - _last_call_time
     if elapsed < _MIN_CALL_INTERVAL:
         await asyncio.sleep(_MIN_CALL_INTERVAL - elapsed)
     result = await asyncio.to_thread(fn, *args, **kwargs)
-    _last_call_time = time.monotonic()
+    with _rate_limit_lock:
+        _last_call_time = time.monotonic()
     return result
 
 
@@ -228,16 +233,18 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
     try:
         if name == "health_check":
             uptime = time.time() - _started_at
+            with _in_flight_lock:
+                current_count = _in_flight_count
             health = {
-                "status": "shutting_down" if _shutdown_requested else "healthy",
+                "status": "shutting_down" if _shutdown_event.is_set() else "healthy",
                 "uptime_seconds": round(uptime, 1),
-                "in_flight_operations": _in_flight_count,
+                "in_flight_operations": current_count,
                 "total_tools_available": len(_TOOL_DEFINITIONS),
             }
             return [types.TextContent(type="text", text=json.dumps(health, indent=2))]
 
         # Reject new operations during shutdown
-        if _shutdown_requested:
+        if _shutdown_event.is_set():
             return [types.TextContent(
                 type="text",
                 text=json.dumps({"error": "shutting_down", "message": "Server is shutting down"}),
@@ -318,8 +325,7 @@ def main() -> None:
     asyncio.set_event_loop(loop)
 
     def _request_shutdown():
-        global _shutdown_requested
-        _shutdown_requested = True
+        _shutdown_event.set()
         logger.info("Shutdown signal received, draining in-flight ops...")
 
     try:

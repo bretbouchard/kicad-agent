@@ -23,7 +23,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class CleanupConfig:
     """Configuration for training output cleanup.
 
@@ -217,8 +217,8 @@ class TrainingCleanup:
             if report_path.exists():
                 try:
                     data = json.loads(report_path.read_text())
-                    data["_run_name"] = run["name"]
-                    all_reports.append(data)
+                    entry = {"_run_name": run["name"], **data}
+                    all_reports.append(entry)
                 except (json.JSONDecodeError, OSError) as e:
                     logger.warning("Could not read %s: %s", report_path, e)
 

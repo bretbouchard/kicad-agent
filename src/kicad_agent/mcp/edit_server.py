@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import signal
+import threading
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -41,8 +42,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _started_at = time.time()
-_shutdown_requested = False
+_shutdown_event = threading.Event()
 _in_flight_count = 0
+_in_flight_lock = threading.Lock()
 
 # ---------------------------------------------------------------------------
 # Response size limit
@@ -328,12 +330,14 @@ async def dispatch_tool(
     # --- Meta-tools ---
     if name == "health_check":
         uptime = time.time() - _started_at
+        with _in_flight_lock:
+            current_count = _in_flight_count
         health = {
-            "status": "shutting_down" if _shutdown_requested else "healthy",
+            "status": "shutting_down" if _shutdown_event.is_set() else "healthy",
             "uptime_seconds": round(uptime, 1),
             "executor_ready": executor is not None,
             "project_dir": str(base_dir),
-            "in_flight_operations": _in_flight_count,
+            "in_flight_operations": current_count,
             "total_tools_available": len(_ALL_TOOLS),
         }
         return types.CallToolResult(
@@ -341,7 +345,7 @@ async def dispatch_tool(
         )
 
     # Reject all other operations during shutdown
-    if _shutdown_requested:
+    if _shutdown_event.is_set():
         return _error_result("shutting_down", "Server is shutting down, not accepting new operations")
 
     if name == "get_operation_schema":
@@ -457,7 +461,8 @@ async def dispatch_tool(
             f"Available tools: {', '.join(sorted(_OP_NAMES)[:10])}...",
         )
 
-    _in_flight_count += 1
+    with _in_flight_lock:
+        _in_flight_count += 1
     try:
         # Inject op_type and resolve target_file against base_dir
         payload = {**arguments, "op_type": name}
@@ -502,7 +507,8 @@ async def dispatch_tool(
             suggestion,
         )
     finally:
-        _in_flight_count -= 1
+        with _in_flight_lock:
+            _in_flight_count -= 1
 
 
 @app.call_tool()
@@ -538,8 +544,7 @@ def main() -> None:
     asyncio.set_event_loop(loop)
 
     def _request_shutdown():
-        global _shutdown_requested
-        _shutdown_requested = True
+        _shutdown_event.set()
         logger.info("Shutdown signal received, draining in-flight ops...")
 
     try:

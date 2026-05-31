@@ -106,12 +106,18 @@ class DataManifest:
         with open(path) as f:
             data = json.load(f)
 
+        try:
+            files = data["files"]
+            split_seed = data["split_seed"]
+        except KeyError as e:
+            raise ValueError(f"Invalid manifest file {path}: missing key {e}") from e
+
         # Convert string keys in split_assignments back to int
         assignments = {int(k): v for k, v in data.get("split_assignments", {}).items()}
 
         return cls(
-            files=data["files"],
-            split_seed=data["split_seed"],
+            files=files,
+            split_seed=split_seed,
             split_assignments=assignments,
             generation_config=data.get("generation_config", {}),
             created_at=data.get("created_at", ""),
@@ -163,6 +169,10 @@ class DataManifest:
         Returns:
             New DataManifest with split_assignments populated.
         """
+        total = train + val + test
+        if abs(total - 1.0) > 0.01:
+            raise ValueError(f"Split fractions must sum to 1.0, got {total}")
+
         indices = list(range(n_samples))
         rng = random.Random(self.split_seed)
         rng.shuffle(indices)

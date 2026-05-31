@@ -18,9 +18,9 @@ from kicad_agent.ops.executor import OperationExecutor
 
 @pytest.fixture(autouse=True)
 def _reset_shutdown_flag():
-    """Ensure _shutdown_requested is reset after each test."""
+    """Ensure _shutdown_event is cleared after each test."""
     yield
-    edit_server_mod._shutdown_requested = False
+    edit_server_mod._shutdown_event.clear()
 
 
 class TestShutdownRejectsOperations:
@@ -35,7 +35,7 @@ class TestShutdownRejectsOperations:
     async def test_rejects_operations_when_shutting_down(self, mock_executor: tuple) -> None:
         """Operations return error when _shutdown_requested is True."""
         executor, base_dir = mock_executor
-        edit_server_mod._shutdown_requested = True
+        edit_server_mod._shutdown_event.set()
 
         result = await dispatch_tool("get_operation_schema", {}, executor, base_dir)
         assert result.isError is True
@@ -46,7 +46,7 @@ class TestShutdownRejectsOperations:
     async def test_rejects_operation_tools_when_shutting_down(self, mock_executor: tuple) -> None:
         """Operation tools (like add_component) are rejected during shutdown."""
         executor, base_dir = mock_executor
-        edit_server_mod._shutdown_requested = True
+        edit_server_mod._shutdown_event.set()
 
         # Copy fixture so validation might pass (but should be rejected before that)
         fixture = Path(__file__).parent / "fixtures" / "Arduino_Mega" / "Arduino_Mega.kicad_sch"
@@ -68,7 +68,7 @@ class TestShutdownRejectsOperations:
     async def test_health_check_works_during_shutdown(self, mock_executor: tuple) -> None:
         """health_check still works during shutdown and reports shutting_down status."""
         executor, base_dir = mock_executor
-        edit_server_mod._shutdown_requested = True
+        edit_server_mod._shutdown_event.set()
 
         result = await dispatch_tool("health_check", {}, executor, base_dir)
         assert result.isError is not True

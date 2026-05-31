@@ -127,6 +127,13 @@ class BaselineStore:
         self.store_dir = Path(store_dir)
         self.store_dir.mkdir(parents=True, exist_ok=True)
 
+    @staticmethod
+    def _validate_name(name: str) -> str:
+        """Validate baseline name to prevent path traversal."""
+        if not name or "/" in name or "\\" in name or ".." in name:
+            raise ValueError(f"Invalid baseline name: {name!r}")
+        return name
+
     def save_baseline(self, name: str, result: EvalResult) -> Path:
         """Save an EvalResult as a baseline.
 
@@ -137,6 +144,7 @@ class BaselineStore:
         Returns:
             Path to saved baseline file.
         """
+        self._validate_name(name)
         path = self.store_dir / f"{name}_baseline.json"
         data = {
             "model_name": result.model_name,
@@ -165,6 +173,7 @@ class BaselineStore:
         """
         from kicad_agent.training.evaluation import EvalResult
 
+        self._validate_name(name)
         path = self.store_dir / f"{name}_baseline.json"
         if not path.exists():
             return None
