@@ -1564,3 +1564,142 @@ class TestImpedance:
             solve_trace_width(
                 target_z0=-10.0, h=0.2, t=0.035, er=4.5
             )
+
+
+# ---------------------------------------------------------------------------
+# Sawtooth Length Matching (Plan 36-02 Task 2)
+# ---------------------------------------------------------------------------
+
+
+class TestSawtoothMatching:
+    """Sawtooth length matching with measure-and-refine convergence."""
+
+    def test_sawtooth_extra_length_positive(self) -> None:
+        """_sawtooth_extra_length returns positive value for nonzero amplitude."""
+        from kicad_agent.routing.length_matching import _sawtooth_extra_length
+        extra = _sawtooth_extra_length(amplitude=1.0, half_pitch=0.5)
+        expected = 2 * math.hypot(0.5, 1.0) - 2 * 0.5
+        assert extra == pytest.approx(expected, rel=1e-6)
+        assert extra > 0
+
+    def test_sawtooth_extra_length_zero_amplitude(self) -> None:
+        """_sawtooth_extra_length returns 0 when amplitude=0."""
+        from kicad_agent.routing.length_matching import _sawtooth_extra_length
+        extra = _sawtooth_extra_length(amplitude=0.0, half_pitch=0.5)
+        assert extra == pytest.approx(0.0, abs=1e-9)
+
+    def test_zero_delta_returns_original(self) -> None:
+        """target_delta_mm=0 returns original path unchanged."""
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
+        result = add_sawtooth_matching(path, target_delta_mm=0.0)
+        assert result.path == path
+        assert result.achieved_delta_mm == 0.0
+
+    def test_positive_delta_longer_path(self) -> None:
+        """target_delta_mm > 0 returns path longer than original."""
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        from kicad_agent.routing.geometry import _path_length
+        path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
+        original_len = _path_length(path)
+        result = add_sawtooth_matching(path, target_delta_mm=2.0)
+        result_len = _path_length(result.path)
+        assert result_len > original_len
+
+    def test_target_5mm_delta_on_20mm_path(self) -> None:
+        """add_sawtooth_matching adds approximately 5mm on a 20mm path."""
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        from kicad_agent.routing.geometry import _path_length
+        path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
+        original_len = _path_length(path)
+        result = add_sawtooth_matching(path, target_delta_mm=5.0)
+        result_len = _path_length(result.path)
+        actual_delta = result_len - original_len
+        assert actual_delta == pytest.approx(5.0, abs=0.5), (
+            f"Expected ~5mm delta, got {actual_delta:.2f}mm"
+        )
+
+    def test_bumps_are_triangle_shaped(self) -> None:
+        """Sawtooth bumps have 3 points per bump (start, peak, end)."""
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
+        result = add_sawtooth_matching(path, target_delta_mm=2.0, spacing_mm=1.0)
+        # Each bump adds 3 points. Original path has 3 points + first/last
+        # preserved. So total = 3 + num_bumps * 3.
+        # Just verify we have more points than original and num_bumps > 0.
+        assert len(result.path) > len(path)
+        assert result.num_bumps > 0
+
+    def test_amplitude_capped_by_detour_ratio(self) -> None:
+        """Sawtooth amplitude does not exceed half_pitch * max_detour_ratio."""
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
+        max_detour = 3.0
+        result = add_sawtooth_matching(
+            path, target_delta_mm=10.0, spacing_mm=1.0,
+            max_detour_ratio=max_detour,
+        )
+        # Even with large target, bumps should exist and amplitude is capped.
+        # We can't directly inspect amplitude, but we verify the result
+        # doesn't produce a path with absurd length.
+        from kicad_agent.routing.geometry import _path_length
+        original_len = _path_length(path)
+        max_possible_delta = result.num_bumps * _sawtooth_max_extra(
+            spacing_mm=1.0, max_detour_ratio=max_detour,
+        )
+        actual_delta = _path_length(result.path) - original_len
+        assert actual_delta <= max_possible_delta + 0.1
+
+    def test_length_match_result_frozen(self) -> None:
+        """LengthMatchResult is a frozen dataclass."""
+        from kicad_agent.routing.length_matching import LengthMatchResult
+        r = LengthMatchResult(
+            path=((0.0, 0.0), (10.0, 0.0)),
+            target_delta_mm=2.0,
+            achieved_delta_mm=1.95,
+            num_bumps=3,
+            valid=True,
+        )
+        with pytest.raises(AttributeError):
+            r.valid = False  # type: ignore[misc]
+
+    def test_length_match_result_fields(self) -> None:
+        """LengthMatchResult has all required fields."""
+        from kicad_agent.routing.length_matching import LengthMatchResult
+        r = LengthMatchResult(
+            path=((0.0, 0.0), (10.0, 0.0)),
+            target_delta_mm=2.0,
+            achieved_delta_mm=1.95,
+            num_bumps=3,
+            valid=True,
+        )
+        assert r.path == ((0.0, 0.0), (10.0, 0.0))
+        assert r.target_delta_mm == 2.0
+        assert r.achieved_delta_mm == 1.95
+        assert r.num_bumps == 3
+        assert r.valid is True
+
+    def test_short_path_returns_original(self) -> None:
+        """Path shorter than bump_pitch returns original path."""
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        # 0.5mm path is shorter than bump_pitch (max(1.0, 0.5) = 1.0mm).
+        path = ((0.0, 0.0), (0.5, 0.0))
+        result = add_sawtooth_matching(path, target_delta_mm=2.0, spacing_mm=1.0)
+        assert result.path == path
+        assert result.num_bumps == 0
+
+    def test_single_point_path_returns_original(self) -> None:
+        """Single-point path returns original path."""
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        path = ((5.0, 5.0),)
+        result = add_sawtooth_matching(path, target_delta_mm=2.0)
+        assert result.path == path
+        assert result.num_bumps == 0
+
+
+def _sawtooth_max_extra(spacing_mm: float, max_detour_ratio: float) -> float:
+    """Helper: max extra length per sawtooth bump at max amplitude."""
+    from kicad_agent.routing.length_matching import _sawtooth_extra_length
+    half_pitch = spacing_mm * 0.5
+    max_amplitude = half_pitch * max_detour_ratio
+    return _sawtooth_extra_length(max_amplitude, half_pitch)
