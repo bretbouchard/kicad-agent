@@ -392,8 +392,7 @@ def _check_hierarchical_power(ir: SchematicIR, file_path: Path) -> list[dict[str
             sub_result = parse_schematic(sub_sch_path)
             sub_ir = SchematicIR(_parse_result=sub_result)
         except Exception as exc:
-            import logging
-            logging.getLogger(__name__).warning(
+            logger.warning(
                 "Cannot parse sub-sheet %s for power check: %s", sub_sch_path, exc
             )
             continue

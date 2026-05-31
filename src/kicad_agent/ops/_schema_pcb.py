@@ -85,7 +85,10 @@ class AddCopperZoneOp(BaseModel):
     op_type: Literal["add_copper_zone"] = "add_copper_zone"
     target_file: TargetFile
     net_name: str = Field(min_length=1, max_length=64, description="Net name for the zone")
-    layer: str = Field(default="F.Cu", max_length=32, description="Copper layer")
+    layer: str = Field(
+        default="F.Cu", max_length=32, pattern=r"^(?:[FB]\.Cu|In[1-9]\d*\.Cu)$",
+        description="Copper layer",
+    )
     clearance: float = Field(default=0.5, gt=0, description="Clearance in mm")
     min_width: float = Field(default=0.25, gt=0, description="Minimum fill width in mm")
     priority: int = Field(default=0, ge=0, description="Zone priority")
@@ -136,7 +139,10 @@ class AutoRouteOp(BaseModel):
     op_type: Literal["auto_route"] = "auto_route"
     target_file: TargetFile
     nets: list[str] = Field(default_factory=list, description="Net names to route (empty = all)")
-    layer: str = Field(default="F.Cu", pattern=r"^[FB]\.Cu|In[1-9]\d*\.Cu$", description="Target copper layer")
+    layer: str = Field(
+        default="F.Cu", pattern=r"^(?:[FB]\.Cu|In[1-9]\d*\.Cu)$",
+        description="Target copper layer",
+    )
 
 
 class ModifyNetClassOp(BaseModel):
@@ -299,7 +305,7 @@ class ModifyCopperZoneOp(BaseModel):
     zone_uuid: str = Field(min_length=1, max_length=64, description="Zone UUID (tstamp)")
     net_name: Optional[str] = Field(default=None, max_length=64, description="New net name")
     layer: Optional[str] = Field(
-        default=None, max_length=32, pattern=r"^[FB]\.Cu|In[1-9]\d*\.Cu$",
+        default=None, max_length=32, pattern=r"^(?:[FB]\.Cu|In[1-9]\d*\.Cu)$",
         description="New layer (e.g. F.Cu, B.Cu, In1.Cu)",
     )
     clearance: Optional[float] = Field(default=None, gt=0, description="New clearance in mm")
