@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: production-hardening
-status: ready-to-plan
-stopped_at: Phase 35 next
-last_updated: "2026-05-31T05:00:00.000Z"
+status: ready-to-execute
+stopped_at: Phase 35 planned (3 plans, 1 wave)
+last_updated: "2026-05-31T06:00:00.000Z"
 last_activity: 2026-05-31
 progress:
   total_phases: 37
@@ -26,9 +26,9 @@ Last activity: 2026-05-31
 
 ## Current Position
 
-Phase: 34 (LLM Provider Abstraction) -- COMPLETE
-Status: **Phase 34 Complete** -- LLMProvider protocol, AnthropicProvider, MockProvider, all 6 consumers migrated
-Last activity: 2026-05-31 -- Phase 34 completed (2 plans, 1808 tests pass, Council APPROVED)
+Phase: 35 (Remaining Ops Gaps) -- PLANNED
+Status: **Phase 35 Planned** -- 3 plans, 1 wave, ready to execute (GEN-01/03/04/05/06)
+Last activity: 2026-05-31 -- Phase 35 planned (3 plans, verification PASSED)
 
 ## Previous Milestone (v2.3)
 
@@ -82,5 +82,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 34 complete
-Resume with: /gsd-plan-phase 35 (Remaining Ops Gaps)
+Stopped at: Phase 35 planned
+Resume with: /gsd-execute-phase 35
