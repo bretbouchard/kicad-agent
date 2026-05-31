@@ -24,6 +24,7 @@ from kicad_agent.schematic_routing.target_finder import find_targets
 from kicad_agent.schematic_routing.wire_router import generate_fixes
 from kicad_agent.schematic_routing.batch_executor import apply_fixes
 from kicad_agent.schematic_routing.net_extractor import extract_nets
+from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
 
 __all__ = [
     "parse_netlist",
@@ -33,6 +34,7 @@ __all__ = [
     "generate_fixes",
     "apply_fixes",
     "extract_nets",
+    "detect_net_conflicts",
     "run_router",
 ]
 

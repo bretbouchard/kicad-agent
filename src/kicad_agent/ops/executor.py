@@ -515,6 +515,17 @@ def _handle_extract_nets(op: Any, ir: SchematicIR, file_path: Path) -> dict[str,
     )
 
 
+@register_schematic("detect_net_conflicts")
+def _handle_detect_net_conflicts(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
+    return detect_net_conflicts(
+        sch_path=file_path,
+        check_case_variants=op.check_case_variants,
+        check_mixed_labels=op.check_mixed_labels,
+        check_unlabeled_junctions=op.check_unlabeled_junctions,
+    )
+
+
 @register_schematic("resolve_pin_positions")
 def _handle_resolve_pin_positions(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.schematic_routing.pin_resolver import PinResolver
