@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.4
-milestone_name: production-hardening
-status: completed
-stopped_at: Phase 37 verified and complete — ALL PHASES DONE
-last_updated: "2026-05-31T23:30:00.000Z"
-last_activity: 2026-05-31
+milestone_name: schematic-intelligence
+status: planning
+stopped_at: Phase 38-40 plans written, Council review pending
+last_updated: "2026-06-01T05:35:00.000Z"
+last_activity: 2026-06-01
 progress:
-  total_phases: 37
+  total_phases: 40
   completed_phases: 37
-  total_plans: 106
+  total_plans: 116
   completed_plans: 103
-  percent: 100
+  percent: 88
 ---
 
 # Project State
@@ -21,34 +21,47 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** v2.4 production-hardening — ALL 37 PHASES COMPLETE. 74 operations, 1854+ tests, structured logging, training infra.
-Last activity: 2026-05-31
+**Current focus:** v2.4 Schematic Intelligence — Phases 38-40 (10 plans, building on existing schematic_routing module)
+Last activity: 2026-06-01
 
 ## Current Position
 
-Phase: 37 (Training + Infrastructure) — VERIFIED COMPLETE
-Status: **3 plans executed, Council review fixes applied, 101 tests pass** — Structured logging, data versioning, regression detection, cleanup utility, health check, graceful shutdown, smoke tests.
-Last activity: 2026-05-31
+Phase: 38-40 (Schematic Routing Engine + Net Intelligence + ERC Root Cause)
+Status: **10 execution-ready plans written, Council review pending**
+Plans: 38-01..04, 39-01..03, 40-01..03
+Last activity: 2026-06-01
 
-## Previous Milestone (v2.3)
+### Wave Structure
 
-**Final: 1710 tests, 57 operation types, MCP server with 59+ tools**
+**Phase 38 (4 plans):**
+- Wave 1: 38-01 (pin resolution) + 38-02 (collision detection) — shared schema file, sequential
+- Wave 2: 38-03 (connect_pins) — depends on 38-01, 38-02
+- Wave 3: 38-04 (batch_connect + regenerate_wiring) — depends on 38-03
 
-## Previous Milestone (v2.2)
+**Phase 39 (3 plans):**
+- Wave 1: 39-01 (net extraction) + 39-02 (conflict detection) — can run parallel
+- Wave 2: 39-03 (net naming) — depends on 39-01
 
-**Final: 1673 tests, 57 operation types, 14 schema sub-modules**
+**Phase 40 (3 plans):**
+- Wave 1: 40-01 (violation classification)
+- Wave 2: 40-02 (root cause diagnosis) — depends on 40-01
+- Wave 3: 40-03 (enhanced erc_auto_fix) — depends on 40-02
+
+## Previous Milestone (v2.4 production-hardening)
+
+**Final: 37/37 phases complete. 74 operations, 1900+ tests, structured logging, training infra.**
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 91
+- Total plans completed: 103
 - Average duration: 5 min
 - Total execution time: 5.2 hours
 
 **Recent Trend:**
 
-- Last 10 plans: 32-01 through 34-02 (all first-execution pass)
+- Last 10 plans: 35-01 through 37-03 (all first-execution pass)
 - Trend: Stable -- all plans passing on first execution
 
 ## Accumulated Context
@@ -63,7 +76,6 @@ Recent decisions affecting current work:
 - [v2.4]: Per-executor undo stack keyed by resolved file path
 - [v2.4]: Standard undo/redo semantics (new operation clears redo stack)
 - [v2.4]: Session-scoped undo (lost on MCP server restart, same as KiCad)
-- [v2.4]: Scan-based pop_latest instead of separate tracking fields (eliminates stale references)
 - [v2.4]: LLMProvider protocol is superset of LLMBackend -- providers satisfy both protocols
 - [v2.4]: Provider selection via KICAD_LLM_PROVIDER env var (default "anthropic")
 - [v2.4]: Lazy LLMClient imports in consumers to avoid hard anthropic dependency
@@ -77,14 +89,20 @@ Recent decisions affecting current work:
 - [v2.4]: _check_hierarchical_power reuses sheet traversal pattern from check_sheet_pin_labels
 - [v2.4]: modify_copper_zone resolves net via get_net_by_name or creates new net if not found
 - [v2.4]: remove_copper_zone prefers UUID lookup, falls back to index, raises ValueError if neither provided
-- [v2.4]: Council H-01 fix: 6 repair ops (UpdateSymbols, FixShortedNets, FixPinTypeMismatches, PlaceMissingUnits, RemoveDanglingWires, BreakWireShorts) added to schema union -- was 68, now 74
+- [v2.4]: Council H-01 fix: 6 repair ops added to schema union -- was 68, now 74
 - [v2.4]: Council H-02 fix: ModifyProjectSettingsOp.updates bounded to max_length=50
 - [v2.4]: Council M-04 fix: ModifyCopperZoneOp.layer validated with pattern r"^[FB]\.Cu|In[1-9]\d*\.Cu$"
 - [v2.4]: Council L-03 fix: RemoveCopperZoneOp has model_validator requiring at least one of zone_uuid/zone_index
+- [v2.4-SI]: Plans build on existing schematic_routing/ module (SchematicGraph, wire_router, batch_executor, netlist_parser)
+- [v2.4-SI]: Schemas in _schema_schematic_routing.py and _schema_schematic_intel.py (new files)
+- [v2.4-SI]: Schematic ops extend existing @register_schematic pattern in executor.py
 
 ### Pending Todos
 
-None.
+- Council review of all 10 plans
+- Execute Phase 38 (4 plans, 3 waves)
+- Execute Phase 39 (3 plans, 2 waves)
+- Execute Phase 40 (3 plans, 3 waves)
 
 ### Blockers/Concerns
 
@@ -96,5 +114,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 37 verified and complete — ALL 37 PHASES DONE
-Resume with: v2.4 production-hardening complete. 37/37 phases, 74 operations, 1900+ tests. Ready for next milestone.
+Stopped at: Phase 38-40 plans written, Council review pending
+Resume with: Run Council review on all plans, then execute Phase 38 first (38-01/02 Wave 1, 38-03 Wave 2, 38-04 Wave 3)
