@@ -285,6 +285,9 @@ from kicad_agent.ops._schema_schematic_routing import (  # noqa: E402
     RegenerateWiringOp,
     ResolvePinPositionsOp,
 )
+from kicad_agent.ops._schema_schematic_intel import (  # noqa: E402
+    ExtractNetsOp,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -380,7 +383,8 @@ class Operation(BaseModel):
         | DetectPinOverlapsOp
         | ConnectPinsOp
         | BatchConnectOp
-        | RegenerateWiringOp,
+        | RegenerateWiringOp
+        | ExtractNetsOp,
         Field(discriminator="op_type"),
     ]
 
@@ -506,6 +510,8 @@ __all__ = [
     "CollisionZone",
     "NetDef",
     "GlobalLabelSpec",
+    # Schematic intelligence ops
+    "ExtractNetsOp",
     # Union and helpers
     "Operation",
     "get_operation_schema",

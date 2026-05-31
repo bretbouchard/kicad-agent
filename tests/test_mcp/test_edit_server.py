@@ -35,8 +35,8 @@ from mcp import types
 class TestToolGeneration:
     """Dynamic tool generation from Operation discriminated union."""
 
-    def test_generates_74_operation_tools(self) -> None:
-        assert len(_OPERATION_TOOLS) == 74  # 57 original + 8 project CRUD + 1 erc_auto_fix + 2 copper zone + 6 repair ops
+    def test_generates_81_operation_tools(self) -> None:
+        assert len(_OPERATION_TOOLS) == 81  # 57 original + 8 project CRUD + 1 erc_auto_fix + 2 copper zone + 6 repair ops + 6 schematic routing + 1 extract_nets
 
     def test_generates_7_meta_tools(self) -> None:
         assert len(_META_TOOLS) == 7
@@ -44,7 +44,7 @@ class TestToolGeneration:
         assert meta_names == {"health_check", "get_operation_schema", "get_project_context", "erc_check", "drc_check", "undo", "redo"}
 
     def test_total_tool_count(self) -> None:
-        assert len(_ALL_TOOLS) == 81  # 74 ops + 7 meta
+        assert len(_ALL_TOOLS) == 88  # 81 ops + 7 meta
 
     def test_all_tools_have_names(self) -> None:
         for tool in _ALL_TOOLS:
