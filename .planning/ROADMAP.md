@@ -738,9 +738,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 36-01-PLAN.md -- 3D routing graph, via cost model, pathfinder 3D, ViaSegment, geometry extraction (ROUTE-05)
-- [ ] 36-02-PLAN.md -- IPC-2141 impedance calculator, sawtooth length matching engine (ROUTE-06, ROUTE-07)
-- [ ] 36-03-PLAN.md -- AutoRouteOp schema extension, executor handler integration, end-to-end tests (ROUTE-05, ROUTE-06, ROUTE-07)
+- [x] 36-01-PLAN.md -- 3D routing graph, via cost model, pathfinder 3D, ViaSegment, geometry extraction (ROUTE-05)
+- [x] 36-02-PLAN.md -- IPC-2141 impedance calculator, sawtooth length matching engine (ROUTE-06, ROUTE-07)
+- [x] 36-03-PLAN.md -- AutoRouteOp schema extension, executor handler integration, end-to-end tests (ROUTE-05, ROUTE-06, ROUTE-07)
 
 ### Phase 37: Training + Infrastructure
 **Goal**: Training pipeline hardening and MCP server infrastructure
@@ -790,3 +790,4 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 33. Undo/Redo Stack | 2/2 | Complete | 2026-05-30 |
 | 34. LLM Provider Abstraction | 2/2 | Complete | 2026-05-31 |
 | 35. Remaining Ops Gaps | 3/3 | Complete | 2026-05-31 |
+| 36. Multi-Layer Routing | 3/3 | Complete | 2026-05-31 |

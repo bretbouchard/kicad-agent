@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: production-hardening
 status: completed
-stopped_at: Phase 35 verified and complete
-last_updated: "2026-05-31T20:00:00.000Z"
+stopped_at: Phase 36 verified and complete
+last_updated: "2026-05-31T22:00:00.000Z"
 last_activity: 2026-05-31
 progress:
   total_phases: 37
-  completed_phases: 35
-  total_plans: 97
-  completed_plans: 97
-  percent: 100
+  completed_phases: 36
+  total_plans: 103
+  completed_plans: 100
+  percent: 97
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** v2.4 production-hardening -- ALL COMPLETE. 74 operations, undo/redo, LLM abstraction.
+**Current focus:** v2.4 production-hardening -- Phase 36 complete. 74 operations, multi-layer routing, impedance control, length matching.
 Last activity: 2026-05-31
 
 ## Current Position
 
-Phase: 35 (Remaining Ops Gaps) -- VERIFIED COMPLETE
-Status: **All 3 plans executed, Council review passed, 9/9 must-haves verified** -- 74 total operations.
-Last activity: 2026-05-31 -- Council execution review fixed, regression 1854 passing
+Phase: 36 (Multi-Layer Routing) -- VERIFIED COMPLETE
+Status: **3 plans executed, Council R2 approved, 146 routing tests pass** -- 3D routing graph, IPC-2141 impedance, sawtooth length matching.
+Last activity: 2026-05-31 -- Council R1 fixes (H-01 through H-04), R2 clean approval
 
 ## Previous Milestone (v2.3)
 
