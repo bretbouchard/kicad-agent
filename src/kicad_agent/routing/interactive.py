@@ -318,7 +318,8 @@ class InteractiveRoutingSession:
         locked_obstacles: list[SpatialBox] = []
         trace_w = self._constraints.trace_width_mm
         for sugg in self._locked_routes.values():
-            for px, py in sugg.path:
+            for pt in sugg.path:
+                px, py = pt[0], pt[1]
                 half_w = trace_w / 2.0
                 locked_obstacles.append(
                     SpatialBox(

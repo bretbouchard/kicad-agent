@@ -22,6 +22,11 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from kicad_agent.routing.geometry import (
+    _direction_at,
+    _interpolate_path,
+    _path_length,
+)
 from kicad_agent.routing.pathfinder import route_net
 
 
@@ -39,127 +44,13 @@ class DiffPairResult:
         valid: True if both nets routed and mismatch is within tolerance.
     """
 
-    net_positive: tuple[tuple[float, float], ...]
-    net_negative: tuple[tuple[float, float], ...]
+    net_positive: tuple[tuple[float, float], ...] | tuple[tuple[float, float, str], ...]
+    net_negative: tuple[tuple[float, float], ...] | tuple[tuple[float, float, str], ...]
     length_positive_mm: float
     length_negative_mm: float
     mismatch_mm: float
     spacing_mm: float
     valid: bool
-
-
-def _path_length(path: tuple[tuple[float, float], ...]) -> float:
-    """Compute total Euclidean length of a path.
-
-    Args:
-        path: Ordered tuple of (x, y) waypoints.
-
-    Returns:
-        Sum of Euclidean distances between consecutive points.
-    """
-    total = 0.0
-    for i in range(len(path) - 1):
-        total += math.hypot(
-            path[i + 1][0] - path[i][0],
-            path[i + 1][1] - path[i][1],
-        )
-    return total
-
-
-def _interpolate_path(
-    path: tuple[tuple[float, float], ...],
-    distances: list[float],
-) -> list[tuple[float, float]]:
-    """Return points at given arc-length distances along the path.
-
-    If a distance exceeds the total path length, the last point is
-    returned.
-
-    Args:
-        path: Ordered tuple of (x, y) waypoints.
-        distances: Sorted list of arc-length distances along the path.
-
-    Returns:
-        List of (x, y) points at the requested distances.
-    """
-    points: list[tuple[float, float]] = []
-    seg_idx = 0
-    cumulative = 0.0
-
-    for d in distances:
-        # Advance to the segment containing distance d.
-        while seg_idx < len(path) - 1:
-            seg_len = math.hypot(
-                path[seg_idx + 1][0] - path[seg_idx][0],
-                path[seg_idx + 1][1] - path[seg_idx][1],
-            )
-            if cumulative + seg_len >= d - 1e-9:
-                break
-            cumulative += seg_len
-            seg_idx += 1
-
-        if seg_idx >= len(path) - 1:
-            points.append(path[-1])
-            continue
-
-        p0 = path[seg_idx]
-        p1 = path[seg_idx + 1]
-        seg_len = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
-
-        if seg_len < 1e-9:
-            points.append(p0)
-            continue
-
-        t = max(0.0, min(1.0, (d - cumulative) / seg_len))
-        points.append((
-            round(p0[0] + t * (p1[0] - p0[0]), 6),
-            round(p0[1] + t * (p1[1] - p0[1]), 6),
-        ))
-
-    return points
-
-
-def _direction_at(
-    path: tuple[tuple[float, float], ...],
-    distance: float,
-) -> tuple[float, float, float, float]:
-    """Return (ux, uy, px, py) at a given arc-length distance.
-
-    ux, uy = unit direction along the path.
-    px, py = perpendicular direction (rotated 90 degrees CCW).
-
-    Args:
-        path: Ordered tuple of (x, y) waypoints.
-        distance: Arc-length distance along the path.
-
-    Returns:
-        Tuple of (ux, uy, px, py) direction components.
-    """
-    cumulative = 0.0
-    for i in range(len(path) - 1):
-        seg_len = math.hypot(
-            path[i + 1][0] - path[i][0],
-            path[i + 1][1] - path[i][1],
-        )
-        if cumulative + seg_len >= distance - 1e-9 or i == len(path) - 2:
-            if seg_len < 1e-9:
-                continue
-            ux = (path[i + 1][0] - path[i][0]) / seg_len
-            uy = (path[i + 1][1] - path[i][1]) / seg_len
-            return ux, uy, -uy, ux
-        cumulative += seg_len
-
-    # Fallback: use last segment direction.
-    if len(path) >= 2:
-        p0 = path[-2]
-        p1 = path[-1]
-        seg_len = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
-        if seg_len > 1e-9:
-            ux = (p1[0] - p0[0]) / seg_len
-            uy = (p1[1] - p0[1]) / seg_len
-            return ux, uy, -uy, ux
-
-    return 1.0, 0.0, 0.0, 1.0
 
 
 def _bump_extra_length(amplitude: float, half_w: float) -> float:
@@ -336,6 +227,20 @@ def _generate_bumps(
     return tuple(new_points)
 
 
+def _strip_layer(
+    path: tuple[tuple[float, float], ...] | tuple[tuple[float, float, str], ...],
+) -> tuple[tuple[float, float], ...]:
+    """Strip layer component from 3D path tuples for geometry operations.
+
+    Args:
+        path: Path with 2D or 3D tuples.
+
+    Returns:
+        Path with only (x, y) tuples.
+    """
+    return tuple((pt[0], pt[1]) for pt in path)
+
+
 def route_differential_pair(
     graph,
     source_pos: tuple[float, float],
@@ -398,8 +303,11 @@ def route_differential_pair(
 
     path_pos = result_pos.path
     path_neg = result_neg.path
-    len_pos = _path_length(path_pos)
-    len_neg = _path_length(path_neg)
+    # Strip layer from 3D paths for geometry operations.
+    path_pos_2d = _strip_layer(path_pos)
+    path_neg_2d = _strip_layer(path_neg)
+    len_pos = _path_length(path_pos_2d)
+    len_neg = _path_length(path_neg_2d)
     mismatch = abs(len_pos - len_neg)
 
     # Apply serpentining if mismatch exceeds tolerance.
@@ -407,22 +315,22 @@ def route_differential_pair(
         delta = mismatch - max_length_mismatch_mm
         if len_pos < len_neg:
             # Positive net is shorter -- add serpentining.
-            path_pos = _add_serpentining(path_pos, delta, target_spacing_mm)
+            path_pos_2d = _add_serpentining(path_pos_2d, delta, target_spacing_mm)
         else:
             # Negative net is shorter -- add serpentining.
-            path_neg = _add_serpentining(path_neg, delta, target_spacing_mm)
+            path_neg_2d = _add_serpentining(path_neg_2d, delta, target_spacing_mm)
 
         # Recompute lengths after serpentining.
-        len_pos = _path_length(path_pos)
-        len_neg = _path_length(path_neg)
+        len_pos = _path_length(path_pos_2d)
+        len_neg = _path_length(path_neg_2d)
         mismatch = abs(len_pos - len_neg)
 
     # Check if serpentining achieved the target mismatch.
     is_valid = mismatch <= max_length_mismatch_mm
 
     return DiffPairResult(
-        net_positive=path_pos,
-        net_negative=path_neg,
+        net_positive=path_pos_2d,
+        net_negative=path_neg_2d,
         length_positive_mm=round(len_pos, 4),
         length_negative_mm=round(len_neg, 4),
         mismatch_mm=round(mismatch, 4),

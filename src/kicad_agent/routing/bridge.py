@@ -94,8 +94,10 @@ def route_to_segments(
             continue
 
         for i in range(len(result.path) - 1):
-            sx, sy = result.path[i]
-            ex, ey = result.path[i + 1]
+            p0 = result.path[i]
+            p1 = result.path[i + 1]
+            sx, sy = p0[0], p0[1]
+            ex, ey = p1[0], p1[1]
             segments.append(TrackSegment(
                 start_x=round(sx, 4),
                 start_y=round(sy, 4),

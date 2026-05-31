@@ -65,8 +65,8 @@ class TestRoutingConstraints:
             RoutingConstraints(grid_resolution_mm=0.05)
 
     def test_max_nodes_cap(self) -> None:
-        with pytest.raises(ValueError, match="max_nodes must be <= 1_000_000"):
-            RoutingConstraints(max_nodes=2_000_000)
+        with pytest.raises(ValueError, match="max_nodes must be <= 2_000_000"):
+            RoutingConstraints(max_nodes=3_000_000)
 
     def test_custom_values(self) -> None:
         c = RoutingConstraints(
@@ -121,9 +121,9 @@ class TestRoutingGraph:
             constraints=RoutingConstraints(grid_resolution_mm=1.0),
         )
         # Node (6, 6) should be inside the obstacle and excluded.
-        assert (6.0, 6.0) not in graph.graph.nodes
+        assert (6.0, 6.0, "F.Cu") not in graph.graph.nodes
         # Node (0, 0) should be outside and present.
-        assert (0.0, 0.0) in graph.graph.nodes
+        assert (0.0, 0.0, "F.Cu") in graph.graph.nodes
 
     def test_max_nodes_raises_value_error(self) -> None:
         """Grid exceeding max_nodes raises ValueError."""
@@ -142,13 +142,13 @@ class TestRoutingGraph:
         graph = self._make_empty_graph(50.0, 1.0)
         node = graph.snap_to_node(5.3, 10.7)
         assert node is not None
-        assert node == (5.0, 11.0) or node == (5.0, 10.0)
+        assert node == (5.0, 11.0, "F.Cu") or node == (5.0, 10.0, "F.Cu")
 
     def test_snap_to_node_exact(self) -> None:
         """snap_to_node returns exact grid point for on-grid input."""
         graph = self._make_empty_graph(50.0, 1.0)
         node = graph.snap_to_node(5.0, 10.0)
-        assert node == (5.0, 10.0)
+        assert node == (5.0, 10.0, "F.Cu")
 
     def test_snap_to_node_out_of_bounds(self) -> None:
         """snap_to_node returns None for points far outside grid."""
@@ -176,11 +176,11 @@ class TestRoutingGraph:
             constraints=constraints,
         )
         # Nodes strictly inside obstacle should be excluded.
-        assert (11.0, 11.0) not in graph.graph.nodes
+        assert (11.0, 11.0, "F.Cu") not in graph.graph.nodes
 
         # Edges near obstacle should be omitted due to clearance violation.
-        assert not graph.graph.has_edge((9.5, 10.0), (10.0, 10.0))
-        assert not graph.graph.has_edge((9.0, 10.0), (9.5, 10.0))
+        assert not graph.graph.has_edge((9.5, 10.0, "F.Cu"), (10.0, 10.0, "F.Cu"))
+        assert not graph.graph.has_edge((9.0, 10.0, "F.Cu"), (9.5, 10.0, "F.Cu"))
 
     def test_obstacle_creates_detour(self) -> None:
         """Obstacle forces a detour -- path around is longer than straight."""
@@ -218,8 +218,8 @@ class TestPathfinding:
         assert result.success
         assert result.net_name == "NET1"
         assert len(result.path) >= 2
-        assert result.path[0] == (0.0, 0.0)
-        assert result.path[-1] == (10.0, 10.0)
+        assert result.path[0] == (0.0, 0.0, "F.Cu")
+        assert result.path[-1] == (10.0, 10.0, "F.Cu")
 
     def test_route_with_obstacle(self) -> None:
         """Route around an obstacle finds a valid path."""
@@ -234,7 +234,8 @@ class TestPathfinding:
         assert result.success
         # Path must not pass through obstacle interior (strict interior,
         # boundary points like (5,5) or (8,8) are not excluded by within).
-        for x, y in result.path:
+        for pt in result.path:
+            x, y = pt[0], pt[1]
             assert not (5 < x < 8 and 5 < y < 8)
 
     def test_route_blocked_source_returns_none(self) -> None:
@@ -404,7 +405,7 @@ class TestBuildRoutingGraph:
     def test_with_obstacles(self) -> None:
         obs = SpatialBox(5, 5, 10, 10, "pad", "P1")
         graph = build_routing_graph((0, 0, 20, 20), obstacles=[obs])
-        assert (7.0, 7.0) not in graph.graph.nodes
+        assert (7.0, 7.0, "F.Cu") not in graph.graph.nodes
 
     def test_custom_constraints(self) -> None:
         c = RoutingConstraints(grid_resolution_mm=2.0)
@@ -563,7 +564,8 @@ class TestDifferentialPair:
         # from the original straight-line path. For a horizontal path at y=5,
         # all y-coordinates should be within [5 - 2*spacing, 5 + 2*spacing].
         max_amplitude = spacing * 2.0
-        for x, y in result.net_positive:
+        for pt in result.net_positive:
+            x, y = pt[0], pt[1]
             assert abs(y - 5.0) <= max_amplitude + 1e-6, (
                 f"Point ({x},{y}) exceeds amplitude bound"
             )
@@ -874,13 +876,13 @@ class TestMarkPathAsObstacle:
             constraints=RoutingConstraints(grid_resolution_mm=1.0),
         )
         # Verify edge exists before marking.
-        assert graph.graph.has_edge((5.0, 5.0), (6.0, 5.0))
-        graph.mark_path_as_obstacle(((5.0, 5.0), (6.0, 5.0), (7.0, 5.0)))
+        assert graph.graph.has_edge((5.0, 5.0, "F.Cu"), (6.0, 5.0, "F.Cu"))
+        graph.mark_path_as_obstacle(((5.0, 5.0, "F.Cu"), (6.0, 5.0, "F.Cu"), (7.0, 5.0, "F.Cu")))
         # Edges (5,5)-(6,5) and (6,5)-(7,5) should be removed.
-        assert not graph.graph.has_edge((5.0, 5.0), (6.0, 5.0))
-        assert not graph.graph.has_edge((6.0, 5.0), (7.0, 5.0))
+        assert not graph.graph.has_edge((5.0, 5.0, "F.Cu"), (6.0, 5.0, "F.Cu"))
+        assert not graph.graph.has_edge((6.0, 5.0, "F.Cu"), (7.0, 5.0, "F.Cu"))
         # Adjacent edge (4,5)-(5,5) should still exist.
-        assert graph.graph.has_edge((4.0, 5.0), (5.0, 5.0))
+        assert graph.graph.has_edge((4.0, 5.0, "F.Cu"), (5.0, 5.0, "F.Cu"))
 
     def test_multi_net_obstacle_marking(self) -> None:
         """route_all_nets marks paths as obstacles, preventing reuse."""
