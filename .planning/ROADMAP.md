@@ -790,7 +790,7 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 38-01-PLAN.md -- Pin position resolution operation (SCH-ROUTE-01)
+- [x] 38-01-PLAN.md -- Pin position resolution operation (SCH-ROUTE-01)
 - [ ] 38-02-PLAN.md -- Collision detection + pin overlap detection operations (SCH-ROUTE-02)
 - [ ] 38-03-PLAN.md -- connect_pins operation with hybrid wire/label routing (SCH-ROUTE-03)
 - [ ] 38-04-PLAN.md -- batch_connect + regenerate_wiring high-level operations (SCH-ROUTE-04)

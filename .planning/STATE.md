@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: schematic-intelligence
-status: planning
-stopped_at: Phase 38-40 plans written, Council review pending
-last_updated: "2026-06-01T05:35:00.000Z"
-last_activity: 2026-06-01
+status: executing
+stopped_at: "Phase 38-01 complete, next: 38-02"
+last_updated: "2026-05-31T21:53:00Z"
+last_activity: 2026-05-31
 progress:
   total_phases: 40
   completed_phases: 37
   total_plans: 116
-  completed_plans: 103
-  percent: 88
+  completed_plans: 104
+  percent: 90
 ---
 
 # Project State
@@ -34,15 +34,18 @@ Last activity: 2026-06-01
 ### Wave Structure
 
 **Phase 38 (4 plans):**
+
 - Wave 1: 38-01 (pin resolution) + 38-02 (collision detection) — shared schema file, sequential
 - Wave 2: 38-03 (connect_pins) — depends on 38-01, 38-02
 - Wave 3: 38-04 (batch_connect + regenerate_wiring) — depends on 38-03
 
 **Phase 39 (3 plans):**
+
 - Wave 1: 39-01 (net extraction) + 39-02 (conflict detection) — can run parallel
 - Wave 2: 39-03 (net naming) — depends on 39-01
 
 **Phase 40 (3 plans):**
+
 - Wave 1: 40-01 (violation classification)
 - Wave 2: 40-02 (root cause diagnosis) — depends on 40-01
 - Wave 3: 40-03 (enhanced erc_auto_fix) — depends on 40-02
@@ -96,11 +99,11 @@ Recent decisions affecting current work:
 - [v2.4-SI]: Plans build on existing schematic_routing/ module (SchematicGraph, wire_router, batch_executor, netlist_parser)
 - [v2.4-SI]: Schemas in _schema_schematic_routing.py and _schema_schematic_intel.py (new files)
 - [v2.4-SI]: Schematic ops extend existing @register_schematic pattern in executor.py
+- [v2.4-SI]: PinResolver uses unit-aware lib symbol indexing via _build_unit_index() for multi-unit IC pin resolution
 
 ### Pending Todos
 
-- Council review of all 10 plans
-- Execute Phase 38 (4 plans, 3 waves)
+- Execute Phase 38 remaining plans (38-02, 38-03, 38-04)
 - Execute Phase 39 (3 plans, 2 waves)
 - Execute Phase 40 (3 plans, 3 waves)
 
@@ -114,5 +117,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 38-40 plans written, Council review pending
-Resume with: Run Council review on all plans, then execute Phase 38 first (38-01/02 Wave 1, 38-03 Wave 2, 38-04 Wave 3)
+Stopped at: Phase 38-01 complete (pin resolution), next: 38-02 (collision detection)
+Resume with: Execute 38-02, then 38-03, 38-04 (Wave 1-3 of Phase 38)
