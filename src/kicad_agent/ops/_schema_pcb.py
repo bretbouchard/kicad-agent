@@ -129,11 +129,19 @@ class AssignNetClassOp(BaseModel):
 class AutoRouteOp(BaseModel):
     """Auto-route nets on a PCB using A* pathfinding.
 
+    Supports single-layer and multi-layer routing with optional impedance
+    control and length matching for differential pairs.
+
     Attributes:
         op_type: Discriminator literal ``"auto_route"``.
         target_file: Relative path to the target KiCad PCB file (H-01 validated).
         nets: Optional list of specific net names to route. Routes all nets if empty.
-        layer: Copper layer for routed traces. Default "F.Cu".
+        layer: Copper layer for single-layer routed traces. Default "F.Cu".
+        layers: Target copper layers for multi-layer routing. Empty list uses
+            the ``layer`` field for backward-compatible single-layer mode.
+        impedance_target: Target impedance in ohms (e.g. 50.0). None = skip.
+        length_match_pairs: Net pairs for sawtooth length matching as
+            ``[(net_a, net_b, tolerance_mm), ...]``. None = skip.
     """
 
     op_type: Literal["auto_route"] = "auto_route"
@@ -141,8 +149,36 @@ class AutoRouteOp(BaseModel):
     nets: list[str] = Field(default_factory=list, description="Net names to route (empty = all)")
     layer: str = Field(
         default="F.Cu", pattern=r"^(?:[FB]\.Cu|In[1-9]\d*\.Cu)$",
-        description="Target copper layer",
+        description="Target copper layer (single-layer mode)",
     )
+    layers: list[str] = Field(
+        default_factory=list,
+        description="Target copper layers for multi-layer routing. "
+                    "Empty = use 'layer' field (single-layer mode).",
+    )
+    impedance_target: Optional[float] = Field(
+        default=None, gt=0, le=200,
+        description="Target impedance in ohms (e.g., 50.0 for controlled impedance). "
+                    "None = no impedance calculation.",
+    )
+    length_match_pairs: Optional[list[tuple[str, str, float]]] = Field(
+        default=None,
+        description="Net pairs for length matching: "
+                    "[(net_a, net_b, tolerance_mm), ...]. "
+                    "Sawtooth pattern applied to shorter net. None = no matching.",
+    )
+
+    @field_validator("layers")
+    @classmethod
+    def _validate_layer_names(cls, v: list[str]) -> list[str]:
+        """Validate that all layer names match KiCad copper layer naming."""
+        import re
+
+        pattern = r"^(?:[FB]\.Cu|In[1-9]\d*\.Cu)$"
+        for layer_name in v:
+            if not re.match(pattern, layer_name):
+                raise ValueError(f"Invalid layer name: {layer_name}")
+        return v
 
 
 class ModifyNetClassOp(BaseModel):

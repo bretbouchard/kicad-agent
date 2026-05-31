@@ -605,11 +605,53 @@ def _handle_assign_net_class(op: Any, ir: PcbIR, file_path: Path) -> dict[str, A
 
 @register_pcb("auto_route")
 def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.routing.bridge import route_to_segments, segments_to_sexpr
+    from kicad_agent.routing.bridge import (
+        TrackSegment,
+        ViaSegment,
+        route_to_segments,
+        route_to_segments_multilayer,
+        segments_to_sexpr,
+    )
     from kicad_agent.routing.constraints import RoutingConstraints
-    from kicad_agent.routing.pathfinder import build_routing_graph, route_all_nets
+    from kicad_agent.routing.pathfinder import RouteResult, build_routing_graph, route_all_nets
 
-    constraints = RoutingConstraints()
+    # Determine active layers.
+    active_layers = op.layers if op.layers else [op.layer]
+    is_multilayer = len(active_layers) > 1
+
+    # Build base constraints with stackup parameters.
+    constraints = RoutingConstraints(
+        dielectric_constant=4.5,
+        dielectric_height_mm=0.2,
+        copper_thickness_mm=0.035,
+    )
+
+    # Impedance control: calculate trace width per layer (ROUTE-06).
+    layer_trace_widths: dict[str, float] | None = None
+    impedance_result = None
+    if op.impedance_target is not None:
+        from kicad_agent.routing.impedance import solve_trace_width
+
+        layer_trace_widths = {}
+        for layer_name in active_layers:
+            model = "microstrip" if layer_name in ("F.Cu", "B.Cu") else "stripline"
+            result = solve_trace_width(
+                target_z0=op.impedance_target,
+                h=constraints.dielectric_height_mm,
+                t=constraints.copper_thickness_mm,
+                er=constraints.dielectric_constant,
+                model=model,
+            )
+            layer_trace_widths[layer_name] = result.trace_width_mm
+        impedance_result = result  # Report last result for user feedback
+
+        # Create new constraints with layer-specific trace widths.
+        constraints = RoutingConstraints(
+            dielectric_constant=constraints.dielectric_constant,
+            dielectric_height_mm=constraints.dielectric_height_mm,
+            copper_thickness_mm=constraints.copper_thickness_mm,
+            layer_trace_widths=layer_trace_widths,
+        )
 
     bounds = ir.get_board_bounds()
     if bounds is None:
@@ -622,24 +664,101 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     if op.nets:
         netlist = {n: pins for n, pins in netlist.items() if n in op.nets}
 
-    routing_graph = build_routing_graph(bounds, constraints=constraints)
+    # Build routing graph with layers support.
+    routing_graph = build_routing_graph(
+        bounds,
+        constraints=constraints,
+        layers=active_layers if is_multilayer else None,
+    )
     results = route_all_nets(routing_graph, netlist)
 
-    segments = route_to_segments(results, constraints, layer=op.layer)
+    # Length matching: apply sawtooth to specified net pairs (ROUTE-07).
+    matched_pairs: list[dict[str, Any]] = []
+    if op.length_match_pairs:
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        from kicad_agent.routing.pathfinder import _path_length as calc_len
+
+        for net_a, net_b, tolerance_mm in op.length_match_pairs:
+            if net_a in results and net_b in results:
+                len_a = results[net_a].length_mm
+                len_b = results[net_b].length_mm
+                mismatch = abs(len_a - len_b)
+                if mismatch > tolerance_mm:
+                    delta = mismatch - tolerance_mm
+                    shorter_net = net_a if len_a < len_b else net_b
+                    shorter_path = results[shorter_net].path
+                    # Extract 2D waypoints from potentially 3D path.
+                    path_2d = tuple(
+                        (p[0], p[1]) for p in shorter_path
+                    )
+                    match_result = add_sawtooth_matching(
+                        path_2d, delta, spacing_mm=constraints.trace_width_mm,
+                    )
+                    if match_result.valid:
+                        matched_path = match_result.path
+                        # Re-attach layer info if 3D path.
+                        if is_multilayer and len(shorter_path) > 0 and len(shorter_path[0]) >= 3:
+                            layer = shorter_path[0][2]
+                            matched_path_3d = tuple(
+                                (p[0], p[1], layer) for p in matched_path
+                            )
+                        else:
+                            matched_path_3d = matched_path
+                        results[shorter_net] = RouteResult(
+                            net_name=shorter_net,
+                            path=matched_path_3d,
+                            length_mm=round(calc_len(list(matched_path_3d)), 4),
+                            success=True,
+                        )
+                        matched_pairs.append({
+                            "pair": (net_a, net_b),
+                            "achieved_mismatch_mm": round(
+                                abs(results[net_a].length_mm - results[net_b].length_mm), 4
+                            ),
+                            "valid": True,
+                        })
+                    else:
+                        matched_pairs.append({
+                            "pair": (net_a, net_b),
+                            "valid": False,
+                            "reason": "Could not achieve target length match",
+                        })
+
+    # Convert to segments.
+    if is_multilayer:
+        segments = route_to_segments_multilayer(results, constraints)
+    else:
+        segments = route_to_segments(results, constraints, layer=op.layer)
     segment_count = len(segments)
-    routed_nets = len(segments) and len({s.net for s in segments})
+    via_count = sum(1 for s in segments if isinstance(s, ViaSegment))
+    routed_nets = len({s.net for s in segments}) if segments else 0
 
     if segments:
-        sexpr_block = segments_to_sexpr(segments)
-        ir.insert_track_segments(sexpr_block)
+        track_segs = [s for s in segments if isinstance(s, TrackSegment)]
+        if track_segs:
+            sexpr_block = segments_to_sexpr(track_segs)
+            ir.insert_track_segments(sexpr_block)
+        # Insert vias separately.
+        via_segs = [s for s in segments if isinstance(s, ViaSegment)]
+        if via_segs:
+            via_block = "\n".join(s.to_sexpr() for s in via_segs)
+            ir.insert_track_segments(via_block)
 
     return {
         "routed_nets": routed_nets,
         "segments": segment_count,
+        "vias": via_count,
         "failed_nets": [
             n for n in netlist
             if n not in results or not results[n].success
         ],
+        "impedance": (
+            {"target_z0": impedance_result.target_z0,
+             "achieved_z0": impedance_result.achieved_z0,
+             "trace_width_mm": impedance_result.trace_width_mm}
+            if impedance_result else None
+        ),
+        "length_matching": matched_pairs if matched_pairs else None,
     }
 
 
