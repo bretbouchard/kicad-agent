@@ -16,10 +16,17 @@ from __future__ import annotations
 import math
 import statistics
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from kicad_agent.training.chains import synthesize_maze_chain, synthesize_corrupted_chain
 from kicad_agent.training.dataset import MazeDataset, MazeSample
+from kicad_agent.training.regression import (
+    BaselineStore,
+    RegressionResult,
+    RegressionThresholds,
+    detect_regression,
+)
 from kicad_agent.training.reward import score_chain
 
 
@@ -186,6 +193,44 @@ class EvaluationHarness:
             "delta_coverage": after.coordinate_coverage - before.coordinate_coverage,
             "delta_pass_rate": after.pass_rate - before.pass_rate,
         }
+
+    def detect_regression(
+        self,
+        baseline: EvalResult,
+        current: EvalResult,
+        thresholds: RegressionThresholds = RegressionThresholds(),
+    ) -> RegressionResult:
+        """Detect regression between baseline and current evaluation.
+
+        Delegates to regression.detect_regression for threshold comparison.
+
+        Args:
+            baseline: Previous evaluation result.
+            current: New evaluation result.
+            thresholds: Configurable thresholds for each metric.
+
+        Returns:
+            RegressionResult with regression status and details.
+        """
+        return detect_regression(baseline, current, thresholds)
+
+    def save_baseline(
+        self, name: str, result: EvalResult, store_dir: Path | None = None
+    ) -> Path:
+        """Save an evaluation result as a baseline for future comparison.
+
+        Convenience wrapper for BaselineStore.save_baseline.
+
+        Args:
+            name: Baseline identifier.
+            result: Evaluation result to persist.
+            store_dir: Optional directory for baseline storage.
+
+        Returns:
+            Path to saved baseline file.
+        """
+        store = BaselineStore(store_dir)
+        return store.save_baseline(name, result)
 
 
 def run_baseline(test_dataset: MazeDataset) -> EvalResult:
