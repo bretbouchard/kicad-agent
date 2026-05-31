@@ -63,8 +63,14 @@ def microstrip_z0(w: float, h: float, t: float, er: float) -> float:
     """
     eff_er = ((er + 1) / 2
               + (er - 1) / 2 * math.pow(1 + 12 * h / w, -0.5))
+    log_arg = 5.98 * h / (0.8 * w + t)
+    if log_arg <= 0:
+        raise ValueError(
+            f"Microstrip formula invalid: 5.98*h/(0.8*w+t) = {log_arg:.4f} <= 0. "
+            f"w={w}, h={h}, t={t} are outside IPC-2141 valid range."
+        )
     z0 = (87 / math.sqrt(eff_er)
-          * math.log(5.98 * h / (0.8 * w + t)))
+          * math.log(log_arg))
     return z0
 
 
@@ -160,8 +166,8 @@ def solve_trace_width(
         z0_mid = z0_fn(mid, h, t, er)
 
         if abs(z0_mid - target_z0) / target_z0 * 100 <= tolerance_percent * 0.1:
-            # Converged well within tolerance; keep refining.
-            pass
+            # Converged well within tolerance; exit early.
+            break
 
         if z0_mid > target_z0:
             # Impedance too high -> need wider trace.

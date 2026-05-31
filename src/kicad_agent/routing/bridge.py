@@ -203,10 +203,12 @@ def route_to_segments_multilayer(
 
             # Check for layer transition.
             if len(p0) >= 3 and len(p1) >= 3 and p0[2] != p1[2]:
-                # Layer transition -- create a via.
+                # Layer transition -- create a via at midpoint.
+                via_x = round((p0[0] + p1[0]) / 2.0, 4)
+                via_y = round((p0[1] + p1[1]) / 2.0, 4)
                 segments.append(ViaSegment(
-                    x=round(p1[0], 4),
-                    y=round(p1[1], 4),
+                    x=via_x,
+                    y=via_y,
                     from_layer=p0[2],
                     to_layer=p1[2],
                     diameter=constraints.via_diameter_mm,

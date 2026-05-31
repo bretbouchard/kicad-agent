@@ -635,6 +635,11 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
         layer_trace_widths = {}
         for layer_name in active_layers:
             model = "microstrip" if layer_name in ("F.Cu", "B.Cu") else "stripline"
+            if layer_name == "B.Cu" and len(active_layers) > 2:
+                logger.warning(
+                    "B.Cu modeled as microstrip — may be inaccurate for 4+ layer "
+                    "stackups where B.Cu is embedded. Use layer_trace_widths override."
+                )
             result = solve_trace_width(
                 target_z0=op.impedance_target,
                 h=constraints.dielectric_height_mm,
