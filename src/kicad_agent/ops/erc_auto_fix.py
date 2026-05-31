@@ -125,6 +125,12 @@ def erc_auto_fix(
     iteration_count = 0
     previous_count = -1
 
+    # Known limitation (Council M-03): The IR object is NOT re-parsed between
+    # iterations. Repair functions mutate the IR in memory, so later iterations
+    # operate on the same (mutated) IR. This is acceptable because parse_erc
+    # re-reads the file from disk for fresh ERC results, and the early-stop
+    # heuristic catches stagnation.
+
     for iteration in range(max_iterations):
         violations = parse_erc(file_path)
         current_count = len(violations)

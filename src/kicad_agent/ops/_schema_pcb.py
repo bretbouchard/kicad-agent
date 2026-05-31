@@ -2,7 +2,7 @@
 
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from kicad_agent.ops.schema import (
     TargetFile,
@@ -271,7 +271,10 @@ class ModifyProjectSettingsOp(BaseModel):
 
     op_type: Literal["modify_project_settings"] = "modify_project_settings"
     target_file: TargetFile
-    updates: dict[str, Any] = Field(description="JSON sections to merge into the project file")
+    updates: dict[str, Any] = Field(
+        max_length=50,
+        description="JSON sections to merge into the project file (max 50 keys)",
+    )
 
 
 class ModifyCopperZoneOp(BaseModel):
@@ -295,7 +298,10 @@ class ModifyCopperZoneOp(BaseModel):
     target_file: TargetFile
     zone_uuid: str = Field(min_length=1, max_length=64, description="Zone UUID (tstamp)")
     net_name: Optional[str] = Field(default=None, max_length=64, description="New net name")
-    layer: Optional[str] = Field(default=None, max_length=32, description="New layer")
+    layer: Optional[str] = Field(
+        default=None, max_length=32, pattern=r"^[FB]\.Cu|In[1-9]\d*\.Cu$",
+        description="New layer (e.g. F.Cu, B.Cu, In1.Cu)",
+    )
     clearance: Optional[float] = Field(default=None, gt=0, description="New clearance in mm")
     min_width: Optional[float] = Field(default=None, gt=0, description="New minimum fill width")
     priority: Optional[int] = Field(default=None, ge=0, description="New priority")
@@ -317,3 +323,9 @@ class RemoveCopperZoneOp(BaseModel):
     target_file: TargetFile
     zone_uuid: Optional[str] = Field(default=None, max_length=64, description="Zone UUID (tstamp)")
     zone_index: Optional[int] = Field(default=None, ge=0, description="Zone index fallback")
+
+    @model_validator(mode="after")
+    def _check_identifier_provided(self) -> "RemoveCopperZoneOp":
+        if self.zone_uuid is None and self.zone_index is None:
+            raise ValueError("Must specify at least one of zone_uuid or zone_index")
+        return self

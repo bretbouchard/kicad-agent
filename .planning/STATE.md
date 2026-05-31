@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: production-hardening
 status: completed
-stopped_at: Completed 35-03-PLAN.md
-last_updated: "2026-05-31T16:35:18.356Z"
+stopped_at: Phase 35 verified and complete
+last_updated: "2026-05-31T20:00:00.000Z"
 last_activity: 2026-05-31
 progress:
   total_phases: 37
   completed_phases: 35
-  total_plans: 94
-  completed_plans: 94
+  total_plans: 97
+  completed_plans: 97
   percent: 100
 ---
 
@@ -26,9 +26,9 @@ Last activity: 2026-05-31
 
 ## Current Position
 
-Phase: 35 (Remaining Ops Gaps) -- COMPLETE
-Status: **All 3 plans complete** -- 74 total operations (project CRUD, erc_auto_fix, hierarchical power, copper zone modify/delete).
-Last activity: 2026-05-31 -- Completed 35-03-PLAN.md
+Phase: 35 (Remaining Ops Gaps) -- VERIFIED COMPLETE
+Status: **All 3 plans executed, Council review passed, 9/9 must-haves verified** -- 74 total operations.
+Last activity: 2026-05-31 -- Council execution review fixed, regression 1854 passing
 
 ## Previous Milestone (v2.3)
 
@@ -77,6 +77,10 @@ Recent decisions affecting current work:
 - [v2.4]: _check_hierarchical_power reuses sheet traversal pattern from check_sheet_pin_labels
 - [v2.4]: modify_copper_zone resolves net via get_net_by_name or creates new net if not found
 - [v2.4]: remove_copper_zone prefers UUID lookup, falls back to index, raises ValueError if neither provided
+- [v2.4]: Council H-01 fix: 6 repair ops (UpdateSymbols, FixShortedNets, FixPinTypeMismatches, PlaceMissingUnits, RemoveDanglingWires, BreakWireShorts) added to schema union -- was 68, now 74
+- [v2.4]: Council H-02 fix: ModifyProjectSettingsOp.updates bounded to max_length=50
+- [v2.4]: Council M-04 fix: ModifyCopperZoneOp.layer validated with pattern r"^[FB]\.Cu|In[1-9]\d*\.Cu$"
+- [v2.4]: Council L-03 fix: RemoveCopperZoneOp has model_validator requiring at least one of zone_uuid/zone_index
 
 ### Pending Todos
 
@@ -92,5 +96,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed 35-03-PLAN.md
-Resume with: Phase 35 complete -- all ops gaps closed, 74 total operations
+Stopped at: Phase 35 verified and complete
+Resume with: All 35 phases complete. 74 operations, 1854 tests. Ready for next milestone or phase 36+.

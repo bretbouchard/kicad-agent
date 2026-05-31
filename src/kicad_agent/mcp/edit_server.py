@@ -1,4 +1,4 @@
-"""MCP server exposing all 68 kicad-agent operations as individually named tools.
+"""MCP server exposing all kicad-agent operations as individually named tools.
 
 Dynamic tool generation from Pydantic Operation discriminated union.
 Follows the same pattern as the existing component-search server.
@@ -113,7 +113,7 @@ _META_TOOLS = [
     types.Tool(
         name="get_operation_schema",
         description=(
-            "Get the full JSON Schema for all 68 kicad-agent operations. "
+            "Get the full JSON Schema for all kicad-agent operations. "
             "Use this to discover available operations and their parameters."
         ),
         inputSchema={"type": "object", "properties": {}},

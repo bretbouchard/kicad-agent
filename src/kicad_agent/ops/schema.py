@@ -257,6 +257,12 @@ from kicad_agent.ops._schema_repair import (  # noqa: E402
     AddPowerFlagOp,
     RebuildRootSheetOp,
     SwapSymbolOp,
+    UpdateSymbolsFromLibraryOp,
+    FixShortedNetsOp,
+    FixPinTypeMismatchesOp,
+    PlaceMissingUnitsOp,
+    RemoveDanglingWiresOp,
+    BreakWireShortsOp,
     ErcAutoFixOp,
 )
 from kicad_agent.ops._schema_sheet import (  # noqa: E402
@@ -348,6 +354,12 @@ class Operation(BaseModel):
         | RemoveDesignRuleOp
         | ListDesignRulesOp
         | ModifyProjectSettingsOp
+        | UpdateSymbolsFromLibraryOp
+        | FixShortedNetsOp
+        | FixPinTypeMismatchesOp
+        | PlaceMissingUnitsOp
+        | RemoveDanglingWiresOp
+        | BreakWireShortsOp
         | ErcAutoFixOp
         | ModifyCopperZoneOp
         | RemoveCopperZoneOp,
@@ -450,6 +462,12 @@ __all__ = [
     "AddPowerFlagOp",
     "RebuildRootSheetOp",
     "SwapSymbolOp",
+    "UpdateSymbolsFromLibraryOp",
+    "FixShortedNetsOp",
+    "FixPinTypeMismatchesOp",
+    "PlaceMissingUnitsOp",
+    "RemoveDanglingWiresOp",
+    "BreakWireShortsOp",
     "ErcAutoFixOp",
     # Sheet ops
     "AddSheetOp",

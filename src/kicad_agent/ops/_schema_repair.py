@@ -1,6 +1,6 @@
 """Repair operation schemas -- repair, convert, snap, power flag, rebuild root sheet, swap symbol,
 update symbols from library, fix shorted nets, fix pin type mismatches, place missing units,
-remove dangling wires, break wire shorts."""
+remove dangling wires, break wire shorts, erc auto-fix."""
 
 from typing import Literal, Optional
 

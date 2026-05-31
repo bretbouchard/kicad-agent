@@ -36,7 +36,7 @@ class TestToolGeneration:
     """Dynamic tool generation from Operation discriminated union."""
 
     def test_generates_57_operation_tools(self) -> None:
-        assert len(_OPERATION_TOOLS) == 68  # 57 original + 8 project CRUD ops + 1 erc_auto_fix meta-op + 2 copper zone modify/delete
+        assert len(_OPERATION_TOOLS) == 74  # 57 original + 8 project CRUD + 1 erc_auto_fix + 2 copper zone + 6 repair ops
 
     def test_generates_6_meta_tools(self) -> None:
         assert len(_META_TOOLS) == 6
@@ -44,7 +44,7 @@ class TestToolGeneration:
         assert meta_names == {"get_operation_schema", "get_project_context", "erc_check", "drc_check", "undo", "redo"}
 
     def test_total_tool_count(self) -> None:
-        assert len(_ALL_TOOLS) == 74  # 68 ops + 6 meta
+        assert len(_ALL_TOOLS) == 80  # 74 ops + 6 meta
 
     def test_all_tools_have_names(self) -> None:
         for tool in _ALL_TOOLS:
