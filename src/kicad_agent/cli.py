@@ -32,6 +32,7 @@ import sys
 from pathlib import Path
 
 from kicad_agent.handler import format_result, handle_operation, validate_operation
+from kicad_agent.logging_config import configure_logging
 from kicad_agent.ops.schema import get_operation_schema
 
 _SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats"}
@@ -156,11 +157,7 @@ def _handle_collect(argv: list[str]) -> None:
 
     from kicad_agent.training.real_dataset import run_pipeline
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    configure_logging()
 
     args.staging_dir.mkdir(parents=True, exist_ok=True)
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -578,6 +575,8 @@ def main(argv: list[str] | None = None) -> None:
 
     # Route subcommands to their own parsers
     if argv and argv[0] in _SUBCOMMANDS:
+        # Ensure structured logging is configured for subcommand paths
+        configure_logging()
         subcmd = argv[0]
         subcmd_argv = argv[1:]
         if subcmd == "collect":
@@ -601,6 +600,7 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     # Legacy operation mode
+    configure_logging()
     parser = _build_operation_parser()
     args = parser.parse_args(argv)
 
