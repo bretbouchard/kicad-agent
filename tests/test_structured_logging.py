@@ -64,14 +64,12 @@ def test_json_output_valid_json():
 
     configure_logging(level="INFO", json_output=True)
 
-    # Capture stderr where logging outputs
-    stream = StringIO()
-    handler = logging.StreamHandler(stream)
-    handler.setFormatter(logging.Formatter("%(message)s"))
-
+    # Redirect the configured handler's stream to capture output
     root = logging.getLogger()
-    # Remove existing handlers, add our capture handler
-    root.handlers = [handler]
+    stream = StringIO()
+    # The handler installed by configure_logging uses ProcessorFormatter
+    assert len(root.handlers) == 1
+    root.handlers[0].stream = stream
 
     logger = logging.getLogger("test.json.module")
     logger.info("test event message")
@@ -90,13 +88,11 @@ def test_console_output_not_json():
 
     configure_logging(level="INFO", json_output=False)
 
-    # Capture output
-    stream = StringIO()
-    handler = logging.StreamHandler(stream)
-    handler.setFormatter(logging.Formatter("%(message)s"))
-
+    # Redirect the configured handler's stream to capture output
     root = logging.getLogger()
-    root.handlers = [handler]
+    stream = StringIO()
+    assert len(root.handlers) == 1
+    root.handlers[0].stream = stream
 
     logger = logging.getLogger("test.console.module")
     logger.info("console test message")
@@ -129,13 +125,11 @@ def test_stdlib_interception():
 
     configure_logging(level="INFO", json_output=True)
 
-    # Capture output
-    stream = StringIO()
-    handler = logging.StreamHandler(stream)
-    handler.setFormatter(logging.Formatter("%(message)s"))
-
+    # Redirect the configured handler's stream to capture output
     root = logging.getLogger()
-    root.handlers = [handler]
+    stream = StringIO()
+    assert len(root.handlers) == 1
+    root.handlers[0].stream = stream
 
     # Use a stdlib logger like existing code does
     module_logger = logging.getLogger("kicad_agent.ops.executor")
@@ -161,13 +155,11 @@ def test_env_var_json_format(monkeypatch):
     monkeypatch.setenv("KICAD_LOG_FORMAT", "json")
     configure_logging()
 
-    # Capture output
-    stream = StringIO()
-    handler = logging.StreamHandler(stream)
-    handler.setFormatter(logging.Formatter("%(message)s"))
-
+    # Redirect the configured handler's stream to capture output
     root = logging.getLogger()
-    root.handlers = [handler]
+    stream = StringIO()
+    assert len(root.handlers) == 1
+    root.handlers[0].stream = stream
 
     logger = logging.getLogger("test.env.json")
     logger.info("env var test")
