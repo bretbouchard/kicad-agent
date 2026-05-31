@@ -38,13 +38,13 @@ class TestToolGeneration:
     def test_generates_74_operation_tools(self) -> None:
         assert len(_OPERATION_TOOLS) == 74  # 57 original + 8 project CRUD + 1 erc_auto_fix + 2 copper zone + 6 repair ops
 
-    def test_generates_6_meta_tools(self) -> None:
-        assert len(_META_TOOLS) == 6
+    def test_generates_7_meta_tools(self) -> None:
+        assert len(_META_TOOLS) == 7
         meta_names = {t.name for t in _META_TOOLS}
-        assert meta_names == {"get_operation_schema", "get_project_context", "erc_check", "drc_check", "undo", "redo"}
+        assert meta_names == {"health_check", "get_operation_schema", "get_project_context", "erc_check", "drc_check", "undo", "redo"}
 
     def test_total_tool_count(self) -> None:
-        assert len(_ALL_TOOLS) == 80  # 74 ops + 6 meta
+        assert len(_ALL_TOOLS) == 81  # 74 ops + 7 meta
 
     def test_all_tools_have_names(self) -> None:
         for tool in _ALL_TOOLS:

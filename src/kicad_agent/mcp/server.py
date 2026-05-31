@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import signal
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -41,10 +42,27 @@ from kicad_agent.mcp.tools import (
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# Server lifecycle state
+# ---------------------------------------------------------------------------
+
+_started_at = time.time()
+_shutdown_requested = False
+_in_flight_count = 0
+
+# ---------------------------------------------------------------------------
 # Tool schema definitions
 # ---------------------------------------------------------------------------
 
 _TOOL_DEFINITIONS = [
+    types.Tool(
+        name="health_check",
+        description=(
+            "Returns server health status including uptime and tool availability. "
+            "Use for liveness probing."
+        ),
+        inputSchema={"type": "object", "properties": {}},
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
     types.Tool(
         name="search_components",
         description=(
@@ -208,6 +226,23 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
     client: EasyEdaClient = lifespan_ctx["client"]
 
     try:
+        if name == "health_check":
+            uptime = time.time() - _started_at
+            health = {
+                "status": "shutting_down" if _shutdown_requested else "healthy",
+                "uptime_seconds": round(uptime, 1),
+                "in_flight_operations": _in_flight_count,
+                "total_tools_available": len(_TOOL_DEFINITIONS),
+            }
+            return [types.TextContent(type="text", text=json.dumps(health, indent=2))]
+
+        # Reject new operations during shutdown
+        if _shutdown_requested:
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({"error": "shutting_down", "message": "Server is shutting down"}),
+            )]
+
         if name == "search_components":
             result = await _rate_limited_thread_call(
                 search_components,
@@ -278,7 +313,27 @@ def main() -> None:
     """CLI entry point for kicad-component-search."""
     from kicad_agent.logging_config import configure_logging
     configure_logging()
-    asyncio.run(_run_server())
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    def _request_shutdown():
+        global _shutdown_requested
+        _shutdown_requested = True
+        logger.info("Shutdown signal received, draining in-flight ops...")
+
+    try:
+        loop.add_signal_handler(signal.SIGTERM, _request_shutdown)
+        loop.add_signal_handler(signal.SIGINT, _request_shutdown)
+    except NotImplementedError:
+        import signal as sig_mod
+        sig_mod.signal(sig_mod.SIGTERM, lambda s, f: _request_shutdown())
+        sig_mod.signal(sig_mod.SIGINT, lambda s, f: _request_shutdown())
+
+    try:
+        loop.run_until_complete(_run_server())
+    finally:
+        loop.close()
 
 
 if __name__ == "__main__":
