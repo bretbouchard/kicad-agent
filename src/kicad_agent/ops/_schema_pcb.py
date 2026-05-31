@@ -272,3 +272,48 @@ class ModifyProjectSettingsOp(BaseModel):
     op_type: Literal["modify_project_settings"] = "modify_project_settings"
     target_file: TargetFile
     updates: dict[str, Any] = Field(description="JSON sections to merge into the project file")
+
+
+class ModifyCopperZoneOp(BaseModel):
+    """Modify an existing copper zone on a PCB.
+
+    Only specified (non-None) fields are updated; None means keep existing value.
+    Zone is identified by its UUID (tstamp).
+
+    Attributes:
+        op_type: Discriminator literal ``"modify_copper_zone"``.
+        target_file: Relative path to the target KiCad PCB file (H-01 validated).
+        zone_uuid: Zone UUID (tstamp) to identify the zone to modify.
+        net_name: New net name (optional).
+        layer: New copper layer (optional).
+        clearance: New clearance in mm (optional).
+        min_width: New minimum fill width in mm (optional).
+        priority: New priority (optional).
+    """
+
+    op_type: Literal["modify_copper_zone"] = "modify_copper_zone"
+    target_file: TargetFile
+    zone_uuid: str = Field(min_length=1, max_length=64, description="Zone UUID (tstamp)")
+    net_name: Optional[str] = Field(default=None, max_length=64, description="New net name")
+    layer: Optional[str] = Field(default=None, max_length=32, description="New layer")
+    clearance: Optional[float] = Field(default=None, gt=0, description="New clearance in mm")
+    min_width: Optional[float] = Field(default=None, gt=0, description="New minimum fill width")
+    priority: Optional[int] = Field(default=None, ge=0, description="New priority")
+
+
+class RemoveCopperZoneOp(BaseModel):
+    """Remove a copper zone from a PCB.
+
+    Zone is identified by UUID (preferred) or index (fallback).
+
+    Attributes:
+        op_type: Discriminator literal ``"remove_copper_zone"``.
+        target_file: Relative path to the target KiCad PCB file (H-01 validated).
+        zone_uuid: Zone UUID (tstamp) to identify the zone (preferred).
+        zone_index: Zone index as fallback when UUID is not available.
+    """
+
+    op_type: Literal["remove_copper_zone"] = "remove_copper_zone"
+    target_file: TargetFile
+    zone_uuid: Optional[str] = Field(default=None, max_length=64, description="Zone UUID (tstamp)")
+    zone_index: Optional[int] = Field(default=None, ge=0, description="Zone index fallback")

@@ -231,6 +231,8 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
     RemoveDesignRuleOp,
     ListDesignRulesOp,
     ModifyProjectSettingsOp,
+    ModifyCopperZoneOp,
+    RemoveCopperZoneOp,
 )
 from kicad_agent.ops._schema_validation import (  # noqa: E402
     ValidatePowerNetsOp,
@@ -346,7 +348,9 @@ class Operation(BaseModel):
         | RemoveDesignRuleOp
         | ListDesignRulesOp
         | ModifyProjectSettingsOp
-        | ErcAutoFixOp,
+        | ErcAutoFixOp
+        | ModifyCopperZoneOp
+        | RemoveCopperZoneOp,
         Field(discriminator="op_type"),
     ]
 
@@ -423,6 +427,8 @@ __all__ = [
     "RemoveDesignRuleOp",
     "ListDesignRulesOp",
     "ModifyProjectSettingsOp",
+    "ModifyCopperZoneOp",
+    "RemoveCopperZoneOp",
     # Validation ops
     "ValidatePowerNetsOp",
     "ValidateSchematicOp",

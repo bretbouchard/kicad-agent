@@ -16,10 +16,15 @@ class ValidatePowerNetsOp(BaseModel):
     Attributes:
         op_type: Discriminator literal ``"validate_power_nets"``.
         target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        check_hierarchical: Also check power nets span hierarchical sheets (default True).
     """
 
     op_type: Literal["validate_power_nets"] = "validate_power_nets"
     target_file: TargetFile
+    check_hierarchical: bool = Field(
+        default=True,
+        description="Check power nets span hierarchical sheets",
+    )
 
 
 class ValidateSchematicOp(BaseModel):

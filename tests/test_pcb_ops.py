@@ -23,6 +23,15 @@ from kicad_agent.parser import parse_pcb
 from kicad_agent.parser.uuid_extractor import extract_uuids
 
 
+@pytest.fixture(autouse=True)
+def _clear_ir_registry():
+    """Clear IR registry between tests to prevent ParseResult reuse errors."""
+    from kicad_agent.ir.base import _clear_registry
+    _clear_registry()
+    yield
+    _clear_registry()
+
+
 def _create_minimal_pcb(tmpdir: Path, name: str = "test.kicad_pcb") -> tuple[Path, PcbIR]:
     """Create a minimal PCB with a GND net, save it, and return parsed IR."""
     pcb_path = tmpdir / name

@@ -29,7 +29,11 @@ _POWER_PIN_TYPES = {"power_in", "power_out"}
 _COMMON_POWER_NETS = {"GND", "VCC", "+5V", "+3V3", "+3.3V", "VDD", "VSS"}
 
 
-def validate_power_nets(ir: SchematicIR) -> dict[str, Any]:
+def validate_power_nets(
+    ir: SchematicIR,
+    file_path: Path | None = None,
+    check_hierarchical: bool = False,
+) -> dict[str, Any]:
     """Check all power pins have connected power symbols.
 
     Finds all power pins (power_in, power_out) in the schematic and verifies
@@ -37,6 +41,8 @@ def validate_power_nets(ir: SchematicIR) -> dict[str, Any]:
 
     Args:
         ir: SchematicIR for the target schematic.
+        file_path: Path to the .kicad_sch file (required for hierarchical check).
+        check_hierarchical: Also traverse sub-sheets for power connectivity.
 
     Returns:
         Dict with:
@@ -44,6 +50,7 @@ def validate_power_nets(ir: SchematicIR) -> dict[str, Any]:
         - unconnected_power_pins: list of dicts with pin details
         - power_nets: list of power net names found
         - missing_power_symbols: list of net names lacking power sources
+        - hierarchical_issues: list of dicts (only when check_hierarchical=True)
     """
     sch = ir.schematic
     pin_positions = ir.get_pin_positions()
@@ -120,12 +127,19 @@ def validate_power_nets(ir: SchematicIR) -> dict[str, Any]:
     all_power_nets = sorted(power_symbol_nets | power_in_nets)
     valid = len(unconnected) == 0 and len(missing_power_symbols) == 0
 
-    return {
+    result: dict[str, Any] = {
         "valid": valid,
         "unconnected_power_pins": unconnected,
         "power_nets": all_power_nets,
         "missing_power_symbols": sorted(set(missing_power_symbols)),
     }
+
+    if check_hierarchical and file_path is not None:
+        hierarchical_issues = _check_hierarchical_power(ir, file_path)
+        result["hierarchical_issues"] = hierarchical_issues
+        result["valid"] = valid and len(hierarchical_issues) == 0
+
+    return result
 
 
 def check_erc_clean(sch_path: Path) -> dict[str, Any]:
@@ -331,6 +345,79 @@ def _distance(x1: float, y1: float, x2: float, y2: float) -> float:
 def _round_pos(x: float, y: float) -> tuple[float, float]:
     """Round position to 0.01mm precision for grouping."""
     return (round(x, 2), round(y, 2))
+
+
+def _check_hierarchical_power(ir: SchematicIR, file_path: Path) -> list[dict[str, Any]]:
+    """Check power nets span hierarchical sheets.
+
+    For each sub-sheet referenced by the root schematic, finds power-related
+    sheet pins and verifies each has at least one power symbol inside the
+    sub-sheet. Reuses the sheet traversal pattern from check_sheet_pin_labels().
+
+    Args:
+        ir: SchematicIR for the root schematic.
+        file_path: Path to the root .kicad_sch file.
+
+    Returns:
+        List of issue dicts with sub_sheet, net, and issue description.
+    """
+    from kicad_agent.parser import parse_schematic
+
+    sch = ir.schematic
+    issues: list[dict[str, Any]] = []
+
+    # Power-related name patterns for sheet pins
+    _POWER_NAME_PATTERNS = {
+        "GND", "VCC", "VDD", "VSS", "AGND", "DGND",
+        "+3V3", "+3.3V", "+5V", "+3V", "+12V", "-12V",
+        "+1V8", "+1.2V", "VBAT", "VREF",
+    }
+
+    def _is_power_pin_name(name: str) -> bool:
+        """Check if a pin name looks like a power net."""
+        upper = name.upper().lstrip("+").lstrip("-")
+        return name in _POWER_NAME_PATTERNS or upper in _POWER_NAME_PATTERNS
+
+    for sheet in sch.sheets:
+        sheet_file_name = sheet.fileName.value if sheet.fileName else ""
+        if not sheet_file_name:
+            continue
+
+        # Resolve sub-sheet path relative to parent schematic
+        sub_sch_path = file_path.resolve().parent / sheet_file_name
+        if not sub_sch_path.exists():
+            continue
+
+        try:
+            sub_result = parse_schematic(sub_sch_path)
+            sub_ir = SchematicIR(_parse_result=sub_result)
+        except Exception:
+            continue
+
+        # Find power symbol nets inside the sub-sheet
+        sub_power_symbol_nets: set[str] = set()
+        for sym in sub_ir.schematic.schematicSymbols:
+            if sym.libId.startswith("power:"):
+                net_name = sym.libId.split(":", 1)[1]
+                for prop in sym.properties:
+                    if prop.key == "Value":
+                        net_name = prop.value
+                        break
+                sub_power_symbol_nets.add(net_name)
+
+        # Check each sheet pin that looks like a power net
+        sheet_name = sheet.sheetName.value if sheet.sheetName else sheet_file_name
+        for pin in sheet.pins:
+            pin_name = pin.name if pin.name else ""
+            if pin_name and _is_power_pin_name(pin_name):
+                if pin_name not in sub_power_symbol_nets:
+                    issues.append({
+                        "sub_sheet": sheet_name,
+                        "net": pin_name,
+                        "issue": "no power symbol for boundary net",
+                    })
+
+    return issues
 
 
 def validate_schematic_completeness(

@@ -313,7 +313,7 @@ def _handle_repair_schematic(op: Any, ir: SchematicIR, file_path: Path) -> dict[
 @register_schematic("validate_power_nets")
 def _handle_validate_power_nets(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.validation_gates import validate_power_nets
-    return validate_power_nets(ir)
+    return validate_power_nets(ir, file_path, check_hierarchical=op.check_hierarchical)
 
 
 @register_schematic("validate_schematic")
@@ -560,6 +560,30 @@ def _handle_add_copper_zone(op: Any, ir: PcbIR, file_path: Path) -> dict[str, An
         clearance=op.clearance,
         min_width=op.min_width,
         priority=op.priority,
+    )
+
+
+@register_pcb("modify_copper_zone")
+def _handle_modify_copper_zone(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.pcb_ops import modify_copper_zone
+    return modify_copper_zone(
+        ir, file_path,
+        zone_uuid=op.zone_uuid,
+        net_name=op.net_name,
+        layer=op.layer,
+        clearance=op.clearance,
+        min_width=op.min_width,
+        priority=op.priority,
+    )
+
+
+@register_pcb("remove_copper_zone")
+def _handle_remove_copper_zone(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.pcb_ops import remove_copper_zone
+    return remove_copper_zone(
+        ir, file_path,
+        zone_uuid=op.zone_uuid,
+        zone_index=op.zone_index,
     )
 
 

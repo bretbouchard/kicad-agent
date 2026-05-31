@@ -108,6 +108,128 @@ def add_copper_zone(
     }
 
 
+def modify_copper_zone(
+    ir: PcbIR,
+    file_path: object,
+    zone_uuid: str,
+    net_name: str | None = None,
+    layer: str | None = None,
+    clearance: float | None = None,
+    min_width: float | None = None,
+    priority: int | None = None,
+) -> dict[str, Any]:
+    """Modify an existing copper zone identified by UUID.
+
+    Only non-None parameters are updated on the zone.
+
+    Args:
+        ir: PcbIR for the target PCB.
+        file_path: Path to the PCB file (Path or str).
+        zone_uuid: UUID (tstamp) of the zone to modify.
+        net_name: New net name (optional).
+        layer: New layer (optional).
+        clearance: New clearance in mm (optional).
+        min_width: New minimum fill width in mm (optional).
+        priority: New priority (optional).
+
+    Returns:
+        Dict with modified, zone_uuid, and updated_fields list.
+
+    Raises:
+        ValueError: If zone with given UUID is not found.
+    """
+    target = next((z for z in ir.board.zones if z.tstamp == zone_uuid), None)
+    if target is None:
+        raise ValueError(f"Zone with UUID '{zone_uuid}' not found")
+
+    updated_fields: list[str] = []
+
+    if net_name is not None:
+        found_net = ir.get_net_by_name(net_name)
+        if found_net is not None:
+            target.net = found_net.number
+        else:
+            new_net = ir.add_net(net_name=net_name)
+            target.net = new_net.number
+        target.netName = net_name
+        updated_fields.append("net_name")
+
+    if layer is not None:
+        target.layers = [layer]
+        updated_fields.append("layer")
+
+    if clearance is not None:
+        target.clearance = clearance
+        updated_fields.append("clearance")
+
+    if min_width is not None:
+        target.minThickness = min_width
+        updated_fields.append("min_width")
+
+    if priority is not None:
+        target.priority = priority
+        updated_fields.append("priority")
+
+    ir._record_mutation("modify_copper_zone", {
+        "zone_uuid": zone_uuid,
+        "updated_fields": updated_fields,
+    })
+
+    return {
+        "modified": True,
+        "zone_uuid": zone_uuid,
+        "updated_fields": updated_fields,
+    }
+
+
+def remove_copper_zone(
+    ir: PcbIR,
+    file_path: object,
+    zone_uuid: str | None = None,
+    zone_index: int | None = None,
+) -> dict[str, Any]:
+    """Remove a copper zone from the PCB.
+
+    Tries UUID first, falls back to index.
+
+    Args:
+        ir: PcbIR for the target PCB.
+        file_path: Path to the PCB file (Path or str).
+        zone_uuid: UUID (tstamp) of the zone (preferred).
+        zone_index: Index of the zone as fallback.
+
+    Returns:
+        Dict with removed and zone_uuid.
+
+    Raises:
+        ValueError: If neither UUID nor index provided, or UUID not found.
+        IndexError: If index is out of range.
+    """
+    if zone_uuid is not None:
+        target = next((z for z in ir.board.zones if z.tstamp == zone_uuid), None)
+        if target is None:
+            raise ValueError(f"Zone with UUID '{zone_uuid}' not found")
+    elif zone_index is not None:
+        if zone_index < 0 or zone_index >= len(ir.board.zones):
+            raise IndexError(
+                f"Zone index {zone_index} out of range "
+                f"(0-{max(0, len(ir.board.zones) - 1)})"
+            )
+        target = ir.board.zones[zone_index]
+    else:
+        raise ValueError("Must specify zone_uuid or zone_index")
+
+    removed_uuid = target.tstamp
+    ir.board.zones.remove(target)
+
+    ir._record_mutation("remove_copper_zone", {"zone_uuid": removed_uuid})
+
+    return {
+        "removed": True,
+        "zone_uuid": removed_uuid,
+    }
+
+
 def set_board_outline(
     ir: PcbIR,
     width: float,
