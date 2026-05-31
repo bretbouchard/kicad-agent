@@ -22,9 +22,12 @@ import tempfile
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 from kicad_agent.spatial.maze_generator import generate_maze_board
+
+if TYPE_CHECKING:
+    from kicad_agent.training.manifest import DataManifest
 
 logger = logging.getLogger(__name__)
 
@@ -168,13 +171,19 @@ class MazeDataset:
         train: float = 0.8,
         val: float = 0.1,
         test: float = 0.1,
+        manifest: DataManifest | None = None,
     ) -> tuple[MazeDataset, MazeDataset, MazeDataset]:
         """Deterministic train/val/test split by sample_id order.
+
+        When a manifest is provided, split assignments are controlled by the
+        manifest's split_seed or explicit split_assignments, making splits
+        fully reproducible across runs.
 
         Args:
             train: Fraction for training set (default 0.8).
             val: Fraction for validation set (default 0.1).
             test: Fraction for test set (default 0.1).
+            manifest: Optional DataManifest for reproducible splits.
 
         Returns:
             Tuple of (train_dataset, val_dataset, test_dataset).
@@ -187,9 +196,36 @@ class MazeDataset:
             raise ValueError(f"Split fractions must sum to 1.0, got {total}")
 
         n = len(self.samples)
-        indices = list(range(n))
+
+        # Manifest with explicit split assignments: group by label
+        if manifest is not None and manifest.split_assignments:
+            train_samples: list[MazeSample] = []
+            val_samples: list[MazeSample] = []
+            test_samples: list[MazeSample] = []
+            for sample in self.samples:
+                label = manifest.split_assignments.get(sample.sample_id, "train")
+                if label == "train":
+                    train_samples.append(sample)
+                elif label == "val":
+                    val_samples.append(sample)
+                else:
+                    test_samples.append(sample)
+            return (
+                MazeDataset(samples=train_samples),
+                MazeDataset(samples=val_samples),
+                MazeDataset(samples=test_samples),
+            )
+
+        # Manifest with seed only: use manifest.split_seed for RNG
         import random
-        rng = random.Random(self.samples[0].seed if self.samples else 42)
+
+        if manifest is not None:
+            seed = manifest.split_seed
+        else:
+            seed = self.samples[0].seed if self.samples else 42
+
+        indices = list(range(n))
+        rng = random.Random(seed)
         rng.shuffle(indices)
         shuffled = [self.samples[i] for i in indices]
         train_end = int(n * train)
