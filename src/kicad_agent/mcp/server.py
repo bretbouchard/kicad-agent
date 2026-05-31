@@ -276,6 +276,8 @@ async def _run_server() -> None:
 
 def main() -> None:
     """CLI entry point for kicad-component-search."""
+    from kicad_agent.logging_config import configure_logging
+    configure_logging()
     asyncio.run(_run_server())
 
 
