@@ -657,7 +657,7 @@ Plans:
 
 ### v2.4 Production-Hardening Phase Details
 
-### Phase 32: Executor Performance — COMPLETE
+### Phase 32: Executor Performance -- COMPLETE
 **Goal**: IR caching and batch execution for single-parse single-write operation throughput
 **Depends on**: Phase 31
 **Requirements**: PERF-01, PERF-02, PERF-03, PERF-04
@@ -682,17 +682,27 @@ Plans:
   3. MCP undo/redo meta-tools with destructiveHint=True
   4. Per-file isolation across concurrent projects
   5. Configurable max_size with env var KICAD_UNDO_MAX_SIZE
-**Plans**: 2 plans
+**Plans**: 2 plans (2/2 complete)
 
 Plans:
 - [x] 33-01-PLAN.md -- UndoStack module, executor snapshot capture, undo/redo methods (UNDO-01, UNDO-02, UNDO-04, UNDO-05)
 - [x] 33-02-PLAN.md -- MCP undo/redo meta-tools with dispatch and tests (UNDO-03)
 
 ### Phase 34: LLM Provider Abstraction
-**Goal**: Abstract LLM calls behind a protocol so different providers can be swapped
+**Goal**: Abstract LLM calls behind a typed protocol so different providers (Anthropic, mock) can be swapped via environment variable
 **Depends on**: Phase 33
 **Requirements**: LLM-13, LLM-14, LLM-15, LLM-16, LLM-17
-**Plans**: TBD
+**Success Criteria**:
+  1. LLMProvider protocol with generate(), embed(), and create_message() methods
+  2. AnthropicProvider implements protocol using existing LLMClient
+  3. All 6 consumer files migrated to accept provider via constructor
+  4. Provider selection via KICAD_LLM_PROVIDER env var (default "anthropic")
+  5. MockProvider for deterministic testing without API calls
+**Plans**: 2 plans
+
+Plans:
+- [x] 34-01-PLAN.md -- LLMProvider protocol, AnthropicProvider, MockProvider, get_provider() factory, tests, __init__.py exports (LLM-13, LLM-14, LLM-16, LLM-17)
+- [ ] 34-02-PLAN.md -- Consumer migration: DesignCritic, ErrorFixer, IntentParser, ComponentSuggester, UnifiedParsers, pipeline.py (LLM-15)
 
 ### Phase 35: Remaining Ops Gaps
 **Goal**: Close the five remaining operation gaps for complete CRUD coverage
