@@ -571,7 +571,7 @@ Born from real-world pain: Bret spent 3+ sessions manually writing Python script
 ### Schematic Intelligence (Phase 39)
 
 - [ ] **SCH-INTEL-01**: `extract_nets` operation parses existing schematic wires, labels, and power symbols to produce a complete net topology with pin membership, wire counts, and global/local classification
-- [ ] **SCH-INTEL-02**: `detect_net_conflicts` operation finds multiple_net_names, local/global mismatches, power net name mismatches, and case-only differences before running ERC
+- [x] **SCH-INTEL-02**: `detect_net_conflicts` operation finds multiple_net_names, local/global mismatches, power net name mismatches, and case-only differences before running ERC
 - [ ] **SCH-INTEL-03**: `suggest_net_names` operation maps internal net names to canonical names based on global labels, power symbol net names, and IC pin functions
 
 ### ERC Root Cause Analysis (Phase 40)
@@ -579,3 +579,24 @@ Born from real-world pain: Bret spent 3+ sessions manually writing Python script
 - [ ] **ERC-SMART-01**: `classify_violations` operation categorizes ERC violations as fixable, pre-existing, benign, or config_issue with confidence levels and root cause explanations
 - [ ] **ERC-SMART-02**: `diagnose_violations` operation generates targeted fix operations for fixable violations with multiple fix options, side effect analysis, and recommended fix index
 - [ ] **ERC-SMART-03**: Enhanced `erc_auto_fix` with `root_cause` mode that classifies violations first, fixes only fixable ones, documents pre-existing issues, and suppresses benign warnings
+
+## v2.5 Requirements — Evaluation Benchmarks
+
+Born from gap analysis: the Evaluation Benchmarks scorecard dimension is at 2/10. No professional takes an AI tool seriously without published benchmarks. These requirements establish the "PCB MMLU" — a standardized circuit intelligence benchmark.
+
+### PCB MMLU Benchmark (Phase 41)
+
+- [ ] **BENCH-01**: Generate 500+ multi-choice circuit analysis questions across 8 categories (component_identification, topology_recognition, signal_flow, power_design, pin_function, net_purpose, design_rules, troubleshooting) with ground truth, distractor pools for all categories, explicit difficulty thresholds, and reproducible seeded generation
+- [ ] **BENCH-02**: Benchmark runner evaluates any model against PCB MMLU producing BenchmarkResult with overall, per-category, and per-difficulty accuracy; includes BaselineRandom and BaselineHeuristic models; CLI interface with full surface designed upfront (including future --regression-check and --adversarial flags)
+
+### Circuit QA Dataset (Phase 42)
+
+- [ ] **BENCH-03**: Generate 2000+ open-ended question-answer pairs across 6 types (violation_diagnosis, signal_flow, component_function, net_purpose, design_review, value_calculation) with answer templates for all types, train/validation/test split (80/10/10), and reproducible seeded generation
+
+### Regression Benchmark Suite (Phase 43)
+
+- [ ] **BENCH-04**: Automated regression detection comparing BenchmarkResult against baseline with configurable threshold (default 2%); historical tracking in benchmarks/results/; GitHub Actions CI workflow that blocks PRs on accuracy drops; regression check available as CLI subcommand
+
+### Adversarial Test Generation (Phase 44)
+
+- [ ] **BENCH-05**: Three types of adversarial testing: mutation testing (200+ deliberately broken schematics via 7 mutation types), property-based testing (50+ verifying 5 invariants on generated circuits), parser fuzzing (500+ random S-expression mutations proving no crashes); all seeded for reproducibility

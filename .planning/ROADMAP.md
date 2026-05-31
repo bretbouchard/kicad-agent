@@ -807,8 +807,8 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 39-01-PLAN.md -- Net extraction from existing schematics (SCH-INTEL-01)
-- [ ] 39-02-PLAN.md -- Net name conflict detection (SCH-INTEL-02)
+- [x] 39-01-PLAN.md -- Net extraction from existing schematics (SCH-INTEL-01)
+- [x] 39-02-PLAN.md -- Net name conflict detection (SCH-INTEL-02)
 - [ ] 39-03-PLAN.md -- Auto-name nets from topology (SCH-INTEL-03)
 
 ### Phase 40: ERC Root Cause Analysis
