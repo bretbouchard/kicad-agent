@@ -11,10 +11,15 @@ Security (threat model):
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from kicad_agent.generation.intent import _SAFE_ID_PATTERN
 from kicad_agent.llm.client import LLMClient
 from kicad_agent.llm.tools import COMPONENT_SYSTEM_PROMPT, SUGGEST_TOOL
+
+if TYPE_CHECKING:
+    from kicad_agent.llm.backend import LLMBackend
+    from kicad_agent.llm.provider import LLMProvider
 
 
 @dataclass(frozen=True)
@@ -42,10 +47,24 @@ class ComponentSuggester:
 
     Args:
         model: Optional model override. If None, uses LLMClient default.
+        client: Optional LLMBackend instance. If provided, used instead of
+                creating a new LLMClient.
+        provider: Optional LLMProvider instance. Takes priority over client
+                  and model when provided.
     """
 
-    def __init__(self, model: str | None = None) -> None:
-        self._client = LLMClient(model=model)
+    def __init__(
+        self,
+        model: str | None = None,
+        client: LLMBackend | None = None,
+        provider: LLMProvider | None = None,
+    ) -> None:
+        if provider is not None:
+            self._client = provider
+        elif client is not None:
+            self._client = client
+        else:
+            self._client = LLMClient(model=model)
 
     def suggest(self, functional_description: str) -> list[ComponentSuggestion]:
         """Suggest KiCad components for a given functional description.

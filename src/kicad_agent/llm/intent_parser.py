@@ -19,6 +19,7 @@ from kicad_agent.llm.tools import INTENT_TOOL
 
 if TYPE_CHECKING:
     from kicad_agent.llm.backend import LLMBackend
+    from kicad_agent.llm.provider import LLMProvider
 
 
 class IntentParser:
@@ -31,14 +32,20 @@ class IntentParser:
         model: Optional model override. If None, uses LLMClient default.
         client: Optional LLMBackend instance. If provided, used instead of
                 creating a new LLMClient (enables hybrid local/cloud).
+        provider: Optional LLMProvider instance. Takes priority over client
+                  and model when provided.
     """
 
     def __init__(
         self,
         model: str | None = None,
         client: LLMBackend | None = None,
+        provider: LLMProvider | None = None,
     ) -> None:
-        self._client = client or LLMClient(model=model)
+        if provider is not None:
+            self._client = provider
+        else:
+            self._client = client or LLMClient(model=model)
 
     def parse(self, description: str) -> GenerationIntent:
         """Convert a natural language circuit description to a GenerationIntent.

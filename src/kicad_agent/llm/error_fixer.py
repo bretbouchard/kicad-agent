@@ -22,6 +22,7 @@ from kicad_agent.ops.schema import get_operation_schema
 
 if TYPE_CHECKING:
     from kicad_agent.llm.backend import LLMBackend
+    from kicad_agent.llm.provider import LLMProvider
 
 logger = logging.getLogger(__name__)
 
@@ -83,14 +84,22 @@ class ErrorFixer:
 
     Args:
         model: Optional model override for the LLM client.
+        client: Optional LLMBackend instance. If provided, used instead of
+                creating a new LLMClient.
+        provider: Optional LLMProvider instance. Takes priority over client
+                  and model when provided.
     """
 
     def __init__(
         self,
         model: str | None = None,
         client: LLMBackend | None = None,
+        provider: LLMProvider | None = None,
     ) -> None:
-        self._client = client or LLMClient(model=model)
+        if provider is not None:
+            self._client = provider
+        else:
+            self._client = client or LLMClient(model=model)
 
     def fix(
         self,

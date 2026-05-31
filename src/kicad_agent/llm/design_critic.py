@@ -27,6 +27,7 @@ from kicad_agent.llm.context_builder import ContextBuilder
 
 if TYPE_CHECKING:
     from kicad_agent.llm.backend import LLMBackend
+    from kicad_agent.llm.provider import LLMProvider
 
 
 # ---------------------------------------------------------------------------
@@ -218,14 +219,22 @@ class DesignCritic:
 
     Args:
         model: Optional model override for LLMClient.
+        client: Optional LLMBackend instance. If provided, used instead of
+                creating a new LLMClient.
+        provider: Optional LLMProvider instance. Takes priority over client
+                  and model when provided.
     """
 
     def __init__(
         self,
         model: str | None = None,
         client: LLMBackend | None = None,
+        provider: LLMProvider | None = None,
     ) -> None:
-        self._client = client or LLMClient(model=model)
+        if provider is not None:
+            self._client = provider
+        else:
+            self._client = client or LLMClient(model=model)
 
     def critique(
         self,
