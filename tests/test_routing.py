@@ -1430,3 +1430,276 @@ class TestRouteToSegmentsMultilayer:
         b_cu = [s for s in track_segs if s.layer == "B.Cu"][0]
         assert f_cu.width == 0.3
         assert b_cu.width == 0.2
+
+
+# ---------------------------------------------------------------------------
+# IPC-2141 Impedance Calculator (Plan 36-02 Task 1)
+# ---------------------------------------------------------------------------
+
+
+class TestImpedance:
+    """IPC-2141 microstrip/stripline impedance and bisection trace width solver."""
+
+    def test_microstrip_known_value(self) -> None:
+        """w=0.47mm microstrip on er=4.5 stackup gives ~50 ohm (within 5%)."""
+        from kicad_agent.routing.impedance import microstrip_z0
+        z0 = microstrip_z0(w=0.47, h=0.2, t=0.035, er=4.5)
+        assert 47.5 <= z0 <= 52.5, f"Expected ~50 ohm, got {z0:.2f}"
+
+    def test_stripline_known_value(self) -> None:
+        """w=0.09mm symmetric stripline on er=4.5 gives ~50 ohm (within 5%)."""
+        from kicad_agent.routing.impedance import stripline_z0
+        z0 = stripline_z0(w=0.09, h=0.15, t=0.035, er=4.5)
+        assert 47.5 <= z0 <= 52.5, f"Expected ~50 ohm, got {z0:.2f}"
+
+    def test_microstrip_decreases_with_width(self) -> None:
+        """Wider trace has lower impedance."""
+        from kicad_agent.routing.impedance import microstrip_z0
+        z0_narrow = microstrip_z0(w=0.2, h=0.2, t=0.035, er=4.5)
+        z0_wide = microstrip_z0(w=0.6, h=0.2, t=0.035, er=4.5)
+        assert z0_wide < z0_narrow
+
+    def test_stripline_decreases_with_width(self) -> None:
+        """Wider stripline trace has lower impedance."""
+        from kicad_agent.routing.impedance import stripline_z0
+        z0_narrow = stripline_z0(w=0.05, h=0.15, t=0.035, er=4.5)
+        z0_wide = stripline_z0(w=0.3, h=0.15, t=0.035, er=4.5)
+        assert z0_wide < z0_narrow
+
+    def test_impedance_result_is_frozen(self) -> None:
+        """ImpedanceResult is a frozen dataclass."""
+        from kicad_agent.routing.impedance import ImpedanceResult
+        r = ImpedanceResult(
+            trace_width_mm=0.47,
+            target_z0=50.0,
+            achieved_z0=49.8,
+            impedance_error_percent=0.4,
+            model="microstrip",
+            valid=True,
+        )
+        with pytest.raises(AttributeError):
+            r.valid = False  # type: ignore[misc]
+
+    def test_impedance_result_fields(self) -> None:
+        """ImpedanceResult has all required fields."""
+        from kicad_agent.routing.impedance import ImpedanceResult
+        r = ImpedanceResult(
+            trace_width_mm=0.47,
+            target_z0=50.0,
+            achieved_z0=49.8,
+            impedance_error_percent=0.4,
+            model="microstrip",
+            valid=True,
+        )
+        assert r.trace_width_mm == 0.47
+        assert r.target_z0 == 50.0
+        assert r.achieved_z0 == 49.8
+        assert r.impedance_error_percent == 0.4
+        assert r.model == "microstrip"
+        assert r.valid is True
+
+    def test_solve_trace_width_microstrip(self) -> None:
+        """Bisection solver finds ~0.47mm for 50-ohm microstrip target."""
+        from kicad_agent.routing.impedance import solve_trace_width
+        r = solve_trace_width(
+            target_z0=50.0, h=0.2, t=0.035, er=4.5, model="microstrip"
+        )
+        assert r.valid is True
+        assert r.impedance_error_percent < 1.0
+        assert abs(r.trace_width_mm - 0.47) < 0.05
+
+    def test_solve_trace_width_stripline(self) -> None:
+        """Bisection solver converges for stripline model."""
+        from kicad_agent.routing.impedance import solve_trace_width
+        r = solve_trace_width(
+            target_z0=50.0, h=0.15, t=0.035, er=4.5, model="stripline",
+            min_width=0.05,
+        )
+        assert r.valid is True
+        assert r.impedance_error_percent < 1.0
+
+    def test_solve_trace_width_min_width_clamp(self) -> None:
+        """Very high target impedance clamps to min_width=0.1mm."""
+        from kicad_agent.routing.impedance import solve_trace_width
+        r = solve_trace_width(
+            target_z0=200.0, h=0.2, t=0.035, er=4.5, model="microstrip",
+            min_width=0.1, max_width=2.0,
+        )
+        assert r.trace_width_mm == pytest.approx(0.1, abs=0.001)
+
+    def test_solve_trace_width_unreachable_returns_invalid(self) -> None:
+        """Unreachable impedance target returns valid=False."""
+        from kicad_agent.routing.impedance import solve_trace_width
+        r = solve_trace_width(
+            target_z0=200.0, h=0.2, t=0.035, er=4.5, model="microstrip",
+            min_width=0.1, max_width=0.15,
+        )
+        assert r.valid is False
+        assert r.impedance_error_percent > 1.0
+
+    def test_solve_trace_width_valid_reflects_error(self) -> None:
+        """ImpedanceResult.valid is True when error <= tolerance_percent."""
+        from kicad_agent.routing.impedance import solve_trace_width
+        r = solve_trace_width(
+            target_z0=50.0, h=0.2, t=0.035, er=4.5, model="microstrip",
+            tolerance_percent=1.0,
+        )
+        if r.valid:
+            assert r.impedance_error_percent <= 1.0
+        else:
+            assert r.impedance_error_percent > 1.0
+
+    def test_solve_trace_width_validates_model(self) -> None:
+        """Invalid model raises ValueError."""
+        from kicad_agent.routing.impedance import solve_trace_width
+        with pytest.raises(ValueError, match="model"):
+            solve_trace_width(
+                target_z0=50.0, h=0.2, t=0.035, er=4.5, model="coaxial"
+            )
+
+    def test_solve_trace_width_validates_positive(self) -> None:
+        """Negative parameters raise ValueError."""
+        from kicad_agent.routing.impedance import solve_trace_width
+        with pytest.raises(ValueError):
+            solve_trace_width(
+                target_z0=-10.0, h=0.2, t=0.035, er=4.5
+            )
+
+
+# ---------------------------------------------------------------------------
+# Sawtooth Length Matching (Plan 36-02 Task 2)
+# ---------------------------------------------------------------------------
+
+
+class TestSawtoothMatching:
+    """Sawtooth length matching with measure-and-refine convergence."""
+
+    def test_sawtooth_extra_length_positive(self) -> None:
+        """_sawtooth_extra_length returns positive value for nonzero amplitude."""
+        from kicad_agent.routing.length_matching import _sawtooth_extra_length
+        extra = _sawtooth_extra_length(amplitude=1.0, half_pitch=0.5)
+        expected = 2 * math.hypot(0.5, 1.0) - 2 * 0.5
+        assert extra == pytest.approx(expected, rel=1e-6)
+        assert extra > 0
+
+    def test_sawtooth_extra_length_zero_amplitude(self) -> None:
+        """_sawtooth_extra_length returns 0 when amplitude=0."""
+        from kicad_agent.routing.length_matching import _sawtooth_extra_length
+        extra = _sawtooth_extra_length(amplitude=0.0, half_pitch=0.5)
+        assert extra == pytest.approx(0.0, abs=1e-9)
+
+    def test_zero_delta_returns_original(self) -> None:
+        """target_delta_mm=0 returns original path unchanged."""
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
+        result = add_sawtooth_matching(path, target_delta_mm=0.0)
+        assert result.path == path
+        assert result.achieved_delta_mm == 0.0
+
+    def test_positive_delta_longer_path(self) -> None:
+        """target_delta_mm > 0 returns path longer than original."""
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        from kicad_agent.routing.geometry import _path_length
+        path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
+        original_len = _path_length(path)
+        result = add_sawtooth_matching(path, target_delta_mm=2.0)
+        result_len = _path_length(result.path)
+        assert result_len > original_len
+
+    def test_target_5mm_delta_on_20mm_path(self) -> None:
+        """add_sawtooth_matching adds approximately 5mm on a 20mm path."""
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        from kicad_agent.routing.geometry import _path_length
+        path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
+        original_len = _path_length(path)
+        result = add_sawtooth_matching(path, target_delta_mm=5.0)
+        result_len = _path_length(result.path)
+        actual_delta = result_len - original_len
+        assert actual_delta == pytest.approx(5.0, abs=0.5), (
+            f"Expected ~5mm delta, got {actual_delta:.2f}mm"
+        )
+
+    def test_bumps_are_triangle_shaped(self) -> None:
+        """Sawtooth bumps have 3 points per bump (start, peak, end)."""
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
+        result = add_sawtooth_matching(path, target_delta_mm=2.0, spacing_mm=1.0)
+        # Each bump adds 3 points. Original path has 3 points + first/last
+        # preserved. So total = 3 + num_bumps * 3.
+        # Just verify we have more points than original and num_bumps > 0.
+        assert len(result.path) > len(path)
+        assert result.num_bumps > 0
+
+    def test_amplitude_capped_by_detour_ratio(self) -> None:
+        """Sawtooth amplitude does not exceed half_pitch * max_detour_ratio."""
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
+        max_detour = 3.0
+        result = add_sawtooth_matching(
+            path, target_delta_mm=10.0, spacing_mm=1.0,
+            max_detour_ratio=max_detour,
+        )
+        # Even with large target, bumps should exist and amplitude is capped.
+        # We can't directly inspect amplitude, but we verify the result
+        # doesn't produce a path with absurd length.
+        from kicad_agent.routing.geometry import _path_length
+        original_len = _path_length(path)
+        max_possible_delta = result.num_bumps * _sawtooth_max_extra(
+            spacing_mm=1.0, max_detour_ratio=max_detour,
+        )
+        actual_delta = _path_length(result.path) - original_len
+        assert actual_delta <= max_possible_delta + 0.1
+
+    def test_length_match_result_frozen(self) -> None:
+        """LengthMatchResult is a frozen dataclass."""
+        from kicad_agent.routing.length_matching import LengthMatchResult
+        r = LengthMatchResult(
+            path=((0.0, 0.0), (10.0, 0.0)),
+            target_delta_mm=2.0,
+            achieved_delta_mm=1.95,
+            num_bumps=3,
+            valid=True,
+        )
+        with pytest.raises(AttributeError):
+            r.valid = False  # type: ignore[misc]
+
+    def test_length_match_result_fields(self) -> None:
+        """LengthMatchResult has all required fields."""
+        from kicad_agent.routing.length_matching import LengthMatchResult
+        r = LengthMatchResult(
+            path=((0.0, 0.0), (10.0, 0.0)),
+            target_delta_mm=2.0,
+            achieved_delta_mm=1.95,
+            num_bumps=3,
+            valid=True,
+        )
+        assert r.path == ((0.0, 0.0), (10.0, 0.0))
+        assert r.target_delta_mm == 2.0
+        assert r.achieved_delta_mm == 1.95
+        assert r.num_bumps == 3
+        assert r.valid is True
+
+    def test_short_path_returns_original(self) -> None:
+        """Path shorter than bump_pitch returns original path."""
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        # 0.5mm path is shorter than bump_pitch (max(1.0, 0.5) = 1.0mm).
+        path = ((0.0, 0.0), (0.5, 0.0))
+        result = add_sawtooth_matching(path, target_delta_mm=2.0, spacing_mm=1.0)
+        assert result.path == path
+        assert result.num_bumps == 0
+
+    def test_single_point_path_returns_original(self) -> None:
+        """Single-point path returns original path."""
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        path = ((5.0, 5.0),)
+        result = add_sawtooth_matching(path, target_delta_mm=2.0)
+        assert result.path == path
+        assert result.num_bumps == 0
+
+
+def _sawtooth_max_extra(spacing_mm: float, max_detour_ratio: float) -> float:
+    """Helper: max extra length per sawtooth bump at max amplitude."""
+    from kicad_agent.routing.length_matching import _sawtooth_extra_length
+    half_pitch = spacing_mm * 0.5
+    max_amplitude = half_pitch * max_detour_ratio
+    return _sawtooth_extra_length(max_amplitude, half_pitch)
