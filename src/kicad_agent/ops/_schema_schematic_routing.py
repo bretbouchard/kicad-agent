@@ -9,13 +9,16 @@ Security (threat model):
   T-38-01-02: ref field bounded to max_length=16 (component refs are short)
   T-38-02-01: target_file validated via TargetFile type (inherited H-01)
   T-38-02-02: collision_tolerance validated: gt=0, le=10 prevents extreme values
+  T-38-03-01: net_name, ref, pin fields validated with _validate_sexpr_safe_string
+  T-38-03-02: pins list bounded to max_length=100 (prevents DoS)
+  T-38-03-04: collision_zones list bounded to max_length=50
 """
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
-from kicad_agent.ops.schema import TargetFile
+from kicad_agent.ops.schema import TargetFile, _validate_sexpr_safe_string
 
 
 class ResolvePinPositionsOp(BaseModel):
@@ -84,3 +87,105 @@ class DetectPinOverlapsOp(BaseModel):
         le=1.0,
         description="Position tolerance (mm) for overlap detection",
     )
+
+
+class PinRef(BaseModel):
+    """Reference to a component pin for net connection.
+
+    Attributes:
+        ref: Component reference designator (e.g. ``"R55"``, ``"U21"``).
+        pin: Pin number or name (e.g. ``"1"``, ``"VCA_IN"``).
+    """
+
+    ref: str = Field(
+        min_length=1, max_length=16,
+        description="Component reference (e.g. 'R55', 'U21')",
+    )
+    pin: str = Field(
+        min_length=1, max_length=32,
+        description="Pin number or name (e.g. '1', 'VCA_IN')",
+    )
+
+    @field_validator("ref", "pin")
+    @classmethod
+    def _validate_sexpr(cls, v: str) -> str:
+        """T-38-03-01: Reject S-expression injection in pin references."""
+        return _validate_sexpr_safe_string(v)
+
+
+class CollisionZone(BaseModel):
+    """A collision zone to avoid during wire routing.
+
+    Attributes:
+        direction: Whether this is a vertical or horizontal zone.
+        coordinate: X coordinate (vertical) or Y coordinate (horizontal).
+        tolerance: Range around coordinate to avoid (default 2.54mm).
+    """
+
+    direction: Literal["vertical", "horizontal"] = Field(
+        description="Collision zone direction",
+    )
+    coordinate: float = Field(description="X coordinate (vertical) or Y coordinate (horizontal)")
+    tolerance: float = Field(
+        default=2.54, gt=0,
+        description="Range around coordinate to avoid",
+    )
+
+    @field_validator("coordinate", "tolerance")
+    @classmethod
+    def _reject_non_finite(cls, v: float) -> float:
+        import math
+        if math.isnan(v) or math.isinf(v):
+            raise ValueError("Coordinate values must be finite (not NaN or Infinity)")
+        return v
+
+
+class ConnectPinsOp(BaseModel):
+    """Connect pins into a net with wire/label generation.
+
+    Generates net labels at every pin body_position for guaranteed KiCad
+    connectivity. Optionally generates wires for nearby same-axis pins,
+    respecting collision zones and max wire length.
+
+    Three strategies:
+      - ``wire_first``: Generate wires for connected pins, labels for unreached.
+      - ``label_only``: No wires, just labels at every pin.
+      - ``hybrid``: Short/clean wires where possible, labels everywhere.
+
+    Attributes:
+        op_type: Discriminator literal ``"connect_pins"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        net_name: Net name for generated labels.
+        pins: List of pin references to connect.
+        strategy: Routing strategy (default ``"hybrid"``).
+        collision_zones: Zones to avoid during wire routing (max 50, T-38-03-04).
+        max_wire_length: Skip wires longer than this in mm (default 40.0).
+    """
+
+    op_type: Literal["connect_pins"] = "connect_pins"
+    target_file: TargetFile
+    net_name: str = Field(
+        min_length=1, max_length=128,
+        description="Net name for labels",
+    )
+    pins: list[PinRef] = Field(
+        min_length=1, max_length=100,
+        description="Pins to connect (T-38-03-02: max 100)",
+    )
+    strategy: Literal["wire_first", "label_only", "hybrid"] = Field(
+        default="hybrid",
+    )
+    collision_zones: list[CollisionZone] = Field(
+        default_factory=list, max_length=50,
+        description="Collision zones to avoid (T-38-03-04: max 50)",
+    )
+    max_wire_length: float = Field(
+        default=40.0, gt=0,
+        description="Skip wires longer than this (mm)",
+    )
+
+    @field_validator("net_name")
+    @classmethod
+    def _validate_name_sexpr(cls, v: str) -> str:
+        """T-38-03-01: Reject S-expression injection in net name."""
+        return _validate_sexpr_safe_string(v)
