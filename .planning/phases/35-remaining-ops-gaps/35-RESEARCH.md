@@ -412,7 +412,7 @@ def write_project_settings(path: Path, updates: dict[str, Any]) -> None:
 
 **If this table is empty:** All claims in this research were verified or cited -- no user confirmation needed.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should list ops be registered as @register_project or as a new read-only project query path?**
    - What we know: Project handlers do not get IR, they get file_path. This is correct for lib table and DRU queries.
