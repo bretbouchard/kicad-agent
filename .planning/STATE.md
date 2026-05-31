@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: Complete-Ops
-status: completed
-stopped_at: Phase 34 plan 02 complete
-last_updated: "2026-05-31T04:38:54.134Z"
-last_activity: 2026-05-30
+milestone: v2.4
+milestone_name: production-hardening
+status: ready-to-plan
+stopped_at: Phase 35 next
+last_updated: "2026-05-31T05:00:00.000Z"
+last_activity: 2026-05-31
 progress:
-  total_phases: 35
-  completed_phases: 24
-  total_plans: 103
-  completed_plans: 86
-  percent: 83
+  total_phases: 37
+  completed_phases: 34
+  total_plans: 91
+  completed_plans: 91
+  percent: 100
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** v2.4 production-hardening -- undo/redo DONE, LLM abstraction, remaining ops, training infrastructure next.
-Last activity: 2026-05-30
+**Current focus:** v2.4 production-hardening -- undo/redo DONE, LLM abstraction DONE, remaining ops next.
+Last activity: 2026-05-31
 
 ## Current Position
 
-Phase: 34 (LLM Provider Abstraction) -- EXECUTING
-Status: **Phase 34 Plan 02 complete** -- All 6 consumers migrated to accept LLMProvider, pipeline.py wired with get_provider() fallback
-Last activity: 2026-05-31 -- Plan 34-02 completed (107 tests, 0 regressions)
+Phase: 34 (LLM Provider Abstraction) -- COMPLETE
+Status: **Phase 34 Complete** -- LLMProvider protocol, AnthropicProvider, MockProvider, all 6 consumers migrated
+Last activity: 2026-05-31 -- Phase 34 completed (2 plans, 1808 tests pass, Council APPROVED)
 
 ## Previous Milestone (v2.3)
 
@@ -42,13 +42,13 @@ Last activity: 2026-05-31 -- Plan 34-02 completed (107 tests, 0 regressions)
 
 **Velocity:**
 
-- Total plans completed: 85
+- Total plans completed: 91
 - Average duration: 5 min
-- Total execution time: 4.9 hours
+- Total execution time: 5.2 hours
 
 **Recent Trend:**
 
-- Last 10 plans: 30-01 through 33-02 (all first-execution pass)
+- Last 10 plans: 32-01 through 34-02 (all first-execution pass)
 - Trend: Stable -- all plans passing on first execution
 
 ## Accumulated Context
@@ -64,6 +64,9 @@ Recent decisions affecting current work:
 - [v2.4]: Standard undo/redo semantics (new operation clears redo stack)
 - [v2.4]: Session-scoped undo (lost on MCP server restart, same as KiCad)
 - [v2.4]: Scan-based pop_latest instead of separate tracking fields (eliminates stale references)
+- [v2.4]: LLMProvider protocol is superset of LLMBackend -- providers satisfy both protocols
+- [v2.4]: Provider selection via KICAD_LLM_PROVIDER env var (default "anthropic")
+- [v2.4]: Lazy LLMClient imports in consumers to avoid hard anthropic dependency
 
 ### Pending Todos
 
@@ -79,5 +82,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 34 plan 02 complete
-Resume with: Phase 34 complete -- all consumers migrated to LLMProvider
+Stopped at: Phase 34 complete
+Resume with: /gsd-plan-phase 35 (Remaining Ops Gaps)
