@@ -534,6 +534,39 @@ def _handle_detect_pin_overlaps(op: Any, ir: SchematicIR, file_path: Path) -> di
     return {"overlaps": overlaps, "count": len(overlaps)}
 
 
+@register_schematic("connect_pins")
+def _handle_connect_pins(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.schematic_routing.net_connector import NetConnector
+    connector = NetConnector(file_path)
+    result = connector.connect_pins(
+        net_name=op.net_name,
+        pins=[{"ref": p.ref, "pin": p.pin} for p in op.pins],
+        strategy=op.strategy,
+        collision_zones=[z.model_dump() for z in op.collision_zones],
+        max_wire_length=op.max_wire_length,
+    )
+    # Apply generated wires and labels to the IR
+    for wire in result.get("wires", []):
+        ir.add_wire(
+            start_x=wire["start"][0], start_y=wire["start"][1],
+            end_x=wire["end"][0], end_y=wire["end"][1],
+        )
+    for label in result.get("labels", []):
+        ir.add_label(
+            name=op.net_name,
+            label_type="local",
+            x=label["position"][0], y=label["position"][1],
+            angle=0, shape="input",
+        )
+    return {
+        "net_name": op.net_name,
+        "wires_generated": result["wires_generated"],
+        "labels_generated": result["labels_generated"],
+        "collisions_avoided": result["collisions_avoided"],
+        "notes": result.get("notes", []),
+    }
+
+
 # ---------------------------------------------------------------------------
 # PCB handler implementations
 # ---------------------------------------------------------------------------
