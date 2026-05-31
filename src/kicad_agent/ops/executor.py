@@ -505,6 +505,14 @@ def _handle_erc_auto_fix(op: Any, ir: SchematicIR, file_path: Path) -> dict[str,
     return erc_auto_fix(ir, file_path, max_iterations=op.max_iterations)
 
 
+@register_schematic("classify_violations")
+def _handle_classify_violations(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.violation_classifier import classify_violations
+    from kicad_agent.ops.erc_parser import parse_erc
+    violations = parse_erc(file_path)
+    return classify_violations(violations, ir, file_path)
+
+
 @register_schematic("extract_nets")
 def _handle_extract_nets(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.schematic_routing.net_extractor import extract_nets
