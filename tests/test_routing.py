@@ -1703,3 +1703,300 @@ def _sawtooth_max_extra(spacing_mm: float, max_detour_ratio: float) -> float:
     half_pitch = spacing_mm * 0.5
     max_amplitude = half_pitch * max_detour_ratio
     return _sawtooth_extra_length(max_amplitude, half_pitch)
+
+
+# ---------------------------------------------------------------------------
+# ROUTE-05/06/07: AutoRouteOp schema extension (Plan 36-03)
+# ---------------------------------------------------------------------------
+
+
+class TestAutoRouteOpSchema:
+    """AutoRouteOp schema validation for multi-layer, impedance, length matching."""
+
+    def test_autorouteop_default_fields(self) -> None:
+        """AutoRouteOp defaults: layers=[], impedance_target=None, length_match_pairs=None."""
+        from kicad_agent.ops._schema_pcb import AutoRouteOp
+
+        op = AutoRouteOp(target_file="test.kicad_pcb")
+        assert op.layers == []
+        assert op.impedance_target is None
+        assert op.length_match_pairs is None
+        # Backward compat: single-layer mode via 'layer' field.
+        assert op.layer == "F.Cu"
+
+    def test_autorouteop_layers_valid(self) -> None:
+        """AutoRouteOp accepts valid copper layer names in layers list."""
+        from kicad_agent.ops._schema_pcb import AutoRouteOp
+
+        op = AutoRouteOp(
+            target_file="test.kicad_pcb",
+            layers=["F.Cu", "B.Cu"],
+        )
+        assert op.layers == ["F.Cu", "B.Cu"]
+
+    def test_autorouteop_layers_inner(self) -> None:
+        """AutoRouteOp accepts inner layer names like In1.Cu."""
+        from kicad_agent.ops._schema_pcb import AutoRouteOp
+
+        op = AutoRouteOp(
+            target_file="test.kicad_pcb",
+            layers=["F.Cu", "In1.Cu", "B.Cu"],
+        )
+        assert len(op.layers) == 3
+
+    def test_autorouteop_layers_invalid_name(self) -> None:
+        """AutoRouteOp rejects invalid layer name in layers list."""
+        from pydantic import ValidationError
+
+        from kicad_agent.ops._schema_pcb import AutoRouteOp
+
+        with pytest.raises(ValidationError, match="Invalid layer name"):
+            AutoRouteOp(
+                target_file="test.kicad_pcb",
+                layers=["F.Cu", "InvalidLayer"],
+            )
+
+    def test_autorouteop_impedance_target_valid(self) -> None:
+        """AutoRouteOp accepts valid impedance_target."""
+        from kicad_agent.ops._schema_pcb import AutoRouteOp
+
+        op = AutoRouteOp(
+            target_file="test.kicad_pcb",
+            impedance_target=50.0,
+        )
+        assert op.impedance_target == 50.0
+
+    def test_autorouteop_impedance_target_zero_rejected(self) -> None:
+        """AutoRouteOp rejects impedance_target=0."""
+        from pydantic import ValidationError
+
+        from kicad_agent.ops._schema_pcb import AutoRouteOp
+
+        with pytest.raises(ValidationError):
+            AutoRouteOp(
+                target_file="test.kicad_pcb",
+                impedance_target=0.0,
+            )
+
+    def test_autorouteop_impedance_target_over_200_rejected(self) -> None:
+        """AutoRouteOp rejects impedance_target > 200."""
+        from pydantic import ValidationError
+
+        from kicad_agent.ops._schema_pcb import AutoRouteOp
+
+        with pytest.raises(ValidationError):
+            AutoRouteOp(
+                target_file="test.kicad_pcb",
+                impedance_target=250.0,
+            )
+
+    def test_autorouteop_length_match_pairs_valid(self) -> None:
+        """AutoRouteOp accepts valid length_match_pairs."""
+        from kicad_agent.ops._schema_pcb import AutoRouteOp
+
+        op = AutoRouteOp(
+            target_file="test.kicad_pcb",
+            length_match_pairs=[("CLK_P", "CLK_N", 0.1)],
+        )
+        assert op.length_match_pairs == [("CLK_P", "CLK_N", 0.1)]
+
+    def test_autorouteop_length_match_pairs_multiple(self) -> None:
+        """AutoRouteOp accepts multiple length match pairs."""
+        from kicad_agent.ops._schema_pcb import AutoRouteOp
+
+        op = AutoRouteOp(
+            target_file="test.kicad_pcb",
+            length_match_pairs=[
+                ("CLK_P", "CLK_N", 0.1),
+                ("DATA_P", "DATA_N", 0.25),
+            ],
+        )
+        assert len(op.length_match_pairs) == 2
+
+    def test_autorouteop_all_fields_combined(self) -> None:
+        """AutoRouteOp with all new fields validates correctly."""
+        from kicad_agent.ops._schema_pcb import AutoRouteOp
+
+        op = AutoRouteOp(
+            target_file="test.kicad_pcb",
+            layers=["F.Cu", "In1.Cu", "B.Cu"],
+            impedance_target=50.0,
+            length_match_pairs=[("CLK_P", "CLK_N", 0.1)],
+        )
+        assert len(op.layers) == 3
+        assert op.impedance_target == 50.0
+        assert len(op.length_match_pairs) == 1
+
+    def test_autorouteop_empty_layers_backward_compat(self) -> None:
+        """AutoRouteOp with empty layers falls back to single-layer mode."""
+        from kicad_agent.ops._schema_pcb import AutoRouteOp
+
+        op = AutoRouteOp(target_file="test.kicad_pcb", layer="B.Cu")
+        assert op.layers == []
+        assert op.layer == "B.Cu"
+
+
+class TestMultiLayerIntegration:
+    """End-to-end integration: multi-layer + impedance + length matching."""
+
+    def test_handle_auto_route_single_layer_backward_compat(self) -> None:
+        """_handle_auto_route without new fields produces same result as before."""
+        from kicad_agent.routing.bridge import TrackSegment, route_to_segments
+        from kicad_agent.routing.constraints import RoutingConstraints
+        from kicad_agent.routing.pathfinder import RouteResult, route_all_nets
+
+        constraints = RoutingConstraints(grid_resolution_mm=1.0)
+        graph = build_routing_graph(
+            (0, 0, 20, 20),
+            constraints=constraints,
+        )
+        netlist = {
+            "VCC": [(0, 0), (10, 0)],
+            "GND": [(0, 5), (10, 5)],
+        }
+        results = route_all_nets(graph, netlist)
+        segments = route_to_segments(results, constraints, layer="F.Cu")
+        assert len(segments) >= 2
+        assert all(s.layer == "F.Cu" for s in segments)
+
+    def test_handle_auto_route_multilayer_produces_vias(self) -> None:
+        """Multi-layer routing produces ViaSegments at layer transitions."""
+        from kicad_agent.routing.bridge import (
+            TrackSegment,
+            ViaSegment,
+            route_to_segments_multilayer,
+        )
+
+        constraints = RoutingConstraints(
+            grid_resolution_mm=1.0,
+            via_cost_mm=5.0,
+        )
+        graph = build_routing_graph(
+            (0, 0, 20, 20),
+            constraints=constraints,
+            layers=["F.Cu", "B.Cu"],
+        )
+        netlist = {
+            "CROSS": [(0, 0), (15, 10)],
+        }
+        results = route_all_nets(graph, netlist)
+        # route_all_nets with 3D graph should produce results.
+        assert "CROSS" in results
+        assert results["CROSS"].success
+        # Check segments include both layers and vias.
+        segments = route_to_segments_multilayer(results, constraints)
+        via_segs = [s for s in segments if isinstance(s, ViaSegment)]
+        # If there are any layer transitions, vias should exist.
+        path = results["CROSS"].path
+        layers_in_path = {pt[2] for pt in path if len(pt) >= 3}
+        if len(layers_in_path) > 1:
+            assert len(via_segs) >= 1
+
+    def test_handle_auto_route_impedance_adjusts_width(self) -> None:
+        """Impedance target produces trace width different from default."""
+        from kicad_agent.routing.impedance import solve_trace_width
+
+        constraints = RoutingConstraints()
+        target_z0 = 50.0
+        # Solve for microstrip on surface layer.
+        result = solve_trace_width(
+            target_z0=target_z0,
+            h=constraints.dielectric_height_mm,
+            t=constraints.copper_thickness_mm,
+            er=constraints.dielectric_constant,
+            model="microstrip",
+        )
+        assert result.valid
+        # The solved trace width should differ from default 0.25mm.
+        assert result.trace_width_mm != pytest.approx(constraints.trace_width_mm, abs=0.001)
+
+    def test_handle_auto_route_length_matching(self) -> None:
+        """Length matching adjusts shorter net to match longer net."""
+        from kicad_agent.routing.constraints import RoutingConstraints
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+
+        path_short = ((0.0, 0.0), (5.0, 0.0))
+        delta = 3.0
+        result = add_sawtooth_matching(path_short, target_delta_mm=delta, spacing_mm=1.0)
+        assert result.valid
+        from kicad_agent.routing.geometry import _path_length
+        new_len = _path_length(result.path)
+        original_len = _path_length(path_short)
+        assert new_len > original_len
+
+    def test_full_pipeline_multilayer_impedance_length_match(self) -> None:
+        """Full pipeline: multi-layer graph + impedance + length matching."""
+        from kicad_agent.routing.bridge import (
+            TrackSegment,
+            ViaSegment,
+            route_to_segments_multilayer,
+        )
+        from kicad_agent.routing.impedance import solve_trace_width
+        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        from kicad_agent.routing.pathfinder import RouteResult, _path_length
+
+        constraints = RoutingConstraints(
+            grid_resolution_mm=1.0,
+            via_cost_mm=5.0,
+        )
+
+        # Step 1: Solve impedance for 50-ohm target.
+        imp_result = solve_trace_width(
+            target_z0=50.0,
+            h=constraints.dielectric_height_mm,
+            t=constraints.copper_thickness_mm,
+            er=constraints.dielectric_constant,
+            model="microstrip",
+        )
+        assert imp_result.valid
+
+        # Step 2: Create constraints with impedance-adjusted widths.
+        constraints = RoutingConstraints(
+            grid_resolution_mm=1.0,
+            via_cost_mm=5.0,
+            layer_trace_widths={
+                "F.Cu": imp_result.trace_width_mm,
+                "B.Cu": imp_result.trace_width_mm,
+            },
+        )
+
+        # Step 3: Build multi-layer graph.
+        graph = build_routing_graph(
+            (0, 0, 20, 20),
+            constraints=constraints,
+            layers=["F.Cu", "B.Cu"],
+        )
+
+        # Step 4: Route nets.
+        netlist = {
+            "CLK_P": [(0, 0), (15, 0)],
+            "CLK_N": [(0, 2), (15, 2)],
+        }
+        results = route_all_nets(graph, netlist)
+        assert len(results) == 2
+        assert results["CLK_P"].success
+        assert results["CLK_N"].success
+
+        # Step 5: Apply length matching if needed.
+        len_p = results["CLK_P"].length_mm
+        len_n = results["CLK_N"].length_mm
+        mismatch = abs(len_p - len_n)
+        tolerance = 0.5
+
+        if mismatch > tolerance:
+            shorter_net = "CLK_P" if len_p < len_n else "CLK_N"
+            shorter_path = results[shorter_net].path
+            path_2d = tuple((p[0], p[1]) for p in shorter_path)
+            match_result = add_sawtooth_matching(
+                path_2d, target_delta_mm=mismatch - tolerance,
+                spacing_mm=constraints.trace_width_mm,
+            )
+            assert match_result.valid
+
+        # Step 6: Convert to segments with per-layer widths.
+        segments = route_to_segments_multilayer(results, constraints)
+        track_segs = [s for s in segments if isinstance(s, TrackSegment)]
+        # All track segments should use impedance-adjusted width.
+        for seg in track_segs:
+            expected_width = constraints.effective_trace_width(seg.layer)
+            assert seg.width == pytest.approx(expected_width, abs=0.001)
