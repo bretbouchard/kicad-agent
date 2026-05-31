@@ -70,21 +70,36 @@ def _mock_net_result(net_name, wires=0, labels=2, collisions=0):
 
 
 def _mock_schematic_content():
-    """Create a minimal .kicad_sch file content with wires, labels, and no_connects."""
-    return """(kicad_sch
-  (version 20250114)
-  (generator "kicad")
-  (uuid "test-uuid")
-  (paper "A4")
-  (lib_symbols)
-  (wire (pts (xy 10 10) (xy 20 20)))
-  (wire (pts (xy 30 30) (xy 40 40)))
-  (label "NET_A" (at 50 50 0) (effects (font (size 0.75 0.75))))
-  (global_label "VCC" (shape bidirectional) (at 60 60 0) (effects (font (size 1 1))))
-  (no_connect (at 70 70))
-  (symbol (lib_id "Device:R") (at 80 80 0))
-)
-"""
+    """Create a minimal .kicad_sch file content with wires, labels, and no_connects.
+
+    Uses kiutils to generate a valid KiCad schematic that can be parsed back.
+    """
+    from kiutils.schematic import Schematic
+    from kiutils.items.schitems import Connection, GlobalLabel, LocalLabel, NoConnect
+    from kiutils.items.common import Position, Stroke
+
+    sch = Schematic.create_new()
+
+    # Add 2 wires
+    sch.graphicalItems.append(
+        Connection(type='wire', points=[Position(X=10, Y=10), Position(X=20, Y=20)], stroke=Stroke(width=0))
+    )
+    sch.graphicalItems.append(
+        Connection(type='wire', points=[Position(X=30, Y=30), Position(X=40, Y=40)], stroke=Stroke(width=0))
+    )
+
+    # Add 1 local label
+    sch.labels.append(LocalLabel(text='NET_A', position=Position(X=50, Y=50)))
+
+    # Add 1 global label
+    sch.globalLabels.append(
+        GlobalLabel(text='VCC', shape='bidirectional', position=Position(X=60, Y=60))
+    )
+
+    # Add 1 no_connect
+    sch.noConnects.append(NoConnect(position=Position(X=70, Y=70)))
+
+    return sch.to_sexpr()
 
 
 # ---------------------------------------------------------------------------
@@ -281,7 +296,8 @@ class TestBatchWiring:
         """Create a BatchWiring instance with mocked dependencies.
 
         Patches NetConnector and CollisionDetector so that the actual
-        schematic file is not needed.
+        schematic file is not needed. Patches remain active via direct
+        attribute replacement on the instance so method calls use mocks.
         """
         from kicad_agent.schematic_routing.batch_wiring import BatchWiring
 
@@ -289,37 +305,39 @@ class TestBatchWiring:
         tmpfile = Path(tmpdir) / "test.kicad_sch"
         tmpfile.write_text("(kicad_sch)", encoding="utf-8")
 
-        patches = []
+        connector = mock_connector or _make_mock_connector({})
+        detector = mock_detector or MagicMock()
 
-        connector_ctx = patch(
-            "kicad_agent.schematic_routing.batch_wiring.NetConnector",
-            return_value=mock_connector or _make_mock_connector({}),
-        )
-        detector_ctx = patch(
-            "kicad_agent.schematic_routing.batch_wiring.CollisionDetector",
-            return_value=mock_detector or MagicMock(),
-        )
-
-        connector_mock = connector_ctx.start()
-        detector_mock = detector_ctx.start()
-        patches.extend([connector_ctx, detector_ctx])
-
-        wiring = BatchWiring(tmpfile)
-
-        for p in patches:
-            p.stop()
-
-        # Re-patch for method calls
         with patch(
             "kicad_agent.schematic_routing.batch_wiring.NetConnector",
-            return_value=mock_connector or _make_mock_connector({}),
+            return_value=connector,
         ), patch(
             "kicad_agent.schematic_routing.batch_wiring.CollisionDetector",
-            return_value=mock_detector or MagicMock(),
+            return_value=detector,
         ):
-            wiring2 = BatchWiring(tmpfile)
+            wiring = BatchWiring(tmpfile)
 
-        return wiring2
+        # Store mocks directly on the instance for method calls that
+        # re-create these internally (batch_connect creates CollisionDetector,
+        # regenerate_wiring re-creates NetConnector)
+        wiring._mock_connector = connector
+        wiring._mock_detector = detector
+        wiring._patch_active = True
+
+        return wiring
+
+    def _call_batch_connect(self, wiring, **kwargs):
+        """Call batch_connect with patches active for CollisionDetector creation."""
+        if getattr(wiring, '_patch_active', False):
+            with patch(
+                "kicad_agent.schematic_routing.batch_wiring.NetConnector",
+                return_value=wiring._mock_connector,
+            ), patch(
+                "kicad_agent.schematic_routing.batch_wiring.CollisionDetector",
+                return_value=wiring._mock_detector,
+            ):
+                return wiring.batch_connect(**kwargs)
+        return wiring.batch_connect(**kwargs)
 
     def test_batch_connect_processes_3_nets(self):
         """Test 3: batch_connect processes 3 nets and returns aggregate stats."""
@@ -331,7 +349,8 @@ class TestBatchWiring:
         mock_connector = _make_mock_connector(net_results)
         wiring = self._make_batch_wiring(mock_connector=mock_connector)
 
-        result = wiring.batch_connect(
+        result = self._call_batch_connect(
+            wiring,
             nets=[
                 {"name": "NET_A", "pins": [{"ref": "R1", "pin": "1"}, {"ref": "R2", "pin": "1"}]},
                 {"name": "NET_B", "pins": [{"ref": "R3", "pin": "1"}, {"ref": "R4", "pin": "1"}]},
@@ -360,7 +379,8 @@ class TestBatchWiring:
             mock_detector=mock_detector,
         )
 
-        result = wiring.batch_connect(
+        result = self._call_batch_connect(
+            wiring,
             nets=[{"name": "NET_A", "pins": [{"ref": "R1", "pin": "1"}]}],
             collision_zones=None,
             auto_detect_collisions=True,
@@ -380,7 +400,8 @@ class TestBatchWiring:
         })
         wiring = self._make_batch_wiring(mock_connector=mock_connector)
 
-        result = wiring.batch_connect(
+        result = self._call_batch_connect(
+            wiring,
             nets=[{"name": "NET_A", "pins": [{"ref": "R1", "pin": "1"}]}],
             global_labels=[
                 {"name": "VCC", "position": (50.0, 60.0), "shape": "bidirectional"},

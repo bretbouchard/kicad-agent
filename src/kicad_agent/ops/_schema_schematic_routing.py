@@ -12,13 +12,15 @@ Security (threat model):
   T-38-03-01: net_name, ref, pin fields validated with _validate_sexpr_safe_string
   T-38-03-02: pins list bounded to max_length=100 (prevents DoS)
   T-38-03-04: collision_zones list bounded to max_length=50
+  T-38-04-01: net names in NetDef/GlobalLabelSpec validated with _validate_sexpr_safe_string
+  T-38-04-03: nets list bounded to max_length=200 (prevents DoS)
 """
 
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from kicad_agent.ops.schema import TargetFile, _validate_sexpr_safe_string
+from kicad_agent.ops.schema import PositionSpec, TargetFile, _validate_sexpr_safe_string
 
 
 class ResolvePinPositionsOp(BaseModel):
@@ -189,3 +191,98 @@ class ConnectPinsOp(BaseModel):
     def _validate_name_sexpr(cls, v: str) -> str:
         """T-38-03-01: Reject S-expression injection in net name."""
         return _validate_sexpr_safe_string(v)
+
+
+class NetDef(BaseModel):
+    """A net definition: name and the pins that belong to it.
+
+    Attributes:
+        name: Net name (e.g. ``"VCC"``, ``"COMP_IN"``).
+        pins: List of pin references on this net.
+    """
+
+    name: str = Field(min_length=1, max_length=128)
+    pins: list[PinRef] = Field(min_length=1, max_length=100)
+
+    @field_validator("name")
+    @classmethod
+    def _validate_name_sexpr(cls, v: str) -> str:
+        """T-38-04-01: Reject S-expression injection in net name."""
+        return _validate_sexpr_safe_string(v)
+
+
+class GlobalLabelSpec(BaseModel):
+    """A global label to place for cross-sheet connectivity.
+
+    Attributes:
+        name: Global label text.
+        position: Position on the schematic.
+        shape: Label shape (default ``"bidirectional"``).
+    """
+
+    name: str = Field(min_length=1, max_length=128)
+    position: "PositionSpec" = Field(description="Label position on schematic")
+    shape: str = Field(default="bidirectional")
+
+    @field_validator("name")
+    @classmethod
+    def _validate_name_sexpr(cls, v: str) -> str:
+        """T-38-04-01: Reject S-expression injection in global label name."""
+        return _validate_sexpr_safe_string(v)
+
+
+class BatchConnectOp(BaseModel):
+    """Batch-connect multiple nets in a single call.
+
+    Processes a list of net definitions, optionally auto-detecting collision
+    zones and generating global labels for cross-sheet connectivity.
+
+    Attributes:
+        op_type: Discriminator literal ``"batch_connect"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        nets: List of net definitions (T-38-04-03: max 200).
+        global_labels: Global labels to place for cross-sheet connectivity.
+        strategy: Routing strategy (default ``"hybrid"``).
+        collision_zones: Zones to avoid during wire routing (max 50).
+        auto_detect_collisions: Auto-detect collision zones when none provided.
+        max_wire_length: Skip wires longer than this in mm (default 40.0).
+    """
+
+    op_type: Literal["batch_connect"] = "batch_connect"
+    target_file: TargetFile
+    nets: list[NetDef] = Field(min_length=1, max_length=200)
+    global_labels: list[GlobalLabelSpec] = Field(default_factory=list)
+    strategy: Literal["wire_first", "label_only", "hybrid"] = Field(default="hybrid")
+    collision_zones: list[CollisionZone] = Field(default_factory=list, max_length=50)
+    auto_detect_collisions: bool = Field(default=True)
+    max_wire_length: float = Field(default=40.0, gt=0)
+
+
+class RegenerateWiringOp(BaseModel):
+    """Strip all wires/labels/no_connects and regenerate from netlist definition.
+
+    Removes all existing wiring elements from a schematic body, then reconnects
+    all nets using the provided net definitions, global labels, and no-connect
+    markers.
+
+    Attributes:
+        op_type: Discriminator literal ``"regenerate_wiring"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        nets: List of net definitions (T-38-04-03: max 200).
+        global_labels: Global labels to place for cross-sheet connectivity.
+        no_connect_positions: Positions for no-connect markers.
+        strategy: Routing strategy (default ``"hybrid"``).
+        collision_zones: Zones to avoid during wire routing (max 50).
+        auto_detect_collisions: Auto-detect collision zones when none provided.
+        max_wire_length: Skip wires longer than this in mm (default 40.0).
+    """
+
+    op_type: Literal["regenerate_wiring"] = "regenerate_wiring"
+    target_file: TargetFile
+    nets: list[NetDef] = Field(min_length=1, max_length=200)
+    global_labels: list[GlobalLabelSpec] = Field(default_factory=list)
+    no_connect_positions: list["PositionSpec"] = Field(default_factory=list)
+    strategy: Literal["wire_first", "label_only", "hybrid"] = Field(default="hybrid")
+    collision_zones: list[CollisionZone] = Field(default_factory=list, max_length=50)
+    auto_detect_collisions: bool = Field(default=True)
+    max_wire_length: float = Field(default=40.0, gt=0)
