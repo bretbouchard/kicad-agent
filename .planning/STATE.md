@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: schematic-intelligence
 status: executing
-stopped_at: "Phase 38-03 complete, next: 38-04"
-last_updated: "2026-05-31T22:11:39Z"
+stopped_at: "Phase 38-04 complete, Phase 38 finished. Next: Phase 39-01"
+last_updated: "2026-05-31T22:21:05Z"
 last_activity: 2026-05-31
 progress:
   total_phases: 40
@@ -58,13 +58,13 @@ Last activity: 2026-06-01
 
 **Velocity:**
 
-- Total plans completed: 103
+- Total plans completed: 107
 - Average duration: 5 min
-- Total execution time: 5.2 hours
+- Total execution time: 5.5 hours
 
 **Recent Trend:**
 
-- Last 10 plans: 35-01 through 37-03 (all first-execution pass)
+- Last 10 plans: 38-01 through 38-04 (all first-execution pass)
 - Trend: Stable -- all plans passing on first execution
 
 ## Accumulated Context
@@ -104,10 +104,12 @@ Recent decisions affecting current work:
 - [v2.4-SI]: Pin overlap severity: error (different nets from netlist), warning (same net or unknown) -- defaults to warning without netlist
 - [v2.4-SI]: Net labels placed at pin body_position (not wire endpoint) for visual clarity and guaranteed connectivity
 - [v2.4-SI]: L-shaped wires use horizontal-first path; collision zone check covers full segment range
+- [v2.4-SI]: BatchWiring uses kiutils from_file/to_file for element stripping (not raw S-expression manipulation)
+- [v2.4-SI]: Auto-detection of collision zones inside batch_connect when none explicitly provided
+- [v2.4-SI]: regenerate_wiring strips wires/labels/no_connects via kiutils, reconnects via NetConnector per-net
 
 ### Pending Todos
 
-- Execute Phase 38 remaining plan (38-04)
 - Execute Phase 39 (3 plans, 2 waves)
 - Execute Phase 40 (3 plans, 3 waves)
 
@@ -121,5 +123,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 38-03 complete (connect_pins), next: 38-04 (batch_connect + regenerate_wiring)
-Resume with: Execute 38-04 (Wave 3 of Phase 38)
+Stopped at: Phase 38-04 complete (batch wiring), Phase 38 fully executed. Next: Phase 39-01
+Resume with: Execute Phase 39 (net intelligence)
