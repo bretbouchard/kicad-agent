@@ -40,6 +40,11 @@ class RoutingConstraints:
     via_diameter_mm: float = 0.8
     via_drill_mm: float = 0.4
     max_nodes: int = 500_000
+    via_cost_mm: float = 5.0
+    layer_trace_widths: dict[str, float] | None = None
+    dielectric_constant: float = 4.5
+    dielectric_height_mm: float = 0.2
+    copper_thickness_mm: float = 0.035
 
     def __post_init__(self) -> None:
         """Validate constraint values at construction time.
@@ -56,9 +61,9 @@ class RoutingConstraints:
                 f"grid_resolution_mm must be >= 0.1, "
                 f"got {self.grid_resolution_mm}"
             )
-        if self.max_nodes > 1_000_000:
+        if self.max_nodes > 2_000_000:
             raise ValueError(
-                f"max_nodes must be <= 1_000_000, got {self.max_nodes}"
+                f"max_nodes must be <= 2_000_000, got {self.max_nodes}"
             )
         if self.trace_width_mm <= 0:
             raise ValueError(
@@ -72,3 +77,38 @@ class RoutingConstraints:
             raise ValueError(
                 f"via_drill_mm must be > 0, got {self.via_drill_mm}"
             )
+        if self.via_cost_mm <= 0:
+            raise ValueError(
+                f"via_cost_mm must be > 0, got {self.via_cost_mm}"
+            )
+        if self.dielectric_constant <= 0:
+            raise ValueError(
+                f"dielectric_constant must be > 0, "
+                f"got {self.dielectric_constant}"
+            )
+        if self.dielectric_height_mm <= 0:
+            raise ValueError(
+                f"dielectric_height_mm must be > 0, "
+                f"got {self.dielectric_height_mm}"
+            )
+        if self.copper_thickness_mm <= 0:
+            raise ValueError(
+                f"copper_thickness_mm must be > 0, "
+                f"got {self.copper_thickness_mm}"
+            )
+
+    def effective_trace_width(self, layer: str) -> float:
+        """Return trace width for a specific copper layer.
+
+        If layer_trace_widths is set and contains the layer, returns
+        the layer-specific width. Otherwise falls back to trace_width_mm.
+
+        Args:
+            layer: Copper layer name (e.g., "F.Cu", "B.Cu").
+
+        Returns:
+            Trace width in mm for the given layer.
+        """
+        if self.layer_trace_widths and layer in self.layer_trace_widths:
+            return self.layer_trace_widths[layer]
+        return self.trace_width_mm

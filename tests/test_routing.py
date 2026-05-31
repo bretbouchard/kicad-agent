@@ -12,6 +12,7 @@ import math
 import pytest
 
 from kicad_agent.routing.constraints import RoutingConstraints
+from kicad_agent.routing.bridge import TrackSegment
 from kicad_agent.routing.graph import RoutingGraph
 from kicad_agent.routing.diff_pair import (
     DiffPairResult,
@@ -65,8 +66,8 @@ class TestRoutingConstraints:
             RoutingConstraints(grid_resolution_mm=0.05)
 
     def test_max_nodes_cap(self) -> None:
-        with pytest.raises(ValueError, match="max_nodes must be <= 1_000_000"):
-            RoutingConstraints(max_nodes=2_000_000)
+        with pytest.raises(ValueError, match="max_nodes must be <= 2_000_000"):
+            RoutingConstraints(max_nodes=3_000_000)
 
     def test_custom_values(self) -> None:
         c = RoutingConstraints(
@@ -121,9 +122,9 @@ class TestRoutingGraph:
             constraints=RoutingConstraints(grid_resolution_mm=1.0),
         )
         # Node (6, 6) should be inside the obstacle and excluded.
-        assert (6.0, 6.0) not in graph.graph.nodes
+        assert (6.0, 6.0, "F.Cu") not in graph.graph.nodes
         # Node (0, 0) should be outside and present.
-        assert (0.0, 0.0) in graph.graph.nodes
+        assert (0.0, 0.0, "F.Cu") in graph.graph.nodes
 
     def test_max_nodes_raises_value_error(self) -> None:
         """Grid exceeding max_nodes raises ValueError."""
@@ -142,13 +143,13 @@ class TestRoutingGraph:
         graph = self._make_empty_graph(50.0, 1.0)
         node = graph.snap_to_node(5.3, 10.7)
         assert node is not None
-        assert node == (5.0, 11.0) or node == (5.0, 10.0)
+        assert node == (5.0, 11.0, "F.Cu") or node == (5.0, 10.0, "F.Cu")
 
     def test_snap_to_node_exact(self) -> None:
         """snap_to_node returns exact grid point for on-grid input."""
         graph = self._make_empty_graph(50.0, 1.0)
         node = graph.snap_to_node(5.0, 10.0)
-        assert node == (5.0, 10.0)
+        assert node == (5.0, 10.0, "F.Cu")
 
     def test_snap_to_node_out_of_bounds(self) -> None:
         """snap_to_node returns None for points far outside grid."""
@@ -176,11 +177,11 @@ class TestRoutingGraph:
             constraints=constraints,
         )
         # Nodes strictly inside obstacle should be excluded.
-        assert (11.0, 11.0) not in graph.graph.nodes
+        assert (11.0, 11.0, "F.Cu") not in graph.graph.nodes
 
         # Edges near obstacle should be omitted due to clearance violation.
-        assert not graph.graph.has_edge((9.5, 10.0), (10.0, 10.0))
-        assert not graph.graph.has_edge((9.0, 10.0), (9.5, 10.0))
+        assert not graph.graph.has_edge((9.5, 10.0, "F.Cu"), (10.0, 10.0, "F.Cu"))
+        assert not graph.graph.has_edge((9.0, 10.0, "F.Cu"), (9.5, 10.0, "F.Cu"))
 
     def test_obstacle_creates_detour(self) -> None:
         """Obstacle forces a detour -- path around is longer than straight."""
@@ -218,8 +219,8 @@ class TestPathfinding:
         assert result.success
         assert result.net_name == "NET1"
         assert len(result.path) >= 2
-        assert result.path[0] == (0.0, 0.0)
-        assert result.path[-1] == (10.0, 10.0)
+        assert result.path[0] == (0.0, 0.0, "F.Cu")
+        assert result.path[-1] == (10.0, 10.0, "F.Cu")
 
     def test_route_with_obstacle(self) -> None:
         """Route around an obstacle finds a valid path."""
@@ -234,7 +235,8 @@ class TestPathfinding:
         assert result.success
         # Path must not pass through obstacle interior (strict interior,
         # boundary points like (5,5) or (8,8) are not excluded by within).
-        for x, y in result.path:
+        for pt in result.path:
+            x, y = pt[0], pt[1]
             assert not (5 < x < 8 and 5 < y < 8)
 
     def test_route_blocked_source_returns_none(self) -> None:
@@ -404,7 +406,7 @@ class TestBuildRoutingGraph:
     def test_with_obstacles(self) -> None:
         obs = SpatialBox(5, 5, 10, 10, "pad", "P1")
         graph = build_routing_graph((0, 0, 20, 20), obstacles=[obs])
-        assert (7.0, 7.0) not in graph.graph.nodes
+        assert (7.0, 7.0, "F.Cu") not in graph.graph.nodes
 
     def test_custom_constraints(self) -> None:
         c = RoutingConstraints(grid_resolution_mm=2.0)
@@ -563,7 +565,8 @@ class TestDifferentialPair:
         # from the original straight-line path. For a horizontal path at y=5,
         # all y-coordinates should be within [5 - 2*spacing, 5 + 2*spacing].
         max_amplitude = spacing * 2.0
-        for x, y in result.net_positive:
+        for pt in result.net_positive:
+            x, y = pt[0], pt[1]
             assert abs(y - 5.0) <= max_amplitude + 1e-6, (
                 f"Point ({x},{y}) exceeds amplitude bound"
             )
@@ -874,13 +877,13 @@ class TestMarkPathAsObstacle:
             constraints=RoutingConstraints(grid_resolution_mm=1.0),
         )
         # Verify edge exists before marking.
-        assert graph.graph.has_edge((5.0, 5.0), (6.0, 5.0))
-        graph.mark_path_as_obstacle(((5.0, 5.0), (6.0, 5.0), (7.0, 5.0)))
+        assert graph.graph.has_edge((5.0, 5.0, "F.Cu"), (6.0, 5.0, "F.Cu"))
+        graph.mark_path_as_obstacle(((5.0, 5.0, "F.Cu"), (6.0, 5.0, "F.Cu"), (7.0, 5.0, "F.Cu")))
         # Edges (5,5)-(6,5) and (6,5)-(7,5) should be removed.
-        assert not graph.graph.has_edge((5.0, 5.0), (6.0, 5.0))
-        assert not graph.graph.has_edge((6.0, 5.0), (7.0, 5.0))
+        assert not graph.graph.has_edge((5.0, 5.0, "F.Cu"), (6.0, 5.0, "F.Cu"))
+        assert not graph.graph.has_edge((6.0, 5.0, "F.Cu"), (7.0, 5.0, "F.Cu"))
         # Adjacent edge (4,5)-(5,5) should still exist.
-        assert graph.graph.has_edge((4.0, 5.0), (5.0, 5.0))
+        assert graph.graph.has_edge((4.0, 5.0, "F.Cu"), (5.0, 5.0, "F.Cu"))
 
     def test_multi_net_obstacle_marking(self) -> None:
         """route_all_nets marks paths as obstacles, preventing reuse."""
@@ -908,3 +911,522 @@ class TestMarkPathAsObstacle:
             constraints=RoutingConstraints(grid_resolution_mm=1.0),
         )
         graph.mark_path_as_obstacle(())  # Should not raise
+
+
+# ---------------------------------------------------------------------------
+# ROUTE-05: Multi-layer routing (3D graph, via edges)
+# ---------------------------------------------------------------------------
+
+
+class TestRoutingConstraints3D:
+    """Multi-layer constraint fields: via_cost_mm, layer_trace_widths, stackup."""
+
+    def test_via_cost_mm_default(self) -> None:
+        """via_cost_mm defaults to 5.0."""
+        c = RoutingConstraints()
+        assert c.via_cost_mm == 5.0
+
+    def test_via_cost_mm_must_be_positive(self) -> None:
+        """via_cost_mm must be > 0."""
+        with pytest.raises(ValueError, match="via_cost_mm must be > 0"):
+            RoutingConstraints(via_cost_mm=0)
+        with pytest.raises(ValueError, match="via_cost_mm must be > 0"):
+            RoutingConstraints(via_cost_mm=-1.0)
+
+    def test_via_cost_mm_custom(self) -> None:
+        """via_cost_mm accepts positive custom values."""
+        c = RoutingConstraints(via_cost_mm=10.0)
+        assert c.via_cost_mm == 10.0
+
+    def test_layer_trace_widths_default_none(self) -> None:
+        """layer_trace_widths defaults to None."""
+        c = RoutingConstraints()
+        assert c.layer_trace_widths is None
+
+    def test_layer_trace_widths_custom(self) -> None:
+        """layer_trace_widths accepts a dict mapping layer names to widths."""
+        c = RoutingConstraints(
+            layer_trace_widths={"F.Cu": 0.3, "B.Cu": 0.25}
+        )
+        assert c.layer_trace_widths == {"F.Cu": 0.3, "B.Cu": 0.25}
+
+    def test_dielectric_constant_default(self) -> None:
+        """dielectric_constant defaults to 4.5."""
+        c = RoutingConstraints()
+        assert c.dielectric_constant == 4.5
+
+    def test_dielectric_constant_must_be_positive(self) -> None:
+        """dielectric_constant must be > 0."""
+        with pytest.raises(ValueError, match="dielectric_constant must be > 0"):
+            RoutingConstraints(dielectric_constant=0)
+
+    def test_dielectric_height_default(self) -> None:
+        """dielectric_height_mm defaults to 0.2."""
+        c = RoutingConstraints()
+        assert c.dielectric_height_mm == 0.2
+
+    def test_dielectric_height_must_be_positive(self) -> None:
+        """dielectric_height_mm must be > 0."""
+        with pytest.raises(ValueError, match="dielectric_height_mm must be > 0"):
+            RoutingConstraints(dielectric_height_mm=-0.1)
+
+    def test_copper_thickness_default(self) -> None:
+        """copper_thickness_mm defaults to 0.035."""
+        c = RoutingConstraints()
+        assert c.copper_thickness_mm == 0.035
+
+    def test_copper_thickness_must_be_positive(self) -> None:
+        """copper_thickness_mm must be > 0."""
+        with pytest.raises(ValueError, match="copper_thickness_mm must be > 0"):
+            RoutingConstraints(copper_thickness_mm=0)
+
+    def test_max_nodes_raised_cap(self) -> None:
+        """max_nodes cap raised to 2,000,000."""
+        c = RoutingConstraints(max_nodes=2_000_000)
+        assert c.max_nodes == 2_000_000
+
+    def test_max_nodes_over_new_cap(self) -> None:
+        """max_nodes over 2,000,000 still raises ValueError."""
+        with pytest.raises(ValueError, match="max_nodes must be <= 2_000_000"):
+            RoutingConstraints(max_nodes=3_000_000)
+
+    def test_effective_trace_width_default(self) -> None:
+        """effective_trace_width returns trace_width_mm when no layer overrides."""
+        c = RoutingConstraints(trace_width_mm=0.25)
+        assert c.effective_trace_width("F.Cu") == 0.25
+        assert c.effective_trace_width("B.Cu") == 0.25
+
+    def test_effective_trace_width_layer_override(self) -> None:
+        """effective_trace_width returns layer-specific width when set."""
+        c = RoutingConstraints(
+            trace_width_mm=0.25,
+            layer_trace_widths={"F.Cu": 0.3, "In1.Cu": 0.2},
+        )
+        assert c.effective_trace_width("F.Cu") == 0.3
+        assert c.effective_trace_width("In1.Cu") == 0.2
+        # Layer not in overrides falls back to trace_width_mm.
+        assert c.effective_trace_width("B.Cu") == 0.25
+
+
+class TestRoutingGraph3D:
+    """Multi-layer graph construction with 3D (x, y, layer) nodes."""
+
+    def _make_2layer_graph(
+        self,
+        size_mm: float = 10.0,
+        grid_res: float = 1.0,
+        layers: list[str] | None = None,
+    ) -> RoutingGraph:
+        if layers is None:
+            layers = ["F.Cu", "B.Cu"]
+        return RoutingGraph(
+            board_bounds=(0, 0, size_mm, size_mm),
+            obstacles=[],
+            constraints=RoutingConstraints(
+                grid_resolution_mm=grid_res,
+                via_cost_mm=5.0,
+            ),
+            layers=layers,
+        )
+
+    def test_2layer_node_count(self) -> None:
+        """2-layer graph has ~2x the single-layer node count."""
+        graph = self._make_2layer_graph(10.0, 1.0, ["F.Cu", "B.Cu"])
+        # 11x11 = 121 nodes per layer, 242 total.
+        assert graph.node_count == 242
+
+    def test_3d_node_format(self) -> None:
+        """Nodes are (x, y, layer) 3-tuples."""
+        graph = self._make_2layer_graph(5.0, 1.0, ["F.Cu", "In1.Cu"])
+        for node in graph.graph.nodes:
+            assert len(node) == 3
+            assert isinstance(node[2], str)
+
+    def test_nodes_on_both_layers(self) -> None:
+        """Both layers have nodes."""
+        graph = self._make_2layer_graph(5.0, 1.0, ["F.Cu", "B.Cu"])
+        f_cu_nodes = [n for n in graph.graph.nodes if n[2] == "F.Cu"]
+        b_cu_nodes = [n for n in graph.graph.nodes if n[2] == "B.Cu"]
+        assert len(f_cu_nodes) > 0
+        assert len(b_cu_nodes) > 0
+        assert len(f_cu_nodes) == len(b_cu_nodes)
+
+    def test_via_edges_connect_adjacent_layers(self) -> None:
+        """Via edges connect same (x,y) on adjacent layers with via_cost_mm."""
+        constraints = RoutingConstraints(grid_resolution_mm=1.0, via_cost_mm=7.5)
+        graph = RoutingGraph(
+            board_bounds=(0, 0, 5, 5),
+            obstacles=[],
+            constraints=constraints,
+            layers=["F.Cu", "B.Cu"],
+        )
+        # Check a specific via edge.
+        node_f = (3.0, 3.0, "F.Cu")
+        node_b = (3.0, 3.0, "B.Cu")
+        assert graph.graph.has_edge(node_f, node_b)
+        assert graph.graph[node_f][node_b]["weight"] == 7.5
+
+    def test_via_edge_count(self) -> None:
+        """Via edge count matches expected for 2-layer board."""
+        graph = self._make_2layer_graph(5.0, 1.0, ["F.Cu", "B.Cu"])
+        # 6x6 = 36 nodes per layer, all overlap, so 36 via edges.
+        via_edges = [
+            (u, v)
+            for u, v in graph.graph.edges
+            if u[2] != v[2]
+        ]
+        assert len(via_edges) == 36
+
+    def test_same_layer_edges_exist(self) -> None:
+        """Same-layer horizontal and vertical edges exist on both layers."""
+        graph = self._make_2layer_graph(5.0, 1.0, ["F.Cu", "B.Cu"])
+        # Check F.Cu same-layer edge.
+        assert graph.graph.has_edge((0.0, 0.0, "F.Cu"), (1.0, 0.0, "F.Cu"))
+        # Check B.Cu same-layer edge.
+        assert graph.graph.has_edge((0.0, 0.0, "B.Cu"), (1.0, 0.0, "B.Cu"))
+
+    def test_layers_none_backward_compat(self) -> None:
+        """layers=None defaults to single-layer F.Cu, backward compatible."""
+        graph = RoutingGraph(
+            board_bounds=(0, 0, 10, 10),
+            obstacles=[],
+            constraints=RoutingConstraints(grid_resolution_mm=1.0),
+            layers=None,
+        )
+        # Should behave like old 2D graph.
+        assert graph.node_count == 121  # 11x11
+        # Nodes should be 3-tuples with "F.Cu" layer.
+        for node in graph.graph.nodes:
+            assert len(node) == 3
+            assert node[2] == "F.Cu"
+
+    def test_snap_to_node_with_layer(self) -> None:
+        """snap_to_node with layer parameter returns 3D tuple."""
+        graph = self._make_2layer_graph(10.0, 1.0)
+        node = graph.snap_to_node(5.3, 10.7, layer="F.Cu")
+        assert node is not None
+        assert len(node) == 3
+        assert node[2] == "F.Cu"
+
+    def test_snap_to_node_without_layer_3d(self) -> None:
+        """snap_to_node without layer finds nearest on any layer."""
+        graph = self._make_2layer_graph(10.0, 1.0)
+        node = graph.snap_to_node(5.0, 5.0)
+        assert node is not None
+        assert len(node) == 3
+
+    def test_snap_to_node_layer_specific(self) -> None:
+        """snap_to_node with layer restricts to that layer only."""
+        graph = self._make_2layer_graph(10.0, 1.0)
+        node_f = graph.snap_to_node(5.0, 5.0, layer="F.Cu")
+        node_b = graph.snap_to_node(5.0, 5.0, layer="B.Cu")
+        assert node_f is not None
+        assert node_b is not None
+        assert node_f[2] == "F.Cu"
+        assert node_b[2] == "B.Cu"
+        # Same x,y but different layer.
+        assert node_f[:2] == node_b[:2]
+
+    def test_mark_path_as_obstacle_3d(self) -> None:
+        """mark_path_as_obstacle works with 3D path tuples."""
+        graph = self._make_2layer_graph(10.0, 1.0)
+        node_a = (5.0, 5.0, "F.Cu")
+        node_b = (6.0, 5.0, "F.Cu")
+        assert graph.graph.has_edge(node_a, node_b)
+        graph.mark_path_as_obstacle((node_a, node_b))
+        assert not graph.graph.has_edge(node_a, node_b)
+
+    def test_obstacle_nodes_excluded_on_all_layers(self) -> None:
+        """Obstacles exclude nodes on all layers."""
+        obstacle = SpatialBox(3, 3, 5, 5, "footprint", "U1")
+        constraints = RoutingConstraints(grid_resolution_mm=1.0)
+        graph = RoutingGraph(
+            board_bounds=(0, 0, 10, 10),
+            obstacles=[obstacle],
+            constraints=constraints,
+            layers=["F.Cu", "B.Cu"],
+        )
+        # (4, 4) is inside obstacle -- excluded on both layers.
+        assert (4.0, 4.0, "F.Cu") not in graph.graph.nodes
+        assert (4.0, 4.0, "B.Cu") not in graph.graph.nodes
+        # (0, 0) is outside -- present on both layers.
+        assert (0.0, 0.0, "F.Cu") in graph.graph.nodes
+        assert (0.0, 0.0, "B.Cu") in graph.graph.nodes
+
+    def test_3layer_graph(self) -> None:
+        """3-layer graph builds correctly with via edges between adjacent."""
+        graph = RoutingGraph(
+            board_bounds=(0, 0, 5, 5),
+            obstacles=[],
+            constraints=RoutingConstraints(grid_resolution_mm=1.0),
+            layers=["F.Cu", "In1.Cu", "B.Cu"],
+        )
+        # 6x6 = 36 per layer, 3 layers = 108 nodes.
+        assert graph.node_count == 108
+        # Via edges: F.Cu-In1.Cu (36) + In1.Cu-B.Cu (36) = 72.
+        via_edges = [
+            (u, v) for u, v in graph.graph.edges if u[2] != v[2]
+        ]
+        assert len(via_edges) == 72
+        # No direct via between F.Cu and B.Cu (not adjacent).
+        assert not graph.graph.has_edge((0.0, 0.0, "F.Cu"), (0.0, 0.0, "B.Cu"))
+
+
+# ---------------------------------------------------------------------------
+# ROUTE-05: 3D pathfinding and ViaSegment
+# ---------------------------------------------------------------------------
+
+
+class TestPathfinding3D:
+    """3D pathfinding: route across layers, via detours, multi-layer batch."""
+
+    def _make_2layer_graph(
+        self,
+        size_mm: float = 20.0,
+        grid_res: float = 1.0,
+        via_cost: float = 5.0,
+    ) -> RoutingGraph:
+        return RoutingGraph(
+            board_bounds=(0, 0, size_mm, size_mm),
+            obstacles=[],
+            constraints=RoutingConstraints(
+                grid_resolution_mm=grid_res,
+                via_cost_mm=via_cost,
+            ),
+            layers=["F.Cu", "B.Cu"],
+        )
+
+    def test_route_3d_same_layer(self) -> None:
+        """route_net on 3D graph routes on same layer."""
+        graph = self._make_2layer_graph()
+        result = route_net(
+            graph,
+            (0.0, 0.0, "F.Cu"),
+            (10.0, 0.0, "F.Cu"),
+            "NET3D",
+        )
+        assert result is not None
+        assert result.success
+        assert result.path[0] == (0.0, 0.0, "F.Cu")
+        assert result.path[-1] == (10.0, 0.0, "F.Cu")
+
+    def test_route_3d_cross_layer(self) -> None:
+        """route_net with different source/target layers uses vias."""
+        graph = self._make_2layer_graph()
+        result = route_net(
+            graph,
+            (0.0, 0.0, "F.Cu"),
+            (10.0, 0.0, "B.Cu"),
+            "VIA_NET",
+        )
+        assert result is not None
+        assert result.success
+        # Path starts on F.Cu and ends on B.Cu.
+        assert result.path[0][2] == "F.Cu"
+        assert result.path[-1][2] == "B.Cu"
+        # Path should contain at least one layer transition.
+        layers_in_path = {pt[2] for pt in result.path}
+        assert len(layers_in_path) == 2
+
+    def test_route_3d_blocked_layer_via_detour(self) -> None:
+        """Wall on one axis -- route takes via to another layer for shorter path."""
+        # Small obstacle blocking the direct path at (5,10) on both layers.
+        # But with a via, the path can detour more efficiently.
+        # Actually test that cross-layer routing works: source on F.Cu,
+        # target on B.Cu forces a layer transition.
+        wall = SpatialBox(8, 8, 9, 12, "keepout", "WALL")
+        graph = RoutingGraph(
+            board_bounds=(0, 0, 20, 20),
+            obstacles=[wall],
+            constraints=RoutingConstraints(
+                grid_resolution_mm=1.0,
+                via_cost_mm=5.0,
+            ),
+            layers=["F.Cu", "B.Cu"],
+        )
+        # Source on F.Cu, target on B.Cu -- must transition layers.
+        result = route_net(
+            graph,
+            (5.0, 10.0, "F.Cu"),
+            (15.0, 10.0, "B.Cu"),
+            "DETOUR",
+        )
+        assert result is not None
+        assert result.success
+        # Path starts on F.Cu, ends on B.Cu.
+        assert result.path[0][2] == "F.Cu"
+        assert result.path[-1][2] == "B.Cu"
+        # Path must visit both layers.
+        layers_in_path = {pt[2] for pt in result.path}
+        assert len(layers_in_path) == 2
+
+    def test_route_result_3d_path_tuples(self) -> None:
+        """RouteResult.path contains 3D tuples on multi-layer graph."""
+        graph = self._make_2layer_graph()
+        result = route_net(
+            graph,
+            (0.0, 0.0, "F.Cu"),
+            (5.0, 5.0, "F.Cu"),
+            "3D_TUPLES",
+        )
+        assert result is not None
+        for pt in result.path:
+            assert len(pt) == 3
+
+    def test_euclidean_heuristic_3d(self) -> None:
+        """_euclidean_heuristic works with 3D tuples (ignores layer)."""
+        from kicad_agent.routing.pathfinder import _euclidean_heuristic
+        d = _euclidean_heuristic((0.0, 0.0, "F.Cu"), (3.0, 4.0, "B.Cu"))
+        assert abs(d - 5.0) < 1e-9
+
+    def test_route_all_nets_multilayer(self) -> None:
+        """route_all_nets works on multi-layer graph."""
+        graph = self._make_2layer_graph()
+        netlist = {
+            "VCC": [(0, 0), (10, 0)],
+            "GND": [(0, 5), (10, 5)],
+        }
+        results = route_all_nets(graph, netlist)
+        assert len(results) == 2
+        assert results["VCC"].success
+        assert results["GND"].success
+
+    def test_build_routing_graph_with_layers(self) -> None:
+        """build_routing_graph accepts layers parameter."""
+        graph = build_routing_graph(
+            (0, 0, 5, 5),
+            constraints=RoutingConstraints(grid_resolution_mm=1.0),
+            layers=["F.Cu", "B.Cu"],
+        )
+        # 6x6 per layer * 2 = 72 nodes.
+        assert graph.node_count == 72
+
+
+class TestViaSegment:
+    """ViaSegment frozen dataclass and to_sexpr()."""
+
+    def test_construction(self) -> None:
+        """ViaSegment holds x, y, from_layer, to_layer, diameter, drill, net."""
+        from kicad_agent.routing.bridge import ViaSegment
+        via = ViaSegment(
+            x=5.0, y=10.0,
+            from_layer="F.Cu", to_layer="B.Cu",
+            diameter=0.8, drill=0.4, net="VCC",
+        )
+        assert via.x == 5.0
+        assert via.from_layer == "F.Cu"
+        assert via.to_layer == "B.Cu"
+
+    def test_frozen(self) -> None:
+        """ViaSegment is frozen."""
+        from kicad_agent.routing.bridge import ViaSegment
+        via = ViaSegment(5.0, 5.0, "F.Cu", "B.Cu", 0.8, 0.4, "GND")
+        with pytest.raises(AttributeError):
+            via.x = 6.0  # type: ignore[misc]
+
+    def test_to_sexpr(self) -> None:
+        """ViaSegment.to_sexpr() produces valid KiCad via S-expression."""
+        from kicad_agent.routing.bridge import ViaSegment
+        via = ViaSegment(5.0, 10.0, "F.Cu", "B.Cu", 0.8, 0.4, "VCC")
+        sexpr = via.to_sexpr(uuid_tag="test-uuid")
+        assert "(via" in sexpr
+        assert "(at 5.0000 10.0000)" in sexpr
+        assert "(size 0.8000)" in sexpr
+        assert "(drill 0.4000)" in sexpr
+        assert '"F.Cu"' in sexpr
+        assert '"B.Cu"' in sexpr
+        assert '"VCC"' in sexpr
+        assert "(uuid test-uuid)" in sexpr
+
+    def test_to_sexpr_no_net(self) -> None:
+        """ViaSegment with empty net omits net field."""
+        from kicad_agent.routing.bridge import ViaSegment
+        via = ViaSegment(5.0, 5.0, "F.Cu", "B.Cu", 0.8, 0.4, "")
+        sexpr = via.to_sexpr()
+        assert "(net" not in sexpr
+
+
+class TestRouteToSegmentsMultilayer:
+    """route_to_segments_multilayer with layer extraction and vias."""
+
+    def _make_3d_results(self) -> dict[str, RouteResult]:
+        """Create synthetic 3D route results with layer transitions."""
+        return {
+            "CROSS": RouteResult(
+                net_name="CROSS",
+                path=(
+                    (0.0, 0.0, "F.Cu"),
+                    (5.0, 0.0, "F.Cu"),
+                    (5.0, 0.0, "B.Cu"),
+                    (10.0, 0.0, "B.Cu"),
+                ),
+                length_mm=15.0,
+                success=True,
+            ),
+        }
+
+    def test_extracts_track_segments_with_layers(self) -> None:
+        """Produces TrackSegments with correct layer from 3D path."""
+        from kicad_agent.routing.bridge import route_to_segments_multilayer
+        results = self._make_3d_results()
+        segments = route_to_segments_multilayer(results)
+        # Should have 3 track segments: (0,0,F)->(5,0,F), (5,0,F)->(5,0,B) is via,
+        # (5,0,B)->(10,0,B)
+        track_segs = [s for s in segments if isinstance(s, TrackSegment)]
+        assert len(track_segs) == 2
+        # First segment on F.Cu.
+        f_cu_segs = [s for s in track_segs if s.layer == "F.Cu"]
+        assert len(f_cu_segs) == 1
+        # Second segment on B.Cu.
+        b_cu_segs = [s for s in track_segs if s.layer == "B.Cu"]
+        assert len(b_cu_segs) == 1
+
+    def test_produces_via_segments(self) -> None:
+        """Produces ViaSegments at layer transitions."""
+        from kicad_agent.routing.bridge import ViaSegment, route_to_segments_multilayer
+        results = self._make_3d_results()
+        segments = route_to_segments_multilayer(results)
+        via_segs = [s for s in segments if isinstance(s, ViaSegment)]
+        assert len(via_segs) == 1
+        via = via_segs[0]
+        assert via.x == 5.0
+        assert via.y == 0.0
+        assert via.from_layer == "F.Cu"
+        assert via.to_layer == "B.Cu"
+        assert via.net == "CROSS"
+
+    def test_single_layer_no_vias(self) -> None:
+        """Single-layer path produces no ViaSegments."""
+        from kicad_agent.routing.bridge import ViaSegment, route_to_segments_multilayer
+        results = {
+            "FLAT": RouteResult(
+                net_name="FLAT",
+                path=(
+                    (0.0, 0.0, "F.Cu"),
+                    (5.0, 0.0, "F.Cu"),
+                    (10.0, 0.0, "F.Cu"),
+                ),
+                length_mm=10.0,
+                success=True,
+            ),
+        }
+        segments = route_to_segments_multilayer(results)
+        via_segs = [s for s in segments if isinstance(s, ViaSegment)]
+        assert len(via_segs) == 0
+        track_segs = [s for s in segments if isinstance(s, TrackSegment)]
+        assert len(track_segs) == 2
+
+    def test_effective_trace_width_per_layer(self) -> None:
+        """Uses effective_trace_width for per-layer segment widths."""
+        from kicad_agent.routing.bridge import TrackSegment, route_to_segments_multilayer
+        constraints = RoutingConstraints(
+            trace_width_mm=0.25,
+            layer_trace_widths={"F.Cu": 0.3, "B.Cu": 0.2},
+        )
+        results = self._make_3d_results()
+        segments = route_to_segments_multilayer(results, constraints)
+        track_segs = [s for s in segments if isinstance(s, TrackSegment)]
+        f_cu = [s for s in track_segs if s.layer == "F.Cu"][0]
+        b_cu = [s for s in track_segs if s.layer == "B.Cu"][0]
+        assert f_cu.width == 0.3
+        assert b_cu.width == 0.2

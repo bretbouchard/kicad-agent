@@ -26,24 +26,31 @@ class RouteResult:
 
     Attributes:
         net_name: Name of the routed net.
-        path: Ordered tuple of (x, y) waypoints forming the route.
+        path: Ordered tuple of (x, y) or (x, y, layer) waypoints.
         length_mm: Total path length in mm.
         success: True if a valid path was found.
     """
 
     net_name: str
-    path: tuple[tuple[float, float], ...]
+    path: tuple[tuple[float, float], ...] | tuple[tuple[float, float, str], ...]
     length_mm: float
     success: bool
 
 
-def _euclidean_heuristic(u: tuple[float, float], v: tuple[float, float]) -> float:
-    """Euclidean distance heuristic for A* search."""
+def _euclidean_heuristic(u: tuple[float, ...], v: tuple[float, ...]) -> float:
+    """Euclidean distance heuristic for A* search.
+
+    Works with both 2D (x, y) and 3D (x, y, layer) tuples by only
+    using the first two elements.
+    """
     return math.hypot(u[0] - v[0], u[1] - v[1])
 
 
-def _path_length(path: list[tuple[float, float]]) -> float:
-    """Compute total Euclidean length of a path."""
+def _path_length(path: list[tuple[float, ...]]) -> float:
+    """Compute total Euclidean length of a path.
+
+    Works with both 2D and 3D tuples by only using x, y coordinates.
+    """
     total = 0.0
     for i in range(len(path) - 1):
         total += math.hypot(
@@ -55,16 +62,16 @@ def _path_length(path: list[tuple[float, float]]) -> float:
 
 def route_net(
     graph: RoutingGraph,
-    source: tuple[float, float],
-    target: tuple[float, float],
+    source: tuple[float, float] | tuple[float, float, str],
+    target: tuple[float, float] | tuple[float, float, str],
     net_name: str,
 ) -> RouteResult | None:
     """Route a single net from source to target using A* pathfinding.
 
     Args:
         graph: Routing graph with DRC-aware edge weights.
-        source: (x, y) start coordinate in mm.
-        target: (x, y) end coordinate in mm.
+        source: (x, y) or (x, y, layer) start coordinate in mm.
+        target: (x, y) or (x, y, layer) end coordinate in mm.
         net_name: Name of the net being routed.
 
     Returns:
@@ -73,9 +80,17 @@ def route_net(
     """
     import networkx as nx
 
-    # Snap source and target to nearest grid nodes.
-    src_node = graph.snap_to_node(source[0], source[1])
-    tgt_node = graph.snap_to_node(target[0], target[1])
+    # Detect whether graph has 3D nodes.
+    is_3d = any(len(n) == 3 for n in graph.graph.nodes)
+
+    if is_3d:
+        src_layer = source[2] if len(source) == 3 else None
+        tgt_layer = target[2] if len(target) == 3 else None
+        src_node = graph.snap_to_node(source[0], source[1], src_layer)
+        tgt_node = graph.snap_to_node(target[0], target[1], tgt_layer)
+    else:
+        src_node = graph.snap_to_node(source[0], source[1])
+        tgt_node = graph.snap_to_node(target[0], target[1])
 
     if src_node is None or tgt_node is None:
         return None
@@ -146,6 +161,7 @@ def build_routing_graph(
     board_bounds: tuple[float, float, float, float],
     obstacles: list | None = None,
     constraints: RoutingConstraints | None = None,
+    layers: list[str] | None = None,
 ) -> RoutingGraph:
     """Convenience function to build a routing graph.
 
@@ -153,6 +169,8 @@ def build_routing_graph(
         board_bounds: (x_min, y_min, x_max, y_max) board outline in mm.
         obstacles: List of SpatialBox obstacles. Defaults to empty.
         constraints: Routing constraints. Uses defaults if not provided.
+        layers: List of copper layer names for multi-layer routing.
+            Defaults to ["F.Cu"] for single-layer.
 
     Returns:
         Constructed RoutingGraph.
@@ -163,4 +181,5 @@ def build_routing_graph(
         board_bounds=board_bounds,
         obstacles=obstacles or [],
         constraints=constraints or RC(),
+        layers=layers,
     )

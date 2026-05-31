@@ -51,6 +51,7 @@ class RoutingGraph:
         obstacles: list,
         constraints: RoutingConstraints | None = None,
         query_engine: SpatialQueryEngine | None = None,
+        layers: list[str] | None = None,
     ) -> None:
         """Build routing graph from board bounds, obstacles, and constraints.
 
@@ -60,6 +61,8 @@ class RoutingGraph:
             constraints: Routing constraints. Uses defaults if not provided.
             query_engine: Optional pre-built SpatialQueryEngine for proximity
                 queries. Built from obstacles if not provided.
+            layers: List of copper layer names for multi-layer routing.
+                Defaults to ["F.Cu"] for single-layer backward compatibility.
 
         Raises:
             ValueError: If grid would exceed max_nodes.
@@ -71,6 +74,8 @@ class RoutingGraph:
 
         self.constraints = constraints or RoutingConstraints()
         self._graph = nx.Graph()
+
+        active_layers = layers or ["F.Cu"]
 
         x_min, y_min, x_max, y_max = board_bounds
         grid_res = self.constraints.grid_resolution_mm
@@ -96,18 +101,15 @@ class RoutingGraph:
             ys.append(round(y, 6))
             y += grid_res
 
-        nodes: list[tuple[float, float]] = []
-        for gx in xs:
-            for gy in ys:
-                pt = ShapelyPoint(gx, gy)
-                # Skip nodes inside any obstacle.
-                inside = False
-                for geom in obstacle_geoms:
-                    if pt.within(geom):
-                        inside = True
-                        break
-                if not inside:
-                    nodes.append((gx, gy))
+        nodes: list[tuple[float, float, str]] = []
+        for layer in active_layers:
+            for gx in xs:
+                for gy in ys:
+                    pt = ShapelyPoint(gx, gy)
+                    # Skip nodes inside any obstacle.
+                    inside = any(pt.within(geom) for geom in obstacle_geoms)
+                    if not inside:
+                        nodes.append((gx, gy, layer))
 
         if len(nodes) > self.constraints.max_nodes:
             raise ValueError(
@@ -130,15 +132,15 @@ class RoutingGraph:
         else:
             self._query_engine = None
 
-        # Create edges between adjacent nodes (4-directional).
+        # Create same-layer edges between adjacent nodes (4-directional).
         clearance_threshold = (
             self.constraints.clearance_mm
             + self.constraints.trace_width_mm / 2.0
         )
 
-        for gx, gy in nodes:
+        for gx, gy, layer in nodes:
             for dx, dy in ((grid_res, 0), (0, grid_res)):
-                neighbor = (round(gx + dx, 6), round(gy + dy, 6))
+                neighbor = (round(gx + dx, 6), round(gy + dy, 6), layer)
                 if neighbor not in node_set:
                     continue
 
@@ -162,8 +164,21 @@ class RoutingGraph:
                     cost += _DRC_PENALTY
 
                 self._graph.add_edge(
-                    (gx, gy), neighbor, weight=cost
+                    (gx, gy, layer), neighbor, weight=cost
                 )
+
+        # Add via edges between adjacent layers.
+        via_cost = self.constraints.via_cost_mm
+        for i in range(len(active_layers) - 1):
+            layer_a = active_layers[i]
+            layer_b = active_layers[i + 1]
+            layer_a_xy = {(gx, gy) for gx, gy, l in nodes if l == layer_a}
+            for gx, gy, l in nodes:
+                if l == layer_b and (gx, gy) in layer_a_xy:
+                    self._graph.add_edge(
+                        (gx, gy, layer_a), (gx, gy, layer_b),
+                        weight=via_cost,
+                    )
 
     @staticmethod
     def _build_query_engine(obstacles: list) -> SpatialQueryEngine:
@@ -220,8 +235,8 @@ class RoutingGraph:
         return self._graph.number_of_edges()
 
     def snap_to_node(
-        self, x: float, y: float
-    ) -> tuple[float, float] | None:
+        self, x: float, y: float, layer: str | None = None
+    ) -> tuple[float, float, str] | tuple[float, float] | None:
         """Find the nearest grid node to (x, y) within tolerance.
 
         Tolerance is grid_resolution_mm. Returns None if no node is
@@ -230,9 +245,12 @@ class RoutingGraph:
         Args:
             x: X coordinate in mm.
             y: Y coordinate in mm.
+            layer: Optional copper layer name. If provided, only considers
+                nodes on that layer. If None, finds nearest on any layer.
 
         Returns:
-            (x, y) tuple of the nearest node, or None if out of tolerance.
+            (x, y, layer) tuple for 3D graphs, or (x, y) for backward
+            compat, or None if out of tolerance.
         """
         if not self._graph.nodes:
             return None
@@ -244,10 +262,40 @@ class RoutingGraph:
         gx = round(round(x / grid_res) * grid_res, 6)
         gy = round(round(y / grid_res) * grid_res, 6)
 
-        if (gx, gy) in self._graph:
+        if layer is not None:
+            # Specific layer snap for 3D graphs.
+            candidate = (gx, gy, layer)
+            if candidate in self._graph:
+                dist = math.hypot(x - gx, y - gy)
+                if dist <= tolerance:
+                    return candidate
+            # Fall back to nearest node on the specified layer.
+            best_node = None
+            best_dist = float("inf")
+            for node in self._graph.nodes:
+                if len(node) == 3 and node[2] == layer:
+                    d = math.hypot(x - node[0], y - node[1])
+                    if d < best_dist:
+                        best_dist = d
+                        best_node = node
+            if best_node is not None and best_dist <= tolerance:
+                return best_node
+            return None
+
+        # No layer specified -- find nearest on any layer.
+        # Try exact grid snap first.
+        candidate = (gx, gy)
+        if candidate in self._graph:
             dist = math.hypot(x - gx, y - gy)
             if dist <= tolerance:
-                return (gx, gy)
+                return candidate
+
+        # Try 3D grid snap.
+        for node in self._graph.nodes:
+            if node[0] == gx and node[1] == gy:
+                dist = math.hypot(x - gx, y - gy)
+                if dist <= tolerance:
+                    return node
 
         # Fall back to nearest neighbor search.
         best_node = None
@@ -262,7 +310,10 @@ class RoutingGraph:
             return best_node
         return None
 
-    def mark_path_as_obstacle(self, path: tuple[tuple[float, float], ...]) -> None:
+    def mark_path_as_obstacle(
+        self,
+        path: tuple[tuple[float, float], ...] | tuple[tuple[float, float, str], ...],
+    ) -> None:
         """Remove edges along a routed path so subsequent nets avoid it.
 
         This provides single-layer multi-net routing by progressively blocking
@@ -270,7 +321,8 @@ class RoutingGraph:
         nets' endpoints) but edges along the path are removed.
 
         Args:
-            path: Ordered tuple of (x, y) waypoints forming a routed path.
+            path: Ordered tuple of (x, y) or (x, y, layer) waypoints forming
+                a routed path.
         """
         for i in range(len(path) - 1):
             u, v = path[i], path[i + 1]
