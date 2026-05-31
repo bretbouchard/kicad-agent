@@ -743,10 +743,23 @@ Plans:
 - [x] 36-03-PLAN.md -- AutoRouteOp schema extension, executor handler integration, end-to-end tests (ROUTE-05, ROUTE-06, ROUTE-07)
 
 ### Phase 37: Training + Infrastructure
-**Goal**: Training pipeline hardening and MCP server infrastructure
+**Goal**: Harden training pipeline with data versioning, evaluation harness, smoke tests, and output cleanup. Add production-grade infrastructure: structured logging, MCP health check, and graceful shutdown.
 **Depends on**: Phase 36
 **Requirements**: TRAIN-01, TRAIN-02, TRAIN-03, TRAIN-04, INFRA-01, INFRA-02, INFRA-03
-**Plans**: TBD
+**Success Criteria** (what must be TRUE):
+  1. DataManifest records SHA256 hashes of training data files and verifies content integrity
+  2. Regression detection flags evaluation metrics dropping below configurable thresholds
+  3. SFT smoke test trains tiny RewardModel on synthetic data with decreasing loss
+  4. TrainingCleanup removes stale output preserving latest N runs per type with dry-run mode
+  5. configure_logging() produces structured JSON or console output from all 70 getLogger sites
+  6. health_check MCP tool returns server status with uptime and in-flight operation count
+  7. Graceful shutdown rejects new operations and drains in-flight ops before exit
+**Plans**: 3 plans
+
+Plans:
+- [ ] 37-01-PLAN.md -- Structured logging via structlog with env-var controlled output format (INFRA-01)
+- [ ] 37-02-PLAN.md -- Training data versioning, regression detection, output cleanup (TRAIN-01, TRAIN-02, TRAIN-04)
+- [ ] 37-03-PLAN.md -- MCP health check, graceful shutdown, training pipeline smoke tests (INFRA-02, INFRA-03, TRAIN-03)
 
 ## Progress
 
@@ -791,3 +804,4 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 34. LLM Provider Abstraction | 2/2 | Complete | 2026-05-31 |
 | 35. Remaining Ops Gaps | 3/3 | Complete | 2026-05-31 |
 | 36. Multi-Layer Routing | 3/3 | Complete | 2026-05-31 |
+| 37. Training + Infrastructure | 0/3 | Planned | |
