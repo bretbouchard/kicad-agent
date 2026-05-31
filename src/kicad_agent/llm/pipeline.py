@@ -128,7 +128,8 @@ def llm_generate(
                 intent_parser = UnifiedIntentParser(hybrid_client)
             else:
                 from kicad_agent.llm.intent_parser import IntentParser
-                intent_parser = IntentParser()
+                from kicad_agent.llm.provider import get_provider
+                intent_parser = IntentParser(provider=get_provider())
 
         intent = intent_parser.parse(description)
         logger.info("Parsed intent: %s", intent.name)
@@ -187,11 +188,16 @@ def llm_generate(
         pcb_path = generation_result.pcb_path
 
         if sch_path is not None and sch_path.exists():
-            # Wire error fixer through hybrid client
+            # Wire error fixer through hybrid client or provider
             fixer = error_fixer
-            if fixer is None and hybrid_client is not None:
-                from kicad_agent.llm.unified_parsers import UnifiedErrorFixer
-                fixer = UnifiedErrorFixer(hybrid_client)
+            if fixer is None:
+                if hybrid_client is not None:
+                    from kicad_agent.llm.unified_parsers import UnifiedErrorFixer
+                    fixer = UnifiedErrorFixer(hybrid_client)
+                else:
+                    from kicad_agent.llm.error_fixer import ErrorFixer
+                    from kicad_agent.llm.provider import get_provider
+                    fixer = ErrorFixer(provider=get_provider())
 
             refinement_result = llm_refine_design(
                 sch_path,
@@ -214,13 +220,13 @@ def llm_generate(
     if run_critique and generation_result.pcb_path is not None and generation_result.pcb_path.exists():
         try:
             if design_critic is None:
-                critic_client = hybrid_client  # will be None for pure cloud
-                if critic_client is not None:
+                if hybrid_client is not None:
                     from kicad_agent.llm.design_critic import DesignCritic
-                    design_critic = DesignCritic(client=critic_client)
+                    design_critic = DesignCritic(client=hybrid_client)
                 else:
                     from kicad_agent.llm.design_critic import DesignCritic
-                    design_critic = DesignCritic()
+                    from kicad_agent.llm.provider import get_provider
+                    design_critic = DesignCritic(provider=get_provider())
 
             # Parse PCB and build spatial data
             from kicad_agent.parser import parse_pcb

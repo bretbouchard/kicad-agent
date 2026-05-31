@@ -25,6 +25,7 @@ from kicad_agent.llm.tools import INTENT_TOOL
 
 if TYPE_CHECKING:
     from kicad_agent.llm.backend import LLMBackend
+    from kicad_agent.llm.provider import LLMProvider
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +61,23 @@ class UnifiedIntentParser:
     Falls back to text-based JSON extraction for local model responses.
 
     Args:
-        client: LLMBackend instance (typically HybridLLMClient).
+        client: Optional LLMBackend instance (typically HybridLLMClient).
+        provider: Optional LLMProvider instance. Takes priority over client
+                  when provided. Falls back to LLMClient if neither is given.
     """
 
-    def __init__(self, client: LLMBackend) -> None:
-        self._client = client
+    def __init__(
+        self,
+        client: LLMBackend | None = None,
+        provider: LLMProvider | None = None,
+    ) -> None:
+        if provider is not None:
+            self._client = provider
+        elif client is not None:
+            self._client = client
+        else:
+            from kicad_agent.llm.client import LLMClient
+            self._client = LLMClient()
 
     def parse(self, description: str) -> GenerationIntent:
         """Parse NL into GenerationIntent via cloud tool_use or text extraction.
@@ -117,11 +130,23 @@ class UnifiedErrorFixer:
     Falls back to text-based JSON extraction for local model responses.
 
     Args:
-        client: LLMBackend instance (typically HybridLLMClient).
+        client: Optional LLMBackend instance (typically HybridLLMClient).
+        provider: Optional LLMProvider instance. Takes priority over client
+                  when provided. Falls back to LLMClient if neither is given.
     """
 
-    def __init__(self, client: LLMBackend) -> None:
-        self._client = client
+    def __init__(
+        self,
+        client: LLMBackend | None = None,
+        provider: LLMProvider | None = None,
+    ) -> None:
+        if provider is not None:
+            self._client = provider
+        elif client is not None:
+            self._client = client
+        else:
+            from kicad_agent.llm.client import LLMClient
+            self._client = LLMClient()
 
     def fix(
         self,
