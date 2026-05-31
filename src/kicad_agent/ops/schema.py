@@ -292,6 +292,7 @@ from kicad_agent.ops._schema_schematic_intel import (  # noqa: E402
 )
 from kicad_agent.ops._schema_erc_smart import (  # noqa: E402
     ClassifyViolationsOp,
+    DiagnoseViolationsOp,
 )
 
 
@@ -392,7 +393,8 @@ class Operation(BaseModel):
         | ExtractNetsOp
         | DetectNetConflictsOp
         | SuggestNetNamesOp
-        | ClassifyViolationsOp,
+        | ClassifyViolationsOp
+        | DiagnoseViolationsOp,
         Field(discriminator="op_type"),
     ]
 
@@ -524,6 +526,7 @@ __all__ = [
     "SuggestNetNamesOp",
     # ERC smart ops
     "ClassifyViolationsOp",
+    "DiagnoseViolationsOp",
     # Union and helpers
     "Operation",
     "get_operation_schema",

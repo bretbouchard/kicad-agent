@@ -513,6 +513,19 @@ def _handle_classify_violations(op: Any, ir: SchematicIR, file_path: Path) -> di
     return classify_violations(violations, ir, file_path)
 
 
+@register_schematic("diagnose_violations")
+def _handle_diagnose_violations(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.violation_diagnostic import diagnose_violations
+    from kicad_agent.ops.violation_classifier import classify_violations
+    from kicad_agent.ops.erc_parser import parse_erc
+    violations = parse_erc(file_path)
+    classified = classify_violations(violations, ir, file_path)
+    fixable = classified["fixable"]
+    if op.violation_types is not None:
+        fixable = [v for v in fixable if v["violation"]["type"] in op.violation_types]
+    return diagnose_violations(fixable, ir, file_path)
+
+
 @register_schematic("extract_nets")
 def _handle_extract_nets(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.schematic_routing.net_extractor import extract_nets
