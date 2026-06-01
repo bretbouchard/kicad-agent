@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: benchmark-suite
 status: executing
-stopped_at: "Plan 45-02 complete. Signal integrity, importance ranking, net stats. 116 tests."
-last_updated: "2026-06-01T04:14:39Z"
+stopped_at: "Plan 46-01 complete. Subcircuit detection + classification. 66 tests."
+last_updated: "2026-06-01T04:57:48Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 48
   completed_phases: 44
   total_plans: 122
-  completed_plans: 119
+  completed_plans: 120
   percent: 98
 ---
 
@@ -26,21 +26,18 @@ Last activity: 2026-06-01
 
 ## Current Position
 
-Phase: 45 (Circuit Topology Graph) IN PROGRESS
-Status: **Plan 45-02 complete. Signal integrity, importance ranking, net stats. 116 tests.**
-Plans: 45-01 (complete), 45-02 (complete)
+Phase: 46 (Component Function Recognition) IN PROGRESS
+Status: **Plan 46-01 complete. Subcircuit detection + classification. 66 tests.**
+Plans: 46-01 (complete)
 Last activity: 2026-06-01
 
-### Phase 45: Circuit Topology Graph
+### Phase 46: Component Function Recognition
 
-- Plan 45-01: CircuitTopology schema, TopologyBuilder, NetClassifier (COMPLETE)
-  - Union-Find net resolution, IC pin role classification, feedback detection, signal path tracing
-  - 87 TDD tests covering all classification and flow rules
-- Plan 45-02: Signal integrity, importance ranking, net stats (COMPLETE)
-  - SignalIntegrity enum (HIGH_SPEED, LOW_FREQUENCY, DC, POWER_INTEGRITY)
-  - NetImportance enum (CRITICAL, HIGH, MEDIUM, LOW)
-  - NetStats with fanout, stub detection, multi-drop, BFS path depth
-  - 116 TDD tests (87 prior + 29 new)
+- Plan 46-01: SubcircuitDetector, CircuitClassifier (COMPLETE)
+  - IC-centric BFS clustering with max_hops=2, IC boundary stop
+  - CircuitClassifier with 13 ordered rules (first match wins)
+  - 66 TDD tests covering all 15 subcircuit types, confidence, integration
+  - No regressions (182 combined tests with topology)
 
 ## Previous Milestone (v2.4 Schematic Intelligence)
 
@@ -115,13 +112,16 @@ Recent decisions affecting current work:
 - [v2.5-45]: NetStats.is_stub detects diode, connector, misc components as dead-ends plus non-forward-adjacency
 - [v2.5-45]: NetStats.is_multi_drop requires 2+ receiver ICs (not passive components)
 - [v2.5-45]: Signal integrity rules stored as class-level _si_rules for extensibility matching _rules pattern
+- [v2.5-46]: BFS clustering does not traverse through ICs -- each IC forms its own subcircuit
+- [v2.5-46]: PREAMP rule requires resistor_count >= 2 to distinguish from OUTPUT_STAGE
+- [v2.5-46]: Feature extraction as standalone _extract_features method for Plan 46-02 reuse
 - [v2.4-SI]: ClassifyViolationsOp in _schema_erc_smart.py (separate from _schema_repair.py per D-01)
 - [v2.4-SI]: IR position data (pin/wire/label positions) distinguishes #PWR symbols from regular components
 
 ### Pending Todos
 
-- Phase 45 complete -- Signal integrity, importance ranking, net stats (116 tests)
-- Next: Phase 46 (component function recognition) or continue with next milestone plans
+- Plan 46-01 complete -- Subcircuit detection + classification (66 tests)
+- Next: Plan 46-02 (feature vector generation for ML classification)
 
 ### Blockers/Concerns
 
@@ -133,5 +133,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Plan 45-02 complete. Signal integrity, importance ranking, net stats. 116 tests.
-Resume with: Phase 46 (component function recognition) or continue with next milestone plans
+Stopped at: Plan 46-01 complete. Subcircuit detection + classification. 66 tests.
+Resume with: Plan 46-02 (feature vector generation for ML classification)
