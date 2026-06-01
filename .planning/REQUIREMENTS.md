@@ -599,4 +599,16 @@ Born from gap analysis: the Evaluation Benchmarks scorecard dimension is at 2/10
 
 ### Adversarial Test Generation (Phase 44)
 
-- [ ] **BENCH-05**: Three types of adversarial testing: mutation testing (200+ deliberately broken schematics via 7 mutation types), property-based testing (50+ verifying 5 invariants on generated circuits), parser fuzzing (500+ random S-expression mutations proving no crashes); all seeded for reproducibility
+- [x] **BENCH-05**: Three types of adversarial testing: mutation testing (200+ deliberately broken schematics via 7 mutation types), property-based testing (50+ verifying 5 invariants on generated circuits), parser fuzzing (500+ random S-expression mutations proving no crashes); all seeded for reproducibility
+
+## v2.7 Requirements -- Domain Intelligence
+
+Born from gap analysis: the Domain Intelligence scorecard dimension needs to move from 6/10 to 10/10. These requirements establish circuit intent inference and design rule intelligence -- the foundation for intelligent design review.
+
+### Circuit Intent Inference (Phase 47)
+
+- [ ] **DOMAIN-03**: Deterministic, rule-based intent inference engine that analyzes circuit topology and subcircuit data to produce structured DesignIntent (overall_type, subcircuit_intents, signal_flow_description, design_goals, confidence scores). Must identify common analog circuit patterns (compressor via THAT4301+sidechain, buffer/amplifier via NE5532+feedback, switch/bypass via CD4066+control_nets, oscillator via CD4060+RC, envelope via LM358+integrator) without LLM calls. Inference is template-based with ordered rules (first match wins). Signal flow descriptions must be human-readable with arrow notation (e.g. "Audio input -> bypass switch -> VCA -> output buffer").
+
+### Design Rule Intelligence (Phase 48)
+
+- [ ] **DOMAIN-04**: Pluggable design rule engine with 8 built-in rules for domain-specific DRC beyond KiCad's ERC/DRC: BYPASS_CAP_01 (decoupling caps near ICs), FEEDBACK_01 (op-amp feedback compensation), IMPEDANCE_01 (high-speed net termination), THERMAL_01 (power component thermal relief), GROUND_01 (star ground topology), POWER_01 (power supply filtering), SIGNAL_01 (input protection), LAYOUT_01 (critical signal path quality). Rules subclass a DesignRule ABC with check(topology) method. Engine supports rule enable/disable, per-rule config overrides, error-tolerant execution (broken rules don't crash the pipeline), and JSON/Markdown report output. YAML configuration for custom thresholds and rule toggling. CLI subcommand `kicad-agent design-rules <schematic>` for end-to-end invocation.
