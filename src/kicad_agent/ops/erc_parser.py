@@ -142,12 +142,14 @@ def _extract_positions(
     """Extract (x, y) positions from ERC violation item dicts.
 
     Each item dict may have a "pos" key with {"x": float, "y": float}.
+    KiCad 10's kicad-cli JSON output uses a unit that is 100x smaller than mm
+    (e.g. 97.79mm appears as 0.9779). We multiply by 100 to normalize to mm.
 
     Args:
         items: Tuple of item dicts from a Violation.
 
     Returns:
-        List of (x, y) coordinate tuples.
+        List of (x, y) coordinate tuples in millimeters.
     """
     positions: list[tuple[float, float]] = []
     for item in items:
@@ -156,5 +158,5 @@ def _extract_positions(
             x = pos.get("x")
             y = pos.get("y")
             if isinstance(x, (int, float)) and isinstance(y, (int, float)):
-                positions.append((float(x), float(y)))
+                positions.append((float(x) * 100.0, float(y) * 100.0))
     return positions
