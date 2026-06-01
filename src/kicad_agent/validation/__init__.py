@@ -43,6 +43,12 @@ from kicad_agent.validation.drc_intel import (
     IntelligentDrcReport,
     FixSuggester,
 )
+from kicad_agent.validation.pcb_design_rules import (
+    ClearanceCheckRule,
+    ImpedanceCheckRule,
+    ThermalProximityRule,
+    get_pcb_design_rules,
+)
 
 __all__ = [
     "round_trip_stable",
@@ -75,4 +81,8 @@ __all__ = [
     "SpatialFixSuggestion",
     "IntelligentDrcReport",
     "FixSuggester",
+    "ClearanceCheckRule",
+    "ImpedanceCheckRule",
+    "ThermalProximityRule",
+    "get_pcb_design_rules",
 ]
