@@ -5,6 +5,10 @@ VP-04: Procedural maze-routing PCB generator.
 VP-05: Cold-start reasoning chain synthesis from DRC/ERC violations.
 VP-06: Spatial query engine with Shapely STRtree.
 VP-08: Rick agent integration for coordinate-grounded domain reports.
+SI-01: PCB spatial model with per-layer geometry and STRtree indexing.
+SI-02: Layer stackup metadata extraction.
+SI-03: Layer classification utility.
+SI-04: Per-net geometry parameters.
 
 Provides:
     - SpatialPoint, SpatialBox, SpatialPath, SpatialRegion: frozen dataclasses
@@ -17,6 +21,10 @@ Provides:
     - SpatialQueryEngine: Shapely STRtree spatial query engine
     - RickDomain, RickFinding, SpatialRickReport: Rick integration types
     - generate_spatial_report, generate_all_reports: Rick report generation
+    - PcbSpatialModel: PCB spatial model with per-layer Shapely geometry and STRtree
+    - LayerClassifier: KiCad layer name classification utility
+    - LayerStackup, LayerInfo: Layer stackup metadata dataclasses
+    - NetClassGeometry, build_net_class_map: Per-net geometry parameters
 """
 
 from kicad_agent.spatial.extractor import (
@@ -26,20 +34,30 @@ from kicad_agent.spatial.extractor import (
     extract_points,
     extract_regions,
 )
+from kicad_agent.spatial.layer_classifier import LayerClassifier
+from kicad_agent.spatial.layer_stackup import LayerInfo, LayerStackup
 from kicad_agent.spatial.maze_generator import MazeBoard, generate_maze_board
+from kicad_agent.spatial.net_class_geometry import (
+    NetClassGeometry,
+    build_net_class_map,
+)
+from kicad_agent.spatial.pcb_model import (
+    PcbSpatialModel,
+    _CLEARANCE_TOLERANCE_MM,
+)
 from kicad_agent.spatial.primitives import (
     SpatialBox,
     SpatialPath,
     SpatialPoint,
     SpatialRegion,
 )
+from kicad_agent.spatial.query import SpatialQueryEngine
 from kicad_agent.spatial.reasoning_chains import (
     ReasoningChain,
     ReasoningStep,
     synthesize_chain,
     synthesize_chains,
 )
-from kicad_agent.spatial.query import SpatialQueryEngine
 from kicad_agent.spatial.renderer import (
     render_pcb_layer,
     render_pcb_layer_grid,
@@ -53,27 +71,41 @@ from kicad_agent.spatial.rick_integration import (
 )
 
 __all__ = [
+    # Primitives
     "SpatialPoint",
     "SpatialBox",
     "SpatialPath",
     "SpatialRegion",
+    # Extraction
     "extract_points",
     "extract_boxes",
     "extract_paths",
     "extract_regions",
     "extract_all",
+    # Rendering
     "render_pcb_layer",
     "render_pcb_layer_grid",
+    # Maze generator
     "MazeBoard",
     "generate_maze_board",
+    # Reasoning chains
     "ReasoningChain",
     "ReasoningStep",
     "synthesize_chain",
     "synthesize_chains",
+    # Query engine
     "SpatialQueryEngine",
+    # Rick integration
     "RickDomain",
     "RickFinding",
     "SpatialRickReport",
     "generate_spatial_report",
     "generate_all_reports",
+    # PCB Spatial Intelligence (SI)
+    "PcbSpatialModel",
+    "LayerClassifier",
+    "LayerStackup",
+    "LayerInfo",
+    "NetClassGeometry",
+    "build_net_class_map",
 ]
