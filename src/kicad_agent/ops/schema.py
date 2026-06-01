@@ -293,6 +293,7 @@ from kicad_agent.ops._schema_schematic_intel import (  # noqa: E402
 from kicad_agent.ops._schema_erc_smart import (  # noqa: E402
     ClassifyViolationsOp,
     DiagnoseViolationsOp,
+    ErcAutoFixHierarchicalOp,
     ErcAutoFixOp,
 )
 
@@ -383,6 +384,7 @@ class Operation(BaseModel):
         | RemoveDanglingWiresOp
         | BreakWireShortsOp
         | ErcAutoFixOp
+        | ErcAutoFixHierarchicalOp
         | ModifyCopperZoneOp
         | RemoveCopperZoneOp
         | ResolvePinPositionsOp
@@ -502,6 +504,7 @@ __all__ = [
     "RemoveDanglingWiresOp",
     "BreakWireShortsOp",
     "ErcAutoFixOp",
+    "ErcAutoFixHierarchicalOp",
     # Sheet ops
     "AddSheetOp",
     "AddSheetPinOp",

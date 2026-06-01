@@ -505,8 +505,20 @@ def _handle_erc_auto_fix(op: Any, ir: SchematicIR, file_path: Path) -> dict[str,
     return erc_auto_fix(
         ir, file_path,
         max_iterations=op.max_iterations,
-        mode=getattr(op, "mode", "symptom"),
-        fix_classes=getattr(op, "fix_classes", None),
+        mode=op.mode,
+        fix_classes=op.fix_classes,
+        sheet_filter=op.sheet_filter,
+    )
+
+
+@register_schematic("erc_auto_fix_hierarchical")
+def _handle_erc_auto_fix_hierarchical(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    # ir unused: hierarchical creates per-sheet IRs internally
+    from kicad_agent.ops.erc_auto_fix import erc_auto_fix_hierarchical
+    return erc_auto_fix_hierarchical(
+        file_path,
+        max_iterations=op.max_iterations,
+        mode=op.mode,
     )
 
 

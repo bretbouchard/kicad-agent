@@ -93,3 +93,34 @@ class ErcAutoFixOp(BaseModel):
         default=None,
         description="In root_cause mode, only fix these classes. None = fixable only.",
     )
+    sheet_filter: Optional[str] = Field(
+        default="/",
+        description="Only fix violations from this sheet path. Defaults to '/' (root sheet). Use None for all sheets.",
+    )
+
+
+class ErcAutoFixHierarchicalOp(BaseModel):
+    """Run ERC auto-fix across all sheets in a hierarchical schematic.
+
+    Discovers all sub-sheets, creates per-sheet IRs, and runs ``erc_auto_fix``
+    on each with matching ``sheet_filter``. Returns a combined summary with
+    per-sheet breakdown.
+
+    Attributes:
+        op_type: Discriminator literal ``"erc_auto_fix_hierarchical"``.
+        target_file: Relative path to the root KiCad schematic file (H-01 validated).
+        max_iterations: Maximum repair iterations per sheet (default 3, max 10).
+        mode: ``"symptom"`` for iteration-based repair, ``"root_cause"`` for
+            classify-diagnose-fix pipeline.
+    """
+
+    op_type: Literal["erc_auto_fix_hierarchical"] = "erc_auto_fix_hierarchical"
+    target_file: TargetFile
+    max_iterations: int = Field(
+        default=3, ge=1, le=10,
+        description="Maximum repair iterations per sheet (default 3)",
+    )
+    mode: Literal["symptom", "root_cause"] = Field(
+        default="symptom",
+        description="symptom: iteration-based repair. root_cause: classify-diagnose-fix pipeline.",
+    )

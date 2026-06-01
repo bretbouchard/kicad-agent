@@ -538,23 +538,26 @@ class TestExecutorHandlerDispatch:
 
     def test_handler_passes_mode(self):
         """Executor handler passes op.mode to erc_auto_fix."""
+        from kicad_agent.ops._schema_erc_smart import ErcAutoFixOp
         from kicad_agent.ops.executor import _SCHEMATIC_HANDLERS
 
         assert "erc_auto_fix" in _SCHEMATIC_HANDLERS
         handler = _SCHEMATIC_HANDLERS["erc_auto_fix"]
 
-        # Create a mock op with mode and fix_classes
-        mock_op = MagicMock()
-        mock_op.max_iterations = 3
-        mock_op.mode = "root_cause"
-        mock_op.fix_classes = ["fixable"]
+        op = ErcAutoFixOp(
+            target_file="test.kicad_sch",
+            max_iterations=3,
+            mode="root_cause",
+            fix_classes=["fixable"],
+            sheet_filter="/",
+        )
 
         mock_ir = MagicMock()
         mock_file_path = Path("test.kicad_sch")
 
         with patch("kicad_agent.ops.erc_auto_fix.erc_auto_fix") as mock_auto_fix:
             mock_auto_fix.return_value = {"mode": "root_cause"}
-            handler(mock_op, mock_ir, mock_file_path)
+            handler(op, mock_ir, mock_file_path)
 
             mock_auto_fix.assert_called_once_with(
                 mock_ir,
@@ -562,28 +565,57 @@ class TestExecutorHandlerDispatch:
                 max_iterations=3,
                 mode="root_cause",
                 fix_classes=["fixable"],
+                sheet_filter="/",
             )
 
     def test_handler_default_symptom(self):
-        """Executor handler defaults to symptom mode via getattr."""
+        """Executor handler uses schema defaults when only target_file provided."""
+        from kicad_agent.ops._schema_erc_smart import ErcAutoFixOp
         from kicad_agent.ops.executor import _SCHEMATIC_HANDLERS
 
         handler = _SCHEMATIC_HANDLERS["erc_auto_fix"]
 
-        # Create a mock op WITHOUT mode/fix_classes (simulating old schema)
-        mock_op = MagicMock(spec=["max_iterations", "target_file"])
-        mock_op.max_iterations = 3
+        # Use real schema model to get proper defaults
+        op = ErcAutoFixOp(target_file="test.kicad_sch")
 
         mock_ir = MagicMock()
         mock_file_path = Path("test.kicad_sch")
 
         with patch("kicad_agent.ops.erc_auto_fix.erc_auto_fix") as mock_auto_fix:
             mock_auto_fix.return_value = {"fixes_applied": []}
-            handler(mock_op, mock_ir, mock_file_path)
+            handler(op, mock_ir, mock_file_path)
 
             call_kwargs = mock_auto_fix.call_args
             assert call_kwargs[1]["mode"] == "symptom"
             assert call_kwargs[1]["fix_classes"] is None
+            assert call_kwargs[1]["sheet_filter"] == "/"
+
+    def test_handler_hierarchical_dispatch(self):
+        """erc_auto_fix_hierarchical handler is registered and dispatches correctly."""
+        from kicad_agent.ops._schema_erc_smart import ErcAutoFixHierarchicalOp
+        from kicad_agent.ops.executor import _SCHEMATIC_HANDLERS
+
+        assert "erc_auto_fix_hierarchical" in _SCHEMATIC_HANDLERS
+        handler = _SCHEMATIC_HANDLERS["erc_auto_fix_hierarchical"]
+
+        op = ErcAutoFixHierarchicalOp(
+            target_file="root.kicad_sch",
+            max_iterations=5,
+            mode="root_cause",
+        )
+
+        mock_ir = MagicMock()
+        mock_file_path = Path("root.kicad_sch")
+
+        with patch("kicad_agent.ops.erc_auto_fix.erc_auto_fix_hierarchical") as mock_hier:
+            mock_hier.return_value = {"sheets_processed": 3}
+            handler(op, mock_ir, mock_file_path)
+
+            mock_hier.assert_called_once_with(
+                mock_file_path,
+                max_iterations=5,
+                mode="root_cause",
+            )
 
 
 # ---------------------------------------------------------------------------
