@@ -231,8 +231,11 @@ class TopologyBuilder:
         nodes = self._build_nodes(graph)
         nodes_by_ref = {n.ref: n for n in nodes}
 
+        # 1.5 Resolve pin nets (needed by edge building and path tracing)
+        pin_nets = self._resolve_pin_nets(graph)
+
         # 2. Build edges with net resolution and direction
-        edges = self._build_edges(graph, nodes_by_ref)
+        edges = self._build_edges(graph, nodes_by_ref, pin_nets)
 
         # 3. Classify nets
         net_names = {e.net_name for e in edges}
@@ -264,7 +267,7 @@ class TopologyBuilder:
         edges = updated_edges
 
         # 6. Trace signal paths
-        signal_paths = self._trace_signal_paths(edges, list(input_nets), list(output_nets))
+        signal_paths = self._trace_signal_paths(edges, list(input_nets), list(output_nets), pin_nets)
 
         # 7. Compute stats
         stats = {
@@ -369,117 +372,124 @@ class TopologyBuilder:
     # -------------------------------------------------------------------
 
     def _resolve_pin_nets(self, graph: SchematicGraph) -> dict[tuple[str, str], str]:
-        """Resolve each pin to its net name using label proximity and wire tracing.
+        """Resolve each pin to its net name using Union-Find grouping.
+
+        Uses Union-Find to group all positions (pin positions, wire endpoints,
+        label positions) into electrically connected clusters. Each cluster
+        gets a net name from the first label found in it, or an anonymous name.
 
         Returns a dict mapping (ref, pin_number) -> net_name.
         """
-        pin_nets: dict[tuple[str, str], str] = {}
+        # Union-Find data structure
+        parent: dict[tuple[float, float], tuple[float, float]] = {}
 
-        # Build label position index for fast lookup
-        label_at_pos: dict[tuple[float, float], str] = {}
-        for label in graph.labels:
-            key = (round(label.position[0], 2), round(label.position[1], 2))
-            label_at_pos[key] = label.name
+        def find(x: tuple[float, float]) -> tuple[float, float]:
+            root = x
+            while parent.get(root, root) != root:
+                root = parent[root]
+            # Path compression: point all nodes directly to root
+            while parent.get(x, x) != root:
+                next_x = parent[x]
+                parent[x] = root
+                x = next_x
+            return root
 
-        # For each pin, check if it's directly on a label
+        def union(a: tuple[float, float], b: tuple[float, float]) -> None:
+            ra, rb = find(a), find(b)
+            if ra != rb:
+                parent[ra] = rb
+
+        # Round positions for consistent keys
+        def rp(pos: tuple[float, ...]) -> tuple[float, float]:
+            return (round(pos[0], 2), round(pos[1], 2))
+
+        # Initialize parent for all positions
         for pin in graph.pins:
-            pin_key = (pin.ref, pin.pin_number)
-            pos = (round(pin.position[0], 2), round(pin.position[1], 2))
-            body_pos = (round(pin.body_position[0], 2), round(pin.body_position[1], 2))
+            pos = rp(pin.position)
+            parent.setdefault(pos, pos)
+        for wire in graph.wires:
+            s, e = rp(wire.start), rp(wire.end)
+            parent.setdefault(s, s)
+            parent.setdefault(e, e)
+        for label in graph.labels:
+            pos = rp(label.position)
+            parent.setdefault(pos, pos)
 
-            # Check if label is at pin position (exact or nearby)
-            net_name = label_at_pos.get(pos)
-            if not net_name:
-                # Check body position
-                net_name = label_at_pos.get(body_pos)
-            if not net_name:
-                # Proximity check with tolerance
-                for lpos, lname in label_at_pos.items():
-                    dist = ((pos[0] - lpos[0]) ** 2 + (pos[1] - lpos[1]) ** 2) ** 0.5
-                    if dist <= _POSITION_TOLERANCE:
-                        net_name = lname
+        # Union wire endpoints
+        for wire in graph.wires:
+            s, e = rp(wire.start), rp(wire.end)
+            union(s, e)
+
+        # Union pins at wire endpoints (pin position == wire endpoint)
+        for pin in graph.pins:
+            pos = rp(pin.position)
+            # Check all nearby positions (within tolerance)
+            for other_pos in list(parent.keys()):
+                if other_pos == pos:
+                    continue
+                dist = ((pos[0] - other_pos[0]) ** 2 + (pos[1] - other_pos[1]) ** 2) ** 0.5
+                if dist <= _POSITION_TOLERANCE:
+                    union(pos, other_pos)
+
+        # Union labels at pin positions or wire endpoints (proximity)
+        for label in graph.labels:
+            lpos = rp(label.position)
+            for other_pos in list(parent.keys()):
+                dist = ((lpos[0] - other_pos[0]) ** 2 + (lpos[1] - other_pos[1]) ** 2) ** 0.5
+                if dist <= _POSITION_TOLERANCE:
+                    union(lpos, other_pos)
+
+        # Build clusters: root -> set of positions
+        clusters: dict[tuple[float, float], set[tuple[float, float]]] = {}
+        for pos in parent:
+            root = find(pos)
+            clusters.setdefault(root, set()).add(pos)
+
+        # For each cluster, find the net name (from labels) or assign anonymous name
+        cluster_nets: dict[tuple[float, float], str] = {}
+        anon_counter = 0
+        for root, positions in clusters.items():
+            # Find any label in this cluster
+            net_name = None
+            for label in graph.labels:
+                lpos = rp(label.position)
+                if lpos in positions:
+                    net_name = label.name
+                    break
+
+            if net_name is None:
+                # Check proximity to any label in cluster
+                for label in graph.labels:
+                    lpos = rp(label.position)
+                    for pos in positions:
+                        dist = ((pos[0] - lpos[0]) ** 2 + (pos[1] - lpos[1]) ** 2) ** 0.5
+                        if dist <= _POSITION_TOLERANCE:
+                            net_name = label.name
+                            break
+                    if net_name:
                         break
 
-            if net_name:
-                pin_nets[pin_key] = net_name
+            if net_name is None:
+                anon_counter += 1
+                net_name = f"Net_{anon_counter}"
 
-        # For pins not resolved by labels, try wire tracing
-        # Build wire endpoint -> wire index for connectivity
-        wire_endpoints: dict[tuple[float, float], list] = {}
-        for wire in graph.wires:
-            s = (round(wire.start[0], 2), round(wire.start[1], 2))
-            e = (round(wire.end[0], 2), round(wire.end[1], 2))
-            wire_endpoints.setdefault(s, []).append(wire)
-            wire_endpoints.setdefault(e, []).append(wire)
+            cluster_nets[root] = net_name
 
-        # Build pin position index
-        pin_at_pos: dict[tuple[float, float], PinPosition] = {}
+        # Map each pin to its cluster's net name
+        pin_nets: dict[tuple[str, str], str] = {}
         for pin in graph.pins:
-            pin_at_pos[(round(pin.position[0], 2), round(pin.position[1], 2))] = pin
-
-        # For each unresolved pin, BFS through wires to find a label or resolved pin
-        for pin in graph.pins:
-            pin_key = (pin.ref, pin.pin_number)
-            if pin_key in pin_nets:
-                continue
-
-            pos = (round(pin.position[0], 2), round(pin.position[1], 2))
-            net = self._bfs_wire_trace(pos, wire_endpoints, label_at_pos, pin_at_pos, pin_nets)
-            if net:
-                pin_nets[pin_key] = net
+            pos = rp(pin.position)
+            if pos in parent:
+                root = find(pos)
+                net_name = cluster_nets.get(root)
+                if net_name:
+                    pin_nets[(pin.ref, pin.pin_number)] = net_name
 
         return pin_nets
 
-    def _bfs_wire_trace(
-        self,
-        start: tuple[float, float],
-        wire_endpoints: dict[tuple[float, float], list],
-        label_at_pos: dict[tuple[float, float], str],
-        pin_at_pos: dict[tuple[float, float], PinPosition],
-        pin_nets: dict[tuple[str, str], str],
-    ) -> Optional[str]:
-        """BFS through wires from start position to find net name."""
-        visited: set[tuple[float, float]] = set()
-        queue: deque[tuple[float, float]] = deque([start])
-        visited.add(start)
-
-        while queue:
-            pos = queue.popleft()
-
-            # Check if there's a label at this position
-            net = label_at_pos.get(pos)
-            if net:
-                return net
-
-            # Check proximity to labels
-            for lpos, lname in label_at_pos.items():
-                dist = ((pos[0] - lpos[0]) ** 2 + (pos[1] - lpos[1]) ** 2) ** 0.5
-                if dist <= _POSITION_TOLERANCE:
-                    return lname
-
-            # Check if a resolved pin is at this position
-            pin = pin_at_pos.get(pos)
-            if pin:
-                pnet = pin_nets.get((pin.ref, pin.pin_number))
-                if pnet:
-                    return pnet
-
-            # Follow wires from this position
-            for wire in wire_endpoints.get(pos, []):
-                s = (round(wire.start[0], 2), round(wire.start[1], 2))
-                e = (round(wire.end[0], 2), round(wire.end[1], 2))
-                other = e if pos == s else s
-                if other not in visited:
-                    visited.add(other)
-                    queue.append(other)
-
-        return None
-
-    def _build_edges(self, graph: SchematicGraph, nodes: dict[str, TopologyNode]) -> list[TopologyEdge]:
+    def _build_edges(self, graph: SchematicGraph, nodes: dict[str, TopologyNode], pin_nets: dict[tuple[str, str], str]) -> list[TopologyEdge]:
         """Build directed TopologyEdge for each signal-carrying net."""
         from kicad_agent.analysis.net_classifier import NetClassifier
-
-        pin_nets = self._resolve_pin_nets(graph)
 
         # Group pins by net
         net_pins: dict[str, list[tuple[str, str, PinRole]]] = {}
@@ -528,12 +538,14 @@ class TopologyBuilder:
                             classification=classification,
                             signal_direction=direction,
                         ))
-            elif bidirectional:
-                # No driver -- bidirectional connections (two edges per pair)
-                for i in range(len(bidirectional)):
-                    for j in range(i + 1, len(bidirectional)):
-                        r1, p1 = bidirectional[i]
-                        r2, p2 = bidirectional[j]
+            elif len(members) >= 2:
+                # No driver -- bidirectional/unknown connections (two edges per pair)
+                # Include all non-power members
+                non_power = [(ref, pnum) for ref, pnum, role in members if role != PinRole.POWER]
+                for i in range(len(non_power)):
+                    for j in range(i + 1, len(non_power)):
+                        r1, p1 = non_power[i]
+                        r2, p2 = non_power[j]
                         direction = "bidirectional"
                         if classification == NetClassification.POWER:
                             direction = "power"
@@ -694,34 +706,46 @@ class TopologyBuilder:
         edges: list[TopologyEdge],
         input_nets: list[str],
         output_nets: list[str],
+        pin_nets: dict[tuple[str, str], str] | None = None,
     ) -> list[list[str]]:
         """BFS trace from input nets to output nets through directed edges.
 
         Algorithm:
-        1. Start from all input nets
+        1. Start from all components connected to input nets
         2. Follow directed edges, skipping POWER-classified edges
-        3. Record each path that reaches an output net
+        3. Record each path that reaches a component connected to an output net
         4. Skip dead-end branches
         5. Apply max_paths limit for safety
         """
         # Build adjacency: ref -> [(target_ref, net_name)]
         forward: dict[str, list[tuple[str, str]]] = {}
         for edge in edges:
-            if edge.classification in (NetClassification.POWER, NetClassification.POWER):
+            if edge.classification == NetClassification.POWER:
                 continue
             forward.setdefault(edge.source_ref, []).append((edge.target_ref, edge.net_name))
 
-        # Find refs that are sources of input nets
+        # Find refs connected to input nets (either as edge source/target or via pin_nets)
         input_refs: set[str] = set()
         for edge in edges:
             if edge.net_name in input_nets:
                 input_refs.add(edge.source_ref)
+                input_refs.add(edge.target_ref)
+        # Also check pin_nets for single-pin input nets (no edges created)
+        if pin_nets:
+            for (ref, _pnum), net in pin_nets.items():
+                if net in input_nets:
+                    input_refs.add(ref)
 
-        # Find refs that are targets of output nets
+        # Find refs connected to output nets
         output_refs: set[str] = set()
         for edge in edges:
             if edge.net_name in output_nets:
+                output_refs.add(edge.source_ref)
                 output_refs.add(edge.target_ref)
+        if pin_nets:
+            for (ref, _pnum), net in pin_nets.items():
+                if net in output_nets:
+                    output_refs.add(ref)
 
         if not input_refs or not output_refs:
             return []
@@ -749,9 +773,12 @@ class TopologyBuilder:
             visited_states.add(state)
 
             # Found output
-            if ref in output_refs and len(path) > 1:
-                paths.append(path)
-                continue
+            if ref in output_refs and len(path) >= 1:
+                # Only record if we traversed at least one edge or this is an input AND output component
+                if len(path) > 1 or (ref in input_refs and ref in output_refs):
+                    paths.append(path)
+                if len(path) > 1:
+                    continue
 
             # Expand
             for target, _net in forward.get(ref, []):
