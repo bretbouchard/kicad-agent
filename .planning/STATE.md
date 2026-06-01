@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
 status: in-progress
-stopped_at: Phase 52 plan 52-01 complete. SignalFlowGrouper, ComponentGeometry, LayoutAwarePlacer. 16 tests.
-last_updated: "2026-06-01T19:43:00Z"
+stopped_at: Phase 52 plan 52-02 complete. ThermalProfile, constraint-aware SA, 41 tests.
+last_updated: "2026-06-01T19:59:33Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 65
   completed_phases: 26
   total_plans: 192
-  completed_plans: 129
-  percent: 67
+  completed_plans: 130
+  percent: 68
 ---
 
 # Project State
@@ -27,8 +27,8 @@ Last activity: 2026-06-01
 ## Current Position
 
 Phase: 52 (Layout-Aware Placement Engine) — executing
-Status: Plan 52-01 complete (SignalFlowGrouper, ComponentGeometry, LayoutAwarePlacer)
-Plans: 52-01 (COMPLETE), 52-02 (PENDING)
+Status: Plan 52-02 complete (ThermalProfile, constraint-aware SA, integration tests)
+Plans: 52-01 (COMPLETE), 52-02 (COMPLETE)
 Last activity: 2026-06-01
 
 ### Phase 47: Circuit Intent Inference
@@ -61,7 +61,7 @@ Last activity: 2026-06-01
 
 **Velocity:**
 
-- Total plans completed: 126
+- Total plans completed: 130
 - Average duration: 5 min
 - Total execution time: 5.9 hours
 
@@ -161,6 +161,10 @@ Recent decisions affecting current work:
 - [v3.0-52]: Zone boundaries are soft constraints (logged, not enforced) to avoid rejecting valid placements
 - [v3.0-52]: ThermalProfile forward-declared as Any in LayoutAwareRequest for Plan 52-02
 - [v3.0-52]: Type priority fallback when signal flow ordering is ambiguous
+- [v3.0-52]: ThermalProfile is opt-in -- distance heuristic fallback with explicit logging
+- [v3.0-52]: Constraint penalties use duck-typed objects (getattr) since Phase 50 types not yet defined
+- [v3.0-52]: Thermal exclusion zones are soft guidance (SA can violate with penalty)
+- [v3.0-52]: SA refinement at 200 iterations for layout-aware (reduced latency)
 
 ### Pending Todos
 
@@ -177,5 +181,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 52 plan 52-01 complete. SignalFlowGrouper, ComponentGeometry, LayoutAwarePlacer. 16 tests.
-Resume with: Plan 52-02 per ROADMAP.md (thermal-aware placement, constraint-aware SA refinement).
+Stopped at: Phase 52 plan 52-02 complete. ThermalProfile, constraint-aware SA, 41 tests.
+Resume with: Verify Phase 52 or proceed to next phase per ROADMAP.md.

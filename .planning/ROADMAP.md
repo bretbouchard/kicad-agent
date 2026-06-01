@@ -946,7 +946,7 @@ Plans:
 
 Plans:
 - [x] 52-01-PLAN.md -- LayoutAwarePlacer, SignalFlowGrouper, real footprint geometry extraction (LP-01, LP-02, LP-03)
-- [ ] 52-02-PLAN.md -- Thermal-aware placement, constraint-aware SA refinement, integration tests (LP-04, LP-05)
+- [x] 52-02-PLAN.md -- Thermal-aware placement, constraint-aware SA refinement, integration tests (LP-04, LP-05)
 
 ### Phase 53: PCB DRC Intelligence
 **Goal**: Spatial violation enrichment with fix suggestions and constraint-aware classification. Turns raw kicad-cli DRC output into actionable, coordinate-grounded fix recommendations.
