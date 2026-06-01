@@ -634,11 +634,11 @@ Bridge schematic intelligence to PCB layout with constraint propagation, spatial
 
 ### PCB Spatial Intelligence (Phase 51)
 
-- [ ] **SI-01**: PcbSpatialModel builds rich spatial representation from PcbIR with per-layer Shapely geometry, STRtree spatial indexing, and board outline polygon. Read-only derived view (not BaseIR subclass), rebuilt when PCB changes.
-- [ ] **SI-02**: LayerStackup extracts dielectric/copper layer metadata from board setup including thickness, copper weight, and dielectric constant for impedance calculations.
-- [ ] **SI-03**: LayerClassifier utility with `is_copper()`, `is_silkscreen()`, `is_mask()`, `is_paste()` methods. Copper layers matched via `r"^(F|B|In\d+)\.Cu$"` pattern.
-- [ ] **SI-04**: NetClassGeometry metadata per net: trace_width_mm, clearance_mm, via_drill_mm, via_diameter_mm, diff_pair_gap_mm.
-- [ ] **SI-05**: Clearance tolerance constant `_CLEARANCE_TOLERANCE_MM = 1e-4` (0.1 micrometers) for all Shapely distance comparisons to prevent floating-point false positives.
+- [x] **SI-01**: PcbSpatialModel builds rich spatial representation from PcbIR with per-layer Shapely geometry, STRtree spatial indexing, and board outline polygon. Read-only derived view (not BaseIR subclass), rebuilt when PCB changes.
+- [x] **SI-02**: LayerStackup extracts dielectric/copper layer metadata from board setup including thickness, copper weight, and dielectric constant for impedance calculations.
+- [x] **SI-03**: LayerClassifier utility with `is_copper()`, `is_silkscreen()`, `is_mask()`, `is_paste()` methods. Copper layers matched via `r"^(F|B|In\d+)\.Cu$"` pattern.
+- [x] **SI-04**: NetClassGeometry metadata per net: trace_width_mm, clearance_mm, via_drill_mm, via_diameter_mm, diff_pair_gap_mm.
+- [x] **SI-05**: Clearance tolerance constant `_CLEARANCE_TOLERANCE_MM = 1e-4` (0.1 micrometers) for all Shapely distance comparisons to prevent floating-point false positives.
 - [ ] **SI-06**: Board outline extraction handles line segments, arcs, and circles on Edge.Cuts layer. Returns Shapely Polygon, not just bounding box.
 - [ ] **SI-07**: Dirty-flag lifecycle with batch mutation support. STRtree rebuilt only when spatial model is marked dirty after position updates.
 

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: full-stack-eda
 status: executing
-stopped_at: "Completed 50-01-PLAN.md — PCBConstraint types, ConstraintTable, CoordinateConverter, converters"
-last_updated: "2026-06-01T19:05:00Z"
+stopped_at: "Completed 51-01-PLAN.md — PcbSpatialModel, LayerStackup, LayerClassifier, NetClassGeometry"
+last_updated: "2026-06-01T19:22:00Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 54
   completed_phases: 49
   total_plans: 139
-  completed_plans: 130
-  percent: 93
+  completed_plans: 131
+  percent: 94
 ---
 
 # Project State
@@ -26,9 +26,9 @@ Last activity: 2026-06-01
 
 ## Current Position
 
-Phase: 50 (Constraint Propagation) — executing
-Status: Plan 50-01 complete (PCBConstraint types, ConstraintTable, CoordinateConverter, converters)
-Plans: 50-01 (COMPLETE), 50-02 (not started)
+Phase: 51 (PCB Spatial Intelligence) — executing
+Status: Plan 51-01 complete (PcbSpatialModel, LayerStackup, LayerClassifier, NetClassGeometry)
+Plans: 51-01 (COMPLETE), 51-02 (not started)
 Last activity: 2026-06-01
 
 ### Phase 47: Circuit Intent Inference
@@ -169,5 +169,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 49 complete. One-command demo pipeline + 6 templates. 24 tests.
-Resume with: Next phase per ROADMAP.md.
+Stopped at: Phase 51 plan 51-01 complete. PcbSpatialModel, LayerStackup, LayerClassifier, NetClassGeometry. 36 tests.
+Resume with: Plan 51-02 per ROADMAP.md.

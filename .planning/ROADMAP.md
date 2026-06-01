@@ -927,7 +927,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 51-01-PLAN.md -- PcbSpatialModel, LayerStackup, LayerClassifier, NetClassGeometry, clearance tolerance (SI-01, SI-02, SI-03, SI-04, SI-05)
+- [x] 51-01-PLAN.md -- PcbSpatialModel, LayerStackup, LayerClassifier, NetClassGeometry, clearance tolerance (SI-01, SI-02, SI-03, SI-04, SI-05)
 - [ ] 51-02-PLAN.md -- Board outline extraction, dirty-flag lifecycle, integration with spatial query engine, tests (SI-06, SI-07)
 
 ### Phase 52: Layout-Aware Placement Engine
