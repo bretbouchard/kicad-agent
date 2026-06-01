@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.4
-milestone_name: schematic-intelligence
+milestone: v2.5
+milestone_name: benchmark-suite
 status: executing
-stopped_at: "Phase 43 Plan 01 and Phase 44 Plan 01 complete. Regression detection + adversarial testing."
-last_updated: "2026-06-01T00:25:00Z"
-last_activity: 2026-06-01
+stopped_at: "Phases 41-44 complete. PCB MMLU + Circuit QA + Regression + Adversarial. Council approved."
+last_updated: "2026-05-31T12:00:00Z"
+last_activity: 2026-05-31
 progress:
-  total_phases: 40
-  completed_phases: 38
-  total_plans: 116
-  completed_plans: 112
+  total_phases: 44
+  completed_phases: 44
+  total_plans: 121
+  completed_plans: 117
   percent: 97
 ---
 
@@ -21,27 +21,29 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** v2.4 Schematic Intelligence — Phases 38-40 (10 plans, building on existing schematic_routing module)
-Last activity: 2026-06-01
+**Current focus:** v2.5 Benchmark Suite shipped. Next: Phases 45-48 (Domain Intelligence)
+Last activity: 2026-05-31
 
 ## Current Position
 
-Phase: 43-44 (Regression Benchmark Suite + Adversarial Test Generation)
-Status: **Phase 43 Plan 01 and Phase 44 Plan 01 complete. Regression detection + adversarial testing.**
-Plans: 43-01 (regression detector + CI), 44-01 (mutation engine + adversarial suite)
-Last activity: 2026-06-01
+Phase: 41-44 COMPLETE (v2.5 Benchmark Suite)
+Status: **All 4 phases complete. PCB MMLU + Circuit QA + Regression + Adversarial. Council approved.**
+Plans: 41-01/02, 42-01, 43-01, 44-01 (5 plans, all complete)
+Last activity: 2026-05-31
 
-### Wave Structure
+### v2.5 Benchmark Suite (Phases 41-44)
 
-**Phase 43 (1 plan):**
+- Phase 41: PCB MMLU Benchmark (2 plans) — 500+ questions, 8 categories, runner + baselines
+- Phase 42: Circuit QA Dataset (1 plan) — 2000+ QA pairs, 6 types, train/test split
+- Phase 43: Regression Detection (1 plan) — CI workflow, 2% threshold, baseline tracking
+- Phase 44: Adversarial Testing (1 plan) — 750+ tests, mutation + property + fuzz
+- Council Gate 2: CONDITIONAL APPROVE (2 non-blocking LOW findings on file length)
 
-- Wave 1: 43-01 (RegressionDetector + CI workflow + baseline) -- complete
+## Previous Milestone (v2.4 Schematic Intelligence)
 
-**Phase 44 (1 plan):**
+**Final: 40/40 phases complete. 85 operations, 2343+ tests, structured logging, training infra, schematic routing.**
 
-- Wave 1: 44-01 (mutation engine + property tests + fuzz testing) -- complete
-
-## Previous## Previous Milestone (v2.4 production-hardening)
+## Previous Milestone (v2.4 production-hardening)
 
 **Final: 37/37 phases complete. 74 operations, 1900+ tests, structured logging, training infra.**
 
@@ -49,13 +51,13 @@ Last activity: 2026-06-01
 
 **Velocity:**
 
-- Total plans completed: 112
+- Total plans completed: 117
 - Average duration: 5 min
 - Total execution time: 5.5 hours
 
 **Recent Trend:**
 
-- Last 10 plans: 38-01 through 39-03 (all first-execution pass)
+- Last 10 plans: 41-01 through 44-01 (all first-execution pass)
 - Trend: Stable -- all plans passing on first execution
 
 ## Accumulated Context
@@ -107,11 +109,10 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Phase 43 Plan 01 complete -- Regression detection with CI workflow (39 tests)
-- Phase 44 Plan 01 complete -- Adversarial test generation (750 test cases)
-- Next: Continue to Phase 45 or next phase
+- Phases 41-44 complete -- PCB MMLU + Circuit QA + Regression + Adversarial (148 benchmark tests)
+- Next: Phase 45 (Circuit Topology Graph) or next strategic priority
 
-### Blockers### Blockers/Concerns
+### Blockers/Concerns
 
 None.
 
@@ -121,5 +122,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 43-01 and Phase 44-01 complete. Regression detection + adversarial testing.
-Resume with: Continue to Phase 45 or next phase
+Stopped at: Phases 41-44 complete. v2.5 Benchmark Suite shipped. Council approved.
+Resume with: Phase 45 (Circuit Topology Graph) or next strategic priority

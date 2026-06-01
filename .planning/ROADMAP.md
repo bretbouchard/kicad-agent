@@ -12,7 +12,8 @@ Build an AI-safe KiCad structural editing tool across multiple milestones. First
 - **v2.1 Audit** - Phases 23-24 (shipped 2026-05-29)
 - **v2.2 Complete-Ops** - Phases 25-29 (shipped 2026-05-29)
 - **v2.3 MCP-Server** - Phases 30-31 (shipped 2026-05-29)
-- **v2.4 Schematic Intelligence** - Phases 38-40 (planned)
+- **v2.4 Schematic Intelligence** - Phases 38-40 (shipped 2026-05-31)
+- **v2.5 Benchmark Suite** - Phases 41-44 (shipped 2026-05-31)
 - **v3.0 Full-Stack EDA** - Future (schematic DRC, layout-aware placement, constraint propagation)
 
 ## Phases
@@ -766,11 +767,11 @@ Plans:
 ---
 
 <details>
-<summary>v2.4 Schematic Intelligence (Phases 38-40) - PLANNED</summary>
+<summary>v2.4 Schematic Intelligence (Phases 38-40) - SHIPPED 2026-05-31</summary>
 
-- [ ] **Phase 38: Schematic Routing Engine** - Pin position resolution, collision-aware wire routing, net-based batch wiring, full schematic regeneration from netlist. Born from real-world pain: Bret spent 3 sessions manually writing Python scripts to regenerate a 43-component compressor schematic. See `38-CONTEXT.md` for the complete hands-on experience dump.
-- [ ] **Phase 39: Schematic Intelligence** - Net extraction from existing schematics, net name conflict detection, automatic name suggestion from topology. Eliminates the manual net-name-to-global-label alignment work.
-- [ ] **Phase 40: ERC Root Cause Analysis** - Violation classification (fixable vs pre-existing vs benign), root cause diagnosis, enhanced erc_auto_fix with root cause mode. Moves from symptom patching to actual fix generation.
+- [x] **Phase 38: Schematic Routing Engine** - Pin position resolution, collision-aware wire routing, net-based batch wiring, full schematic regeneration from netlist. Born from real-world pain: Bret spent 3 sessions manually writing Python scripts to regenerate a 43-component compressor schematic. See `38-CONTEXT.md` for the complete hands-on experience dump.
+- [x] **Phase 39: Schematic Intelligence** - Net extraction from existing schematics, net name conflict detection, automatic name suggestion from topology. Eliminates the manual net-name-to-global-label alignment work.
+- [x] **Phase 40: ERC Root Cause Analysis** - Violation classification (fixable vs pre-existing vs benign), root cause diagnosis, enhanced erc_auto_fix with root cause mode. Moves from symptom patching to actual fix generation.
 
 </details>
 
@@ -791,9 +792,9 @@ Plans:
 
 Plans:
 - [x] 38-01-PLAN.md -- Pin position resolution operation (SCH-ROUTE-01)
-- [ ] 38-02-PLAN.md -- Collision detection + pin overlap detection operations (SCH-ROUTE-02)
-- [ ] 38-03-PLAN.md -- connect_pins operation with hybrid wire/label routing (SCH-ROUTE-03)
-- [ ] 38-04-PLAN.md -- batch_connect + regenerate_wiring high-level operations (SCH-ROUTE-04)
+- [x] 38-02-PLAN.md -- Collision detection + pin overlap detection operations (SCH-ROUTE-02)
+- [x] 38-03-PLAN.md -- connect_pins operation with hybrid wire/label routing (SCH-ROUTE-03)
+- [x] 38-04-PLAN.md -- batch_connect + regenerate_wiring high-level operations (SCH-ROUTE-04)
 
 ### Phase 39: Schematic Intelligence
 **Goal**: Extract existing net topology, detect naming conflicts, suggest canonical names based on global labels and circuit function. Eliminate manual net-name alignment work.
@@ -825,8 +826,68 @@ Plans:
 
 Plans:
 - [x] 40-01-PLAN.md -- ERC violation classification (ERC-SMART-01)
-- [ ] 40-02-PLAN.md -- Root cause diagnosis for fixable violations (ERC-SMART-02)
-- [ ] 40-03-PLAN.md -- Enhanced erc_auto_fix with root cause mode (ERC-SMART-03)
+- [x] 40-02-PLAN.md -- Root cause diagnosis for fixable violations (ERC-SMART-02)
+- [x] 40-03-PLAN.md -- Enhanced erc_auto_fix with root cause mode (ERC-SMART-03)
+
+### v2.5 Benchmark Suite Phase Details
+
+### Phase 41: PCB MMLU Benchmark
+**Goal**: Create the "PCB MMLU" — 500+ multi-choice circuit analysis questions across 8 categories with benchmark runner and baseline models
+**Depends on**: Phase 37 (all operations complete)
+**Requirements**: BENCH-01, BENCH-02
+**Success Criteria** (what must be TRUE):
+  1. 500+ benchmark questions across 8 categories (component_identification, topology_recognition, signal_flow, power_design, pin_function, net_purpose, design_rules, troubleshooting)
+  2. Difficulty distribution within 5% of 20/60/20 (easy/medium/hard)
+  3. BenchmarkRunner produces BenchmarkResult with per-category accuracy
+  4. BaselineRandom ~25%, BaselineHeuristic >25%
+  5. CLI: `python -m kicad_agent.benchmarks --dataset <file> --model <name>`
+**Plans**: 2 plans (2/2 complete)
+
+Plans:
+- [x] 41-01-PLAN.md -- Benchmark dataset schemas, question generator, dataset builder (BENCH-01)
+- [x] 41-02-PLAN.md -- Benchmark runner, baseline models, CLI entry point (BENCH-02)
+
+### Phase 42: Circuit QA Dataset
+**Goal**: Generate 2000+ open-ended QA pairs across 6 types for fine-tuning
+**Depends on**: Phase 41 (schemas and source patterns)
+**Requirements**: BENCH-03
+**Success Criteria** (what must be TRUE):
+  1. 2000+ QA pairs with all 6 types (violation_diagnosis, signal_flow, component_function, net_purpose, design_review, value_calculation)
+  2. 80/10/10 stratified train/val/test split
+  3. Deterministic generation with seeded RNG
+  4. Every QA pair has source reference to originating schematic
+**Plans**: 1 plan (1/1 complete)
+
+Plans:
+- [x] 42-01-PLAN.md -- QA schemas, generator, dataset with split (BENCH-03)
+
+### Phase 43: Regression Benchmark Suite
+**Goal**: Automated regression detection with CI integration — every PR runs benchmarks, flags score drops >2%
+**Depends on**: Phase 41, Phase 42
+**Requirements**: BENCH-04
+**Success Criteria** (what must be TRUE):
+  1. RegressionDetector compares BenchmarkResult against baseline, flags >2% category drops
+  2. Historical result tracking in benchmarks/results/
+  3. GitHub Actions CI workflow runs heuristic baseline on every PR
+  4. Baseline = best-known result, not first result
+**Plans**: 1 plan (1/1 complete)
+
+Plans:
+- [x] 43-01-PLAN.md -- RegressionDetector + CI workflow + baseline (BENCH-04)
+
+### Phase 44: Adversarial Test Generation
+**Goal**: Three types of adversarial testing — 7-type mutation engine, property-based invariants, fuzz testing — proving parser robustness
+**Depends on**: Phase 41, Phase 42
+**Requirements**: BENCH-05
+**Success Criteria** (what must be TRUE):
+  1. MutationEngine applies 7 mutation types (swap_values, break_wire, remove_label, duplicate_net, short_pins, floating_pin, wrong_polarity)
+  2. AdversarialTestSuite produces 750+ tests (200 mutation + 50 property + 500 fuzz)
+  3. All tests seeded for reproducibility
+  4. Parser never crashes on fuzz mutations
+**Plans**: 1 plan (1/1 complete)
+
+Plans:
+- [x] 44-01-PLAN.md -- Mutation engine + adversarial suite + fuzz testing (BENCH-05)
 
 ## Progress
 
@@ -872,6 +933,10 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 35. Remaining Ops Gaps | 3/3 | Complete | 2026-05-31 |
 | 36. Multi-Layer Routing | 3/3 | Complete | 2026-05-31 |
 | 37. Training + Infrastructure | 3/3 | Complete | 2026-05-31 |
-| 38. Schematic Routing Engine | 0/4 | Planned | — |
+| 38. Schematic Routing Engine | 4/4 | Complete | 2026-05-31 |
 | 39. Schematic Intelligence | 3/3 | Complete | 2026-05-31 |
-| 40. ERC Root Cause Analysis | 0/3 | Planned | — |
+| 40. ERC Root Cause Analysis | 3/3 | Complete | 2026-05-31 |
+| 41. PCB MMLU Benchmark | 2/2 | Complete | 2026-05-31 |
+| 42. Circuit QA Dataset | 1/1 | Complete | 2026-05-31 |
+| 43. Regression Benchmark Suite | 1/1 | Complete | 2026-05-31 |
+| 44. Adversarial Test Generation | 1/1 | Complete | 2026-05-31 |
