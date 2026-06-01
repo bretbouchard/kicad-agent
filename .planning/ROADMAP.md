@@ -928,7 +928,7 @@ Plans:
 
 Plans:
 - [x] 51-01-PLAN.md -- PcbSpatialModel, LayerStackup, LayerClassifier, NetClassGeometry, clearance tolerance (SI-01, SI-02, SI-03, SI-04, SI-05)
-- [ ] 51-02-PLAN.md -- Board outline extraction, dirty-flag lifecycle, integration with spatial query engine, tests (SI-06, SI-07)
+- [x] 51-02-PLAN.md -- Board outline extraction, dirty-flag lifecycle, integration with spatial query engine, tests (SI-06, SI-07)
 
 ### Phase 52: Layout-Aware Placement Engine
 **Goal**: Constraint-driven placement extending HybridPlacementEngine with signal flow grouping, decoupling cap proximity, differential pair alignment, and thermal awareness.
@@ -945,7 +945,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 52-01-PLAN.md -- LayoutAwarePlacer, SignalFlowGrouper, real footprint geometry extraction (LP-01, LP-02, LP-03)
+- [x] 52-01-PLAN.md -- LayoutAwarePlacer, SignalFlowGrouper, real footprint geometry extraction (LP-01, LP-02, LP-03)
 - [ ] 52-02-PLAN.md -- Thermal-aware placement, constraint-aware SA refinement, integration tests (LP-04, LP-05)
 
 ### Phase 53: PCB DRC Intelligence

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: completed
-stopped_at: Phase 51 plan 51-02 complete. Board outline extraction, dirty-flag lifecycle, spatial query integration. 51 tests.
-last_updated: "2026-06-01T19:36:31.169Z"
+status: in-progress
+stopped_at: Phase 52 plan 52-01 complete. SignalFlowGrouper, ComponentGeometry, LayoutAwarePlacer. 16 tests.
+last_updated: "2026-06-01T19:43:00Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 65
   completed_phases: 26
   total_plans: 192
-  completed_plans: 128
+  completed_plans: 129
   percent: 67
 ---
 
@@ -26,9 +26,9 @@ Last activity: 2026-06-01
 
 ## Current Position
 
-Phase: 51 (PCB Spatial Intelligence) — executing
-Status: Plan 51-02 complete (board outline extraction, dirty-flag lifecycle, spatial query integration)
-Plans: 51-01 (COMPLETE), 51-02 (COMPLETE)
+Phase: 52 (Layout-Aware Placement Engine) — executing
+Status: Plan 52-01 complete (SignalFlowGrouper, ComponentGeometry, LayoutAwarePlacer)
+Plans: 52-01 (COMPLETE), 52-02 (PENDING)
 Last activity: 2026-06-01
 
 ### Phase 47: Circuit Intent Inference
@@ -157,6 +157,10 @@ Recent decisions affecting current work:
 - [v2.5-51]: 1nm snap tolerance closes floating-point gaps before polygonize (manufacturing tolerance >> 1nm)
 - [v2.5-51]: Graphic item type detection by attribute presence (has start/end/mid/center), not isinstance
 - [v2.5-51]: SpatialQueryEngine rebuilt lazily on access when dirty; mark_dirty invalidates cached engine
+- [v3.0-52]: LayoutAwarePlacer wraps HybridPlacementEngine (composition over inheritance)
+- [v3.0-52]: Zone boundaries are soft constraints (logged, not enforced) to avoid rejecting valid placements
+- [v3.0-52]: ThermalProfile forward-declared as Any in LayoutAwareRequest for Plan 52-02
+- [v3.0-52]: Type priority fallback when signal flow ordering is ambiguous
 
 ### Pending Todos
 
@@ -173,5 +177,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 51 plan 51-02 complete. Board outline extraction, dirty-flag lifecycle, spatial query integration. 51 tests.
-Resume with: Plan 51-03 per ROADMAP.md (if applicable).
+Stopped at: Phase 52 plan 52-01 complete. SignalFlowGrouper, ComponentGeometry, LayoutAwarePlacer. 16 tests.
+Resume with: Plan 52-02 per ROADMAP.md (thermal-aware placement, constraint-aware SA refinement).
