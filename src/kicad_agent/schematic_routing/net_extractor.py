@@ -311,3 +311,150 @@ def extract_nets(
             "unnamed_nets": unnamed_nets,
         },
     }
+
+
+# ---------------------------------------------------------------------------
+# NetPositionIndex — maps any schematic position to its net name
+# ---------------------------------------------------------------------------
+
+
+class NetPositionIndex:
+    """Maps any schematic position to its net name and connected component.
+
+    Built from SchematicGraph + union-find over ALL positions (wire endpoints,
+    pins, labels, junctions). Provides stable component-root identity for
+    comparison even when net names are auto-generated.
+
+    Used by repair operations (Phases 66-70) for connectivity-aware decisions.
+    """
+
+    def __init__(
+        self,
+        graph: SchematicGraph,
+        pin_index: dict[tuple[str, str], str] | None = None,
+    ) -> None:
+        self._pos_to_root: dict[tuple[float, float], tuple[float, float]] = {}
+        self._root_to_net: dict[tuple[float, float], str] = {}
+        self._root_to_positions: dict[tuple[float, float], set[tuple[float, float]]] = {}
+        self._net_to_positions: dict[str, set[tuple[float, float]]] = {}
+
+        self._build(graph, pin_index)
+
+    def _build(self, graph: SchematicGraph, pin_index: dict | None) -> None:
+        uf = _UnionFind()
+        all_positions: set[tuple[float, float]] = set()
+
+        # Add wire endpoints
+        for wire in graph.wires:
+            start = _round_pos(wire.start)
+            end = _round_pos(wire.end)
+            all_positions.add(start)
+            all_positions.add(end)
+            uf.make_set(start)
+            uf.make_set(end)
+            uf.union(start, end)
+
+        # Add pin positions
+        pin_pos_map: dict[tuple[float, float], list[PinPosition]] = {}
+        for pin in graph.pins:
+            key = _round_pos(pin.position)
+            pin_pos_map.setdefault(key, []).append(pin)
+            all_positions.add(key)
+            uf.make_set(key)
+
+        # Add label positions
+        label_pos_map: dict[tuple[float, float], Label] = {}
+        for label in graph.labels:
+            key = _round_pos(label.position)
+            label_pos_map[key] = label
+            all_positions.add(key)
+            uf.make_set(key)
+
+        # Add junction positions
+        for junc in graph.junctions:
+            junc_key = _round_pos(junc)
+            all_positions.add(junc_key)
+            uf.make_set(junc_key)
+
+        # Union positions that lie ON a wire segment (mid-point connectivity)
+        for pos in all_positions:
+            for wire in graph.wires:
+                if _point_on_segment(pos, _round_pos(wire.start), _round_pos(wire.end)):
+                    uf.union(pos, _round_pos(wire.start))
+
+        # Build connected components
+        components: dict[tuple[float, float], set[tuple[float, float]]] = {}
+        for pos in all_positions:
+            root = uf.find(pos)
+            components.setdefault(root, set()).add(pos)
+
+        # Resolve net name per component
+        auto_counter = 0
+        for root, positions in components.items():
+            net_name: str | None = None
+
+            # Priority 1: label name
+            for pos in positions:
+                if pos in label_pos_map:
+                    net_name = label_pos_map[pos].name
+                    break
+
+            # Priority 2: pin_index
+            if net_name is None and pin_index:
+                for pos in positions:
+                    if pos in pin_pos_map:
+                        for pin in pin_pos_map[pos]:
+                            key = (pin.ref, pin.pin_number)
+                            if key in pin_index:
+                                net_name = pin_index[key]
+                                break
+                    if net_name:
+                        break
+
+            # Priority 3: auto-name
+            if net_name is None:
+                auto_counter += 1
+                net_name = f"Net_{auto_counter}"
+
+            # Store mappings
+            self._root_to_net[root] = net_name
+            self._root_to_positions[root] = positions
+            self._net_to_positions.setdefault(net_name, set()).update(positions)
+            for pos in positions:
+                self._pos_to_root[pos] = root
+
+    def get_net_at(self, pos: tuple[float, float]) -> str | None:
+        """Return the net name at *pos*, or None if not connected."""
+        root = self._pos_to_root.get(_round_pos(pos))
+        if root is None:
+            return None
+        return self._root_to_net.get(root)
+
+    def get_component_root(self, pos: tuple[float, float]) -> tuple[float, float] | None:
+        """Return the union-find root for stable component identity."""
+        return self._pos_to_root.get(_round_pos(pos))
+
+    def get_positions_for_net(self, net_name: str) -> set[tuple[float, float]]:
+        """Return all positions belonging to *net_name*."""
+        return self._net_to_positions.get(net_name, set())
+
+    @staticmethod
+    def is_auto_named(net_name: str) -> bool:
+        """Check if *net_name* is an auto-generated name (Net_N)."""
+        return net_name.startswith("Net_") and net_name[4:].isdigit()
+
+    @classmethod
+    def from_file(
+        cls,
+        sch_path: Path | str,
+        netlist_path: str | None = None,
+    ) -> NetPositionIndex:
+        """Build a NetPositionIndex from a schematic file."""
+        graph = SchematicGraph.from_file(sch_path)
+
+        pin_index: dict[tuple[str, str], str] = {}
+        if netlist_path:
+            from kicad_agent.schematic_routing.netlist_parser import parse_netlist
+            _, pin_index = parse_netlist(netlist_path)
+
+        return cls(graph, pin_index)

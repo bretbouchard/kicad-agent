@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from kicad_agent.ir.schematic_ir import SchematicIR
+from kicad_agent.schematic_routing.net_extractor import NetPositionIndex
 
 logger = logging.getLogger(__name__)
 
@@ -983,23 +984,26 @@ def _find_position_for_unit(
     label_positions: list[dict[str, Any]],
     center: tuple[float, float] | None = None,
     max_distance: float = 100.0,
+    net_index: NetPositionIndex | None = None,
+    placed_unit_roots: set[tuple[float, float]] | None = None,
 ) -> tuple[float, float] | None:
-    """Find the component position that aligns a unit's pins with existing wires/labels.
+    """Find the component position that aligns a unit's pins with existing nets.
+
+    Phase 66: Uses connectivity-aware scoring when a NetPositionIndex is
+    provided.  For each candidate position, calculates where each pin would
+    land and scores by how many pins connect to unique nets (not shared with
+    already-placed units).  Falls back to spatial wire-endpoint voting when
+    no net index is available.
 
     Uses the Y-inversion pattern from ``get_pin_positions()``:
         absolute = (sx + rot_px, sy - rot_py)
     Reverse: (sx, sy) = (abs_x - rot_px, abs_y + rot_py)
 
-    For each pin on the missing unit, computes candidate component
-    positions from wire endpoints and label positions.  Returns the
-    position with the most agreement across pins, or ``None`` if fewer
-    than 2 pins agree.
-
     Args:
-        center: If provided, only consider anchors within *max_distance*
-            mm of this point.  This prevents matching wires from unrelated
-            parts of the schematic.
-        max_distance: Maximum distance from *center* in mm.
+        net_index: Optional NetPositionIndex for connectivity-aware scoring.
+        placed_unit_roots: Set of union-find component roots for pins of
+            already-placed units.  Candidate positions whose pins land on
+            these roots are penalized.
     """
     pin_offsets = _get_unit_pin_offsets(lib_sym, unit_num)
     if not pin_offsets:
@@ -1045,13 +1049,52 @@ def _find_position_for_unit(
             cand_y = round((anchor_y + rot_py) * 10) / 10
             candidate_positions.append((cand_x, cand_y))
 
+    if not candidate_positions:
+        return None
+
+    # --- Net-aware scoring (Phase 66) ---
+    if net_index is not None and placed_unit_roots is not None:
+        best_pos: tuple[float, float] | None = None
+        best_score = 0
+
+        # Deduplicated candidate positions
+        unique_candidates = set(candidate_positions)
+
+        for cand_x, cand_y in unique_candidates:
+            score = 0
+            for _pin_num, (px, py) in pin_offsets.items():
+                rot_px = px * cos_a - py * sin_a
+                rot_py = px * sin_a + py * cos_a
+
+                # Y-inversion: absolute = (sx + rot_px, sy - rot_py)
+                pin_abs_x = cand_x + rot_px
+                pin_abs_y = cand_y - rot_py
+
+                root = net_index.get_component_root((pin_abs_x, pin_abs_y))
+                if root is not None and root not in placed_unit_roots:
+                    score += 1
+
+            if score > best_score:
+                best_score = score
+                best_pos = (cand_x, cand_y)
+
+        if best_score >= 2 and best_pos is not None:
+            return best_pos
+
+        # Net-aware didn't find a good position — fall through to spatial
+        logger.debug(
+            "Net-aware scoring best=%d (need >=2), falling back to spatial",
+            best_score,
+        )
+
+    # --- Spatial fallback: wire-endpoint voting ---
     pos_counter = Counter(candidate_positions)
     if not pos_counter:
         return None
 
-    best_pos, count = pos_counter.most_common(1)[0]
+    best_pos_spatial, count = pos_counter.most_common(1)[0]
     if count >= 2:
-        return best_pos
+        return best_pos_spatial
 
     return None
 
@@ -1108,6 +1151,15 @@ def place_missing_units(
 
     units_placed: list[dict[str, Any]] = []
 
+    # Build net position index for connectivity-aware placement (Phase 66).
+    # Try to build from the schematic file; if that fails (e.g. in-memory
+    # only), fall back to None which disables net-aware scoring.
+    net_index: NetPositionIndex | None = None
+    try:
+        net_index = NetPositionIndex.from_file(file_path)
+    except Exception:
+        logger.debug("Could not build NetPositionIndex, using spatial fallback")
+
     for base_ref, components in components_by_ref.items():
         if len(components) == 0:
             continue
@@ -1159,19 +1211,39 @@ def place_missing_units(
         first_comp = components[0]
         rotation = first_comp.position.angle or 0.0
 
+        # Collect union-find component roots for already-placed units' pins.
+        # Phase 66: Net-aware scoring uses this to avoid placing a missing
+        # unit at a position where its pins would land on the same nets.
+        placed_unit_roots: set[tuple[float, float]] = set()
+        if net_index is not None:
+            angle_rad = math.radians(rotation)
+            cos_a = math.cos(angle_rad)
+            sin_a = math.sin(angle_rad)
+            for comp in components:
+                comp_offsets = _get_unit_pin_offsets(lib_sym, comp.unit)
+                for _pn, (px, py) in comp_offsets.items():
+                    rot_px = px * cos_a - py * sin_a
+                    rot_py = px * sin_a + py * cos_a
+                    pin_x = comp.position.X + rot_px
+                    pin_y = comp.position.Y - rot_py
+                    root = net_index.get_component_root((pin_x, pin_y))
+                    if root is not None:
+                        placed_unit_roots.add(root)
+
         # Place missing units
         import copy
 
         for i, missing_num in enumerate(missing_unit_nums):
-            # Bug C fix: try to find position that aligns pins with
-            # existing wires/labels.  Only search near the first placed
-            # unit to avoid matching wires from unrelated parts of the
-            # schematic.
+            # Phase 66: Net-aware position matching.  Find a position where
+            # the missing unit's pins land on nets DIFFERENT from the
+            # already-placed units.  Only search near the first placed unit.
             center = (first_comp.position.X, first_comp.position.Y)
             pos = _find_position_for_unit(
                 ir, lib_sym, missing_num, rotation,
                 wire_endpoints, label_positions,
                 center=center, max_distance=100.0,
+                net_index=net_index,
+                placed_unit_roots=placed_unit_roots,
             )
             if pos is None:
                 # Fallback: offset from first unit.  Stacking at the
