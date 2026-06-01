@@ -35,7 +35,7 @@ from kicad_agent.handler import format_result, handle_operation, validate_operat
 from kicad_agent.logging_config import configure_logging
 from kicad_agent.ops.schema import get_operation_schema
 
-_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "demo", "playground"}
+_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "demo", "playground", "dfm"}
 
 
 def _build_operation_parser() -> argparse.ArgumentParser:
@@ -588,6 +588,25 @@ def _handle_design_rules(argv: list[str]) -> None:
     sys.exit(exit_code)
 
 
+def _handle_dfm(argv: list[str]) -> None:
+    """Handle the 'dfm' subcommand -- run DFM analysis on a PCB."""
+    from kicad_agent.dfm.cli import register_dfm_parser, dfm_command
+
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent dfm",
+        description="Run DFM (Design for Manufacturing) analysis on a KiCad PCB.",
+    )
+    subparsers = parser.add_subparsers()
+    register_dfm_parser(subparsers)
+
+    args = parser.parse_args(argv)
+    if not hasattr(args, "func"):
+        parser.print_help()
+        sys.exit(2)
+
+    sys.exit(dfm_command(args))
+
+
 def _handle_review_schematic(argv: list[str]) -> None:
     """Handle the 'review-schematic' subcommand -- review schematic readability."""
     from kicad_agent.cli.review_schematic_cmd import review_schematic_command
@@ -714,6 +733,8 @@ def main(argv: list[str] | None = None) -> None:
             _handle_ai_stats(subcmd_argv)
         elif subcmd == "design-rules":
             _handle_design_rules(subcmd_argv)
+        elif subcmd == "dfm":
+            _handle_dfm(subcmd_argv)
         elif subcmd == "review-schematic":
             _handle_review_schematic(subcmd_argv)
         elif subcmd == "demo":
