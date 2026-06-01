@@ -62,7 +62,6 @@ class ReviewCategory(str, Enum):
     SIGNAL_INTEGRITY = "signal_integrity"
     COMPONENT_VALUE_OPTIMIZATION = "component_value_optimization"
     THERMAL = "thermal"
-    LAYOUT = "layout"
 
 
 class DesignFinding(BaseModel):
@@ -130,15 +129,10 @@ _OPAMP_LIB_PATTERNS = (
 
 _CAP_LIB_PATTERNS = ("Device:C", "Device:C_Small", "Device:CP", "Device:CP_Small")
 
-_POWER_PIN_NAMES = ("VCC", "VDD", "V+", "V-", "VCC_", "VDD_", "VEE", "GND")
-
 _POWER_NET_PREFIXES = (
     "+9V", "-9V", "+12V", "-12V", "+15V", "-15V",
     "+3V3", "+5V", "-5V", "GNDA",
 )
-
-_SIGNAL_PIN_NAMES = ("IN", "OUT", "+", "-", "INPUT", "OUTPUT")
-
 
 def _find_ics(topology: CircuitTopology) -> list[TopologyNode]:
     """Find all IC components in topology."""
@@ -169,11 +163,6 @@ def _is_resistor(node: TopologyNode) -> bool:
 def _is_diode(node: TopologyNode) -> bool:
     """Check if a node is a diode."""
     return node.lib_id.startswith("Device:D") or node.lib_id.startswith("Device:LED")
-
-
-def _get_power_nets_for_node(node: TopologyNode) -> list[str]:
-    """Extract power pin names from a topology node."""
-    return list(node.power_pins)
 
 
 def _build_net_to_nodes(topology: CircuitTopology) -> dict[str, list[TopologyNode]]:
@@ -217,10 +206,12 @@ def _build_node_to_nets(topology: CircuitTopology) -> dict[str, list[str]]:
 def _has_cap_on_power_net(
     ic: TopologyNode,
     topology: CircuitTopology,
+    net_to_nodes: dict[str, list[TopologyNode]] | None = None,
+    node_nets: dict[str, list[str]] | None = None,
 ) -> bool:
     """Check if any capacitor shares a power net with the IC."""
-    net_to_nodes = _build_net_to_nodes(topology)
-    node_nets = _build_node_to_nets(topology)
+    net_to_nodes = net_to_nodes or _build_net_to_nodes(topology)
+    node_nets = node_nets or _build_node_to_nets(topology)
 
     # Get nets connected to the IC
     ic_nets = node_nets.get(ic.ref, [])
@@ -247,14 +238,16 @@ def _has_cap_on_power_net(
 def _has_feedback_cap(
     opamp: TopologyNode,
     topology: CircuitTopology,
+    net_to_nodes: dict[str, list[TopologyNode]] | None = None,
+    node_nets: dict[str, list[str]] | None = None,
 ) -> bool:
     """Check if an op-amp has a capacitor in its feedback path.
 
     Feedback path: inverting input (-) and output (OUT) share a net
     through a resistor, and there is a capacitor bridging the same nets.
     """
-    node_nets = _build_node_to_nets(topology)
-    net_to_nodes = _build_net_to_nodes(topology)
+    node_nets = node_nets or _build_node_to_nets(topology)
+    net_to_nodes = net_to_nodes or _build_net_to_nodes(topology)
 
     # Find feedback edges: edges with signal_direction="feedback"
     # that involve this op-amp
@@ -277,10 +270,12 @@ def _has_feedback_cap(
 def _has_feedback_path(
     opamp: TopologyNode,
     topology: CircuitTopology,
+    net_to_nodes: dict[str, list[TopologyNode]] | None = None,
+    node_nets: dict[str, list[str]] | None = None,
 ) -> bool:
     """Check if an op-amp has a feedback path (resistor from output to inverting input)."""
-    node_nets = _build_node_to_nets(topology)
-    net_to_nodes = _build_net_to_nodes(topology)
+    node_nets = node_nets or _build_node_to_nets(topology)
+    net_to_nodes = net_to_nodes or _build_net_to_nodes(topology)
 
     opamp_nets = set(node_nets.get(opamp.ref, []))
 
@@ -324,6 +319,8 @@ def _check_bypass_caps(
     - WARNING otherwise
     """
     findings: list[DesignFinding] = []
+    net_to_nodes = _build_net_to_nodes(topology)
+    node_nets = _build_node_to_nets(topology)
     ics = _find_ics(topology)
 
     for ic in ics:
@@ -331,7 +328,7 @@ def _check_bypass_caps(
         if not ic.power_pins:
             continue
 
-        if _has_cap_on_power_net(ic, topology):
+        if _has_cap_on_power_net(ic, topology, net_to_nodes, node_nets):
             continue
 
         is_audio = intent and DesignGoal.AUDIO_PROCESSING in intent.design_goals
@@ -365,13 +362,15 @@ def _check_feedback_compensation(
     4. No cap -> SUGGESTION to add compensation
     """
     findings: list[DesignFinding] = []
+    net_to_nodes = _build_net_to_nodes(topology)
+    node_nets = _build_node_to_nets(topology)
     opamps = _find_opamps(topology)
 
     for opamp in opamps:
-        if not _has_feedback_path(opamp, topology):
+        if not _has_feedback_path(opamp, topology, net_to_nodes, node_nets):
             continue
 
-        if _has_feedback_cap(opamp, topology):
+        if _has_feedback_cap(opamp, topology, net_to_nodes, node_nets):
             continue
 
         findings.append(DesignFinding(
@@ -501,7 +500,8 @@ _DEFAULT_CHECKS: list[Callable[
     _check_feedback_compensation,
     _check_power_decoupling,
     _check_input_protection,
-    _check_component_values,
+    # _check_component_values excluded: TopologyNode lacks value data.
+    # Available for future integration when component values are accessible.
 ]
 
 
@@ -522,7 +522,10 @@ class DesignReviewer:
         review = reviewer.review(topology, intent=result.intent)
     """
 
-    def __init__(self, checks: list | None = None):
+    def __init__(
+        self,
+        checks: list[Callable[[CircuitTopology, DesignIntent | None], list[DesignFinding]]] | None = None,
+    ):
         """Initialize with optional custom checks.
 
         Args:

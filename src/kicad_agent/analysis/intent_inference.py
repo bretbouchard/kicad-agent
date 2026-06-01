@@ -61,8 +61,14 @@ _IntentRule = tuple[
 ]
 
 
-def _find_component(topology: CircuitTopology, ref: str):
+def _find_component(
+    topology: CircuitTopology,
+    ref: str,
+    ref_index: dict[str, "TopologyNode"] | None = None,
+):
     """Find a TopologyNode by ref, return None if not found."""
+    if ref_index is not None:
+        return ref_index.get(ref)
     for node in topology.nodes:
         if node.ref == ref:
             return node
@@ -72,18 +78,18 @@ def _find_component(topology: CircuitTopology, ref: str):
 def _has_ic(lib_id_substring: str) -> Callable[[Subcircuit, CircuitTopology], bool]:
     """Match if any component lib_id contains the substring."""
 
-    def matcher(subcircuit: Subcircuit, topology: CircuitTopology) -> bool:
+    def matcher(subcircuit: Subcircuit, topology: CircuitTopology, _ref_index: dict | None = None) -> bool:
         # Check features["lib_id"] first (faster)
         lib_id = subcircuit.features.get("lib_id", "")
         if lib_id_substring.upper() in lib_id.upper():
             return True
         # Fallback: check topology nodes
         for ref in subcircuit.components:
-            node = _find_component(topology, ref)
+            node = _find_component(topology, ref, ref_index=_ref_index)
             if node and lib_id_substring.upper() in node.lib_id.upper():
                 return True
         # Also check center_component
-        node = _find_component(topology, subcircuit.center_component)
+        node = _find_component(topology, subcircuit.center_component, ref_index=_ref_index)
         if node and lib_id_substring.upper() in node.lib_id.upper():
             return True
         return False
@@ -97,7 +103,7 @@ def _has_ic_with_net(
 ) -> Callable[[Subcircuit, CircuitTopology], bool]:
     """Match if IC present AND any net in the subcircuit contains the substring."""
 
-    def matcher(subcircuit: Subcircuit, topology: CircuitTopology) -> bool:
+    def matcher(subcircuit: Subcircuit, topology: CircuitTopology, _ref_index: dict | None = None) -> bool:
         # Check if IC is present
         has_ic = False
         lib_id = subcircuit.features.get("lib_id", "")
@@ -105,12 +111,12 @@ def _has_ic_with_net(
             has_ic = True
         if not has_ic:
             for ref in subcircuit.components:
-                node = _find_component(topology, ref)
+                node = _find_component(topology, ref, ref_index=_ref_index)
                 if node and lib_id_substring.upper() in node.lib_id.upper():
                     has_ic = True
                     break
         if not has_ic:
-            node = _find_component(topology, subcircuit.center_component)
+            node = _find_component(topology, subcircuit.center_component, ref_index=_ref_index)
             if node and lib_id_substring.upper() in node.lib_id.upper():
                 has_ic = True
 
@@ -230,29 +236,26 @@ def _infer_overall_type(intents: list[SubcircuitIntent]) -> str:
         return "amplifier"
 
     # Fallback: use the function of the first (highest confidence) intent
-    if intents:
-        primary = intents[0].function
-        # Map common function names to overall types
-        type_map = {
-            "compressor_vca": "compressor",
-            "vca_only": "compressor",
-            "feedback_amplifier": "amplifier",
-            "unity_gain_buffer": "buffer",
-            "analog_switch": "switch",
-            "bypass_switch": "switch",
-            "clock_generator": "oscillator",
-            "lfo_oscillator": "oscillator",
-            "envelope_generator": "envelope",
-            "voltage_regulator": "power_supply",
-            "negative_regulator": "power_supply",
-            "digital_delay": "delay",
-            "mcu_controller": "controller",
-            "dual_opamp": "amplifier",
-            "jfet_opamp": "amplifier",
-        }
-        return type_map.get(primary, primary)
-
-    return "unknown"
+    primary = intents[0].function
+    # Map common function names to overall types
+    type_map = {
+        "compressor_vca": "compressor",
+        "vca_only": "compressor",
+        "feedback_amplifier": "amplifier",
+        "unity_gain_buffer": "buffer",
+        "analog_switch": "switch",
+        "bypass_switch": "switch",
+        "clock_generator": "oscillator",
+        "lfo_oscillator": "oscillator",
+        "envelope_generator": "envelope",
+        "voltage_regulator": "power_supply",
+        "negative_regulator": "power_supply",
+        "digital_delay": "delay",
+        "mcu_controller": "controller",
+        "dual_opamp": "amplifier",
+        "jfet_opamp": "amplifier",
+    }
+    return type_map.get(primary, primary)
 
 
 # ---------------------------------------------------------------------------
@@ -323,13 +326,14 @@ class IntentInferrer:
             )
 
         # 1. Match each subcircuit against intent rules
+        ref_index: dict[str, TopologyNode] = {n.ref: n for n in topology.nodes}
         intents: list[SubcircuitIntent] = []
         primary_rule = "no_rule_matched"
         primary_overall_type: str | None = None
         matched_goals: list[DesignGoal] = []
 
         for subcircuit in subcircuits:
-            match_result = self._match_subcircuit(subcircuit, topology)
+            match_result = self._match_subcircuit(subcircuit, topology, ref_index)
             if match_result is not None:
                 matched_intent, rule_overall_type, rule_goals = match_result
                 intents.append(matched_intent)
@@ -366,8 +370,8 @@ class IntentInferrer:
         # 4. Collect design goals (deduplicated from matched rules)
         all_goals: list[DesignGoal] = matched_goals if matched_goals else [DesignGoal.UNKNOWN]
 
-        # 5. Compute overall confidence (weighted average, higher confidence
-        #    subcircuits weighted more)
+        # 5. Compute overall confidence (quadratic weighted mean -- squares
+        #    confidence values so higher-confidence subcircuits dominate)
         if intents:
             total_weight = sum(i.confidence for i in intents)
             if total_weight > 0:
@@ -400,6 +404,7 @@ class IntentInferrer:
         self,
         subcircuit: Subcircuit,
         topology: CircuitTopology,
+        ref_index: dict[str, TopologyNode] | None = None,
     ) -> tuple[SubcircuitIntent, str, tuple[DesignGoal, ...]] | None:
         """Match a single subcircuit against intent rules.
 
@@ -407,7 +412,11 @@ class IntentInferrer:
         the first matching rule, or None.
         """
         for match_fn, overall_type, function_name, design_goals, confidence in self._rules:
-            if match_fn(subcircuit, topology):
+            try:
+                matched = match_fn(subcircuit, topology, ref_index)
+            except TypeError:
+                matched = match_fn(subcircuit, topology)
+            if matched:
                 # Extract design choices from subcircuit features
                 choices = self._extract_design_choices(subcircuit, function_name)
 
@@ -499,7 +508,16 @@ class IntentInferrer:
             if "regulator" in fn or "power" in fn:
                 control_stages.append(stage_text)
             elif any(k in fn for k in ("buffer", "amplifier", "op-amp")):
-                if not output_stages and intent.output_nets:
+                # Net connectivity ordering: output stage only if no downstream
+                # subcircuit consumes its output nets (handles multi-buffer)
+                is_last_stage = False
+                if intent.output_nets:
+                    out_set = set(intent.output_nets)
+                    is_last_stage = not any(
+                        out_set & set(oi.input_nets)
+                        for oi in intents if oi is not intent
+                    )
+                if is_last_stage and not output_stages:
                     output_stages.append(stage_text)
                 else:
                     processing_stages.append(stage_text)
