@@ -180,8 +180,10 @@ class SubcircuitDetector:
                 output_nets=set(topology.output_nets),
             )
 
-            # Merge: ML features + classifier-legacy fields for backward compat
-            features = {**sc_features.to_dict(), **classifier_features}
+            # Merge: legacy fields first, then ML-ready features overwrite for
+            # overlapping keys (resistor_count, capacitor_count, etc.) so the
+            # SubcircuitFeatures computed values are the single source of truth.
+            features = {**classifier_features, **sc_features.to_dict()}
 
             # Classify
             classification = classifier.classify(features)
@@ -496,6 +498,9 @@ class SubcircuitDetector:
         Returns:
             Number of lines written.
         """
+        if len(subcircuits) > 500:
+            logger.warning("Large JSONL export: %d subcircuits", len(subcircuits))
+
         count = 0
         with open(output_path, "w") as f:
             for sc in subcircuits:
