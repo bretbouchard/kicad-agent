@@ -436,7 +436,9 @@ def snap_to_grid(ir: SchematicIR, grid_mm: float = 0.01) -> dict[str, Any]:
 def add_power_flags(ir: SchematicIR, sch_path: Path) -> dict[str, Any]:
     """Place PWR_FLAG symbols at power_pin_not_driven ERC violation positions.
 
-    SCHREPAIR-06: ERC-driven power flag placement.
+    Phase 68: Places PWR_FLAG directly at the violation position so its pin
+    overlaps with the power net connection. Uses NetPositionIndex for net
+    name resolution when available. Deduplicates per net name.
 
     Args:
         ir: SchematicIR for the target schematic.
@@ -451,16 +453,28 @@ def add_power_flags(ir: SchematicIR, sch_path: Path) -> dict[str, Any]:
     if not positions:
         return {"placed": 0, "positions": [], "skipped": 0, "net_names": []}
 
-    # Get label positions to determine net names at violation points
+    # Try to use NetPositionIndex for connectivity-aware net resolution
+    net_index: NetPositionIndex | None = None
+    try:
+        net_index = NetPositionIndex.from_file(sch_path)
+    except Exception:
+        pass
+
     label_positions = ir.get_label_positions()
     placed_count = 0
     skipped_count = 0
     placed_positions: list[tuple[float, float]] = []
     net_names: list[str] = []
+    placed_nets: set[str] = set()  # dedup per invocation
 
     for vp in positions:
-        # Find which label is at or near this position
-        net_name = _find_net_name_at_position(vp.x, vp.y, label_positions)
+        # Resolve net name: prefer NetPositionIndex, fall back to labels
+        net_name = None
+        if net_index is not None:
+            net_name = net_index.get_net_at((vp.x, vp.y))
+        if net_name is None:
+            net_name = _find_net_name_at_position(vp.x, vp.y, label_positions)
+
         if net_name is None:
             logger.warning(
                 "Could not determine net name at (%.2f, %.2f), skipping power flag",
@@ -469,16 +483,21 @@ def add_power_flags(ir: SchematicIR, sch_path: Path) -> dict[str, Any]:
             skipped_count += 1
             continue
 
-        # Place PWR_FLAG offset to the right to avoid overlapping
-        offset_x = vp.x + 2.54
-        offset_y = vp.y
-        ir.add_power_symbol("PWR_FLAG", offset_x, offset_y, 0.0)
+        # Dedup: one PWR_FLAG per net per invocation
+        if net_name in placed_nets:
+            skipped_count += 1
+            continue
+        placed_nets.add(net_name)
+
+        # Place PWR_FLAG at the violation position so its pin connects
+        # directly to the power net (not offset — offset was the isolation bug)
+        ir.add_power_symbol("PWR_FLAG", vp.x, vp.y, 0.0)
         placed_count += 1
-        placed_positions.append((round(offset_x, 4), round(offset_y, 4)))
+        placed_positions.append((round(vp.x, 4), round(vp.y, 4)))
         net_names.append(net_name)
         ir._record_mutation("add_power_flag", {
             "net_name": net_name,
-            "position": [offset_x, offset_y],
+            "position": [vp.x, vp.y],
         })
 
     return {
@@ -492,20 +511,46 @@ def add_power_flags(ir: SchematicIR, sch_path: Path) -> dict[str, Any]:
 def place_no_connects_from_erc(ir: SchematicIR, sch_path: Path) -> dict[str, Any]:
     """Place no-connect markers at pin_not_connected ERC violation positions.
 
-    SCHREPAIR-07: ERC-driven no-connect placement.
+    Phase 68: Filters by pin electrical type — skips power pins, input pins,
+    and pins on power nets. Only places no_connect on safe pin types.
+
+    Pin type safety table:
+    - Always skip: power_in, power_out, input, net_in, net_out
+    - Safe to no-connect: output, bidirectional, open_collector, open_emitter,
+      free, passive
 
     Args:
         ir: SchematicIR for the target schematic.
         sch_path: Path to the schematic file (for ERC invocation).
 
     Returns:
-        Dict with placed count, skipped duplicates count, and positions.
+        Dict with placed count, skipped counts, and positions.
     """
     from kicad_agent.ops.erc_parser import extract_violation_positions
 
     positions = extract_violation_positions(sch_path, "pin_not_connected")
     if not positions:
-        return {"placed": 0, "skipped_duplicates": 0, "positions": []}
+        return {"placed": 0, "skipped_duplicates": 0, "positions": [],
+                "skipped_pin_type": 0, "skipped_power_net": 0}
+
+    # Build pin position → electrical type lookup from IR
+    pin_positions = ir.get_pin_positions()
+    pos_to_type: dict[tuple[float, float], str] = {}
+    for p in pin_positions:
+        key = (round(p["x"], 2), round(p["y"], 2))
+        pos_to_type[key] = p.get("electrical_type", "passive")
+
+    # Try to build net index for power-net checking
+    net_index: NetPositionIndex | None = None
+    try:
+        net_index = NetPositionIndex.from_file(sch_path)
+    except Exception:
+        pass
+
+    # Pin types that should NOT receive no_connect
+    UNSAFE_PIN_TYPES = frozenset({
+        "power_in", "power_out", "input", "net_in", "net_out",
+    })
 
     # Check existing no-connect positions to avoid duplicates
     sch = ir.schematic
@@ -515,6 +560,8 @@ def place_no_connects_from_erc(ir: SchematicIR, sch_path: Path) -> dict[str, Any
 
     placed_count = 0
     dup_count = 0
+    skipped_pin_type = 0
+    skipped_power_net = 0
     placed_positions: list[tuple[float, float]] = []
 
     for vp in positions:
@@ -522,6 +569,27 @@ def place_no_connects_from_erc(ir: SchematicIR, sch_path: Path) -> dict[str, Any
         if pos_key in existing_nc:
             dup_count += 1
             continue
+
+        # Check pin electrical type
+        pin_type = pos_to_type.get(pos_key, "passive")
+        if pin_type in UNSAFE_PIN_TYPES:
+            skipped_pin_type += 1
+            logger.debug(
+                "Skipping no_connect at (%.2f, %.2f): unsafe pin type '%s'",
+                vp.x, vp.y, pin_type,
+            )
+            continue
+
+        # Check if pin is on a power net
+        if net_index is not None:
+            net_name = net_index.get_net_at((vp.x, vp.y))
+            if net_name and _is_power_net(net_name):
+                skipped_power_net += 1
+                logger.debug(
+                    "Skipping no_connect at (%.2f, %.2f): on power net '%s'",
+                    vp.x, vp.y, net_name,
+                )
+                continue
 
         ir.add_no_connect(x=vp.x, y=vp.y)
         placed_count += 1
@@ -532,6 +600,8 @@ def place_no_connects_from_erc(ir: SchematicIR, sch_path: Path) -> dict[str, Any
     return {
         "placed": placed_count,
         "skipped_duplicates": dup_count,
+        "skipped_pin_type": skipped_pin_type,
+        "skipped_power_net": skipped_power_net,
         "positions": placed_positions,
     }
 

@@ -451,7 +451,7 @@ class TestAddPowerFlags:
 
         assert result["placed"] == 1
         assert "+5V" in result["net_names"]
-        ir.add_power_symbol.assert_called_once_with("PWR_FLAG", 52.54, 30.0, 0.0)
+        ir.add_power_symbol.assert_called_once_with("PWR_FLAG", 50.0, 30.0, 0.0)
 
     def test_add_power_flags_no_violations(self):
         """No violations means no symbols placed."""

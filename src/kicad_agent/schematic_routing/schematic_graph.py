@@ -49,6 +49,7 @@ class PinPosition:
     pin_name: str
     position: Pos  # wire connection point (body + length in pin direction)
     body_position: Pos  # pin body position (for label placement)
+    electrical_type: str = "passive"  # pin type: input, output, passive, power_in, etc.
 
 
 @dataclass
@@ -380,7 +381,7 @@ def _parse_symbol_pins(body: str, lib_symbols: dict[str, list[tuple]]) -> list[P
         cos_a, sin_a = math.cos(rad), math.sin(rad)
 
         for pin_data in lib_pins:
-            _, px, py, pa, pl, pin_name, pin_number = pin_data
+            pin_type, px, py, pa, pl, pin_name, pin_number = pin_data
 
             # Rotate pin offset by symbol angle
             rot_px = px * cos_a - py * sin_a
@@ -402,6 +403,7 @@ def _parse_symbol_pins(body: str, lib_symbols: dict[str, list[tuple]]) -> list[P
                 pin_name=pin_name,
                 position=(wire_x, wire_y),
                 body_position=(body_x, body_y),
+                electrical_type=pin_type,
             ))
 
     return pins
