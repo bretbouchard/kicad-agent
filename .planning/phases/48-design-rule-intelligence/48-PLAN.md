@@ -20,6 +20,10 @@ Plans:
 - [ ] 48-01-PLAN.md -- Domain-specific design rules engine with built-in rules (DOMAIN-04)
 - [ ] 48-02-PLAN.md -- Configurable project rules + reporting + CLI integration (DOMAIN-04)
 
+## Follows: Phase 48.5 — Schematic Readability & Overlap Detection
+
+Phase 48 builds the rule engine and 8 domain rules (bypass caps, feedback, impedance, etc.). **Phase 48.5 extends the same engine with schematic readability rules** — overlap detection, text collisions, duplicate labels, spacing, and a Schematic Readability Score (SRS). Phase 48.5 also adds a Claude vision review loop. 48 must complete before 48.5 starts.
+
 ## Wave Structure
 
 **Wave 1:** 48-01 (rules engine + built-in rules) -- depends on 45-01 and 46-01 output interfaces

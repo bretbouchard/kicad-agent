@@ -986,8 +986,13 @@ def place_missing_units(
 
         # Count available units
         available_units = list(lib_sym.units)
-        if len(available_units) <= 1:
-            continue  # Single-unit symbol
+
+        # KiCad standard library symbols (R, C, L, power, test points) use a
+        # 2-unit structure: unit 0 = graphic-only (no pins), unit 1 = component.
+        # True multi-unit symbols (NE5532, CD4066BE) have 3+ units or pins on
+        # unit 0 (shared power pins).  Skip the fake 2-unit symbols.
+        if len(available_units) <= 2 and len(available_units[0].pins) == 0:
+            continue  # Single-unit symbol with graphic wrapper
 
         # Count placed units
         placed_count = len(components)

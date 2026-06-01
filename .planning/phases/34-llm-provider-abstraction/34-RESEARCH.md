@@ -486,22 +486,13 @@ Note: InferenceWrapper uses `LocalLLMClient.chat()`, not `create_message()`. It 
 
 **Assumption A1 is the most critical.** The CONTEXT.md decisions say "generate(prompt, system) -> str" but the codebase shows 4 consumers using tool_use with create_message(). The planner must decide: does the protocol include create_message() (superset approach) or do we add a second tool_use-specific method?
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Protocol scope: generate() only vs generate() + create_message()?**
-   - What we know: CONTEXT.md says two methods: `generate()` and `embed()`. But 4 of 6 consumers pass `tools=[...]` to `create_message()` and extract tool_use blocks.
-   - What's unclear: Whether the locked decision about "two methods" is a hard constraint or whether `create_message()` can be added as a third method for backward compat.
-   - Recommendation: Include `create_message()` in the protocol as a third method. The "two methods" in CONTEXT.md refers to the new simplified API surface. `create_message()` is preserved for backward compat, not as a new feature. This is consistent with the locked decision "Existing LLMBackend protocol stays."
+1. **Protocol scope: generate() only vs generate() + create_message()?** — RESOLVED: Include `create_message()` as a third method. Plans 01+02 include it. The "two methods" in CONTEXT.md refers to the new simplified API surface; `create_message()` is preserved for backward compat per Claude's Discretion.
 
-2. **Should provider.py also export LLMProviderProtocol type alias?**
-   - What we know: LLMBackend already exists as a runtime_checkable Protocol.
-   - What's unclear: Whether the new LLMProvider should extend/replace LLMBackend or coexist.
-   - Recommendation: Coexist. LLMProvider can implicitly satisfy LLMBackend (same `.model` and `.create_message()` methods). No need for explicit inheritance. This matches "providers satisfy both protocols" from CONTEXT.md.
+2. **Should provider.py also export LLMProviderProtocol type alias?** — RESOLVED: No alias needed. LLMProvider coexists with LLMBackend. Providers satisfy both protocols implicitly (same `.model` and `.create_message()` methods). Matches CONTEXT.md "providers satisfy both protocols."
 
-3. **Should `get_provider()` return type be `Any` or `LLMProvider`?**
-   - What we know: runtime_checkable protocols support isinstance() checks.
-   - What's unclear: Whether static type checkers (mypy/pyright) will be happy with Protocol return types from a factory.
-   - Recommendation: Return `LLMProvider` type. Use `from __future__ import annotations` to avoid circular type evaluation issues.
+3. **Should `get_provider()` return type be `Any` or `LLMProvider`?** — RESOLVED: Return `LLMProvider` type. Plans use `from __future__ import annotations` to avoid circular type evaluation. Plan 01 Task 1 action section 4 specifies return type.
 
 ## Environment Availability
 

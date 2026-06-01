@@ -50,7 +50,20 @@ If the AI can't produce structurally valid KiCad files through the tool layer, n
 - Existing tools: kiutils (Python), sexpdata (Python), kicad-cli for validation, difftastic for diffs
 - The tool lives at ~/apps/kicad-agent/ (Python backend) with a skill definition at ~/.claude/skills/kicad-agent/
 
-## Current Milestone: v2.3 mcp-server
+## Current Milestone: v3.0 Full-Stack EDA
+
+**Goal:** Bridge schematic intelligence to PCB layout with constraint propagation, spatial intelligence, layout-aware placement, DRC intelligence, and DFM checks.
+
+**Target features:**
+- Constraint propagation: Schematic intent (differential pairs, impedance, clearance) → PCB design rules
+- PCB spatial model: Rich PCB equivalent of SchematicIR with net/layer/trace/copper zone geometry
+- Layout-aware placement: Thermal-aware, signal flow-driven, decoupling-cap-aware component placement
+- PCB DRC intelligence: Spatial violation parsing, fix suggestions, signal/power integrity checks
+- Design for Manufacturing: DFM checks, panelization awareness, thermal relief, assembly considerations
+
+**Why this milestone:** v2.5 built deep schematic understanding (topology, subcircuits, intent, design rules, readability). But that intelligence stops at the schematic boundary. PCB layout remains "run kicad-cli and report results." v3.0 closes the loop — schematic intelligence flows to PCB constraints, PCB spatial data becomes queryable, and violations become understandable and fixable.
+
+## Previous Milestone: v2.3 mcp-server
 
 **Goal:** Expose all 57 kicad-agent operations as MCP tools so any AI agent (Claude, Cursor, etc.) can invoke KiCad file edits directly.
 
@@ -100,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-29 — Milestone v2.3 mcp-server started*
+*Last updated: 2026-06-01 — Milestone v3.0 full-stack-eda started*

@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: Complete-Ops
-status: in-progress
-stopped_at: Phase 54 plan 54-01 complete. DfmChecker, ManufacturerProfile, 5 built-in DFM checks, 38 tests.
-last_updated: "2026-06-01T20:25:00Z"
+milestone: v3.0
+milestone_name: Full-Stack EDA
+status: complete
+stopped_at: All phases 50-54 complete. 291 new tests, ~3400 lines, zero regressions.
+last_updated: "2026-06-01T22:00:00Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 65
-  completed_phases: 26
-  total_plans: 192
-  completed_plans: 133
-  percent: 69
+  completed_phases: 31
+  total_plans: 202
+  completed_plans: 143
+  percent: 71
 ---
 
 # Project State
@@ -26,9 +26,11 @@ Last activity: 2026-06-01
 
 ## Current Position
 
-Phase: 54 (Design for Manufacturing) — executing
-Status: Plan 54-01 complete (DfmChecker, ManufacturerProfile, 5 built-in checks, 38 tests)
-Plans: 54-01 (COMPLETE)
+**Milestone v3.0 (Full-Stack EDA) COMPLETE**
+
+Phases 50-54 all executed. 10 plans, 291 new tests, ~3400 lines, zero regressions.
+Full pipeline: Schematic → Topology → Constraints → Spatial Model → Placement → DRC Intelligence → DFM
+
 Last activity: 2026-06-01
 
 ### Phase 47: Circuit Intent Inference
@@ -169,6 +171,12 @@ Recent decisions affecting current work:
 - [v3.0-54]: Meta-finding uses DFM_CHECKER_01 check_id to satisfy pattern validation on crashed checks
 - [v3.0-54]: SolderMaskCheck uses 4x sliver proximity window for O(n) pair optimization
 - [v3.0-54]: ManufacturerProfile uses yaml.safe_load for security (T-54-02, same as rule_config.py)
+- [v3.0-54]: Panelization score formula: fiducials (0.3/0.15), tooling holes (0.2/0.1), orientation (0.3), edge clearance (0.2)
+- [v3.0-54]: Assembly score formula: 1.0 - (warnings * 0.05) clamped to [0.0, 1.0]
+- [v3.0-54]: Multi-stage pipeline runs DfmChecker with filtered check subsets per stage
+- [v3.0-54]: Overall DFM score is minimum of all stage scores and panelization score
+- [v3.0-54]: CLI exit codes: 0 (score >= 0.5), 1 (score < 0.5), 2 (error)
+- [v3.0-54]: isinstance() type guards prevent MagicMock auto-attribute string matching
 
 ### Pending Todos
 
@@ -185,5 +193,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 54 plan 54-01 complete. DfmChecker, ManufacturerProfile, 5 built-in DFM checks, 38 tests.
-Resume with: Continue to plan 54-02 in Phase 54 or proceed per ROADMAP.md.
+Stopped at: Milestone v3.0 (Full-Stack EDA) complete. Phases 50-54 all executed. 291 new tests, zero regressions.
+Resume with: Continue to next milestone per ROADMAP.md or run `/gsd-progress`.

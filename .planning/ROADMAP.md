@@ -982,8 +982,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 54-01-PLAN.md -- DfmCheck ABC, DfmChecker, ManufacturerProfile, built-in DFM checks (DFM-01, DFM-02, DFM-03)
-- [ ] 54-02-PLAN.md -- Multi-stage DFM, panelization scoring, assembly checks, CLI integration (DFM-04, DFM-05)
+- [x] 54-01-PLAN.md -- DfmCheck ABC, DfmChecker, ManufacturerProfile, built-in DFM checks (DFM-01, DFM-02, DFM-03)
+- [x] 54-02-PLAN.md -- Multi-stage DFM, panelization scoring, assembly checks, CLI integration (DFM-04, DFM-05)
 
 ## Progress
 
@@ -1046,4 +1046,4 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 51. PCB Spatial Intelligence | 0/2 | Planned | |
 | 52. Layout-Aware Placement | 0/2 | Planned | |
 | 53. PCB DRC Intelligence | 2/2 | Complete | |
-| 54. Design for Manufacturing | 0/2 | Planned | |
+| 54. Design for Manufacturing | 2/2 | Complete | 62 tests |
