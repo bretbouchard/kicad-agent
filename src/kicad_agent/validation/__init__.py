@@ -35,6 +35,14 @@ from kicad_agent.validation.pipeline import (
     PipelineStage,
     StageResult,
 )
+from kicad_agent.validation.drc_intel import (
+    IntelligentDrcAnalyzer,
+    EnrichedViolation,
+    ViolationClassification,
+    SpatialFixSuggestion,
+    IntelligentDrcReport,
+    FixSuggester,
+)
 
 __all__ = [
     "round_trip_stable",
@@ -61,4 +69,10 @@ __all__ = [
     "PipelineResult",
     "PipelineStage",
     "StageResult",
+    "IntelligentDrcAnalyzer",
+    "EnrichedViolation",
+    "ViolationClassification",
+    "SpatialFixSuggestion",
+    "IntelligentDrcReport",
+    "FixSuggester",
 ]
