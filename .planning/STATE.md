@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.0
-milestone_name: full-stack-eda
-status: executing
-stopped_at: "Completed 51-01-PLAN.md — PcbSpatialModel, LayerStackup, LayerClassifier, NetClassGeometry"
-last_updated: "2026-06-01T19:22:00Z"
+milestone: v2.2
+milestone_name: Complete-Ops
+status: completed
+stopped_at: Phase 51 plan 51-02 complete. Board outline extraction, dirty-flag lifecycle, spatial query integration. 51 tests.
+last_updated: "2026-06-01T19:36:31.169Z"
 last_activity: 2026-06-01
 progress:
-  total_phases: 54
-  completed_phases: 49
-  total_plans: 139
-  completed_plans: 131
-  percent: 94
+  total_phases: 65
+  completed_phases: 26
+  total_plans: 192
+  completed_plans: 128
+  percent: 67
 ---
 
 # Project State
@@ -27,8 +27,8 @@ Last activity: 2026-06-01
 ## Current Position
 
 Phase: 51 (PCB Spatial Intelligence) — executing
-Status: Plan 51-01 complete (PcbSpatialModel, LayerStackup, LayerClassifier, NetClassGeometry)
-Plans: 51-01 (COMPLETE), 51-02 (not started)
+Status: Plan 51-02 complete (board outline extraction, dirty-flag lifecycle, spatial query integration)
+Plans: 51-01 (COMPLETE), 51-02 (COMPLETE)
 Last activity: 2026-06-01
 
 ### Phase 47: Circuit Intent Inference
@@ -61,7 +61,7 @@ Last activity: 2026-06-01
 
 **Velocity:**
 
-- Total plans completed: 124
+- Total plans completed: 126
 - Average duration: 5 min
 - Total execution time: 5.9 hours
 
@@ -153,6 +153,10 @@ Recent decisions affecting current work:
 - [v2.5-48]: CLI tests use real CircuitTopology instead of MagicMock to avoid Pydantic validation errors
 - [v2.4-SI]: ClassifyViolationsOp in _schema_erc_smart.py (separate from _schema_repair.py per D-01)
 - [v2.4-SI]: IR position data (pin/wire/label positions) distinguishes #PWR symbols from regular components
+- [v2.5-51]: Arc center computed via perpendicular bisector intersection; 32-segment LineString approximation
+- [v2.5-51]: 1nm snap tolerance closes floating-point gaps before polygonize (manufacturing tolerance >> 1nm)
+- [v2.5-51]: Graphic item type detection by attribute presence (has start/end/mid/center), not isinstance
+- [v2.5-51]: SpatialQueryEngine rebuilt lazily on access when dirty; mark_dirty invalidates cached engine
 
 ### Pending Todos
 
@@ -169,5 +173,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 51 plan 51-01 complete. PcbSpatialModel, LayerStackup, LayerClassifier, NetClassGeometry. 36 tests.
-Resume with: Plan 51-02 per ROADMAP.md.
+Stopped at: Phase 51 plan 51-02 complete. Board outline extraction, dirty-flag lifecycle, spatial query integration. 51 tests.
+Resume with: Plan 51-03 per ROADMAP.md (if applicable).
