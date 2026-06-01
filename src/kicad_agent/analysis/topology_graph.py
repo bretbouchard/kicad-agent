@@ -66,6 +66,21 @@ class TopologyEdge:
 
 
 @dataclass(frozen=True)
+class NetStats:
+    """Statistics for a single net in the topology."""
+
+    net_name: str
+    fanout: int                      # Number of receiving components
+    is_stub: bool                    # Dead-end branch (leads to test point, LED, etc.)
+    is_multi_drop: bool              # 1 source, 2+ receivers on different ICs
+    longest_path_from_input: int     # Hops from nearest input net
+    component_count: int             # Total components on this net
+    classification: NetClassification
+    importance: str                  # From NetImportance enum value
+    signal_integrity: str            # From SignalIntegrity enum value
+
+
+@dataclass(frozen=True)
 class CircuitTopology:
     """Complete circuit topology with signal flow."""
 
@@ -224,7 +239,7 @@ class TopologyBuilder:
                 output_nets=(),
                 power_nets=(),
                 signal_paths=(),
-                stats={"component_count": 0, "net_count": 0, "signal_path_count": 0, "feedback_count": 0},
+                stats={"component_count": 0, "net_count": 0, "signal_path_count": 0, "feedback_count": 0, "net_stats": {}},
             )
 
         # 1. Build nodes with pin role classification
@@ -270,11 +285,15 @@ class TopologyBuilder:
         signal_paths = self._trace_signal_paths(edges, list(input_nets), list(output_nets), pin_nets)
 
         # 7. Compute stats
+        from dataclasses import asdict
+
+        net_stats = self._compute_net_stats(edges, list(input_nets), nodes_by_ref)
         stats = {
             "component_count": len(nodes),
             "net_count": len(net_names),
             "signal_path_count": len(signal_paths),
             "feedback_count": len(feedback_nets),
+            "net_stats": {name: asdict(stat) for name, stat in net_stats.items()},
         }
 
         if len(nodes) > 500:
@@ -289,6 +308,133 @@ class TopologyBuilder:
             signal_paths=tuple(tuple(p) for p in signal_paths),
             stats=stats,
         )
+
+    # -------------------------------------------------------------------
+    # Net stats computation
+    # -------------------------------------------------------------------
+
+    def _compute_net_stats(
+        self,
+        edges: list[TopologyEdge],
+        input_nets: list[str],
+        nodes: dict[str, TopologyNode],
+    ) -> dict[str, NetStats]:
+        """Compute per-net statistics.
+
+        Algorithm:
+        1. Group edges by net_name
+        2. For each net:
+           a. fanout = count of unique target refs
+           b. is_stub = net connects to exactly one component that is a dead-end
+           c. is_multi_drop = fanout >= 2 and receivers are on different ICs
+           d. longest_path_from_input = BFS depth from input nets
+           e. component_count = unique refs on this net
+        """
+        from dataclasses import asdict
+        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+
+        classifier = NetClassifier()
+
+        # Group edges by net name
+        net_edges: dict[str, list[TopologyEdge]] = {}
+        for edge in edges:
+            net_edges.setdefault(edge.net_name, []).append(edge)
+
+        # Build adjacency for BFS depth from input nets
+        forward: dict[str, list[tuple[str, str]]] = {}
+        for edge in edges:
+            if edge.classification == NetClassification.POWER:
+                continue
+            forward.setdefault(edge.source_ref, []).append((edge.target_ref, edge.net_name))
+
+        # BFS from input-net-connected components to compute depth
+        depth: dict[str, int] = {}
+        queue: deque[tuple[str, int]] = deque()
+        input_refs: set[str] = set()
+        for edge in edges:
+            if edge.net_name in input_nets:
+                input_refs.add(edge.source_ref)
+                input_refs.add(edge.target_ref)
+        for ref in input_refs:
+            if ref not in depth:
+                depth[ref] = 0
+                queue.append((ref, 0))
+        while queue:
+            ref, d = queue.popleft()
+            for target, _net in forward.get(ref, []):
+                if target not in depth:
+                    depth[target] = d + 1
+                    queue.append((target, d + 1))
+
+        result: dict[str, NetStats] = {}
+        for net_name, net_edge_list in net_edges.items():
+            # Unique refs on this net
+            all_refs: set[str] = set()
+            source_refs: set[str] = set()
+            target_refs: set[str] = set()
+            classification = NetClassification.UNKNOWN
+            for edge in net_edge_list:
+                all_refs.add(edge.source_ref)
+                all_refs.add(edge.target_ref)
+                if edge.signal_direction not in ("bidirectional",):
+                    source_refs.add(edge.source_ref)
+                    target_refs.add(edge.target_ref)
+                else:
+                    target_refs.add(edge.source_ref)
+                    target_refs.add(edge.target_ref)
+                classification = edge.classification
+
+            # Fanout: unique target components (receivers)
+            receivers = target_refs - source_refs
+            fanout = len(receivers) if receivers else len(target_refs)
+
+            # Component count
+            component_count = len(all_refs)
+
+            # is_multi_drop: fanout >= 2 and receivers on different ICs
+            receiver_ic_count = sum(
+                1 for ref in receivers
+                if nodes.get(ref, None) and nodes[ref].component_type == "ic"
+            )
+            is_multi_drop = fanout >= 2 and receiver_ic_count >= 2
+
+            # is_stub: net leads to exactly one dead-end component
+            # Dead-end: diode (LED), connector, or component not in forward adjacency
+            dead_end_types = {"diode", "connector", "misc"}
+            dead_end_refs = {
+                ref for ref in all_refs
+                if nodes.get(ref) and (
+                    nodes[ref].component_type in dead_end_types
+                    or ref not in forward
+                )
+            }
+            # Stub: at least one dead-end component, and all dead-ends have no outgoing edges
+            is_stub = len(dead_end_refs) >= 1 and len(dead_end_refs) < len(all_refs)
+
+            # Longest path from input: max BFS depth of any component on this net
+            if depth:
+                net_depths = [depth.get(ref, 0) for ref in all_refs if ref in depth]
+                longest_path = max(net_depths) if net_depths else 0
+            else:
+                longest_path = 0
+
+            # Signal integrity and importance
+            importance = classifier.rank_importance(classification)
+            signal_integrity = classifier.classify_signal_integrity(net_name)
+
+            result[net_name] = NetStats(
+                net_name=net_name,
+                fanout=fanout,
+                is_stub=is_stub,
+                is_multi_drop=is_multi_drop,
+                longest_path_from_input=longest_path,
+                component_count=component_count,
+                classification=classification,
+                importance=importance.value,
+                signal_integrity=signal_integrity.value,
+            )
+
+        return result
 
     # -------------------------------------------------------------------
     # Pin grouping and role classification
