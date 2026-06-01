@@ -9,6 +9,13 @@ from kicad_agent.analysis.circuit_classifier import CircuitClassifier, Classific
 from kicad_agent.analysis.feature_extraction import SubcircuitFeatures, extract_features
 from kicad_agent.analysis.intent_schemas import DesignGoal, DesignIntent, SubcircuitIntent
 from kicad_agent.analysis.intent_inference import InferenceResult, IntentInferrer
+from kicad_agent.analysis.design_review import (
+    DesignFinding,
+    DesignReview,
+    DesignReviewer,
+    ReviewCategory,
+    ReviewSeverity,
+)
 
 __all__ = [
     "NetGraph",
@@ -34,4 +41,9 @@ __all__ = [
     "SubcircuitIntent",
     "InferenceResult",
     "IntentInferrer",
+    "DesignFinding",
+    "DesignReview",
+    "DesignReviewer",
+    "ReviewCategory",
+    "ReviewSeverity",
 ]
