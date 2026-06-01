@@ -250,10 +250,10 @@ class TestBenchmarkDatasetSchema:
             id="pcb-mmlu-0001",
             category="topology_recognition",
             difficulty="medium",
-            question="What type of circuit is this?",
-            choices=["A", "B", "C", "D"],
+            question="What type of circuit is formed by these components?",
+            choices=["Amplifier", "Filter", "Oscillator", "Power supply"],
             correct_index=0,
-            explanation="Test.",
+            explanation="This is a test explanation for validation purposes.",
             source="test.kicad_sch",
             source_type="schematic",
         )
