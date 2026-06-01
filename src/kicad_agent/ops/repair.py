@@ -34,35 +34,79 @@ def _distance(x1: float, y1: float, x2: float, y2: float) -> float:
     return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
 
+def _check_snap_safety(
+    endpoint_pos: tuple[float, float],
+    target_pin_pos: tuple[float, float],
+    net_index: NetPositionIndex,
+) -> bool:
+    """Check if snapping a wire endpoint to a target pin is safe.
+
+    Phase 69: Returns True if the snap is allowed, False if it would move
+    the endpoint from one named net to a different named net.
+
+    Rules:
+    - If endpoint is on no net (floating) -> ALLOW (needs connection)
+    - If endpoint is on an auto-named net (Net_N) -> ALLOW (no identity)
+    - If target pin is on no net or auto-named -> ALLOW
+    - If both on same named net -> ALLOW
+    - If on different named nets -> BLOCK
+    """
+    source_net = net_index.get_net_at(endpoint_pos)
+    target_net = net_index.get_net_at(target_pin_pos)
+
+    # Auto-named nets treated as "no net"
+    if source_net and net_index.is_auto_named(source_net):
+        source_net = None
+    if target_net and net_index.is_auto_named(target_net):
+        target_net = None
+
+    # Both floating or auto-named -> safe
+    if source_net is None or target_net is None:
+        return True
+
+    # Same named net -> safe
+    if source_net == target_net:
+        return True
+
+    # Different named nets -> BLOCK
+    return False
+
+
 def repair_wire_snapping(ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     """Snap wire endpoints to the nearest pin position within tolerance.
 
-    For each wire in the schematic, checks if start/end points are within
-    SNAP_TOLERANCE of a pin position. If not snapped, adjusts the wire
-    endpoint to the nearest pin position.
+    Phase 69: Adds net-verification guard. Before snapping a wire endpoint
+    to a pin, checks that the endpoint isn't already connected to a
+    different named net. Prevents unintended cross-net connections.
 
     Pin positions use the Y-inversion pattern: absolute = (sx+px, sy-py).
     See SchematicIR.get_pin_positions() for rotation handling.
-
-    T-10-09: Snap distance limited to SNAP_TOLERANCE (0.01mm).
 
     Args:
         ir: SchematicIR for the target schematic.
         file_path: Path to the schematic file (for logging).
 
     Returns:
-        Dict with snapped_count and unchanged_count.
+        Dict with snapped_count, unchanged_count, and skipped_net_mismatch.
     """
     pin_positions = ir.get_pin_positions()
     if not pin_positions:
-        return {"snapped_count": 0, "unchanged_count": 0}
+        return {"snapped_count": 0, "unchanged_count": 0, "skipped_net_mismatch": 0}
 
     # Build a list of (x, y) tuples for fast nearest-point lookup
     pins_xy = [(p["x"], p["y"]) for p in pin_positions]
 
+    # Build net index once for snap safety checks
+    net_index: NetPositionIndex | None = None
+    try:
+        net_index = NetPositionIndex.from_file(file_path)
+    except Exception:
+        pass
+
     wire_endpoints = ir.get_wire_endpoints()
     snapped_count = 0
     unchanged_count = 0
+    skipped_net_mismatch = 0
 
     sch = ir.schematic
 
@@ -81,17 +125,29 @@ def repair_wire_snapping(ir: SchematicIR, file_path: Path) -> dict[str, Any]:
         sx, sy = wire.points[0].X, wire.points[0].Y
         nearest_pin = _find_nearest_pin(sx, sy, pins_xy, SNAP_TOLERANCE)
         if nearest_pin is not None and _distance(sx, sy, nearest_pin[0], nearest_pin[1]) > 0:
-            wire.points[0].X = nearest_pin[0]
-            wire.points[0].Y = nearest_pin[1]
-            modified = True
+            # Net safety check
+            if net_index is not None and not _check_snap_safety(
+                (sx, sy), nearest_pin, net_index,
+            ):
+                skipped_net_mismatch += 1
+            else:
+                wire.points[0].X = nearest_pin[0]
+                wire.points[0].Y = nearest_pin[1]
+                modified = True
 
         # Check end point
         ex, ey = wire.points[1].X, wire.points[1].Y
         nearest_pin = _find_nearest_pin(ex, ey, pins_xy, SNAP_TOLERANCE)
         if nearest_pin is not None and _distance(ex, ey, nearest_pin[0], nearest_pin[1]) > 0:
-            wire.points[1].X = nearest_pin[0]
-            wire.points[1].Y = nearest_pin[1]
-            modified = True
+            # Net safety check
+            if net_index is not None and not _check_snap_safety(
+                (ex, ey), nearest_pin, net_index,
+            ):
+                skipped_net_mismatch += 1
+            else:
+                wire.points[1].X = nearest_pin[0]
+                wire.points[1].Y = nearest_pin[1]
+                modified = True
 
         if modified:
             snapped_count += 1
@@ -101,7 +157,11 @@ def repair_wire_snapping(ir: SchematicIR, file_path: Path) -> dict[str, Any]:
         else:
             unchanged_count += 1
 
-    return {"snapped_count": snapped_count, "unchanged_count": unchanged_count}
+    return {
+        "snapped_count": snapped_count,
+        "unchanged_count": unchanged_count,
+        "skipped_net_mismatch": skipped_net_mismatch,
+    }
 
 
 def remove_orphaned_labels(ir: SchematicIR) -> dict[str, Any]:
