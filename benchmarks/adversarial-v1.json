@@ -1,0 +1,5358 @@
+{
+  "mutations": [
+    {
+      "mutation_type": "swap_values",
+      "target": "J2",
+      "original": "PWM",
+      "mutated": "PWM",
+      "description": "Swapped value of J2 from PWM to PWM",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_28",
+      "original": "(wire (pts (xy 34.29 59.69) (xy 21.59 59.69))\n    (stroke (width 0) (type solid))\n    (uuid 486ca832-85f4-4989-b0f4-569faf9be534)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 28: (34.29,59.69) to (21.59,59.69)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_94",
+      "original": "(wire (pts (xy 62.23 49.53) (xy 74.93 49.53))\n    (stroke (width 0) (type solid))\n    (uuid fe837306-92d0-4847-ad21-76c47ae932d1)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 94: (62.23,49.53) to (74.93,49.53)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J7",
+      "original": "Digital",
+      "mutated": "Communication",
+      "description": "Swapped value of J7 from Digital to Communication",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J6",
+      "original": "Communication",
+      "mutated": "Analog",
+      "description": "Swapped value of J6 from Communication to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J2",
+      "original": "PWM",
+      "mutated": "Digital",
+      "description": "Swapped value of J2 from PWM to Digital",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_29",
+      "original": "(wire (pts (xy 62.23 39.37) (xy 74.93 39.37))\n    (stroke (width 0) (type solid))\n    (uuid 4a910b57-a5cd-4105-ab4f-bde2a80d4f00)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 29: (62.23,39.37) to (74.93,39.37)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J7.36",
+      "original": "(69.85,128.27)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J7.36 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J6",
+      "original": "Communication",
+      "mutated": "Analog",
+      "description": "Swapped value of J6 from Communication to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J7.23",
+      "original": "(54.61,123.19)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J7.23 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_57",
+      "original": "(wire (pts (xy 19.05 36.83) (xy 34.29 36.83))\n    (stroke (width 0) (type solid))\n    (uuid 93e52853-9d1e-4afe-aee8-b825ab9f5d09)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 57: (19.05,36.83) to (34.29,36.83)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J6.2",
+      "original": "(55.88,97.79)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J6.2 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J3",
+      "original": "Analog",
+      "mutated": "Analog",
+      "description": "Swapped value of J3 from Analog to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "SDA{slash}20",
+      "original": "SDA{slash}20",
+      "mutated": "",
+      "description": "Removed net label 'SDA{slash}20' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_27",
+      "original": "(wire (pts (xy 62.23 59.69) (xy 74.93 59.69))\n    (stroke (width 0) (type solid))\n    (uuid 4455ee2e-5642-42c1-a83b-f7e65fa0c2f1)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 27: (62.23,59.69) to (74.93,59.69)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "TX1{slash}18",
+      "original": "TX1{slash}18",
+      "mutated": "",
+      "description": "Removed net label 'TX1{slash}18' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J5",
+      "original": "Analog",
+      "mutated": "PWM",
+      "description": "Swapped value of J5 from Analog to PWM",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "TX0{slash}1",
+      "original": "TX0{slash}1",
+      "mutated": "",
+      "description": "Removed net label 'TX0{slash}1' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J5.8",
+      "original": "(38.1,82.55)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J5.8 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J7",
+      "original": "Digital",
+      "mutated": "Analog",
+      "description": "Swapped value of J7 from Digital to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J3.6",
+      "original": "(38.1,62.23)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J3.6 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J3.1+J7.22",
+      "original": "(52.07,128.27)",
+      "mutated": "(38.1,74.93)",
+      "description": "Moved J7.22 to J3.1 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "RX1{slash}19",
+      "original": "RX1{slash}19",
+      "mutated": "",
+      "description": "Removed net label 'RX1{slash}19' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J4.7",
+      "original": "(55.88,59.69)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J4.7 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J2",
+      "original": "PWM",
+      "mutated": "Analog",
+      "description": "Swapped value of J2 from PWM to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "33",
+      "original": "33",
+      "mutated": "",
+      "description": "Removed net label '33' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_12",
+      "original": "(wire (pts (xy 54.61 109.22) (xy 54.61 119.38))\n    (stroke (width 0) (type solid))\n    (uuid 240a4724-43ab-4c76-a4be-faba45871514)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 12: (54.61,109.22) to (54.61,119.38)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J6.2+J7.33",
+      "original": "(67.31,123.19)",
+      "mutated": "(55.88,97.79)",
+      "description": "Moved J7.33 to J6.2 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "~{RESET}",
+      "original": "~{RESET}",
+      "mutated": "",
+      "description": "Removed net label '~{RESET}' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "24",
+      "original": "24",
+      "mutated": "",
+      "description": "Removed net label '24' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_85",
+      "original": "(wire (pts (xy 62.23 72.39) (xy 74.93 72.39))\n    (stroke (width 0) (type solid))\n    (uuid e9bdd59b-3252-4c44-a357-6fa1af0c210c)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 85: (62.23,72.39) to (74.93,72.39)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "22",
+      "original": "22",
+      "mutated": "",
+      "description": "Removed net label '22' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J4.4",
+      "original": "(55.88,67.31)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J4.4 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J5.6",
+      "original": "(38.1,87.63)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J5.6 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_59",
+      "original": "(wire (pts (xy 34.29 46.99) (xy 31.75 46.99))\n    (stroke (width 0) (type solid))\n    (uuid 97df9ac9-dbb8-472e-b84f-3684d0eb5efc)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 59: (34.29,46.99) to (31.75,46.99)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J6.1+J7.24",
+      "original": "(54.61,128.27)",
+      "mutated": "(55.88,100.33)",
+      "description": "Moved J7.24 to J6.1 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_87",
+      "original": "(wire (pts (xy 41.91 132.08) (xy 41.91 142.24))\n    (stroke (width 0) (type solid))\n    (uuid f1bc5e21-0912-4c1a-b1df-a5acda52ba6c)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 87: (41.91,132.08) to (41.91,142.24)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "26",
+      "original": "26",
+      "mutated": "",
+      "description": "Removed net label '26' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_4",
+      "original": "(wire (pts (xy 62.23 26.67) (xy 74.93 26.67))\n    (stroke (width 0) (type solid))\n    (uuid 0f5d2189-4ead-42fa-8f7a-cfa3af4de132)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 4: (62.23,26.67) to (74.93,26.67)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "A8",
+      "original": "A8",
+      "mutated": "",
+      "description": "Removed net label 'A8' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "31",
+      "original": "31",
+      "mutated": "",
+      "description": "Removed net label '31' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_72",
+      "original": "(wire (pts (xy 62.23 109.22) (xy 62.23 119.38))\n    (stroke (width 0) (type solid))\n    (uuid c4a04015-4dda-43b3-b8bc-71fe7ebfd606)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 72: (62.23,109.22) to (62.23,119.38)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "41",
+      "original": "41",
+      "mutated": "",
+      "description": "Removed net label '41' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.17+J7.33",
+      "original": "(67.31,123.19)",
+      "mutated": "(46.99,123.19)",
+      "description": "Moved J7.33 to J7.17 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_33",
+      "original": "(wire (pts (xy 52.07 109.22) (xy 52.07 119.38))\n    (stroke (width 0) (type solid))\n    (uuid 59c6c290-eb1c-4aa2-a21c-a10a8fdf2286)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 33: (52.07,109.22) to (52.07,119.38)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_31",
+      "original": "(wire (pts (xy 62.23 62.23) (xy 74.93 62.23))\n    (stroke (width 0) (type solid))\n    (uuid 4e60e1af-19bd-45a0-b418-b7030b594dde)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 31: (62.23,62.23) to (74.93,62.23)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J7.18",
+      "original": "(46.99,128.27)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J7.18 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "SCL{slash}21",
+      "original": "SCL{slash}21",
+      "mutated": "",
+      "description": "Removed net label 'SCL{slash}21' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.30+J7.19",
+      "original": "(49.53,123.19)",
+      "mutated": "(62.23,128.27)",
+      "description": "Moved J7.19 to J7.30 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "30",
+      "original": "30",
+      "mutated": "",
+      "description": "Removed net label '30' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_65",
+      "original": "(wire (pts (xy 34.29 90.17) (xy 21.59 90.17))\n    (stroke (width 0) (type solid))\n    (uuid b8d843ab-6138-4016-858d-11c02d63fa6d)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 65: (34.29,90.17) to (21.59,90.17)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J3.2+J2.7",
+      "original": "(55.88,31.75)",
+      "mutated": "(38.1,72.39)",
+      "description": "Moved J2.7 to J3.2 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J3",
+      "original": "Analog",
+      "mutated": "Digital",
+      "description": "Swapped value of J3 from Analog to Digital",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.34+J2.9",
+      "original": "(55.88,26.67)",
+      "mutated": "(67.31,128.27)",
+      "description": "Moved J2.9 to J7.34 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.13+J7.34",
+      "original": "(67.31,128.27)",
+      "mutated": "(41.91,123.19)",
+      "description": "Moved J7.34 to J7.13 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.16+J5.7",
+      "original": "(38.1,85.09)",
+      "mutated": "(44.45,128.27)",
+      "description": "Moved J5.7 to J7.16 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J2.2",
+      "original": "(55.88,44.45)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J2.2 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J7",
+      "original": "Digital",
+      "mutated": "Communication",
+      "description": "Swapped value of J7 from Digital to Communication",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "53",
+      "original": "53",
+      "mutated": "",
+      "description": "Removed net label '53' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J4",
+      "original": "PWM",
+      "mutated": "Analog",
+      "description": "Swapped value of J4 from PWM to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_58",
+      "original": "(wire (pts (xy 62.23 85.09) (xy 74.93 85.09))\n    (stroke (width 0) (type solid))\n    (uuid 95ef487c-5414-4cc4-b8e5-a7f669bf018c)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 58: (62.23,85.09) to (74.93,85.09)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J7",
+      "original": "Digital",
+      "mutated": "PWM",
+      "description": "Swapped value of J7 from Digital to PWM",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J4.5",
+      "original": "(55.88,64.77)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J4.5 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J3.4",
+      "original": "(38.1,67.31)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J3.4 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "A7",
+      "original": "A7",
+      "mutated": "",
+      "description": "Removed net label 'A7' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J4.8",
+      "original": "(55.88,57.15)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J4.8 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_47",
+      "original": "(wire (pts (xy 19.05 34.29) (xy 34.29 34.29))\n    (stroke (width 0) (type solid))\n    (uuid 73d4774c-1387-4550-b580-a1cc0ac89b89)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 47: (19.05,34.29) to (34.29,34.29)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_69",
+      "original": "(wire (pts (xy 46.99 132.08) (xy 46.99 142.24))\n    (stroke (width 0) (type solid))\n    (uuid bd37f6ec-1c69-4512-a679-1de130223883)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 69: (46.99,132.08) to (46.99,142.24)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J2.1",
+      "original": "(55.88,46.99)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J2.1 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J6.8",
+      "original": "(55.88,82.55)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J6.8 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J2.3+J3.5",
+      "original": "(38.1,64.77)",
+      "mutated": "(55.88,41.91)",
+      "description": "Moved J3.5 to J2.3 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "*3",
+      "original": "*3",
+      "mutated": "",
+      "description": "Removed net label '*3' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_7",
+      "original": "(wire (pts (xy 26.67 119.38) (xy 21.59 119.38))\n    (stroke (width 0) (type solid))\n    (uuid 18b63976-d31d-4bce-80fb-4b927b019f89)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 7: (26.67,119.38) to (21.59,119.38)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_72",
+      "original": "(wire (pts (xy 62.23 109.22) (xy 62.23 119.38))\n    (stroke (width 0) (type solid))\n    (uuid c4a04015-4dda-43b3-b8bc-71fe7ebfd606)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 72: (62.23,109.22) to (62.23,119.38)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J2",
+      "original": "PWM",
+      "mutated": "Analog",
+      "description": "Swapped value of J2 from PWM to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J6",
+      "original": "Communication",
+      "mutated": "Analog",
+      "description": "Swapped value of J6 from Communication to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_84",
+      "original": "(wire (pts (xy 64.77 132.08) (xy 64.77 142.24))\n    (stroke (width 0) (type solid))\n    (uuid e7eb4b6b-4658-48ff-b09c-d497a9b472e6)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 84: (64.77,132.08) to (64.77,142.24)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.22+J4.4",
+      "original": "(55.88,67.31)",
+      "mutated": "(52.07,128.27)",
+      "description": "Moved J4.4 to J7.22 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "49",
+      "original": "49",
+      "mutated": "",
+      "description": "Removed net label '49' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J7.25",
+      "original": "(57.15,123.19)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J7.25 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_69",
+      "original": "(wire (pts (xy 46.99 132.08) (xy 46.99 142.24))\n    (stroke (width 0) (type solid))\n    (uuid bd37f6ec-1c69-4512-a679-1de130223883)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 69: (46.99,132.08) to (46.99,142.24)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_91",
+      "original": "(wire (pts (xy 21.59 132.08) (xy 21.59 139.7))\n    (stroke (width 0) (type solid))\n    (uuid f9315c78-c56d-49ea-b391-57a0fd98d09c)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 91: (21.59,132.08) to (21.59,139.7)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "A8",
+      "original": "A8",
+      "mutated": "",
+      "description": "Removed net label 'A8' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "*6",
+      "original": "*6",
+      "mutated": "",
+      "description": "Removed net label '*6' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J7.31",
+      "original": "(64.77,123.19)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J7.31 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J3",
+      "original": "Analog",
+      "mutated": "Digital",
+      "description": "Swapped value of J3 from Analog to Digital",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J4",
+      "original": "PWM",
+      "mutated": "PWM",
+      "description": "Swapped value of J4 from PWM to PWM",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J7.22",
+      "original": "(52.07,128.27)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J7.22 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_75",
+      "original": "(wire (pts (xy 21.59 87.63) (xy 34.29 87.63))\n    (stroke (width 0) (type solid))\n    (uuid cb133df4-75a8-44a9-a59b-b2bf35892b1e)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 75: (21.59,87.63) to (34.29,87.63)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_0",
+      "original": "(wire (pts (xy 62.23 77.47) (xy 74.93 77.47))\n    (stroke (width 0) (type solid))\n    (uuid 010ba307-2067-49d3-b0fa-6414143f3fc2)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 0: (62.23,77.47) to (74.93,77.47)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J7",
+      "original": "Digital",
+      "mutated": "PWM",
+      "description": "Swapped value of J7 from Digital to PWM",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_8",
+      "original": "(wire (pts (xy 62.23 90.17) (xy 74.93 90.17))\n    (stroke (width 0) (type solid))\n    (uuid 1c2f44b3-e471-419a-a532-7c16aa64a472)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 8: (62.23,90.17) to (74.93,90.17)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J4",
+      "original": "PWM",
+      "mutated": "PWM",
+      "description": "Swapped value of J4 from PWM to PWM",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J5.5",
+      "original": "(38.1,90.17)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J5.5 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "*5",
+      "original": "*5",
+      "mutated": "",
+      "description": "Removed net label '*5' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_69",
+      "original": "(wire (pts (xy 46.99 132.08) (xy 46.99 142.24))\n    (stroke (width 0) (type solid))\n    (uuid bd37f6ec-1c69-4512-a679-1de130223883)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 69: (46.99,132.08) to (46.99,142.24)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_92",
+      "original": "(wire (pts (xy 34.29 74.93) (xy 21.59 74.93))\n    (stroke (width 0) (type solid))\n    (uuid facf0af0-382f-418f-bbf6-463f27b2c05f)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 92: (34.29,74.93) to (21.59,74.93)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J7.28",
+      "original": "(59.69,128.27)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J7.28 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J5.6+J7.2",
+      "original": "(26.67,128.27)",
+      "mutated": "(38.1,87.63)",
+      "description": "Moved J7.2 to J5.6 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J4.7+J3.3",
+      "original": "(38.1,69.85)",
+      "mutated": "(55.88,59.69)",
+      "description": "Moved J3.3 to J4.7 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J7",
+      "original": "Digital",
+      "mutated": "Analog",
+      "description": "Swapped value of J7 from Digital to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "37",
+      "original": "37",
+      "mutated": "",
+      "description": "Removed net label '37' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.35+J2.7",
+      "original": "(55.88,31.75)",
+      "mutated": "(69.85,123.19)",
+      "description": "Moved J2.7 to J7.35 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J2",
+      "original": "PWM",
+      "mutated": "Analog",
+      "description": "Swapped value of J2 from PWM to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "TX1{slash}18",
+      "original": "TX1{slash}18",
+      "mutated": "",
+      "description": "Removed net label 'TX1{slash}18' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_24",
+      "original": "(wire (pts (xy 59.69 132.08) (xy 59.69 142.24))\n    (stroke (width 0) (type solid))\n    (uuid 3bc39d02-483a-4b85-ad1a-a39ec175d917)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 24: (59.69,132.08) to (59.69,142.24)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_68",
+      "original": "(wire (pts (xy 62.23 34.29) (xy 64.77 34.29))\n    (stroke (width 0) (type solid))\n    (uuid bcbc7302-8a54-4b9b-98b9-f277f1b20941)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 68: (62.23,34.29) to (64.77,34.29)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J3.8+J7.25",
+      "original": "(57.15,123.19)",
+      "mutated": "(38.1,57.15)",
+      "description": "Moved J7.25 to J3.8 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_35",
+      "original": "(wire (pts (xy 36.83 109.22) (xy 36.83 119.38))\n    (stroke (width 0) (type solid))\n    (uuid 5e62b16e-38db-42bd-ad8c-358f9473713c)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 35: (36.83,109.22) to (36.83,119.38)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J5.6+J2.10",
+      "original": "(55.88,24.13)",
+      "mutated": "(38.1,87.63)",
+      "description": "Moved J2.10 to J5.6 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.22+J3.3",
+      "original": "(38.1,69.85)",
+      "mutated": "(52.07,128.27)",
+      "description": "Moved J3.3 to J7.22 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J7",
+      "original": "Digital",
+      "mutated": "Communication",
+      "description": "Swapped value of J7 from Digital to Communication",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J2",
+      "original": "PWM",
+      "mutated": "Analog",
+      "description": "Swapped value of J2 from PWM to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_52",
+      "original": "(wire (pts (xy 62.23 31.75) (xy 74.93 31.75))\n    (stroke (width 0) (type solid))\n    (uuid 8a3d35a2-f0f6-4dec-a606-7c8e288ca828)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 52: (62.23,31.75) to (74.93,31.75)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.4+J5.2",
+      "original": "(38.1,97.79)",
+      "mutated": "(29.21,128.27)",
+      "description": "Moved J5.2 to J7.4 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J2.8+J4.4",
+      "original": "(55.88,67.31)",
+      "mutated": "(55.88,29.21)",
+      "description": "Moved J4.4 to J2.8 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J2.1+J7.15",
+      "original": "(44.45,123.19)",
+      "mutated": "(55.88,46.99)",
+      "description": "Moved J7.15 to J2.1 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "SCL{slash}21",
+      "original": "SCL{slash}21",
+      "mutated": "",
+      "description": "Removed net label 'SCL{slash}21' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "37",
+      "original": "37",
+      "mutated": "",
+      "description": "Removed net label '37' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J7.6",
+      "original": "(31.75,128.27)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J7.6 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_24",
+      "original": "(wire (pts (xy 59.69 132.08) (xy 59.69 142.24))\n    (stroke (width 0) (type solid))\n    (uuid 3bc39d02-483a-4b85-ad1a-a39ec175d917)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 24: (59.69,132.08) to (59.69,142.24)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "41",
+      "original": "41",
+      "mutated": "",
+      "description": "Removed net label '41' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J6",
+      "original": "Communication",
+      "mutated": "Digital",
+      "description": "Swapped value of J6 from Communication to Digital",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J7",
+      "original": "Digital",
+      "mutated": "PWM",
+      "description": "Swapped value of J7 from Digital to PWM",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J2",
+      "original": "PWM",
+      "mutated": "Communication",
+      "description": "Swapped value of J2 from PWM to Communication",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.10+J7.16",
+      "original": "(44.45,128.27)",
+      "mutated": "(36.83,128.27)",
+      "description": "Moved J7.16 to J7.10 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_7",
+      "original": "(wire (pts (xy 26.67 119.38) (xy 21.59 119.38))\n    (stroke (width 0) (type solid))\n    (uuid 18b63976-d31d-4bce-80fb-4b927b019f89)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 7: (26.67,119.38) to (21.59,119.38)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J3.1",
+      "original": "(38.1,74.93)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J3.1 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_8",
+      "original": "(wire (pts (xy 62.23 90.17) (xy 74.93 90.17))\n    (stroke (width 0) (type solid))\n    (uuid 1c2f44b3-e471-419a-a532-7c16aa64a472)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 8: (62.23,90.17) to (74.93,90.17)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J2.9",
+      "original": "(55.88,26.67)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J2.9 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_51",
+      "original": "(wire (pts (xy 62.23 102.87) (xy 74.93 102.87))\n    (stroke (width 0) (type solid))\n    (uuid 86cb4f21-03a8-4c74-83fa-9f5796375280)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 51: (62.23,102.87) to (74.93,102.87)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J6",
+      "original": "Communication",
+      "mutated": "Analog",
+      "description": "Swapped value of J6 from Communication to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J7.34",
+      "original": "(67.31,128.27)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J7.34 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J6",
+      "original": "Communication",
+      "mutated": "PWM",
+      "description": "Swapped value of J6 from Communication to PWM",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.30+J7.26",
+      "original": "(57.15,128.27)",
+      "mutated": "(62.23,128.27)",
+      "description": "Moved J7.26 to J7.30 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J6.7",
+      "original": "(55.88,85.09)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J6.7 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "A13",
+      "original": "A13",
+      "mutated": "",
+      "description": "Removed net label 'A13' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "34",
+      "original": "34",
+      "mutated": "",
+      "description": "Removed net label '34' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "39",
+      "original": "39",
+      "mutated": "",
+      "description": "Removed net label '39' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_85",
+      "original": "(wire (pts (xy 62.23 72.39) (xy 74.93 72.39))\n    (stroke (width 0) (type solid))\n    (uuid e9bdd59b-3252-4c44-a357-6fa1af0c210c)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 85: (62.23,72.39) to (74.93,72.39)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "SCL{slash}21",
+      "original": "SCL{slash}21",
+      "mutated": "",
+      "description": "Removed net label 'SCL{slash}21' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "22",
+      "original": "22",
+      "mutated": "",
+      "description": "Removed net label '22' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J5",
+      "original": "Analog",
+      "mutated": "Communication",
+      "description": "Swapped value of J5 from Analog to Communication",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J3.3",
+      "original": "(38.1,69.85)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J3.3 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J6",
+      "original": "Communication",
+      "mutated": "Analog",
+      "description": "Swapped value of J6 from Communication to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J5.8",
+      "original": "(38.1,82.55)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J5.8 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_44",
+      "original": "(wire (pts (xy 62.23 67.31) (xy 74.93 67.31))\n    (stroke (width 0) (type solid))\n    (uuid 6bb3ea5f-9e60-4add-9d97-244be2cf61d2)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 44: (62.23,67.31) to (74.93,67.31)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J3",
+      "original": "Analog",
+      "mutated": "PWM",
+      "description": "Swapped value of J3 from Analog to PWM",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "~{RESET}",
+      "original": "~{RESET}",
+      "mutated": "",
+      "description": "Removed net label '~{RESET}' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.20+J6.5",
+      "original": "(55.88,90.17)",
+      "mutated": "(49.53,128.27)",
+      "description": "Moved J6.5 to J7.20 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J7.16",
+      "original": "(44.45,128.27)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J7.16 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J7",
+      "original": "Digital",
+      "mutated": "Communication",
+      "description": "Swapped value of J7 from Digital to Communication",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "TX1{slash}18",
+      "original": "TX1{slash}18",
+      "mutated": "",
+      "description": "Removed net label 'TX1{slash}18' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_33",
+      "original": "(wire (pts (xy 52.07 109.22) (xy 52.07 119.38))\n    (stroke (width 0) (type solid))\n    (uuid 59c6c290-eb1c-4aa2-a21c-a10a8fdf2286)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 33: (52.07,109.22) to (52.07,119.38)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J2",
+      "original": "PWM",
+      "mutated": "Communication",
+      "description": "Swapped value of J2 from PWM to Communication",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_34",
+      "original": "(wire (pts (xy 21.59 119.38) (xy 21.59 132.08))\n    (stroke (width 0) (type solid))\n    (uuid 5c382079-5d3d-4194-85e1-c1f8963618ac)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 34: (21.59,119.38) to (21.59,132.08)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "A13",
+      "original": "A13",
+      "mutated": "",
+      "description": "Removed net label 'A13' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "A13",
+      "original": "A13",
+      "mutated": "",
+      "description": "Removed net label 'A13' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "A7",
+      "original": "A7",
+      "mutated": "",
+      "description": "Removed net label 'A7' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J5.7+J2.7",
+      "original": "(55.88,31.75)",
+      "mutated": "(38.1,85.09)",
+      "description": "Moved J2.7 to J5.7 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J7",
+      "original": "Digital",
+      "mutated": "Analog",
+      "description": "Swapped value of J7 from Digital to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "*4",
+      "original": "*4",
+      "mutated": "",
+      "description": "Removed net label '*4' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J4",
+      "original": "PWM",
+      "mutated": "Analog",
+      "description": "Swapped value of J4 from PWM to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "~{RESET}",
+      "original": "~{RESET}",
+      "mutated": "",
+      "description": "Removed net label '~{RESET}' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.22+J7.25",
+      "original": "(57.15,123.19)",
+      "mutated": "(52.07,128.27)",
+      "description": "Moved J7.25 to J7.22 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J2.2",
+      "original": "(55.88,44.45)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J2.2 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J2",
+      "original": "PWM",
+      "mutated": "Analog",
+      "description": "Swapped value of J2 from PWM to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J2.5",
+      "original": "(55.88,36.83)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J2.5 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "SCL{slash}21",
+      "original": "SCL{slash}21",
+      "mutated": "",
+      "description": "Removed net label 'SCL{slash}21' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J4.1",
+      "original": "(55.88,74.93)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J4.1 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J3.7+J2.6",
+      "original": "(55.88,34.29)",
+      "mutated": "(38.1,59.69)",
+      "description": "Moved J2.6 to J3.7 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "RX1{slash}19",
+      "original": "RX1{slash}19",
+      "mutated": "",
+      "description": "Removed net label 'RX1{slash}19' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J4",
+      "original": "PWM",
+      "mutated": "Analog",
+      "description": "Swapped value of J4 from PWM to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_85",
+      "original": "(wire (pts (xy 62.23 72.39) (xy 74.93 72.39))\n    (stroke (width 0) (type solid))\n    (uuid e9bdd59b-3252-4c44-a357-6fa1af0c210c)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 85: (62.23,72.39) to (74.93,72.39)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J4",
+      "original": "PWM",
+      "mutated": "Communication",
+      "description": "Swapped value of J4 from PWM to Communication",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J4.2+J5.5",
+      "original": "(38.1,90.17)",
+      "mutated": "(55.88,72.39)",
+      "description": "Moved J5.5 to J4.2 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_22",
+      "original": "(wire (pts (xy 21.59 102.87) (xy 34.29 102.87))\n    (stroke (width 0) (type solid))\n    (uuid 3a45db4f-43df-448a-90e5-fa734e4985d6)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 22: (21.59,102.87) to (34.29,102.87)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J2.4+J4.5",
+      "original": "(55.88,64.77)",
+      "mutated": "(55.88,39.37)",
+      "description": "Moved J4.5 to J2.4 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "Vin",
+      "original": "Vin",
+      "mutated": "",
+      "description": "Removed net label 'Vin' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_34",
+      "original": "(wire (pts (xy 21.59 119.38) (xy 21.59 132.08))\n    (stroke (width 0) (type solid))\n    (uuid 5c382079-5d3d-4194-85e1-c1f8963618ac)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 34: (21.59,119.38) to (21.59,132.08)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_89",
+      "original": "(wire (pts (xy 34.29 95.25) (xy 21.59 95.25))\n    (stroke (width 0) (type solid))\n    (uuid f86b02ed-2f5a-4836-80dd-b0d705c66330)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 89: (34.29,95.25) to (21.59,95.25)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J5",
+      "original": "Analog",
+      "mutated": "PWM",
+      "description": "Swapped value of J5 from Analog to PWM",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J5.3+J4.8",
+      "original": "(55.88,57.15)",
+      "mutated": "(38.1,95.25)",
+      "description": "Moved J4.8 to J5.3 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.5+J6.6",
+      "original": "(55.88,87.63)",
+      "mutated": "(31.75,123.19)",
+      "description": "Moved J6.6 to J7.5 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_28",
+      "original": "(wire (pts (xy 34.29 59.69) (xy 21.59 59.69))\n    (stroke (width 0) (type solid))\n    (uuid 486ca832-85f4-4989-b0f4-569faf9be534)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 28: (34.29,59.69) to (21.59,59.69)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J7",
+      "original": "Digital",
+      "mutated": "Analog",
+      "description": "Swapped value of J7 from Digital to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.1+J6.2",
+      "original": "(55.88,97.79)",
+      "mutated": "(26.67,123.19)",
+      "description": "Moved J6.2 to J7.1 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J4",
+      "original": "PWM",
+      "mutated": "Digital",
+      "description": "Swapped value of J4 from PWM to Digital",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J7.19",
+      "original": "(49.53,123.19)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J7.19 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "floating_pin",
+      "target": "J7.1",
+      "original": "(26.67,123.19)",
+      "mutated": "disconnected",
+      "description": "Disconnected wire from J7.1 creating floating pin",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J2",
+      "original": "PWM",
+      "mutated": "PWM",
+      "description": "Swapped value of J2 from PWM to PWM",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_74",
+      "original": "(wire (pts (xy 49.53 109.22) (xy 49.53 119.38))\n    (stroke (width 0) (type solid))\n    (uuid c89b58e4-ab6b-4c5b-9c2e-ddf6dcd4b4c2)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 74: (49.53,109.22) to (49.53,119.38)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "RX2{slash}17",
+      "original": "RX2{slash}17",
+      "mutated": "",
+      "description": "Removed net label 'RX2{slash}17' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J6",
+      "original": "Communication",
+      "mutated": "Analog",
+      "description": "Swapped value of J6 from Communication to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "remove_label",
+      "target": "A6",
+      "original": "A6",
+      "mutated": "",
+      "description": "Removed net label 'A6' creating unnamed net",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "short_pins",
+      "target": "J7.36+J7.12",
+      "original": "(39.37,128.27)",
+      "mutated": "(69.85,128.27)",
+      "description": "Moved J7.12 to J7.36 position creating short",
+      "expected_detection": "pin_overlap"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J5",
+      "original": "Analog",
+      "mutated": "Communication",
+      "description": "Swapped value of J5 from Analog to Communication",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "break_wire",
+      "target": "wire_32",
+      "original": "(wire (pts (xy 62.23 97.79) (xy 74.93 97.79))\n    (stroke (width 0) (type solid))\n    (uuid 535f236c-2664-4c6c-ba0b-0e76f0bfcd2b)\n  )",
+      "mutated": "",
+      "description": "Removed wire segment 32: (62.23,97.79) to (74.93,97.79)",
+      "expected_detection": "pin_not_connected"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J7",
+      "original": "Digital",
+      "mutated": "Analog",
+      "description": "Swapped value of J7 from Digital to Analog",
+      "expected_detection": "value_mismatch"
+    },
+    {
+      "mutation_type": "swap_values",
+      "target": "J6",
+      "original": "Communication",
+      "mutated": "Digital",
+      "description": "Swapped value of J6 from Communication to Digital",
+      "expected_detection": "value_mismatch"
+    }
+  ],
+  "properties": [
+    {
+      "property": "add_then_remove_preserves_structure",
+      "iteration": 0,
+      "passed": true
+    },
+    {
+      "property": "add_then_remove_preserves_structure",
+      "iteration": 1,
+      "passed": true
+    },
+    {
+      "property": "add_then_remove_preserves_structure",
+      "iteration": 2,
+      "passed": true
+    },
+    {
+      "property": "add_then_remove_preserves_structure",
+      "iteration": 3,
+      "passed": true
+    },
+    {
+      "property": "add_then_remove_preserves_structure",
+      "iteration": 4,
+      "passed": true
+    },
+    {
+      "property": "add_then_remove_preserves_structure",
+      "iteration": 5,
+      "passed": true
+    },
+    {
+      "property": "add_then_remove_preserves_structure",
+      "iteration": 6,
+      "passed": true
+    },
+    {
+      "property": "add_then_remove_preserves_structure",
+      "iteration": 7,
+      "passed": true
+    },
+    {
+      "property": "add_then_remove_preserves_structure",
+      "iteration": 8,
+      "passed": true
+    },
+    {
+      "property": "add_then_remove_preserves_structure",
+      "iteration": 9,
+      "passed": true
+    },
+    {
+      "property": "erc_auto_fix_never_increases_violations",
+      "iteration": 0,
+      "passed": true
+    },
+    {
+      "property": "erc_auto_fix_never_increases_violations",
+      "iteration": 1,
+      "passed": true
+    },
+    {
+      "property": "erc_auto_fix_never_increases_violations",
+      "iteration": 2,
+      "passed": true
+    },
+    {
+      "property": "erc_auto_fix_never_increases_violations",
+      "iteration": 3,
+      "passed": true
+    },
+    {
+      "property": "erc_auto_fix_never_increases_violations",
+      "iteration": 4,
+      "passed": true
+    },
+    {
+      "property": "erc_auto_fix_never_increases_violations",
+      "iteration": 5,
+      "passed": true
+    },
+    {
+      "property": "erc_auto_fix_never_increases_violations",
+      "iteration": 6,
+      "passed": true
+    },
+    {
+      "property": "erc_auto_fix_never_increases_violations",
+      "iteration": 7,
+      "passed": true
+    },
+    {
+      "property": "erc_auto_fix_never_increases_violations",
+      "iteration": 8,
+      "passed": true
+    },
+    {
+      "property": "erc_auto_fix_never_increases_violations",
+      "iteration": 9,
+      "passed": true
+    },
+    {
+      "property": "round_trip_preserves_content",
+      "iteration": 0,
+      "passed": true
+    },
+    {
+      "property": "round_trip_preserves_content",
+      "iteration": 1,
+      "passed": true
+    },
+    {
+      "property": "round_trip_preserves_content",
+      "iteration": 2,
+      "passed": true
+    },
+    {
+      "property": "round_trip_preserves_content",
+      "iteration": 3,
+      "passed": true
+    },
+    {
+      "property": "round_trip_preserves_content",
+      "iteration": 4,
+      "passed": true
+    },
+    {
+      "property": "round_trip_preserves_content",
+      "iteration": 5,
+      "passed": true
+    },
+    {
+      "property": "round_trip_preserves_content",
+      "iteration": 6,
+      "passed": true
+    },
+    {
+      "property": "round_trip_preserves_content",
+      "iteration": 7,
+      "passed": true
+    },
+    {
+      "property": "round_trip_preserves_content",
+      "iteration": 8,
+      "passed": true
+    },
+    {
+      "property": "round_trip_preserves_content",
+      "iteration": 9,
+      "passed": true
+    },
+    {
+      "property": "schema_validation_rejects_invalid_ops",
+      "iteration": 0,
+      "passed": true
+    },
+    {
+      "property": "schema_validation_rejects_invalid_ops",
+      "iteration": 1,
+      "passed": true
+    },
+    {
+      "property": "schema_validation_rejects_invalid_ops",
+      "iteration": 2,
+      "passed": true
+    },
+    {
+      "property": "schema_validation_rejects_invalid_ops",
+      "iteration": 3,
+      "passed": true
+    },
+    {
+      "property": "schema_validation_rejects_invalid_ops",
+      "iteration": 4,
+      "passed": true
+    },
+    {
+      "property": "schema_validation_rejects_invalid_ops",
+      "iteration": 5,
+      "passed": true
+    },
+    {
+      "property": "schema_validation_rejects_invalid_ops",
+      "iteration": 6,
+      "passed": true
+    },
+    {
+      "property": "schema_validation_rejects_invalid_ops",
+      "iteration": 7,
+      "passed": true
+    },
+    {
+      "property": "schema_validation_rejects_invalid_ops",
+      "iteration": 8,
+      "passed": true
+    },
+    {
+      "property": "schema_validation_rejects_invalid_ops",
+      "iteration": 9,
+      "passed": true
+    },
+    {
+      "property": "no_untracked_mutations",
+      "iteration": 0,
+      "passed": true
+    },
+    {
+      "property": "no_untracked_mutations",
+      "iteration": 1,
+      "passed": true
+    },
+    {
+      "property": "no_untracked_mutations",
+      "iteration": 2,
+      "passed": true
+    },
+    {
+      "property": "no_untracked_mutations",
+      "iteration": 3,
+      "passed": true
+    },
+    {
+      "property": "no_untracked_mutations",
+      "iteration": 4,
+      "passed": true
+    },
+    {
+      "property": "no_untracked_mutations",
+      "iteration": 5,
+      "passed": true
+    },
+    {
+      "property": "no_untracked_mutations",
+      "iteration": 6,
+      "passed": true
+    },
+    {
+      "property": "no_untracked_mutations",
+      "iteration": 7,
+      "passed": true
+    },
+    {
+      "property": "no_untracked_mutations",
+      "iteration": 8,
+      "passed": true
+    },
+    {
+      "property": "no_untracked_mutations",
+      "iteration": 9,
+      "passed": true
+    }
+  ],
+  "fuzz": [
+    {
+      "mutation": "seed_2746317213",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2746317213
+    },
+    {
+      "mutation": "seed_1181241943",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1181241943
+    },
+    {
+      "mutation": "seed_958682846",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 958682846
+    },
+    {
+      "mutation": "seed_3163119785",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3163119785
+    },
+    {
+      "mutation": "seed_1812140441",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1812140441
+    },
+    {
+      "mutation": "seed_127978094",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 127978094
+    },
+    {
+      "mutation": "seed_939042955",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 939042955
+    },
+    {
+      "mutation": "seed_2340505846",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2340505846
+    },
+    {
+      "mutation": "seed_946785248",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 946785248
+    },
+    {
+      "mutation": "seed_2530876844",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2530876844
+    },
+    {
+      "mutation": "seed_3460967357",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3460967357
+    },
+    {
+      "mutation": "seed_2998485882",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2998485882
+    },
+    {
+      "mutation": "seed_1461364854",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1461364854
+    },
+    {
+      "mutation": "seed_667779376",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 667779376
+    },
+    {
+      "mutation": "seed_1445662585",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1445662585
+    },
+    {
+      "mutation": "seed_398340369",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 398340369
+    },
+    {
+      "mutation": "seed_415393687",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 415393687
+    },
+    {
+      "mutation": "seed_3639960595",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3639960595
+    },
+    {
+      "mutation": "seed_2592983555",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2592983555
+    },
+    {
+      "mutation": "seed_3466589567",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3466589567
+    },
+    {
+      "mutation": "seed_3134174160",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3134174160
+    },
+    {
+      "mutation": "seed_2303082117",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2303082117
+    },
+    {
+      "mutation": "seed_1625792787",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1625792787
+    },
+    {
+      "mutation": "seed_2370996465",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2370996465
+    },
+    {
+      "mutation": "seed_3701002945",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3701002945
+    },
+    {
+      "mutation": "seed_2479708607",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2479708607
+    },
+    {
+      "mutation": "seed_3026113008",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3026113008
+    },
+    {
+      "mutation": "seed_433797840",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 433797840
+    },
+    {
+      "mutation": "seed_1193887545",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1193887545
+    },
+    {
+      "mutation": "seed_1566942273",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1566942273
+    },
+    {
+      "mutation": "seed_1589915144",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1589915144
+    },
+    {
+      "mutation": "seed_2783290795",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2783290795
+    },
+    {
+      "mutation": "seed_3131575764",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3131575764
+    },
+    {
+      "mutation": "seed_701808367",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 701808367
+    },
+    {
+      "mutation": "seed_1629748727",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1629748727
+    },
+    {
+      "mutation": "seed_2392080953",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2392080953
+    },
+    {
+      "mutation": "seed_2940395823",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2940395823
+    },
+    {
+      "mutation": "seed_3332894265",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3332894265
+    },
+    {
+      "mutation": "seed_1354860540",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1354860540
+    },
+    {
+      "mutation": "seed_1149938334",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1149938334
+    },
+    {
+      "mutation": "seed_1351531223",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1351531223
+    },
+    {
+      "mutation": "seed_2815087637",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2815087637
+    },
+    {
+      "mutation": "seed_1970753705",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1970753705
+    },
+    {
+      "mutation": "seed_1137651678",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1137651678
+    },
+    {
+      "mutation": "seed_2510777721",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2510777721
+    },
+    {
+      "mutation": "seed_1715412119",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1715412119
+    },
+    {
+      "mutation": "seed_4284391408",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 4284391408
+    },
+    {
+      "mutation": "seed_2188398760",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2188398760
+    },
+    {
+      "mutation": "seed_470939445",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 470939445
+    },
+    {
+      "mutation": "seed_2694860228",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2694860228
+    },
+    {
+      "mutation": "seed_272849424",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 272849424
+    },
+    {
+      "mutation": "seed_4278308761",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4278308761
+    },
+    {
+      "mutation": "seed_2272528809",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2272528809
+    },
+    {
+      "mutation": "seed_3095476665",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3095476665
+    },
+    {
+      "mutation": "seed_2752909971",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2752909971
+    },
+    {
+      "mutation": "seed_479112937",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 479112937
+    },
+    {
+      "mutation": "seed_1867302554",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1867302554
+    },
+    {
+      "mutation": "seed_1948728483",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1948728483
+    },
+    {
+      "mutation": "seed_3919706735",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3919706735
+    },
+    {
+      "mutation": "seed_2615507143",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2615507143
+    },
+    {
+      "mutation": "seed_656439677",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 656439677
+    },
+    {
+      "mutation": "seed_3274958945",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3274958945
+    },
+    {
+      "mutation": "seed_1392239675",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1392239675
+    },
+    {
+      "mutation": "seed_83651970",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 83651970
+    },
+    {
+      "mutation": "seed_3990448177",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3990448177
+    },
+    {
+      "mutation": "seed_1320763135",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1320763135
+    },
+    {
+      "mutation": "seed_248786714",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 248786714
+    },
+    {
+      "mutation": "seed_4067116918",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 4067116918
+    },
+    {
+      "mutation": "seed_3289233844",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3289233844
+    },
+    {
+      "mutation": "seed_2361388464",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2361388464
+    },
+    {
+      "mutation": "seed_1338811290",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1338811290
+    },
+    {
+      "mutation": "seed_2791205006",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2791205006
+    },
+    {
+      "mutation": "seed_2222971316",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2222971316
+    },
+    {
+      "mutation": "seed_519709079",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 519709079
+    },
+    {
+      "mutation": "seed_965067727",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 965067727
+    },
+    {
+      "mutation": "seed_1452066459",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1452066459
+    },
+    {
+      "mutation": "seed_945826486",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 945826486
+    },
+    {
+      "mutation": "seed_2710566582",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2710566582
+    },
+    {
+      "mutation": "seed_983297492",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 983297492
+    },
+    {
+      "mutation": "seed_3888749350",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3888749350
+    },
+    {
+      "mutation": "seed_3692105921",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3692105921
+    },
+    {
+      "mutation": "seed_1022222125",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1022222125
+    },
+    {
+      "mutation": "seed_2873237671",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2873237671
+    },
+    {
+      "mutation": "seed_2030106617",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2030106617
+    },
+    {
+      "mutation": "seed_3369914783",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3369914783
+    },
+    {
+      "mutation": "seed_3468173213",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3468173213
+    },
+    {
+      "mutation": "seed_817804383",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 817804383
+    },
+    {
+      "mutation": "seed_1851350739",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1851350739
+    },
+    {
+      "mutation": "seed_1819256337",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1819256337
+    },
+    {
+      "mutation": "seed_3131356954",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3131356954
+    },
+    {
+      "mutation": "seed_422701550",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 422701550
+    },
+    {
+      "mutation": "seed_3700855390",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3700855390
+    },
+    {
+      "mutation": "seed_1067970820",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1067970820
+    },
+    {
+      "mutation": "seed_1926780541",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1926780541
+    },
+    {
+      "mutation": "seed_1811967841",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1811967841
+    },
+    {
+      "mutation": "seed_1196342297",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1196342297
+    },
+    {
+      "mutation": "seed_3965395580",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3965395580
+    },
+    {
+      "mutation": "seed_2363629219",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2363629219
+    },
+    {
+      "mutation": "seed_3590711152",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3590711152
+    },
+    {
+      "mutation": "seed_4161807235",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4161807235
+    },
+    {
+      "mutation": "seed_3645120421",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3645120421
+    },
+    {
+      "mutation": "seed_714300770",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 714300770
+    },
+    {
+      "mutation": "seed_2085812759",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2085812759
+    },
+    {
+      "mutation": "seed_251837136",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 251837136
+    },
+    {
+      "mutation": "seed_1627677155",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1627677155
+    },
+    {
+      "mutation": "seed_4231869256",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4231869256
+    },
+    {
+      "mutation": "seed_1954246074",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1954246074
+    },
+    {
+      "mutation": "seed_3085540042",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3085540042
+    },
+    {
+      "mutation": "seed_664847319",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 664847319
+    },
+    {
+      "mutation": "seed_1274350418",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1274350418
+    },
+    {
+      "mutation": "seed_4160575046",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 4160575046
+    },
+    {
+      "mutation": "seed_2328710672",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2328710672
+    },
+    {
+      "mutation": "seed_3212530587",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3212530587
+    },
+    {
+      "mutation": "seed_245522987",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 245522987
+    },
+    {
+      "mutation": "seed_2509023674",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2509023674
+    },
+    {
+      "mutation": "seed_676168421",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 676168421
+    },
+    {
+      "mutation": "seed_798112150",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 798112150
+    },
+    {
+      "mutation": "seed_2555656321",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2555656321
+    },
+    {
+      "mutation": "seed_1010193046",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1010193046
+    },
+    {
+      "mutation": "seed_2553440342",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2553440342
+    },
+    {
+      "mutation": "seed_2660223333",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2660223333
+    },
+    {
+      "mutation": "seed_2245334677",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2245334677
+    },
+    {
+      "mutation": "seed_4014532821",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4014532821
+    },
+    {
+      "mutation": "seed_3076020365",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3076020365
+    },
+    {
+      "mutation": "seed_1025148381",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1025148381
+    },
+    {
+      "mutation": "seed_1699887270",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1699887270
+    },
+    {
+      "mutation": "seed_1288477634",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1288477634
+    },
+    {
+      "mutation": "seed_311570307",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 311570307
+    },
+    {
+      "mutation": "seed_4278201677",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4278201677
+    },
+    {
+      "mutation": "seed_1139027119",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1139027119
+    },
+    {
+      "mutation": "seed_4008318526",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 4008318526
+    },
+    {
+      "mutation": "seed_3783282817",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3783282817
+    },
+    {
+      "mutation": "seed_3776436931",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3776436931
+    },
+    {
+      "mutation": "seed_1587106770",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1587106770
+    },
+    {
+      "mutation": "seed_677517496",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 677517496
+    },
+    {
+      "mutation": "seed_3021680963",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3021680963
+    },
+    {
+      "mutation": "seed_2849232839",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2849232839
+    },
+    {
+      "mutation": "seed_576775951",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 576775951
+    },
+    {
+      "mutation": "seed_2376077463",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2376077463
+    },
+    {
+      "mutation": "seed_1169726681",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1169726681
+    },
+    {
+      "mutation": "seed_2597724331",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2597724331
+    },
+    {
+      "mutation": "seed_3082120871",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3082120871
+    },
+    {
+      "mutation": "seed_2098228320",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2098228320
+    },
+    {
+      "mutation": "seed_3633987776",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3633987776
+    },
+    {
+      "mutation": "seed_1188332531",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1188332531
+    },
+    {
+      "mutation": "seed_15228622",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 15228622
+    },
+    {
+      "mutation": "seed_3311931853",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3311931853
+    },
+    {
+      "mutation": "seed_1125089309",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1125089309
+    },
+    {
+      "mutation": "seed_3183562527",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3183562527
+    },
+    {
+      "mutation": "seed_41531046",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 41531046
+    },
+    {
+      "mutation": "seed_3882343658",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3882343658
+    },
+    {
+      "mutation": "seed_2343292475",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2343292475
+    },
+    {
+      "mutation": "seed_3584558315",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3584558315
+    },
+    {
+      "mutation": "seed_636057975",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 636057975
+    },
+    {
+      "mutation": "seed_547374338",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 547374338
+    },
+    {
+      "mutation": "seed_1323959527",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1323959527
+    },
+    {
+      "mutation": "seed_3696689457",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3696689457
+    },
+    {
+      "mutation": "seed_3860851904",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3860851904
+    },
+    {
+      "mutation": "seed_441495235",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 441495235
+    },
+    {
+      "mutation": "seed_3993808565",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3993808565
+    },
+    {
+      "mutation": "seed_3713453204",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3713453204
+    },
+    {
+      "mutation": "seed_3482238042",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3482238042
+    },
+    {
+      "mutation": "seed_3785653776",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3785653776
+    },
+    {
+      "mutation": "seed_106456634",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 106456634
+    },
+    {
+      "mutation": "seed_3997823785",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3997823785
+    },
+    {
+      "mutation": "seed_3482141802",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3482141802
+    },
+    {
+      "mutation": "seed_1145921803",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1145921803
+    },
+    {
+      "mutation": "seed_464267175",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 464267175
+    },
+    {
+      "mutation": "seed_3745927824",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3745927824
+    },
+    {
+      "mutation": "seed_3687629943",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3687629943
+    },
+    {
+      "mutation": "seed_955345537",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 955345537
+    },
+    {
+      "mutation": "seed_1976987348",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1976987348
+    },
+    {
+      "mutation": "seed_977515194",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 977515194
+    },
+    {
+      "mutation": "seed_829486135",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 829486135
+    },
+    {
+      "mutation": "seed_1409874348",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1409874348
+    },
+    {
+      "mutation": "seed_3712367625",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3712367625
+    },
+    {
+      "mutation": "seed_1198832728",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1198832728
+    },
+    {
+      "mutation": "seed_2303029031",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2303029031
+    },
+    {
+      "mutation": "seed_4033992825",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4033992825
+    },
+    {
+      "mutation": "seed_4167838882",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 4167838882
+    },
+    {
+      "mutation": "seed_1140169349",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1140169349
+    },
+    {
+      "mutation": "seed_1866437132",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1866437132
+    },
+    {
+      "mutation": "seed_1347233823",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1347233823
+    },
+    {
+      "mutation": "seed_2196545325",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2196545325
+    },
+    {
+      "mutation": "seed_2476426797",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2476426797
+    },
+    {
+      "mutation": "seed_1094024844",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1094024844
+    },
+    {
+      "mutation": "seed_3044209616",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3044209616
+    },
+    {
+      "mutation": "seed_2880327491",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2880327491
+    },
+    {
+      "mutation": "seed_1564319318",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1564319318
+    },
+    {
+      "mutation": "seed_3642197907",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3642197907
+    },
+    {
+      "mutation": "seed_1754034197",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1754034197
+    },
+    {
+      "mutation": "seed_546696950",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 546696950
+    },
+    {
+      "mutation": "seed_4038831207",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4038831207
+    },
+    {
+      "mutation": "seed_3877520294",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3877520294
+    },
+    {
+      "mutation": "seed_1292569882",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1292569882
+    },
+    {
+      "mutation": "seed_1743499",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1743499
+    },
+    {
+      "mutation": "seed_1232285036",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1232285036
+    },
+    {
+      "mutation": "seed_2811939242",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2811939242
+    },
+    {
+      "mutation": "seed_1997109065",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1997109065
+    },
+    {
+      "mutation": "seed_364194056",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 364194056
+    },
+    {
+      "mutation": "seed_1439622619",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1439622619
+    },
+    {
+      "mutation": "seed_3226113732",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3226113732
+    },
+    {
+      "mutation": "seed_2889635392",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2889635392
+    },
+    {
+      "mutation": "seed_855256552",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 855256552
+    },
+    {
+      "mutation": "seed_104906255",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 104906255
+    },
+    {
+      "mutation": "seed_312794864",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 312794864
+    },
+    {
+      "mutation": "seed_2990818727",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2990818727
+    },
+    {
+      "mutation": "seed_2123333781",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2123333781
+    },
+    {
+      "mutation": "seed_1047905204",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1047905204
+    },
+    {
+      "mutation": "seed_1825989011",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1825989011
+    },
+    {
+      "mutation": "seed_2224611603",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2224611603
+    },
+    {
+      "mutation": "seed_3643576871",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3643576871
+    },
+    {
+      "mutation": "seed_1960488639",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1960488639
+    },
+    {
+      "mutation": "seed_3442058095",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3442058095
+    },
+    {
+      "mutation": "seed_2557448229",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2557448229
+    },
+    {
+      "mutation": "seed_3828645201",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3828645201
+    },
+    {
+      "mutation": "seed_2168005699",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2168005699
+    },
+    {
+      "mutation": "seed_2353092123",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2353092123
+    },
+    {
+      "mutation": "seed_3853479481",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3853479481
+    },
+    {
+      "mutation": "seed_2038711176",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2038711176
+    },
+    {
+      "mutation": "seed_2738735023",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2738735023
+    },
+    {
+      "mutation": "seed_2238965651",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2238965651
+    },
+    {
+      "mutation": "seed_2691864041",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2691864041
+    },
+    {
+      "mutation": "seed_1179387055",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1179387055
+    },
+    {
+      "mutation": "seed_1227193073",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1227193073
+    },
+    {
+      "mutation": "seed_1167007513",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1167007513
+    },
+    {
+      "mutation": "seed_2319936135",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2319936135
+    },
+    {
+      "mutation": "seed_594312071",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 594312071
+    },
+    {
+      "mutation": "seed_993260504",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 993260504
+    },
+    {
+      "mutation": "seed_2980491761",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2980491761
+    },
+    {
+      "mutation": "seed_3034047118",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3034047118
+    },
+    {
+      "mutation": "seed_275860817",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 275860817
+    },
+    {
+      "mutation": "seed_1750625978",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1750625978
+    },
+    {
+      "mutation": "seed_2330497115",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2330497115
+    },
+    {
+      "mutation": "seed_1785736751",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1785736751
+    },
+    {
+      "mutation": "seed_1804502687",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1804502687
+    },
+    {
+      "mutation": "seed_2987248494",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2987248494
+    },
+    {
+      "mutation": "seed_1633724084",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1633724084
+    },
+    {
+      "mutation": "seed_1510792572",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1510792572
+    },
+    {
+      "mutation": "seed_3236151037",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3236151037
+    },
+    {
+      "mutation": "seed_947206476",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 947206476
+    },
+    {
+      "mutation": "seed_942408767",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 942408767
+    },
+    {
+      "mutation": "seed_1871901278",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1871901278
+    },
+    {
+      "mutation": "seed_124660666",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 124660666
+    },
+    {
+      "mutation": "seed_116402431",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 116402431
+    },
+    {
+      "mutation": "seed_2760588734",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2760588734
+    },
+    {
+      "mutation": "seed_1982979741",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1982979741
+    },
+    {
+      "mutation": "seed_215970859",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 215970859
+    },
+    {
+      "mutation": "seed_1628238707",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1628238707
+    },
+    {
+      "mutation": "seed_909074012",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 909074012
+    },
+    {
+      "mutation": "seed_1403792057",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1403792057
+    },
+    {
+      "mutation": "seed_1628334692",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1628334692
+    },
+    {
+      "mutation": "seed_3573087602",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3573087602
+    },
+    {
+      "mutation": "seed_351784589",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 351784589
+    },
+    {
+      "mutation": "seed_2316787198",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2316787198
+    },
+    {
+      "mutation": "seed_1503068227",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1503068227
+    },
+    {
+      "mutation": "seed_2792347639",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2792347639
+    },
+    {
+      "mutation": "seed_2799264931",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2799264931
+    },
+    {
+      "mutation": "seed_3239406957",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3239406957
+    },
+    {
+      "mutation": "seed_4078551333",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 4078551333
+    },
+    {
+      "mutation": "seed_654477195",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 654477195
+    },
+    {
+      "mutation": "seed_542114964",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 542114964
+    },
+    {
+      "mutation": "seed_2875303857",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2875303857
+    },
+    {
+      "mutation": "seed_936150587",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 936150587
+    },
+    {
+      "mutation": "seed_3004179184",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3004179184
+    },
+    {
+      "mutation": "seed_3293802269",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3293802269
+    },
+    {
+      "mutation": "seed_3518871744",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3518871744
+    },
+    {
+      "mutation": "seed_4143444172",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4143444172
+    },
+    {
+      "mutation": "seed_4115320994",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 4115320994
+    },
+    {
+      "mutation": "seed_3070964768",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3070964768
+    },
+    {
+      "mutation": "seed_2693985578",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2693985578
+    },
+    {
+      "mutation": "seed_3317780148",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3317780148
+    },
+    {
+      "mutation": "seed_3361393222",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3361393222
+    },
+    {
+      "mutation": "seed_1591589823",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1591589823
+    },
+    {
+      "mutation": "seed_1465576748",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1465576748
+    },
+    {
+      "mutation": "seed_3648899533",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3648899533
+    },
+    {
+      "mutation": "seed_3531884396",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3531884396
+    },
+    {
+      "mutation": "seed_453285987",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 453285987
+    },
+    {
+      "mutation": "seed_4126551191",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 4126551191
+    },
+    {
+      "mutation": "seed_3559270786",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3559270786
+    },
+    {
+      "mutation": "seed_3037867512",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3037867512
+    },
+    {
+      "mutation": "seed_1870403050",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1870403050
+    },
+    {
+      "mutation": "seed_2076605983",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2076605983
+    },
+    {
+      "mutation": "seed_1152750071",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1152750071
+    },
+    {
+      "mutation": "seed_3658080160",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3658080160
+    },
+    {
+      "mutation": "seed_372214308",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 372214308
+    },
+    {
+      "mutation": "seed_3786577118",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3786577118
+    },
+    {
+      "mutation": "seed_1627746667",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1627746667
+    },
+    {
+      "mutation": "seed_123265537",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 123265537
+    },
+    {
+      "mutation": "seed_3654814605",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3654814605
+    },
+    {
+      "mutation": "seed_780996231",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 780996231
+    },
+    {
+      "mutation": "seed_911047815",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 911047815
+    },
+    {
+      "mutation": "seed_3426663902",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3426663902
+    },
+    {
+      "mutation": "seed_1461744198",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1461744198
+    },
+    {
+      "mutation": "seed_4071897791",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4071897791
+    },
+    {
+      "mutation": "seed_367704871",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 367704871
+    },
+    {
+      "mutation": "seed_3092697141",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3092697141
+    },
+    {
+      "mutation": "seed_3256292393",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3256292393
+    },
+    {
+      "mutation": "seed_2966144543",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2966144543
+    },
+    {
+      "mutation": "seed_2108061573",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2108061573
+    },
+    {
+      "mutation": "seed_3405620755",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3405620755
+    },
+    {
+      "mutation": "seed_399661102",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 399661102
+    },
+    {
+      "mutation": "seed_951749308",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 951749308
+    },
+    {
+      "mutation": "seed_2971203213",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2971203213
+    },
+    {
+      "mutation": "seed_2497762234",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2497762234
+    },
+    {
+      "mutation": "seed_2280292341",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2280292341
+    },
+    {
+      "mutation": "seed_1420737819",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1420737819
+    },
+    {
+      "mutation": "seed_3018739003",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3018739003
+    },
+    {
+      "mutation": "seed_1163577186",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1163577186
+    },
+    {
+      "mutation": "seed_1079770569",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1079770569
+    },
+    {
+      "mutation": "seed_827143233",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 827143233
+    },
+    {
+      "mutation": "seed_795212538",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 795212538
+    },
+    {
+      "mutation": "seed_2079617090",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2079617090
+    },
+    {
+      "mutation": "seed_833728665",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 833728665
+    },
+    {
+      "mutation": "seed_977032766",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 977032766
+    },
+    {
+      "mutation": "seed_770695571",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 770695571
+    },
+    {
+      "mutation": "seed_2294092753",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2294092753
+    },
+    {
+      "mutation": "seed_1178158203",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1178158203
+    },
+    {
+      "mutation": "seed_4184564874",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 4184564874
+    },
+    {
+      "mutation": "seed_2376658660",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2376658660
+    },
+    {
+      "mutation": "seed_2108307952",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2108307952
+    },
+    {
+      "mutation": "seed_3748302739",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3748302739
+    },
+    {
+      "mutation": "seed_2465587067",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2465587067
+    },
+    {
+      "mutation": "seed_2016044512",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2016044512
+    },
+    {
+      "mutation": "seed_1891799103",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1891799103
+    },
+    {
+      "mutation": "seed_220661337",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 220661337
+    },
+    {
+      "mutation": "seed_2051831252",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2051831252
+    },
+    {
+      "mutation": "seed_3530959836",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3530959836
+    },
+    {
+      "mutation": "seed_1721025347",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1721025347
+    },
+    {
+      "mutation": "seed_230249217",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 230249217
+    },
+    {
+      "mutation": "seed_1304963614",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1304963614
+    },
+    {
+      "mutation": "seed_4268845844",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4268845844
+    },
+    {
+      "mutation": "seed_3283259600",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3283259600
+    },
+    {
+      "mutation": "seed_2244431947",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2244431947
+    },
+    {
+      "mutation": "seed_1901472238",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1901472238
+    },
+    {
+      "mutation": "seed_4252151888",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 4252151888
+    },
+    {
+      "mutation": "seed_2667292043",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2667292043
+    },
+    {
+      "mutation": "seed_3178659381",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3178659381
+    },
+    {
+      "mutation": "seed_906346324",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 906346324
+    },
+    {
+      "mutation": "seed_2836517266",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2836517266
+    },
+    {
+      "mutation": "seed_674555072",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 674555072
+    },
+    {
+      "mutation": "seed_322401182",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 322401182
+    },
+    {
+      "mutation": "seed_11492154",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 11492154
+    },
+    {
+      "mutation": "seed_2550399650",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2550399650
+    },
+    {
+      "mutation": "seed_1250949136",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1250949136
+    },
+    {
+      "mutation": "seed_994182853",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 994182853
+    },
+    {
+      "mutation": "seed_3036352185",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3036352185
+    },
+    {
+      "mutation": "seed_1950049698",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1950049698
+    },
+    {
+      "mutation": "seed_2952295757",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2952295757
+    },
+    {
+      "mutation": "seed_3968167735",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3968167735
+    },
+    {
+      "mutation": "seed_4010075517",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 4010075517
+    },
+    {
+      "mutation": "seed_1825957977",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1825957977
+    },
+    {
+      "mutation": "seed_2338877621",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2338877621
+    },
+    {
+      "mutation": "seed_2781569954",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2781569954
+    },
+    {
+      "mutation": "seed_3901597465",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3901597465
+    },
+    {
+      "mutation": "seed_3550353803",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3550353803
+    },
+    {
+      "mutation": "seed_306702926",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 306702926
+    },
+    {
+      "mutation": "seed_1239573053",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1239573053
+    },
+    {
+      "mutation": "seed_534094883",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 534094883
+    },
+    {
+      "mutation": "seed_2957849462",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2957849462
+    },
+    {
+      "mutation": "seed_3005333281",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3005333281
+    },
+    {
+      "mutation": "seed_4048763624",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4048763624
+    },
+    {
+      "mutation": "seed_2120834317",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2120834317
+    },
+    {
+      "mutation": "seed_1075321966",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1075321966
+    },
+    {
+      "mutation": "seed_392245997",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 392245997
+    },
+    {
+      "mutation": "seed_4083595988",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4083595988
+    },
+    {
+      "mutation": "seed_3248149900",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3248149900
+    },
+    {
+      "mutation": "seed_2798211967",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2798211967
+    },
+    {
+      "mutation": "seed_3934502656",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3934502656
+    },
+    {
+      "mutation": "seed_2513971584",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2513971584
+    },
+    {
+      "mutation": "seed_391883149",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 391883149
+    },
+    {
+      "mutation": "seed_1494481363",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1494481363
+    },
+    {
+      "mutation": "seed_1431548670",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1431548670
+    },
+    {
+      "mutation": "seed_2878201524",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2878201524
+    },
+    {
+      "mutation": "seed_3683935600",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3683935600
+    },
+    {
+      "mutation": "seed_1416495962",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1416495962
+    },
+    {
+      "mutation": "seed_2979305739",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2979305739
+    },
+    {
+      "mutation": "seed_4059575358",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4059575358
+    },
+    {
+      "mutation": "seed_2362646960",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2362646960
+    },
+    {
+      "mutation": "seed_1953462417",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1953462417
+    },
+    {
+      "mutation": "seed_1350840898",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1350840898
+    },
+    {
+      "mutation": "seed_1388450337",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1388450337
+    },
+    {
+      "mutation": "seed_4243939720",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 4243939720
+    },
+    {
+      "mutation": "seed_2330421741",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2330421741
+    },
+    {
+      "mutation": "seed_1774884818",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1774884818
+    },
+    {
+      "mutation": "seed_3248898619",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3248898619
+    },
+    {
+      "mutation": "seed_2686110098",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2686110098
+    },
+    {
+      "mutation": "seed_3264134512",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3264134512
+    },
+    {
+      "mutation": "seed_874275988",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 874275988
+    },
+    {
+      "mutation": "seed_2358880404",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2358880404
+    },
+    {
+      "mutation": "seed_3984324182",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3984324182
+    },
+    {
+      "mutation": "seed_2998961044",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2998961044
+    },
+    {
+      "mutation": "seed_521521078",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 521521078
+    },
+    {
+      "mutation": "seed_680229045",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 680229045
+    },
+    {
+      "mutation": "seed_2365835550",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2365835550
+    },
+    {
+      "mutation": "seed_2371901750",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2371901750
+    },
+    {
+      "mutation": "seed_400330495",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 400330495
+    },
+    {
+      "mutation": "seed_3921003983",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3921003983
+    },
+    {
+      "mutation": "seed_3574027737",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3574027737
+    },
+    {
+      "mutation": "seed_3077787850",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3077787850
+    },
+    {
+      "mutation": "seed_1174350979",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1174350979
+    },
+    {
+      "mutation": "seed_3585112032",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3585112032
+    },
+    {
+      "mutation": "seed_4210118640",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4210118640
+    },
+    {
+      "mutation": "seed_1046816259",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1046816259
+    },
+    {
+      "mutation": "seed_2367665472",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2367665472
+    },
+    {
+      "mutation": "seed_1647489402",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1647489402
+    },
+    {
+      "mutation": "seed_3776677517",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3776677517
+    },
+    {
+      "mutation": "seed_3710967433",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3710967433
+    },
+    {
+      "mutation": "seed_1782164134",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1782164134
+    },
+    {
+      "mutation": "seed_2180716723",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2180716723
+    },
+    {
+      "mutation": "seed_3524233168",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3524233168
+    },
+    {
+      "mutation": "seed_638212450",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 638212450
+    },
+    {
+      "mutation": "seed_2313185971",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2313185971
+    },
+    {
+      "mutation": "seed_1482296058",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1482296058
+    },
+    {
+      "mutation": "seed_2334014365",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2334014365
+    },
+    {
+      "mutation": "seed_2995732958",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2995732958
+    },
+    {
+      "mutation": "seed_2455852189",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2455852189
+    },
+    {
+      "mutation": "seed_3330938159",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3330938159
+    },
+    {
+      "mutation": "seed_187463722",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 187463722
+    },
+    {
+      "mutation": "seed_3198484273",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3198484273
+    },
+    {
+      "mutation": "seed_3484974703",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3484974703
+    },
+    {
+      "mutation": "seed_4212581851",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4212581851
+    },
+    {
+      "mutation": "seed_158998032",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 158998032
+    },
+    {
+      "mutation": "seed_2534805646",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2534805646
+    },
+    {
+      "mutation": "seed_3735334423",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3735334423
+    },
+    {
+      "mutation": "seed_1891100776",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1891100776
+    },
+    {
+      "mutation": "seed_1962491159",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1962491159
+    },
+    {
+      "mutation": "seed_3102872611",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3102872611
+    },
+    {
+      "mutation": "seed_662976399",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 662976399
+    },
+    {
+      "mutation": "seed_4162697889",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4162697889
+    },
+    {
+      "mutation": "seed_2975143612",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2975143612
+    },
+    {
+      "mutation": "seed_2791027186",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2791027186
+    },
+    {
+      "mutation": "seed_3658304095",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3658304095
+    },
+    {
+      "mutation": "seed_3261605950",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3261605950
+    },
+    {
+      "mutation": "seed_293864877",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 293864877
+    },
+    {
+      "mutation": "seed_3955360367",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3955360367
+    },
+    {
+      "mutation": "seed_4283911723",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 4283911723
+    },
+    {
+      "mutation": "seed_3207337120",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3207337120
+    },
+    {
+      "mutation": "seed_3747699292",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3747699292
+    },
+    {
+      "mutation": "seed_1905584866",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1905584866
+    },
+    {
+      "mutation": "seed_2980712298",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2980712298
+    },
+    {
+      "mutation": "seed_3880176825",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3880176825
+    },
+    {
+      "mutation": "seed_197529702",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 197529702
+    },
+    {
+      "mutation": "seed_3419410162",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3419410162
+    },
+    {
+      "mutation": "seed_1260005019",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1260005019
+    },
+    {
+      "mutation": "seed_1609930218",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1609930218
+    },
+    {
+      "mutation": "seed_625217504",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 625217504
+    },
+    {
+      "mutation": "seed_2281341978",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2281341978
+    },
+    {
+      "mutation": "seed_3403845222",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3403845222
+    },
+    {
+      "mutation": "seed_730074215",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 730074215
+    },
+    {
+      "mutation": "seed_3740227599",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3740227599
+    },
+    {
+      "mutation": "seed_1034356087",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1034356087
+    },
+    {
+      "mutation": "seed_614685938",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 614685938
+    },
+    {
+      "mutation": "seed_1090824373",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1090824373
+    },
+    {
+      "mutation": "seed_3455872736",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3455872736
+    },
+    {
+      "mutation": "seed_3870665004",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3870665004
+    },
+    {
+      "mutation": "seed_678500147",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 678500147
+    },
+    {
+      "mutation": "seed_2523601252",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2523601252
+    },
+    {
+      "mutation": "seed_1074163698",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1074163698
+    },
+    {
+      "mutation": "seed_3630552730",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3630552730
+    },
+    {
+      "mutation": "seed_2075362821",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2075362821
+    },
+    {
+      "mutation": "seed_1018790736",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1018790736
+    },
+    {
+      "mutation": "seed_2456389272",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2456389272
+    },
+    {
+      "mutation": "seed_2468798461",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2468798461
+    },
+    {
+      "mutation": "seed_1268006448",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1268006448
+    },
+    {
+      "mutation": "seed_2827075539",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2827075539
+    },
+    {
+      "mutation": "seed_1178884276",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1178884276
+    },
+    {
+      "mutation": "seed_3431078106",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3431078106
+    },
+    {
+      "mutation": "seed_1513206988",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 1513206988
+    },
+    {
+      "mutation": "seed_2734252963",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2734252963
+    },
+    {
+      "mutation": "seed_2666707262",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2666707262
+    },
+    {
+      "mutation": "seed_3600630513",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3600630513
+    },
+    {
+      "mutation": "seed_2698305085",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2698305085
+    },
+    {
+      "mutation": "seed_2776011793",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2776011793
+    },
+    {
+      "mutation": "seed_1893321208",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1893321208
+    },
+    {
+      "mutation": "seed_2489250532",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2489250532
+    },
+    {
+      "mutation": "seed_3145461251",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3145461251
+    },
+    {
+      "mutation": "seed_1267489756",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1267489756
+    },
+    {
+      "mutation": "seed_3210405862",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3210405862
+    },
+    {
+      "mutation": "seed_754368373",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 754368373
+    },
+    {
+      "mutation": "seed_4172515979",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 4172515979
+    },
+    {
+      "mutation": "seed_3923396682",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 3923396682
+    },
+    {
+      "mutation": "seed_3566852761",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3566852761
+    },
+    {
+      "mutation": "seed_3463841709",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 3463841709
+    },
+    {
+      "mutation": "seed_494650131",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 494650131
+    },
+    {
+      "mutation": "seed_4135595227",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 4135595227
+    },
+    {
+      "mutation": "seed_4151086814",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 4151086814
+    },
+    {
+      "mutation": "seed_4208819875",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4208819875
+    },
+    {
+      "mutation": "seed_1570991899",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1570991899
+    },
+    {
+      "mutation": "seed_3395953188",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3395953188
+    },
+    {
+      "mutation": "seed_59780189",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 59780189
+    },
+    {
+      "mutation": "seed_2304560537",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2304560537
+    },
+    {
+      "mutation": "seed_1953291127",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 1953291127
+    },
+    {
+      "mutation": "seed_2887681752",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": true,
+      "mutation_seed": 2887681752
+    },
+    {
+      "mutation": "seed_2510666490",
+      "crash": false,
+      "parse_error": true,
+      "round_trip_ok": false,
+      "mutation_seed": 2510666490
+    },
+    {
+      "mutation": "seed_4038522943",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 4038522943
+    },
+    {
+      "mutation": "seed_1004257438",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1004257438
+    },
+    {
+      "mutation": "seed_2411226340",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 2411226340
+    },
+    {
+      "mutation": "seed_3538431800",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 3538431800
+    },
+    {
+      "mutation": "seed_1753617371",
+      "crash": false,
+      "parse_error": false,
+      "round_trip_ok": false,
+      "mutation_seed": 1753617371
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 ---
 phase: 43-regression-benchmark-suite
 plan: 01
-subsystem: testing
-tags: [benchmark, regression, ci, github-actions, pydantic]
+subsystem: benchmarks
+tags: [benchmark, regression, ci, github-actions, pydantic, tdd]
 
 # Dependency graph
 requires:
@@ -15,12 +15,13 @@ provides:
   - RegressionReport schema with delta, is_regression, regression_categories
   - GitHub Actions CI workflow for automated benchmark on every PR
   - Initial baseline.json from heuristic model (31.4% accuracy)
+  - CLI --regression-check and --baseline flags
 affects: [44-adversarial-testing, future-model-training]
 
 # Tech tracking
 tech-stack:
-  added: []
-  patterns: [regression-detection, baseline-comparison, ci-benchmark-gate]
+  added: [pydantic RegressionReport, RegressionDetector, GitHub Actions workflow]
+  patterns: [regression-detection, baseline-comparison, ci-benchmark-gate, tdd-red-green]
 
 key-files:
   created:
@@ -28,12 +29,16 @@ key-files:
     - .github/workflows/benchmark.yml
     - benchmarks/results/baseline.json
     - tests/test_benchmark_regression.py
-  modified: []
+  modified:
+    - src/kicad_agent/benchmarks/__main__.py
 
 key-decisions:
   - "RegressionDetector uses configurable threshold (default 2%) per-category, not overall accuracy"
   - "Baseline stored as benchmarks/results/baseline.json, version-controlled for audit trail"
   - "CI workflow runs BaselineHeuristic model (fast, deterministic) for regression checks on PRs"
+  - "CLI --regression-check exits with code 1 on regression for CI blocking (Council HIGH-10)"
+  - "load_history() skips baseline.json to keep baseline separate from run history"
+  - "Missing categories treated as accuracy=0 for comparison"
 
 patterns-established:
   - "Regression detection: compare current vs baseline per-category, flag drops > threshold"
@@ -43,21 +48,23 @@ patterns-established:
 requirements-completed: [BENCH-04]
 
 # Metrics
-duration: 3min
+duration: 4min
 completed: 2026-06-01
+tests: 39
+baseline_accuracy: 31.4%
 ---
 
-# Phase 43 Plan 01: Regression Detection Summary
+# Phase 43 Plan 01: Regression Benchmark Suite Summary
 
-**RegressionDetector with configurable threshold (2%) per-category comparison, GitHub Actions CI gate on every PR, and baseline tracking from heuristic model**
+**RegressionDetector with configurable threshold (2%) per-category comparison, GitHub Actions CI gate on every PR, CLI regression flags, and baseline tracking from heuristic model**
 
 ## Performance
 
-- **Duration:** 3 min
-- **Started:** 2026-06-01T00:19:55Z
-- **Completed:** 2026-06-01T00:22:40Z
-- **Tasks:** 2
-- **Files modified:** 4
+- **Duration:** ~4 min
+- **Started:** 2026-06-01T00:18:35Z
+- **Completed:** 2026-06-01T00:23:17Z
+- **Tasks:** 2 (Task 1: TDD RED/GREEN, Task 2: CI + baseline + CLI)
+- **Files modified:** 5
 
 ## Accomplishments
 - RegressionDetector compares BenchmarkResult objects with per-category delta computation and configurable threshold
@@ -72,11 +79,11 @@ Each task was committed atomically:
 
 1. **Task 1 (RED): Failing tests for regression detection** - `5bb36ef` (test)
 2. **Task 1 (GREEN): RegressionDetector implementation** - `497a26b` (feat)
-3. **Task 2: CI workflow, baseline, and test fix** - `0cd5784` (feat, committed within 44-01 batch)
+3. **Task 2: CI workflow, baseline, and CLI regression flags** - `8791380` (feat)
 
-**Plan metadata:** pending (docs commit)
+**Plan metadata:** `62a49b9` (docs: complete plan summary)
 
-_Note: Task 1 followed TDD cycle (RED -> GREEN). Task 2 files were committed alongside 44-01 work in a batch commit._
+_Note: Task 1 followed TDD cycle (RED -> GREEN). Task 2 added CI workflow, baseline generation, and CLI --regression-check/--baseline flags._
 
 ## Files Created/Modified
 - `src/kicad_agent/benchmarks/regression.py` - RegressionDetector and RegressionReport implementation
@@ -100,7 +107,7 @@ _Note: Task 1 followed TDD cycle (RED -> GREEN). Task 2 files were committed alo
 - **Fix:** Changed test to use `parsed.get("on") or parsed.get(True)` for cross-version robustness
 - **Files modified:** tests/test_benchmark_regression.py
 - **Verification:** All 39 tests pass including TestCIWorkflow.test_workflow_triggers_on_pull_request
-- **Committed in:** 0cd5784 (Task 2 commit)
+- **Committed in:** 8791380 (Task 2 commit)
 
 ---
 
@@ -108,7 +115,7 @@ _Note: Task 1 followed TDD cycle (RED -> GREEN). Task 2 files were committed alo
 **Impact on plan:** Minimal -- test-only fix for known PyYAML behavior. No scope creep.
 
 ## Issues Encountered
-- Task 2 files (CI workflow, baseline.json, test fix) were committed as part of a batch commit `0cd5784` that also included 44-01 work. The files are correctly committed but share a commit with the adversarial testing plan.
+None.
 
 ## User Setup Required
 None - no external service configuration required.
@@ -131,4 +138,5 @@ None - no external service configuration required.
 - [x] .planning/phases/43-regression-benchmark-suite/43-01-SUMMARY.md -- FOUND
 - [x] Commit 5bb36ef (test RED) -- FOUND
 - [x] Commit 497a26b (feat GREEN) -- FOUND
-- [x] Commit 0cd5784 (CI + baseline) -- FOUND
+- [x] Commit 8791380 (CI + baseline + CLI) -- FOUND
+- [x] Commit 62a49b9 (docs summary) -- FOUND
