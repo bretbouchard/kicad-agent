@@ -541,3 +541,20 @@ def serialize_design_rules(dru: DesignRulesFile, path: Path) -> None:
         path: File path to write.
     """
     dru.to_file(path)
+
+
+def extract_net_classes(path: Path) -> list[NetClassDef]:
+    """Extract net class definitions from a .kicad_dru file.
+
+    Thin wrapper around parse_design_rules() that returns the
+    NetClassDef list directly. The heavy lifting is the existing
+    parser (D-V3-04).
+
+    Args:
+        path: Path to the .kicad_dru file.
+
+    Returns:
+        List of NetClassDef instances from the parsed file.
+    """
+    dru = parse_design_rules(path)
+    return list(dru.net_classes)
