@@ -16,6 +16,15 @@ from kicad_agent.analysis.design_review import (
     ReviewCategory,
     ReviewSeverity,
 )
+from kicad_agent.analysis.design_rules import (
+    DesignRule,
+    DesignRuleReport,
+    DesignRuleViolation,
+    RuleCategory,
+    RuleSeverity,
+)
+from kicad_agent.analysis.design_rule_engine import DesignRuleEngine
+from kicad_agent.analysis.builtin_rules import get_builtin_rules
 
 __all__ = [
     "NetGraph",
@@ -46,4 +55,11 @@ __all__ = [
     "DesignReviewer",
     "ReviewCategory",
     "ReviewSeverity",
+    "DesignRule",
+    "DesignRuleReport",
+    "DesignRuleViolation",
+    "RuleCategory",
+    "RuleSeverity",
+    "DesignRuleEngine",
+    "get_builtin_rules",
 ]

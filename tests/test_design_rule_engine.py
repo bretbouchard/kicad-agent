@@ -623,13 +623,15 @@ class TestGroundRule:
         """Test 8: Multiple ground nets without connection are flagged."""
         from kicad_agent.analysis.builtin_rules import GroundRule
 
-        ic = _ic_node("U1", "NE5532")
+        # IC1 on GND, IC2 on GNDA -- no component bridges them
+        ic1 = _ic_node("U1", "NE5532")
+        ic2 = _ic_node("U2", "TL072")
         edges = (
             _make_edge("U1", "R1", "GND", "power"),
-            _make_edge("U1", "R2", "GNDA", "power"),
+            _make_edge("U2", "R2", "GNDA", "power"),
         )
         topo = _make_topology(
-            nodes=(ic, _resistor_node("R1"), _resistor_node("R2")),
+            nodes=(ic1, ic2, _resistor_node("R1"), _resistor_node("R2")),
             edges=edges,
             power_nets=("GND", "GNDA"),
         )
