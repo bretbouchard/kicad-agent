@@ -9,6 +9,7 @@ SI-01: PCB spatial model with per-layer geometry and STRtree indexing.
 SI-02: Layer stackup metadata extraction.
 SI-03: Layer classification utility.
 SI-04: Per-net geometry parameters.
+SI-06: Board outline extraction from Edge.Cuts layer.
 
 Provides:
     - SpatialPoint, SpatialBox, SpatialPath, SpatialRegion: frozen dataclasses
@@ -25,6 +26,7 @@ Provides:
     - LayerClassifier: KiCad layer name classification utility
     - LayerStackup, LayerInfo: Layer stackup metadata dataclasses
     - NetClassGeometry, build_net_class_map: Per-net geometry parameters
+    - extract_board_outline: Board outline extraction from Edge.Cuts layer
 """
 
 from kicad_agent.spatial.extractor import (
@@ -62,6 +64,7 @@ from kicad_agent.spatial.renderer import (
     render_pcb_layer,
     render_pcb_layer_grid,
 )
+from kicad_agent.spatial.board_outline import extract_board_outline
 from kicad_agent.spatial.rick_integration import (
     RickDomain,
     RickFinding,
@@ -108,4 +111,5 @@ __all__ = [
     "LayerInfo",
     "NetClassGeometry",
     "build_net_class_map",
+    "extract_board_outline",
 ]
