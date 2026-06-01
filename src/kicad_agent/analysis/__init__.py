@@ -25,6 +25,8 @@ from kicad_agent.analysis.design_rules import (
 )
 from kicad_agent.analysis.design_rule_engine import DesignRuleEngine
 from kicad_agent.analysis.builtin_rules import get_builtin_rules
+from kicad_agent.analysis.rule_config import RuleConfig, RuleConfigLoader
+from kicad_agent.analysis.rule_report import generate_json_report, generate_markdown_report
 
 __all__ = [
     "NetGraph",
@@ -62,4 +64,8 @@ __all__ = [
     "RuleSeverity",
     "DesignRuleEngine",
     "get_builtin_rules",
+    "RuleConfig",
+    "RuleConfigLoader",
+    "generate_json_report",
+    "generate_markdown_report",
 ]

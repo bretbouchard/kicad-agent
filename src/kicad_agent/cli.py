@@ -35,7 +35,7 @@ from kicad_agent.handler import format_result, handle_operation, validate_operat
 from kicad_agent.logging_config import configure_logging
 from kicad_agent.ops.schema import get_operation_schema
 
-_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats"}
+_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules"}
 
 
 def _build_operation_parser() -> argparse.ArgumentParser:
@@ -568,6 +568,26 @@ def _handle_ai_stats(argv: list[str]) -> None:
         print(format_stats_report(report))
 
 
+def _handle_design_rules(argv: list[str]) -> None:
+    """Handle the 'design-rules' subcommand -- run domain-specific design rules."""
+    from kicad_agent.cli.design_rules_cmd import register_parser, design_rules_command
+
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent design-rules",
+        description="Run domain-specific design rules against a KiCad schematic.",
+    )
+    subparsers = parser.add_subparsers()
+    register_parser(subparsers)
+
+    args = parser.parse_args(argv)
+    if not hasattr(args, "func"):
+        parser.print_help()
+        sys.exit(2)
+
+    exit_code = design_rules_command(args)
+    sys.exit(exit_code)
+
+
 def main(argv: list[str] | None = None) -> None:
     """Entry point for the kicad-agent CLI."""
     if argv is None:
@@ -597,6 +617,8 @@ def main(argv: list[str] | None = None) -> None:
             _handle_component_search(subcmd_argv)
         elif subcmd == "ai-stats":
             _handle_ai_stats(subcmd_argv)
+        elif subcmd == "design-rules":
+            _handle_design_rules(subcmd_argv)
         return
 
     # Legacy operation mode

@@ -209,6 +209,23 @@ class TestMarkdownReport:
 class TestDesignRulesCommand:
     """Tests for design-rules CLI subcommand."""
 
+    @staticmethod
+    def _make_mock_topology() -> "CircuitTopology":
+        """Create a minimal CircuitTopology for CLI tests."""
+        from kicad_agent.analysis.topology_graph import (
+            CircuitTopology,
+        )
+        return CircuitTopology(
+            nodes=(),
+            edges=(),
+            input_nets=(),
+            output_nets=(),
+            power_nets=(),
+            signal_paths=(),
+            stats={"component_count": 0, "net_count": 0, "signal_path_count": 0,
+                   "feedback_count": 0, "net_stats": {}},
+        )
+
     def _make_args(self, schematic: str, config=None, format="markdown", output=None) -> argparse.Namespace:
         """Build CLI args namespace for testing."""
         return argparse.Namespace(
@@ -232,7 +249,7 @@ class TestDesignRulesCommand:
         """CLI produces JSON output when --format json."""
         from kicad_agent.cli.design_rules_cmd import design_rules_command
 
-        mock_extract.return_value = MagicMock()
+        mock_extract.return_value = self._make_mock_topology()
 
         with tempfile.NamedTemporaryFile(suffix=".kicad_sch", delete=False) as f:
             sch_path = f.name
@@ -259,7 +276,7 @@ class TestDesignRulesCommand:
         """CLI produces Markdown output when --format markdown."""
         from kicad_agent.cli.design_rules_cmd import design_rules_command
 
-        mock_extract.return_value = MagicMock()
+        mock_extract.return_value = self._make_mock_topology()
 
         with tempfile.NamedTemporaryFile(suffix=".kicad_sch", delete=False) as f:
             sch_path = f.name
@@ -283,7 +300,7 @@ class TestDesignRulesCommand:
         """CLI writes report to file when --output is specified."""
         from kicad_agent.cli.design_rules_cmd import design_rules_command
 
-        mock_extract.return_value = MagicMock()
+        mock_extract.return_value = self._make_mock_topology()
 
         with tempfile.NamedTemporaryFile(suffix=".kicad_sch", delete=False) as sch_f:
             sch_path = sch_f.name
@@ -312,7 +329,7 @@ class TestDesignRulesCommand:
         import yaml
         from kicad_agent.cli.design_rules_cmd import design_rules_command
 
-        mock_extract.return_value = MagicMock()
+        mock_extract.return_value = self._make_mock_topology()
 
         config_data = {
             "rules": {
