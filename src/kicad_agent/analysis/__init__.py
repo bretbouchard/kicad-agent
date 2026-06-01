@@ -4,6 +4,8 @@ from kicad_agent.analysis.connectivity import NetGraph
 from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity, NetImportance
 from kicad_agent.analysis.topology_graph import TopologyBuilder, CircuitTopology, TopologyNode, TopologyEdge, NetStats
 from kicad_agent.analysis.types import NetClassification, PinRole
+from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector, Subcircuit, SubcircuitType
+from kicad_agent.analysis.circuit_classifier import CircuitClassifier, ClassificationResult
 
 __all__ = [
     "NetGraph",
@@ -17,4 +19,9 @@ __all__ = [
     "NetStats",
     "NetClassification",
     "PinRole",
+    "SubcircuitDetector",
+    "Subcircuit",
+    "SubcircuitType",
+    "CircuitClassifier",
+    "ClassificationResult",
 ]
