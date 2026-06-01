@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: benchmark-suite
 status: executing
-stopped_at: "Plan 45-01 complete. TopologyBuilder with signal flow inference. 87 tests."
-last_updated: "2026-06-01T03:46:00Z"
+stopped_at: "Plan 45-02 complete. Signal integrity, importance ranking, net stats. 116 tests."
+last_updated: "2026-06-01T04:14:39Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 48
   completed_phases: 44
   total_plans: 122
-  completed_plans: 118
-  percent: 97
+  completed_plans: 119
+  percent: 98
 ---
 
 # Project State
@@ -27,8 +27,8 @@ Last activity: 2026-06-01
 ## Current Position
 
 Phase: 45 (Circuit Topology Graph) IN PROGRESS
-Status: **Plan 45-01 complete. TopologyBuilder with signal flow inference. 87 tests.**
-Plans: 45-01 (complete), 45-02 (pending)
+Status: **Plan 45-02 complete. Signal integrity, importance ranking, net stats. 116 tests.**
+Plans: 45-01 (complete), 45-02 (complete)
 Last activity: 2026-06-01
 
 ### Phase 45: Circuit Topology Graph
@@ -36,6 +36,11 @@ Last activity: 2026-06-01
 - Plan 45-01: CircuitTopology schema, TopologyBuilder, NetClassifier (COMPLETE)
   - Union-Find net resolution, IC pin role classification, feedback detection, signal path tracing
   - 87 TDD tests covering all classification and flow rules
+- Plan 45-02: Signal integrity, importance ranking, net stats (COMPLETE)
+  - SignalIntegrity enum (HIGH_SPEED, LOW_FREQUENCY, DC, POWER_INTEGRITY)
+  - NetImportance enum (CRITICAL, HIGH, MEDIUM, LOW)
+  - NetStats with fanout, stub detection, multi-drop, BFS path depth
+  - 116 TDD tests (87 prior + 29 new)
 
 ## Previous Milestone (v2.4 Schematic Intelligence)
 
@@ -49,13 +54,13 @@ Last activity: 2026-06-01
 
 **Velocity:**
 
-- Total plans completed: 117
+- Total plans completed: 119
 - Average duration: 5 min
-- Total execution time: 5.5 hours
+- Total execution time: 5.6 hours
 
 **Recent Trend:**
 
-- Last 10 plans: 41-01 through 44-01 (all first-execution pass)
+- Last 10 plans: 45-01 through 45-02 (all first-execution pass)
 - Trend: Stable -- all plans passing on first execution
 
 ## Accumulated Context
@@ -106,13 +111,17 @@ Recent decisions affecting current work:
 - [v2.5-45]: Union-Find with path compression for net resolution -- BFS wire tracing failed on multi-hop pin chains without labels
 - [v2.5-45]: Ordered list (not dict) for _LIBID_TYPE_MAP to handle prefix ordering (LED before L, Crystal before C)
 - [v2.5-45]: Feedback edges reclassified from any non-POWER classification, not just SIGNAL
+- [v2.5-45]: SignalIntegrity rules reuse existing _CLOCK_PATTERNS and _CONTROL_PATTERNS (no duplication)
+- [v2.5-45]: NetStats.is_stub detects diode, connector, misc components as dead-ends plus non-forward-adjacency
+- [v2.5-45]: NetStats.is_multi_drop requires 2+ receiver ICs (not passive components)
+- [v2.5-45]: Signal integrity rules stored as class-level _si_rules for extensibility matching _rules pattern
 - [v2.4-SI]: ClassifyViolationsOp in _schema_erc_smart.py (separate from _schema_repair.py per D-01)
 - [v2.4-SI]: IR position data (pin/wire/label positions) distinguishes #PWR symbols from regular components
 
 ### Pending Todos
 
-- Plan 45-01 complete -- TopologyBuilder with signal flow inference (87 tests)
-- Next: Plan 45-02 (SchematicIR-based topology) or continue Phase 45
+- Phase 45 complete -- Signal integrity, importance ranking, net stats (116 tests)
+- Next: Phase 46 (component function recognition) or continue with next milestone plans
 
 ### Blockers/Concerns
 
@@ -124,5 +133,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Plan 45-01 complete. TopologyBuilder with signal flow inference. 87 tests.
-Resume with: Plan 45-02 (SchematicIR-based topology) or continue Phase 45
+Stopped at: Plan 45-02 complete. Signal integrity, importance ranking, net stats. 116 tests.
+Resume with: Phase 46 (component function recognition) or continue with next milestone plans

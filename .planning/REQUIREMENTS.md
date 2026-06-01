@@ -609,7 +609,7 @@ Born from gap analysis: the Domain Intelligence scorecard dimension needs to mov
 
 - [ ] **DOMAIN-01**: Circuit topology graph construction with directed signal flow from inputs to outputs. Builds a networkx DiGraph from schematic wire connectivity, classifies nodes as input/output/passive/power, traces signal paths through components, and produces a TopologyResult with node count, edge count, connected components, and longest path. Foundation for all domain intelligence features.
 
-- [ ] **DOMAIN-02**: Net classification with signal integrity and importance ratings. Classifies nets as power/ground/signal/clock/high-speed based on connected component types and naming conventions. Assigns importance ratings for design rule prioritization. Enables subcircuit detection and component function recognition.
+- [x] **DOMAIN-02**: Net classification with signal integrity and importance ratings. Classifies nets as power/ground/signal/clock/high-speed based on connected component types and naming conventions. Assigns importance ratings for design rule prioritization. Enables subcircuit detection and component function recognition.
 
 ### Circuit Intent Inference (Phase 47)
 
