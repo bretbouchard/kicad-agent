@@ -1074,3 +1074,421 @@ class TestSubcircuitIntegration:
         result = detector.detect(_multi_type_topology())
         ids = [sc.subcircuit_id for sc in result]
         assert ids == sorted(ids)
+
+
+# ---------------------------------------------------------------------------
+# Mock data for feature extraction tests
+# ---------------------------------------------------------------------------
+
+
+def _mock_subcircuit_data() -> dict:
+    """Mock subcircuit data for feature extraction tests."""
+    return {
+        "components": ["U1", "R1", "R2", "C1", "C2"],
+        "nets": ["SIG_IN", "SIG_OUT", "FB_NET", "VCC", "GND"],
+        "boundary_nets": ["SIG_IN", "SIG_OUT"],
+        "center_component": "U1",
+        "nodes": {
+            "U1": _make_node("U1", "NE5532", "ic", 8,
+                             power_pins=("4", "8"), input_pins=("2", "3"), output_pins=("1",)),
+            "R1": _make_node("R1", "Device:R", "resistor", 2),
+            "R2": _make_node("R2", "Device:R", "resistor", 2),
+            "C1": _make_node("C1", "Device:C", "capacitor", 2),
+            "C2": _make_node("C2", "Device:C", "capacitor", 2),
+        },
+        "edges": [
+            _make_edge("SIG_IN", "J1", "1", "U1", "3"),
+            _make_edge("FB_NET", "U1", "1", "R2", "1", NetClassification.FEEDBACK, "feedback"),
+            _make_edge("FB_NET", "R2", "2", "U1", "2", NetClassification.FEEDBACK, "feedback"),
+            _make_edge("VCC", "U1", "8", "U1", "4", NetClassification.POWER),
+            _make_edge("GND", "U1", "4", "U1", "4", NetClassification.GROUND),
+            _make_edge("SIG_OUT", "U1", "1", "J2", "1"),
+        ],
+        "power_nets": {"VCC", "GND"},
+        "signal_paths": [["J1", "U1", "J2"]],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Test: SubcircuitFeatures dataclass
+# ---------------------------------------------------------------------------
+
+
+class TestSubcircuitFeatures:
+    """SubcircuitFeatures frozen dataclass schema and serialization."""
+
+    def test_has_25_fields(self):
+        """SubcircuitFeatures has all 25 fields."""
+        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
+        import dataclasses
+        field_names = {f.name for f in dataclasses.fields(SubcircuitFeatures)}
+        expected = {
+            "subcircuit_id",
+            "ic_count", "resistor_count", "capacitor_count",
+            "inductor_count", "diode_count", "transistor_count",
+            "total_component_count",
+            "has_feedback_loop", "has_power_connection", "has_crystal",
+            "feedback_capacitor_count", "feedback_resistor_count",
+            "coupling_capacitor_count",
+            "input_net_count", "output_net_count", "power_net_count",
+            "ground_net_count", "control_net_count", "feedback_net_count",
+            "net_count", "boundary_net_count",
+            "ic_lib_ids", "primary_ic_type",
+            "max_signal_path_length", "component_density",
+        }
+        assert field_names == expected, f"Missing: {expected - field_names}, Extra: {field_names - expected}"
+
+    def test_frozen(self):
+        """SubcircuitFeatures is frozen (immutable)."""
+        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
+        features = SubcircuitFeatures(
+            subcircuit_id="SC-001",
+            ic_count=1, resistor_count=2, capacitor_count=2,
+            inductor_count=0, diode_count=0, transistor_count=0,
+            total_component_count=5,
+            has_feedback_loop=True, has_power_connection=True, has_crystal=False,
+            feedback_capacitor_count=0, feedback_resistor_count=1,
+            coupling_capacitor_count=2,
+            input_net_count=1, output_net_count=1, power_net_count=1,
+            ground_net_count=1, control_net_count=0, feedback_net_count=1,
+            net_count=5, boundary_net_count=2,
+            ic_lib_ids=("NE5532",), primary_ic_type="opamp",
+            max_signal_path_length=2, component_density=1.0,
+        )
+        try:
+            features.ic_count = 99  # type: ignore[misc]
+            assert False, "Should have raised FrozenInstanceError"
+        except AttributeError:
+            pass
+
+    def test_json_serializable(self):
+        """SubcircuitFeatures is JSON-serializable via dataclasses.asdict."""
+        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
+        import json
+        features = SubcircuitFeatures(
+            subcircuit_id="SC-001",
+            ic_count=1, resistor_count=2, capacitor_count=2,
+            inductor_count=0, diode_count=0, transistor_count=0,
+            total_component_count=5,
+            has_feedback_loop=True, has_power_connection=True, has_crystal=False,
+            feedback_capacitor_count=0, feedback_resistor_count=1,
+            coupling_capacitor_count=2,
+            input_net_count=1, output_net_count=1, power_net_count=1,
+            ground_net_count=1, control_net_count=0, feedback_net_count=1,
+            net_count=5, boundary_net_count=2,
+            ic_lib_ids=("NE5532",), primary_ic_type="opamp",
+            max_signal_path_length=2, component_density=1.0,
+        )
+        json_str = features.to_json()
+        parsed = json.loads(json_str)
+        assert parsed["ic_count"] == 1
+        assert parsed["resistor_count"] == 2
+        assert parsed["primary_ic_type"] == "opamp"
+
+    def test_to_dict(self):
+        """to_dict returns plain dict for sklearn DictVectorizer."""
+        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
+        features = SubcircuitFeatures(
+            subcircuit_id="SC-001",
+            ic_count=1, resistor_count=2, capacitor_count=2,
+            inductor_count=0, diode_count=0, transistor_count=0,
+            total_component_count=5,
+            has_feedback_loop=True, has_power_connection=True, has_crystal=False,
+            feedback_capacitor_count=0, feedback_resistor_count=1,
+            coupling_capacitor_count=2,
+            input_net_count=1, output_net_count=1, power_net_count=1,
+            ground_net_count=1, control_net_count=0, feedback_net_count=1,
+            net_count=5, boundary_net_count=2,
+            ic_lib_ids=("NE5532",), primary_ic_type="opamp",
+            max_signal_path_length=2, component_density=1.0,
+        )
+        d = features.to_dict()
+        assert isinstance(d, dict)
+        assert d["ic_count"] == 1
+        assert d["ic_lib_ids"] == ("NE5532",)
+
+    def test_to_numeric_vector(self):
+        """to_numeric_vector produces fixed-length float list for tensor conversion."""
+        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
+        features = SubcircuitFeatures(
+            subcircuit_id="SC-001",
+            ic_count=1, resistor_count=2, capacitor_count=2,
+            inductor_count=0, diode_count=0, transistor_count=0,
+            total_component_count=5,
+            has_feedback_loop=True, has_power_connection=True, has_crystal=False,
+            feedback_capacitor_count=0, feedback_resistor_count=1,
+            coupling_capacitor_count=2,
+            input_net_count=1, output_net_count=1, power_net_count=1,
+            ground_net_count=1, control_net_count=0, feedback_net_count=1,
+            net_count=5, boundary_net_count=2,
+            ic_lib_ids=("NE5532",), primary_ic_type="opamp",
+            max_signal_path_length=2, component_density=1.0,
+        )
+        vec = features.to_numeric_vector()
+        assert isinstance(vec, list)
+        assert all(isinstance(v, float) for v in vec)
+        assert len(vec) == 23  # All numeric fields minus subcircuit_id, ic_lib_ids, primary_ic_type
+
+    def test_from_dict_roundtrip(self):
+        """from_dict reconstructs SubcircuitFeatures from dict."""
+        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
+        original = SubcircuitFeatures(
+            subcircuit_id="SC-001",
+            ic_count=1, resistor_count=2, capacitor_count=2,
+            inductor_count=0, diode_count=0, transistor_count=0,
+            total_component_count=5,
+            has_feedback_loop=True, has_power_connection=True, has_crystal=False,
+            feedback_capacitor_count=0, feedback_resistor_count=1,
+            coupling_capacitor_count=2,
+            input_net_count=1, output_net_count=1, power_net_count=1,
+            ground_net_count=1, control_net_count=0, feedback_net_count=1,
+            net_count=5, boundary_net_count=2,
+            ic_lib_ids=("NE5532",), primary_ic_type="opamp",
+            max_signal_path_length=2, component_density=1.0,
+        )
+        d = original.to_dict()
+        restored = SubcircuitFeatures.from_dict(d)
+        assert restored == original
+
+
+# ---------------------------------------------------------------------------
+# Test: Feature extraction from topology data
+# ---------------------------------------------------------------------------
+
+
+class TestFeatureExtraction:
+    """extract_features computes correct feature vectors."""
+
+    def test_correct_component_counts(self):
+        """extract_features counts ICs, resistors, capacitors correctly."""
+        from kicad_agent.analysis.feature_extraction import extract_features
+        data = _mock_subcircuit_data()
+        features = extract_features(
+            component_refs=data["components"],
+            nodes=data["nodes"],
+            edges=data["edges"],
+            nets=data["nets"],
+            boundary_nets=data["boundary_nets"],
+            center_component=data["center_component"],
+            power_nets=data["power_nets"],
+            signal_paths=data["signal_paths"],
+            subcircuit_id="SC-TEST",
+        )
+        assert features.ic_count == 1
+        assert features.resistor_count == 2
+        assert features.capacitor_count == 2
+        assert features.total_component_count == 5
+
+    def test_identifies_feedback_loops(self):
+        """extract_features detects feedback edges in subcircuit."""
+        from kicad_agent.analysis.feature_extraction import extract_features
+        data = _mock_subcircuit_data()
+        features = extract_features(
+            component_refs=data["components"],
+            nodes=data["nodes"],
+            edges=data["edges"],
+            nets=data["nets"],
+            boundary_nets=data["boundary_nets"],
+            center_component=data["center_component"],
+            power_nets=data["power_nets"],
+            signal_paths=data["signal_paths"],
+        )
+        assert features.has_feedback_loop is True
+        assert features.feedback_net_count >= 1
+
+    def test_identifies_power_connections(self):
+        """extract_features detects power net connections."""
+        from kicad_agent.analysis.feature_extraction import extract_features
+        data = _mock_subcircuit_data()
+        features = extract_features(
+            component_refs=data["components"],
+            nodes=data["nodes"],
+            edges=data["edges"],
+            nets=data["nets"],
+            boundary_nets=data["boundary_nets"],
+            center_component=data["center_component"],
+            power_nets=data["power_nets"],
+            signal_paths=data["signal_paths"],
+        )
+        assert features.has_power_connection is True
+
+    def test_component_density(self):
+        """component_density = total_components / net_count."""
+        from kicad_agent.analysis.feature_extraction import extract_features
+        data = _mock_subcircuit_data()
+        features = extract_features(
+            component_refs=data["components"],
+            nodes=data["nodes"],
+            edges=data["edges"],
+            nets=data["nets"],
+            boundary_nets=data["boundary_nets"],
+            center_component=data["center_component"],
+            power_nets=data["power_nets"],
+            signal_paths=data["signal_paths"],
+        )
+        assert features.component_density == 5 / 5  # 5 components, 5 nets
+
+    def test_primary_ic_type_opamp(self):
+        """primary_ic_type returns 'opamp' for NE5532."""
+        from kicad_agent.analysis.feature_extraction import extract_features
+        data = _mock_subcircuit_data()
+        features = extract_features(
+            component_refs=data["components"],
+            nodes=data["nodes"],
+            edges=data["edges"],
+            nets=data["nets"],
+            boundary_nets=data["boundary_nets"],
+            center_component=data["center_component"],
+            power_nets=data["power_nets"],
+            signal_paths=data["signal_paths"],
+        )
+        assert features.primary_ic_type == "opamp"
+
+    def test_deterministic(self):
+        """Feature extraction is deterministic (same input -> same output)."""
+        from kicad_agent.analysis.feature_extraction import extract_features
+        data = _mock_subcircuit_data()
+        f1 = extract_features(
+            component_refs=data["components"],
+            nodes=data["nodes"],
+            edges=data["edges"],
+            nets=data["nets"],
+            boundary_nets=data["boundary_nets"],
+            center_component=data["center_component"],
+            power_nets=data["power_nets"],
+            signal_paths=data["signal_paths"],
+        )
+        f2 = extract_features(
+            component_refs=data["components"],
+            nodes=data["nodes"],
+            edges=data["edges"],
+            nets=data["nets"],
+            boundary_nets=data["boundary_nets"],
+            center_component=data["center_component"],
+            power_nets=data["power_nets"],
+            signal_paths=data["signal_paths"],
+        )
+        assert f1 == f2
+
+
+# ---------------------------------------------------------------------------
+# Test: Feature extraction edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestFeatureExtractionEdgeCases:
+    """Edge cases for feature extraction."""
+
+    def test_passive_only_subcircuit(self):
+        """Subcircuit with 0 ICs."""
+        from kicad_agent.analysis.feature_extraction import extract_features
+        nodes = {
+            "R1": _make_node("R1", "Device:R", "resistor", 2),
+            "C1": _make_node("C1", "Device:C", "capacitor", 2),
+        }
+        features = extract_features(
+            component_refs=["R1", "C1"],
+            nodes=nodes,
+            edges=[_make_edge("NET_A", "R1", "1", "C1", "1")],
+            nets=["NET_A"],
+            boundary_nets=["NET_A"],
+            center_component="R1",  # No IC, so center is passive
+            power_nets=set(),
+            signal_paths=[],
+        )
+        assert features.ic_count == 0
+        assert features.resistor_count == 1
+        assert features.capacitor_count == 1
+        assert features.primary_ic_type == "unknown"
+
+    def test_subcircuit_id_set(self):
+        """subcircuit_id is properly set in features."""
+        from kicad_agent.analysis.feature_extraction import extract_features
+        nodes = {
+            "U1": _make_node("U1", "NE5532", "ic", 8),
+        }
+        features = extract_features(
+            component_refs=["U1"],
+            nodes=nodes,
+            edges=[],
+            nets=["NET_A"],
+            boundary_nets=[],
+            center_component="U1",
+            power_nets=set(),
+            signal_paths=[],
+            subcircuit_id="SC-042",
+        )
+        assert features.subcircuit_id == "SC-042"
+
+    def test_no_feedback_edges(self):
+        """Subcircuit with no feedback edges."""
+        from kicad_agent.analysis.feature_extraction import extract_features
+        nodes = {
+            "U1": _make_node("U1", "LM7805", "ic", 3),
+            "C1": _make_node("C1", "Device:C", "capacitor", 2),
+        }
+        features = extract_features(
+            component_refs=["U1", "C1"],
+            nodes=nodes,
+            edges=[_make_edge("VOUT", "U1", "2", "C1", "1")],
+            nets=["VOUT"],
+            boundary_nets=[],
+            center_component="U1",
+            power_nets={"VOUT"},
+            signal_paths=[],
+        )
+        assert features.has_feedback_loop is False
+        assert features.feedback_net_count == 0
+
+    def test_crystal_detection(self):
+        """Crystal components detected via lib_id."""
+        from kicad_agent.analysis.feature_extraction import extract_features
+        nodes = {
+            "U1": _make_node("U1", "RP2040", "ic", 40),
+            "Y1": _make_node("Y1", "Device:Crystal", "misc", 2),
+        }
+        features = extract_features(
+            component_refs=["U1", "Y1"],
+            nodes=nodes,
+            edges=[_make_edge("XTAL", "U1", "1", "Y1", "1")],
+            nets=["XTAL"],
+            boundary_nets=[],
+            center_component="U1",
+            power_nets=set(),
+            signal_paths=[],
+        )
+        assert features.has_crystal is True
+
+    def test_primary_ic_types(self):
+        """Various IC types correctly classified."""
+        from kicad_agent.analysis.feature_extraction import _classify_ic_type
+        assert _classify_ic_type("NE5532") == "opamp"
+        assert _classify_ic_type("TL072") == "opamp"
+        assert _classify_ic_type("THAT4301") == "vca"
+        assert _classify_ic_type("THAT2181") == "vca"
+        assert _classify_ic_type("RP2040") == "mcu"
+        assert _classify_ic_type("ATMEGA328P") == "mcu"
+        assert _classify_ic_type("LM7805") == "regulator"
+        assert _classify_ic_type("AMS1117") == "regulator"
+        assert _classify_ic_type("CD4066") == "switch"
+        assert _classify_ic_type("CD4060") == "oscillator"
+        assert _classify_ic_type("UnknownIC") == "unknown"
+
+    def test_ic_lib_ids_tuple(self):
+        """ic_lib_ids captures all IC lib_ids in subcircuit."""
+        from kicad_agent.analysis.feature_extraction import extract_features
+        nodes = {
+            "U1": _make_node("U1", "NE5532", "ic", 8),
+            "R1": _make_node("R1", "Device:R", "resistor", 2),
+        }
+        features = extract_features(
+            component_refs=["U1", "R1"],
+            nodes=nodes,
+            edges=[],
+            nets=["NET_A"],
+            boundary_nets=[],
+            center_component="U1",
+            power_nets=set(),
+            signal_paths=[],
+        )
+        assert features.ic_lib_ids == ("NE5532",)
