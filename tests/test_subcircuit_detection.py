@@ -541,3 +541,376 @@ class TestSubcircuitDetectorDeterminism:
             assert sc1.subcircuit_id == sc2.subcircuit_id
             assert sc1.components == sc2.components
             assert sc1.subcircuit_type == sc2.subcircuit_type
+
+
+# ---------------------------------------------------------------------------
+# CircuitClassifier feature helpers
+# ---------------------------------------------------------------------------
+
+
+def _opamp_preamplifier_features() -> dict:
+    return {
+        "center_component": "U1",
+        "lib_id": "NE5532",
+        "component_type": "ic",
+        "resistor_count": 3,
+        "capacitor_count": 2,
+        "feedback_resistor_count": 1,
+        "feedback_capacitor_count": 0,
+        "has_feedback_loop": True,
+        "coupling_capacitor_count": 2,
+        "has_multiple_inputs": False,
+    }
+
+
+def _opamp_filter_features() -> dict:
+    return {
+        "center_component": "U1",
+        "lib_id": "NE5532",
+        "component_type": "ic",
+        "resistor_count": 2,
+        "capacitor_count": 4,
+        "feedback_resistor_count": 1,
+        "feedback_capacitor_count": 2,
+        "has_feedback_loop": True,
+        "coupling_capacitor_count": 1,
+        "has_multiple_inputs": False,
+    }
+
+
+def _compressor_features() -> dict:
+    return {
+        "center_component": "U1",
+        "lib_id": "THAT4301",
+        "component_type": "ic",
+        "resistor_count": 5,
+        "capacitor_count": 3,
+        "has_feedback_loop": False,
+        "has_sidechain": True,
+        "has_vca_input": True,
+    }
+
+
+def _vca_no_sidechain_features() -> dict:
+    return {
+        "center_component": "U1",
+        "lib_id": "THAT4301",
+        "component_type": "ic",
+        "resistor_count": 2,
+        "capacitor_count": 1,
+        "has_feedback_loop": False,
+        "has_sidechain": False,
+        "has_vca_input": True,
+    }
+
+
+def _power_supply_features() -> dict:
+    return {
+        "center_component": "U1",
+        "lib_id": "LM7805",
+        "component_type": "ic",
+        "resistor_count": 0,
+        "capacitor_count": 4,
+        "diode_count": 2,
+        "has_power_connection": True,
+    }
+
+
+def _digital_control_features() -> dict:
+    return {
+        "center_component": "U1",
+        "lib_id": "RP2040",
+        "component_type": "ic",
+        "resistor_count": 3,
+        "capacitor_count": 6,
+        "has_crystal": True,
+        "has_power_connection": True,
+    }
+
+
+def _analog_switch_features() -> dict:
+    return {
+        "center_component": "U1",
+        "lib_id": "CD4066",
+        "component_type": "ic",
+        "resistor_count": 2,
+        "capacitor_count": 0,
+    }
+
+
+def _output_stage_features() -> dict:
+    return {
+        "center_component": "U1",
+        "lib_id": "NE5532",
+        "component_type": "ic",
+        "resistor_count": 1,
+        "capacitor_count": 2,
+        "feedback_resistor_count": 1,
+        "feedback_capacitor_count": 0,
+        "has_multiple_inputs": False,
+    }
+
+
+def _oscillator_features() -> dict:
+    return {
+        "center_component": "U1",
+        "lib_id": "CD4060",
+        "component_type": "ic",
+        "resistor_count": 2,
+        "capacitor_count": 1,
+    }
+
+
+def _lfo_features() -> dict:
+    return {
+        "center_component": "U1",
+        "lib_id": "CD4060",
+        "component_type": "ic",
+        "resistor_count": 3,
+        "capacitor_count": 2,
+    }
+
+
+def _unknown_ic_features() -> dict:
+    return {
+        "center_component": "U1",
+        "lib_id": "SomeCustomIC123",
+        "component_type": "ic",
+        "resistor_count": 1,
+        "capacitor_count": 1,
+    }
+
+
+def _mixer_features() -> dict:
+    return {
+        "center_component": "U1",
+        "lib_id": "NE5532",
+        "component_type": "ic",
+        "resistor_count": 4,
+        "capacitor_count": 1,
+        "has_multiple_inputs": True,
+        "feedback_resistor_count": 1,
+        "feedback_capacitor_count": 0,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Test: CircuitClassifier
+# ---------------------------------------------------------------------------
+
+
+class TestCircuitClassifier:
+    """CircuitClassifier correctly classifies subcircuit types."""
+
+    def test_opamp_preamplifier(self):
+        """Op-amp with feedback resistors (no caps in feedback) -> PREAMP."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_opamp_preamplifier_features())
+        assert result.subcircuit_type == SubcircuitType.PREAMP
+        assert result.confidence >= 0.8
+
+    def test_opamp_filter(self):
+        """Op-amp with capacitors in feedback -> FILTER."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_opamp_filter_features())
+        assert result.subcircuit_type == SubcircuitType.FILTER
+        assert result.confidence >= 0.8
+
+    def test_compressor_with_sidechain(self):
+        """THAT4301 with sidechain -> COMPRESSOR."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_compressor_features())
+        assert result.subcircuit_type == SubcircuitType.COMPRESSOR
+        assert result.confidence >= 0.8
+
+    def test_vca_without_sidechain(self):
+        """THAT4301 without sidechain -> VCA."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_vca_no_sidechain_features())
+        assert result.subcircuit_type == SubcircuitType.VCA
+        assert result.confidence >= 0.8
+
+    def test_power_supply(self):
+        """LM7805 + filter caps -> POWER_SUPPLY."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_power_supply_features())
+        assert result.subcircuit_type == SubcircuitType.POWER_SUPPLY
+        assert result.confidence >= 0.8
+
+    def test_digital_control(self):
+        """RP2040 + crystal -> DIGITAL_CONTROL."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_digital_control_features())
+        assert result.subcircuit_type == SubcircuitType.DIGITAL_CONTROL
+        assert result.confidence >= 0.8
+
+    def test_analog_switch(self):
+        """CD4066 -> ANALOG_SWITCH."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_analog_switch_features())
+        assert result.subcircuit_type == SubcircuitType.ANALOG_SWITCH
+        assert result.confidence >= 0.8
+
+    def test_output_stage(self):
+        """Op-amp output buffer -> OUTPUT_STAGE (low component count)."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_output_stage_features())
+        assert result.subcircuit_type == SubcircuitType.OUTPUT_STAGE
+        assert result.confidence >= 0.7
+
+    def test_oscillator(self):
+        """CD4060 oscillator -> OSCILLATOR."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_oscillator_features())
+        assert result.subcircuit_type == SubcircuitType.OSCILLATOR
+        assert result.confidence >= 0.8
+
+    def test_lfo(self):
+        """CD4060 with RC timing -> LFO (takes precedence over OSCILLATOR)."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_lfo_features())
+        assert result.subcircuit_type == SubcircuitType.LFO
+        assert result.confidence >= 0.8
+
+    def test_unknown_ic(self):
+        """Unknown IC with ambiguous components -> UNKNOWN with low confidence."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_unknown_ic_features())
+        assert result.subcircuit_type == SubcircuitType.UNKNOWN
+        assert result.confidence < 0.5
+
+    def test_mixer(self):
+        """Op-amp with multiple inputs -> MIXER."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_mixer_features())
+        assert result.subcircuit_type == SubcircuitType.MIXER
+        assert result.confidence >= 0.8
+
+
+class TestClassifierConfidence:
+    """Confidence scoring for classifier results."""
+
+    def test_exact_match_high_confidence(self):
+        """Exact rule match produces confidence > 0.8."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        c = CircuitClassifier()
+        result = c.classify(_power_supply_features())
+        assert result.confidence >= 0.9
+
+    def test_unknown_low_confidence(self):
+        """No rule match produces confidence < 0.5."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        c = CircuitClassifier()
+        result = c.classify(_unknown_ic_features())
+        assert result.confidence < 0.5
+
+    def test_confidence_always_in_range(self):
+        """All classification results have confidence in [0.0, 1.0]."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        c = CircuitClassifier()
+        for features in [
+            _opamp_preamplifier_features(),
+            _opamp_filter_features(),
+            _compressor_features(),
+            _power_supply_features(),
+            _unknown_ic_features(),
+        ]:
+            result = c.classify(features)
+            assert 0.0 <= result.confidence <= 1.0
+
+
+class TestClassifierUnknowns:
+    """Unknown/ambiguous handling."""
+
+    def test_unknown_returns_unknown_type(self):
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify({"lib_id": "XYZ999", "component_type": "ic"})
+        assert result.subcircuit_type == SubcircuitType.UNKNOWN
+
+    def test_unknown_low_confidence(self):
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        c = CircuitClassifier()
+        result = c.classify({"lib_id": "XYZ999", "component_type": "ic"})
+        assert result.confidence < 0.5
+
+    def test_unknown_matched_rule_description(self):
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        c = CircuitClassifier()
+        result = c.classify({"lib_id": "XYZ999", "component_type": "ic"})
+        assert result.matched_rule == "No rule matched"
+
+
+class TestClassifierOrderedRules:
+    """CircuitClassifier follows ordered rules (first match wins)."""
+
+    def test_first_match_wins(self):
+        """First matching rule wins, not the most specific."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        # Compressor features also match VCA rule, but compressor rule is first
+        result = c.classify(_compressor_features())
+        assert result.subcircuit_type == SubcircuitType.COMPRESSOR
+
+    def test_lfo_before_oscillator(self):
+        """LFO rule matches before OSCILLATOR rule for CD4060 with RC."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_lfo_features())
+        assert result.subcircuit_type == SubcircuitType.LFO
+
+    def test_custom_rule_prepended(self):
+        """Custom rules checked before default rules."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+
+        custom_rule = [
+            (lambda f: f.get("lib_id") == "NE5532", SubcircuitType.EQ, 0.99, "Custom EQ rule"),
+        ]
+        c = CircuitClassifier(custom_rules=custom_rule)
+        result = c.classify(_opamp_preamplifier_features())
+        assert result.subcircuit_type == SubcircuitType.EQ
+        assert result.matched_rule == "Custom EQ rule"
+
+    def test_classify_batch(self):
+        """Batch classification returns one result per input."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        c = CircuitClassifier()
+        features_list = [
+            _opamp_preamplifier_features(),
+            _power_supply_features(),
+            _unknown_ic_features(),
+        ]
+        results = c.classify_batch(features_list)
+        assert len(results) == 3
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        assert results[0].subcircuit_type == SubcircuitType.PREAMP
+        assert results[1].subcircuit_type == SubcircuitType.POWER_SUPPLY
+        assert results[2].subcircuit_type == SubcircuitType.UNKNOWN

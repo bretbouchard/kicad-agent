@@ -65,12 +65,13 @@ def _is_filter(features: dict) -> bool:
 
 
 def _is_preamplifier(features: dict) -> bool:
-    """Op-amp with resistive feedback, no caps in feedback."""
+    """Op-amp with resistive feedback, no caps in feedback, at least 2 resistors."""
     comp_type = features.get("component_type", "")
     lib_id = features.get("lib_id", "").upper()
     return (
         comp_type == "ic"
         and any(op in lib_id for op in ["NE5532", "TL072", "LM358", "LM324", "OPA2134"])
+        and features.get("resistor_count", 0) >= 2
         and features.get("feedback_resistor_count", 0) > 0
         and features.get("feedback_capacitor_count", 0) == 0
         and not features.get("has_multiple_inputs", False)
