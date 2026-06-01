@@ -145,6 +145,8 @@ class SubcircuitDetector:
         all_nets = {e.net_name for e in topology.edges}
 
         # 5. Classify each subcircuit and build final results
+        # Deferred import to avoid circular dependency:
+        # circuit_classifier imports SubcircuitType from this module.
         from kicad_agent.analysis.circuit_classifier import CircuitClassifier
 
         classifier = CircuitClassifier()
@@ -317,11 +319,11 @@ class SubcircuitDetector:
             nearest_idx = self._find_nearest_subcircuit(ref, subcircuit_data, adjacency)
             if nearest_idx is not None:
                 sc = subcircuit_data[nearest_idx]
-                sc["components"] = list(sc["components"]) + [ref]
+                sc["components"].append(ref)
                 # Also add nets connecting this component
                 for edge in topology.edges:
                     if (edge.source_ref == ref or edge.target_ref == ref) and edge.net_name not in sc["nets"]:
-                        sc["nets"] = list(sc["nets"]) + [edge.net_name]
+                        sc["nets"].append(edge.net_name)
                 assigned.add(ref)
 
         return subcircuit_data
@@ -353,12 +355,17 @@ class SubcircuitDetector:
                     queue.append((neighbor_ref, depth + 1))
 
         # Default: assign to first subcircuit if any exist
-        return 0 if subcircuit_data else None
+        if subcircuit_data:
+            logger.warning(
+                "Passive %s has no nearby IC subcircuit, defaulting to SC-001", ref,
+            )
+            return 0
+        return None
 
     def _extract_features(
         self,
         ic_node: TopologyNode,
-        component_refs: tuple[str, ...],
+        component_refs: list[str],
         nets: list[str],
         topology: CircuitTopology,
     ) -> dict[str, Any]:
