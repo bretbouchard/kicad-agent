@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: benchmark-suite
 status: executing
-stopped_at: "Plan 47-02 complete. Design review engine with 5 checks. 15 tests."
-last_updated: "2026-06-01T06:21:43Z"
+stopped_at: "Phase 47 complete. Intent inference + design review. 42 tests. Council approved."
+last_updated: "2026-06-01T07:00:00Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 48
-  completed_phases: 44
+  completed_phases: 45
   total_plans: 122
-  completed_plans: 123
+  completed_plans: 125
   percent: 98
 ---
 
@@ -26,8 +26,8 @@ Last activity: 2026-06-01
 
 ## Current Position
 
-Phase: 47 (Circuit Intent Inference) IN PROGRESS
-Status: **Plan 47-02 complete. Design review engine with 5 checks. 15 tests.**
+Phase: 47 (Circuit Intent Inference) COMPLETE
+Status: **Phase 47 complete. Intent inference + design review. 42 tests. Council approved.**
 Plans: 47-01 (complete), 47-02 (complete)
 Last activity: 2026-06-01
 
@@ -134,14 +134,19 @@ Recent decisions affecting current work:
 - [v2.5-47]: Subcircuit lib_id checked from features dict first (fast), topology nodes as fallback
 - [v2.5-47]: Design checks use topology edges for net connectivity (TopologyNode has no pin_nets)
 - [v2.5-47]: Feedback detection uses edge signal_direction plus resistor net-sharing analysis
-- [v2.5-47]: Component value check placeholder -- TopologyNode has no value field
+- [v2.5-47]: Component value check excluded from pipeline -- TopologyNode lacks value data
+- [v2.5-47]: Topology indexes (net_to_nodes, node_to_nets) built once per check, passed to helpers
+- [v2.5-47]: Ref index dict for O(1) component lookup in intent inference
+- [v2.5-47]: Quadratic weighted mean for overall confidence (squares dominate higher-confidence subcircuits)
+- [v2.5-47]: Net connectivity ordering for multi-buffer signal flow (not positional heuristic)
+- [v2.5-47]: Backward-compatible match_fn dispatch (3-arg with TypeError fallback for 2-arg custom rules)
 - [v2.4-SI]: ClassifyViolationsOp in _schema_erc_smart.py (separate from _schema_repair.py per D-01)
 - [v2.4-SI]: IR position data (pin/wire/label positions) distinguishes #PWR symbols from regular components
 
 ### Pending Todos
 
-- Plan 47-02 complete -- design review engine with 5 checks (15 tests)
 - Phase 47 complete (2/2 plans done)
+- Continue to Phase 48 per ROADMAP.md
 
 ### Blockers/Concerns
 
@@ -153,5 +158,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Plan 47-02 complete. Design review engine with 5 checks. 15 tests.
-Resume with: Phase 47 complete. Continue to Phase 48 per ROADMAP.md.
+Stopped at: Phase 47 complete. Intent inference + design review. 42 tests. Council approved.
+Resume with: Phase 48 (Design Rule Intelligence) per ROADMAP.md.
