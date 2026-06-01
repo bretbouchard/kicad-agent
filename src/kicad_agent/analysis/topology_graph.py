@@ -365,6 +365,16 @@ class TopologyBuilder:
                     depth[target] = d + 1
                     queue.append((target, d + 1))
 
+        # Priority: FEEDBACK > POWER > CLOCK > CONTROL > SIGNAL > UNKNOWN
+        _classification_priority: dict[NetClassification, int] = {
+            NetClassification.FEEDBACK: 5,
+            NetClassification.POWER: 4,
+            NetClassification.CLOCK: 3,
+            NetClassification.CONTROL: 2,
+            NetClassification.SIGNAL: 1,
+            NetClassification.UNKNOWN: 0,
+        }
+
         result: dict[str, NetStats] = {}
         for net_name, net_edge_list in net_edges.items():
             # Unique refs on this net
@@ -381,7 +391,8 @@ class TopologyBuilder:
                 else:
                     target_refs.add(edge.source_ref)
                     target_refs.add(edge.target_ref)
-                classification = edge.classification
+                if _classification_priority.get(edge.classification, 0) > _classification_priority.get(classification, 0):
+                    classification = edge.classification
 
             # Fanout: unique target components (receivers)
             receivers = target_refs - source_refs
