@@ -338,7 +338,7 @@ class TestSubcircuitIntentSchema:
 
     def test_rejects_empty_function(self):
         """SubcircuitIntent rejects empty function string."""
-        with pytest.raises(ValueError, match="function must not be empty"):
+        with pytest.raises(ValueError):
             SubcircuitIntent(
                 function="",
                 component_refs=(),

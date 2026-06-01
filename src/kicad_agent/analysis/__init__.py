@@ -7,6 +7,8 @@ from kicad_agent.analysis.types import NetClassification, PinRole
 from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector, Subcircuit, SubcircuitType
 from kicad_agent.analysis.circuit_classifier import CircuitClassifier, ClassificationResult
 from kicad_agent.analysis.feature_extraction import SubcircuitFeatures, extract_features
+from kicad_agent.analysis.intent_schemas import DesignGoal, DesignIntent, SubcircuitIntent
+from kicad_agent.analysis.intent_inference import InferenceResult, IntentInferrer
 
 __all__ = [
     "NetGraph",
@@ -27,4 +29,9 @@ __all__ = [
     "ClassificationResult",
     "SubcircuitFeatures",
     "extract_features",
+    "DesignGoal",
+    "DesignIntent",
+    "SubcircuitIntent",
+    "InferenceResult",
+    "IntentInferrer",
 ]
