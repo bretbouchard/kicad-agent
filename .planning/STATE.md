@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: schematic-intelligence
 status: executing
-stopped_at: "Phase 40 complete (all 3 plans executed). Phase 40 done."
-last_updated: "2026-05-31T23:46:00Z"
-last_activity: 2026-05-31
+stopped_at: "Phase 41 Plan 02 complete. Benchmark Runner + CLI implemented."
+last_updated: "2026-06-01T00:10:00Z"
+last_activity: 2026-06-01
 progress:
   total_phases: 40
   completed_phases: 38
   total_plans: 116
-  completed_plans: 111
-  percent: 96
+  completed_plans: 112
+  percent: 97
 ---
 
 # Project State
@@ -26,31 +26,19 @@ Last activity: 2026-06-01
 
 ## Current Position
 
-Phase: 38-40 (Schematic Routing Engine + Net Intelligence + ERC Root Cause)
-Status: **Phase 40 complete. All 3 plans executed (3 waves).**
-Plans: 38-01..04, 39-01..03, 40-01..03
+Phase: 41 (PCB MMLU Benchmark)
+Status: **Phase 41 Plan 02 complete. BenchmarkRunner + CLI implemented.**
+Plans: 41-01 (dataset), 41-02 (runner + CLI)
 Last activity: 2026-06-01
 
 ### Wave Structure
 
-**Phase 38 (4 plans):**
+**Phase 41 (2 plans):**
 
-- Wave 1: 38-01 (pin resolution) + 38-02 (collision detection) — shared schema file, sequential
-- Wave 2: 38-03 (connect_pins) — depends on 38-01, 38-02
-- Wave 3: 38-04 (batch_connect + regenerate_wiring) — depends on 38-03
+- Wave 1: 41-01 (dataset + schemas) -- complete
+- Wave 2: 41-02 (runner + models + CLI) -- complete
 
-**Phase 39 (3 plans):**
-
-- Wave 1: 39-01 (net extraction) + 39-02 (conflict detection) — can run parallel
-- Wave 2: 39-03 (net naming) — depends on 39-01
-
-**Phase 40 (3 plans):**
-
-- Wave 1: 40-01 (violation classification)
-- Wave 2: 40-02 (root cause diagnosis) — depends on 40-01
-- Wave 3: 40-03 (enhanced erc_auto_fix) — depends on 40-02
-
-## Previous Milestone (v2.4 production-hardening)
+## Previous## Previous Milestone (v2.4 production-hardening)
 
 **Final: 37/37 phases complete. 74 operations, 1900+ tests, structured logging, training infra.**
 
@@ -58,7 +46,7 @@ Last activity: 2026-06-01
 
 **Velocity:**
 
-- Total plans completed: 109
+- Total plans completed: 112
 - Average duration: 5 min
 - Total execution time: 5.5 hours
 
@@ -116,10 +104,10 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Phase 40 complete -- all 3 plans executed
-- Next: Verify Phase 40 work or proceed to next milestone phase
+- Phase 41 Plan 02 complete -- BenchmarkRunner, models, CLI implemented
+- Next: Continue Phase 41 remaining plans or proceed to Phase 42
 
-### Blockers/Concerns
+### Blockers### Blockers/Concerns
 
 None.
 
@@ -129,5 +117,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 40 complete (all 3 plans executed). Phase 40 done.
-Resume with: Verify Phase 40 or proceed to next milestone phase
+Stopped at: Phase 41 Plan 02 complete. Benchmark Runner + CLI implemented.
+Resume with: Continue Phase 41 or proceed to Phase 42
