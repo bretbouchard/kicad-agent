@@ -50,18 +50,18 @@ If the AI can't produce structurally valid KiCad files through the tool layer, n
 - Existing tools: kiutils (Python), sexpdata (Python), kicad-cli for validation, difftastic for diffs
 - The tool lives at ~/apps/kicad-agent/ (Python backend) with a skill definition at ~/.claude/skills/kicad-agent/
 
-## Current Milestone: v3.0 Full-Stack EDA
+## Current Milestone: None (all shipped)
 
-**Goal:** Bridge schematic intelligence to PCB layout with constraint propagation, spatial intelligence, layout-aware placement, DRC intelligence, and DFM checks.
+**v3.0 Full-Stack EDA shipped 2026-06-01.** All 54 phases across 10 milestones complete. 143 plans, 3171+ tests, ~3400 lines in v3.0 alone.
 
-**Target features:**
-- Constraint propagation: Schematic intent (differential pairs, impedance, clearance) → PCB design rules
-- PCB spatial model: Rich PCB equivalent of SchematicIR with net/layer/trace/copper zone geometry
-- Layout-aware placement: Thermal-aware, signal flow-driven, decoupling-cap-aware component placement
-- PCB DRC intelligence: Spatial violation parsing, fix suggestions, signal/power integrity checks
-- Design for Manufacturing: DFM checks, panelization awareness, thermal relief, assembly considerations
+**What shipped in v3.0:**
+- Constraint propagation: Schematic intent → PCB design rules (81 tests)
+- PCB spatial model: STRtree spatial indexing, layer classification, board outline extraction (51 tests)
+- Layout-aware placement: Thermal-aware, signal flow-driven, constraint-aware SA refinement (41 tests)
+- PCB DRC intelligence: Spatial violation enrichment, fix suggestions, PCB-specific design rules (56 tests)
+- Design for Manufacturing: DFM checks, manufacturer profiles, panelization scoring, CLI subcommand (62 tests)
 
-**Why this milestone:** v2.5 built deep schematic understanding (topology, subcircuits, intent, design rules, readability). But that intelligence stops at the schematic boundary. PCB layout remains "run kicad-cli and report results." v3.0 closes the loop — schematic intelligence flows to PCB constraints, PCB spatial data becomes queryable, and violations become understandable and fixable.
+**Next:** Run `/gsd-new-milestone` to plan the next milestone.
 
 ## Previous Milestone: v2.3 mcp-server
 
@@ -113,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-01 — Milestone v3.0 full-stack-eda started*
+*Last updated: 2026-06-01 — Milestone v3.0 full-stack-eda shipped, all 54 phases complete*

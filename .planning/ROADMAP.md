@@ -14,7 +14,7 @@ Build an AI-safe KiCad structural editing tool across multiple milestones. First
 - **v2.3 MCP-Server** - Phases 30-31 (shipped 2026-05-29)
 - **v2.4 Schematic Intelligence** - Phases 38-40 (shipped 2026-05-31)
 - **v2.5 Benchmark Suite** - Phases 41-44 (shipped 2026-05-31)
-- **v3.0 Full-Stack EDA** - Phases 50-54 (constraint propagation, PCB spatial intelligence, layout-aware placement, DRC intelligence, DFM)
+- **v3.0 Full-Stack EDA** - Phases 50-54 (shipped 2026-06-01)
 
 ## Phases
 
@@ -908,7 +908,7 @@ Plans:
 
 Plans:
 - [x] 50-01-PLAN.md -- PCBConstraint types, .kicad_dru parser, ConstraintTable, coordinate converter (CP-02, CP-03, CP-04, CP-06)
-- [ ] 50-02-PLAN.md -- ConstraintPropagator orchestrator, five constraint extractors, integration tests (CP-01, CP-05)
+- [x] 50-02-PLAN.md -- ConstraintPropagator orchestrator, five constraint extractors, integration tests (CP-01, CP-05)
 
 ### Phase 51: PCB Spatial Intelligence
 **Goal**: Rich PCB spatial model with per-layer Shapely geometry, STRtree spatial indexing, layer stackup metadata, and board outline extraction. The spatial foundation for placement, DRC, and DFM.
@@ -1042,8 +1042,8 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 48. Design Rule Intelligence | 2/2 | Complete | 2026-06-01 |
 | 48.5. Schematic Readability | 3/3 | Complete | 2026-06-01 |
 | 49. One-Command Demo | 2/2 | Complete | 2026-06-01 |
-| 50. Constraint Propagation | 0/2 | Planned | |
-| 51. PCB Spatial Intelligence | 0/2 | Planned | |
-| 52. Layout-Aware Placement | 0/2 | Planned | |
-| 53. PCB DRC Intelligence | 2/2 | Complete | |
-| 54. Design for Manufacturing | 2/2 | Complete | 62 tests |
+| 50. Constraint Propagation | 2/2 | Complete | 2026-06-01 |
+| 51. PCB Spatial Intelligence | 2/2 | Complete | 2026-06-01 |
+| 52. Layout-Aware Placement | 2/2 | Complete | 2026-06-01 |
+| 53. PCB DRC Intelligence | 2/2 | Complete | 2026-06-01 |
+| 54. Design for Manufacturing | 2/2 | Complete | 2026-06-01 |
