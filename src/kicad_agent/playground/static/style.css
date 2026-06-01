@@ -1,0 +1,122 @@
+/* kicad-agent Playground Styles */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+}
+
+.playground { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+.playground-header {
+    text-align: center;
+    padding: 20px 0;
+    border-bottom: 1px solid #333;
+    margin-bottom: 20px;
+}
+
+.playground-header h1 { color: #16c784; font-size: 1.8em; }
+.playground-header p { color: #888; margin-top: 8px; }
+
+.playground-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+}
+
+.playground-sidebar { display: flex; flex-direction: column; gap: 20px; }
+
+.upload-section, .operations-section {
+    background: #16213e;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.upload-section h2, .operations-section h2,
+.preview-section h2, .report-section h2, .log-section h2 {
+    font-size: 1em;
+    color: #888;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.upload-dropzone {
+    border: 2px dashed #333;
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.upload-dropzone.dragover { border-color: #16c784; }
+.upload-dropzone p { color: #666; margin-bottom: 12px; }
+
+#upload-btn {
+    background: #16c784;
+    color: #1a1a2e;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.status-area { margin-top: 8px; font-size: 0.85em; }
+
+.operation-list { display: flex; flex-direction: column; gap: 4px; max-height: 400px; overflow-y: auto; }
+
+.operation-btn {
+    background: #0f3460;
+    color: #e0e0e0;
+    border: 1px solid #1a1a4e;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    font-family: monospace;
+    font-size: 0.85em;
+    transition: background 0.2s;
+}
+
+.operation-btn:hover { background: #1a4a8a; }
+
+.playground-main { display: flex; flex-direction: column; gap: 20px; }
+
+.preview-section, .report-section, .log-section {
+    background: #16213e;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.preview-panel, .report-panel {
+    min-height: 200px;
+    max-height: 500px;
+    overflow: auto;
+    background: #0d1117;
+    border-radius: 4px;
+    padding: 12px;
+}
+
+.preview-panel svg { max-width: 100%; height: auto; }
+
+.placeholder { color: #555; text-align: center; padding: 40px; }
+
+.log-panel {
+    min-height: 100px;
+    max-height: 300px;
+    overflow-y: auto;
+    background: #0d1117;
+    border-radius: 4px;
+    padding: 12px;
+    font-family: monospace;
+    font-size: 0.8em;
+}
+
+.log-entry { padding: 2px 0; border-bottom: 1px solid #1a1a2e; }
+.log-error { color: #e74c3c; }
+.log-info { color: #888; }
+
+pre { white-space: pre-wrap; word-break: break-all; }

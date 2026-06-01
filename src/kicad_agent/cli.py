@@ -35,7 +35,7 @@ from kicad_agent.handler import format_result, handle_operation, validate_operat
 from kicad_agent.logging_config import configure_logging
 from kicad_agent.ops.schema import get_operation_schema
 
-_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "demo"}
+_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "demo", "playground"}
 
 
 def _build_operation_parser() -> argparse.ArgumentParser:
@@ -660,6 +660,29 @@ def _handle_demo(argv: list[str]) -> None:
         sys.exit(1)
 
 
+def _handle_playground(argv: list[str]) -> None:
+    """Handle the 'playground' subcommand -- start interactive web UI."""
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent playground",
+        description="Start interactive web playground.",
+    )
+    parser.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=8000, help="Bind port (default: 8000)")
+    args = parser.parse_args(argv)
+
+    try:
+        import uvicorn
+    except ImportError:
+        print("Error: uvicorn required for playground. Install with: pip install uvicorn", file=sys.stderr)
+        sys.exit(1)
+
+    from kicad_agent.playground.app import create_app
+    app = create_app()
+    print(f"kicad-agent playground: http://{args.host}:{args.port}")
+    print("Press Ctrl+C to stop")
+    uvicorn.run(app, host=args.host, port=args.port)
+
+
 def main(argv: list[str] | None = None) -> None:
     """Entry point for the kicad-agent CLI."""
     if argv is None:
@@ -695,6 +718,8 @@ def main(argv: list[str] | None = None) -> None:
             _handle_review_schematic(subcmd_argv)
         elif subcmd == "demo":
             _handle_demo(subcmd_argv)
+        elif subcmd == "playground":
+            _handle_playground(subcmd_argv)
         return
 
     # Legacy operation mode

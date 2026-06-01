@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kicad-agent Playground</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="playground">
+        <header class="playground-header">
+            <h1>kicad-agent Playground</h1>
+            <p>Upload a KiCad file and explore operations interactively.</p>
+        </header>
+
+        <div class="playground-layout">
+            <aside class="playground-sidebar">
+                <section class="upload-section">
+                    <h2>Upload File</h2>
+                    <div class="upload-dropzone" id="dropzone">
+                        <p>Drop .kicad_sch or .kicad_pcb here</p>
+                        <input type="file" id="file-input" accept=".kicad_sch,.kicad_pcb" hidden>
+                        <button id="upload-btn">Choose File</button>
+                    </div>
+                    <div id="upload-status" class="status-area"></div>
+                </section>
+
+                <section class="operations-section">
+                    <h2>Operations</h2>
+                    <div id="operation-palette" class="operation-list"></div>
+                </section>
+            </aside>
+
+            <main class="playground-main">
+                <section class="preview-section">
+                    <h2>SVG Preview</h2>
+                    <div id="svg-preview" class="preview-panel">
+                        <p class="placeholder">Upload a file to see preview</p>
+                    </div>
+                </section>
+
+                <section class="report-section">
+                    <h2>ERC / DRC Report</h2>
+                    <div id="report-panel" class="report-panel">
+                        <p class="placeholder">Run ERC or DRC to see results</p>
+                    </div>
+                </section>
+
+                <section class="log-section">
+                    <h2>Execution Log</h2>
+                    <div id="log-panel" class="log-panel"></div>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
