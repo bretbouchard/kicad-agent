@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: benchmark-suite
 status: executing
-stopped_at: "Plan 46-02 complete. ML-ready feature extraction + confidence calibration. 101 tests."
-last_updated: "2026-06-01T05:28:06Z"
+stopped_at: "Plan 47-01 complete. Deterministic intent inference with 15 rules. 27 tests."
+last_updated: "2026-06-01T06:10:20Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 48
   completed_phases: 44
   total_plans: 122
-  completed_plans: 121
+  completed_plans: 122
   percent: 98
 ---
 
@@ -26,26 +26,20 @@ Last activity: 2026-06-01
 
 ## Current Position
 
-Phase: 46 (Component Function Recognition) IN PROGRESS
-Status: **Plan 46-02 complete. ML-ready feature extraction + confidence calibration. 101 tests.**
-Plans: 46-01 (complete), 46-02 (complete)
+Phase: 47 (Circuit Intent Inference) IN PROGRESS
+Status: **Plan 47-01 complete. Deterministic intent inference with 15 rules. 27 tests.**
+Plans: 47-01 (complete)
 Last activity: 2026-06-01
 
-### Phase 46: Component Function Recognition
+### Phase 47: Circuit Intent Inference
 
-- Plan 46-01: SubcircuitDetector, CircuitClassifier (COMPLETE)
-  - IC-centric BFS clustering with max_hops=2, IC boundary stop
-  - CircuitClassifier with 13 ordered rules (first match wins)
-  - 66 TDD tests covering all 15 subcircuit types, confidence, integration
-  - No regressions (182 combined tests with topology)
-
-- Plan 46-02: Feature Extraction, Confidence Calibration (COMPLETE)
-  - SubcircuitFeatures frozen dataclass with 26 fields for ML-ready feature vectors
-  - extract_features function: component counts, feedback, power, density, IC type, signal paths
-  - ClassificationResult with feature_vector for ML pipeline audit trail
-  - Confidence calibrated: feature_vector populated for confidence < 0.5
-  - SubcircuitDetector.to_jsonl for JSONL training data export
-  - 35 new TDD tests (101 total subcircuit tests), 2560 total pass
+- Plan 47-01: IntentInference, DesignIntent schemas (COMPLETE)
+  - IntentInferrer with 15 ordered intent rules (THAT4301, NE5532, CD4066, CD4060, LM358, etc.)
+  - DesignIntent and SubcircuitIntent Pydantic schemas with validation
+  - DesignGoal enum with 9 categories
+  - Signal flow generation with arrow notation: "Input -> VCA -> Output"
+  - InferenceResult frozen dataclass with rule_matched and timing
+  - 27 TDD tests, 244 total analysis tests pass
 
 ## Previous Milestone (v2.4 Schematic Intelligence)
 
@@ -59,13 +53,13 @@ Last activity: 2026-06-01
 
 **Velocity:**
 
-- Total plans completed: 121
+- Total plans completed: 122
 - Average duration: 5 min
-- Total execution time: 5.7 hours
+- Total execution time: 5.9 hours
 
 **Recent Trend:**
 
-- Last 10 plans: 46-01 through 46-02 (all first-execution pass)
+- Last 10 plans: 46-01 through 47-01 (all first-execution pass)
 - Trend: Stable -- all plans passing on first execution
 
 ## Accumulated Context
@@ -127,13 +121,16 @@ Recent decisions affecting current work:
 - [v2.5-46]: Features dict merges ML fields (SubcircuitFeatures.to_dict) with legacy classifier fields (_extract_features) for backward compatibility
 - [v2.5-46]: ClassificationResult.feature_vector populated only for confidence < 0.5 to minimize storage while capturing ML training data
 - [v2.5-46]: extract_features accepts optional input_nets/output_nets set parameters for topology-level signal counting
+- [v2.5-47]: Intent rule overall_type propagated directly from matched rule, not re-derived from function name
+- [v2.5-47]: Signal flow adds Input/Output context when subcircuits have input/output nets
+- [v2.5-47]: Subcircuit lib_id checked from features dict first (fast), topology nodes as fallback
 - [v2.4-SI]: ClassifyViolationsOp in _schema_erc_smart.py (separate from _schema_repair.py per D-01)
 - [v2.4-SI]: IR position data (pin/wire/label positions) distinguishes #PWR symbols from regular components
 
 ### Pending Todos
 
-- Plan 46-02 complete -- ML-ready feature extraction + confidence calibration (101 tests)
-- Phase 46 complete (2/2 plans done)
+- Plan 47-01 complete -- deterministic intent inference with 15 rules (27 tests)
+- Phase 47 in progress (1/2 plans done)
 
 ### Blockers/Concerns
 
@@ -145,5 +142,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Plan 46-02 complete. ML-ready feature extraction + confidence calibration. 101 tests.
-Resume with: Phase 46 complete. Next phase per ROADMAP.md.
+Stopped at: Plan 47-01 complete. Deterministic intent inference with 15 rules. 27 tests.
+Resume with: Continue to Plan 47-02 per ROADMAP.md.
