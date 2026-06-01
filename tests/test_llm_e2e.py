@@ -239,7 +239,7 @@ class TestHappyPath:
         critique_idx = call_order.index("critique")
         assert parse_idx < critique_idx
 
-    def test_pipeline_evaluation_produces_score(self, tmp_path: Path):
+    def test_pipeline_evaluation_produces_score(self, tmp_path: Path, llm_api_key):
         """Evaluation stage produces an EvaluationResult with overall_score."""
         from kicad_agent.llm.pipeline import llm_generate
 
@@ -421,7 +421,7 @@ class TestRefinementBehavior:
                 if result.generation_result is not None and not result.generation_result.erc_pass:
                     mock_refine.assert_called_once()
 
-    def test_refinement_not_called_when_erc_passes(self, tmp_path: Path):
+    def test_refinement_not_called_when_erc_passes(self, tmp_path: Path, llm_api_key):
         """Pipeline skips refinement when ERC already passes."""
         from kicad_agent.llm.pipeline import llm_generate
 
@@ -505,7 +505,7 @@ class TestCritiqueSkipping:
 class TestSuccessCriteria:
     """Tests for the success flag computation."""
 
-    def test_success_true_when_erc_passes(self, tmp_path: Path):
+    def test_success_true_when_erc_passes(self, tmp_path: Path, llm_api_key):
         """success=True when generation succeeded and ERC passed."""
         from kicad_agent.llm.pipeline import llm_generate
 
@@ -527,7 +527,7 @@ class TestSuccessCriteria:
         if result.generation_result is not None and result.generation_result.erc_pass:
             assert result.success is True
 
-    def test_success_true_when_refinement_converges(self, tmp_path: Path):
+    def test_success_true_when_refinement_converges(self, tmp_path: Path, llm_api_key):
         """success=True when generation succeeded, ERC failed, but refinement converged."""
         from kicad_agent.llm.pipeline import llm_generate
         from kicad_agent.generation.pipeline import GenerationResult

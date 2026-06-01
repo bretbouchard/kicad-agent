@@ -42,13 +42,15 @@ class FakeMessage:
 
 
 @pytest.fixture
-def mock_anthropic_client():
+def mock_anthropic_client(llm_api_key):
     """Mock anthropic.Anthropic().messages.create() returning a configurable fake response.
 
     Usage in tests:
         mock_anthropic_client.return_value = FakeMessage([
             FakeToolUseBlock("create_design_intent", {...})
         ])
+
+    Depends on llm_api_key so ANTHROPIC_API_KEY is set for LLMClient init.
     """
     with patch("anthropic.Anthropic") as mock_cls:
         mock_instance = MagicMock()
@@ -112,7 +114,11 @@ def sample_suggestions_dict() -> list[dict[str, str]]:
     ]
 
 
-@pytest.fixture(autouse=True)
-def set_api_key(monkeypatch):
-    """Set ANTHROPIC_API_KEY for all LLM tests."""
+@pytest.fixture
+def llm_api_key(monkeypatch):
+    """Set ANTHROPIC_API_KEY for LLM tests only.
+
+    NOT autouse — only tests that explicitly request this fixture get the key.
+    This prevents masking missing-env-var bugs in non-LLM tests.
+    """
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-key-for-testing-only")

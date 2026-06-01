@@ -15,6 +15,7 @@ Build an AI-safe KiCad structural editing tool across multiple milestones. First
 - **v2.4 Schematic Intelligence** - Phases 38-40 (shipped 2026-05-31)
 - **v2.5 Benchmark Suite** - Phases 41-44 (shipped 2026-05-31)
 - **v3.0 Full-Stack EDA** - Phases 50-54 (shipped 2026-06-01)
+- **v3.1 Council Remediation** - Phases 60-65 (planned)
 
 ## Phases
 
@@ -1047,3 +1048,120 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 52. Layout-Aware Placement | 2/2 | Complete | 2026-06-01 |
 | 53. PCB DRC Intelligence | 2/2 | Complete | 2026-06-01 |
 | 54. Design for Manufacturing | 2/2 | Complete | 2026-06-01 |
+
+### v3.1 Council Remediation Phase Details
+
+### Phase 60: Test Infrastructure — Stale Constants & Fixture Cleanup
+**Goal**: Fix 5 stale hardcoded test constants that caused Council REJECT verdict (T-1 through T-5), fix autouse API key fixture contamination (H-5), establish dynamic-count testing patterns
+**Depends on**: None (merge gate unblocker)
+**Findings**: T-1, T-2, T-3, T-4, T-5, H-5
+**Success Criteria** (what must be TRUE):
+  1. All 5 hardcoded test constants replaced with dynamic computation from source
+  2. `tests/helpers/counts.py` module provides shared count helpers
+  3. `conftest_llm.py` fixture is no longer autouse — only LLM tests get API key
+  4. All existing tests pass without modification
+  5. Adding a new schema file does NOT break any test
+**Plans**: 2 plans
+
+Plans:
+- [ ] 60-01-PLAN.md — Fix stale test constants (T-1 through T-5): dynamic Op count, schema file count, tool count
+- [ ] 60-02-PLAN.md — Fix autouse API key fixture (H-5): remove autouse, add explicit fixture usage
+
+### Phase 61: Security Hardening
+**Goal**: Fix CRITICAL and HIGH security findings: replace eval() (C-1), add upload content validation (H-1), warn on public binding (H-2), validate repo names (H-3), convert source inspection tests to runtime (H-4)
+**Depends on**: None
+**Findings**: C-1, H-1, H-2, H-3, H-4
+**Success Criteria** (what must be TRUE):
+  1. Zero eval() calls in production code — replaced with AST walker
+  2. Playground upload validates content against KiCad file signatures
+  3. --host 0.0.0.0 prints security warning to stderr
+  4. Repo names validated against owner/repo regex pattern
+  5. Security tests verify runtime behavior, not source text
+**Plans**: 5 plans
+
+Plans:
+- [ ] 61-01-PLAN.md — Replace eval() with safe AST expression parser (C-1)
+- [ ] 61-02-PLAN.md — Add KiCad file content validation to upload endpoint (H-1)
+- [ ] 61-03-PLAN.md — Add public network binding warning (H-2)
+- [ ] 61-04-PLAN.md — Validate repo names in BulkFetcher (H-3)
+- [ ] 61-05-PLAN.md — Convert security tests from source inspection to runtime (H-4)
+
+### Phase 62: Routing Correctness
+**Goal**: Fix 5 HIGH routing bugs: O(n) snap_to_node (H-6), multi-pin net routing (H-7), hardcoded net number 0 (H-8, H-9), incomplete obstacle marking (H-10)
+**Depends on**: None
+**Findings**: H-6, H-7, H-8, H-9, H-10
+**Success Criteria** (what must be TRUE):
+  1. snap_to_node uses spatial index — O(log n) instead of O(n)
+  2. Multi-pin nets produce connected routing trees (not just first→last)
+  3. TrackSegment and ViaSegment emit correct net IDs from netlist
+  4. mark_path_as_obstacle blocks clearance corridor, not just exact edges
+  5. Performance: snap_to_node <10ms for 10k nodes
+**Plans**: 4 plans
+
+Plans:
+- [ ] 62-01-PLAN.md — Add STRtree spatial index to snap_to_node (H-6)
+- [ ] 62-02-PLAN.md — Implement Steiner-tree multi-pin net routing (H-7)
+- [ ] 62-03-PLAN.md — Fix hardcoded net number 0 in TrackSegment/ViaSegment (H-8, H-9)
+- [ ] 62-04-PLAN.md — Add clearance corridor to mark_path_as_obstacle (H-10)
+
+### Phase 63: Training Integrity
+**Goal**: Fix 4 HIGH training pipeline integrity issues: token handling (H-11), seed race condition (H-12), unseeded random (H-13), self-referential scoring (H-14)
+**Depends on**: None
+**Findings**: H-11, H-12, H-13, H-14
+**Success Criteria** (what must be TRUE):
+  1. GitHub token validated format and accepted from env var
+  2. Parallel workers receive unique, non-overlapping seed offsets
+  3. train_step uses deterministic seed (global + step counter)
+  4. Best-of-N scoring uses independent metrics, not self-evaluation
+  5. Reproducibility: same seed produces identical output across 2 runs
+**Plans**: 4 plans
+
+Plans:
+- [ ] 63-01-PLAN.md — Fix GitHub token handling with format validation + env var (H-11)
+- [ ] 63-02-PLAN.md — Fix parallel seed offset race condition (H-12)
+- [ ] 63-03-PLAN.md — Fix unseeded random in train_step (H-13)
+- [ ] 63-04-PLAN.md — Fix self-referential best-of-N scoring (H-14)
+
+### Phase 64: CLI/UX Polish
+**Goal**: Fix 3 HIGH CLI/UX bugs: route crash on paths outside CWD (H-15), no top-level help (H-16), component-search --help starts server (H-17)
+**Depends on**: None
+**Findings**: H-15, H-16, H-17
+**Success Criteria** (what must be TRUE):
+  1. route handles files outside CWD gracefully (no crash)
+  2. kicad-agent --help lists all subcommands with descriptions
+  3. kicad-agent component-search --help shows help, does NOT start server
+**Plans**: 3 plans
+
+Plans:
+- [ ] 64-01-PLAN.md — Fix route crash on paths outside CWD (H-15)
+- [ ] 64-02-PLAN.md — Add top-level --help with subcommand listing (H-16)
+- [ ] 64-03-PLAN.md — Fix component-search --help starting MCP server (H-17)
+
+### Phase 65: Architecture Refactor
+**Goal**: Split 3 oversized files below 800-line limit (H-18, H-19, H-20) and fix 12 MEDIUM-severity findings (M-1 through M-12)
+**Depends on**: Phase 60 (test infrastructure stable before refactoring)
+**Findings**: H-18, H-19, H-20, M-1 through M-12
+**Success Criteria** (what must be TRUE):
+  1. executor.py < 800 lines (from 2070) — split to handler sub-modules
+  2. repair.py < 800 lines (from 1561) — split to repair_erc, repair_units, repair_wires
+  3. topology_graph.py < 800 lines (from 950) — split to topology_builder
+  4. All existing imports still work (backward compat via re-exports)
+  5. All 12 MEDIUM findings fixed
+**Plans**: 4 plans
+
+Plans:
+- [ ] 65-01-PLAN.md — Split executor.py (2070→<800) into handler sub-modules (H-18)
+- [ ] 65-02-PLAN.md — Split repair.py (1561→<800) into repair_erc, repair_units, repair_wires (H-19)
+- [ ] 65-03-PLAN.md — Split topology_graph.py (950→<800) into topology_builder (H-20)
+- [ ] 65-04-PLAN.md — Fix all 12 MEDIUM findings (M-1 through M-12)
+
+## v3.1 Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 60. Test Infrastructure | 0/2 | Planned | — |
+| 61. Security Hardening | 0/5 | Planned | — |
+| 62. Routing Correctness | 0/4 | Planned | — |
+| 63. Training Integrity | 0/4 | Planned | — |
+| 64. CLI/UX Polish | 0/3 | Planned | — |
+| 65. Architecture Refactor | 0/4 | Planned | — |

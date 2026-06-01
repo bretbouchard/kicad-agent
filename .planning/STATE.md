@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.0
-milestone_name: Full-Stack EDA
-status: complete
-stopped_at: Milestone v3.0 shipped. 10 plans, 291 tests, ~3400 lines. Council review passed.
-last_updated: "2026-06-01T23:00:00Z"
+milestone: v3.1
+milestone_name: Council Remediation
+status: planning
+stopped_at: Plans created for phases 60-65 covering all ~50 Council findings. Ready for execution.
+last_updated: "2026-06-01T23:30:00Z"
 last_activity: 2026-06-01
 progress:
-  total_phases: 54
+  total_phases: 60
   completed_phases: 54
-  total_plans: 202
+  total_plans: 214
   completed_plans: 143
-  percent: 100
+  percent: 90
 ---
 
 # Project State

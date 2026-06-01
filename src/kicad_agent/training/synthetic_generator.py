@@ -261,7 +261,7 @@ class SyntheticGenerator:
                     )
                 )
 
-            except (ValueError, Exception) as e:
+            except Exception as e:
                 failures += 1
                 results.append(
                     GenerationAttempt(
