@@ -1180,3 +1180,161 @@ class TestNetImportance:
 
         c = NetClassifier()
         assert c.rank_importance(NetClassification.UNKNOWN) == NetImportance.LOW
+
+
+# ---------------------------------------------------------------------------
+# Test: NetStats dataclass
+# ---------------------------------------------------------------------------
+
+
+class TestNetStats:
+    """NetStats dataclass with fanout, stub detection, and path metrics."""
+
+    def test_netstats_has_required_fields(self):
+        """NetStats has fanout, is_stub, longest_path_from_input, component_count, is_multi_drop."""
+        from kicad_agent.analysis.topology_graph import NetStats
+
+        stat = NetStats(
+            net_name="SIG_IN",
+            fanout=3,
+            is_stub=False,
+            is_multi_drop=True,
+            longest_path_from_input=2,
+            component_count=4,
+            classification=NetClassification.SIGNAL,
+            importance="MEDIUM",
+            signal_integrity="UNKNOWN",
+        )
+        assert stat.fanout == 3
+        assert stat.is_stub is False
+        assert stat.is_multi_drop is True
+        assert stat.longest_path_from_input == 2
+        assert stat.component_count == 4
+
+    def test_net_with_multiple_receivers_has_fanout(self):
+        """Net with 1 source and 3 receivers has fanout=3."""
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo = builder.from_schematic_graph(_fanout_graph())
+        net_stats = topo.stats.get("net_stats", {})
+        # The signal net should have fanout >= 2
+        signal_stats = [s for name, s in net_stats.items() if name.startswith("SIG_")]
+        assert len(signal_stats) >= 1
+        assert any(s["fanout"] >= 2 for s in signal_stats)
+
+    def test_stub_detection(self):
+        """Net connecting to dead-end component (test point, LED) detected as stub."""
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo = builder.from_schematic_graph(_stub_graph())
+        net_stats = topo.stats.get("net_stats", {})
+        # At least one net should be detected as a stub
+        stub_nets = [name for name, s in net_stats.items() if s.get("is_stub")]
+        assert len(stub_nets) >= 1
+
+    def test_multi_drop_detection(self):
+        """Multi-drop net (1 source, 2+ receivers on different ICs) detected."""
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo = builder.from_schematic_graph(_fanout_graph())
+        net_stats = topo.stats.get("net_stats", {})
+        # Signal net going to multiple ICs should be multi-drop
+        multi_drop = [name for name, s in net_stats.items() if s.get("is_multi_drop")]
+        assert len(multi_drop) >= 1
+
+    def test_net_stats_in_topology_stats(self):
+        """Net stats included in CircuitTopology.stats dict."""
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
+        assert "net_stats" in topo.stats
+        assert isinstance(topo.stats["net_stats"], dict)
+
+    def test_net_stats_deterministic(self):
+        """All net stats computed deterministically."""
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo1 = builder.from_schematic_graph(_opamp_subcircuit_graph())
+        topo2 = builder.from_schematic_graph(_opamp_subcircuit_graph())
+        # Stats should be identical
+        assert topo1.stats["net_stats"] == topo2.stats["net_stats"]
+
+
+# ---------------------------------------------------------------------------
+# Task 2 mock factories
+# ---------------------------------------------------------------------------
+
+
+def _fanout_graph() -> SchematicGraph:
+    """One IC output driving 3 IC inputs (fanout=3)."""
+    return SchematicGraph(
+        filepath="fanout.kicad_sch",
+        pins=[
+            # U1 driver
+            PinPosition(ref="U1", pin_number="1", pin_name="OUT", position=(50.0, 50.0), body_position=(45.0, 50.0)),
+            PinPosition(ref="U1", pin_number="4", pin_name="V-", position=(50.0, 30.0), body_position=(50.0, 30.0)),
+            PinPosition(ref="U1", pin_number="8", pin_name="V+", position=(50.0, 70.0), body_position=(50.0, 70.0)),
+            # U2 receiver
+            PinPosition(ref="U2", pin_number="3", pin_name="IN+", position=(70.0, 40.0), body_position=(75.0, 40.0)),
+            PinPosition(ref="U2", pin_number="4", pin_name="V-", position=(70.0, 30.0), body_position=(70.0, 30.0)),
+            PinPosition(ref="U2", pin_number="8", pin_name="V+", position=(70.0, 70.0), body_position=(70.0, 70.0)),
+            # U3 receiver
+            PinPosition(ref="U3", pin_number="3", pin_name="IN+", position=(70.0, 60.0), body_position=(75.0, 60.0)),
+            PinPosition(ref="U3", pin_number="4", pin_name="V-", position=(70.0, 55.0), body_position=(70.0, 55.0)),
+            PinPosition(ref="U3", pin_number="8", pin_name="V+", position=(70.0, 75.0), body_position=(70.0, 75.0)),
+            # U4 receiver
+            PinPosition(ref="U4", pin_number="3", pin_name="IN+", position=(70.0, 80.0), body_position=(75.0, 80.0)),
+            PinPosition(ref="U4", pin_number="4", pin_name="V-", position=(70.0, 85.0), body_position=(70.0, 85.0)),
+            PinPosition(ref="U4", pin_number="8", pin_name="V+", position=(70.0, 90.0), body_position=(70.0, 90.0)),
+        ],
+        wires=[
+            Wire(start=(50.0, 50.0), end=(60.0, 50.0)),  # U1.OUT -> junction
+            Wire(start=(60.0, 50.0), end=(70.0, 40.0)),  # junction -> U2.IN+
+            Wire(start=(60.0, 50.0), end=(70.0, 60.0)),  # junction -> U3.IN+
+            Wire(start=(60.0, 50.0), end=(70.0, 80.0)),  # junction -> U4.IN+
+        ],
+        labels=[
+            Label(name="SIG_OUT", position=(60.0, 50.0), label_type="global"),
+            Label(name="VCC", position=(50.0, 70.0), label_type="global"),
+            Label(name="VCC", position=(70.0, 70.0), label_type="global"),
+            Label(name="VEE", position=(50.0, 30.0), label_type="global"),
+        ],
+        ref_to_libid={"U1": "NE5532", "U2": "NE5532", "U3": "NE5532", "U4": "NE5532"},
+    )
+
+
+def _stub_graph() -> SchematicGraph:
+    """Circuit with a stub net leading to an LED (dead-end component)."""
+    return SchematicGraph(
+        filepath="stub.kicad_sch",
+        pins=[
+            # U1 driver
+            PinPosition(ref="U1", pin_number="1", pin_name="OUT", position=(50.0, 50.0), body_position=(45.0, 50.0)),
+            PinPosition(ref="U1", pin_number="3", pin_name="IN+", position=(30.0, 50.0), body_position=(35.0, 50.0)),
+            PinPosition(ref="U1", pin_number="2", pin_name="IN-", position=(30.0, 60.0), body_position=(35.0, 55.0)),
+            PinPosition(ref="U1", pin_number="4", pin_name="V-", position=(40.0, 30.0), body_position=(40.0, 30.0)),
+            PinPosition(ref="U1", pin_number="8", pin_name="V+", position=(40.0, 70.0), body_position=(40.0, 70.0)),
+            # R1 series resistor
+            PinPosition(ref="R1", pin_number="1", pin_name="1", position=(55.0, 50.0), body_position=(57.5, 50.0)),
+            PinPosition(ref="R1", pin_number="2", pin_name="2", position=(60.0, 50.0), body_position=(62.5, 50.0)),
+            # D1 LED (dead-end)
+            PinPosition(ref="D1", pin_number="1", pin_name="A", position=(65.0, 50.0), body_position=(67.5, 50.0)),
+            PinPosition(ref="D1", pin_number="2", pin_name="K", position=(70.0, 50.0), body_position=(72.5, 50.0)),
+        ],
+        wires=[
+            Wire(start=(50.0, 50.0), end=(55.0, 50.0)),  # U1.OUT -> R1.1
+            Wire(start=(60.0, 50.0), end=(65.0, 50.0)),  # R1.2 -> D1.A
+        ],
+        labels=[
+            Label(name="SIG_IN", position=(30.0, 50.0), label_type="global"),
+            Label(name="LED_NET", position=(62.5, 50.0), label_type="local"),
+            Label(name="VCC", position=(40.0, 70.0), label_type="global"),
+            Label(name="VEE", position=(40.0, 30.0), label_type="global"),
+        ],
+        ref_to_libid={"U1": "NE5532", "R1": "Device:R", "D1": "Device:LED"},
+    )
