@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.4
 milestone_name: schematic-intelligence
 status: executing
-stopped_at: "Phase 44 Plan 01 complete. Adversarial test generation (750 test cases)."
-last_updated: "2026-06-01T00:23:44Z"
+stopped_at: "Phase 43 Plan 01 and Phase 44 Plan 01 complete. Regression detection + adversarial testing."
+last_updated: "2026-06-01T00:25:00Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 40
@@ -26,12 +26,16 @@ Last activity: 2026-06-01
 
 ## Current Position
 
-Phase: 44 (Adversarial Test Generation)
-Status: **Phase 44 Plan 01 complete. Adversarial test generation (750 test cases).**
-Plans: 44-01 (mutation engine + adversarial suite)
+Phase: 43-44 (Regression Benchmark Suite + Adversarial Test Generation)
+Status: **Phase 43 Plan 01 and Phase 44 Plan 01 complete. Regression detection + adversarial testing.**
+Plans: 43-01 (regression detector + CI), 44-01 (mutation engine + adversarial suite)
 Last activity: 2026-06-01
 
 ### Wave Structure
+
+**Phase 43 (1 plan):**
+
+- Wave 1: 43-01 (RegressionDetector + CI workflow + baseline) -- complete
 
 **Phase 44 (1 plan):**
 
@@ -103,8 +107,9 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Phase 44 Plan 01 complete -- Adversarial test generation (750 test cases: 200 mutations + 50 properties + 500 fuzz)
-- Next: Continue Phase 44 or proceed to next phase
+- Phase 43 Plan 01 complete -- Regression detection with CI workflow (39 tests)
+- Phase 44 Plan 01 complete -- Adversarial test generation (750 test cases)
+- Next: Continue to Phase 45 or next phase
 
 ### Blockers### Blockers/Concerns
 
@@ -116,5 +121,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 44 Plan 01 complete. Adversarial test generation (750 test cases).
-Resume with: Continue Phase 44 or proceed to next phase
+Stopped at: Phase 43-01 and Phase 44-01 complete. Regression detection + adversarial testing.
+Resume with: Continue to Phase 45 or next phase
