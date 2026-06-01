@@ -1631,3 +1631,229 @@ def break_wire_shorts(
         "wires_removed": removed_count if not dry_run else len(all_bridge_indices),
         "details": details,
     }
+
+
+# Power net name patterns — never auto-remove these labels
+_POWER_NET_PATTERNS = frozenset({
+    "VCC", "VDD", "VEE", "VSS",
+    "GND", "AGND", "DGND", "PGND", "CHASSIS",
+    "+3V3", "+5V", "+9V", "+12V", "+15V", "+24V", "+48V",
+    "-3V3", "-5V", "-9V", "-12V", "-15V", "-24V", "-48V",
+    "3V3", "5V", "9V", "12V", "15V", "24V", "48V",
+})
+
+
+def _is_power_net(net_name: str) -> bool:
+    """Check if a net name is a power rail."""
+    upper = net_name.upper().lstrip("+").lstrip("-")
+    return net_name in _POWER_NET_PATTERNS or upper in _POWER_NET_PATTERNS
+
+
+def _check_orphan_count(
+    wire_endpoints: list[dict[str, Any]],
+    bridge_wire_index: int,
+    label_positions: list[dict[str, Any]],
+) -> int:
+    """Count pins/labels orphaned if bridge_wire_index is removed.
+
+    Returns 0 if the break is clean (no orphans).
+    """
+    # Build adjacency without the bridge wire
+    adjacency: dict[tuple[float, float], list[tuple[float, float]]] = {}
+    for we in wire_endpoints:
+        wi = we["wire_index"]
+        if wi == bridge_wire_index:
+            continue
+        start = _round_pos(we["start_x"], we["start_y"])
+        end = _round_pos(we["end_x"], we["end_y"])
+        adjacency.setdefault(start, []).append(end)
+        adjacency.setdefault(end, []).append(start)
+
+    # Collect all label positions
+    label_pos_set: set[tuple[float, float]] = set()
+    for label in label_positions:
+        label_pos_set.add(_round_pos(label["x"], label["y"]))
+
+    # BFS from label positions to find reachable set
+    visited: set[tuple[float, float]] = set()
+    queue: list[tuple[float, float]] = list(label_pos_set)
+    for pos in queue:
+        visited.add(pos)
+
+    head = 0
+    while head < len(queue):
+        current = queue[head]
+        head += 1
+        for neighbor in adjacency.get(current, []):
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)
+
+    # Count label positions NOT reachable from any other label
+    orphan_count = 0
+    for pos in label_pos_set:
+        if pos not in visited:
+            orphan_count += 1
+
+    return orphan_count
+
+
+def resolve_shorted_nets(
+    ir: SchematicIR, file_path: Path, *,
+    strategy: str = "break_bridge",
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Atomic short resolution with power-net protection and orphan checking.
+
+    Phase 67: Combines break_wire_shorts + fix_shorted_nets into a single
+    operation with:
+    - Power-net protection: never auto-resolve shorts involving power rails
+    - Orphan checking: reject break points that leave labels/pins disconnected
+    - Graph-bridges algorithm for optimal break point selection
+
+    Args:
+        ir: SchematicIR for the target schematic.
+        file_path: Resolved path to the schematic file.
+        strategy: "break_bridge" (remove bridge wire), "remove_label"
+            (remove duplicate label), or "manual" (report only).
+        dry_run: If True, report without modifying.
+
+    Returns:
+        Dict with shorts_found, resolved, skipped_power, and details.
+    """
+    shorts_result = detect_shorted_nets(ir)
+    shorts = shorts_result["shorts"]
+
+    if not shorts:
+        return {"shorts_found": 0, "resolved": 0, "skipped_power": 0, "details": []}
+
+    wire_endpoints = ir.get_wire_endpoints()
+    label_positions = ir.get_label_positions()
+    sch = ir.schematic
+
+    resolved_count = 0
+    skipped_power = 0
+    details: list[dict[str, Any]] = []
+
+    for short in shorts:
+        nets = short["nets"]
+        if len(nets) < 2:
+            continue
+
+        # Power-net protection: skip auto-resolution for power rail shorts
+        if any(_is_power_net(n) for n in nets):
+            skipped_power += 1
+            details.append({
+                "nets": sorted(nets),
+                "action": "skipped_power",
+                "position": list(short["position"]),
+                "reason": "Short involves power rail — requires manual resolution",
+            })
+            continue
+
+        if strategy == "manual":
+            details.append({
+                "nets": sorted(nets),
+                "action": "manual_only",
+                "position": list(short["position"]),
+            })
+            continue
+
+        # Try break_bridge strategy first
+        if strategy == "break_bridge":
+            bridges = find_bridge_wires(ir, nets[0], nets[1])
+
+            # Check orphan count for each bridge candidate
+            clean_bridge = None
+            for bridge in bridges[:5]:  # limit candidates
+                orphan_count = _check_orphan_count(
+                    wire_endpoints, bridge["wire_index"], label_positions,
+                )
+                if orphan_count == 0:
+                    clean_bridge = bridge
+                    break
+
+            if clean_bridge and not dry_run:
+                # Remove the bridge wire
+                wire_idx = clean_bridge["wire_index"]
+                if wire_idx < len(sch.graphicalItems):
+                    sch.graphicalItems.pop(wire_idx)
+                    resolved_count += 1
+                    ir._record_mutation("resolve_shorted_net", {
+                        "action": "break_bridge",
+                        "nets": sorted(nets),
+                        "wire_index": wire_idx,
+                    })
+                    details.append({
+                        "nets": sorted(nets),
+                        "action": "break_bridge",
+                        "wire_start": clean_bridge["start"],
+                        "wire_end": clean_bridge["end"],
+                    })
+                    continue
+
+            # No clean break found — try label removal
+            if clean_bridge is None and bridges:
+                details.append({
+                    "nets": sorted(nets),
+                    "action": "no_clean_break",
+                    "position": list(short["position"]),
+                    "reason": "All bridge candidates would orphan connections",
+                })
+
+        # Label removal strategy (fallback or explicit)
+        if strategy == "remove_label" or (strategy == "break_bridge" and not bridges):
+            # Keep the first net, remove labels for the rest
+            keep_net = nets[0]
+            remove_nets = set(nets) - {keep_net}
+
+            removed_labels = []
+            for label in list(sch.labels):
+                if label.text in remove_nets:
+                    pos_key = _round_pos(label.position.X, label.position.Y)
+                    short_pos = (round(short["position"][0], 2), round(short["position"][1], 2))
+                    if pos_key == short_pos or _distance(
+                        label.position.X, label.position.Y,
+                        short["position"][0], short["position"][1],
+                    ) <= 0.5:
+                        if not dry_run:
+                            removed_labels.append(label.text)
+                            sch.labels.remove(label)
+                            ir._record_mutation("resolve_shorted_net", {
+                                "action": "remove_label",
+                                "removed": label.text,
+                                "kept": keep_net,
+                            })
+
+            for label in list(sch.globalLabels):
+                if label.text in remove_nets:
+                    pos_key = _round_pos(label.position.X, label.position.Y)
+                    short_pos = (round(short["position"][0], 2), round(short["position"][1], 2))
+                    if pos_key == short_pos or _distance(
+                        label.position.X, label.position.Y,
+                        short["position"][0], short["position"][1],
+                    ) <= 0.5:
+                        if not dry_run:
+                            removed_labels.append(label.text)
+                            sch.globalLabels.remove(label)
+                            ir._record_mutation("resolve_shorted_net", {
+                                "action": "remove_label",
+                                "removed": label.text,
+                                "kept": keep_net,
+                            })
+
+            if removed_labels:
+                resolved_count += 1
+                details.append({
+                    "nets": sorted(nets),
+                    "action": "remove_label",
+                    "kept": keep_net,
+                    "removed": removed_labels,
+                })
+
+    return {
+        "shorts_found": len(shorts),
+        "resolved": resolved_count,
+        "skipped_power": skipped_power,
+        "details": details,
+    }

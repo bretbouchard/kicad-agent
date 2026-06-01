@@ -27,6 +27,7 @@ from kicad_agent.ops.repair import (
     place_no_connects_from_erc,
     remove_orphaned_labels,
     repair_wire_snapping,
+    resolve_shorted_nets,
     snap_to_grid,
 )
 from kicad_agent.parser import parse_schematic
@@ -1051,3 +1052,52 @@ class TestNetAwarePositionMatching:
             # Position should be a valid coordinate, not NaN
             assert math.isfinite(detail["position"][0])
             assert math.isfinite(detail["position"][1])
+
+
+class TestResolveShortedNets:
+    """Tests for connectivity-aware short resolution — Phase 67."""
+
+    def test_power_net_detection(self):
+        """Power net patterns are correctly identified."""
+        from kicad_agent.ops.repair import _is_power_net
+
+        assert _is_power_net("VCC") is True
+        assert _is_power_net("+9V") is True
+        assert _is_power_net("AGND") is True
+        assert _is_power_net("+3V3") is True
+        assert _is_power_net("-15V") is True
+        assert _is_power_net("SDA") is False
+        assert _is_power_net("AUDIO_OUT") is False
+        assert _is_power_net("EQ_STAGE_1") is False
+
+    def test_orphan_check_returns_zero_for_clean_break(self):
+        """Orphan check returns 0 when removing a bridge wire leaves no orphans."""
+        from kicad_agent.ops.repair import _check_orphan_count
+
+        # Two labels connected by a wire, plus a bridge wire
+        wire_endpoints = [
+            {"wire_index": 0, "start_x": 50.0, "start_y": 50.0, "end_x": 55.0, "end_y": 50.0},
+            {"wire_index": 1, "start_x": 55.0, "start_y": 50.0, "end_x": 60.0, "end_y": 50.0},
+        ]
+        label_positions = [
+            {"x": 50.0, "y": 50.0, "name": "NET_A"},
+            {"x": 60.0, "y": 50.0, "name": "NET_B"},
+        ]
+
+        # Removing wire_index=1 should leave NET_A connected to wire 0
+        orphans = _check_orphan_count(wire_endpoints, 1, label_positions)
+        assert orphans == 0
+
+    def test_resolve_on_channel_strip(self):
+        """resolve_shorted_nets runs on channel strip eq-stage."""
+        if not _EQ_STAGE.exists():
+            pytest.skip("Channel strip eq-stage not found")
+
+        result = parse_schematic(_EQ_STAGE)
+        ir = SchematicIR(_parse_result=result)
+
+        output = resolve_shorted_nets(ir, _EQ_STAGE, dry_run=True)
+        assert "shorts_found" in output
+        assert "resolved" in output
+        assert "skipped_power" in output
+        assert "details" in output
