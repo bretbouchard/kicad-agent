@@ -35,7 +35,7 @@ from kicad_agent.handler import format_result, handle_operation, validate_operat
 from kicad_agent.logging_config import configure_logging
 from kicad_agent.ops.schema import get_operation_schema
 
-_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic"}
+_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "demo"}
 
 
 def _build_operation_parser() -> argparse.ArgumentParser:
@@ -607,6 +607,59 @@ def _handle_review_schematic(argv: list[str]) -> None:
     sys.exit(exit_code)
 
 
+def _handle_demo(argv: list[str]) -> None:
+    """Handle the 'demo' subcommand -- one-command schematic demo."""
+    import argparse
+    from pathlib import Path as _Path
+
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent demo",
+        description="Generate, validate, and render a schematic in one command.",
+    )
+    parser.add_argument(
+        "--template", "-t",
+        default="random",
+        help="Template name (default: random). Use --list to see available.",
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        dest="list_templates",
+        help="List available templates and exit.",
+    )
+    parser.add_argument(
+        "--output-dir", "-o",
+        type=_Path,
+        default=_Path("demo-output"),
+        help="Output directory (default: demo-output).",
+    )
+
+    args = parser.parse_args(argv)
+
+    from kicad_agent.demo.pipeline import DemoPipeline
+    from kicad_agent.demo.templates import list_templates as _list_templates
+
+    if args.list_templates:
+        templates = _list_templates()
+        print("Available templates:\n")
+        tier_labels = {"basic": "Basic", "intermediate": "Intermediate", "advanced": "Advanced"}
+        for name, desc, difficulty in templates:
+            print(f"  {tier_labels[difficulty]:14s} {name:25s} {desc}")
+        print(f"\nUse: kicad-agent demo --template <name>")
+        sys.exit(0)
+
+    pipeline = DemoPipeline(output_dir=args.output_dir)
+    report = pipeline.run(args.template)
+
+    print(report.model_dump_json(indent=2))
+
+    if report.success:
+        sys.exit(0)
+    else:
+        print(f"\nDemo failed: {', '.join(report.errors)}", file=sys.stderr)
+        sys.exit(1)
+
+
 def main(argv: list[str] | None = None) -> None:
     """Entry point for the kicad-agent CLI."""
     if argv is None:
@@ -640,6 +693,8 @@ def main(argv: list[str] | None = None) -> None:
             _handle_design_rules(subcmd_argv)
         elif subcmd == "review-schematic":
             _handle_review_schematic(subcmd_argv)
+        elif subcmd == "demo":
+            _handle_demo(subcmd_argv)
         return
 
     # Legacy operation mode
