@@ -22,9 +22,9 @@ from __future__ import annotations
 
 import logging
 from collections import deque
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import asdict, dataclass, field
 
+from kicad_agent.analysis.net_classifier import NetClassifier
 from kicad_agent.analysis.types import NetClassification, PinRole
 from kicad_agent.schematic_routing.schematic_graph import (
     SchematicGraph,
@@ -249,8 +249,11 @@ class TopologyBuilder:
         # 1.5 Resolve pin nets (needed by edge building and path tracing)
         pin_nets = self._resolve_pin_nets(graph)
 
+        # 1.6 Shared classifier for edge building and stats
+        classifier = NetClassifier()
+
         # 2. Build edges with net resolution and direction
-        edges = self._build_edges(graph, nodes_by_ref, pin_nets)
+        edges = self._build_edges(graph, nodes_by_ref, pin_nets, classifier)
 
         # 3. Classify nets
         net_names = {e.net_name for e in edges}
@@ -285,9 +288,7 @@ class TopologyBuilder:
         signal_paths = self._trace_signal_paths(edges, list(input_nets), list(output_nets), pin_nets)
 
         # 7. Compute stats
-        from dataclasses import asdict
-
-        net_stats = self._compute_net_stats(edges, list(input_nets), nodes_by_ref)
+        net_stats = self._compute_net_stats(edges, list(input_nets), nodes_by_ref, classifier)
         stats = {
             "component_count": len(nodes),
             "net_count": len(net_names),
@@ -318,6 +319,7 @@ class TopologyBuilder:
         edges: list[TopologyEdge],
         input_nets: list[str],
         nodes: dict[str, TopologyNode],
+        classifier: NetClassifier,
     ) -> dict[str, NetStats]:
         """Compute per-net statistics.
 
@@ -330,10 +332,7 @@ class TopologyBuilder:
            d. longest_path_from_input = BFS depth from input nets
            e. component_count = unique refs on this net
         """
-        from dataclasses import asdict
-        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
-
-        classifier = NetClassifier()
+        from kicad_agent.analysis.net_classifier import SignalIntegrity
 
         # Group edges by net name
         net_edges: dict[str, list[TopologyEdge]] = {}
@@ -633,10 +632,8 @@ class TopologyBuilder:
 
         return pin_nets
 
-    def _build_edges(self, graph: SchematicGraph, nodes: dict[str, TopologyNode], pin_nets: dict[tuple[str, str], str]) -> list[TopologyEdge]:
+    def _build_edges(self, graph: SchematicGraph, nodes: dict[str, TopologyNode], pin_nets: dict[tuple[str, str], str], classifier: NetClassifier) -> list[TopologyEdge]:
         """Build directed TopologyEdge for each signal-carrying net."""
-        from kicad_agent.analysis.net_classifier import NetClassifier
-
         # Group pins by net
         net_pins: dict[str, list[tuple[str, str, PinRole]]] = {}
         for pin in graph.pins:
@@ -650,7 +647,6 @@ class TopologyBuilder:
             role = self._classify_pin_role(pin.ref, pin, node.lib_id)
             net_pins.setdefault(net_name, []).append((pin.ref, pin.pin_number, role))
 
-        classifier = NetClassifier()
         edges = []
 
         for net_name, members in net_pins.items():
@@ -831,14 +827,6 @@ class TopologyBuilder:
 
             # Backward edge: source is deeper than target
             if src_depth > tgt_depth:
-                feedback_nets.add(edge.net_name)
-
-        # Also detect local feedback: output -> same IC inverting input
-        for edge in edges:
-            if edge.classification == NetClassification.POWER:
-                continue
-            if edge.source_ref == edge.target_ref:
-                # Same component -- local feedback
                 feedback_nets.add(edge.net_name)
 
         return feedback_nets
