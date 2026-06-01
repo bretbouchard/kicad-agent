@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: benchmark-suite
 status: executing
-stopped_at: "Phase 47 complete. Intent inference + design review. 42 tests. Council approved."
-last_updated: "2026-06-01T07:00:00Z"
+stopped_at: "Phase 48 plan 01 complete. Design rule engine with 8 built-in rules. 36 tests."
+last_updated: "2026-06-01T07:10:00Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 48
   completed_phases: 45
   total_plans: 122
-  completed_plans: 125
+  completed_plans: 126
   percent: 98
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 45 (Circuit Topology Graph) -- Domain Intelligence dimension
+**Current focus:** Phase 48 (Design Rule Intelligence) -- Domain Intelligence dimension
 Last activity: 2026-06-01
 
 ## Current Position
 
-Phase: 47 (Circuit Intent Inference) COMPLETE
-Status: **Phase 47 complete. Intent inference + design review. 42 tests. Council approved.**
-Plans: 47-01 (complete), 47-02 (complete)
+Phase: 48 (Design Rule Intelligence) IN PROGRESS
+Status: **Plan 48-01 complete. Design rule engine with 8 built-in rules. 36 tests.**
+Plans: 48-01 (complete), 48-02 (pending)
 Last activity: 2026-06-01
 
 ### Phase 47: Circuit Intent Inference
@@ -140,13 +140,17 @@ Recent decisions affecting current work:
 - [v2.5-47]: Quadratic weighted mean for overall confidence (squares dominate higher-confidence subcircuits)
 - [v2.5-47]: Net connectivity ordering for multi-buffer signal flow (not positional heuristic)
 - [v2.5-47]: Backward-compatible match_fn dispatch (3-arg with TypeError fallback for 2-arg custom rules)
+- [v2.5-48]: Design rules use topology edges exclusively (not pin_nets) for net connectivity -- TopologyNode lacks pin_nets
+- [v2.5-48]: Feedback comp cap detection uses any feedback net overlap (single-net feedback common in topology graph)
+- [v2.5-48]: THERMAL_01 emits INFO severity since topology lacks thermal pad data
+- [v2.5-48]: Test file named test_design_rule_engine.py to avoid collision with existing test_design_rules.py (DRU parsing)
 - [v2.4-SI]: ClassifyViolationsOp in _schema_erc_smart.py (separate from _schema_repair.py per D-01)
 - [v2.4-SI]: IR position data (pin/wire/label positions) distinguishes #PWR symbols from regular components
 
 ### Pending Todos
 
-- Phase 47 complete (2/2 plans done)
-- Continue to Phase 48 per ROADMAP.md
+- Plan 48-01 complete
+- Continue to Plan 48-02 per ROADMAP.md
 
 ### Blockers/Concerns
 
@@ -158,5 +162,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 47 complete. Intent inference + design review. 42 tests. Council approved.
-Resume with: Phase 48 (Design Rule Intelligence) per ROADMAP.md.
+Stopped at: Phase 48 plan 01 complete. Design rule engine with 8 built-in rules. 36 tests.
+Resume with: Plan 48-02 (CLI/MCP integration) per ROADMAP.md.
