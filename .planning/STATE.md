@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: benchmark-suite
 status: executing
-stopped_at: "Phases 41-44 complete. PCB MMLU + Circuit QA + Regression + Adversarial. Council approved."
-last_updated: "2026-05-31T12:00:00Z"
-last_activity: 2026-05-31
+stopped_at: "Plan 45-01 complete. TopologyBuilder with signal flow inference. 87 tests."
+last_updated: "2026-06-01T03:46:00Z"
+last_activity: 2026-06-01
 progress:
-  total_phases: 44
+  total_phases: 48
   completed_phases: 44
-  total_plans: 121
-  completed_plans: 117
+  total_plans: 122
+  completed_plans: 118
   percent: 97
 ---
 
@@ -21,23 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-29)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** v2.5 Benchmark Suite shipped. Next: Phases 45-48 (Domain Intelligence)
-Last activity: 2026-05-31
+**Current focus:** Phase 45 (Circuit Topology Graph) -- Domain Intelligence dimension
+Last activity: 2026-06-01
 
 ## Current Position
 
-Phase: 41-44 COMPLETE (v2.5 Benchmark Suite)
-Status: **All 4 phases complete. PCB MMLU + Circuit QA + Regression + Adversarial. Council approved.**
-Plans: 41-01/02, 42-01, 43-01, 44-01 (5 plans, all complete)
-Last activity: 2026-05-31
+Phase: 45 (Circuit Topology Graph) IN PROGRESS
+Status: **Plan 45-01 complete. TopologyBuilder with signal flow inference. 87 tests.**
+Plans: 45-01 (complete), 45-02 (pending)
+Last activity: 2026-06-01
 
-### v2.5 Benchmark Suite (Phases 41-44)
+### Phase 45: Circuit Topology Graph
 
-- Phase 41: PCB MMLU Benchmark (2 plans) — 500+ questions, 8 categories, runner + baselines
-- Phase 42: Circuit QA Dataset (1 plan) — 2000+ QA pairs, 6 types, train/test split
-- Phase 43: Regression Detection (1 plan) — CI workflow, 2% threshold, baseline tracking
-- Phase 44: Adversarial Testing (1 plan) — 750+ tests, mutation + property + fuzz
-- Council Gate 2: CONDITIONAL APPROVE (2 non-blocking LOW findings on file length)
+- Plan 45-01: CircuitTopology schema, TopologyBuilder, NetClassifier (COMPLETE)
+  - Union-Find net resolution, IC pin role classification, feedback detection, signal path tracing
+  - 87 TDD tests covering all classification and flow rules
 
 ## Previous Milestone (v2.4 Schematic Intelligence)
 
@@ -104,13 +102,17 @@ Recent decisions affecting current work:
 - [v2.4-SI]: Power convention detection uses pin_name only, not lib_id -- SchematicGraph filters power symbols
 - [v2.4-SI]: Passive components identified by lib_id containing Device:R, Device:C, Device:L
 - [v2.4-SI]: Violation classification uses _CLASSIFICATION_RULES ordered list (match_fn, category, root_cause, confidence) -- first match wins
+- [v2.5-45]: Shared types.py for NetClassification/PinRole enums prevents circular imports between topology_graph and net_classifier
+- [v2.5-45]: Union-Find with path compression for net resolution -- BFS wire tracing failed on multi-hop pin chains without labels
+- [v2.5-45]: Ordered list (not dict) for _LIBID_TYPE_MAP to handle prefix ordering (LED before L, Crystal before C)
+- [v2.5-45]: Feedback edges reclassified from any non-POWER classification, not just SIGNAL
 - [v2.4-SI]: ClassifyViolationsOp in _schema_erc_smart.py (separate from _schema_repair.py per D-01)
 - [v2.4-SI]: IR position data (pin/wire/label positions) distinguishes #PWR symbols from regular components
 
 ### Pending Todos
 
-- Phases 41-44 complete -- PCB MMLU + Circuit QA + Regression + Adversarial (148 benchmark tests)
-- Next: Phase 45 (Circuit Topology Graph) or next strategic priority
+- Plan 45-01 complete -- TopologyBuilder with signal flow inference (87 tests)
+- Next: Plan 45-02 (SchematicIR-based topology) or continue Phase 45
 
 ### Blockers/Concerns
 
@@ -122,5 +124,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phases 41-44 complete. v2.5 Benchmark Suite shipped. Council approved.
-Resume with: Phase 45 (Circuit Topology Graph) or next strategic priority
+Stopped at: Plan 45-01 complete. TopologyBuilder with signal flow inference. 87 tests.
+Resume with: Plan 45-02 (SchematicIR-based topology) or continue Phase 45
