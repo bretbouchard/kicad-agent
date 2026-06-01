@@ -146,7 +146,7 @@ class SchematicReviewer:
         rule_report = engine.run(topology)
 
         # Compute SRS score
-        scorer = SchematicReadabilityScorer(self._extractor, self._topology)
+        scorer = SchematicReadabilityScorer(self._extractor, topology)
         readability = scorer.score()
 
         # Optional vision review
@@ -259,7 +259,11 @@ class SchematicReviewer:
             ]
 
             response = client.create_message(messages=messages)
-            review_text = response.get("content", [{}])[0].get("text", "")
+            # Anthropic SDK returns Message object with .content list of ContentBlocks
+            if response.content:
+                review_text = response.content[0].text
+            else:
+                review_text = ""
 
             return self._parse_vision_findings(review_text)
         except Exception as e:
