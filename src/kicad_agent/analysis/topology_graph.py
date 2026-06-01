@@ -576,11 +576,28 @@ class TopologyBuilder:
             s, e = rp(wire.start), rp(wire.end)
             union(s, e)
 
+        # Build spatial grid index for O(1) proximity lookups
+        # Grid cell size = 2x tolerance so any position within tolerance
+        # is guaranteed to be in the same cell or an adjacent cell.
+        _grid_cell = _POSITION_TOLERANCE * 2
+        grid: dict[tuple[int, int], list[tuple[float, float]]] = {}
+        for pos in parent:
+            cell = (int(pos[0] // _grid_cell), int(pos[1] // _grid_cell))
+            grid.setdefault(cell, []).append(pos)
+
+        def _nearby_positions(pos: tuple[float, float]) -> list[tuple[float, float]]:
+            """Return positions in the same grid cell and 8 adjacent cells."""
+            cx, cy = int(pos[0] // _grid_cell), int(pos[1] // _grid_cell)
+            result: list[tuple[float, float]] = []
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    result.extend(grid.get((cx + dx, cy + dy), []))
+            return result
+
         # Union pins at wire endpoints (pin position == wire endpoint)
         for pin in graph.pins:
             pos = rp(pin.position)
-            # Check all nearby positions (within tolerance)
-            for other_pos in list(parent.keys()):
+            for other_pos in _nearby_positions(pos):
                 if other_pos == pos:
                     continue
                 dist = ((pos[0] - other_pos[0]) ** 2 + (pos[1] - other_pos[1]) ** 2) ** 0.5
@@ -590,7 +607,7 @@ class TopologyBuilder:
         # Union labels at pin positions or wire endpoints (proximity)
         for label in graph.labels:
             lpos = rp(label.position)
-            for other_pos in list(parent.keys()):
+            for other_pos in _nearby_positions(lpos):
                 dist = ((lpos[0] - other_pos[0]) ** 2 + (lpos[1] - other_pos[1]) ** 2) ** 0.5
                 if dist <= _POSITION_TOLERANCE:
                     union(lpos, other_pos)
