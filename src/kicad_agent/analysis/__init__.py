@@ -6,6 +6,7 @@ from kicad_agent.analysis.topology_graph import TopologyBuilder, CircuitTopology
 from kicad_agent.analysis.types import NetClassification, PinRole
 from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector, Subcircuit, SubcircuitType
 from kicad_agent.analysis.circuit_classifier import CircuitClassifier, ClassificationResult
+from kicad_agent.analysis.feature_extraction import SubcircuitFeatures, extract_features
 
 __all__ = [
     "NetGraph",
@@ -24,4 +25,6 @@ __all__ = [
     "SubcircuitType",
     "CircuitClassifier",
     "ClassificationResult",
+    "SubcircuitFeatures",
+    "extract_features",
 ]
