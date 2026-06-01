@@ -322,6 +322,7 @@ class TestDfmChecker:
         assert len(report.findings) == 1
         assert report.findings[0].severity == DfmSeverity.WARNING
         assert "CRASH_CHECK" in report.findings[0].description
+        assert report.findings[0].check_id == "DFM_CHECKER_01"
         assert report.checks_failed == 1
 
     def test_check_names_property(self):
@@ -376,6 +377,7 @@ class TestBuiltinDfmChecks:
         x=0, y=0,
         entity_type="via_drill", entity_id="v1",
         layer="", net="",
+        drill_diameter=None,
     ):
         pt = MagicMock()
         pt.x = x
@@ -384,6 +386,8 @@ class TestBuiltinDfmChecks:
         pt.entity_id = entity_id
         pt.layer = layer
         pt.net = net
+        # Explicitly set drill_diameter to avoid MagicMock auto-attribute
+        pt.drill_diameter = drill_diameter
         from shapely.geometry import Point
         pt.to_shapely.return_value = Point(x, y)
         return pt
@@ -436,6 +440,7 @@ class TestBuiltinDfmChecks:
         )
         drill = self._make_point(
             x=0, y=0, entity_type="drill", entity_id="p1_drill",
+            drill_diameter=0.4,
         )
         model = _MockSpatialModel(primitives=[pad, drill])
         profile = get_builtin_profiles()["jlcpcb"]
@@ -455,6 +460,7 @@ class TestBuiltinDfmChecks:
         )
         drill = self._make_point(
             x=0, y=0, entity_type="drill", entity_id="p2_drill",
+            drill_diameter=0.4,
         )
         model = _MockSpatialModel(primitives=[pad, drill])
         profile = get_builtin_profiles()["jlcpcb"]
@@ -662,12 +668,14 @@ class TestBuiltinDfmChecks:
         from kicad_agent.dfm.checks import AnnularRingCheck
 
         # Pad with annular ring of 0.12mm: passes JLCPCB (0.1mm) but might differ with generic (0.15mm)
+        # pad diameter = 0.64mm, drill = 0.4mm -> annular ring = (0.64 - 0.4) / 2 = 0.12mm
         pad = self._make_box(
             x1=-0.32, y1=-0.32, x2=0.32, y2=0.32,
             entity_type="pad", entity_id="p_xr", reference="X1",
         )
         drill = self._make_point(
             x=0, y=0, entity_type="drill", entity_id="p_xr_drill",
+            drill_diameter=0.4,
         )
         model = _MockSpatialModel(primitives=[pad, drill])
 
@@ -756,13 +764,15 @@ class TestBuiltinDfmChecksIntegration:
             x1=-1, y1=-1, x2=1, y2=1,
             entity_type="pad", entity_id="p_ok", reference="U10",
         )
+        # Pad drill: 2mm pad - 0.6mm drill = 0.7mm annular ring >> generic 0.15mm min
         drill = TestBuiltinDfmChecks._make_point(
             x=0, y=0, entity_type="drill", entity_id="p_ok_drill",
+            drill_diameter=0.6,
         )
         large_via = TestBuiltinDfmChecks._make_point(
             x=10, y=10, entity_type="via_drill", entity_id="v_ok",
+            drill_diameter=0.8,  # Well above generic 0.4mm
         )
-        large_via.drill_diameter = 0.8  # Well above generic 0.4mm
 
         model = _MockSpatialModel(primitives=[wide_trace, large_pad, drill, large_via])
         report = checker.run(model, profile)
