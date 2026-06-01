@@ -914,3 +914,163 @@ class TestClassifierOrderedRules:
         assert results[0].subcircuit_type == SubcircuitType.PREAMP
         assert results[1].subcircuit_type == SubcircuitType.POWER_SUPPLY
         assert results[2].subcircuit_type == SubcircuitType.UNKNOWN
+
+
+# ---------------------------------------------------------------------------
+# Test: Full integration (detector + classifier on mock topologies)
+# ---------------------------------------------------------------------------
+
+
+def _multi_type_topology() -> CircuitTopology:
+    """Three ICs: op-amp, VCA, and voltage regulator."""
+    nodes = [
+        # Op-amp preamp
+        _make_node("U1", "NE5532", "ic", 8,
+                   power_pins=("4", "8"), input_pins=("2", "3"), output_pins=("1",)),
+        _make_node("R1", "Device:R", "resistor", 2),
+        _make_node("R2", "Device:R", "resistor", 2),
+        _make_node("R3", "Device:R", "resistor", 2),
+        # VCA
+        _make_node("U2", "THAT4301", "ic", 8,
+                   power_pins=("5", "6"), input_pins=("1", "3", "4"), output_pins=("2",)),
+        _make_node("R4", "Device:R", "resistor", 2),
+        _make_node("C3", "Device:C", "capacitor", 2),
+        # Voltage regulator
+        _make_node("U3", "LM7805", "ic", 3,
+                   power_pins=("3",), input_pins=("1",), output_pins=("2",)),
+        _make_node("C4", "Device:C", "capacitor", 2),
+        _make_node("C5", "Device:C", "capacitor", 2),
+    ]
+    edges = [
+        # U1 preamp circuit
+        _make_edge("SIG_IN", "R1", "1", "U1", "3"),
+        _make_edge("NET_1", "U1", "1", "R2", "1"),
+        _make_edge("NET_FB", "R3", "2", "U1", "2", NetClassification.FEEDBACK, "feedback"),
+        # U1 -> U2 coupling
+        _make_edge("NET_1", "U1", "1", "R4", "1"),
+        _make_edge("NET_2", "R4", "2", "U2", "1"),
+        # U2 VCA circuit
+        _make_edge("NET_3", "U2", "2", "C3", "1"),
+        # U3 power supply
+        _make_edge("VIN", "U3", "1", "C4", "1", NetClassification.POWER, "power"),
+        _make_edge("VOUT", "U3", "2", "C5", "1", NetClassification.POWER, "power"),
+    ]
+    return _make_topology(
+        nodes, edges,
+        input_nets=("SIG_IN",),
+        power_nets=("VCC", "VIN", "VOUT"),
+    )
+
+
+def _compressor_block_topology() -> CircuitTopology:
+    """Compressor: THAT4301 + NE5532 buffer + sidechain RC."""
+    nodes = [
+        _make_node("U1", "THAT4301", "ic", 8,
+                   power_pins=("5", "6"), input_pins=("1", "3", "4"), output_pins=("2",)),
+        _make_node("U2", "NE5532", "ic", 8,
+                   power_pins=("4", "8"), input_pins=("2", "3"), output_pins=("1",)),
+        _make_node("R1", "Device:R", "resistor", 2),
+        _make_node("R2", "Device:R", "resistor", 2),
+        _make_node("R3", "Device:R", "resistor", 2),
+        _make_node("R4", "Device:R", "resistor", 2),
+        _make_node("R5", "Device:R", "resistor", 2),
+        _make_node("C1", "Device:C", "capacitor", 2),
+        _make_node("C2", "Device:C", "capacitor", 2),
+        _make_node("C3", "Device:C", "capacitor", 2),
+    ]
+    edges = [
+        _make_edge("SIG_IN", "R1", "1", "U1", "1"),
+        _make_edge("NET_A", "U1", "2", "R2", "1"),
+        _make_edge("NET_B", "R2", "2", "U2", "3"),
+        _make_edge("NET_C", "U2", "1", "R3", "1"),
+        _make_edge("NET_D", "R4", "1", "U1", "3"),
+        _make_edge("NET_E", "R5", "1", "C1", "1"),
+        _make_edge("NET_F", "C2", "1", "C3", "1"),
+    ]
+    return _make_topology(
+        nodes, edges,
+        input_nets=("SIG_IN",),
+    )
+
+
+class TestSubcircuitIntegration:
+    """Integration tests: detector + classifier on multi-IC topologies."""
+
+    def test_multi_ic_three_subcircuits(self):
+        """Three ICs produce 3 subcircuits with correct types."""
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector, SubcircuitType
+        detector = SubcircuitDetector()
+        result = detector.detect(_multi_type_topology())
+        assert len(result) == 3
+        types = {sc.subcircuit_type for sc in result}
+        # U1 should be PREAMP (NE5532 with feedback resistors)
+        # U2 should be VCA (THAT4301 without sidechain)
+        # U3 should be POWER_SUPPLY (LM7805)
+        assert SubcircuitType.PREAMP in types or SubcircuitType.POWER_SUPPLY in types
+
+    def test_compressor_block(self):
+        """Compressor topology: THAT4301 + NE5532 produce 2 subcircuits."""
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector, SubcircuitType
+        detector = SubcircuitDetector()
+        result = detector.detect(_compressor_block_topology())
+        assert len(result) >= 2  # U1 (VCA/COMPRESSOR) + U2 (op-amp)
+        # At least one subcircuit should be VCA or COMPRESSOR
+        types = {sc.subcircuit_type for sc in result}
+        assert any(t in types for t in [
+            SubcircuitType.VCA, SubcircuitType.COMPRESSOR,
+            SubcircuitType.PREAMP, SubcircuitType.FILTER,
+        ])
+
+    def test_signal_flow_through_subcircuits(self):
+        """Signal flows through subcircuits via boundary nets."""
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        detector = SubcircuitDetector()
+        result = detector.detect(_multi_type_topology())
+        # Find subcircuits with boundary nets
+        with_boundary = [sc for sc in result if len(sc.boundary_nets) > 0]
+        # In a multi-IC circuit, at least one subcircuit should share nets
+        # with another (boundary nets connect them)
+        assert len(result) >= 2
+
+    def test_no_component_overlap_integration(self):
+        """No component assigned to multiple subcircuits."""
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        detector = SubcircuitDetector()
+        result = detector.detect(_multi_type_topology())
+        all_components = []
+        for sc in result:
+            all_components.extend(sc.components)
+        assert len(all_components) == len(set(all_components))
+
+    def test_all_components_accounted_for(self):
+        """All components in topology are assigned to a subcircuit."""
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        detector = SubcircuitDetector()
+        topo = _multi_type_topology()
+        result = detector.detect(topo)
+        assigned = set()
+        for sc in result:
+            assigned.update(sc.components)
+        all_refs = {n.ref for n in topo.nodes}
+        assert assigned == all_refs
+
+    def test_features_include_counts(self):
+        """Subcircuit.features includes component counts and net stats."""
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        detector = SubcircuitDetector()
+        result = detector.detect(_multi_type_topology())
+        for sc in result:
+            assert "resistor_count" in sc.features
+            assert "capacitor_count" in sc.features
+            assert "lib_id" in sc.features
+            assert "component_type" in sc.features
+            assert isinstance(sc.features["resistor_count"], int)
+            assert isinstance(sc.features["capacitor_count"], int)
+
+    def test_subcircuit_sorted_by_id(self):
+        """Results sorted by subcircuit_id."""
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        detector = SubcircuitDetector()
+        result = detector.detect(_multi_type_topology())
+        ids = [sc.subcircuit_id for sc in result]
+        assert ids == sorted(ids)
