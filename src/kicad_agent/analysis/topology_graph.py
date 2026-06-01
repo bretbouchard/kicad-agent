@@ -252,7 +252,7 @@ class TopologyBuilder:
         feedback_nets = self._detect_feedback(edges, nodes_by_ref)
         updated_edges = []
         for edge in edges:
-            if edge.net_name in feedback_nets and edge.classification == NetClassification.SIGNAL:
+            if edge.net_name in feedback_nets and edge.classification != NetClassification.POWER:
                 updated_edges.append(TopologyEdge(
                     net_name=edge.net_name,
                     source_ref=edge.source_ref,

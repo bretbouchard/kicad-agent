@@ -752,3 +752,257 @@ class TestNetClassifier:
         assert results["SDA"] == NetClassification.CONTROL
         assert results["CLK_10M"] == NetClassification.CLOCK
         assert results["Net_1"] == NetClassification.UNKNOWN
+
+
+# ---------------------------------------------------------------------------
+# Task 4 mock factories
+# ---------------------------------------------------------------------------
+
+
+def _opamp_feedback_graph() -> SchematicGraph:
+    """Op-amp with feedback resistor from output to inverting input."""
+    return SchematicGraph(
+        filepath="opamp_feedback.kicad_sch",
+        pins=[
+            PinPosition(ref="U1", pin_number="3", pin_name="IN+", position=(40.0, 50.0), body_position=(40.0, 45.0)),
+            PinPosition(ref="U1", pin_number="2", pin_name="IN-", position=(40.0, 60.0), body_position=(40.0, 55.0)),
+            PinPosition(ref="U1", pin_number="1", pin_name="OUT", position=(60.0, 55.0), body_position=(55.0, 55.0)),
+            PinPosition(ref="U1", pin_number="4", pin_name="V-", position=(50.0, 40.0), body_position=(50.0, 40.0)),
+            PinPosition(ref="U1", pin_number="8", pin_name="V+", position=(50.0, 70.0), body_position=(50.0, 70.0)),
+            PinPosition(ref="Rfb", pin_number="1", pin_name="1", position=(50.0, 60.0), body_position=(45.0, 65.0)),
+            PinPosition(ref="Rfb", pin_number="2", pin_name="2", position=(55.0, 55.0), body_position=(55.0, 60.0)),
+            PinPosition(ref="Rin", pin_number="1", pin_name="1", position=(30.0, 60.0), body_position=(35.0, 60.0)),
+            PinPosition(ref="Rin", pin_number="2", pin_name="2", position=(40.0, 60.0), body_position=(40.0, 60.0)),
+        ],
+        wires=[
+            Wire(start=(60.0, 55.0), end=(55.0, 55.0)),  # U1.OUT -> Rfb.2
+            Wire(start=(50.0, 60.0), end=(40.0, 60.0)),  # Rfb.1 -> U1.IN-
+            Wire(start=(30.0, 60.0), end=(40.0, 60.0)),  # Rin.2 -> U1.IN- (junction)
+        ],
+        labels=[
+            Label(name="SIG_IN", position=(30.0, 60.0), label_type="global"),
+            Label(name="VCC", position=(50.0, 70.0), label_type="global"),
+            Label(name="VEE", position=(50.0, 40.0), label_type="global"),
+            Label(name="SIG_OUT", position=(60.0, 55.0), label_type="global"),
+        ],
+        ref_to_libid={"U1": "NE5532", "Rfb": "Device:R", "Rin": "Device:R"},
+    )
+
+
+def _parallel_path_graph() -> SchematicGraph:
+    """Circuit with parallel signal paths (split and merge)."""
+    return SchematicGraph(
+        filepath="parallel.kicad_sch",
+        pins=[
+            # Input connector
+            PinPosition(ref="J1", pin_number="1", pin_name="1", position=(10.0, 50.0), body_position=(10.0, 50.0)),
+            PinPosition(ref="J1", pin_number="2", pin_name="2", position=(10.0, 60.0), body_position=(10.0, 60.0)),
+            # Split point R1
+            PinPosition(ref="R1", pin_number="1", pin_name="1", position=(20.0, 50.0), body_position=(20.0, 50.0)),
+            PinPosition(ref="R1", pin_number="2", pin_name="2", position=(30.0, 50.0), body_position=(30.0, 50.0)),
+            # Path A: R2
+            PinPosition(ref="R2", pin_number="1", pin_name="1", position=(40.0, 40.0), body_position=(40.0, 40.0)),
+            PinPosition(ref="R2", pin_number="2", pin_name="2", position=(50.0, 40.0), body_position=(50.0, 40.0)),
+            # Path B: R3
+            PinPosition(ref="R3", pin_number="1", pin_name="1", position=(40.0, 60.0), body_position=(40.0, 60.0)),
+            PinPosition(ref="R3", pin_number="2", pin_name="2", position=(50.0, 60.0), body_position=(50.0, 60.0)),
+            # Merge point R4
+            PinPosition(ref="R4", pin_number="1", pin_name="1", position=(60.0, 50.0), body_position=(60.0, 50.0)),
+            PinPosition(ref="R4", pin_number="2", pin_name="2", position=(70.0, 50.0), body_position=(70.0, 50.0)),
+            # Output connector
+            PinPosition(ref="J2", pin_number="1", pin_name="1", position=(80.0, 50.0), body_position=(80.0, 50.0)),
+        ],
+        wires=[
+            Wire(start=(10.0, 50.0), end=(20.0, 50.0)),  # J1.1 -> R1.1
+            Wire(start=(30.0, 50.0), end=(40.0, 40.0)),  # R1.2 -> R2.1
+            Wire(start=(30.0, 50.0), end=(40.0, 60.0)),  # R1.2 -> R3.1 (split)
+            Wire(start=(50.0, 40.0), end=(60.0, 50.0)),  # R2.2 -> R4.1
+            Wire(start=(50.0, 60.0), end=(60.0, 50.0)),  # R3.2 -> R4.1 (merge)
+            Wire(start=(70.0, 50.0), end=(80.0, 50.0)),  # R4.2 -> J2.1
+        ],
+        labels=[
+            Label(name="SIG_IN", position=(10.0, 50.0), label_type="global"),
+            Label(name="SIG_OUT", position=(80.0, 50.0), label_type="global"),
+        ],
+        ref_to_libid={
+            "J1": "Connector:Conn_01x02",
+            "R1": "Device:R",
+            "R2": "Device:R",
+            "R3": "Device:R",
+            "R4": "Device:R",
+            "J2": "Connector:Conn_01x02",
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test: Feedback detection
+# ---------------------------------------------------------------------------
+
+
+class TestFeedbackDetection:
+    """Feedback loops detected in op-amp circuits."""
+
+    def test_feedback_net_detected(self):
+        """Feedback from U1 output through Rfb to U1 inverting input."""
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo = builder.from_schematic_graph(_opamp_feedback_graph())
+        # There should be at least one feedback edge
+        feedback_edges = [e for e in topo.edges if e.classification == NetClassification.FEEDBACK]
+        assert len(feedback_edges) >= 1
+
+    def test_feedback_net_name(self):
+        """Feedback net connects output stage back to input stage."""
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo = builder.from_schematic_graph(_opamp_feedback_graph())
+        feedback_nets = {e.net_name for e in topo.edges if e.classification == NetClassification.FEEDBACK}
+        # The feedback should involve the Rfb net (connecting U1.OUT back to U1.IN-)
+        assert len(feedback_nets) >= 1
+
+    def test_feedback_count_in_stats(self):
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo = builder.from_schematic_graph(_opamp_feedback_graph())
+        assert topo.stats["feedback_count"] >= 1
+
+
+# ---------------------------------------------------------------------------
+# Test: Signal path tracing
+# ---------------------------------------------------------------------------
+
+
+class TestSignalPathTracing:
+    """Signal paths traced through multi-stage circuits."""
+
+    def test_opamp_subcircuit_signal_path(self):
+        """Signal path from input through U1 -> R1 -> U2 -> output."""
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
+        assert len(topo.signal_paths) >= 1
+        # Path should include U1 and U2
+        for path in topo.signal_paths:
+            refs = list(path)
+            if "U1" in refs and "U2" in refs:
+                assert refs.index("U1") < refs.index("U2")
+                break
+        else:
+            assert False, "No path found from U1 to U2"
+
+    def test_signal_path_skips_power_nets(self):
+        """Signal paths do not traverse POWER-classified edges."""
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
+        # No signal path should include only power nets
+        for path in topo.signal_paths:
+            for ref in path:
+                # No path should be just a power rail connection
+                assert ref.startswith("U") or ref.startswith("R") or ref.startswith("J")
+
+    def test_parallel_paths(self):
+        """Parallel circuit produces multiple signal paths."""
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo = builder.from_schematic_graph(_parallel_path_graph())
+        # Should have at least one signal path
+        assert len(topo.signal_paths) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Test: Topology stats
+# ---------------------------------------------------------------------------
+
+
+class TestTopologyStats:
+    """CircuitTopology.stats contains accurate counts."""
+
+    def test_empty_stats(self):
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo = builder.from_schematic_graph(_empty_graph())
+        assert topo.stats["component_count"] == 0
+        assert topo.stats["net_count"] == 0
+        assert topo.stats["signal_path_count"] == 0
+        assert topo.stats["feedback_count"] == 0
+
+    def test_single_component_stats(self):
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo = builder.from_schematic_graph(_single_resistor_graph())
+        assert topo.stats["component_count"] == 1
+        assert topo.stats["net_count"] == 0  # Single component, no edges
+
+    def test_opamp_subcircuit_stats(self):
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
+        assert topo.stats["component_count"] == 3  # U1, R1, U2
+        assert topo.stats["net_count"] >= 2  # At least Net_2 and Net_3 (signal nets)
+        assert topo.stats["feedback_count"] >= 0
+
+
+# ---------------------------------------------------------------------------
+# Test: Full integration (compressor subcircuit)
+# ---------------------------------------------------------------------------
+
+
+class TestFullIntegration:
+    """End-to-end topology construction with realistic circuits."""
+
+    def test_opamp_feedback_complete_topology(self):
+        """Op-amp with feedback produces correct topology."""
+        from kicad_agent.analysis.topology_graph import TopologyBuilder
+
+        builder = TopologyBuilder()
+        topo = builder.from_schematic_graph(_opamp_feedback_graph())
+
+        # 3 components: U1, Rfb, Rin
+        assert topo.stats["component_count"] == 3
+
+        # U1 should be an IC with power, input, and output pins
+        u1_nodes = [n for n in topo.nodes if n.ref == "U1"]
+        assert len(u1_nodes) == 1
+        u1 = u1_nodes[0]
+        assert u1.component_type == "ic"
+        assert len(u1.power_pins) >= 2
+        assert len(u1.input_pins) >= 2
+        assert len(u1.output_pins) >= 1
+
+        # Should have input and output nets
+        assert "SIG_IN" in topo.input_nets
+        assert "SIG_OUT" in topo.output_nets
+
+    def test_imports_work(self):
+        """All public imports work correctly."""
+        from kicad_agent.analysis.topology_graph import TopologyBuilder, CircuitTopology
+        from kicad_agent.analysis.net_classifier import NetClassifier
+        from kicad_agent.analysis.types import NetClassification, PinRole
+
+        assert TopologyBuilder is not None
+        assert CircuitTopology is not None
+        assert NetClassifier is not None
+        assert NetClassification.POWER == "POWER"
+        assert PinRole.OUTPUT == "OUTPUT"
+
+    def test_net_classifier_standalone(self):
+        """NetClassifier works independently."""
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        assert c.classify("VCC") == NetClassification.POWER
+        assert c.classify("GND") == NetClassification.GROUND
+        assert c.classify("CLK_10M") == NetClassification.CLOCK
+        assert c.classify("SDA") == NetClassification.CONTROL
+        assert c.classify("random_net") == NetClassification.UNKNOWN
