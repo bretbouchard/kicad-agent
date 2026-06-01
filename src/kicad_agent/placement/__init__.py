@@ -55,6 +55,11 @@ from kicad_agent.placement.signal_flow import (
     SignalFlowGrouper,
     SignalFlowZone,
 )
+from kicad_agent.placement.thermal import (
+    ThermalProfile,
+    apply_thermal_constraints,
+    compute_thermal_separation,
+)
 from kicad_agent.placement.validation import (
     PlacementValidator,
     PlacementViolation,
@@ -74,6 +79,10 @@ __all__ = [
     "SignalFlowGrouper",
     "SignalFlowGroup",
     "SignalFlowZone",
+    # Thermal-aware placement
+    "ThermalProfile",
+    "compute_thermal_separation",
+    "apply_thermal_constraints",
     # Footprint geometry
     "ComponentGeometry",
     "extract_footprint_geometry",
