@@ -1006,3 +1006,177 @@ class TestFullIntegration:
         assert c.classify("CLK_10M") == NetClassification.CLOCK
         assert c.classify("SDA") == NetClassification.CONTROL
         assert c.classify("random_net") == NetClassification.UNKNOWN
+
+
+# ---------------------------------------------------------------------------
+# Test: SignalIntegrity enum values
+# ---------------------------------------------------------------------------
+
+
+class TestSignalIntegrity:
+    """SignalIntegrity enum classifies nets for signal integrity analysis."""
+
+    def test_high_speed_exists(self):
+        from kicad_agent.analysis.net_classifier import SignalIntegrity
+
+        assert SignalIntegrity.HIGH_SPEED == "HIGH_SPEED"
+
+    def test_low_frequency_exists(self):
+        from kicad_agent.analysis.net_classifier import SignalIntegrity
+
+        assert SignalIntegrity.LOW_FREQUENCY == "LOW_FREQUENCY"
+
+    def test_dc_exists(self):
+        from kicad_agent.analysis.net_classifier import SignalIntegrity
+
+        assert SignalIntegrity.DC == "DC"
+
+    def test_power_integrity_exists(self):
+        from kicad_agent.analysis.net_classifier import SignalIntegrity
+
+        assert SignalIntegrity.POWER_INTEGRITY == "POWER_INTEGRITY"
+
+    def test_unknown_exists(self):
+        from kicad_agent.analysis.net_classifier import SignalIntegrity
+
+        assert SignalIntegrity.UNKNOWN == "UNKNOWN"
+
+    def test_clock_net_is_high_speed(self):
+        """Clock nets (CLK, MCLK, SCK) classified as HIGH_SPEED."""
+        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+
+        c = NetClassifier()
+        assert c.classify_signal_integrity("CLK_10M") == SignalIntegrity.HIGH_SPEED
+        assert c.classify_signal_integrity("MCLK") == SignalIntegrity.HIGH_SPEED
+        assert c.classify_signal_integrity("SCK") == SignalIntegrity.HIGH_SPEED
+
+    def test_spi_i2c_nets_are_high_speed(self):
+        """SPI/I2C nets (SDA, SCL, MOSI, MISO) classified as HIGH_SPEED."""
+        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+
+        c = NetClassifier()
+        assert c.classify_signal_integrity("SDA") == SignalIntegrity.HIGH_SPEED
+        assert c.classify_signal_integrity("SCL") == SignalIntegrity.HIGH_SPEED
+        assert c.classify_signal_integrity("MOSI") == SignalIntegrity.HIGH_SPEED
+        assert c.classify_signal_integrity("MISO") == SignalIntegrity.HIGH_SPEED
+
+    def test_audio_nets_are_low_frequency(self):
+        """Audio/analog signal nets classified as LOW_FREQUENCY."""
+        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+
+        c = NetClassifier()
+        assert c.classify_signal_integrity("AUDIO_IN") == SignalIntegrity.LOW_FREQUENCY
+        assert c.classify_signal_integrity("SIG_OUT") == SignalIntegrity.LOW_FREQUENCY
+
+    def test_power_rails_are_power_integrity(self):
+        """Power rails classified as POWER_INTEGRITY."""
+        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+
+        c = NetClassifier()
+        assert c.classify_signal_integrity("VCC") == SignalIntegrity.POWER_INTEGRITY
+        assert c.classify_signal_integrity("+12V") == SignalIntegrity.POWER_INTEGRITY
+
+    def test_ground_nets_are_power_integrity(self):
+        """Ground nets classified as POWER_INTEGRITY."""
+        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+
+        c = NetClassifier()
+        assert c.classify_signal_integrity("GND") == SignalIntegrity.POWER_INTEGRITY
+        assert c.classify_signal_integrity("AGND") == SignalIntegrity.POWER_INTEGRITY
+
+    def test_dc_bias_is_dc(self):
+        """DC bias/reference nets classified as DC."""
+        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+
+        c = NetClassifier()
+        assert c.classify_signal_integrity("VREF") == SignalIntegrity.DC
+        assert c.classify_signal_integrity("BIAS_1") == SignalIntegrity.DC
+
+    def test_unknown_net_is_unknown(self):
+        """Unrecognized nets classified as UNKNOWN."""
+        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+
+        c = NetClassifier()
+        assert c.classify_signal_integrity("random_net") == SignalIntegrity.UNKNOWN
+
+    def test_topology_context_for_ambiguous_nets(self):
+        """classify_signal_integrity uses topology context for ambiguous nets."""
+        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+
+        c = NetClassifier()
+        # Net with all power pins should be POWER_INTEGRITY even with ambiguous name
+        pin_roles = {("U1", "8"): PinRole.POWER, ("U2", "8"): PinRole.POWER}
+        result = c.classify_signal_integrity("some_net", pin_roles)
+        assert result == SignalIntegrity.POWER_INTEGRITY
+
+
+# ---------------------------------------------------------------------------
+# Test: NetImportance enum values
+# ---------------------------------------------------------------------------
+
+
+class TestNetImportance:
+    """NetImportance enum ranks net importance for analysis prioritization."""
+
+    def test_critical_exists(self):
+        from kicad_agent.analysis.net_classifier import NetImportance
+
+        assert NetImportance.CRITICAL == "CRITICAL"
+
+    def test_high_exists(self):
+        from kicad_agent.analysis.net_classifier import NetImportance
+
+        assert NetImportance.HIGH == "HIGH"
+
+    def test_medium_exists(self):
+        from kicad_agent.analysis.net_classifier import NetImportance
+
+        assert NetImportance.MEDIUM == "MEDIUM"
+
+    def test_low_exists(self):
+        from kicad_agent.analysis.net_classifier import NetImportance
+
+        assert NetImportance.LOW == "LOW"
+
+    def test_power_nets_are_critical(self):
+        """Power nets ranked as CRITICAL importance."""
+        from kicad_agent.analysis.net_classifier import NetClassifier, NetImportance
+
+        c = NetClassifier()
+        assert c.rank_importance(NetClassification.POWER) == NetImportance.CRITICAL
+        assert c.rank_importance(NetClassification.GROUND) == NetImportance.CRITICAL
+
+    def test_clock_nets_are_critical(self):
+        """Clock nets ranked as CRITICAL importance."""
+        from kicad_agent.analysis.net_classifier import NetClassifier, NetImportance
+
+        c = NetClassifier()
+        assert c.rank_importance(NetClassification.CLOCK) == NetImportance.CRITICAL
+
+    def test_feedback_nets_are_high(self):
+        """Feedback nets ranked as HIGH importance."""
+        from kicad_agent.analysis.net_classifier import NetClassifier, NetImportance
+
+        c = NetClassifier()
+        assert c.rank_importance(NetClassification.FEEDBACK) == NetImportance.HIGH
+
+    def test_control_nets_are_high(self):
+        """Control nets ranked as HIGH importance."""
+        from kicad_agent.analysis.net_classifier import NetClassifier, NetImportance
+
+        c = NetClassifier()
+        assert c.rank_importance(NetClassification.CONTROL) == NetImportance.HIGH
+
+    def test_signal_nets_are_medium(self):
+        """Signal nets ranked as MEDIUM importance."""
+        from kicad_agent.analysis.net_classifier import NetClassifier, NetImportance
+
+        c = NetClassifier()
+        assert c.rank_importance(NetClassification.SIGNAL) == NetImportance.MEDIUM
+
+    def test_unknown_nets_are_low(self):
+        """Unknown nets ranked as LOW importance."""
+        from kicad_agent.analysis.net_classifier import NetClassifier, NetImportance
+
+        c = NetClassifier()
+        assert c.rank_importance(NetClassification.UNKNOWN) == NetImportance.LOW
