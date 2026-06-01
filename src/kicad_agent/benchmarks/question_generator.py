@@ -27,6 +27,9 @@ from typing import Any
 from kicad_agent.benchmarks.schemas import BenchmarkQuestion
 
 # Global ID counter for sequential question IDs.
+# NOTE: This is module-level mutable state. It is NOT thread-safe and must be
+# reset via reset_id_counter() before each DatasetBuilder.build() call to avoid
+# ID collisions across sequential builds within the same process.
 _id_counter: int = 0
 
 # ---------------------------------------------------------------------------

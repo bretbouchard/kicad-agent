@@ -42,6 +42,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 
 from kicad_agent.benchmarks.models import BaselineHeuristic, BaselineRandom
 from kicad_agent.benchmarks.regression import RegressionDetector
@@ -101,6 +102,16 @@ def main() -> None:
         help="Path to baseline JSON for regression check (default: benchmarks/results/baseline.json)",
     )
     args = parser.parse_args()
+
+    # Validate dataset path exists and is within size limits
+    dataset_path = Path(args.dataset)
+    if not dataset_path.exists():
+        print(f"Error: Dataset file not found: {args.dataset}", file=sys.stderr)
+        sys.exit(1)
+    max_dataset_size = 100 * 1024 * 1024  # 100 MB
+    if dataset_path.stat().st_size > max_dataset_size:
+        print(f"Error: Dataset file exceeds 100 MB limit: {dataset_path.stat().st_size / 1024 / 1024:.1f} MB", file=sys.stderr)
+        sys.exit(1)
 
     # Load dataset
     with open(args.dataset) as f:

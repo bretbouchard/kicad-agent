@@ -469,3 +469,18 @@ class TestQAGenerator:
         dataset = gen.generate_dataset(target_count=2000)
         ids = [pair.id for pair in dataset.qa_pairs]
         assert len(ids) == len(set(ids)), f"Duplicate IDs found"
+
+    def test_empty_source_list_uses_defaults(self):
+        """Test that QAGenerator with empty source list falls back to defaults."""
+        from kicad_agent.benchmarks.qa_generator import QAGenerator
+        gen = QAGenerator(source_schematics=[], seed=42)
+        # Should use default sources, not crash
+        dataset = gen.generate_dataset(target_count=100)
+        assert len(dataset.qa_pairs) >= 100
+
+    def test_none_source_uses_defaults(self):
+        """Test that QAGenerator with None source uses defaults."""
+        from kicad_agent.benchmarks.qa_generator import QAGenerator
+        gen = QAGenerator(source_schematics=None, seed=42)
+        dataset = gen.generate_dataset(target_count=100)
+        assert len(dataset.qa_pairs) >= 100

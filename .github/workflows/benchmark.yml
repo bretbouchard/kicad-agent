@@ -12,6 +12,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: pip
       - name: Install dependencies
         run: pip install -e ".[dev]"
       - name: Run benchmark
@@ -28,7 +29,8 @@ jobs:
           import json
           detector = RegressionDetector()
           baseline = detector.load_baseline()
-          current = BenchmarkResult.model_validate(json.load(open('/tmp/current-results.json')))
+          with open('/tmp/current-results.json') as f:
+              current = BenchmarkResult.model_validate(json.load(f))
           report = detector.compare(current, baseline)
           if report.is_regression:
               print(f'REGRESSION DETECTED in: {report.regression_categories}')

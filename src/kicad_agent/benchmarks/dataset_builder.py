@@ -392,7 +392,7 @@ class DatasetBuilder:
                 "total_sources": len(self.sources),
                 "target_count": target_count,
                 "actual_count": len(final_questions),
-                "seed": self.rng.random() and 42,  # just store the seed
+                "seed": self.rng.randint(0, 2**32),  # stored for reproducibility
                 "categories": _ALL_CATEGORIES,
             },
         )

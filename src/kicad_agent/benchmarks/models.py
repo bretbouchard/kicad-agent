@@ -3,10 +3,6 @@
 Provides BenchmarkModel ABC and concrete implementations:
 - BaselineRandom: Uniform random choice (~25% accuracy)
 - BaselineHeuristic: Keyword-matching heuristic (>25% on relevant categories)
-
-Only models with working implementations are included here.
-Future model types (fine-tuned, API-based) will be added in later phases
-when the training pipeline produces adapters or API endpoints are configured.
 """
 
 from __future__ import annotations

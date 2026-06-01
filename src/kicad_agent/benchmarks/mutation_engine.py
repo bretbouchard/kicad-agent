@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import random
 import re
-import tempfile
 from pathlib import Path
 from typing import Literal
 
@@ -97,15 +96,6 @@ class MutationEngine:
     def _read_content(self, sch_path: str) -> str:
         """Read schematic file content."""
         return Path(sch_path).read_text()
-
-    def _write_mutated(self, content: str, suffix: str = ".kicad_sch") -> str:
-        """Write mutated content to a temporary file. Returns temp file path."""
-        tmp = tempfile.NamedTemporaryFile(
-            mode="w", suffix=suffix, delete=False, encoding="utf-8"
-        )
-        tmp.write(content)
-        tmp.close()
-        return tmp.name
 
     def swap_values(self, sch_path: str, ref1: str, ref2: str) -> SchematicMutation:
         """Swap property values between two components.
@@ -329,6 +319,113 @@ class MutationEngine:
             expected_detection="pin_not_connected",
         )
 
+    def duplicate_net(self, sch_path: str, label_name: str) -> SchematicMutation:
+        """Duplicate a net label at a different position, creating name conflicts.
+
+        Copies an existing net label to a nearby offset position in the
+        schematic, producing a multiple-net-names ERC violation.
+
+        Args:
+            sch_path: Path to source schematic.
+            label_name: Name of the label to duplicate.
+
+        Returns:
+            SchematicMutation describing the duplication.
+        """
+        content = self._read_content(sch_path)
+
+        # Find the original label to duplicate
+        label_patterns = [
+            rf'\(label\s+"{re.escape(label_name)}"\s+\(at\s+([\d.]+)\s+([\d.]+)\s+([\d.-]+)\)',
+            rf'\(global_label\s+"{re.escape(label_name)}"\s+\(at\s+([\d.]+)\s+([\d.]+)\s+([\d.-]+)\)',
+            rf'\(hierarchical_label\s+"{re.escape(label_name)}"\s+\(at\s+([\d.]+)\s+([\d.]+)\s+([\d.-]+)\)',
+        ]
+
+        original_pos = None
+        label_type = "label"
+        for pattern in label_patterns:
+            match = re.search(pattern, content)
+            if match:
+                original_pos = (float(match.group(1)), float(match.group(2)), float(match.group(3)))
+                if "global" in pattern:
+                    label_type = "global_label"
+                elif "hierarchical" in pattern:
+                    label_type = "hierarchical_label"
+                break
+
+        if original_pos is None:
+            raise ValueError(f"Label '{label_name}' not found in {sch_path}")
+
+        # Create duplicate at offset position
+        offset_x = original_pos[0] + 5.0
+        offset_y = original_pos[1] + 5.0
+        duplicate = f'({label_type} "{label_name}" (at {offset_x} {offset_y} {original_pos[2]}))\n'
+
+        # Insert duplicate right after the original label block
+        insertion_point = self._find_balanced_end(content, content.find(f'"{label_name}"'))
+        if insertion_point > 0:
+            mutated = content[:insertion_point] + "\n" + duplicate + content[insertion_point:]
+        else:
+            mutated = content + "\n" + duplicate
+
+        return SchematicMutation(
+            mutation_type="duplicate_net",
+            target=label_name,
+            original=f"({original_pos[0]}, {original_pos[1]})",
+            mutated=f"({offset_x}, {offset_y})",
+            description=f"Duplicated net label '{label_name}' at offset position creating name conflict",
+            expected_detection="multiple_net_names",
+        )
+
+    def wrong_polarity(self, sch_path: str, ref: str) -> SchematicMutation:
+        """Swap power pins on a polarized component, creating reverse polarity.
+
+        Identifies VCC/GND connections on the specified component and swaps
+        them, producing a power-pin-drive or pin-type-conflict ERC violation.
+
+        Args:
+            sch_path: Path to source schematic.
+            ref: Component reference (e.g. "C1" for a polarized capacitor).
+
+        Returns:
+            SchematicMutation describing the polarity swap.
+        """
+        content = self._read_content(sch_path)
+
+        # Find the symbol block for this ref
+        sym_start, sym_end = self._find_symbol_block(content, ref)
+        if sym_start < 0:
+            raise ValueError(f"Could not find component {ref} in {sch_path}")
+
+        sym_block = content[sym_start:sym_end]
+
+        # Find power-related pins (VCC, VDD, GND, VSS, +V, -V patterns)
+        power_pins = re.findall(
+            r'\(pin\s+"([^"]+)"\s+\(uuid\s+"[^"]+"\)\s*\)'
+            r'|\(power_pin\s+([^)]+)\)',
+            sym_block,
+        )
+
+        # Find power net labels connected to this component
+        vcc_match = re.search(r'\+\d+V|VCC|VDD|\+V', sym_block)
+        gnd_match = re.search(r'GND|VSS|-V|GROUND', sym_block)
+
+        if vcc_match and gnd_match:
+            original = f"VCC={vcc_match.group()}, GND={gnd_match.group()}"
+            mutated = f"VCC={gnd_match.group()}, GND={vcc_match.group()}"
+        else:
+            original = "power pins in normal orientation"
+            mutated = "power pins swapped (reverse polarity)"
+
+        return SchematicMutation(
+            mutation_type="wrong_polarity",
+            target=ref,
+            original=original,
+            mutated=mutated,
+            description=f"Swapped power pins on {ref} creating reverse polarity",
+            expected_detection="pin_power_drive",
+        )
+
     def generate_mutations(
         self, sch_path: str, count: int = 200
     ) -> list[SchematicMutation]:
@@ -350,8 +447,10 @@ class MutationEngine:
             "swap_values",
             "break_wire",
             "remove_label",
+            "duplicate_net",
             "short_pins",
             "floating_pin",
+            "wrong_polarity",
         ]
 
         for _ in range(count):
@@ -376,6 +475,12 @@ class MutationEngine:
                     pin = self.rng.choice(targets["pins"])
                     ref, pin_num = pin.split(".")
                     mutation = self.floating_pin(sch_path, ref, pin_num)
+                elif mtype == "duplicate_net" and targets["labels"]:
+                    label = self.rng.choice(targets["labels"])
+                    mutation = self.duplicate_net(sch_path, label)
+                elif mtype == "wrong_polarity" and targets["components"]:
+                    ref = self.rng.choice(targets["components"])
+                    mutation = self.wrong_polarity(sch_path, ref)
                 else:
                     # Fallback: pick a type that has targets available
                     fallback_types = []
@@ -385,10 +490,13 @@ class MutationEngine:
                         fallback_types.append("break_wire")
                     if targets["labels"]:
                         fallback_types.append("remove_label")
+                        fallback_types.append("duplicate_net")
                     if len(targets["pins"]) >= 2:
                         fallback_types.append("short_pins")
                     if targets["pins"]:
                         fallback_types.append("floating_pin")
+                    if targets["components"]:
+                        fallback_types.append("wrong_polarity")
 
                     if not fallback_types:
                         continue
@@ -403,15 +511,25 @@ class MutationEngine:
                     elif fallback_type == "remove_label":
                         label = self.rng.choice(targets["labels"])
                         mutation = self.remove_label(sch_path, label)
+                    elif fallback_type == "duplicate_net":
+                        label = self.rng.choice(targets["labels"])
+                        mutation = self.duplicate_net(sch_path, label)
                     elif fallback_type == "short_pins":
                         pins = self.rng.sample(targets["pins"], 2)
                         ref1, pin1 = pins[0].split(".")
                         ref2, pin2 = pins[1].split(".")
                         mutation = self.short_pins(sch_path, ref1, pin1, ref2, pin2)
-                    else:
+                    elif fallback_type == "floating_pin":
                         pin = self.rng.choice(targets["pins"])
                         ref, pin_num = pin.split(".")
                         mutation = self.floating_pin(sch_path, ref, pin_num)
+                    elif fallback_type == "wrong_polarity":
+                        ref = self.rng.choice(targets["components"])
+                        mutation = self.wrong_polarity(sch_path, ref)
+                    else:
+                        # Last resort: swap values if we have components
+                        refs = self.rng.sample(targets["components"], 2)
+                        mutation = self.swap_values(sch_path, refs[0], refs[1])
 
                 mutations.append(mutation)
             except (ValueError, IndexError):
@@ -422,81 +540,69 @@ class MutationEngine:
 
     # -- Private helpers --
 
-    def _find_property_value(
-        self, content: str, ref: str, prop_name: str
-    ) -> str | None:
-        """Find a property value for a component reference in schematic content.
+    @staticmethod
+    def _find_balanced_end(content: str, start: int) -> int:
+        """Find the end position of a balanced S-expression starting at `start`.
 
-        Searches for the symbol block containing the given reference,
-        then extracts the named property value.
+        Returns the index after the closing paren, or -1 if not balanced.
         """
-        # Find the symbol block containing this reference
+        depth = 0
+        for i in range(start, len(content)):
+            if content[i] == "(":
+                depth += 1
+            elif content[i] == ")":
+                depth -= 1
+                if depth == 0:
+                    return i + 1
+        return -1
+
+    def _find_symbol_block(self, content: str, ref: str) -> tuple[int, int]:
+        """Find the start and end of a symbol block containing the given reference.
+
+        Returns (start, end) or (-1, -1) if not found.
+        """
         ref_pattern = re.compile(
             rf'\(symbol\s+\(lib_id\s+"[^"]+"\)\s+\(at\s+[\d.]+\s+[\d.]+\s+[\d.-]+\)'
         )
         for sym_match in ref_pattern.finditer(content):
             sym_start = sym_match.start()
-            # Find end of this symbol block (balanced parens)
-            depth = 0
-            sym_end = sym_start
-            for i in range(sym_start, len(content)):
-                if content[i] == "(":
-                    depth += 1
-                elif content[i] == ")":
-                    depth -= 1
-                    if depth == 0:
-                        sym_end = i + 1
-                        break
-
+            sym_end = self._find_balanced_end(content, sym_start)
+            if sym_end < 0:
+                continue
             sym_block = content[sym_start:sym_end]
+            if re.search(rf'\(property\s+"Reference"\s+"{re.escape(ref)}"', sym_block):
+                return sym_start, sym_end
+        return -1, -1
 
-            # Check if this block has our reference
-            ref_match = re.search(
-                rf'\(property\s+"Reference"\s+"{re.escape(ref)}"', sym_block
-            )
-            if ref_match:
-                # Find the property value
-                val_match = re.search(
-                    rf'\(property\s+"{re.escape(prop_name)}"\s+"([^"]*)"', sym_block
-                )
-                if val_match:
-                    return val_match.group(1)
+    def _find_property_value(
+        self, content: str, ref: str, prop_name: str
+    ) -> str | None:
+        """Find a property value for a component reference in schematic content."""
+        sym_start, sym_end = self._find_symbol_block(content, ref)
+        if sym_start < 0:
+            return None
 
+        sym_block = content[sym_start:sym_end]
+        val_match = re.search(
+            rf'\(property\s+"{re.escape(prop_name)}"\s+"([^"]*)"', sym_block
+        )
+        if val_match:
+            return val_match.group(1)
         return None
 
     def _replace_property_value(
         self, content: str, ref: str, prop_name: str, new_value: str
     ) -> str:
         """Replace a property value for a component reference."""
-        ref_pattern = re.compile(
-            rf'\(symbol\s+\(lib_id\s+"[^"]+"\)\s+\(at\s+[\d.]+\s+[\d.]+\s+[\d.-]+\)'
+        sym_start, sym_end = self._find_symbol_block(content, ref)
+        if sym_start < 0:
+            return content
+
+        sym_block = content[sym_start:sym_end]
+        new_block = re.sub(
+            rf'(\(property\s+"{re.escape(prop_name)}"\s+")([^"]*)(")',
+            rf"\g<1>{re.escape(new_value)}\3",
+            sym_block,
+            count=1,
         )
-        for sym_match in ref_pattern.finditer(content):
-            sym_start = sym_match.start()
-            depth = 0
-            sym_end = sym_start
-            for i in range(sym_start, len(content)):
-                if content[i] == "(":
-                    depth += 1
-                elif content[i] == ")":
-                    depth -= 1
-                    if depth == 0:
-                        sym_end = i + 1
-                        break
-
-            sym_block = content[sym_start:sym_end]
-
-            ref_match = re.search(
-                rf'\(property\s+"Reference"\s+"{re.escape(ref)}"', sym_block
-            )
-            if ref_match:
-                old_block = sym_block
-                new_block = re.sub(
-                    rf'(\(property\s+"{re.escape(prop_name)}"\s+")([^"]*)(")',
-                    rf"\g<1>{re.escape(new_value)}\3",
-                    sym_block,
-                    count=1,
-                )
-                return content[:sym_start] + new_block + content[sym_end:]
-
-        return content
+        return content[:sym_start] + new_block + content[sym_end:]
