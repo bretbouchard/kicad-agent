@@ -940,3 +940,9 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 42. Circuit QA Dataset | 1/1 | Complete | 2026-05-31 |
 | 43. Regression Benchmark Suite | 1/1 | Complete | 2026-05-31 |
 | 44. Adversarial Test Generation | 1/1 | Complete | 2026-05-31 |
+| 45. Circuit Topology Graph | 2/2 | Complete | 2026-06-01 |
+| 46. Component Function Recognition | 2/2 | Complete | 2026-06-01 |
+| 47. Circuit Intent Inference | 2/2 | Complete | 2026-06-01 |
+| 48. Design Rule Intelligence | 2/2 | Complete | 2026-06-01 |
+| **48.5. Schematic Readability** | **0/3** | **Planned** | **(depends on 48)** |
+| 49. One-Command Demo | 0/2 | Planned | |
