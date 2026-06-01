@@ -2,14 +2,17 @@
 
 Provides the complete placement pipeline from netlist-to-graph conversion,
 through ML-based prediction and interactive constraint propagation, to
-DRC-aware validation and quality scoring.
+DRC-aware validation and quality scoring. Includes layout-aware placement
+with signal flow grouping and real footprint geometry.
 
 Usage::
 
     from kicad_agent.placement import (
         HybridPlacementEngine,
+        LayoutAwarePlacer,
         PlacementGraph,
         PlacementPredictor,
+        SignalFlowGrouper,
         interactive_placement,
     )
 """
@@ -25,11 +28,19 @@ from kicad_agent.placement.features import (
     extract_component_features,
     extract_net_features,
 )
+from kicad_agent.placement.footprint_geometry import (
+    ComponentGeometry,
+    extract_footprint_geometry,
+)
 from kicad_agent.placement.graph import PlacementGraph, netlist_to_placement_graph
 from kicad_agent.placement.interactive import (
     ConstraintSet,
     interactive_placement,
     suggest_placements,
+)
+from kicad_agent.placement.layout_aware import (
+    LayoutAwarePlacer,
+    LayoutAwareRequest,
 )
 from kicad_agent.placement.model import BipartiteAttentionLayer, PlacementModel
 from kicad_agent.placement.predict import PlacementPrediction, PlacementPredictor
@@ -38,6 +49,11 @@ from kicad_agent.placement.scoring import (
     PlacementScorer,
     compute_congestion_estimate,
     compute_hpwl_score,
+)
+from kicad_agent.placement.signal_flow import (
+    SignalFlowGroup,
+    SignalFlowGrouper,
+    SignalFlowZone,
 )
 from kicad_agent.placement.validation import (
     PlacementValidator,
@@ -51,6 +67,16 @@ __all__ = [
     "HybridPlacementEngine",
     "PlacementRequest",
     "PlacementOutput",
+    # Layout-aware
+    "LayoutAwarePlacer",
+    "LayoutAwareRequest",
+    # Signal flow
+    "SignalFlowGrouper",
+    "SignalFlowGroup",
+    "SignalFlowZone",
+    # Footprint geometry
+    "ComponentGeometry",
+    "extract_footprint_geometry",
     # Graph
     "PlacementGraph",
     "netlist_to_placement_graph",
