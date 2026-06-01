@@ -14,7 +14,7 @@ Build an AI-safe KiCad structural editing tool across multiple milestones. First
 - **v2.3 MCP-Server** - Phases 30-31 (shipped 2026-05-29)
 - **v2.4 Schematic Intelligence** - Phases 38-40 (shipped 2026-05-31)
 - **v2.5 Benchmark Suite** - Phases 41-44 (shipped 2026-05-31)
-- **v3.0 Full-Stack EDA** - Future (schematic DRC, layout-aware placement, constraint propagation)
+- **v3.0 Full-Stack EDA** - Phases 50-54 (constraint propagation, PCB spatial intelligence, layout-aware placement, DRC intelligence, DFM)
 
 ## Phases
 
@@ -889,6 +889,102 @@ Plans:
 Plans:
 - [x] 44-01-PLAN.md -- Mutation engine + adversarial suite + fuzz testing (BENCH-05)
 
+### v3.0 Full-Stack EDA Phase Details
+
+### Phase 50: Constraint Extraction & Propagation
+**Goal**: Translate schematic intent (differential pairs, impedance, clearance, thermal, decoupling) into PCB design constraints. The keystone bridge between `analysis/` outputs and `placement/`/`validation/` consumers.
+**Depends on**: Phase 45 (topology), Phase 46 (subcircuits), Phase 47 (intent inference), Phase 48 (design rules)
+**Context**: Phases 45-48 provide CircuitTopology, NetClassification, Subcircuit detection, DesignIntent. This phase builds the constraint propagation layer that bridges schematic intelligence to PCB layout.
+**Requirements**: CP-01, CP-02, CP-03, CP-04, CP-05, CP-06
+**Success Criteria** (what must be TRUE):
+  1. `ConstraintPropagator` accepts `CircuitTopology`, `list[Subcircuit]`, `DesignRuleReport` and produces `list[PCBConstraint]`
+  2. Five constraint extractors produce typed constraints: DifferentialPairConstraint, ClearanceConstraint, ImpedanceConstraint, DecouplingConstraint, ThermalConstraint
+  3. `.kicad_dru` parser extracts net class definitions using sexpdata (kiutils gap)
+  4. ConstraintTable maps `(SignalIntegrity, NetImportance)` to `PcbConstraint` via deterministic lookup
+  5. Coordinate converter handles schematic-to-PCB Y-axis flip, tested against Arduino_Mega fixture
+  6. Propagation is strictly unidirectional — no feedback path from PCB to schematic
+  7. 15+ tests covering each constraint extractor with real circuit patterns
+**Plans**: 2 plans
+
+Plans:
+- [x] 50-01-PLAN.md -- PCBConstraint types, .kicad_dru parser, ConstraintTable, coordinate converter (CP-02, CP-03, CP-04, CP-06)
+- [ ] 50-02-PLAN.md -- ConstraintPropagator orchestrator, five constraint extractors, integration tests (CP-01, CP-05)
+
+### Phase 51: PCB Spatial Intelligence
+**Goal**: Rich PCB spatial model with per-layer Shapely geometry, STRtree spatial indexing, layer stackup metadata, and board outline extraction. The spatial foundation for placement, DRC, and DFM.
+**Depends on**: Phase 50 (constraints), existing spatial/ + PcbIR
+**Context**: Extends existing spatial/primitives.py and spatial/query.py with PCB-specific geometry, net class awareness, and layer classification.
+**Requirements**: SI-01, SI-02, SI-03, SI-04, SI-05, SI-06, SI-07
+**Success Criteria** (what must be TRUE):
+  1. `PcbSpatialModel` builds from `PcbIR` with per-layer Shapely geometry and STRtree index
+  2. `LayerStackup` extracts copper/dielectric metadata including epsilon_r for impedance
+  3. `LayerClassifier.is_copper("In1.Cu")` returns True; handles all canonical layer names
+  4. `NetClassGeometry` provides trace_width, clearance, via parameters per net
+  5. Clearance tolerance constant `_CLEARANCE_TOLERANCE_MM = 1e-4` prevents floating-point false positives
+  6. Board outline extraction handles line segments, arcs, and circles on Edge.Cuts
+  7. Dirty-flag lifecycle with batch mutation support and STRtree rebuild
+  8. 15+ tests with real PCB fixtures (Arduino_Mega, analog-board)
+**Plans**: 2 plans
+
+Plans:
+- [ ] 51-01-PLAN.md -- PcbSpatialModel, LayerStackup, LayerClassifier, NetClassGeometry, clearance tolerance (SI-01, SI-02, SI-03, SI-04, SI-05)
+- [ ] 51-02-PLAN.md -- Board outline extraction, dirty-flag lifecycle, integration with spatial query engine, tests (SI-06, SI-07)
+
+### Phase 52: Layout-Aware Placement Engine
+**Goal**: Constraint-driven placement extending HybridPlacementEngine with signal flow grouping, decoupling cap proximity, differential pair alignment, and thermal awareness.
+**Depends on**: Phase 50 (constraints), Phase 51 (spatial model)
+**Context**: Extends existing placement/engine.py HybridPlacementEngine. Uses PcbSpatialModel for board geometry and PCBConstraint[] for placement rules.
+**Requirements**: LP-01, LP-02, LP-03, LP-04, LP-05
+**Success Criteria** (what must be TRUE):
+  1. `LayoutAwarePlacer` wraps `HybridPlacementEngine` with pre-placement constraint analysis and post-placement validation
+  2. `SignalFlowGrouper` converts `Subcircuit[]` to `SignalFlowGroup[]` with input/output ordering
+  3. Real footprint bounding boxes extracted from PcbIR replace scalar `estimated_size` heuristic
+  4. Thermal-aware placement with opt-in `ThermalProfile` dataclass; distance heuristic fallback when no profiles
+  5. Constraint-aware SA refinement adds penalty terms to existing simulated annealing objective
+  6. 15+ tests covering signal flow grouping, thermal placement, constraint validation
+**Plans**: 2 plans
+
+Plans:
+- [ ] 52-01-PLAN.md -- LayoutAwarePlacer, SignalFlowGrouper, real footprint geometry extraction (LP-01, LP-02, LP-03)
+- [ ] 52-02-PLAN.md -- Thermal-aware placement, constraint-aware SA refinement, integration tests (LP-04, LP-05)
+
+### Phase 53: PCB DRC Intelligence
+**Goal**: Spatial violation enrichment with fix suggestions and constraint-aware classification. Turns raw kicad-cli DRC output into actionable, coordinate-grounded fix recommendations.
+**Depends on**: Phase 50 (constraints), Phase 51 (spatial model)
+**Context**: Extends existing validation/spatial_drc.py enrich_drc_result() with constraint context and fix suggestion logic.
+**Requirements**: DI-01, DI-02, DI-03, DI-04, DI-05
+**Success Criteria** (what must be TRUE):
+  1. `IntelligentDrcAnalyzer` enriches `DrcResult` with spatial context → `IntelligentDrcReport`
+  2. `EnrichedViolation` wraps each violation with spatial items, related constraint, fix suggestions, classification
+  3. `FixSuggester` maps violation type + spatial context to `SpatialFixSuggestion` with confidence and rationale
+  4. DRC report schema version check at parse time; defensive parsing on unexpected structure
+  5. PCB-specific design rules extend existing `DesignRule` ABC for clearance, impedance, thermal checks
+  6. 15+ tests with real DRC reports from kicad-cli
+**Plans**: 2 plans
+
+Plans:
+- [ ] 53-01-PLAN.md -- IntelligentDrcAnalyzer, EnrichedViolation, FixSuggester, DRC report version check (DI-01, DI-02, DI-03, DI-04)
+- [ ] 53-02-PLAN.md -- PCB-specific design rules extending DesignRule ABC, integration tests (DI-05)
+
+### Phase 54: Design for Manufacturing
+**Goal**: DFM checks, manufacturer profiles, panelization readiness, thermal relief validation, and assembly consideration checks. Goes beyond DRC into manufacturability assessment.
+**Depends on**: Phase 51 (spatial model)
+**Context**: Mirrors analysis/design_rule_engine.py pattern (orchestrator + individual checks + config). New dfm/ module.
+**Requirements**: DFM-01, DFM-02, DFM-03, DFM-04, DFM-05
+**Success Criteria** (what must be TRUE):
+  1. `DfmChecker` orchestrator runs pluggable `DfmCheck` subclasses against `PcbSpatialModel`
+  2. `ManufacturerProfile` loaded from YAML/JSON; ships with JLCPCB, PCBWay, OSH Park, generic profiles
+  3. Built-in checks: annular ring, solder mask web, thermal relief, min trace width, min drill
+  4. Multi-stage DFM: footprint audit (pre-placement), placement check, post-route check
+  5. Panelization readiness scoring and assembly checks (fiducials, tooling holes)
+  6. CLI subcommand `kicad-agent dfm <board>` works end-to-end
+  7. 15+ tests covering all checks with manufacturer profile variation
+**Plans**: 2 plans
+
+Plans:
+- [ ] 54-01-PLAN.md -- DfmCheck ABC, DfmChecker, ManufacturerProfile, built-in DFM checks (DFM-01, DFM-02, DFM-03)
+- [ ] 54-02-PLAN.md -- Multi-stage DFM, panelization scoring, assembly checks, CLI integration (DFM-04, DFM-05)
+
 ## Progress
 
 **Execution Order:**
@@ -944,5 +1040,10 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 | 46. Component Function Recognition | 2/2 | Complete | 2026-06-01 |
 | 47. Circuit Intent Inference | 2/2 | Complete | 2026-06-01 |
 | 48. Design Rule Intelligence | 2/2 | Complete | 2026-06-01 |
-| **48.5. Schematic Readability** | **0/3** | **Planned** | **(depends on 48)** |
-| 49. One-Command Demo | 0/2 | Planned | |
+| 48.5. Schematic Readability | 3/3 | Complete | 2026-06-01 |
+| 49. One-Command Demo | 2/2 | Complete | 2026-06-01 |
+| 50. Constraint Propagation | 0/2 | Planned | |
+| 51. PCB Spatial Intelligence | 0/2 | Planned | |
+| 52. Layout-Aware Placement | 0/2 | Planned | |
+| 53. PCB DRC Intelligence | 0/2 | Planned | |
+| 54. Design for Manufacturing | 0/2 | Planned | |

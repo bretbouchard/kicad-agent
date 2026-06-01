@@ -619,44 +619,93 @@ Born from gap analysis: the Domain Intelligence scorecard dimension needs to mov
 
 - [ ] **DOMAIN-04**: Pluggable design rule engine with 8 built-in rules for domain-specific DRC beyond KiCad's ERC/DRC: BYPASS_CAP_01 (decoupling caps near ICs), FEEDBACK_01 (op-amp feedback compensation), IMPEDANCE_01 (high-speed net termination), THERMAL_01 (power component thermal relief), GROUND_01 (star ground topology), POWER_01 (power supply filtering), SIGNAL_01 (input protection), LAYOUT_01 (critical signal path quality). Rules subclass a DesignRule ABC with check(topology) method. Engine supports rule enable/disable, per-rule config overrides, error-tolerant execution (broken rules don't crash the pipeline), and JSON/Markdown report output. YAML configuration for custom thresholds and rule toggling. CLI subcommand `kicad-agent design-rules <schematic>` for end-to-end invocation.
 
-## v2.8 Requirements -- Phases 49-58
+## v3.0 Requirements -- Full-Stack EDA
 
-### One-Command Demo (Phase 49)
+Bridge schematic intelligence to PCB layout with constraint propagation, spatial intelligence, layout-aware placement, DRC intelligence, and DFM checks. v2.5 built deep schematic understanding; v3.0 closes the loop to PCB.
 
-- [ ] **DEMO-01**: One-command demo pipeline: `kicad-agent demo` generates a schematic from templates, runs ERC, auto-fixes violations, re-runs ERC, renders SVG, and produces a DemoReport. Templates include common-emitter amplifier, voltage divider, LED driver, op-amp buffer, and random selection. DemoReport includes template_used, stages_completed, erc_before, erc_after, svg_paths, duration_seconds, and success flag.
+### Constraint Extraction & Propagation (Phase 50)
 
-### Visual Output Showcase (Phase 50)
+- [ ] **CP-01**: ConstraintPropagator translates schematic intent (from CircuitTopology, Subcircuit[], DesignRuleReport) into PCB design constraints (PCBConstraint hierarchy). Constraint propagation is strictly unidirectional (Schematic → PCB) with no feedback path.
+- [x] **CP-02**: PCBConstraint frozen dataclass hierarchy with typed subtypes: DifferentialPairConstraint (gap, length mismatch, impedance), ClearanceConstraint (min_clearance, layer_restriction, reason), ImpedanceConstraint (target, deviation, reference_layer), DecouplingConstraint (ic_ref, max_distance, capacitance), ThermalConstraint (component_ref, keepout_margin, thermal_pad).
+- [x] **CP-03**: .kicad_dru parser using sexpdata extracts net class definitions (trace_width, clearance, via_dia, via_drill) and custom rules. Follows same raw S-expression pattern as PcbIR.
+- [x] **CP-04**: ConstraintTable maps (SignalIntegrity, NetImportance) to PcbConstraint via deterministic lookup. No constraint solver library needed.
+- [ ] **CP-05**: Five constraint extractors: diff_pair (differential pair nets), power (clearance + decoupling), impedance (high-speed net targets), thermal (keepout + spacing), signal_flow (placement group ordering). Each is a plain function: (topology, config) → list[PCBConstraint].
+- [x] **CP-06**: Coordinate converter utility for schematic-to-PCB Y-axis flip (schematic Y-up vs PCB Y-down). Tested against real KiCad project fixture.
 
-- [ ] **DEMO-02**: SVG annotation engine with violation markers. Rendered schematics show ERC violations with highlighted pins, missing connections, and graphical annotations. SVG output includes interactive hover regions for violation details.
+### PCB Spatial Intelligence (Phase 51)
 
-### Interactive Playground (Phase 51)
+- [ ] **SI-01**: PcbSpatialModel builds rich spatial representation from PcbIR with per-layer Shapely geometry, STRtree spatial indexing, and board outline polygon. Read-only derived view (not BaseIR subclass), rebuilt when PCB changes.
+- [ ] **SI-02**: LayerStackup extracts dielectric/copper layer metadata from board setup including thickness, copper weight, and dielectric constant for impedance calculations.
+- [ ] **SI-03**: LayerClassifier utility with `is_copper()`, `is_silkscreen()`, `is_mask()`, `is_paste()` methods. Copper layers matched via `r"^(F|B|In\d+)\.Cu$"` pattern.
+- [ ] **SI-04**: NetClassGeometry metadata per net: trace_width_mm, clearance_mm, via_drill_mm, via_diameter_mm, diff_pair_gap_mm.
+- [ ] **SI-05**: Clearance tolerance constant `_CLEARANCE_TOLERANCE_MM = 1e-4` (0.1 micrometers) for all Shapely distance comparisons to prevent floating-point false positives.
+- [ ] **SI-06**: Board outline extraction handles line segments, arcs, and circles on Edge.Cuts layer. Returns Shapely Polygon, not just bounding box.
+- [ ] **SI-07**: Dirty-flag lifecycle with batch mutation support. STRtree rebuilt only when spatial model is marked dirty after position updates.
 
-- [ ] **DEMO-03**: Interactive playground for exploring operations in a browser. Web UI with schematic viewer, operation palette, real-time feedback, and undo stack. Supports all kicad-agent operations through a JSON API.
+### Layout-Aware Placement Engine (Phase 52)
 
-### Synthetic Circuit Generation (Phase 52)
+- [ ] **LP-01**: LayoutAwarePlacer extends HybridPlacementEngine with constraint-driven placement: signal flow grouping, decoupling cap proximity, differential pair alignment, thermal clearance margins.
+- [ ] **LP-02**: SignalFlowGrouper converts Subcircuit[] to SignalFlowGroup[] with input/output ordering, subcircuit type priority, and contiguous placement zones.
+- [ ] **LP-03**: Real footprint bounding box extraction from PcbIR (pad + graphics geometry) replaces scalar estimated_size heuristic. ComponentGeometry dataclass holds width, height, pad positions, thermal area.
+- [ ] **LP-04**: Thermal-aware placement phase with opt-in ThermalProfile dataclass (reference, power_dissipation_watts, max_temp_celsius). Distance-based heuristic fallback when no thermal profiles provided. No silent degradation — logs when thermal data unavailable.
+- [ ] **LP-05**: Constraint-aware SA refinement adds penalty terms for constraint violations to the existing simulated annealing objective in placement/interactive.py.
 
-- [ ] **CORPUS-01**: Template-based synthetic circuit generation with parameterized components, deterministic seeding for reproducibility, quality metrics (component count, net count, connectivity ratio, DRC pass rate), and deduplication via SHA256 content hashing. Circuit templates cover common analog building blocks (amplifiers, filters, oscillators, power supplies). Mass generation produces 1000+ unique circuits per run.
+### PCB DRC Intelligence (Phase 53)
 
-### Real-World Corpus (Phase 53)
+- [ ] **DI-01**: IntelligentDrcAnalyzer enriches kicad-cli DRC results with spatial context and fix suggestions. Consumes DrcResult + PcbSpatialModel + PCBConstraint[]. Produces IntelligentDrcReport.
+- [ ] **DI-02**: EnrichedViolation dataclass wraps each violation with spatial items, related PCBConstraint, fix suggestions, and classification (constraint_violation / manufacturing / cosmetic).
+- [ ] **DI-03**: FixSuggester maps violation type + spatial context to actionable SpatialFixSuggestion (move_component, increase_clearance, add_teardrop, resize_pad) with confidence and rationale.
+- [ ] **DI-04**: DRC report schema version check at parse time. Defensive parsing with warning on unexpected JSON structure. Stores kicad_version from report.
+- [ ] **DI-05**: PCB-specific design rules extending existing DesignRule ABC: clearance checks (spatial), impedance verification (formula vs constraint), thermal proximity (component-to-component).
 
-- [ ] **CORPUS-02**: Curated corpus of 50+ real-world KiCad projects from open-source hardware communities with quality gates (minimum 5 components, parses without errors, identifiable circuit function), license tracking with SPDX identifiers and commercial_use_compatible flag, searchable ProjectIndex (by category, complexity, component types, license), and download integrity verification (SHA256 content hash, 50MB size limit, domain allowlist for github.com and hackaday.io).
+### Design for Manufacturing (Phase 54)
 
-### VS Code Extension (Phase 54)
+- [ ] **DFM-01**: DfmChecker orchestrator mirrors DesignRuleEngine pattern. DfmCheck ABC with `check(spatial_model, config)` method. DfmReport with manufacturability score (0.0-1.0).
+- [ ] **DFM-02**: ManufacturerProfile loaded from YAML/JSON config. Ships with 3-5 profiles (JLCPCB standard, PCBWay standard, OSH Park, generic 2-layer conservative). User-configurable via project-level config.
+- [ ] **DFM-03**: Built-in DFM checks: annular ring adequacy, solder mask web/sliver minimum, thermal relief on copper zone pads, minimum trace width, minimum drill size.
+- [ ] **DFM-04**: Multi-stage DFM: footprint audit (before placement), placement check (component spacing for assembly), post-route check (manufacturing constraints).
+- [ ] **DFM-05**: Panelization readiness scoring and assembly consideration checks (fiducials, tooling holes, component orientation).
 
-- [ ] **WORKFLOW-01**: VS Code extension activating for .kicad_sch and .kicad_pcb files with MCP client connecting to edit_server.py via stdio transport, workspace-scoped authentication (VS Code workspace trust boundary), file path validation rejecting paths outside workspace root, right-click context menus for ERC fixing and design suggestions, sidebar panels for operation history and ERC reports, file watcher with debounced auto-ERC on save, and .vsix packaging via vsce.
+## v2.8 Requirements -- Phases 55-64 (DEFERRED)
 
-### Abstract AST (Phase 55)
+*Deferred in favor of v3.0 Full-Stack EDA. Will be renumbered and scheduled in a future milestone.*
 
-- [ ] **FORMAT-01**: Format-neutral AbstractCircuit model (Pydantic v2) with AbstractComponent, AbstractNet (pin_refs), AbstractPin (PinType enum), AbstractSheet, and WireSegment. KiCadAdapter provides bidirectional conversion: schematic_ir_to_abstract() extracts from SchematicIR, abstract_to_schematic_ir() reconstructs KiCad schematics via kiutils constructors. LOSS_ACCOUNTING documents preserved and dropped fields. Round-trip tests verify component count, net count, and ref designator preservation.
+### One-Command Demo (Phase 49) -- COMPLETE
 
-### EasyEDA Support (Phase 56)
+- [x] **DEMO-01**: One-command demo pipeline: `kicad-agent demo` generates a schematic from templates, runs ERC, auto-fixes violations, re-runs ERC, renders SVG, and produces a DemoReport.
 
-- [ ] **FORMAT-02**: EasyEDA JSON parser converting .json schematics to AbstractCircuit via tilde-delimited shape array parsing, LCSC part number preservation, component extraction with positions and orientations, and net derivation from wire connectivity + labels. EasyEdaWriter serializes AbstractCircuit back to EasyEDA JSON format. LCSC-to-KiCad symbol/footprint mapping with bidirectional lookup.
+### Visual Output Showcase (Phase 55)
 
-### Altium Support (Phase 57)
+- [ ] **DEMO-02**: SVG annotation engine with violation markers.
 
-- [ ] **FORMAT-03**: Altium .SchDoc parser reading OLE compound documents via olefile with binary record extraction, Altium electrical type code to PinType enum mapping, OLE stream size limits (10MB per stream, 100MB total, 100k record cap), and graceful handling of malformed files. AltiumMigration CLI tool converts .SchDoc to .kicad_sch through Abstract AST layer (parse -> AbstractCircuit -> KiCadAdapter -> .kicad_sch).
+### Interactive Playground (Phase 56)
 
-### Eagle + Format Registry (Phase 58)
+- [ ] **DEMO-03**: Interactive playground for exploring operations in a browser.
 
-- [ ] **FORMAT-04**: Eagle XML parser converting .sch files to AbstractCircuit with gate-based symbol handling, package-to-footprint mapping, and defusedxml for XML bomb protection. FormatRegistry with lazy imports, capability matrix (read/write/round-trip per format), auto-detection by file extension and content, FormatType enum for type-safe format identification, and unified CLI for cross-format conversion.
+### Synthetic Circuit Generation (Phase 57)
+
+- [ ] **CORPUS-01**: Template-based synthetic circuit generation with parameterized components.
+
+### Real-World Corpus (Phase 58)
+
+- [ ] **CORPUS-02**: Curated corpus of 50+ real-world KiCad projects.
+
+### VS Code Extension (Phase 59)
+
+- [ ] **WORKFLOW-01**: VS Code extension activating for .kicad_sch and .kicad_pcb files.
+
+### Abstract AST (Phase 60)
+
+- [ ] **FORMAT-01**: Format-neutral AbstractCircuit model (Pydantic v2).
+
+### EasyEDA Support (Phase 61)
+
+- [ ] **FORMAT-02**: EasyEDA JSON parser converting .json schematics to AbstractCircuit.
+
+### Altium Support (Phase 62)
+
+- [ ] **FORMAT-03**: Altium .SchDoc parser reading OLE compound documents via olefile.
+
+### Eagle + Format Registry (Phase 63)
+
+- [ ] **FORMAT-04**: Eagle XML parser converting .sch files to AbstractCircuit with defusedxml protection.

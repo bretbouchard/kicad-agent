@@ -1,34 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.5
-milestone_name: benchmark-suite
+milestone: v3.0
+milestone_name: full-stack-eda
 status: executing
-stopped_at: "Phase 48 complete. Design rule engine + 8 rules + CLI. 59 tests. Council approved."
-last_updated: "2026-06-01T07:35:00Z"
+stopped_at: "Completed 50-01-PLAN.md — PCBConstraint types, ConstraintTable, CoordinateConverter, converters"
+last_updated: "2026-06-01T19:05:00Z"
 last_activity: 2026-06-01
 progress:
-  total_phases: 48
-  completed_phases: 46
-  total_plans: 122
-  completed_plans: 129
-  percent: 98
+  total_phases: 54
+  completed_phases: 49
+  total_plans: 139
+  completed_plans: 130
+  percent: 93
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-29)
+See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 48 (Design Rule Intelligence) -- Domain Intelligence dimension
+**Current focus:** Milestone v3.0 (Full-Stack EDA) — constraint propagation, PCB spatial intelligence, layout-aware placement, DRC intelligence, DFM
 Last activity: 2026-06-01
 
 ## Current Position
 
-Phase: 48 (Design Rule Intelligence) COMPLETE
-Status: **Phase 48 complete. Design rule engine + 8 rules + CLI. 59 tests. Council approved.**
-Plans: 48-01 (complete), 48-02 (complete)
+Phase: 50 (Constraint Propagation) — executing
+Status: Plan 50-01 complete (PCBConstraint types, ConstraintTable, CoordinateConverter, converters)
+Plans: 50-01 (COMPLETE), 50-02 (not started)
 Last activity: 2026-06-01
 
 ### Phase 47: Circuit Intent Inference
@@ -156,7 +156,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-- Phase 48 complete (2/2 plans done)
+- Phase 48.5 complete (3/3 plans done)
 - Continue to next phase per ROADMAP.md
 
 ### Blockers/Concerns
@@ -169,6 +169,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 48 complete. Design rule engine + 8 rules + CLI. 59 tests. Council approved.
+Stopped at: Phase 49 complete. One-command demo pipeline + 6 templates. 24 tests.
 Resume with: Next phase per ROADMAP.md.
-Resume with: Phase 48 verification, or proceed to next phase per ROADMAP.md.
