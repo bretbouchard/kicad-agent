@@ -20,12 +20,14 @@ Usage:
 
 from __future__ import annotations
 
+import json
 import logging
 from collections import deque
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
+from kicad_agent.analysis.feature_extraction import SubcircuitFeatures, extract_features
 from kicad_agent.analysis.topology_graph import (
     CircuitTopology,
     NetClassification,
@@ -154,13 +156,32 @@ class SubcircuitDetector:
             other_nets = [all_sc_nets[j] for j in range(len(all_sc_nets)) if j != idx]
             boundary = self._find_boundary_nets(sc_nets, all_nets, other_nets)
 
-            # Extract features for classification
-            features = self._extract_features(
+            # Extract features using legacy method for classifier compatibility
+            classifier_features = self._extract_features(
                 sc_data["ic_node"],
                 sc_data["components"],
                 sc_data["nets"],
                 topology,
             )
+
+            # Extract ML-ready features using new feature extraction module
+            node_map = {n.ref: n for n in topology.nodes}
+            sc_features = extract_features(
+                component_refs=list(sc_data["components"]) + [sc_data["center_component"]],
+                nodes=node_map,
+                edges=list(topology.edges),
+                nets=list(sc_nets),
+                boundary_nets=list(boundary),
+                center_component=sc_data["center_component"],
+                power_nets=set(topology.power_nets),
+                signal_paths=[list(p) for p in topology.signal_paths],
+                subcircuit_id=sc_id,
+                input_nets=set(topology.input_nets),
+                output_nets=set(topology.output_nets),
+            )
+
+            # Merge: ML features + classifier-legacy fields for backward compat
+            features = {**sc_features.to_dict(), **classifier_features}
 
             # Classify
             classification = classifier.classify(features)
@@ -460,3 +481,30 @@ class SubcircuitDetector:
             "has_vca_input": has_vca_input,
             "has_multiple_inputs": has_multiple_inputs,
         }
+
+    def to_jsonl(self, subcircuits: list[Subcircuit], output_path: str) -> int:
+        """Export feature vectors to JSONL for ML training data.
+
+        Each line is a JSON object with:
+        - subcircuit_id, subcircuit_type, confidence
+        - All feature fields from the subcircuit's features dict
+
+        Args:
+            subcircuits: List of Subcircuit instances from detect().
+            output_path: File path to write JSONL output.
+
+        Returns:
+            Number of lines written.
+        """
+        count = 0
+        with open(output_path, "w") as f:
+            for sc in subcircuits:
+                record = {
+                    "subcircuit_id": sc.subcircuit_id,
+                    "subcircuit_type": sc.subcircuit_type.value,
+                    "confidence": sc.confidence,
+                    **sc.features,
+                }
+                f.write(json.dumps(record, default=str) + "\n")
+                count += 1
+        return count

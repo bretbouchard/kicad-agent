@@ -1653,3 +1653,91 @@ class TestBatchClassification:
         ])
         assert results[0].feature_vector is None  # Known, no feature vector needed
         assert results[1].feature_vector is not None  # Unknown, feature vector for ML
+
+
+# ---------------------------------------------------------------------------
+# Test: Feature integration into SubcircuitDetector
+# ---------------------------------------------------------------------------
+
+
+class TestFeatureIntegration:
+    """Feature extraction integrated into SubcircuitDetector.detect()."""
+
+    def test_detect_returns_features_dict(self):
+        """SubcircuitDetector.detect returns Subcircuits with feature data."""
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        detector = SubcircuitDetector()
+        result = detector.detect(_multi_type_topology())
+        assert len(result) >= 1
+        for sc in result:
+            assert isinstance(sc.features, dict)
+            # Should have ML-ready feature fields
+            assert "resistor_count" in sc.features
+            assert "capacitor_count" in sc.features
+
+    def test_all_subcircuits_have_feature_vectors(self):
+        """All subcircuits in a topology have feature vectors."""
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        detector = SubcircuitDetector()
+        result = detector.detect(_multi_type_topology())
+        assert len(result) >= 2
+        for sc in result:
+            assert sc.features is not None
+            assert isinstance(sc.features, dict)
+            assert "total_component_count" in sc.features
+            assert "component_density" in sc.features
+
+    def test_feature_determinism_across_runs(self):
+        """Feature vectors from same schematic are deterministic across runs."""
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        detector = SubcircuitDetector()
+        topo = _multi_type_topology()
+        result1 = detector.detect(topo)
+        result2 = detector.detect(topo)
+        for sc1, sc2 in zip(result1, result2):
+            assert sc1.features == sc2.features
+
+    def test_to_jsonl_export(self):
+        """to_jsonl exports feature vectors as valid JSONL."""
+        import json
+        import tempfile
+        import os
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        detector = SubcircuitDetector()
+        result = detector.detect(_multi_type_topology())
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
+            path = f.name
+        try:
+            count = detector.to_jsonl(result, path)
+            assert count == len(result)
+            with open(path) as f:
+                lines = f.readlines()
+            assert len(lines) == len(result)
+            for line in lines:
+                parsed = json.loads(line)
+                assert "subcircuit_id" in parsed
+                assert "subcircuit_type" in parsed
+                assert "confidence" in parsed
+                assert "resistor_count" in parsed
+        finally:
+            os.unlink(path)
+
+    def test_end_to_end_feature_fields(self):
+        """End-to-end: topology -> detection -> features include all key fields."""
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        detector = SubcircuitDetector()
+        result = detector.detect(_multi_type_topology())
+        assert len(result) >= 2
+        for sc in result:
+            f = sc.features
+            # Component counts
+            assert "ic_count" in f
+            assert "resistor_count" in f
+            assert "capacitor_count" in f
+            assert "total_component_count" in f
+            # Topology features
+            assert "has_feedback_loop" in f
+            assert "has_power_connection" in f
+            assert "component_density" in f
+            assert "primary_ic_type" in f
+            assert "ic_lib_ids" in f
