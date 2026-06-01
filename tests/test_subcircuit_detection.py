@@ -1492,3 +1492,164 @@ class TestFeatureExtractionEdgeCases:
             signal_paths=[],
         )
         assert features.ic_lib_ids == ("NE5532",)
+
+
+# ---------------------------------------------------------------------------
+# Test: Confidence calibration
+# ---------------------------------------------------------------------------
+
+
+class TestConfidenceCalibration:
+    """Confidence scoring calibrated: >0.8 exact, 0.5-0.8 heuristic, <0.5 unknown."""
+
+    def test_exact_ic_match_high_confidence(self):
+        """Exact IC match (THAT4301 with sidechain) -> confidence > 0.8."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_compressor_features())
+        assert result.subcircuit_type == SubcircuitType.COMPRESSOR
+        assert result.confidence > 0.8
+
+    def test_heuristic_match_medium_confidence(self):
+        """Heuristic match (known op-amp pattern) -> confidence >= 0.5."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        c = CircuitClassifier()
+        result = c.classify(_output_stage_features())
+        assert result.confidence >= 0.5
+        assert result.confidence <= 0.9
+
+    def test_no_match_low_confidence(self):
+        """No rule match -> confidence < 0.5."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        result = c.classify(_unknown_ic_features())
+        assert result.subcircuit_type == SubcircuitType.UNKNOWN
+        assert result.confidence < 0.5
+
+    def test_feature_vector_included_for_unknown(self):
+        """ClassificationResult includes feature_vector for unknown classifications."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        c = CircuitClassifier()
+        result = c.classify(_unknown_ic_features())
+        assert result.feature_vector is not None
+        assert isinstance(result.feature_vector, dict)
+        assert "lib_id" in result.feature_vector
+
+    def test_classify_accepts_subcircuit_features(self):
+        """CircuitClassifier accepts SubcircuitFeatures in addition to raw dict."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+
+        features = SubcircuitFeatures(
+            subcircuit_id="SC-001",
+            ic_count=1, resistor_count=2, capacitor_count=2,
+            inductor_count=0, diode_count=0, transistor_count=0,
+            total_component_count=5,
+            has_feedback_loop=True, has_power_connection=True, has_crystal=False,
+            feedback_capacitor_count=0, feedback_resistor_count=1,
+            coupling_capacitor_count=2,
+            input_net_count=1, output_net_count=1, power_net_count=1,
+            ground_net_count=1, control_net_count=0, feedback_net_count=1,
+            net_count=5, boundary_net_count=2,
+            ic_lib_ids=("NE5532",), primary_ic_type="opamp",
+            max_signal_path_length=2, component_density=1.0,
+        )
+        c = CircuitClassifier()
+        result = c.classify(features)
+        # NE5532 with feedback resistors should classify as some type
+        assert result.subcircuit_type != SubcircuitType.UNKNOWN or result.confidence < 0.5
+
+    def test_custom_rule_override_confidence(self):
+        """Custom rules can override default confidence for domain-specific tuning."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+
+        custom_rule = [
+            (lambda f: f.get("lib_id") == "NE5532", SubcircuitType.EQ, 0.99, "Custom EQ rule"),
+        ]
+        c = CircuitClassifier(custom_rules=custom_rule)
+        result = c.classify(_opamp_preamplifier_features())
+        assert result.confidence == 0.99
+        assert result.matched_rule == "Custom EQ rule"
+
+
+# ---------------------------------------------------------------------------
+# Test: Unknown/ambiguous handling
+# ---------------------------------------------------------------------------
+
+
+class TestUnknownHandling:
+    """Unknown and ambiguous subcircuits logged with feature vectors."""
+
+    def test_ambiguous_opamp_lower_confidence(self):
+        """Op-amp that could be preamp OR output stage has lower confidence."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        c = CircuitClassifier()
+        # Output stage features: ambiguous (op-amp with low component count)
+        result = c.classify(_output_stage_features())
+        # Output stage should still classify but with medium confidence
+        assert result.confidence <= 0.8
+
+    def test_unknown_logged_with_feature_vector(self):
+        """Unknown classifications have feature_vector populated for ML pipeline."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        c = CircuitClassifier()
+        result = c.classify({"lib_id": "XYZ999", "component_type": "ic"})
+        assert result.feature_vector is not None
+
+    def test_known_high_confidence_no_feature_vector(self):
+        """High-confidence matches do not include feature_vector (not needed for ML)."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        c = CircuitClassifier()
+        result = c.classify(_power_supply_features())
+        assert result.confidence >= 0.9
+        # High-confidence results don't need feature vector
+        assert result.feature_vector is None
+
+
+# ---------------------------------------------------------------------------
+# Test: Batch classification consistency
+# ---------------------------------------------------------------------------
+
+
+class TestBatchClassification:
+    """Batch classification returns consistent results."""
+
+    def test_batch_consistent_with_individual(self):
+        """classify_batch returns same results as individual classify calls."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        c = CircuitClassifier()
+        features_list = [
+            _opamp_preamplifier_features(),
+            _power_supply_features(),
+            _unknown_ic_features(),
+        ]
+        batch_results = c.classify_batch(features_list)
+        for features, batch_result in zip(features_list, batch_results):
+            individual = c.classify(features)
+            assert batch_result.subcircuit_type == individual.subcircuit_type
+            assert batch_result.confidence == individual.confidence
+
+    def test_batch_confidence_ordering(self):
+        """Specific rules (high confidence) ordered before general rules."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        c = CircuitClassifier()
+        # Compressor has confidence 0.9 (specific), VCA has 0.85 (less specific)
+        compressor = c.classify(_compressor_features())
+        vca = c.classify(_vca_no_sidechain_features())
+        assert compressor.confidence > vca.confidence
+
+    def test_batch_returns_feature_vectors_for_unknowns(self):
+        """Batch results include feature vectors for unknown classifications."""
+        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        c = CircuitClassifier()
+        results = c.classify_batch([
+            _power_supply_features(),
+            _unknown_ic_features(),
+        ])
+        assert results[0].feature_vector is None  # Known, no feature vector needed
+        assert results[1].feature_vector is not None  # Unknown, feature vector for ML

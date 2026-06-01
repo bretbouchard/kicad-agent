@@ -16,9 +16,10 @@ Usage:
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Union
 
 from kicad_agent.analysis.subcircuit_detector import SubcircuitType
 
@@ -185,6 +186,7 @@ class ClassificationResult:
     subcircuit_type: SubcircuitType
     confidence: float
     matched_rule: str  # Description of the rule that matched
+    feature_vector: dict | None = None  # Feature dict for audit/ML pipeline
 
 
 class CircuitClassifier:
@@ -202,33 +204,57 @@ class CircuitClassifier:
         """
         self._rules = (custom_rules or []) + _CLASSIFICATION_RULES
 
-    def classify(self, features: dict[str, Any]) -> ClassificationResult:
+    def classify(
+        self, features: dict[str, Any] | "SubcircuitFeatures",  # noqa: F821
+    ) -> ClassificationResult:
         """Classify a subcircuit by its features.
 
+        Accepts raw dict or SubcircuitFeatures. Converts SubcircuitFeatures
+        to dict internally for rule matching.
+
         Args:
-            features: Dict of subcircuit features (from Subcircuit.features or extracted).
+            features: Dict of subcircuit features or SubcircuitFeatures instance.
 
         Returns:
-            ClassificationResult with type, confidence, and matched rule description.
+            ClassificationResult with type, confidence, matched rule, and
+            optional feature_vector for low-confidence results.
         """
+        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
+
+        if isinstance(features, SubcircuitFeatures):
+            feat_dict = features.to_dict()
+        else:
+            feat_dict = features
+
         for match_fn, sc_type, confidence, description in self._rules:
-            if match_fn(features):
+            if match_fn(feat_dict):
                 return ClassificationResult(
                     subcircuit_type=sc_type,
                     confidence=confidence,
                     matched_rule=description,
+                    feature_vector=feat_dict if confidence < 0.5 else None,
                 )
+
+        # No match -- log for ML training data
+        logger.info(
+            "Unknown subcircuit classification: features=%s",
+            json.dumps(feat_dict, default=str),
+        )
         return ClassificationResult(
             subcircuit_type=SubcircuitType.UNKNOWN,
             confidence=0.3,
             matched_rule="No rule matched",
+            feature_vector=feat_dict,
         )
 
-    def classify_batch(self, feature_list: list[dict[str, Any]]) -> list[ClassificationResult]:
+    def classify_batch(
+        self,
+        feature_list: list[dict[str, Any] | "SubcircuitFeatures"],  # noqa: F821
+    ) -> list[ClassificationResult]:
         """Classify multiple subcircuits at once.
 
         Args:
-            feature_list: List of feature dicts.
+            feature_list: List of feature dicts or SubcircuitFeatures instances.
 
         Returns:
             List of ClassificationResult, one per input.
