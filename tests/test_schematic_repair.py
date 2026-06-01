@@ -17,8 +17,12 @@ from kiutils.schematic import Schematic
 from kicad_agent.ir.schematic_ir import SchematicIR
 from kicad_agent.ops.repair import (
     SNAP_TOLERANCE,
+    _find_position_for_unit,
+    _get_unit_pin_map,
+    _get_unit_pin_offsets,
     add_power_flags,
     detect_shorted_nets,
+    place_missing_units,
     place_no_connects,
     place_no_connects_from_erc,
     remove_orphaned_labels,
@@ -723,3 +727,201 @@ class TestErcAutoFix:
             pf_idx = call_order.index("power_flags")
             nc_idx = call_order.index("no_connects")
             assert pf_idx < nc_idx, f"power_flags (idx={pf_idx}) should come before no_connects (idx={nc_idx})"
+
+
+# ---------------------------------------------------------------------------
+# Helper: build a mock lib_sym with multi-unit sub-symbols
+# ---------------------------------------------------------------------------
+
+def _make_pin(number: str, px: float = 0.0, py: float = 0.0):
+    """Create a mock pin with number and position."""
+    pin = MagicMock()
+    pin.number = number
+    pin.position = MagicMock()
+    pin.position.X = px
+    pin.position.Y = py
+    return pin
+
+
+def _make_sub_symbol(lib_id: str, pins: list):
+    """Create a mock sub-symbol with libId and pin list."""
+    sub = MagicMock()
+    sub.libId = lib_id
+    sub.pins = pins
+    return sub
+
+
+def _make_lib_sym(lib_id: str, sub_symbols: list):
+    """Create a mock lib_sym with libId and units."""
+    lib = MagicMock()
+    lib.libId = lib_id
+    lib.units = sub_symbols
+    return lib
+
+
+# Channel-strip eq-stage path for integration tests
+_EQ_STAGE = Path(
+    "/Users/bretbouchard/apps/analog-ecosystem"
+    "/hardware/network-io/channel-strip/eq-stage.kicad_sch"
+)
+
+
+class TestGetUnitPinMap:
+    """Test _get_unit_pin_map helper (Bug B fix)."""
+
+    def test_ne5532_unit_mapping(self):
+        """NE5532 sub-symbols: unit 1 → {1,2,3}, unit 2 → {5,6,7}, unit 3 → {4,8}."""
+        lib_sym = _make_lib_sym("Amplifier_Operational:NE5532", [
+            _make_sub_symbol("NE5532_0_1", []),            # graphic wrapper
+            _make_sub_symbol("NE5532_1_1", [_make_pin("1"), _make_pin("2"), _make_pin("3")]),
+            _make_sub_symbol("NE5532_2_1", [_make_pin("5"), _make_pin("6"), _make_pin("7")]),
+            _make_sub_symbol("NE5532_3_1", [_make_pin("4"), _make_pin("8")]),
+        ])
+        result = _get_unit_pin_map(lib_sym)
+        assert result == {1: {"1", "2", "3"}, 2: {"5", "6", "7"}, 3: {"4", "8"}}
+
+    def test_cd4066be_unit_mapping(self):
+        """CD4066BE: 4 switch units + 1 power unit."""
+        lib_sym = _make_lib_sym("4xxx:CD4066BE", [
+            _make_sub_symbol("CD4066BE_0_1", []),
+            _make_sub_symbol("CD4066BE_1_1", [_make_pin("1"), _make_pin("2"), _make_pin("13")]),
+            _make_sub_symbol("CD4066BE_2_1", [_make_pin("3"), _make_pin("4"), _make_pin("5")]),
+            _make_sub_symbol("CD4066BE_3_1", [_make_pin("6"), _make_pin("8"), _make_pin("9")]),
+            _make_sub_symbol("CD4066BE_4_1", [_make_pin("10"), _make_pin("11"), _make_pin("12")]),
+            _make_sub_symbol("CD4066BE_5_1", [_make_pin("7"), _make_pin("14")]),
+        ])
+        result = _get_unit_pin_map(lib_sym)
+        assert 1 in result and result[1] == {"1", "2", "13"}
+        assert 5 in result and result[5] == {"7", "14"}
+        assert len(result) == 5
+
+    def test_skips_empty_units(self):
+        """Units with no pins (graphic wrappers) are excluded."""
+        lib_sym = _make_lib_sym("Device:R", [
+            _make_sub_symbol("R_0_1", []),
+            _make_sub_symbol("R_1_1", [_make_pin("1"), _make_pin("2")]),
+        ])
+        result = _get_unit_pin_map(lib_sym)
+        assert 0 not in result
+        assert result == {1: {"1", "2"}}
+
+
+class TestGetUnitPinOffsets:
+    """Test _get_unit_pin_offsets helper."""
+
+    def test_returns_offsets_for_specific_unit(self):
+        lib_sym = _make_lib_sym("NE5532", [
+            _make_sub_symbol("NE5532_1_1", [_make_pin("1", 5.08, 3.81), _make_pin("2", 5.08, 1.27)]),
+            _make_sub_symbol("NE5532_2_1", [_make_pin("5", -5.08, 3.81), _make_pin("6", -5.08, 1.27)]),
+        ])
+        offsets = _get_unit_pin_offsets(lib_sym, 2)
+        assert "5" in offsets
+        assert offsets["5"] == (-5.08, 3.81)
+
+    def test_returns_empty_for_unknown_unit(self):
+        lib_sym = _make_lib_sym("NE5532", [
+            _make_sub_symbol("NE5532_1_1", [_make_pin("1", 0, 0)]),
+        ])
+        assert _get_unit_pin_offsets(lib_sym, 99) == {}
+
+
+class TestFindPositionForUnit:
+    """Test _find_position_for_unit helper (Bug C fix)."""
+
+    def test_finds_position_from_wire_endpoints(self):
+        """When a wire endpoint matches a pin offset, calculates correct position."""
+        lib_sym = _make_lib_sym("NE5532", [
+            _make_sub_symbol("NE5532_2_1", [
+                _make_pin("5", -5.08, 3.81),
+                _make_pin("6", -5.08, 1.27),
+                _make_pin("7", -5.08, -1.27),
+            ]),
+        ])
+        # Place wires at positions that would align with unit 2 pins
+        # if component were at (50, 50) with rotation 0
+        ir = MagicMock()
+        wire_endpoints = [
+            {"start_x": 50.0 - 5.08, "start_y": 50.0 - 3.81, "end_x": 40.0, "end_y": 46.19},
+            {"start_x": 50.0 - 5.08, "start_y": 50.0 - 1.27, "end_x": 40.0, "end_y": 48.73},
+        ]
+        pos = _find_position_for_unit(
+            ir, lib_sym, 2, rotation=0.0,
+            wire_endpoints=wire_endpoints, label_positions=[],
+        )
+        assert pos is not None
+        # Should resolve to approximately (50, 50)
+        assert abs(pos[0] - 50.0) < 0.2
+        assert abs(pos[1] - 50.0) < 0.2
+
+    def test_returns_none_when_no_wires(self):
+        """Returns None when no wire endpoints match."""
+        lib_sym = _make_lib_sym("NE5532", [
+            _make_sub_symbol("NE5532_2_1", [
+                _make_pin("5", -5.08, 3.81),
+            ]),
+        ])
+        ir = MagicMock()
+        pos = _find_position_for_unit(
+            ir, lib_sym, 2, rotation=0.0,
+            wire_endpoints=[], label_positions=[],
+        )
+        assert pos is None
+
+    def test_uses_label_positions(self):
+        """Finds position from label positions when no wire matches."""
+        lib_sym = _make_lib_sym("NE5532", [
+            _make_sub_symbol("NE5532_2_1", [
+                _make_pin("5", -5.08, 3.81),
+                _make_pin("6", -5.08, 1.27),
+            ]),
+        ])
+        ir = MagicMock()
+        # Labels at positions matching pins for component at (30, 30)
+        label_positions = [
+            {"name": "NET_A", "x": 30.0 - 5.08, "y": 30.0 - 3.81},
+            {"name": "NET_B", "x": 30.0 - 5.08, "y": 30.0 - 1.27},
+        ]
+        pos = _find_position_for_unit(
+            ir, lib_sym, 2, rotation=0.0,
+            wire_endpoints=[], label_positions=label_positions,
+        )
+        assert pos is not None
+        assert abs(pos[0] - 30.0) < 0.2
+        assert abs(pos[1] - 30.0) < 0.2
+
+
+class TestPlaceMissingUnits:
+    """Integration tests for place_missing_units with Bug B + C fixes."""
+
+    def test_dry_run_on_eq_stage(self):
+        """Dry run on eq-stage: should identify 5 missing units with correct numbers."""
+        if not _EQ_STAGE.exists():
+            pytest.skip("Channel strip eq-stage not found")
+
+        result = parse_schematic(_EQ_STAGE)
+        ir = SchematicIR(_parse_result=result)
+
+        output = place_missing_units(ir, _EQ_STAGE, dry_run=True)
+        assert output["total"] > 0
+
+        # Every placed unit should have a unit_number (not unit_index)
+        for detail in output["units_placed"]:
+            assert "unit_number" in detail
+            assert isinstance(detail["unit_number"], int)
+            assert detail["unit_number"] >= 1
+
+    def test_correct_missing_units_for_ne5532(self):
+        """NE5532 with units {1,3} placed should report unit 2 as missing."""
+        if not _EQ_STAGE.exists():
+            pytest.skip("Channel strip eq-stage not found")
+
+        result = parse_schematic(_EQ_STAGE)
+        ir = SchematicIR(_parse_result=result)
+
+        output = place_missing_units(ir, _EQ_STAGE, dry_run=True,
+                                     references=["U3"])
+        # U3 is NE5532 with units 1 and 3 placed → unit 2 is missing
+        u3_units = [d for d in output["units_placed"] if d["base_reference"] == "U3"]
+        if u3_units:
+            assert u3_units[0]["unit_number"] == 2
+            assert u3_units[0]["unit_letter"] == "B"

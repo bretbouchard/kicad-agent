@@ -915,6 +915,147 @@ def fix_pin_type_mismatches(
     }
 
 
+def _get_unit_pin_map(lib_sym) -> dict[int, set[str]]:
+    """Extract unit_number -> pin_numbers mapping from sub-symbol names.
+
+    KiCad multi-unit symbols define sub-symbols named ``ParentName_X_Y``
+    where X is the unit number and Y is the body style.  This helper
+    parses those names and returns a mapping from unit number to the set
+    of pin numbers defined in that unit.
+
+    Units with zero pins (graphic-only wrappers) are excluded.
+    """
+    unit_map: dict[int, set[str]] = {}
+    for sub_sym in lib_sym.units:
+        name = getattr(sub_sym, "libId", "") or ""
+        parts = name.rsplit("_", 2)
+        if len(parts) < 3:
+            continue
+        try:
+            unit_num = int(parts[-2])
+        except ValueError:
+            continue
+
+        pin_numbers: set[str] = set()
+        for pin in sub_sym.pins:
+            if pin.number:
+                pin_numbers.add(pin.number)
+
+        if pin_numbers:
+            unit_map[unit_num] = pin_numbers
+
+    return unit_map
+
+
+def _get_unit_pin_offsets(
+    lib_sym, unit_num: int
+) -> dict[str, tuple[float, float]]:
+    """Get pin positions for a specific unit from the lib symbol.
+
+    Returns dict of pin_number -> (px, py) where px, py are relative to
+    the component origin (the pin's connection-point position in the lib
+    symbol definition).
+    """
+    for sub_sym in lib_sym.units:
+        name = getattr(sub_sym, "libId", "") or ""
+        parts = name.rsplit("_", 2)
+        if len(parts) < 3:
+            continue
+        try:
+            u = int(parts[-2])
+        except ValueError:
+            continue
+        if u == unit_num:
+            return {
+                pin.number: (pin.position.X, pin.position.Y)
+                for pin in sub_sym.pins
+                if pin.number
+            }
+    return {}
+
+
+def _find_position_for_unit(
+    ir: SchematicIR,
+    lib_sym,
+    unit_num: int,
+    rotation: float,
+    wire_endpoints: list[dict[str, Any]],
+    label_positions: list[dict[str, Any]],
+    center: tuple[float, float] | None = None,
+    max_distance: float = 100.0,
+) -> tuple[float, float] | None:
+    """Find the component position that aligns a unit's pins with existing wires/labels.
+
+    Uses the Y-inversion pattern from ``get_pin_positions()``:
+        absolute = (sx + rot_px, sy - rot_py)
+    Reverse: (sx, sy) = (abs_x - rot_px, abs_y + rot_py)
+
+    For each pin on the missing unit, computes candidate component
+    positions from wire endpoints and label positions.  Returns the
+    position with the most agreement across pins, or ``None`` if fewer
+    than 2 pins agree.
+
+    Args:
+        center: If provided, only consider anchors within *max_distance*
+            mm of this point.  This prevents matching wires from unrelated
+            parts of the schematic.
+        max_distance: Maximum distance from *center* in mm.
+    """
+    pin_offsets = _get_unit_pin_offsets(lib_sym, unit_num)
+    if not pin_offsets:
+        return None
+
+    angle_rad = math.radians(rotation)
+    cos_a = math.cos(angle_rad)
+    sin_a = math.sin(angle_rad)
+
+    # Build anchor points from wire endpoints and label positions
+    anchor_points: list[tuple[float, float]] = []
+    for wire in wire_endpoints:
+        anchor_points.append((wire["start_x"], wire["start_y"]))
+        anchor_points.append((wire["end_x"], wire["end_y"]))
+    for label in label_positions:
+        anchor_points.append((label["x"], label["y"]))
+
+    if not anchor_points:
+        return None
+
+    # Filter by proximity to center if provided
+    if center is not None:
+        cx, cy = center
+        max_dist_sq = max_distance * max_distance
+        anchor_points = [
+            (ax, ay)
+            for ax, ay in anchor_points
+            if (ax - cx) ** 2 + (ay - cy) ** 2 <= max_dist_sq
+        ]
+        if not anchor_points:
+            return None
+
+    # Collect candidate component positions from all pins x all anchors
+    from collections import Counter
+
+    candidate_positions: list[tuple[float, float]] = []
+    for _pin_num, (px, py) in pin_offsets.items():
+        rot_px = px * cos_a - py * sin_a
+        rot_py = px * sin_a + py * cos_a
+
+        for anchor_x, anchor_y in anchor_points:
+            cand_x = round((anchor_x - rot_px) * 10) / 10
+            cand_y = round((anchor_y + rot_py) * 10) / 10
+            candidate_positions.append((cand_x, cand_y))
+
+    pos_counter = Counter(candidate_positions)
+    if not pos_counter:
+        return None
+
+    best_pos, count = pos_counter.most_common(1)[0]
+    if count >= 2:
+        return best_pos
+
+    return None
+
+
 def place_missing_units(
     ir: SchematicIR, file_path: Path, *,
     references: list[str] | None = None,
@@ -994,51 +1135,86 @@ def place_missing_units(
         if len(available_units) <= 2 and len(available_units[0].pins) == 0:
             continue  # Single-unit symbol with graphic wrapper
 
-        # Count placed units
-        placed_count = len(components)
+        # Get unit_number -> pin_numbers mapping from sub-symbol names
+        unit_pin_map = _get_unit_pin_map(lib_sym)
+        if not unit_pin_map:
+            continue
 
-        if placed_count >= len(available_units):
+        # Determine which unit numbers are placed vs missing.
+        # KiCad unit numbers are NOT sequential array indices —
+        # NE5532 has units {1, 2, 3} but a component may have
+        # only units {1, 3} placed (op-amp A + power).  We must
+        # use comp.unit to get the actual KiCad unit number.
+        placed_unit_nums = {comp.unit for comp in components}
+        missing_unit_nums = sorted(unit_pin_map.keys() - placed_unit_nums)
+
+        if not missing_unit_nums:
             continue  # All units already placed
 
-        # Get position of first (placed) component
+        # Get wire endpoints and label positions for position calculation
+        wire_endpoints = ir.get_wire_endpoints()
+        label_positions = ir.get_label_positions()
+
+        # Get position and rotation of first placed component
         first_comp = components[0]
-        base_x = first_comp.position.X
-        base_y = first_comp.position.Y
-        rotation = first_comp.position.angle
+        rotation = first_comp.position.angle or 0.0
 
         # Place missing units
-        for i in range(placed_count, len(available_units)):
-            unit_index = i
-            offset_idx = unit_index - 0  # Offset from first unit
-            new_x = base_x + offset_idx * offset_x
-            new_y = base_y + offset_idx * offset_y
+        import copy
+
+        for i, missing_num in enumerate(missing_unit_nums):
+            # Bug C fix: try to find position that aligns pins with
+            # existing wires/labels.  Only search near the first placed
+            # unit to avoid matching wires from unrelated parts of the
+            # schematic.
+            center = (first_comp.position.X, first_comp.position.Y)
+            pos = _find_position_for_unit(
+                ir, lib_sym, missing_num, rotation,
+                wire_endpoints, label_positions,
+                center=center, max_distance=100.0,
+            )
+            if pos is None:
+                # Fallback: offset from first unit.  Stacking at the
+                # same position is unsafe for dual op-amps (NE5532
+                # units 1 and 2 have identical pin offset patterns),
+                # so we use a sequential offset instead.
+                offset_idx = len(components) + i
+                pos = (
+                    first_comp.position.X + offset_idx * offset_x,
+                    first_comp.position.Y + offset_idx * offset_y,
+                )
+
+            new_x, new_y = pos
 
             if dry_run:
+                unit_letter = chr(ord("A") + missing_num - 1)
                 units_placed.append({
                     "base_reference": base_ref,
-                    "unit_index": unit_index,
+                    "unit_number": missing_num,
+                    "unit_letter": unit_letter,
                     "position": [new_x, new_y],
                     "dry_run": True,
                 })
                 continue
 
-            # Create a new component S-expression for this unit
-            # This is a simplified approach — we clone the first component
-            # and update position, UUID, and unit reference
-            import copy
-
+            # Clone the first component and override unit-specific fields
             new_comp = copy.deepcopy(first_comp)
             new_uuid = str(uuid.uuid4())
             new_comp.position.X = new_x
             new_comp.position.Y = new_y
             new_comp.position.angle = rotation
 
+            # Bug B fix: set the correct KiCad unit number.
+            # Previously all clones inherited comp.unit=1 from the
+            # first component, causing the wrong sub-symbol graphics.
+            new_comp.unit = missing_num
+
             # Update UUID
             if hasattr(new_comp, "uuid"):
                 new_comp.uuid = new_uuid
 
-            # Update reference to include unit letter (A=1, B=2, etc.)
-            unit_letter = chr(ord("A") + unit_index)
+            # Derive reference letter from unit number (1=A, 2=B, 3=C, ...)
+            unit_letter = chr(ord("A") + missing_num - 1)
             for prop in new_comp.properties:
                 if prop.key == "Reference":
                     prop.value = f"{base_ref}{unit_letter}"
@@ -1048,7 +1224,7 @@ def place_missing_units(
 
             ir._record_mutation("place_missing_unit", {
                 "base_reference": base_ref,
-                "unit_index": unit_index,
+                "unit_number": missing_num,
                 "unit_letter": unit_letter,
                 "position": [new_x, new_y],
                 "uuid": new_uuid,
@@ -1056,7 +1232,7 @@ def place_missing_units(
 
             units_placed.append({
                 "base_reference": base_ref,
-                "unit_index": unit_index,
+                "unit_number": missing_num,
                 "unit_letter": unit_letter,
                 "position": [new_x, new_y],
                 "uuid": new_uuid,
