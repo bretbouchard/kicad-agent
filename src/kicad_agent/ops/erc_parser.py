@@ -104,7 +104,9 @@ def parse_erc(sch_path: Path) -> list[ErcViolation]:
 
 
 def extract_violation_positions(
-    sch_path: Path, violation_type: str
+    sch_path: Path,
+    violation_type: str,
+    sheet_filter: str | None = "/",
 ) -> list[ViolationPosition]:
     """Extract positions for a specific ERC violation type.
 
@@ -114,6 +116,10 @@ def extract_violation_positions(
     Args:
         sch_path: Path to a .kicad_sch file.
         violation_type: Violation type to filter for (e.g. "pin_not_connected").
+        sheet_filter: Only include violations from this sheet path.
+            Defaults to "/" (root sheet only) to prevent cross-sheet
+            coordinate mismatches in hierarchical schematics.
+            Pass None to include violations from all sheets.
 
     Returns:
         List of ViolationPosition instances for matching violations.
@@ -123,6 +129,8 @@ def extract_violation_positions(
 
     for v in violations:
         if v.type == violation_type:
+            if sheet_filter is not None and v.sheet != sheet_filter:
+                continue
             for x, y in v.positions:
                 positions.append(
                     ViolationPosition(

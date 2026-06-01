@@ -210,7 +210,7 @@ class TestRootCauseMode:
         """Root cause mode returns result with classification categories."""
         from kicad_agent.ops.erc_auto_fix import erc_auto_fix
 
-        mock_parse_erc.return_value = [MagicMock(type="pin_not_connected")]
+        mock_parse_erc.return_value = [MagicMock(type="pin_not_connected", sheet="/")]
         mock_classify.return_value = self._mock_classify_return()
         mock_diagnose.return_value = self._mock_diagnose_return()
 
@@ -236,7 +236,7 @@ class TestRootCauseMode:
         """Root cause mode result includes pre_existing_documented with root cause explanations."""
         from kicad_agent.ops.erc_auto_fix import erc_auto_fix
 
-        mock_parse_erc.return_value = [MagicMock(type="power_pin_not_driven")]
+        mock_parse_erc.return_value = [MagicMock(type="power_pin_not_driven", sheet="/")]
         mock_classify.return_value = self._mock_classify_return()
         mock_diagnose.return_value = self._mock_diagnose_return()
 
@@ -263,7 +263,7 @@ class TestRootCauseMode:
         """Root cause mode result includes benign_suppressed count (not detailed list)."""
         from kicad_agent.ops.erc_auto_fix import erc_auto_fix
 
-        mock_parse_erc.return_value = [MagicMock(type="same_local_global_label")]
+        mock_parse_erc.return_value = [MagicMock(type="same_local_global_label", sheet="/")]
         mock_classify.return_value = self._mock_classify_return()
         mock_diagnose.return_value = self._mock_diagnose_return()
 
@@ -290,7 +290,7 @@ class TestRootCauseMode:
         """Root cause mode result includes config_issues list."""
         from kicad_agent.ops.erc_auto_fix import erc_auto_fix
 
-        mock_parse_erc.return_value = [MagicMock(type="lib_symbol_issues")]
+        mock_parse_erc.return_value = [MagicMock(type="lib_symbol_issues", sheet="/")]
         mock_classify.return_value = self._mock_classify_return()
         mock_diagnose.return_value = self._mock_diagnose_return()
 
@@ -315,7 +315,7 @@ class TestRootCauseMode:
         """Root cause mode result includes fixes_applied for fixable violations only."""
         from kicad_agent.ops.erc_auto_fix import erc_auto_fix
 
-        mock_parse_erc.return_value = [MagicMock(type="pin_not_connected")]
+        mock_parse_erc.return_value = [MagicMock(type="pin_not_connected", sheet="/")]
         mock_classify.return_value = self._mock_classify_return()
         mock_diagnose.return_value = self._mock_diagnose_return()
 
@@ -340,7 +340,7 @@ class TestRootCauseMode:
         """Root cause mode is single-pass (iterations=1, diagnosis replaces iteration)."""
         from kicad_agent.ops.erc_auto_fix import erc_auto_fix
 
-        mock_parse_erc.return_value = [MagicMock(type="pin_not_connected")]
+        mock_parse_erc.return_value = [MagicMock(type="pin_not_connected", sheet="/")]
         mock_classify.return_value = self._mock_classify_return()
         mock_diagnose.return_value = self._mock_diagnose_return()
 
@@ -363,7 +363,7 @@ class TestRootCauseMode:
         """Root cause mode does NOT attempt to fix pre_existing violations."""
         from kicad_agent.ops.erc_auto_fix import erc_auto_fix
 
-        mock_parse_erc.return_value = [MagicMock(type="power_pin_not_driven")]
+        mock_parse_erc.return_value = [MagicMock(type="power_pin_not_driven", sheet="/")]
         mock_classify.return_value = self._mock_classify_return()
         mock_diagnose.return_value = self._mock_diagnose_return()
 
@@ -489,7 +489,7 @@ class TestModeDispatch:
         """Root cause mode calls classify_violations then diagnose_violations then targeted repair."""
         from kicad_agent.ops.erc_auto_fix import erc_auto_fix
 
-        mock_parse_erc.return_value = [MagicMock(type="pin_not_connected")]
+        mock_parse_erc.return_value = [MagicMock(type="pin_not_connected", sheet="/")]
         mock_classify.return_value = {
             "fixable": [],
             "pre_existing": [],

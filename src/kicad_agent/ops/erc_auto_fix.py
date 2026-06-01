@@ -142,6 +142,7 @@ def erc_auto_fix(
     max_iterations: int = 3,
     mode: str = "symptom",
     fix_classes: list[str] | None = None,
+    sheet_filter: str | None = "/",
 ) -> dict[str, Any]:
     """Run ERC, dispatch repairs by violation type, iterate until resolved.
 
@@ -157,6 +158,12 @@ def erc_auto_fix(
         max_iterations: Maximum repair iterations (default 3, max 10 enforced by schema).
         mode: ``"symptom"`` for existing behavior, ``"root_cause"`` for classify-diagnose-fix.
         fix_classes: In root_cause mode, only fix these classes. None = fixable only.
+        sheet_filter: Only fix violations from this sheet path.
+            Defaults to "/" (root sheet only). In hierarchical schematics, ERC
+            reports violations from all sheets, but the IR only contains data for
+            one sheet. Fixing cross-sheet violations on the wrong sheet causes
+            no_connect_dangling and missing-label regressions (Bug B).
+            Pass None to include violations from all sheets (use with caution).
 
     Returns:
         Dict with:
@@ -168,7 +175,9 @@ def erc_auto_fix(
              config_issues, summary)
     """
     if mode == "root_cause":
-        return erc_auto_fix_root_cause(ir, file_path, max_iterations, fix_classes)
+        return erc_auto_fix_root_cause(
+            ir, file_path, max_iterations, fix_classes, sheet_filter
+        )
 
     # --- Symptom mode: existing iteration-based repair ---
     all_fixes: list[dict[str, Any]] = []
@@ -184,6 +193,14 @@ def erc_auto_fix(
 
     for iteration in range(max_iterations):
         violations = parse_erc(file_path)
+
+        # Bug B fix: filter to current sheet only. In hierarchical schematics,
+        # ERC reports violations from all sheets but the IR only has data for
+        # one sheet. Fixing cross-sheet violations causes no_connect_dangling
+        # and missing-label regressions.
+        if sheet_filter is not None:
+            violations = [v for v in violations if v.sheet == sheet_filter]
+
         current_count = len(violations)
 
         # No violations -- done (don't count this as an iteration)
@@ -269,6 +286,7 @@ def erc_auto_fix_root_cause(
     file_path: Path,
     max_iterations: int = 3,
     fix_classes: list[str] | None = None,
+    sheet_filter: str | None = "/",
 ) -> dict[str, Any]:
     """Root cause mode: classify -> diagnose -> targeted fix -> document.
 
@@ -287,6 +305,8 @@ def erc_auto_fix_root_cause(
         file_path: Path to the schematic file (for ERC invocation).
         max_iterations: Kept for API consistency; root cause mode is single-pass.
         fix_classes: Only fix these violation classes. None = fixable only.
+        sheet_filter: Only fix violations from this sheet path.
+            Defaults to "/" (root sheet only). Pass None for all sheets.
 
     Returns:
         Dict with mode, fixes_applied, iterations, remaining_violations,
@@ -296,6 +316,11 @@ def erc_auto_fix_root_cause(
     from kicad_agent.ops.violation_diagnostic import diagnose_violations
 
     violations = parse_erc(file_path)
+
+    # Bug B fix: filter to current sheet only in hierarchical schematics.
+    if sheet_filter is not None:
+        violations = [v for v in violations if v.sheet == sheet_filter]
+
     if not violations:
         return _empty_root_cause_result()
 
