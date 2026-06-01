@@ -393,3 +393,168 @@ def erc_auto_fix_root_cause(
         ],
         "summary": classified["summary"],
     }
+
+
+# ---------------------------------------------------------------------------
+# Hierarchical ERC auto-fix
+# ---------------------------------------------------------------------------
+
+
+def _discover_sub_sheets(
+    file_path: Path,
+    parent_path: str = "/",
+) -> dict[str, Path]:
+    """Walk hierarchical schematic and return {erc_sheet_path: file_path} mapping.
+
+    Recursively reads HierarchicalSheet objects from each schematic file and
+    builds a flat dictionary mapping ERC sheet paths (e.g. ``/Input Stage/``)
+    to their corresponding file paths.
+
+    Args:
+        file_path: Path to a .kicad_sch file.
+        parent_path: ERC sheet path for the parent (default "/" for root).
+
+    Returns:
+        Dict mapping ERC sheet path strings to Path objects.
+    """
+    from kiutils.schematic import Schematic as KiutilsSchematic
+
+    result: dict[str, Path] = {}
+    try:
+        sch = KiutilsSchematic.from_file(str(file_path))
+    except Exception:
+        return result
+
+    for sheet in sch.sheets:
+        sheet_name = getattr(sheet, "sheetName", None)
+        file_name_prop = getattr(sheet, "fileName", None)
+        if sheet_name is None or file_name_prop is None:
+            continue
+
+        name = sheet_name.value if hasattr(sheet_name, "value") else str(sheet_name)
+        fname = file_name_prop.value if hasattr(file_name_prop, "value") else str(file_name_prop)
+
+        if not fname:
+            continue
+
+        child_path = file_path.parent / fname
+        erc_path = f"{parent_path}{name}/"
+
+        result[erc_path] = child_path
+
+        # Recurse into child sheets
+        if child_path.exists():
+            result.update(_discover_sub_sheets(child_path, erc_path))
+
+    return result
+
+
+def _deregister_parse_result(parse_result: Any) -> None:
+    """Remove a ParseResult from the IR registry to prevent id() collisions.
+
+    The IR registry tracks ParseResult objects by id() to enforce one-IR-per-
+    ParseResult. When processing multiple sheets in a hierarchy, Python may
+    reuse memory addresses after garbage collection, causing false collisions.
+    Call this after each sheet's IR is no longer needed.
+    """
+    from kicad_agent.ir.base import _ir_registry, _ir_registry_lock
+
+    pr_id = id(parse_result)
+    with _ir_registry_lock:
+        _ir_registry.discard(pr_id)
+
+
+def erc_auto_fix_hierarchical(
+    root_path: Path,
+    max_iterations: int = 3,
+    mode: str = "symptom",
+) -> dict[str, Any]:
+    """Run erc_auto_fix across all sheets in a hierarchical schematic.
+
+    Discovers all sub-sheets from the root schematic, runs ERC once to get
+    all violations, then applies erc_auto_fix on each sheet that has violations.
+    Each sheet's IR is created separately so positions match correctly.
+
+    Args:
+        root_path: Path to the root .kicad_sch file.
+        max_iterations: Maximum repair iterations per sheet (default 3).
+        mode: ``"symptom"`` or ``"root_cause"`` (passed to erc_auto_fix).
+
+    Returns:
+        Dict with:
+            total_sheets: Number of sheets processed.
+            sheets_with_fixes: Number of sheets that had fixable violations.
+            per_sheet: Dict mapping sheet_path to erc_auto_fix result.
+            total_remaining: Sum of remaining violations across all sheets.
+    """
+    from kicad_agent.parser.schematic_parser import parse_schematic
+
+    # Step 1: Run ERC once on root (gets violations from all sheets)
+    all_violations = parse_erc(root_path)
+
+    # Step 2: Group violations by sheet
+    violations_by_sheet: dict[str, int] = {}
+    for v in all_violations:
+        violations_by_sheet[v.sheet] = violations_by_sheet.get(v.sheet, 0) + 1
+
+    # Step 3: Discover all sub-sheets
+    sub_sheets = _discover_sub_sheets(root_path)
+
+    # Build full mapping: root "/" + all sub-sheets
+    sheet_file_map: dict[str, Path] = {"/": root_path}
+    sheet_file_map.update(sub_sheets)
+
+    # Step 4: Process each sheet that has violations
+    per_sheet: dict[str, dict[str, Any]] = {}
+    sheets_with_fixes = 0
+
+    for sheet_path, sheet_file in sheet_file_map.items():
+        if violations_by_sheet.get(sheet_path, 0) == 0:
+            continue
+
+        if not sheet_file.exists():
+            logger.warning("Sheet file not found: %s (%s)", sheet_path, sheet_file)
+            continue
+
+        # Parse the sheet and create IR
+        parse_result = None
+        try:
+            parse_result = parse_schematic(sheet_file)
+            sheet_ir = SchematicIR(_parse_result=parse_result)
+        except Exception as exc:
+            logger.warning("Failed to parse sheet %s: %s", sheet_path, exc)
+            # Deregister ParseResult to prevent id() collision on reuse
+            if parse_result is not None:
+                _deregister_parse_result(parse_result)
+            continue
+
+        # Run erc_auto_fix on this sheet with matching sheet_filter
+        try:
+            result = erc_auto_fix(
+                sheet_ir,
+                sheet_file,
+                max_iterations=max_iterations,
+                mode=mode,
+                sheet_filter=sheet_path,
+            )
+            per_sheet[sheet_path] = result
+            if result.get("fixes_applied"):
+                sheets_with_fixes += 1
+        except Exception as exc:
+            logger.warning("erc_auto_fix failed on sheet %s: %s", sheet_path, exc)
+            per_sheet[sheet_path] = {"error": str(exc)}
+        finally:
+            # Deregister to prevent id() collision when Python reuses memory
+            _deregister_parse_result(parse_result)
+
+    # Step 5: Re-run ERC for final total count
+    final_violations = parse_erc(root_path)
+    total_remaining = len(final_violations)
+
+    return {
+        "total_sheets": len(sheet_file_map),
+        "sheets_with_violations": len(violations_by_sheet),
+        "sheets_with_fixes": sheets_with_fixes,
+        "per_sheet": per_sheet,
+        "total_remaining": total_remaining,
+    }
