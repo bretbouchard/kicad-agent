@@ -63,6 +63,7 @@ SIRuleTuple = tuple[
 # Name patterns for classification
 _POWER_NAMES = {"VCC", "VDD", "V+", "VEE", "VAA", "VCC_AUDIO", "VDD_DIGITAL"}
 _POWER_PREFIXES = ["+3V3", "+5V", "+9V", "+12V", "-9V", "-12V", "+3.3V", "+5VA", "+15V", "-15V"]
+_POWER_VOLTAGE_PATTERN = re.compile(r'^[+-]\d+\.?\d*V', re.IGNORECASE)
 _GROUND_NAMES = {"GND", "VSS", "AGND", "PGND", "DGND", "CHASSIS", "EARTH", "GNDA"}
 _CLOCK_PATTERNS = [re.compile(p, re.IGNORECASE) for p in [
     r"^CLK", r"MCLK", r"BCLK", r"LRCLK", r"SCK$", r"XTAL", r"OSC",
@@ -82,6 +83,8 @@ def _is_power_by_name(name: str, _pin_roles: dict[str, PinRole]) -> bool:
     for prefix in _POWER_PREFIXES:
         if upper.startswith(prefix):
             return True
+    if _POWER_VOLTAGE_PATTERN.match(upper):
+        return True
     return False
 
 
