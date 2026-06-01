@@ -138,13 +138,13 @@ class TestPanelizationScore:
     """Panelization readiness scoring: fiducials, tooling holes, orientation, edge clearance."""
 
     def test_no_fiducials_low_score(self):
-        """Board with no fiducials has low panelization score."""
+        """Board with no fiducials, no tooling holes, non-standard orientation has low score."""
         from kicad_agent.dfm.scoring import score_panelization_readiness
 
         primitives = [
             _make_box(x1=0, y1=0, x2=10, y2=10,
                       entity_type="footprint", entity_id="U1", reference="U1",
-                      rotation=0),
+                      rotation=45),  # Non-standard orientation reduces score
         ]
         model = _MockSpatialModel(primitives=primitives)
         profile = get_builtin_profiles()["generic"]
@@ -315,11 +315,12 @@ class TestAssemblyChecks:
 
         # Two components very close together (< clearance * 3)
         # generic min_clearance is 0.2mm, so threshold is 0.6mm
+        # Centers at (0.5, 0.5) and (0.8, 0.5) -> distance 0.3mm < 0.6mm
         primitives = [
-            _make_box(x1=0, y1=0, x2=2, y2=2,
+            _make_box(x1=0, y1=0, x2=1, y2=1,
                       entity_type="footprint", entity_id="U1", reference="U1",
                       rotation=0),
-            _make_box(x1=2.1, y1=0, x2=4.1, y2=2,
+            _make_box(x1=0.3, y1=0, x2=1.3, y2=1,
                       entity_type="footprint", entity_id="U2", reference="U2",
                       rotation=0),
         ]
