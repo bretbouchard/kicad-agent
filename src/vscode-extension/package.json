@@ -1,0 +1,110 @@
+{
+  "name": "kicad-agent",
+  "displayName": "KiCad Agent",
+  "description": "AI-assisted KiCad schematic and PCB editing via MCP",
+  "version": "0.1.0",
+  "publisher": "kicad-agent",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Programming Languages", "Linters", "Other"],
+  "activationEvents": [
+    "onLanguage:kicad-schematic",
+    "onLanguage:kicad-pcb"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "kicad-agent.runErc",
+        "title": "KiCad: Run ERC"
+      },
+      {
+        "command": "kicad-agent.runDrc",
+        "title": "KiCad: Run DRC"
+      },
+      {
+        "command": "kicad-agent.visualize",
+        "title": "KiCad: Visualize"
+      },
+      {
+        "command": "kicad-agent.fixErc",
+        "title": "KiCad: Fix ERC Violations"
+      },
+      {
+        "command": "kicad-agent.suggestImprovements",
+        "title": "KiCad: Suggest Improvements"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "kicad-agent.fixErc",
+          "when": "resourceExtname == .kicad_sch",
+          "group": "kicad@1"
+        },
+        {
+          "command": "kicad-agent.suggestImprovements",
+          "when": "resourceExtname == .kicad_sch || resourceExtname == .kicad_pcb",
+          "group": "kicad@2"
+        }
+      ]
+    },
+    "views": {
+      "kicad-agent-sidebar": [
+        {
+          "id": "kicad-agent.history",
+          "name": "Operation History"
+        },
+        {
+          "id": "kicad-agent.ercReport",
+          "name": "ERC Report"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "kicad-agent-sidebar",
+          "title": "KiCad Agent",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "KiCad Agent",
+      "properties": {
+        "kicad-agent.serverCommand": {
+          "type": "string",
+          "default": "kicad-agent-edit",
+          "description": "Command to start the MCP edit server"
+        },
+        "kicad-agent.autoErcOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically run ERC when saving .kicad_sch files"
+        },
+        "kicad-agent.maxHistoryItems": {
+          "type": "number",
+          "default": 100,
+          "description": "Maximum number of history items to retain"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0",
+    "@vscode/vsce": "^3.0.0"
+  }
+}
