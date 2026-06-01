@@ -35,7 +35,7 @@ from kicad_agent.handler import format_result, handle_operation, validate_operat
 from kicad_agent.logging_config import configure_logging
 from kicad_agent.ops.schema import get_operation_schema
 
-_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules"}
+_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic"}
 
 
 def _build_operation_parser() -> argparse.ArgumentParser:
@@ -588,6 +588,25 @@ def _handle_design_rules(argv: list[str]) -> None:
     sys.exit(exit_code)
 
 
+def _handle_review_schematic(argv: list[str]) -> None:
+    """Handle the 'review-schematic' subcommand -- review schematic readability."""
+    from kicad_agent.cli.review_schematic_cmd import review_schematic_command
+
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent review-schematic",
+        description="Review a schematic for readability and spatial quality.",
+    )
+    parser.add_argument("schematic", type=str, help="Path to .kicad_sch file")
+    parser.add_argument("--vision", action="store_true", default=False,
+                        help="Include Claude vision review")
+    parser.add_argument("--format", choices=["json", "markdown"], default="markdown",
+                        help="Output format")
+
+    args = parser.parse_args(argv)
+    exit_code = review_schematic_command(args)
+    sys.exit(exit_code)
+
+
 def main(argv: list[str] | None = None) -> None:
     """Entry point for the kicad-agent CLI."""
     if argv is None:
@@ -619,6 +638,8 @@ def main(argv: list[str] | None = None) -> None:
             _handle_ai_stats(subcmd_argv)
         elif subcmd == "design-rules":
             _handle_design_rules(subcmd_argv)
+        elif subcmd == "review-schematic":
+            _handle_review_schematic(subcmd_argv)
         return
 
     # Legacy operation mode
