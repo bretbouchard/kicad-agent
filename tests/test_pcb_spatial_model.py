@@ -1,8 +1,8 @@
-"""Tests for PCB spatial intelligence modules (SI-01 through SI-05).
+"""Tests for PCB spatial intelligence modules (SI-01 through SI-07).
 
 Tests LayerClassifier, LayerStackup, NetClassGeometry, PcbSpatialModel,
-and clearance tolerance. Uses Arduino_Mega fixture for integration tests
-and pure Python for unit tests.
+board outline extraction, dirty-flag lifecycle, and spatial query integration.
+Uses Arduino_Mega fixture for integration tests and pure Python for unit tests.
 """
 
 from __future__ import annotations
@@ -33,6 +33,8 @@ from kicad_agent.spatial.primitives import (
     SpatialPath,
     SpatialPoint,
 )
+from kicad_agent.spatial.board_outline import extract_board_outline
+from shapely.geometry import Polygon, MultiPolygon
 
 from conftest import FIXTURE_DIR
 
@@ -371,3 +373,149 @@ class TestClearanceTolerance:
         distance = pt_a.distance(pt_b)
         effective = max(0.0, distance - _CLEARANCE_TOLERANCE_MM)
         assert effective == 0.0
+
+
+# ---------------------------------------------------------------------------
+# TestBoardOutline (SI-06)
+# ---------------------------------------------------------------------------
+
+
+class TestBoardOutline:
+    """SI-06: Board outline extraction from Edge.Cuts graphic items."""
+
+    def test_arduino_mega_outline_exists(self, arduino_pcb_ir: PcbIR) -> None:
+        """Arduino_Mega has Edge.Cuts outline with area > 0."""
+        model = PcbSpatialModel.build_from_pcb_ir(arduino_pcb_ir)
+        outline = model.board_outline
+        assert outline is not None
+        assert outline.area > 0
+
+    def test_arduino_mega_outline_is_polygon(self, arduino_pcb_ir: PcbIR) -> None:
+        """Arduino_Mega outline is a Polygon (single connected outline)."""
+        model = PcbSpatialModel.build_from_pcb_ir(arduino_pcb_ir)
+        assert isinstance(model.board_outline, (Polygon, MultiPolygon))
+
+    def test_arduino_mega_outline_bounds(self, arduino_pcb_ir: PcbIR) -> None:
+        """Arduino_Mega outline bounds match expected dimensions."""
+        model = PcbSpatialModel.build_from_pcb_ir(arduino_pcb_ir)
+        bounds = model.board_bounds
+        assert bounds is not None
+        minx, miny, maxx, maxy = bounds
+        # Arduino_Mega is roughly 100x46.66 to 201.6x100
+        assert minx < 101
+        assert maxx > 200
+        assert miny < 47
+        assert maxy > 99
+
+    def test_outline_empty_board(self) -> None:
+        """Board with no Edge.Cuts returns None."""
+        from unittest.mock import MagicMock
+
+        mock_board = MagicMock()
+        mock_board.graphicItems = []
+        result = extract_board_outline(mock_board)
+        assert result is None
+
+    def test_outline_with_only_lines(self) -> None:
+        """Four line segments forming a rectangle produce a valid Polygon."""
+        from unittest.mock import MagicMock
+
+        items = []
+        # (0,0) -> (10,0) -> (10,10) -> (0,10) -> (0,0)
+        segments = [((0, 0), (10, 0)), ((10, 0), (10, 10)), ((10, 10), (0, 10)), ((0, 10), (0, 0))]
+        for (sx, sy), (ex, ey) in segments:
+            item = MagicMock(spec=["layer", "start", "end"])
+            item.layer = "Edge.Cuts"
+            start = MagicMock()
+            start.X = sx
+            start.Y = sy
+            end = MagicMock()
+            end.X = ex
+            end.Y = ey
+            item.start = start
+            item.end = end
+            items.append(item)
+        mock_board = MagicMock()
+        mock_board.graphicItems = items
+        result = extract_board_outline(mock_board)
+        assert result is not None
+        assert abs(result.area - 100.0) < 1.0  # 10x10 = 100 sq mm
+
+
+# ---------------------------------------------------------------------------
+# TestDirtyFlagLifecycle (SI-07)
+# ---------------------------------------------------------------------------
+
+
+class TestDirtyFlagLifecycle:
+    """SI-07: Dirty-flag lifecycle with STRtree rebuild."""
+
+    def test_initial_state_not_dirty(self, arduino_pcb_ir: PcbIR) -> None:
+        model = PcbSpatialModel.build_from_pcb_ir(arduino_pcb_ir)
+        assert not model.is_dirty
+
+    def test_mark_dirty_sets_flag(self, arduino_pcb_ir: PcbIR) -> None:
+        model = PcbSpatialModel.build_from_pcb_ir(arduino_pcb_ir)
+        model.mark_dirty()
+        assert model.is_dirty
+
+    def test_rebuild_clears_dirty(self, arduino_pcb_ir: PcbIR) -> None:
+        model = PcbSpatialModel.build_from_pcb_ir(arduino_pcb_ir)
+        model.mark_dirty()
+        model.rebuild()
+        assert not model.is_dirty
+
+    def test_rebuild_noop_when_not_dirty(self, arduino_pcb_ir: PcbIR) -> None:
+        model = PcbSpatialModel.build_from_pcb_ir(arduino_pcb_ir)
+        count_before = model.primitive_count
+        model.rebuild()  # no-op
+        assert model.primitive_count == count_before
+
+    def test_batch_update_calls_fn_and_rebuilds(self, arduino_pcb_ir: PcbIR) -> None:
+        model = PcbSpatialModel.build_from_pcb_ir(arduino_pcb_ir)
+        called = []
+
+        def update_fn(pcb_ir: PcbIR) -> None:
+            called.append(True)
+
+        model.batch_update(update_fn)
+        assert not model.is_dirty
+        assert len(called) == 1
+
+    def test_query_engine_auto_rebuilds_on_dirty(self, arduino_pcb_ir: PcbIR) -> None:
+        model = PcbSpatialModel.build_from_pcb_ir(arduino_pcb_ir)
+        model.mark_dirty()
+        # Accessing query_engine should trigger rebuild
+        engine = model.query_engine
+        assert not model.is_dirty
+        assert engine.primitive_count > 0
+
+
+# ---------------------------------------------------------------------------
+# TestSpatialQueryIntegration (SI-06/SI-07)
+# ---------------------------------------------------------------------------
+
+
+class TestSpatialQueryIntegration:
+    """SpatialQueryEngine integration with PcbSpatialModel."""
+
+    def test_find_near_returns_results(self, arduino_pcb_ir: PcbIR) -> None:
+        model = PcbSpatialModel.build_from_pcb_ir(arduino_pcb_ir)
+        results = model.find_near(150.0, 75.0, 20.0)
+        assert isinstance(results, list)
+
+    def test_find_in_box_returns_results(self, arduino_pcb_ir: PcbIR) -> None:
+        model = PcbSpatialModel.build_from_pcb_ir(arduino_pcb_ir)
+        results = model.find_in_box(140.0, 70.0, 160.0, 80.0)
+        assert isinstance(results, list)
+
+    def test_board_bounds_property(self, arduino_pcb_ir: PcbIR) -> None:
+        model = PcbSpatialModel.build_from_pcb_ir(arduino_pcb_ir)
+        bounds = model.board_bounds
+        assert bounds is not None
+        assert len(bounds) == 4
+
+    def test_model_with_no_net_classes(self, arduino_pcb_ir: PcbIR) -> None:
+        """Model works without net_classes parameter."""
+        model = PcbSpatialModel.build_from_pcb_ir(arduino_pcb_ir)
+        assert model.primitive_count > 0

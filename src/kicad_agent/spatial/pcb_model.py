@@ -16,6 +16,7 @@ from shapely import STRtree
 from shapely.geometry import GeometryCollection
 
 from kicad_agent.ir.pcb_ir import PcbIR
+from kicad_agent.spatial.board_outline import extract_board_outline
 from kicad_agent.spatial.extractor import extract_all
 from kicad_agent.spatial.layer_classifier import LayerClassifier
 from kicad_agent.spatial.layer_stackup import LayerStackup
@@ -23,6 +24,7 @@ from kicad_agent.spatial.net_class_geometry import (
     NetClassGeometry,
     build_net_class_map,
 )
+from kicad_agent.spatial.query import SpatialQueryEngine
 
 _CLEARANCE_TOLERANCE_MM: float = 1e-4  # SI-05: 0.1 micrometers
 
@@ -63,6 +65,8 @@ class PcbSpatialModel:
         self._stackup: LayerStackup = LayerStackup(layers=(), total_thickness_mm=0.0)
         self._net_class_map: dict[str, NetClassGeometry] = {}
         self._all_primitives: list = []
+        self._board_outline: Any = None
+        self._query_engine: SpatialQueryEngine | None = None
         self._build()
 
     def _build(self) -> None:
@@ -110,7 +114,13 @@ class PcbSpatialModel:
         else:
             self._net_class_map = {}
 
-        # Step 7: Clear dirty flag
+        # Step 7: Extract board outline from Edge.Cuts
+        self._board_outline = extract_board_outline(self._pcb_ir.board)
+
+        # Step 8: Invalidate query engine (rebuilt lazily on access)
+        self._query_engine = None
+
+        # Step 9: Clear dirty flag
         self._dirty = False
 
     # ------------------------------------------------------------------
@@ -156,6 +166,34 @@ class PcbSpatialModel:
     def clearance_tolerance(self) -> float:
         """Clearance tolerance constant for distance comparisons."""
         return _CLEARANCE_TOLERANCE_MM
+
+    @property
+    def board_outline(self) -> Any:
+        """Board outline polygon extracted from Edge.Cuts layer.
+
+        Returns:
+            Shapely Polygon for single outlines, MultiPolygon for
+            disjoint outlines, or None if no Edge.Cuts items.
+        """
+        return self._board_outline
+
+    @property
+    def board_bounds(self) -> tuple[float, float, float, float] | None:
+        """Board bounding box (minx, miny, maxx, maxy) or None if no outline."""
+        return tuple(self._board_outline.bounds) if self._board_outline else None
+
+    @property
+    def query_engine(self) -> SpatialQueryEngine:
+        """SpatialQueryEngine backed by current primitives.
+
+        Rebuilds engine if dirty. Returned engine is consistent with
+        current spatial model state.
+        """
+        if self._dirty:
+            self.rebuild()
+        if self._query_engine is None:
+            self._query_engine = SpatialQueryEngine(self._all_primitives)
+        return self._query_engine
 
     # ------------------------------------------------------------------
     # Public query methods
@@ -244,6 +282,53 @@ class PcbSpatialModel:
 
         return max(0.0, distance - _CLEARANCE_TOLERANCE_MM)
 
+    def find_near(self, x: float, y: float, radius_mm: float) -> list:
+        """Find all primitives within radius of point.
+
+        Delegates to SpatialQueryEngine.proximity.
+
+        Args:
+            x: Query point X coordinate (mm).
+            y: Query point Y coordinate (mm).
+            radius_mm: Search radius in mm.
+
+        Returns:
+            List of primitives whose geometry intersects the query buffer.
+        """
+        return self.query_engine.proximity(x, y, radius_mm)
+
+    def find_in_box(self, x1: float, y1: float, x2: float, y2: float) -> list:
+        """Find all primitives fully contained within bounding box.
+
+        Delegates to SpatialQueryEngine.containment.
+
+        Args:
+            x1: Min X of query box (mm).
+            y1: Min Y of query box (mm).
+            x2: Max X of query box (mm).
+            y2: Max Y of query box (mm).
+
+        Returns:
+            List of primitives fully contained within the query box.
+        """
+        return self.query_engine.containment(x1, y1, x2, y2)
+
+    def find_clearance(
+        self, entity_id: str, search_radius_mm: float = 10.0
+    ) -> list[tuple[Any, float]]:
+        """Find nearby primitives with distances for a given entity.
+
+        Delegates to SpatialQueryEngine.clearance.
+
+        Args:
+            entity_id: The entity_id of the target primitive.
+            search_radius_mm: How far to search around the target (mm).
+
+        Returns:
+            List of (primitive, distance) tuples sorted by distance ascending.
+        """
+        return self.query_engine.clearance(entity_id, search_radius_mm)
+
     # ------------------------------------------------------------------
     # Dirty-flag methods (SI-07 preparation)
     # ------------------------------------------------------------------
@@ -251,6 +336,7 @@ class PcbSpatialModel:
     def mark_dirty(self) -> None:
         """Mark the model as needing rebuild after mutations."""
         self._dirty = True
+        self._query_engine = None
 
     def rebuild(self) -> None:
         """Rebuild geometry and index if dirty; no-op if clean."""
