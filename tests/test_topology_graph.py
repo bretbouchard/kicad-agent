@@ -632,3 +632,123 @@ class TestOpampSubcircuit:
         assert len(u1.power_pins) >= 2  # V+ and V-
         assert len(u1.input_pins) >= 2  # IN+ and IN-
         assert len(u1.output_pins) >= 1  # OUT
+
+
+# ---------------------------------------------------------------------------
+# Test: NetClassifier rule-based classification
+# ---------------------------------------------------------------------------
+
+
+class TestNetClassifier:
+    """NetClassifier correctly classifies nets by naming patterns."""
+
+    def test_vcc_is_power(self):
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        assert c.classify("VCC") == NetClassification.POWER
+
+    def test_plus12v_is_power(self):
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        assert c.classify("+12V") == NetClassification.POWER
+
+    def test_gnd_is_ground(self):
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        assert c.classify("GND") == NetClassification.GROUND
+
+    def test_agnd_is_ground(self):
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        assert c.classify("AGND") == NetClassification.GROUND
+
+    def test_sda_is_control(self):
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        assert c.classify("SDA") == NetClassification.CONTROL
+
+    def test_clk_10m_is_clock(self):
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        assert c.classify("CLK_10M") == NetClassification.CLOCK
+
+    def test_sig_in_is_signal(self):
+        """SIG_IN doesn't match any power/ground/clock/control pattern -> UNKNOWN."""
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        assert c.classify("SIG_IN") == NetClassification.UNKNOWN
+
+    def test_unknown_net(self):
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        assert c.classify("Net_1") == NetClassification.UNKNOWN
+
+    def test_topology_override_all_power_pins(self):
+        """Net connecting only to power pins classified as POWER regardless of name."""
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        pin_roles = {("U1", "8"): PinRole.POWER, ("U2", "8"): PinRole.POWER}
+        result = c.classify("some_random_net", pin_roles)
+        assert result == NetClassification.POWER
+
+    def test_ordered_rules_first_match_wins(self):
+        """Power name pattern takes precedence over topology check."""
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        # VCC is matched by name first, even if topology says all power pins
+        assert c.classify("VCC") == NetClassification.POWER
+        # GND is matched by name first
+        assert c.classify("GND") == NetClassification.GROUND
+
+    def test_case_insensitive_vcc(self):
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        assert c.classify("vcc") == NetClassification.POWER
+        assert c.classify("Vcc") == NetClassification.POWER
+
+    def test_plus3v3_is_power(self):
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        assert c.classify("+3V3") == NetClassification.POWER
+
+    def test_plus5v_is_power(self):
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        assert c.classify("+5V") == NetClassification.POWER
+
+    def test_minus9v_is_power(self):
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        assert c.classify("-9V") == NetClassification.POWER
+
+    def test_classify_many(self):
+        from kicad_agent.analysis.net_classifier import NetClassifier
+
+        c = NetClassifier()
+        nets = {
+            "VCC": {},
+            "GND": {},
+            "SDA": {},
+            "CLK_10M": {},
+            "Net_1": {},
+        }
+        results = c.classify_many(nets)
+        assert results["VCC"] == NetClassification.POWER
+        assert results["GND"] == NetClassification.GROUND
+        assert results["SDA"] == NetClassification.CONTROL
+        assert results["CLK_10M"] == NetClassification.CLOCK
+        assert results["Net_1"] == NetClassification.UNKNOWN
