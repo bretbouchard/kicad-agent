@@ -25,6 +25,16 @@ from kicad_agent.analysis.subcircuit_detector import SubcircuitType
 
 logger = logging.getLogger(__name__)
 
+# --- Op-amp part number lists (single source of truth for classification) ---
+# Full set: all op-amps recognized for filter and preamplifier classification
+_OPAMP_FULL = ["NE5532", "TL072", "LM358", "LM324", "OPA2134", "OP07", "OP27", "AD712"]
+# Basic set: op-amps recognized for output stage classification
+_OPAMP_BASIC = ["NE5532", "TL072", "LM358", "LM324", "OPA2134"]
+# Mixer set: op-amps recognized for mixer (summing) classification
+_OPAMP_MIXER = ["NE5532", "TL072", "LM358", "LM324"]
+# Output stage set: op-amps recognized for output buffer/driver classification
+_OPAMP_OUTPUT = ["NE5532", "TL072", "LM358"]
+
 
 # Classification rules -- ordered list, first match wins.
 # Each rule: (match_fn, subcircuit_type, confidence, description)
@@ -60,7 +70,7 @@ def _is_filter(features: dict) -> bool:
     lib_id = features.get("lib_id", "").upper()
     return (
         comp_type == "ic"
-        and any(op in lib_id for op in ["NE5532", "TL072", "LM358", "LM324", "OPA2134", "OP07", "OP27", "AD712"])
+        and any(op in lib_id for op in _OPAMP_FULL)
         and features.get("feedback_capacitor_count", 0) > 0
     )
 
@@ -71,7 +81,7 @@ def _is_preamplifier(features: dict) -> bool:
     lib_id = features.get("lib_id", "").upper()
     return (
         comp_type == "ic"
-        and any(op in lib_id for op in ["NE5532", "TL072", "LM358", "LM324", "OPA2134"])
+        and any(op in lib_id for op in _OPAMP_BASIC)
         and features.get("resistor_count", 0) >= 2
         and features.get("feedback_resistor_count", 0) > 0
         and features.get("feedback_capacitor_count", 0) == 0
@@ -85,7 +95,7 @@ def _is_mixer(features: dict) -> bool:
     lib_id = features.get("lib_id", "").upper()
     return (
         comp_type == "ic"
-        and any(op in lib_id for op in ["NE5532", "TL072", "LM358", "LM324"])
+        and any(op in lib_id for op in _OPAMP_MIXER)
         and features.get("has_multiple_inputs", False)
     )
 
@@ -96,7 +106,7 @@ def _is_output_stage(features: dict) -> bool:
     lib_id = features.get("lib_id", "").upper()
     return (
         comp_type == "ic"
-        and any(op in lib_id for op in ["NE5532", "TL072", "LM358"])
+        and any(op in lib_id for op in _OPAMP_OUTPUT)
         and features.get("resistor_count", 0) <= 2
         and features.get("capacitor_count", 0) <= 2
         and features.get("feedback_resistor_count", 0) > 0
@@ -219,6 +229,9 @@ class CircuitClassifier:
             ClassificationResult with type, confidence, matched rule, and
             optional feature_vector for low-confidence results.
         """
+        # Deferred import to avoid circular dependency:
+        # subcircuit_detector imports SubcircuitType from this module,
+        # and this module may receive SubcircuitFeatures from feature_extraction.
         from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
 
         if isinstance(features, SubcircuitFeatures):
