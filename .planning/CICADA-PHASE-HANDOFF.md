@@ -3,43 +3,28 @@
 **Date:** 2026-05-31
 **From:** Bret (with strategic context from external consultation)
 **To:** Cicada team
-**Project:** kicad-agent v2.4 → v3.0
+**Project:** kicad-agent v2.5 Benchmark Suite
 
 ---
 
 ## Where We Are
 
-**Shipped:** 37 phases, 7 milestones (v1.0 through v2.3)
-**In progress:** Phase 38 (Schematic Routing Engine) — 3/4 plans complete
-**Planned:** Phases 39-40 (v2.4), Phases 41-44 (v2.5 Benchmark Suite)
-**Total:** 74 operations, 1392+ tests, 57,275 source lines
+**Shipped:** 40 phases, 8 milestones (v1.0 through v2.4)
+**In Progress:** Phases 41-44 (v2.5 Benchmark Suite) — Council reviewed, plans approved, execution underway (41-02, 42-01, 43-01, 44-01 already committed)
+**Planned:** Phases 45-58 — Council reviewed, plans approved, ready to execute
+**Total:** 85 operations, 2174+ tests, 62,000+ source lines
 
-### Phase 38 Status
+### v2.4 COMPLETE (Phases 38-40)
 
-| Plan | Status | Deliverable |
-|------|--------|-------------|
-| 38-01 Pin Position Resolution | COMPLETE | `pin_resolver.py` — absolute pin coords for any component |
-| 38-02 Collision Detection | COMPLETE | `collision_detector.py` — pin overlaps + routing collision zones |
-| 38-03 connect_pins | COMPLETE | `net_connector.py` — wire routing with collision avoidance + labels |
-| 38-04 batch_connect + regenerate_wiring | **NEXT** | `batch_wiring.py` — multi-net wiring, full schematic rewire |
+**225 new tests, 11 new operations, 30 commits, 0 regressions.**
 
-**Next up: Execute 38-04.** The plan is at `.planning/phases/38-schematic-routing-engine/38-04-PLAN.md`.
+| Phase | Plans | Operations | Tests |
+|-------|-------|------------|-------|
+| 38: Schematic Routing Engine | 4 | resolve_pin_positions, detect_routing_collisions, detect_pin_overlaps, connect_pins, batch_connect, regenerate_wiring | 85 |
+| 39: Schematic Intelligence | 3 | extract_nets, detect_net_conflicts, suggest_net_names | 44 |
+| 40: ERC Root Cause Analysis | 3 | classify_violations, diagnose_violations, erc_auto_fix(root_cause) | 96 |
 
-### Phase 39 (After 38-04)
-
-| Plan | Status | Deliverable |
-|------|--------|-------------|
-| 39-01 Net Extraction | PLANNED | Extract complete net topology from schematic |
-| 39-02 Net Name Conflict Detection | PLANNED | Detect naming problems before ERC |
-| 39-03 Auto-Name Nets | PLANNED | Suggest canonical names from topology |
-
-### Phase 40 (After 39)
-
-| Plan | Status | Deliverable |
-|------|--------|-------------|
-| 40-01 ERC Violation Classification | PLANNED | Classify fixable vs pre-existing vs benign |
-| 40-02 Root Cause Diagnosis | PLANNED | Diagnose root causes for fixable violations |
-| 40-03 Enhanced erc_auto_fix | PLANNED | Root cause mode for smarter auto-fixing |
+All plans TDD-executed. Council Gate 1 (Plan Review) and Gate 2 (Execution Review) passed for all phases. Phase 40 Council Gate 2: APPROVED with 3 non-blocking findings.
 
 ---
 
@@ -60,17 +45,11 @@ We have no standardized way to measure kicad-agent's intelligence. This is the #
 
 **Why it matters:** No professional takes an AI tool seriously without published benchmarks. This is how we prove we're not vaporware.
 
-**Full execution plans written.** See `.planning/phases/41-pcb-mmlu-benchmark/`, `.planning/phases/42-circuit-qa-dataset/`, `.planning/phases/43-regression-benchmark-suite/`, `.planning/phases/44-adversarial-test-generation/`.
-
 ### 2. Domain Intelligence (Currently 2/10)
 
 kicad-agent edits schematics without understanding what the circuit DOES. It can place a resistor, but doesn't know if it's a pull-up, feedback, or bias resistor.
 
-**What we need:** Circuit topology graph → component function recognition → intent inference → design rule intelligence
-
-**Why it matters:** This is the difference between "safe editing tool" and "intelligent engineering assistant." The benchmarks prove we understand circuits; domain intelligence makes the benchmarks pass.
-
-**Phase plan:** Phases 45-48 in STRATEGIC-EXPANSION-PLAN.md
+**What comes after benchmarks:** Phases 45-48 in STRATEGIC-EXPANSION-PLAN.md
 
 ### 3. Positioning
 
@@ -80,127 +59,178 @@ Every failed AI EDA startup tried to design circuits. We review, fix, and valida
 - Binary success criteria (valid file or not)
 - Measurable value (ERC violations reduced by X%)
 - No scaling problem (local model, no cloud)
-- Already 37 phases of foundation work
-
-### 4. Multi-Format Expansion (Long-term)
-
-After benchmarks and domain intelligence are solid:
-- Phase 55: Abstract AST (format-agnostic internal representation)
-- Phase 56: EasyEDA support (JSON format, JLCPCB integration)
-- Phase 57: Altium support (enterprise market)
-- Phase 58: Eagle + OpenWater
-
-**Don't start this until benchmarks are published.** The multi-format architecture only matters if we have credibility first.
+- Already 40 phases of foundation work
 
 ---
 
-## Immediate Priorities
+## v2.5 Benchmark Suite — Phases 41-44
 
-### Priority 1: Finish v2.4 (Phases 38-40)
+**Milestone goal:** Create a standardized circuit intelligence benchmark suite that measures kicad-agent's understanding of electronics design. Publish baseline scores. Integrate regression detection into CI.
 
-Execute these in order:
-1. **38-04** — batch_connect + regenerate_wiring (the last routing engine piece)
-2. **39-01, 39-02** (parallel) — net extraction + conflict detection
-3. **39-03** — auto-name nets
-4. **40-01** — violation classification
-5. **40-02** — root cause diagnosis
-6. **40-03** — enhanced erc_auto_fix
+**Execution order:** 41 -> 42 -> 43 -> 44 (dependency chain)
 
-After Phase 40, ship **v2.4 milestone**.
+**Total plans:** 5 (41 has 2 plans, 42-44 have 1 each)
+**Estimated new files:** ~15 source + ~5 test + ~4 data files
+**Estimated new tests:** ~80
 
-### Priority 2: Benchmark Suite (Phases 41-44) — v2.5
+### Phase 41: PCB MMLU Benchmark (2 plans)
 
-Full execution plans are written and ready. Execute after v2.4 ships.
+**Goal:** Create the "PCB MMLU" — 500+ multi-choice circuit analysis questions across 8 categories that measure circuit understanding.
 
-**Phase 41: PCB MMLU Benchmark** (2 plans)
-| Plan | Deliverable | Files |
-|------|-------------|-------|
-| 41-01 | 500+ multi-choice questions across 8 categories | `benchmarks/question_generator.py`, `benchmarks/dataset_builder.py`, `benchmarks/pcb-mmlu-v1.json` |
-| 41-02 | Benchmark runner + baseline models (random/heuristic/LoRA/API) + CLI | `benchmarks/runner.py`, `benchmarks/models.py`, `benchmarks/__main__.py` |
+**Why this matters:** This is the foundation artifact. Everything else (runner, QA dataset, regression, adversarial) depends on this dataset existing.
 
-8 categories: component_identification, topology_recognition, signal_flow, power_design, pin_function, net_purpose, design_rules, troubleshooting. Template-based generation from real schematics (no LLM needed). Random baseline ~25%, heuristic ~30-40%, target >70% after fine-tuning.
+**Plan 41-01: Benchmark Dataset (BENCH-01)**
+| Item | Detail |
+|------|--------|
+| Wave | 1 |
+| Depends on | Nothing (uses existing schematics) |
+| Files created | `benchmarks/__init__.py`, `benchmarks/schemas.py`, `benchmarks/question_generator.py`, `benchmarks/dataset_builder.py`, `benchmarks/pcb-mmlu-v1.json`, `tests/test_benchmark_dataset.py` |
+| Key schemas | `BenchmarkQuestion(id, category, difficulty, question, choices[4], correct_index, explanation, source, tags)`, `BenchmarkDataset(version, generated_at, questions, metadata)` |
+| Test assertions | 500+ questions, >=50 per category, difficulty within 5% of 20/60/20 split, no duplicate IDs, all distractors differ from correct |
 
-**Phase 42: Circuit QA Dataset** (1 plan)
-| Plan | Deliverable | Files |
-|------|-------------|-------|
-| 42-01 | 2000+ open-ended QA pairs for fine-tuning | `benchmarks/qa_generator.py`, `benchmarks/circuit-qa-v1.json` |
+**8 question categories:**
+1. component_identification — What does this component do?
+2. topology_recognition — What type of circuit is this subcircuit?
+3. signal_flow — Trace signal from input to output
+4. power_design — Power rails, decoupling, regulator selection
+5. pin_function — What is pin N doing in this circuit?
+6. net_purpose — What is this net's function?
+7. design_rules — Is this design rule satisfied?
+8. troubleshooting — What is the root cause of this ERC violation?
 
-6 QA types: violation_diagnosis, signal_flow, component_function, net_purpose, design_review, value_calculation. This is the training data that makes benchmark scores go up.
+**Question sources:** 55 analog-ecosystem schematics, real ERC reports, datasheets (THAT4301, CD4066BE, NE5532, RP2040), netlists, BOMs. Template-based generation (no LLM needed).
 
-**Phase 43: Regression Benchmark Suite** (1 plan)
-| Plan | Deliverable | Files |
-|------|-------------|-------|
-| 43-01 | Regression detection + CI workflow | `benchmarks/regression.py`, `.github/workflows/benchmark.yml` |
+**Plan 41-02: Benchmark Runner + Baseline Models (BENCH-02)**
+| Item | Detail |
+|------|--------|
+| Wave | 2 (depends on 41-01) |
+| Files created | `benchmarks/runner.py`, `benchmarks/models.py`, `benchmarks/__main__.py`, `tests/test_benchmark_runner.py` |
+| Key classes | `BenchmarkRunner`, `BaselineRandomModel`, `BaselineHeuristicModel`, `LocalLoRAModel`, `APIModel` |
+| CLI | `python -m kicad_agent.benchmarks --dataset benchmarks/pcb-mmlu-v1.json --model random --output results.json` |
+| Test assertions | Random ~25% ±10%, heuristic >25%, BenchmarkResult validates, category accuracy for all categories |
 
-RegressionDetector flags >2% drops in any category. GitHub Actions runs on every PR. Historical tracking in `benchmarks/results/`.
+**Expected baselines:**
+- Random: ~25% (4 choices)
+- Heuristic: 30-40% (keyword matching)
+- LoRA fine-tuned: target >70%
 
-**Phase 44: Adversarial Test Generation** (1 plan)
-| Plan | Deliverable | Files |
-|------|-------------|-------|
-| 44-01 | 750+ adversarial test cases | `benchmarks/mutation_engine.py`, `benchmarks/adversarial.py`, `benchmarks/adversarial-v1.json` |
-
-Three types: mutation testing (200 — deliberately broken schematics), property-based testing (50 — invariant verification), parser fuzzing (500 — random S-expression mutations). All seeded for reproducibility.
-
-### Priority 3: Circuit Semantics (Phase 45)
-
-Build the topology graph that enables domain intelligence:
-- Component → pin → net → pin → component graph
-- Signal flow direction inference
-- Net classification (power, ground, signal, control, feedback)
-- Subcircuit recognition (amplifier, filter, oscillator, power supply)
+**Council Gate 1 status:** Phase 41 plans reviewed by 10 specialists. 22 findings (3 critical, 7 high) — all addressed in plan revisions. Re-review passed clean.
 
 ---
 
-## Key Decisions Already Made
+### Phase 42: Circuit QA Dataset (1 plan)
 
-1. **Labels at body_position** (not wire endpoint) — better visual placement + guaranteed connectivity
-2. **L-shaped wires use horizontal-first path** — collision zone check covers full segment range
-3. **Collision threshold: ≥2 pins** (not ≥2 refs) — vertical wire through IC pin column shorts all pins regardless of component count
-4. **Pin overlap severity: error** (different nets from netlist), warning (same net or unknown)
-5. **Schemas in _schema_schematic_routing.py and _schema_schematic_intel.py** — separate files per subsystem
-6. **Schematic ops extend existing @register_schematic pattern** in executor.py
+**Goal:** Generate 2000+ open-ended QA pairs for fine-tuning. This is the training data that makes benchmark scores go up.
+
+**Why this matters:** PCB MMLU measures understanding. This dataset *teaches* understanding. Fine-tuning on QA pairs improves the model's ability to generate explanations, not just pick correct answers.
+
+**Plan 42-01: Circuit QA Dataset (BENCH-03)**
+| Item | Detail |
+|------|--------|
+| Wave | 1 (depends on 41-01 only) |
+| Files created | `benchmarks/qa_schemas.py`, `benchmarks/qa_generator.py`, `benchmarks/circuit-qa-v1.json`, `tests/test_circuit_qa.py` |
+| Key schemas | `CircuitQAPair(question, answer, qa_type, source, verification)`, `CircuitQADataset` |
+| Test assertions | 2000+ QA pairs, all 6 types covered, verifiable answers with source references |
+
+**6 QA types:**
+1. violation_diagnosis — "Why does this schematic have X violation?"
+2. signal_flow — "What is the signal path from A to B?"
+3. component_function — "What is the purpose of R60?"
+4. net_purpose — "What is the SC_FILTER net for?"
+5. design_review — "What improvements could be made to X?"
+6. value_calculation — "What value should C47 be for X time constant?"
+
+**Key integration points:**
+- `qa_generator.py` -> `schematic_graph.py` (subcircuit extraction)
+- `qa_generator.py` -> `erc_parser.py` (violation diagnosis QA)
+- Decoupled from `question_generator.py` (separate module, shared patterns)
 
 ---
 
-## Architecture Reference
+### Phase 43: Regression Benchmark Suite (1 plan)
 
-### Existing schematic_routing/ module (cicada built)
+**Goal:** Automated regression detection + CI integration. Every PR runs benchmarks; if scores drop, the PR is flagged.
+
+**Why this matters:** Benchmarks are useless without regression tracking. This prevents silent model degradation and gives confidence that code changes improve (not hurt) circuit understanding.
+
+**Plan 43-01: Regression Detection + CI (BENCH-04)**
+| Item | Detail |
+|------|--------|
+| Wave | 1 (depends on 41-02 and 42-01) |
+| Files created | `benchmarks/regression.py`, `.github/workflows/benchmark.yml`, `benchmarks/results/baseline.json`, `tests/test_benchmark_regression.py` |
+| Key classes | `RegressionDetector(compare, check_regression)`, `RegressionReport(current, baseline, delta, is_regression, regression_categories)` |
+| Test assertions | >2% drop in any category flagged, equal/improved scores pass, historical tracking works, CI YAML valid |
+
+**Regression detection logic:**
+- Compare current `BenchmarkResult` against baseline
+- Flag if any category accuracy drops >2% (configurable threshold)
+- Store results in `benchmarks/results/` with timestamps
+- Baseline = best-known result, not just first result
+
+**CI workflow:**
+```yaml
+name: Benchmark
+on: [pull_request]
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install -e .
+      - run: python -m kicad_agent.benchmarks --dataset benchmarks/pcb-mmlu-v1.json --model heuristic --output /tmp/results.json
+      - run: python -m kicad_agent.benchmarks --regression-check --baseline benchmarks/results/baseline.json --current /tmp/results.json
+```
+
+---
+
+### Phase 44: Adversarial Test Generation (1 plan)
+
+**Goal:** Three types of adversarial testing — mutation, property-based, fuzzing. Proves kicad-agent handles edge cases and broken inputs correctly.
+
+**Why this matters:** Benchmarks measure understanding. Adversarial tests prove robustness. The combination gives confidence that kicad-agent doesn't just pass happy-path tests.
+
+**Plan 44-01: Adversarial Test Suite (BENCH-05)**
+| Item | Detail |
+|------|--------|
+| Wave | 1 (depends on 41-01 and 42-01) |
+| Files created | `benchmarks/mutation_engine.py`, `benchmarks/adversarial.py`, `benchmarks/adversarial-v1.json`, `tests/test_adversarial.py` |
+| Key classes | `SchematicMutation(mutation_type, target, original, mutated, description, expected_detection)`, `MutationEngine`, `AdversarialTestSuite` |
+| Test assertions | 750+ adversarial tests total, all seeded for reproducibility, parser never crashes on fuzz |
+
+**Three test types:**
+
+| Type | Count | Method | What it tests |
+|------|-------|--------|---------------|
+| Mutation testing | 200 | Apply 7 mutation types to valid schematics | Detection of deliberately broken circuits |
+| Property-based testing | 50 | Verify invariants on generated circuits | Operations preserve validity, ERC never increases |
+| Fuzz testing | 500 | Random S-expression mutations | Parser robustness (no crashes) |
+
+**7 mutation types:** swap_values, break_wire, remove_label, duplicate_net, short_pins, floating_pin, wrong_polarity
+
+**Key integration points:**
+- `mutation_engine.py` -> `schematic_graph.py` (target identification)
+- `adversarial.py` -> `erc_parser.py` (verify mutations produce expected violations)
+- `adversarial.py` -> `mutation_engine.py` (orchestration)
+
+---
+
+## Execution Wave Plan
 
 ```
-src/kicad_agent/schematic_routing/
-├── __init__.py
-├── pin_resolver.py          # 38-01: Absolute pin positions
-├── collision_detector.py     # 38-02: Pin overlaps + routing collision zones
-├── net_connector.py          # 38-03: Wire routing with collision avoidance
-├── batch_executor.py         # Existing batch framework
-├── batch_wiring.py           # 38-04: Multi-net wiring (NEXT)
-├── netlist_parser.py         # Existing netlist parsing
-├── net_resolver.py           # Existing net resolution
-├── schematic_graph.py        # Existing graph representation
-├── target_finder.py          # Existing target finding
-├── power_unit_placer.py      # Existing power unit placement
-└── wire_router.py            # Existing wire routing
+Wave 1: 41-01 (dataset) + 42-01 (QA) — parallel (41-01 is dataset only, 42-01 depends on schemas but can build independently)
+Wave 2: 41-02 (runner) — depends on 41-01
+Wave 3: 43-01 (regression) + 44-01 (adversarial) — parallel (both depend on 41-01/41-02 + 42-01)
 ```
 
-### Schema files
+**Note:** 42-01 only lists `41-01` as a dependency (it needs the schemas and source patterns). 43-01 and 44-01 depend on both the runner (41-02) and QA (42-01).
 
-```
-src/kicad_agent/ops/
-├── _schema_schematic_routing.py  # Routing op schemas (38-01..04)
-├── _schema_schematic_intel.py    # Intelligence op schemas (39-01..03, 40-01..03)
-├── schema.py                     # Re-exports all schemas
-└── executor.py                   # @register_schematic handlers
-```
+---
 
-### Test pattern
-
-Tests in `tests/` follow the pattern `test_<module>.py`. Each plan has test specifications in its PLAN.md.
-
-### New benchmarks/ package (Phases 41-44 will create)
+## New Package Structure (Phases 41-44 create this)
 
 ```
 src/kicad_agent/benchmarks/
-├── __init__.py
+├── __init__.py               # Package init
 ├── __main__.py               # CLI: python -m kicad_agent.benchmarks
 ├── schemas.py                # BenchmarkQuestion, BenchmarkDataset
 ├── question_generator.py     # Template-based question generation (8 categories)
@@ -224,21 +254,71 @@ benchmarks/
 
 ---
 
+## Architecture Reference
+
+### Existing modules that benchmarks integrate with
+
+```
+src/kicad_agent/
+├── schematic_routing/
+│   └── schematic_graph.py    # SchematicGraph.from_file() for subcircuit extraction
+├── ops/
+│   ├── erc_parser.py         # parse_erc(), ErcViolation for violation diagnosis QA
+│   ├── violation_classifier.py  # Phase 40: classify_violations for troubleshooting questions
+│   └── violation_diagnostic.py  # Phase 40: diagnose_violations for root cause QA
+├── inference/
+│   └── evaluator.py          # EvalResult pattern for benchmark results
+└── training/
+    └── evaluation.py         # EvalResult pattern reuse
+```
+
+### Schema files (existing pattern)
+
+```
+src/kicad_agent/ops/
+├── _schema_erc_smart.py      # Phase 40: ClassifyViolationsOp, DiagnoseViolationsOp, ErcAutoFixOp
+├── _schema_schematic_routing.py  # Phase 38: Routing op schemas
+├── _schema_schematic_intel.py    # Phase 39: Intelligence op schemas
+└── schema.py                 # Re-exports all 17 schema sub-modules
+```
+
+### Test pattern
+
+Tests in `tests/` follow `test_<module>.py`. Benchmark tests will be:
+- `test_benchmark_dataset.py` (41-01)
+- `test_benchmark_runner.py` (41-02)
+- `test_circuit_qa.py` (42-01)
+- `test_benchmark_regression.py` (43-01)
+- `test_adversarial.py` (44-01)
+
+---
+
+## Key Decisions Already Made
+
+1. **Template-based generation, no LLM** — Question generation uses templates + real schematic data, not LLM calls. Deterministic, reproducible, no API costs.
+2. **8 PCB MMLU categories** — component_identification, topology_recognition, signal_flow, power_design, pin_function, net_purpose, design_rules, troubleshooting.
+3. **6 QA types** — violation_diagnosis, signal_flow, component_function, net_purpose, design_review, value_calculation.
+4. **4-choice multi-choice** — 25% random baseline, established ML benchmark convention.
+5. **2% regression threshold** — Any category dropping >2% flags a regression. Configurable.
+6. **7 mutation types** — swap_values, break_wire, remove_label, duplicate_net, short_pins, floating_pin, wrong_polarity.
+7. **Seeded RNG for all adversarial tests** — Every adversarial test is reproducible.
+8. **Separate QA dataset from MMLU** — QA is open-ended for fine-tuning; MMLU is multi-choice for evaluation. Different purposes.
+9. **CI runs heuristic baseline, not LoRA** — Heuristic is fast and deterministic. LoRA baseline runs locally or on schedule.
+
+---
+
 ## What Success Looks Like
 
-**v2.4 (Q3 2026):**
-- All 10 plans in phases 38-40 executing cleanly
-- `regenerate_wiring` can rewire a THAT4301 compressor from scratch
-- `erc_auto_fix` with root cause mode classifies violations intelligently
-- Compressor-stage schematic: 33 violations → ≤5 with smart fixing
+**v2.5 (this work):**
+- [ ] PCB MMLU benchmark published with 500+ questions
+- [ ] Benchmark runner produces comparable scores for any model
+- [ ] Random baseline ~25%, heuristic >25%, LoRA target >70%
+- [ ] Circuit QA dataset with 2000+ question-answer pairs
+- [ ] CI pipeline that flags PRs on benchmark regression (>2% drop)
+- [ ] 750+ adversarial test cases proving parser robustness
+- [ ] All plans pass Council Gate 1 (Plan Review) and Gate 2 (Execution Review)
 
-**v2.5 (Q4 2026):**
-- PCB MMLU benchmark published with 500+ questions
-- Baseline results showing >70% accuracy
-- Circuit QA dataset with 2000+ question-answer pairs
-- CI pipeline that blocks PRs on benchmark regression
-
-**v3.0 (2027):**
+**v3.0 (after benchmarks):**
 - Domain intelligence: circuit topology graph, subcircuit recognition
 - Design rule intelligence: beyond KiCad DRC
 - Multi-format support (at least EasyEDA)
@@ -246,15 +326,98 @@ benchmarks/
 
 ---
 
+## Phases 45-58: Strategic Expansion (Council Approved)
+
+**All 14 phases have execution-ready plans with Council approval.**
+- 39 plan files, 19,923 lines total
+- Council reviewed in 4 waves, all CRITICAL/HIGH findings fixed
+- 2 APPROVED, 2 CONDITIONAL APPROVE (remaining items deferred to execution)
+
+### Phase Summary
+
+| Phase | Category | Score Target | Plans | Council Status |
+|-------|----------|-------------|-------|----------------|
+| 45 | Circuit Topology Graph | Domain 2→4 | 2 | CONDITIONAL |
+| 46 | Component Function Recognition | Domain 4→6 | 2 | CONDITIONAL |
+| 47 | Circuit Intent Inference | Domain 6→8 | 2 | CONDITIONAL APPROVE |
+| 48 | Design Rule Intelligence | Domain 8→10 | 2 | CONDITIONAL APPROVE |
+| 49 | One-Command Demo | Demo 6→8 | 2 | APPROVED |
+| 50 | Visual Output Showcase | Demo 8→9 | 2 | APPROVED |
+| 51 | Interactive Playground | Demo 9→10 | 1 | APPROVED |
+| 52 | Synthetic Circuit Generation | Training 8→9 | 2 | APPROVED |
+| 53 | Real-World Corpus Expansion | Training 9→10 | 1 | APPROVED |
+| 54 | VS Code Extension | Workflow 9→10 | 1 | APPROVED |
+| 55 | Abstract AST | Multi-Format foundation | 2 | APPROVED |
+| 56 | EasyEDA Support | Multi-Format | 2 | APPROVED |
+| 57 | Altium Support | Multi-Format enterprise | 2 | APPROVED |
+| 58 | Eagle + OpenWater | Multi-Format | 2 | APPROVED |
+
+### Execution Priority Order
+
+```
+Priority 1: Finish v2.4 (38-40)                      ✅ DONE
+Priority 2: Benchmarks (41-44)                        🔄 IN PROGRESS
+Priority 3: Domain Intelligence (45-48)               📋 READY
+Priority 4: Demo Quality (49-51)                      📋 READY
+Priority 5: Training Corpus (52-53)                   📋 READY
+Priority 6: VS Code Extension (54)                    📋 READY
+Priority 7: Multi-Format Foundation (55-56)           📋 READY
+Priority 8: Multi-Format Enterprise (57-58)           📋 READY
+```
+
+### Timeline
+
+| Quarter | Phases | Milestone |
+|---------|--------|-----------|
+| Q3 2026 | 38-40 | v2.4 — Schematic Intelligence ✅ |
+| Q4 2026 | 41-44 | v2.5 — Benchmark Suite 🔄 |
+| Q1 2027 | 45-46 | v2.6 — Circuit Semantics |
+| Q2 2027 | 47-48, 49-50 | v2.7 — Intelligence + Demo |
+| Q3 2027 | 51-54 | v3.0 — Professional Release |
+| Q4 2027 | 55-58 | v3.1 — Multi-Format |
+
+### Key Architecture Decisions (Phases 45-58)
+
+1. **No LLM in domain intelligence** — Phases 45-48 are deterministic, rule-based systems. Circuit classification uses ordered rules (like violation_classifier.py), not AI.
+2. **Abstract AST is the keystone** — Phase 55 creates a format-neutral circuit representation. All multi-format phases (56-58) depend on it.
+3. **EasyEDA first, Altium last** — EasyEDA is JSON (easy). Altium is binary OLE (hard). Prove the architecture with the easy one.
+4. **Altium write is infeasible** — Read-only support + migration to KiCad tool instead of writing .SchDoc.
+5. **Playground is vanilla JS** — No React, no build step. FastAPI backend, plain HTML/JS frontend.
+6. **10,000+ synthetic circuits** — Phase 52 generates valid circuits from parameterized templates for training diversity.
+7. **LABEL_OFFSET fixed** — NetConnector now places labels 2.54mm outward from IC body (commit 1d96620).
+
+### Requirements Tracking
+
+All requirements in `REQUIREMENTS.md`:
+- **DOMAIN-01..04** — Phases 45-48 (topology, classification, intent, design rules)
+- **DEMO-01..03** — Phases 49-51 (demo pipeline, SVG annotation, playground)
+- **CORPUS-01..02** — Phases 52-53 (synthetic generation, real-world corpus)
+- **WORKFLOW-01** — Phase 54 (VS Code extension)
+- **FORMAT-01..04** — Phases 55-58 (abstract AST, EasyEDA, Altium, Eagle)
+
+---
+
 ## References
 
 - `.planning/STRATEGIC-EXPANSION-PLAN.md` — Full 17-phase expansion plan (41-58)
-- `.planning/ROADMAP.md` — Complete project roadmap (40 phases, 7 milestones)
-- `.planning/REQUIREMENTS.md` — 134 requirements tracked with phase mapping
-- `.planning/phases/38-*/` — Phase 38 plans and summaries
-- `.planning/phases/39-*/` — Phase 39 plans (ready to execute)
-- `.planning/phases/40-*/` — Phase 40 plans (ready to execute)
-- `.planning/phases/41-pcb-mmlu-benchmark/` — PCB MMLU dataset + runner (full plans ready)
-- `.planning/phases/42-circuit-qa-dataset/` — Circuit QA fine-tuning dataset (full plan ready)
-- `.planning/phases/43-regression-benchmark-suite/` — CI regression detection (full plan ready)
-- `.planning/phases/44-adversarial-test-generation/` — Mutation/fuzz adversarial tests (full plan ready)
+- `.planning/ROADMAP.md` — Complete project roadmap (40 phases, 8 milestones)
+- `.planning/REQUIREMENTS.md` — Requirements tracked with phase mapping
+- `.planning/phases/40-*/40-COUNCIL-EXEC-REVIEW.md` — Phase 40 Council Gate 2 (APPROVED)
+- `.planning/phases/41-pcb-mmlu-benchmark/` — PCB MMLU dataset + runner (2 plans, Council reviewed)
+- `.planning/phases/42-circuit-qa-dataset/` — Circuit QA fine-tuning dataset (1 plan)
+- `.planning/phases/43-regression-benchmark-suite/` — CI regression detection (1 plan)
+- `.planning/phases/44-adversarial-test-generation/` — Mutation/fuzz adversarial tests (1 plan)
+- `.planning/phases/45-circuit-topology-graph/` — Topology graph + net classification (2 plans, Council reviewed)
+- `.planning/phases/46-component-function-recognition/` — Subcircuit detection + classification (2 plans, Council reviewed)
+- `.planning/phases/47-circuit-intent-inference/` — Design intent + improvement suggestions (2 plans, Council reviewed)
+- `.planning/phases/48-design-rule-intelligence/` — Domain-specific design rules engine (2 plans, Council reviewed)
+- `.planning/phases/49-one-command-demo/` — One-command demo pipeline (2 plans, Council APPROVED)
+- `.planning/phases/50-visual-output-showcase/` — SVG annotation + visual diff (2 plans, Council APPROVED)
+- `.planning/phases/51-interactive-playground/` — FastAPI playground (1 plan, Council APPROVED)
+- `.planning/phases/52-synthetic-circuit-generation/` — Synthetic circuit templates (2 plans, Council APPROVED)
+- `.planning/phases/53-real-world-corpus/` — Open-source project curation (1 plan, Council APPROVED)
+- `.planning/phases/54-vscode-extension/` — VS Code extension with MCP (1 plan, Council APPROVED)
+- `.planning/phases/55-abstract-ast/` — Format-neutral circuit model (2 plans, Council APPROVED)
+- `.planning/phases/56-easyeda-support/` — EasyEDA JSON support (2 plans, Council APPROVED)
+- `.planning/phases/57-altium-support/` — Altium SchDoc parsing (2 plans, Council APPROVED)
+- `.planning/phases/58-eagle-openwater/` — Eagle XML + FormatRegistry (2 plans, Council APPROVED)
