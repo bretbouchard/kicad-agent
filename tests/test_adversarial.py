@@ -233,7 +233,9 @@ class TestMutationEngine:
         assert mutation.mutation_type == "break_wire"
         assert mutation.target.startswith("wire_")
         assert mutation.original != ""
-        assert mutation.mutated != ""
+        # Wire is removed, so mutated is empty string (wire no longer exists)
+        assert mutation.mutated == ""
+        assert mutation.expected_detection == "pin_not_connected"
 
     def test_remove_label(self, minimal_sch: Path) -> None:
         """remove_label removes a net label creating unnamed nets."""

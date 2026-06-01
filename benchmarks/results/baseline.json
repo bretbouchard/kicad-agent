@@ -1,0 +1,24 @@
+{
+  "model_name": "BaselineHeuristic",
+  "dataset_version": "1.0.0",
+  "total_questions": 500,
+  "correct": 157,
+  "accuracy": 0.314,
+  "category_accuracy": {
+    "troubleshooting": 0.2857142857142857,
+    "topology_recognition": 0.3709677419354839,
+    "design_rules": 0.3387096774193548,
+    "power_design": 0.25396825396825395,
+    "net_purpose": 0.24193548387096775,
+    "signal_flow": 0.2698412698412698,
+    "pin_function": 0.20634920634920634,
+    "component_identification": 0.5483870967741935
+  },
+  "difficulty_accuracy": {
+    "medium": 0.30132450331125826,
+    "easy": 0.42,
+    "hard": 0.24489795918367346
+  },
+  "evaluated_at": "2026-06-01T00:20:38.775777+00:00",
+  "duration_seconds": 0.0
+}

@@ -404,8 +404,9 @@ class TestCIWorkflow:
 
         workflow_path = Path(".github/workflows/benchmark.yml")
         parsed = yaml.safe_load(workflow_path.read_text())
-        assert "on" in parsed
-        on_config = parsed["on"]
+        # PyYAML converts "on" key to Python boolean True
+        on_config = parsed.get("on") or parsed.get(True)
+        assert on_config is not None
         assert "pull_request" in on_config
 
     def test_workflow_has_benchmark_job(self) -> None:
