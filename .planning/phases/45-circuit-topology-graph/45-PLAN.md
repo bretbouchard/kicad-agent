@@ -45,9 +45,9 @@ class TopologyNode:
     lib_id: str                 # "NE5532", "Device:R"
     component_type: str         # "ic", "resistor", "capacitor", "inductor", "diode", "transistor", "connector", "misc"
     pin_count: int
-    power_pins: list[str]       # Pin numbers that connect to power/ground nets
-    input_pins: list[str]       # Pin numbers classified as signal inputs
-    output_pins: list[str]      # Pin numbers classified as signal outputs
+    power_pins: tuple[str, ...]       # Pin numbers that connect to power/ground nets
+    input_pins: tuple[str, ...]       # Pin numbers classified as signal inputs
+    output_pins: tuple[str, ...]      # Pin numbers classified as signal outputs
 
 @dataclass(frozen=True)
 class TopologyEdge:
@@ -61,12 +61,12 @@ class TopologyEdge:
 
 @dataclass(frozen=True)
 class CircuitTopology:
-    nodes: list[TopologyNode]
-    edges: list[TopologyEdge]
-    input_nets: list[str]       # Nets entering the circuit from connectors/external
-    output_nets: list[str]      # Nets leaving the circuit to connectors/external
-    power_nets: list[str]       # All power/ground nets
-    signal_paths: list[list[str]]  # Ordered list of refs from input to output
+    nodes: tuple[TopologyNode, ...]
+    edges: tuple[TopologyEdge, ...]
+    input_nets: tuple[str, ...]       # Nets entering the circuit from connectors/external
+    output_nets: tuple[str, ...]      # Nets leaving the circuit to connectors/external
+    power_nets: tuple[str, ...]       # All power/ground nets
+    signal_paths: tuple[tuple[str, ...], ...]  # Ordered list of refs from input to output
     stats: dict                 # component_count, net_count, signal_path_count, etc.
 ```
 

@@ -603,7 +603,13 @@ Born from gap analysis: the Evaluation Benchmarks scorecard dimension is at 2/10
 
 ## v2.7 Requirements -- Domain Intelligence
 
-Born from gap analysis: the Domain Intelligence scorecard dimension needs to move from 6/10 to 10/10. These requirements establish circuit intent inference and design rule intelligence -- the foundation for intelligent design review.
+Born from gap analysis: the Domain Intelligence scorecard dimension needs to move from 6/10 to 10/10. These requirements establish circuit topology, net classification, intent inference, and design rule intelligence -- the foundation for intelligent design review.
+
+### Circuit Topology Graph (Phase 45)
+
+- [ ] **DOMAIN-01**: Circuit topology graph construction with directed signal flow from inputs to outputs. Builds a networkx DiGraph from schematic wire connectivity, classifies nodes as input/output/passive/power, traces signal paths through components, and produces a TopologyResult with node count, edge count, connected components, and longest path. Foundation for all domain intelligence features.
+
+- [ ] **DOMAIN-02**: Net classification with signal integrity and importance ratings. Classifies nets as power/ground/signal/clock/high-speed based on connected component types and naming conventions. Assigns importance ratings for design rule prioritization. Enables subcircuit detection and component function recognition.
 
 ### Circuit Intent Inference (Phase 47)
 
@@ -612,3 +618,45 @@ Born from gap analysis: the Domain Intelligence scorecard dimension needs to mov
 ### Design Rule Intelligence (Phase 48)
 
 - [ ] **DOMAIN-04**: Pluggable design rule engine with 8 built-in rules for domain-specific DRC beyond KiCad's ERC/DRC: BYPASS_CAP_01 (decoupling caps near ICs), FEEDBACK_01 (op-amp feedback compensation), IMPEDANCE_01 (high-speed net termination), THERMAL_01 (power component thermal relief), GROUND_01 (star ground topology), POWER_01 (power supply filtering), SIGNAL_01 (input protection), LAYOUT_01 (critical signal path quality). Rules subclass a DesignRule ABC with check(topology) method. Engine supports rule enable/disable, per-rule config overrides, error-tolerant execution (broken rules don't crash the pipeline), and JSON/Markdown report output. YAML configuration for custom thresholds and rule toggling. CLI subcommand `kicad-agent design-rules <schematic>` for end-to-end invocation.
+
+## v2.8 Requirements -- Phases 49-58
+
+### One-Command Demo (Phase 49)
+
+- [ ] **DEMO-01**: One-command demo pipeline: `kicad-agent demo` generates a schematic from templates, runs ERC, auto-fixes violations, re-runs ERC, renders SVG, and produces a DemoReport. Templates include common-emitter amplifier, voltage divider, LED driver, op-amp buffer, and random selection. DemoReport includes template_used, stages_completed, erc_before, erc_after, svg_paths, duration_seconds, and success flag.
+
+### Visual Output Showcase (Phase 50)
+
+- [ ] **DEMO-02**: SVG annotation engine with violation markers. Rendered schematics show ERC violations with highlighted pins, missing connections, and graphical annotations. SVG output includes interactive hover regions for violation details.
+
+### Interactive Playground (Phase 51)
+
+- [ ] **DEMO-03**: Interactive playground for exploring operations in a browser. Web UI with schematic viewer, operation palette, real-time feedback, and undo stack. Supports all kicad-agent operations through a JSON API.
+
+### Synthetic Circuit Generation (Phase 52)
+
+- [ ] **CORPUS-01**: Template-based synthetic circuit generation with parameterized components, deterministic seeding for reproducibility, quality metrics (component count, net count, connectivity ratio, DRC pass rate), and deduplication via SHA256 content hashing. Circuit templates cover common analog building blocks (amplifiers, filters, oscillators, power supplies). Mass generation produces 1000+ unique circuits per run.
+
+### Real-World Corpus (Phase 53)
+
+- [ ] **CORPUS-02**: Curated corpus of 50+ real-world KiCad projects from open-source hardware communities with quality gates (minimum 5 components, parses without errors, identifiable circuit function), license tracking with SPDX identifiers and commercial_use_compatible flag, searchable ProjectIndex (by category, complexity, component types, license), and download integrity verification (SHA256 content hash, 50MB size limit, domain allowlist for github.com and hackaday.io).
+
+### VS Code Extension (Phase 54)
+
+- [ ] **WORKFLOW-01**: VS Code extension activating for .kicad_sch and .kicad_pcb files with MCP client connecting to edit_server.py via stdio transport, workspace-scoped authentication (VS Code workspace trust boundary), file path validation rejecting paths outside workspace root, right-click context menus for ERC fixing and design suggestions, sidebar panels for operation history and ERC reports, file watcher with debounced auto-ERC on save, and .vsix packaging via vsce.
+
+### Abstract AST (Phase 55)
+
+- [ ] **FORMAT-01**: Format-neutral AbstractCircuit model (Pydantic v2) with AbstractComponent, AbstractNet (pin_refs), AbstractPin (PinType enum), AbstractSheet, and WireSegment. KiCadAdapter provides bidirectional conversion: schematic_ir_to_abstract() extracts from SchematicIR, abstract_to_schematic_ir() reconstructs KiCad schematics via kiutils constructors. LOSS_ACCOUNTING documents preserved and dropped fields. Round-trip tests verify component count, net count, and ref designator preservation.
+
+### EasyEDA Support (Phase 56)
+
+- [ ] **FORMAT-02**: EasyEDA JSON parser converting .json schematics to AbstractCircuit via tilde-delimited shape array parsing, LCSC part number preservation, component extraction with positions and orientations, and net derivation from wire connectivity + labels. EasyEdaWriter serializes AbstractCircuit back to EasyEDA JSON format. LCSC-to-KiCad symbol/footprint mapping with bidirectional lookup.
+
+### Altium Support (Phase 57)
+
+- [ ] **FORMAT-03**: Altium .SchDoc parser reading OLE compound documents via olefile with binary record extraction, Altium electrical type code to PinType enum mapping, OLE stream size limits (10MB per stream, 100MB total, 100k record cap), and graceful handling of malformed files. AltiumMigration CLI tool converts .SchDoc to .kicad_sch through Abstract AST layer (parse -> AbstractCircuit -> KiCadAdapter -> .kicad_sch).
+
+### Eagle + Format Registry (Phase 58)
+
+- [ ] **FORMAT-04**: Eagle XML parser converting .sch files to AbstractCircuit with gate-based symbol handling, package-to-footprint mapping, and defusedxml for XML bomb protection. FormatRegistry with lazy imports, capability matrix (read/write/round-trip per format), auto-detection by file extension and content, FormatType enum for type-safe format identification, and unified CLI for cross-format conversion.
