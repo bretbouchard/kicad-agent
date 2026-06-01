@@ -1,6 +1,7 @@
 """Net connector -- connect pins into a net with wire/label generation.
 
-Generates net labels at every pin body_position for guaranteed KiCad
+Generates net labels at pin wire endpoints offset outward from IC body
+(configurable via label_offset, default 2.54mm) for guaranteed KiCad
 connectivity, and optionally generates wires for nearby same-axis pins
 with collision zone avoidance.
 
@@ -11,8 +12,9 @@ Three strategies:
 
 Key insight: net labels at every pin position provide guaranteed connectivity.
 Wires are cosmetic for programmatic schematics. The connect_pins operation
-generates labels at EVERY pin (body_position), and optionally generates
-wires for short/clean routes.
+generates labels offset outward from IC body (body_position -> position +
+label_offset along pin direction), and optionally generates wires for
+short/clean routes.
 
 Security (threat model):
   T-38-03-03: Wires generated at exact pin positions only -- no arbitrary
@@ -59,12 +61,13 @@ class NetConnector:
         strategy: str = "hybrid",
         collision_zones: list[dict[str, Any]] | None = None,
         max_wire_length: float = 40.0,
+        label_offset: float = 2.54,
     ) -> dict[str, Any]:
         """Connect pins into a net with wire/label generation.
 
         Algorithm:
         1. Resolve all pin positions using PinResolver.
-        2. Generate labels at every pin body_position.
+        2. Generate labels at pin positions offset outward from IC body.
         3. Generate wires (unless strategy is label_only):
            - Same-axis pins get direct wires.
            - Other pins get L-shaped wires (horizontal then vertical).
@@ -79,6 +82,9 @@ class NetConnector:
             collision_zones: Optional list of collision zone dicts with
                 direction, coordinate, tolerance keys.
             max_wire_length: Skip wires longer than this (mm).
+            label_offset: Distance (mm) to offset labels outward from pin
+                wire endpoint along pin direction. Default 2.54mm (1 grid unit).
+                Set to 0.0 to place labels exactly at wire endpoints.
 
         Returns:
             Dict with net_name, wires_generated, labels_generated,
@@ -100,16 +106,39 @@ class NetConnector:
                 "notes": ["No pins resolved"],
             }
 
-        # Step 2: Generate labels at every pin body_position
+        # Step 2: Generate labels offset outward from pin wire endpoints.
+        # Direction: from body_position toward position (pin points outward
+        # from IC body), then extend further by label_offset.
         labels: list[dict] = []
         for pin_info in resolved_pins:
             bx, by = pin_info["body_position"]
+            wx, wy = pin_info["position"]
+
+            if label_offset > 0 and not (
+                math.isclose(bx, wx, abs_tol=0.01)
+                and math.isclose(by, wy, abs_tol=0.01)
+            ):
+                # Direction vector from body to wire endpoint (outward from IC)
+                dx = wx - bx
+                dy = wy - by
+                length = math.sqrt(dx * dx + dy * dy)
+                if length > 0.01:
+                    # Normalize and extend from wire endpoint
+                    nx = dx / length
+                    ny = dy / length
+                    lx = round(wx + nx * label_offset, 2)
+                    ly = round(wy + ny * label_offset, 2)
+                else:
+                    lx, ly = wx, wy
+            else:
+                lx, ly = wx, wy
+
             label_sexpr = (
-                f'  (label "{net_name}" (at {bx:g} {by:g} 0) '
+                f'  (label "{net_name}" (at {lx:g} {ly:g} 0) '
                 f'(effects (font (size 0.75 0.75))))\n'
             )
             labels.append({
-                "position": (bx, by),
+                "position": (lx, ly),
                 "sexpr": label_sexpr,
                 "ref": pin_info["ref"],
                 "pin": pin_info["pin"],

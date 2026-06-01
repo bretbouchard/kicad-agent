@@ -374,8 +374,13 @@ class TestNetConnector:
         assert "pts" in w["sexpr"]
         assert "xy" in w["sexpr"]
 
-    def test_label_sexpr_format_at_body_position(self):
-        """Test 7: Labels are generated at pin body_position (not wire position)."""
+    def test_label_sexpr_format_offset_from_body(self):
+        """Test 7: Labels are offset outward from IC body by label_offset (default 2.54mm).
+
+        Pin R55.1: body_position=(59.69, 78.74), position=(59.69, 80.01).
+        Pin direction is downward (y increases). Default offset=2.54.
+        Expected label position: 80.01 + 2.54 = 82.55.
+        """
         connector = self._make_connector(_two_horizontal_pins())
         result = connector.connect_pins(
             net_name="NET_D",
@@ -385,10 +390,38 @@ class TestNetConnector:
         labels = result["labels"]
         assert len(labels) == 1
         label = labels[0]
-        # Label should be at body_position (59.69, 78.74), not wire position (59.69, 80.01)
-        assert label["position"] == (59.69, 78.74)
+        # Label should be at wire endpoint + offset outward from IC body
+        assert label["position"] == (59.69, 82.55)
         # sexpr should contain the net name
         assert "NET_D" in label["sexpr"]
+
+    def test_label_offset_zero_places_at_wire_endpoint(self):
+        """Test 7b: label_offset=0 places labels at wire endpoint."""
+        connector = self._make_connector(_two_horizontal_pins())
+        result = connector.connect_pins(
+            net_name="NET_Z",
+            pins=[{"ref": "R55", "pin": "1"}],
+            strategy="label_only",
+            label_offset=0.0,
+        )
+        labels = result["labels"]
+        assert len(labels) == 1
+        # With offset=0, label goes to wire endpoint position
+        assert labels[0]["position"] == (59.69, 80.01)
+
+    def test_label_offset_custom_distance(self):
+        """Test 7c: Custom label_offset (5.08mm = 2 grid units)."""
+        connector = self._make_connector(_two_horizontal_pins())
+        result = connector.connect_pins(
+            net_name="NET_CUSTOM",
+            pins=[{"ref": "R55", "pin": "1"}],
+            strategy="label_only",
+            label_offset=5.08,
+        )
+        labels = result["labels"]
+        assert len(labels) == 1
+        # 80.01 + 5.08 = 85.09
+        assert labels[0]["position"] == (59.69, 85.09)
 
     def test_single_pin_net(self):
         """Test 8: Single-pin net generates just one label, no wires."""
