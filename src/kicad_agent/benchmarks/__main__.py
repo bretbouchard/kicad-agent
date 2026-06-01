@@ -1,22 +1,38 @@
 """CLI entry point for running PCB MMLU benchmarks.
 
 Usage:
-    python -m kicad_agent.benchmarks \\
-        --dataset benchmarks/pcb-mmlu-v1.json \\
-        --model random \\
-        --output results/random-baseline.json
+    # Run benchmark
+    python -m kicad_agent.benchmarks \
+        --dataset benchmarks/pcb-mmlu-v1.json \
+        --model heuristic \
+        --output /tmp/results.json
+
+    # Run benchmark with regression check
+    python -m kicad_agent.benchmarks \
+        --dataset benchmarks/pcb-mmlu-v1.json \
+        --model heuristic \
+        --output /tmp/results.json \
+        --regression-check
+
+    # Run with explicit baseline path
+    python -m kicad_agent.benchmarks \
+        --dataset benchmarks/pcb-mmlu-v1.json \
+        --model heuristic \
+        --output /tmp/results.json \
+        --regression-check \
+        --baseline benchmarks/results/baseline.json
 
 Active flags:
-    --dataset        Path to benchmark JSON dataset (required)
-    --model          Model to evaluate: random, heuristic (required)
-    --output         Path for results JSON output (required)
-    --categories     Filter to specific categories (optional, space-separated)
-    --difficulty     Filter to easy/medium/hard (optional)
-    --max-questions  Limit number of questions evaluated (optional)
-
-Future flags (planned for Phase 43/44):
+    --dataset           Path to benchmark JSON dataset (required)
+    --model             Model to evaluate: random, heuristic (required)
+    --output            Path for results JSON output (required)
+    --categories        Filter to specific categories (optional, space-separated)
+    --difficulty        Filter to easy/medium/hard (optional)
+    --max-questions     Limit number of questions evaluated (optional)
     --regression-check  Compare results against baseline for regression detection
-    --baseline          Path to baseline JSON for regression check
+    --baseline          Path to baseline JSON for regression check (default: benchmarks/results/baseline.json)
+
+Future flags (Phase 44):
     --adversarial       Run adversarial test variants
     --count             Number of questions to sample (default: 500)
 """
@@ -28,6 +44,7 @@ import json
 import sys
 
 from kicad_agent.benchmarks.models import BaselineHeuristic, BaselineRandom
+from kicad_agent.benchmarks.regression import RegressionDetector
 from kicad_agent.benchmarks.runner import BenchmarkRunner
 from kicad_agent.benchmarks.schemas import BenchmarkDataset
 
@@ -73,15 +90,16 @@ def main() -> None:
         type=int,
         help="Maximum number of questions to evaluate",
     )
-    # Future flags (Phase 43/44):
-    # parser.add_argument("--regression-check", action="store_true",
-    #                     help="Compare results against baseline for regression")
-    # parser.add_argument("--baseline",
-    #                     help="Path to baseline JSON for regression check")
-    # parser.add_argument("--adversarial", action="store_true",
-    #                     help="Run adversarial test variants")
-    # parser.add_argument("--count", type=int, default=500,
-    #                     help="Number of questions to sample")
+    parser.add_argument(
+        "--regression-check",
+        action="store_true",
+        help="Compare results against baseline for regression detection",
+    )
+    parser.add_argument(
+        "--baseline",
+        default="benchmarks/results/baseline.json",
+        help="Path to baseline JSON for regression check (default: benchmarks/results/baseline.json)",
+    )
     args = parser.parse_args()
 
     # Load dataset
@@ -114,6 +132,26 @@ def main() -> None:
         print("\nPer-category accuracy:")
         for cat, acc in sorted(result.category_accuracy.items()):
             print(f"  {cat}: {acc:.1%}")
+
+    # Regression check
+    if args.regression_check:
+        detector = RegressionDetector()
+        baseline = detector.load_baseline()
+        report = detector.compare(result, baseline)
+        print("\n--- Regression Check ---")
+        if report.is_regression:
+            print(f"REGRESSION DETECTED in: {report.regression_categories}")
+            for cat in report.regression_categories:
+                delta = report.delta[cat]
+                print(f"  {cat}: {delta:+.1%} (threshold: -{detector.threshold:.0%})")
+            print(f"Overall: {report.overall_delta:+.1%}")
+            sys.exit(1)
+        else:
+            print(f"OK: No regression detected")
+            print(f"Overall delta: {report.overall_delta:+.1%}")
+            for cat, acc in sorted(result.category_accuracy.items()):
+                delta = report.delta.get(cat, 0)
+                print(f"  {cat}: {acc:.1%} ({delta:+.1%})")
 
 
 if __name__ == "__main__":
