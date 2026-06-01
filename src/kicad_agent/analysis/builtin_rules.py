@@ -36,6 +36,7 @@ from kicad_agent.analysis.design_rules import (
     RuleSeverity,
 )
 from kicad_agent.analysis.topology_graph import CircuitTopology, TopologyNode
+from kicad_agent.analysis.topology_utils import build_net_to_nodes, build_node_to_nets
 
 logger = logging.getLogger(__name__)
 
@@ -75,37 +76,6 @@ _POWER_IC_PATTERNS = (
 _GROUND_NAMES = ("GND", "GNDA", "AGND", "PGND", "CHASSIS", "EARTH")
 
 
-def _build_net_to_nodes(topology: CircuitTopology) -> dict[str, list[TopologyNode]]:
-    """Build mapping from net name to connected TopologyNode list."""
-    net_map: dict[str, list[TopologyNode]] = {}
-    node_map = {n.ref: n for n in topology.nodes}
-
-    for edge in topology.edges:
-        src_node = node_map.get(edge.source_ref)
-        if src_node:
-            net_map.setdefault(edge.net_name, [])
-            if src_node not in net_map[edge.net_name]:
-                net_map[edge.net_name].append(src_node)
-        tgt_node = node_map.get(edge.target_ref)
-        if tgt_node:
-            net_map.setdefault(edge.net_name, [])
-            if tgt_node not in net_map[edge.net_name]:
-                net_map[edge.net_name].append(tgt_node)
-
-    return net_map
-
-
-def _build_node_to_nets(topology: CircuitTopology) -> dict[str, list[str]]:
-    """Build mapping from node ref to connected net names."""
-    node_nets: dict[str, list[str]] = {}
-    for edge in topology.edges:
-        for ref in (edge.source_ref, edge.target_ref):
-            node_nets.setdefault(ref, [])
-            if edge.net_name not in node_nets[ref]:
-                node_nets[ref].append(edge.net_name)
-    return node_nets
-
-
 def _is_ic(lib_id: str) -> bool:
     return any(p.upper() in lib_id.upper() for p in _IC_LIB_PATTERNS)
 
@@ -119,7 +89,14 @@ def _is_cap(lib_id: str) -> bool:
 
 
 def _is_resistor(lib_id: str) -> bool:
-    return lib_id.startswith("Device:R")
+    """Check if lib_id is a standard resistor (excludes pots, photo, thermistor)."""
+    if not lib_id.startswith("Device:R"):
+        return False
+    # Exclude R_POT, R_Photo, R_Thermistor, etc.
+    rest = lib_id[len("Device:R"):]
+    return rest == "" or rest[0] == "_" and not any(
+        rest.startswith(f"_{p}") for p in ("Pot", "Photo", "Therm", "Var")
+    )
 
 
 def _is_diode(lib_id: str) -> bool:
@@ -160,8 +137,8 @@ class BypassCapRule(DesignRule):
         config = config or {}
         violations: list[DesignRuleViolation] = []
 
-        net_to_nodes = _build_net_to_nodes(topology)
-        node_nets = _build_node_to_nets(topology)
+        net_to_nodes = build_net_to_nodes(topology)
+        node_nets = build_node_to_nets(topology)
 
         for node in topology.nodes:
             if not _is_ic(node.lib_id):
@@ -227,7 +204,7 @@ class FeedbackCompRule(DesignRule):
     def check(self, topology: Any, config: dict[str, Any] | None = None) -> list[DesignRuleViolation]:
         violations: list[DesignRuleViolation] = []
 
-        node_nets = _build_node_to_nets(topology)
+        node_nets = build_node_to_nets(topology)
 
         for node in topology.nodes:
             if not _is_opamp(node.lib_id):
@@ -303,7 +280,7 @@ class ImpedanceRule(DesignRule):
     def check(self, topology: Any, config: dict[str, Any] | None = None) -> list[DesignRuleViolation]:
         violations: list[DesignRuleViolation] = []
 
-        net_to_nodes = _build_net_to_nodes(topology)
+        net_to_nodes = build_net_to_nodes(topology)
 
         # Collect unique net names from edges
         net_names = {e.net_name for e in topology.edges}
@@ -407,7 +384,7 @@ class GroundRule(DesignRule):
             return violations
 
         # Check if ground nets connect through any component
-        node_nets = _build_node_to_nets(topology)
+        node_nets = build_node_to_nets(topology)
         connected_pairs: set[tuple[str, str]] = set()
 
         for node in topology.nodes:
@@ -460,10 +437,15 @@ class PowerFilterRule(DesignRule):
     def check(self, topology: Any, config: dict[str, Any] | None = None) -> list[DesignRuleViolation]:
         violations: list[DesignRuleViolation] = []
 
-        net_to_nodes = _build_net_to_nodes(topology)
+        net_to_nodes = build_net_to_nodes(topology)
 
-        # Check power_nets from topology
-        for power_net in topology.power_nets:
+        # Collect all power nets: explicit power_nets + pattern-matched nets from edges
+        power_net_names: set[str] = set(topology.power_nets)
+        for edge in topology.edges:
+            if _is_power_net(edge.net_name) and not _is_ground_net(edge.net_name):
+                power_net_names.add(edge.net_name)
+
+        for power_net in power_net_names:
             # Skip ground nets
             if _is_ground_net(power_net):
                 continue
@@ -505,7 +487,7 @@ class InputProtectionRule(DesignRule):
 
     def check(self, topology: Any, config: dict[str, Any] | None = None) -> list[DesignRuleViolation]:
         violations: list[DesignRuleViolation] = []
-        net_to_nodes = _build_net_to_nodes(topology)
+        net_to_nodes = build_net_to_nodes(topology)
 
         for input_net in topology.input_nets:
             nodes_on_input = net_to_nodes.get(input_net, [])
@@ -555,7 +537,7 @@ class LayoutRule(DesignRule):
         max_components = config.get("max_components_per_net", 5)
         violations: list[DesignRuleViolation] = []
 
-        net_to_nodes = _build_net_to_nodes(topology)
+        net_to_nodes = build_net_to_nodes(topology)
 
         for net_name, nodes_on_net in net_to_nodes.items():
             if net_name in topology.power_nets or _is_power_net(net_name):

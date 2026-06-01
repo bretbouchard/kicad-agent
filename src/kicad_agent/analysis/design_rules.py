@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from kicad_agent.analysis.topology_graph import CircuitTopology
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 class RuleSeverity(str, Enum):
@@ -67,13 +67,6 @@ class DesignRuleViolation(BaseModel):
     suggestion: str = Field(default="", max_length=1000)
     affected_components: tuple[str, ...] = Field(default_factory=tuple)
     details: dict[str, Any] = Field(default_factory=dict)
-
-    @field_validator("rule_id")
-    @classmethod
-    def _rule_id_format(cls, v: str) -> str:
-        if not v.strip():
-            raise ValueError("rule_id must not be empty")
-        return v
 
 
 class DesignRuleReport(BaseModel):

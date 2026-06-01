@@ -35,6 +35,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from kicad_agent.analysis.intent_schemas import DesignGoal, DesignIntent
 from kicad_agent.analysis.topology_graph import CircuitTopology, TopologyNode
+from kicad_agent.analysis.topology_utils import build_net_to_nodes, build_node_to_nets
 
 logger = logging.getLogger(__name__)
 
@@ -165,44 +166,6 @@ def _is_diode(node: TopologyNode) -> bool:
     return node.lib_id.startswith("Device:D") or node.lib_id.startswith("Device:LED")
 
 
-def _build_net_to_nodes(topology: CircuitTopology) -> dict[str, list[TopologyNode]]:
-    """Build a mapping from net name to connected nodes.
-
-    Uses topology edges to determine which nodes share nets.
-    """
-    net_map: dict[str, list[TopologyNode]] = {}
-    node_map = {n.ref: n for n in topology.nodes}
-
-    for edge in topology.edges:
-        # Add source node to net
-        src_node = node_map.get(edge.source_ref)
-        if src_node:
-            net_map.setdefault(edge.net_name, [])
-            if src_node not in net_map[edge.net_name]:
-                net_map[edge.net_name].append(src_node)
-        # Add target node to net
-        tgt_node = node_map.get(edge.target_ref)
-        if tgt_node:
-            net_map.setdefault(edge.net_name, [])
-            if tgt_node not in net_map[edge.net_name]:
-                net_map[edge.net_name].append(tgt_node)
-
-    return net_map
-
-
-def _build_node_to_nets(topology: CircuitTopology) -> dict[str, list[str]]:
-    """Build a mapping from node ref to connected net names."""
-    node_nets: dict[str, list[str]] = {}
-    for edge in topology.edges:
-        node_nets.setdefault(edge.source_ref, [])
-        if edge.net_name not in node_nets[edge.source_ref]:
-            node_nets[edge.source_ref].append(edge.net_name)
-        node_nets.setdefault(edge.target_ref, [])
-        if edge.net_name not in node_nets[edge.target_ref]:
-            node_nets[edge.target_ref].append(edge.net_name)
-    return node_nets
-
-
 def _has_cap_on_power_net(
     ic: TopologyNode,
     topology: CircuitTopology,
@@ -210,8 +173,8 @@ def _has_cap_on_power_net(
     node_nets: dict[str, list[str]] | None = None,
 ) -> bool:
     """Check if any capacitor shares a power net with the IC."""
-    net_to_nodes = net_to_nodes or _build_net_to_nodes(topology)
-    node_nets = node_nets or _build_node_to_nets(topology)
+    net_to_nodes = net_to_nodes or build_net_to_nodes(topology)
+    node_nets = node_nets or build_node_to_nets(topology)
 
     # Get nets connected to the IC
     ic_nets = node_nets.get(ic.ref, [])
@@ -246,8 +209,8 @@ def _has_feedback_cap(
     Feedback path: inverting input (-) and output (OUT) share a net
     through a resistor, and there is a capacitor bridging the same nets.
     """
-    node_nets = node_nets or _build_node_to_nets(topology)
-    net_to_nodes = net_to_nodes or _build_net_to_nodes(topology)
+    node_nets = node_nets or build_node_to_nets(topology)
+    net_to_nodes = net_to_nodes or build_net_to_nodes(topology)
 
     # Find feedback edges: edges with signal_direction="feedback"
     # that involve this op-amp
@@ -274,8 +237,8 @@ def _has_feedback_path(
     node_nets: dict[str, list[str]] | None = None,
 ) -> bool:
     """Check if an op-amp has a feedback path (resistor from output to inverting input)."""
-    node_nets = node_nets or _build_node_to_nets(topology)
-    net_to_nodes = net_to_nodes or _build_net_to_nodes(topology)
+    node_nets = node_nets or build_node_to_nets(topology)
+    net_to_nodes = net_to_nodes or build_net_to_nodes(topology)
 
     opamp_nets = set(node_nets.get(opamp.ref, []))
 
@@ -319,8 +282,8 @@ def _check_bypass_caps(
     - WARNING otherwise
     """
     findings: list[DesignFinding] = []
-    net_to_nodes = _build_net_to_nodes(topology)
-    node_nets = _build_node_to_nets(topology)
+    net_to_nodes = build_net_to_nodes(topology)
+    node_nets = build_node_to_nets(topology)
     ics = _find_ics(topology)
 
     for ic in ics:
@@ -362,8 +325,8 @@ def _check_feedback_compensation(
     4. No cap -> SUGGESTION to add compensation
     """
     findings: list[DesignFinding] = []
-    net_to_nodes = _build_net_to_nodes(topology)
-    node_nets = _build_node_to_nets(topology)
+    net_to_nodes = build_net_to_nodes(topology)
+    node_nets = build_node_to_nets(topology)
     opamps = _find_opamps(topology)
 
     for opamp in opamps:
@@ -398,7 +361,7 @@ def _check_power_decoupling(
     2. If power net has no capacitor -> WARNING
     """
     findings: list[DesignFinding] = []
-    net_to_nodes = _build_net_to_nodes(topology)
+    net_to_nodes = build_net_to_nodes(topology)
 
     for power_net in topology.power_nets:
         # Skip ground nets
@@ -435,7 +398,7 @@ def _check_input_protection(
     3. No protection -> SUGGESTION
     """
     findings: list[DesignFinding] = []
-    node_nets = _build_node_to_nets(topology)
+    node_nets = build_node_to_nets(topology)
 
     for input_net in topology.input_nets:
         # Find all nodes on this input net
