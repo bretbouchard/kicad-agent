@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.5
 milestone_name: benchmark-suite
 status: executing
-stopped_at: "Plan 46-01 complete. Subcircuit detection + classification. 66 tests."
-last_updated: "2026-06-01T04:57:48Z"
+stopped_at: "Plan 46-02 complete. ML-ready feature extraction + confidence calibration. 101 tests."
+last_updated: "2026-06-01T05:28:06Z"
 last_activity: 2026-06-01
 progress:
   total_phases: 48
   completed_phases: 44
   total_plans: 122
-  completed_plans: 120
+  completed_plans: 121
   percent: 98
 ---
 
@@ -27,8 +27,8 @@ Last activity: 2026-06-01
 ## Current Position
 
 Phase: 46 (Component Function Recognition) IN PROGRESS
-Status: **Plan 46-01 complete. Subcircuit detection + classification. 66 tests.**
-Plans: 46-01 (complete)
+Status: **Plan 46-02 complete. ML-ready feature extraction + confidence calibration. 101 tests.**
+Plans: 46-01 (complete), 46-02 (complete)
 Last activity: 2026-06-01
 
 ### Phase 46: Component Function Recognition
@@ -38,6 +38,14 @@ Last activity: 2026-06-01
   - CircuitClassifier with 13 ordered rules (first match wins)
   - 66 TDD tests covering all 15 subcircuit types, confidence, integration
   - No regressions (182 combined tests with topology)
+
+- Plan 46-02: Feature Extraction, Confidence Calibration (COMPLETE)
+  - SubcircuitFeatures frozen dataclass with 26 fields for ML-ready feature vectors
+  - extract_features function: component counts, feedback, power, density, IC type, signal paths
+  - ClassificationResult with feature_vector for ML pipeline audit trail
+  - Confidence calibrated: feature_vector populated for confidence < 0.5
+  - SubcircuitDetector.to_jsonl for JSONL training data export
+  - 35 new TDD tests (101 total subcircuit tests), 2560 total pass
 
 ## Previous Milestone (v2.4 Schematic Intelligence)
 
@@ -51,13 +59,13 @@ Last activity: 2026-06-01
 
 **Velocity:**
 
-- Total plans completed: 119
+- Total plans completed: 121
 - Average duration: 5 min
-- Total execution time: 5.6 hours
+- Total execution time: 5.7 hours
 
 **Recent Trend:**
 
-- Last 10 plans: 45-01 through 45-02 (all first-execution pass)
+- Last 10 plans: 46-01 through 46-02 (all first-execution pass)
 - Trend: Stable -- all plans passing on first execution
 
 ## Accumulated Context
@@ -115,13 +123,17 @@ Recent decisions affecting current work:
 - [v2.5-46]: BFS clustering does not traverse through ICs -- each IC forms its own subcircuit
 - [v2.5-46]: PREAMP rule requires resistor_count >= 2 to distinguish from OUTPUT_STAGE
 - [v2.5-46]: Feature extraction as standalone _extract_features method for Plan 46-02 reuse
+- [v2.5-46]: SubcircuitFeatures has 26 fields (subcircuit_id + 25 feature fields) for ML-ready vectors
+- [v2.5-46]: Features dict merges ML fields (SubcircuitFeatures.to_dict) with legacy classifier fields (_extract_features) for backward compatibility
+- [v2.5-46]: ClassificationResult.feature_vector populated only for confidence < 0.5 to minimize storage while capturing ML training data
+- [v2.5-46]: extract_features accepts optional input_nets/output_nets set parameters for topology-level signal counting
 - [v2.4-SI]: ClassifyViolationsOp in _schema_erc_smart.py (separate from _schema_repair.py per D-01)
 - [v2.4-SI]: IR position data (pin/wire/label positions) distinguishes #PWR symbols from regular components
 
 ### Pending Todos
 
-- Plan 46-01 complete -- Subcircuit detection + classification (66 tests)
-- Next: Plan 46-02 (feature vector generation for ML classification)
+- Plan 46-02 complete -- ML-ready feature extraction + confidence calibration (101 tests)
+- Phase 46 complete (2/2 plans done)
 
 ### Blockers/Concerns
 
@@ -133,5 +145,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Plan 46-01 complete. Subcircuit detection + classification. 66 tests.
-Resume with: Plan 46-02 (feature vector generation for ML classification)
+Stopped at: Plan 46-02 complete. ML-ready feature extraction + confidence calibration. 101 tests.
+Resume with: Phase 46 complete. Next phase per ROADMAP.md.
