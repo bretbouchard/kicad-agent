@@ -504,7 +504,8 @@ class IntelligentDrcAnalyzer:
         for constraint in self._constraints:
             # Duck-typed: try constraint_type attribute first
             ct = getattr(constraint, "constraint_type", None) or getattr(constraint, "type", "")
-            if ct and str(ct).lower() in vt_lower:
+            ct_str = ct.value if hasattr(ct, "value") else str(ct)
+            if ct_str and ct_str.lower() in vt_lower:
                 return constraint
 
         return None

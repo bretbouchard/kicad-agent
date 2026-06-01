@@ -508,10 +508,11 @@ class LayoutAwarePlacer:
 
             for constraint in constraints:
                 ctype = getattr(constraint, "constraint_type", "")
-                refs = getattr(constraint, "refs", [])
+                ctype_val = ctype.value if hasattr(ctype, "value") else str(ctype)
+                refs = getattr(constraint, "component_refs", [])
                 max_dist = getattr(constraint, "max_distance_mm", None)
 
-                if ctype == "decoupling" and len(refs) >= 2:
+                if ctype_val == "DECOUPLING" and len(refs) >= 2:
                     # Penalty proportional to distance beyond max_decoupling_distance
                     ref_a, ref_b = refs[0], refs[1]
                     pos_a = all_positions.get(ref_a)
@@ -525,7 +526,7 @@ class LayoutAwarePlacer:
                         if dist > limit:
                             constraint_penalty += (dist - limit) * _DECOUPLING_PENALTY_WEIGHT
 
-                elif ctype == "differential_pair" and len(refs) >= 2:
+                elif ctype_val == "DIFFERENTIAL_PAIR" and len(refs) >= 2:
                     # Penalty for y-offset between pair members
                     ref_a, ref_b = refs[0], refs[1]
                     pos_a = all_positions.get(ref_a)
@@ -534,7 +535,7 @@ class LayoutAwarePlacer:
                         y_offset = abs(pos_a[1] - pos_b[1])
                         constraint_penalty += y_offset * _DIFF_PAIR_PENALTY_WEIGHT
 
-                elif ctype == "thermal" and len(refs) >= 1:
+                elif ctype_val == "THERMAL" and len(refs) >= 1:
                     # Penalty for hot components too close to other components
                     for hot_ref in refs:
                         hot_pos = all_positions.get(hot_ref)

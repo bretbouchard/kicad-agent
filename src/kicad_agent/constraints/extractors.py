@@ -79,23 +79,23 @@ def _is_diff_pair_name(name: str) -> str | None:
             base = pos_match.group(1)
             # Return the negative counterpart
             # Reconstruct from the same pattern type
+            if "_POS" in name:
+                return f"{base}_NEG"
             if "+" in name:
                 return f"{base}-"
             if "_P" in name:
                 return f"{base}_N"
-            if "_POS" in name:
-                return f"{base}_NEG"
             return None
 
         neg_match = neg_pattern.match(name)
         if neg_match:
             base = neg_match.group(1)
+            if "_NEG" in name:
+                return f"{base}_POS"
             if "-" in name and not name.startswith("-"):
                 return f"{base}+"
             if "_N" in name:
                 return f"{base}_P"
-            if "_NEG" in name:
-                return f"{base}_POS"
             return None
     return None
 

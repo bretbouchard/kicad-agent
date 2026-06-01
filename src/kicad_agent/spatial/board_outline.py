@@ -135,7 +135,7 @@ def _arc_to_linestring(
         if arc_is_ccw:
             angle = start_angle + frac * ccw_to_end
         else:
-            angle = start_angle + frac * ccw_to_end
+            angle = start_angle + frac * (ccw_to_end - 2 * math.pi)
         px = center_x + radius * math.cos(angle)
         py = center_y + radius * math.sin(angle)
         points.append((px, py))
