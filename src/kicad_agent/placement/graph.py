@@ -191,6 +191,16 @@ class PlacementGraph:
         self._graph = graph
 
     @property
+    def graph(self) -> nx.Graph:
+        """Underlying networkx bipartite placement graph.
+
+        Public read-only accessor for the internal graph. Prefer typed
+        accessors (component_nodes, net_nodes, get_node_data, neighbors)
+        when possible.
+        """
+        return self._graph
+
+    @property
     def board_width(self) -> float:
         """Board width in mm from graph attributes."""
         return float(self._graph.graph.get("board_width", 0.0))

@@ -127,6 +127,17 @@ class BaseIR:
         self._mutation_log.append({"description": description, **details})
         self._dirty = True
 
+    def mark_dirty(self, description: str = "external_mark") -> None:
+        """Mark the IR as dirty without recording a specific mutation.
+
+        Use this when an external process (e.g. kiutils direct manipulation)
+        modifies the underlying data outside the normal mutation tracking path.
+
+        Args:
+            description: Optional description of why the IR was marked dirty.
+        """
+        self._record_mutation(description, {"source": "mark_dirty"})
+
     @property
     def mutation_log(self) -> list[dict[str, Any]]:
         """Read-only access to mutation history.

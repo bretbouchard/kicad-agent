@@ -47,6 +47,14 @@ class PcbIR(BaseIR):
 
     _raw_written: bool = False  # Set when raw sexp manipulation writes the file directly
 
+    @property
+    def raw_written(self) -> bool:
+        """Whether raw S-expression manipulation has written the file directly.
+
+        When True, the executor skips kiutils serialization to avoid data loss.
+        """
+        return self._raw_written
+
     def __post_init__(self) -> None:
         """Validate file type matches PCB and UUID map is provided."""
         super().__post_init__()

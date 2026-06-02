@@ -654,7 +654,10 @@ def _handle_batch_connect(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
                     end_x=wire["end"][0], end_y=wire["end"][1])
     # Apply generated labels to IR
     for label in result.get("labels", []):
-        ir.add_label(name=label.get("net_name", op.nets[0].name if op.nets else ""),
+        # Use net_name from label data, falling back to first net name,
+        # then to "unnamed_net" as a last resort (never empty string).
+        default_name = op.nets[0].name if op.nets else "unnamed_net"
+        ir.add_label(name=label.get("net_name") or default_name,
                      label_type="local",
                      x=label["position"][0], y=label["position"][1],
                      angle=0, shape="input")
@@ -688,7 +691,7 @@ def _handle_regenerate_wiring(op: Any, ir: SchematicIR, file_path: Path) -> dict
     )
     # The regenerate_wiring method strips and reconnects via kiutils directly.
     # Mark IR as dirty so the executor's Transaction block re-serializes.
-    ir._dirty = True
+    ir.mark_dirty("regenerate_wiring")
     return {
         "removed": result["removed"],
         "generated": result["generated"],
@@ -1516,7 +1519,7 @@ class OperationExecutor:
 
             # Skip kiutils serialization if the IR method already wrote directly
             # via raw S-expression manipulation (avoids data loss from kiutils)
-            if not ir._raw_written:
+            if not ir.raw_written:
                 serialize_pcb(parse_result, file_path, uuid_map=uuid_map)
 
             txn.commit()
@@ -1702,7 +1705,7 @@ class OperationExecutor:
                     if isinstance(ir, PcbIR):
                         parse_result = ir._parse_result
                         uuid_map = ir.uuid_map
-                        if not ir._raw_written:
+                        if not ir.raw_written:
                             serialize_pcb(parse_result, fp, uuid_map=uuid_map)
                     elif isinstance(ir, SchematicIR):
                         serialize_schematic(ir._parse_result, fp)
@@ -1914,7 +1917,7 @@ class OperationExecutor:
                 # Serialize once per file
                 if file_path.suffix == ".kicad_pcb":
                     uuid_map = uuid_map_store.get(file_path)
-                    if not ir._raw_written:
+                    if not ir.raw_written:
                         serialize_pcb(parse_result, file_path, uuid_map=uuid_map)
                 elif not self._is_project_file(file_path):
                     serialize_schematic(parse_result, file_path)

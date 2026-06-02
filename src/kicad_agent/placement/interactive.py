@@ -308,7 +308,7 @@ def _extract_component_sizes(graph: PlacementGraph) -> dict[str, float]:
     """Extract estimated component sizes from graph node data."""
     sizes: dict[str, float] = {}
     for node_id in graph.component_nodes():
-        data = graph._graph.nodes[node_id]
+        data = graph.graph.nodes[node_id]
         ref = data.get("reference", "")
         size = data.get("estimated_size", _DEFAULT_SIZE)
         sizes[ref] = size

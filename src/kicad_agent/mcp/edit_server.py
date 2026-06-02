@@ -92,6 +92,45 @@ def _annotations_for(op_type: str) -> types.ToolAnnotations | None:
 # Dynamic tool generation from Operation discriminated union
 # ---------------------------------------------------------------------------
 
+def _inline_refs(schema: dict[str, Any]) -> None:
+    """Inline $ref references using $defs so the schema is self-contained.
+
+    After inlining, removes $defs since all references are resolved.
+
+    Args:
+        schema: JSON Schema dict (modified in-place).
+    """
+    defs = schema.pop("$defs", None)
+    if not defs:
+        return
+
+    def _resolve(node: Any) -> Any:
+        """Recursively replace $ref with the resolved definition."""
+        if isinstance(node, dict):
+            if "$ref" in node:
+                ref_path = node["$ref"]
+                # Handle "#/$defs/KeyName" format
+                if ref_path.startswith("#/$defs/"):
+                    key = ref_path[len("#/$defs/"):]
+                    if key in defs:
+                        resolved = dict(defs[key])  # shallow copy
+                        # Carry over any sibling keys (e.g. description overrides)
+                        for k, v in node.items():
+                            if k != "$ref":
+                                resolved[k] = v
+                        return _resolve(resolved)
+                return node
+            return {k: _resolve(v) for k, v in node.items()}
+        elif isinstance(node, list):
+            return [_resolve(item) for item in node]
+        return node
+
+    resolved_schema = _resolve(schema)
+    schema.update(resolved_schema)
+    # Remove $defs key if it re-appeared (shouldn't, but safety)
+    schema.pop("$defs", None)
+
+
 def _generate_operation_tools() -> list[types.Tool]:
     """Generate one MCP tool per Operation union variant."""
     ann = Operation.model_fields["root"].annotation
@@ -101,11 +140,9 @@ def _generate_operation_tools() -> list[types.Tool]:
     for variant_cls in variants:
         op_type = variant_cls.model_fields["op_type"].default
         schema = variant_cls.model_json_schema()
-        # Strip $defs — MCP clients handle flat schemas better
-        schema.pop("$defs", None)
-        # Strip $ref references that point to removed $defs
-        for prop in schema.get("properties", {}).values():
-            prop.pop("$ref", None)
+        # Preserve $defs and $ref — MCP clients need these for schema
+        # validation. Inline any $ref so the schema is self-contained.
+        _inline_refs(schema)
 
         description = schema.pop("description", f"Execute {op_type} operation.")
         annotations = _annotations_for(op_type)

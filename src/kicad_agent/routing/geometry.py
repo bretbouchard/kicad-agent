@@ -42,6 +42,12 @@ def _interpolate_path(
     If a distance exceeds the total path length, the last point is
     returned.
 
+    Precondition:
+        - ``path`` must contain at least 2 waypoints (len(path) >= 2).
+        - ``distances`` must be sorted in non-decreasing order and all
+          values must be non-negative. Violating this will not raise an
+          error but may produce incorrect interpolation results.
+
     Args:
         path: Ordered tuple of (x, y) waypoints.
         distances: Sorted list of arc-length distances along the path.

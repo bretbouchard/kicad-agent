@@ -153,17 +153,27 @@ class SolderMaskCheck(DfmCheck):
             if etype == "pad" and layer in self._MASK_LAYERS:
                 mask_pads.append(p)
 
+        # Cache to_shapely() results to avoid redundant geometry computation.
+        # Keyed by entity_id since to_shapely() can be expensive.
+        geom_cache: dict[str, Any] = {}
+
+        def _get_geom(pad: Any) -> Any:
+            eid = getattr(pad, "entity_id", id(pad))
+            if eid not in geom_cache:
+                geom_cache[eid] = pad.to_shapely() if hasattr(pad, "to_shapely") else None
+            return geom_cache[eid]
+
         # Compare nearby pairs (within 2x sliver distance)
         max_compare_dist = min_sliver * 4.0  # generous proximity window
         for i, pad_a in enumerate(mask_pads):
-            geom_a = pad_a.to_shapely() if hasattr(pad_a, "to_shapely") else None
+            geom_a = _get_geom(pad_a)
             if geom_a is None:
                 continue
             ref_a = getattr(pad_a, "reference", getattr(pad_a, "entity_id", ""))
             eid_a = getattr(pad_a, "entity_id", "")
 
             for pad_b in mask_pads[i + 1:]:
-                geom_b = pad_b.to_shapely() if hasattr(pad_b, "to_shapely") else None
+                geom_b = _get_geom(pad_b)
                 if geom_b is None:
                     continue
 

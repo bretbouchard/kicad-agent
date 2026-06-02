@@ -202,15 +202,15 @@ def _extract_ir_data(ir: Any) -> dict[str, Any]:
     """
     try:
         pin_positions = ir.get_pin_positions()
-    except Exception:
+    except (AttributeError, TypeError, ValueError):
         pin_positions = []
     try:
         wire_endpoints = ir.get_wire_endpoints()
-    except Exception:
+    except (AttributeError, TypeError, ValueError):
         wire_endpoints = []
     try:
         label_positions = ir.get_label_positions()
-    except Exception:
+    except (AttributeError, TypeError, ValueError):
         label_positions = []
     return {
         "pin_positions": pin_positions,

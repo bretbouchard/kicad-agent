@@ -359,7 +359,7 @@ class HybridPlacementEngine:
         """Extract estimated component sizes from graph node data."""
         sizes: dict[str, float] = {}
         for node_id in graph.component_nodes():
-            data = graph._graph.nodes[node_id]
+            data = graph.graph.nodes[node_id]
             ref = data.get("reference", "")
             size = data.get("estimated_size", 2.0)
             sizes[ref] = size
@@ -384,8 +384,8 @@ class HybridPlacementEngine:
 
         for net_node in graph.net_nodes():
             comp_refs: list[str] = []
-            for neighbor in graph._graph.neighbors(net_node):
-                data = graph._graph.nodes[neighbor]
+            for neighbor in graph.graph.neighbors(net_node):
+                data = graph.graph.nodes[neighbor]
                 if data.get("bipartite") == 0:
                     ref = data.get("reference", "")
                     if ref in positions:

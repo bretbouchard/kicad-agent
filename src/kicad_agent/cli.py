@@ -513,7 +513,7 @@ def _handle_analyze(argv: list[str]) -> None:
     # Extract board stats for display header
     try:
         from kicad_agent.inference.wrapper import InferenceWrapper
-        stats = InferenceWrapper._extract_board_stats(file_path)
+        stats = InferenceWrapper.extract_board_stats(file_path)
     except (FileNotFoundError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)

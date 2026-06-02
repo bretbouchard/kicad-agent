@@ -120,8 +120,47 @@ class InferenceWrapper:
         return None
 
     @staticmethod
+    def extract_board_stats(file_path: str | Path) -> BoardStats:
+        """Parse a .kicad_pcb or .kicad_sch file and extract board stats.
+
+        Public API for extracting component/net counts and board dimensions
+        from a KiCad file without running inference.
+
+        Args:
+            file_path: Path to KiCad file.
+
+        Returns:
+            BoardStats with component/net counts and dimensions.
+
+        Raises:
+            FileNotFoundError: If file_path does not exist.
+            ValueError: If file extension is not .kicad_pcb or .kicad_sch.
+        """
+        return InferenceWrapper._extract_board_stats_impl(file_path)
+
+    @staticmethod
     def _extract_board_stats(file_path: str | Path) -> BoardStats:
         """Parse a .kicad_pcb or .kicad_sch file and extract board stats.
+
+        .. deprecated::
+            Use :meth:`extract_board_stats` instead. This private alias is
+            kept for backward compatibility.
+
+        Args:
+            file_path: Path to KiCad file.
+
+        Returns:
+            BoardStats with component/net counts and dimensions.
+
+        Raises:
+            FileNotFoundError: If file_path does not exist.
+            ValueError: If file extension is not .kicad_pcb or .kicad_sch.
+        """
+        return InferenceWrapper._extract_board_stats_impl(file_path)
+
+    @staticmethod
+    def _extract_board_stats_impl(file_path: str | Path) -> BoardStats:
+        """Implementation for board stats extraction.
 
         Args:
             file_path: Path to KiCad file.
