@@ -37,36 +37,160 @@ logger = logging.getLogger("collect_easyeda")
 
 # Popular component categories for broad coverage
 DEFAULT_CATEGORIES = [
+    # Microcontrollers
     "STM32",
     "ESP32",
-    "NE555",
+    "Arduino",
+    "Raspberry Pi",
+    "PIC microcontroller",
+    "AVR microcontroller",
+    "NRF52",
+    "RP2040",
+    "CH32V",
+    "GD32",
+    # Analog ICs
     "op-amp",
-    "voltage regulator",
-    "mosfet N-channel",
-    "mosfet P-channel",
-    "capacitor 100nF",
-    "resistor 10k",
-    "LED",
-    "USB-C",
-    "EEPROM",
+    "NE555",
+    "comparator",
     "ADC",
     "DAC",
-    "RS485",
-    "CAN transceiver",
+    "analog switch",
+    "multiplexer",
+    "voltage reference",
+    "PLL",
+    "VCO",
+    # Power management
+    "voltage regulator",
     "LDO regulator",
     "buck converter",
-    "audio amplifier",
-    "relay",
-    "crystal oscillator",
-    "diode schottky",
+    "boost converter",
+    "buck-boost converter",
+    "battery charger",
+    "battery fuel gauge",
+    "power monitor",
+    "LED driver",
+    "motor driver",
+    "H-bridge",
+    "charge pump",
+    # Transistors & diodes
+    "mosfet N-channel",
+    "mosfet P-channel",
     "transistor NPN",
     "transistor PNP",
-    "connector",
+    "diode schottky",
+    "diode zener",
+    "TVS diode",
+    "rectifier diode",
+    "IGBT",
+    "JFET",
+    # Passives
+    "capacitor 100nF",
+    "capacitor 10uF",
+    "resistor 10k",
+    "resistor 1k",
     "electrolytic capacitor",
     "inductor",
     "ferrite bead",
-    "TVS diode",
+    "crystal oscillator",
+    "ceramic resonator",
+    # Connectors
+    "USB-C",
+    "USB connector",
+    "HDMI connector",
+    "RJ45 connector",
+    "connector",
+    "FPC connector",
+    "board-to-board connector",
+    "terminal block",
+    "barrel jack",
+    "SIM card holder",
+    "SD card connector",
+    # Communication
+    "RS485",
+    "CAN transceiver",
+    "Ethernet PHY",
+    "WiFi module",
+    "Bluetooth module",
+    "LoRa module",
+    "NB-IoT module",
+    "UART",
+    "SPI",
+    "I2C",
     "level shifter",
+    "isolator",
+    "optocoupler",
+    # Memory & storage
+    "EEPROM",
+    "FLASH memory",
+    "SRAM",
+    "SDRAM",
+    "DDR",
+    "FRAM",
+    # Sensors
+    "temperature sensor",
+    "humidity sensor",
+    "pressure sensor",
+    "accelerometer",
+    "gyroscope",
+    "IMU",
+    "magnetometer",
+    "light sensor",
+    "proximity sensor",
+    "gas sensor",
+    "current sensor",
+    "hall effect sensor",
+    "microphone",
+    # Audio
+    "audio amplifier",
+    "audio codec",
+    "DAC audio",
+    "ADC audio",
+    "speaker amplifier",
+    "headphone amplifier",
+    # Displays
+    "OLED display",
+    "LCD driver",
+    "LED matrix driver",
+    "display controller",
+    "segment driver",
+    # Interface & logic
+    "level translator",
+    "logic gate",
+    "flip-flop",
+    "shift register",
+    "counter",
+    "decoder",
+    "buffer",
+    "timer",
+    "watchdog",
+    "reset IC",
+    # Protection & filtering
+    "ESD protection",
+    "fuse",
+    "circuit breaker",
+    "EMI filter",
+    "common mode choke",
+    # Clock & timing
+    "RTC",
+    "clock generator",
+    "clock buffer",
+    "frequency synthesizer",
+    # Prototyping
+    "relay",
+    "solid state relay",
+    "switch",
+    "button",
+    "encoder",
+    "potentiometer",
+    "transformer",
+    # RF
+    "RF amplifier",
+    "RF switch",
+    "antenna",
+    "BALUN",
+    "filter SAW",
+    "LNA",
+    "mixer",
 ]
 
 
@@ -95,13 +219,13 @@ def main() -> int:
     parser.add_argument(
         "--max-components",
         type=int,
-        default=5000,
+        default=100000,
         help="Maximum total components to collect",
     )
     parser.add_argument(
         "--pages-per-category",
         type=int,
-        default=5,
+        default=20,
         help="Max pages to fetch per search category",
     )
     args = parser.parse_args()
@@ -115,6 +239,9 @@ def main() -> int:
     n_searched = 0
     n_fetched = 0
     n_failed = 0
+
+    consecutive_failures = 0
+    max_consecutive_failures = 10  # skip category after this many in a row
 
     for cat_idx, keyword in enumerate(categories):
         if len(all_samples) >= args.max_components:
@@ -144,6 +271,25 @@ def main() -> int:
 
                 # Fetch CAD data (pins, pads, footprint)
                 cad = client.get_component_cad_data(comp.lcsc)
+
+                # Track consecutive failures for rate-limit detection
+                if cad is None:
+                    consecutive_failures += 1
+                    if consecutive_failures >= max_consecutive_failures:
+                        logger.warning(
+                            "%d consecutive failures, pausing 60s then skipping category '%s'",
+                            consecutive_failures, keyword,
+                        )
+                        time.sleep(60)
+                        consecutive_failures = 0
+                        break
+                else:
+                    consecutive_failures = 0
+                    if cad.pins or cad.pads:
+                        logger.info(
+                            "  %s: %d pins, %d pads, %s",
+                            comp.lcsc, len(cad.pins), len(cad.pads), comp.name[:40],
+                        )
 
                 # Build training sample
                 attrs_dict = {a["name"]: a["value"] for a in comp.attributes}
@@ -193,26 +339,20 @@ def main() -> int:
                 all_samples.append(sample)
                 sample_id += 1
                 n_fetched += 1
-
-                if cad:
-                    logger.debug(
-                        "  %s %s: %d pins, %d pads",
-                        comp.lcsc, comp.name[:40], len(cad.pins), len(cad.pads),
-                    )
-                else:
+                if cad is None:
                     n_failed += 1
 
                 if len(all_samples) >= args.max_components:
                     break
 
-                # Rate limit: be gentle
-                time.sleep(0.3)
+                # Rate limit: 5s between CAD fetches to avoid 403 rate limiting
+                time.sleep(5.0)
 
             if len(all_samples) >= args.max_components:
                 break
 
             # Rate limit between pages
-            time.sleep(0.5)
+            time.sleep(1.0)
 
         logger.info(
             "  Category '%s' done: %d total components collected",
@@ -256,6 +396,9 @@ def main() -> int:
 
     # Stats
     with_pins = sum(1 for s in unique if s["pin_count"] > 0)
+    with_pads = sum(1 for s in unique if s["pad_count"] > 0)
+    total_pins = sum(s["pin_count"] for s in unique)
+    total_pads = sum(s["pad_count"] for s in unique)
     categories_found = len(set(s["category"] for s in unique))
     brands_found = len(set(s["brand"] for s in unique))
 
@@ -265,7 +408,10 @@ def main() -> int:
     print(f"  JLCPCB results:      {n_searched}")
     print(f"  CAD data fetched:    {n_fetched}")
     print(f"  CAD fetch failed:    {n_failed}")
-    print(f"  With pin data:       {with_pins}")
+    print(f"  With pin data:       {with_pins} ({with_pins*100//max(len(unique),1)}%)")
+    print(f"  With pad data:       {with_pads} ({with_pads*100//max(len(unique),1)}%)")
+    print(f"  Total pins:          {total_pins:,}")
+    print(f"  Total pads:          {total_pads:,}")
     print(f"  Unique categories:   {categories_found}")
     print(f"  Unique brands:       {brands_found}")
     print(f"  Splits:              {train_end} train / {val_end - train_end} val / {len(shuffled) - val_end} test")

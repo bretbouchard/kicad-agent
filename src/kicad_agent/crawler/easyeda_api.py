@@ -163,15 +163,34 @@ class EasyEdaClient:
         url: str,
         data: bytes | None = None,
         extra_headers: dict[str, str] | None = None,
+        max_retries: int = 3,
     ) -> dict[str, Any]:
-        """Fetch JSON from a URL with gzip handling."""
+        """Fetch JSON from a URL with gzip handling and retry on 403/429."""
         headers = {**self._headers, **(extra_headers or {})}
-        req = urllib.request.Request(url, data=data, headers=headers)
-        with urllib.request.urlopen(req, timeout=30, context=self._ssl_context) as resp:
-            raw = resp.read()
-            if raw[:2] == b"\x1f\x8b":
-                raw = gzip.decompress(raw)
-            return json.loads(raw.decode("utf-8"))
+        last_exc: Exception | None = None
+        for attempt in range(max_retries):
+            try:
+                req = urllib.request.Request(url, data=data, headers=headers)
+                with urllib.request.urlopen(req, timeout=30, context=self._ssl_context) as resp:
+                    raw = resp.read()
+                    if raw[:2] == b"\x1f\x8b":
+                        raw = gzip.decompress(raw)
+                    return json.loads(raw.decode("utf-8"))
+            except urllib.error.HTTPError as e:
+                last_exc = e
+                if e.code in (403, 429):
+                    wait = 2.0 * (2 ** attempt)  # 2s, 4s, 8s
+                    logger.warning(
+                        "Rate limited (%d) on %s, retry %d/%d in %.1fs",
+                        e.code, url.split("/")[-1], attempt + 1, max_retries, wait,
+                    )
+                    import time as _time
+                    _time.sleep(wait)
+                    continue
+                raise
+            except (urllib.error.URLError, json.JSONDecodeError):
+                raise
+        raise last_exc  # type: ignore[misc]
 
     def _cache_get(self, key: str) -> dict[str, Any] | None:
         if not self._cache_dir:
@@ -310,9 +329,26 @@ class EasyEdaClient:
         else:
             data_str = ""
 
-        # Parse pin and pad data from shape strings
+        # Parse pin data from schematic symbol shape strings
         pins = _parse_pins(data_str)
-        pads = _parse_pads(data_str)
+
+        # Parse pad data from packageDetail.dataStr (footprint shapes)
+        pads: tuple[EasyEdaFootprintPad, ...] = ()
+        package_detail = result.get("packageDetail")
+        if isinstance(package_detail, dict):
+            pkg_data_str_raw = package_detail.get("dataStr", "")
+            if isinstance(pkg_data_str_raw, dict):
+                pkg_shape_list = pkg_data_str_raw.get("shape", [])
+                pkg_str = "\n".join(pkg_shape_list)
+            elif isinstance(pkg_data_str_raw, str):
+                pkg_str = pkg_data_str_raw
+            else:
+                pkg_str = ""
+            if pkg_str:
+                pads = _parse_pads(pkg_str)
+            # Use package title if no hint from symbol data
+            if not package_hint:
+                package_hint = package_detail.get("title", "")
 
         return EasyEdaComponentData(
             lcsc=lcsc_id,
