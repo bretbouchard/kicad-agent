@@ -941,12 +941,17 @@ class TestNetPositionIndex:
         index = NetPositionIndex.from_file(_EQ_STAGE)
         # Should have at least some named nets
         assert index.get_net_at((0, 0)) is None  # nowhere
-        # Check that some positions return net names
-        found_nets = 0
-        for method_name in dir(index):
-            pass
-        # Just verify it doesn't crash and returns reasonable data
-        assert index is not None
+
+        # Verify the index contains meaningful data: at least one named net
+        # with multiple positions (connected by wires).
+        named_net_positions = {
+            name: positions
+            for name, positions in index._net_to_positions.items()
+            if not index.is_auto_named(name) and len(positions) >= 2
+        }
+        assert len(named_net_positions) >= 1, (
+            "Expected at least one named net with >=2 positions in eq-stage"
+        )
 
     def test_positions_on_same_net_share_root(self):
         """Two positions connected by wire should share the same component root."""

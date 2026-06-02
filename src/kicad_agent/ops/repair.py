@@ -16,6 +16,7 @@ Usage:
 
 import logging
 import math
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -101,7 +102,7 @@ def repair_wire_snapping(ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     try:
         net_index = NetPositionIndex.from_file(file_path)
     except Exception:
-        pass
+        logger.debug("Could not build NetPositionIndex for wire snapping, skipping net safety checks")
 
     wire_endpoints = ir.get_wire_endpoints()
     snapped_count = 0
@@ -518,7 +519,7 @@ def add_power_flags(ir: SchematicIR, sch_path: Path) -> dict[str, Any]:
     try:
         net_index = NetPositionIndex.from_file(sch_path)
     except Exception:
-        pass
+        logger.debug("Could not build NetPositionIndex for label placement, using spatial fallback")
 
     label_positions = ir.get_label_positions()
     placed_count = 0
@@ -605,7 +606,7 @@ def place_no_connects_from_erc(ir: SchematicIR, sch_path: Path) -> dict[str, Any
     try:
         net_index = NetPositionIndex.from_file(sch_path)
     except Exception:
-        pass
+        logger.debug("Could not build NetPositionIndex for no-connect placement, skipping power-net checks")
 
     # Pin types that should NOT receive no_connect
     UNSAFE_PIN_TYPES = frozenset({
@@ -1167,8 +1168,6 @@ def _find_position_for_unit(
             return None
 
     # Collect candidate component positions from all pins x all anchors
-    from collections import Counter
-
     candidate_positions: list[tuple[float, float]] = []
     for _pin_num, (px, py) in pin_offsets.items():
         rot_px = px * cos_a - py * sin_a

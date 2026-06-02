@@ -109,56 +109,54 @@ def _point_on_segment(
         max_y = max(seg_start[1], seg_end[1]) + tolerance
         return min_y <= point[1] <= max_y
 
-    # Diagonal segment: check collinearity and bounds
-    # Parameter t: point = start + t * (end - start)
-    t_x = (point[0] - seg_start[0]) / dx if abs(dx) > tolerance else 0.0
-    t_y = (point[1] - seg_start[1]) / dy if abs(dy) > tolerance else 0.0
-    t = (t_x + t_y) / 2.0
+    # Diagonal segment: use dominant axis for parameter t, then verify
+    # perpendicular distance. Using the larger-magnitude axis gives a more
+    # stable parameterization and avoids the bias from averaging t_x/t_y
+    # when one axis is nearly-zero (nearly axis-aligned diagonal).
+    if abs(dx) >= abs(dy):
+        t = (point[0] - seg_start[0]) / dx
+    else:
+        t = (point[1] - seg_start[1]) / dy
 
     if t < -tolerance or t > 1.0 + tolerance:
         return False
 
-    # Check collinearity: the point should be within tolerance of the line
-    expected_x = seg_start[0] + t * dx
-    expected_y = seg_start[1] + t * dy
-    dist = ((point[0] - expected_x) ** 2 + (point[1] - expected_y) ** 2) ** 0.5
-    return dist <= tolerance
+    # Verify collinearity: distance from point to the infinite line
+    # through seg_start..seg_end must be within tolerance.
+    seg_len_sq = dx * dx + dy * dy
+    cross = abs((point[0] - seg_start[0]) * dy - (point[1] - seg_start[1]) * dx)
+    perp_dist = cross / (seg_len_sq ** 0.5)
+    return perp_dist <= tolerance
 
 
 # ---------------------------------------------------------------------------
-# Core extraction logic
+# Shared union-find construction (used by extract_nets and NetPositionIndex)
 # ---------------------------------------------------------------------------
 
+def _build_union_find_components(
+    graph: SchematicGraph,
+) -> tuple[
+    _UnionFind,
+    set[tuple[float, float]],
+    dict[tuple[float, float], list[PinPosition]],
+    dict[tuple[float, float], Label],
+]:
+    """Build union-find components from a SchematicGraph.
 
-def extract_nets(
-    sch_path: Path | str,
-    include_positions: bool = True,
-    netlist_path: Optional[str] = None,
-) -> dict[str, Any]:
-    """Extract complete net topology from a schematic file.
+    Constructs the union-find over ALL positions (wire endpoints, pins,
+    labels, junctions) and unions positions that lie on shared wire
+    segments (mid-point connectivity).
 
-    Args:
-        sch_path: Path to the .kicad_sch file.
-        include_positions: Include pin positions in output (default True).
-        netlist_path: Optional path to .net file for net name resolution.
+    Complexity: O(P*W) for the midpoint scan, where P is the total number
+    of positions and W is the number of wire segments. KiCad schematics
+    are typically per-sheet with P < 1000 and W < 500, so this is
+    acceptable for current use. For future large-sheet support, consider
+    a spatial index (grid bucket or R-tree).
 
     Returns:
-        Dict with "nets" and "stats" keys:
-        - nets: {net_name: [{"ref", "pin_number", "pin_name", "position"}, ...]}
-        - stats: {"total_nets", "total_pins", "named_nets", "unnamed_nets"}
+        Tuple of (union_find, all_positions, pin_pos_map, label_pos_map).
     """
-    graph = SchematicGraph.from_file(sch_path)
-
-    # Build pin_index from netlist if provided
-    pin_index: dict[tuple[str, str], str] = {}
-    if netlist_path:
-        from kicad_agent.schematic_routing.netlist_parser import parse_netlist
-        _, pin_index = parse_netlist(netlist_path)
-
-    # Step 1: Build union-find over all wire endpoints
     uf = _UnionFind()
-
-    # Index all relevant positions
     all_positions: set[tuple[float, float]] = set()
 
     # Add wire endpoints
@@ -193,28 +191,7 @@ def extract_nets(
         all_positions.add(junc_key)
         uf.make_set(junc_key)
 
-    # Step 2: Union wire endpoints with pins/labels/junctions at shared positions
-    # For each wire, union its endpoints with any pin/label/junction at those positions
-    for wire in graph.wires:
-        start = _round_pos(wire.start)
-        end = _round_pos(wire.end)
-        # If a pin is at the start or end position, union it
-        if start in pin_pos_map:
-            uf.union(start, start)
-        if end in pin_pos_map:
-            uf.union(end, end)
-        # If a label is at the start or end position, union it
-        if start in label_pos_map:
-            uf.union(start, _round_pos(label_pos_map[start].position))
-        if end in label_pos_map:
-            uf.union(end, _round_pos(label_pos_map[end].position))
-        # If a junction is at the start or end position, union it
-        if start in graph.junctions:
-            uf.union(start, start)
-        if end in graph.junctions:
-            uf.union(end, end)
-
-    # Step 2b: Union positions that lie ON a wire segment (mid-point connectivity)
+    # Union positions that lie ON a wire segment (mid-point connectivity).
     # In KiCad, a pin at the midpoint of a wire segment is connected to that net.
     for pos in all_positions:
         for wire in graph.wires:
@@ -222,52 +199,111 @@ def extract_nets(
                 uf.union(pos, _round_pos(wire.start))
                 uf.union(pos, _round_pos(wire.end))
 
-    # Step 3: Build connected components (root -> set of positions)
-    components: dict[tuple[float, float], set[tuple[float, float]]] = {}
-    for pos in all_positions:
-        root = uf.find(pos)
-        components.setdefault(root, set()).add(pos)
+    return uf, all_positions, pin_pos_map, label_pos_map
 
-    # Step 4: For each component, resolve net name
-    # Priority: label name > pin_index name > auto-name
-    net_groups: dict[str, list[PinPosition]] = {}
+
+def _resolve_net_names(
+    components: dict[tuple[float, float], set[tuple[float, float]]],
+    label_pos_map: dict[tuple[float, float], Label],
+    pin_pos_map: dict[tuple[float, float], list[PinPosition]],
+    pin_index: dict[tuple[str, str], str] | None,
+) -> tuple[dict[tuple[float, float], str], int]:
+    """Resolve net names for connected components.
+
+    Priority: label name > pin_index name > auto-name.
+
+    Returns:
+        Tuple of (root_to_net mapping, auto_counter final value).
+    """
+    root_to_net: dict[tuple[float, float], str] = {}
     auto_counter = 0
 
     for root, positions in components.items():
-        # Collect pins and check for labels in this component
-        component_pins: list[PinPosition] = []
-        has_label = False
-        for pos in positions:
-            if pos in pin_pos_map:
-                component_pins.extend(pin_pos_map[pos])
-            if pos in label_pos_map:
-                has_label = True
+        net_name: str | None = None
 
-        # Try to resolve net name
-        net_name: Optional[str] = None
-
-        # Priority 1: Check for label in this component
+        # Priority 1: label name
         for pos in positions:
             if pos in label_pos_map:
                 net_name = label_pos_map[pos].name
                 break
 
-        # Priority 2: Check pin_index for any pin in this component
+        # Priority 2: pin_index
         if net_name is None and pin_index:
-            for pin in component_pins:
-                key = (pin.ref, pin.pin_number)
-                if key in pin_index:
-                    net_name = pin_index[key]
+            for pos in positions:
+                if pos in pin_pos_map:
+                    for pin in pin_pos_map[pos]:
+                        key = (pin.ref, pin.pin_number)
+                        if key in pin_index:
+                            net_name = pin_index[key]
+                            break
+                if net_name:
                     break
 
-        # Priority 3: Auto-generate name
+        # Priority 3: auto-name
         if net_name is None:
             auto_counter += 1
             net_name = f"Net_{auto_counter}"
 
+        root_to_net[root] = net_name
+
+    return root_to_net, auto_counter
+
+
+# ---------------------------------------------------------------------------
+# Core extraction logic
+# ---------------------------------------------------------------------------
+
+
+def extract_nets(
+    sch_path: Path | str,
+    include_positions: bool = True,
+    netlist_path: Optional[str] = None,
+) -> dict[str, Any]:
+    """Extract complete net topology from a schematic file.
+
+    Args:
+        sch_path: Path to the .kicad_sch file.
+        include_positions: Include pin positions in output (default True).
+        netlist_path: Optional path to .net file for net name resolution.
+
+    Returns:
+        Dict with "nets" and "stats" keys:
+        - nets: {net_name: [{"ref", "pin_number", "pin_name", "position"}, ...]}
+        - stats: {"total_nets", "total_pins", "named_nets", "unnamed_nets"}
+    """
+    graph = SchematicGraph.from_file(sch_path)
+
+    # Build pin_index from netlist if provided
+    pin_index: dict[tuple[str, str], str] = {}
+    if netlist_path:
+        from kicad_agent.schematic_routing.netlist_parser import parse_netlist
+        _, pin_index = parse_netlist(netlist_path)
+
+    # Build union-find components via shared pipeline
+    uf, all_positions, pin_pos_map, label_pos_map = _build_union_find_components(graph)
+
+    # Build connected components (root -> set of positions)
+    components: dict[tuple[float, float], set[tuple[float, float]]] = {}
+    for pos in all_positions:
+        root = uf.find(pos)
+        components.setdefault(root, set()).add(pos)
+
+    # Resolve net names
+    root_to_net, _ = _resolve_net_names(
+        components, label_pos_map, pin_pos_map, pin_index,
+    )
+
+    # Build per-net pin groups
+    net_groups: dict[str, list[PinPosition]] = {}
+    for root, positions in components.items():
+        net_name = root_to_net[root]
+        component_pins: list[PinPosition] = []
+        for pos in positions:
+            if pos in pin_pos_map:
+                component_pins.extend(pin_pos_map[pos])
         net_groups.setdefault(net_name, []).extend(component_pins)
 
-    # Step 5: Build result structure
+    # Build result structure
     nets: dict[str, list[dict[str, Any]]] = {}
     total_pins = 0
     named_nets = 0
@@ -341,46 +377,8 @@ class NetPositionIndex:
         self._build(graph, pin_index)
 
     def _build(self, graph: SchematicGraph, pin_index: dict | None) -> None:
-        uf = _UnionFind()
-        all_positions: set[tuple[float, float]] = set()
-
-        # Add wire endpoints
-        for wire in graph.wires:
-            start = _round_pos(wire.start)
-            end = _round_pos(wire.end)
-            all_positions.add(start)
-            all_positions.add(end)
-            uf.make_set(start)
-            uf.make_set(end)
-            uf.union(start, end)
-
-        # Add pin positions
-        pin_pos_map: dict[tuple[float, float], list[PinPosition]] = {}
-        for pin in graph.pins:
-            key = _round_pos(pin.position)
-            pin_pos_map.setdefault(key, []).append(pin)
-            all_positions.add(key)
-            uf.make_set(key)
-
-        # Add label positions
-        label_pos_map: dict[tuple[float, float], Label] = {}
-        for label in graph.labels:
-            key = _round_pos(label.position)
-            label_pos_map[key] = label
-            all_positions.add(key)
-            uf.make_set(key)
-
-        # Add junction positions
-        for junc in graph.junctions:
-            junc_key = _round_pos(junc)
-            all_positions.add(junc_key)
-            uf.make_set(junc_key)
-
-        # Union positions that lie ON a wire segment (mid-point connectivity)
-        for pos in all_positions:
-            for wire in graph.wires:
-                if _point_on_segment(pos, _round_pos(wire.start), _round_pos(wire.end)):
-                    uf.union(pos, _round_pos(wire.start))
+        # Use shared union-find pipeline (same as extract_nets)
+        uf, all_positions, pin_pos_map, label_pos_map = _build_union_find_components(graph)
 
         # Build connected components
         components: dict[tuple[float, float], set[tuple[float, float]]] = {}
@@ -388,35 +386,14 @@ class NetPositionIndex:
             root = uf.find(pos)
             components.setdefault(root, set()).add(pos)
 
-        # Resolve net name per component
-        auto_counter = 0
-        for root, positions in components.items():
-            net_name: str | None = None
+        # Resolve net names via shared resolver
+        root_to_net, _ = _resolve_net_names(
+            components, label_pos_map, pin_pos_map, pin_index,
+        )
 
-            # Priority 1: label name
-            for pos in positions:
-                if pos in label_pos_map:
-                    net_name = label_pos_map[pos].name
-                    break
-
-            # Priority 2: pin_index
-            if net_name is None and pin_index:
-                for pos in positions:
-                    if pos in pin_pos_map:
-                        for pin in pin_pos_map[pos]:
-                            key = (pin.ref, pin.pin_number)
-                            if key in pin_index:
-                                net_name = pin_index[key]
-                                break
-                    if net_name:
-                        break
-
-            # Priority 3: auto-name
-            if net_name is None:
-                auto_counter += 1
-                net_name = f"Net_{auto_counter}"
-
-            # Store mappings
+        # Store mappings
+        for root, net_name in root_to_net.items():
+            positions = components[root]
             self._root_to_net[root] = net_name
             self._root_to_positions[root] = positions
             self._net_to_positions.setdefault(net_name, set()).update(positions)
