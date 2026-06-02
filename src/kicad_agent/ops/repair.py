@@ -1293,6 +1293,12 @@ def place_missing_units(
         if len(components) == 0:
             continue
 
+        # Skip KiCad internal/hidden symbols (power flags, off-page connectors, etc.)
+        # These have references starting with '#' (e.g. #PWR, #FLG) and are not
+        # real multi-unit ICs that need placement.
+        if base_ref.startswith("#"):
+            continue
+
         # Get the lib_id from the first component
         lib_id = components[0].libId
 
