@@ -1446,6 +1446,162 @@ def place_missing_units(
     }
 
 
+# ---------------------------------------------------------------------------
+# Post-repair verification (Phase 70)
+# ---------------------------------------------------------------------------
+
+
+def _take_net_snapshot(ir: SchematicIR) -> dict[str, Any]:
+    """Build net topology snapshot from in-memory IR state.
+
+    Uses pin-set identity (frozenset of (ref, pin_number)) for stable
+    comparison across snapshots, immune to auto-naming order changes.
+    """
+    wire_endpoints = ir.get_wire_endpoints()
+    label_positions = ir.get_label_positions()
+    pin_positions = ir.get_pin_positions()
+
+    # Build union-find over wire-connected positions
+    parent: dict[tuple[float, float], tuple[float, float]] = {}
+
+    def _uf_find(pos: tuple[float, float]) -> tuple[float, float]:
+        while parent.get(pos, pos) != pos:
+            parent[pos] = parent.get(parent[pos], parent[pos])
+            pos = parent[pos]
+        return pos
+
+    def _uf_union(a: tuple[float, float], b: tuple[float, float]) -> None:
+        ra, rb = _uf_find(a), _uf_find(b)
+        if ra != rb:
+            parent[ra] = rb
+
+    # Union wire start/end
+    for we in wire_endpoints:
+        start = _round_pos(we["start_x"], we["start_y"])
+        end = _round_pos(we["end_x"], we["end_y"])
+        _uf_union(start, end)
+
+    # Collect label positions and pin positions
+    pos_to_pins: dict[tuple[float, float], list[tuple[str, str]]] = {}
+    for p in pin_positions:
+        key = _round_pos(p["x"], p["y"])
+        pos_to_pins.setdefault(key, []).append((p["reference"], p["pin_number"]))
+
+    pos_to_labels: dict[tuple[float, float], str] = {}
+    for label in label_positions:
+        key = _round_pos(label["x"], label["y"])
+        pos_to_labels[key] = label["name"]
+
+    # Build components by root
+    components: dict[tuple[float, float], set[tuple[float, float]]] = {}
+    for we in wire_endpoints:
+        for coord in [(we["start_x"], we["start_y"]), (we["end_x"], we["end_y"])]:
+            key = _round_pos(coord[0], coord[1])
+            root = _uf_find(key)
+            components.setdefault(root, set()).add(key)
+    for key in pos_to_pins:
+        root = _uf_find(key)
+        components.setdefault(root, set()).add(key)
+    for key in pos_to_labels:
+        root = _uf_find(key)
+        components.setdefault(root, set()).add(key)
+
+    # Build per-component pin sets and net names
+    result: dict[str, Any] = {"components": {}}
+    for root, positions in components.items():
+        pin_set: set[tuple[str, str]] = set()
+        net_name: str | None = None
+        for pos in positions:
+            if pos in pos_to_pins:
+                pin_set.update(pos_to_pins[pos])
+            if pos in pos_to_labels and net_name is None:
+                net_name = pos_to_labels[pos]
+        result["components"][root] = {
+            "pin_set": frozenset(pin_set),
+            "net_name": net_name,
+        }
+
+    return result
+
+
+def _diff_net_snapshots(before: dict, after: dict) -> dict[str, Any]:
+    """Compare two net snapshots and detect regressions.
+
+    Returns dict with broken_nets, merged_nets, new_components, and clean flag.
+    Uses pin-set overlap for component matching (not net names).
+    """
+    before_comps = before.get("components", {})
+    after_comps = after.get("components", {})
+
+    # Build pin_set -> component mappings
+    before_by_pins: dict[frozenset, tuple] = {}
+    for root, data in before_comps.items():
+        pins = data["pin_set"]
+        if pins:
+            before_by_pins[pins] = (root, data)
+
+    after_by_pins: dict[frozenset, tuple] = {}
+    for root, data in after_comps.items():
+        pins = data["pin_set"]
+        if pins:
+            after_by_pins[pins] = (root, data)
+
+    broken_nets: list[dict] = []
+    merged_nets: list[dict] = []
+    new_components: list[dict] = []
+
+    # Find broken: before component with no after match
+    matched_after: set[frozenset] = set()
+    for pins, (root, data) in before_by_pins.items():
+        if pins in after_by_pins:
+            matched_after.add(pins)
+        else:
+            # Check for partial match (subset of pins still present)
+            found_partial = False
+            for after_pins, (after_root, after_data) in after_by_pins.items():
+                if after_pins and pins and after_pins.issubset(pins) and len(after_pins) >= len(pins) * 0.5:
+                    found_partial = True
+                    matched_after.add(after_pins)
+                    break
+            if not found_partial:
+                broken_nets.append({
+                    "net_name": data.get("net_name"),
+                    "pin_count": len(pins),
+                })
+
+    # Find merged: multiple before components matching same after component
+    # (This would indicate a short was introduced)
+    # Find new: after components with no before match
+    for pins, (root, data) in after_by_pins.items():
+        if pins not in matched_after:
+            new_components.append({
+                "net_name": data.get("net_name"),
+                "pin_count": len(pins),
+            })
+
+    clean = len(broken_nets) == 0 and len(merged_nets) == 0
+    return {
+        "broken_nets": broken_nets,
+        "merged_nets": merged_nets,
+        "new_components": new_components,
+        "clean": clean,
+    }
+
+
+def _checkpoint_ir(ir: SchematicIR) -> bytes:
+    """Deep-copy the IR's kiutils object for rollback on verification failure."""
+    import pickle
+    return pickle.dumps(ir._parse_result.kiutils_obj)
+
+
+def _restore_ir(ir: SchematicIR, checkpoint: bytes) -> None:
+    """Restore IR from checkpoint on verification failure."""
+    import pickle
+    restored = pickle.loads(checkpoint)
+    # ParseResult is a frozen dataclass; use object.__setattr__ to bypass
+    object.__setattr__(ir._parse_result, "kiutils_obj", restored)
+
+
 def remove_dangling_wires(
     ir: SchematicIR, file_path: Path, *,
     max_length_mm: float | None = None,

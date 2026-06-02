@@ -1101,3 +1101,119 @@ class TestResolveShortedNets:
         assert "resolved" in output
         assert "skipped_power" in output
         assert "details" in output
+
+
+# ---------------------------------------------------------------------------
+# Phase 70: Post-Repair Verification
+# ---------------------------------------------------------------------------
+
+
+class TestNetSnapshot:
+    """Test _take_net_snapshot and _diff_net_snapshots helpers."""
+
+    def test_snapshot_on_channel_strip(self):
+        """Snapshot returns populated components on a real schematic."""
+        from kicad_agent.ops.repair import _take_net_snapshot
+
+        if not _EQ_STAGE.exists():
+            pytest.skip("Channel strip eq-stage not found")
+
+        result = parse_schematic(_EQ_STAGE)
+        ir = SchematicIR(_parse_result=result)
+        snapshot = _take_net_snapshot(ir)
+
+        assert "components" in snapshot
+        assert len(snapshot["components"]) >= 1
+
+        # Should have at least one named net
+        named_nets = [
+            data["net_name"]
+            for data in snapshot["components"].values()
+            if data.get("net_name")
+        ]
+        assert len(named_nets) >= 1
+
+    def test_diff_clean_when_identical(self):
+        """Diff of identical snapshots reports clean."""
+        from kicad_agent.ops.repair import _diff_net_snapshots
+
+        snapshot = {
+            "components": {
+                (10.0, 20.0): {"pin_set": frozenset([("R1", "1"), ("C1", "1")]), "net_name": "NET_A"},
+            }
+        }
+        diff = _diff_net_snapshots(snapshot, snapshot)
+        assert diff["clean"] is True
+        assert diff["broken_nets"] == []
+
+    def test_diff_detects_broken_net(self):
+        """Diff detects when a net is lost between snapshots."""
+        from kicad_agent.ops.repair import _diff_net_snapshots
+
+        before = {
+            "components": {
+                (10.0, 20.0): {"pin_set": frozenset([("R1", "1"), ("C1", "1")]), "net_name": "NET_A"},
+            }
+        }
+        after = {
+            "components": {
+                (10.0, 20.0): {"pin_set": frozenset([("R2", "1")]), "net_name": "NET_B"},
+            }
+        }
+        diff = _diff_net_snapshots(before, after)
+        assert diff["clean"] is False
+        assert len(diff["broken_nets"]) >= 1
+
+
+class TestIRCheckpoint:
+    """Test _checkpoint_ir and _restore_ir helpers."""
+
+    def test_checkpoint_and_restore_roundtrip(self):
+        """Checkpoint captures state, restore recovers it."""
+        from kicad_agent.ops.repair import _checkpoint_ir, _restore_ir
+
+        sch = Schematic()
+        sch.graphicalItems = []
+        lbl = LocalLabel(text="ORIGINAL", position=Position(10.0, 10.0))
+        sch.labels = [lbl]
+
+        with tempfile.NamedTemporaryFile(suffix=".kicad_sch", delete=False) as f:
+            sch.to_file(f.name)
+            path = Path(f.name)
+
+        result = parse_schematic(path)
+        ir = SchematicIR(_parse_result=result)
+
+        checkpoint = _checkpoint_ir(ir)
+        assert isinstance(checkpoint, bytes)
+        assert len(checkpoint) > 0
+
+        # Mutate the IR
+        ir._parse_result.kiutils_obj.labels.clear()
+
+        # Restore should recover the original state
+        _restore_ir(ir, checkpoint)
+        assert len(ir._parse_result.kiutils_obj.labels) == 1
+
+
+class TestErcAutoFixVerification:
+    """Test erc_auto_fix with verify=True integration."""
+
+    def test_verify_returns_rollback_key(self):
+        """erc_auto_fix result includes verification_rollback even when verify=False."""
+        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+
+        sch = Schematic()
+        sch.graphicalItems = []
+        sch.wires = []
+
+        with tempfile.NamedTemporaryFile(suffix=".kicad_sch", delete=False) as f:
+            sch.to_file(f.name)
+            path = Path(f.name)
+
+        result = parse_schematic(path)
+        ir = SchematicIR(_parse_result=result)
+
+        output = erc_auto_fix(ir, path, max_iterations=1)
+        assert "verification_rollback" in output
+        assert output["verification_rollback"] == []

@@ -143,6 +143,7 @@ def erc_auto_fix(
     mode: str = "symptom",
     fix_classes: list[str] | None = None,
     sheet_filter: str | None = "/",
+    verify: bool = False,
 ) -> dict[str, Any]:
     """Run ERC, dispatch repairs by violation type, iterate until resolved.
 
@@ -152,6 +153,10 @@ def erc_auto_fix(
     - ``root_cause``: classify first, diagnose fixable violations, apply targeted
       fixes, document pre-existing issues, suppress benign noise. Single-pass.
 
+    Phase 70: When verify=True, takes a net snapshot before each repair and
+    diffs after. If a regression is detected, rolls back the IR and skips
+    that repair.
+
     Args:
         ir: SchematicIR for the target schematic.
         file_path: Path to the schematic file (for ERC invocation).
@@ -159,11 +164,7 @@ def erc_auto_fix(
         mode: ``"symptom"`` for existing behavior, ``"root_cause"`` for classify-diagnose-fix.
         fix_classes: In root_cause mode, only fix these classes. None = fixable only.
         sheet_filter: Only fix violations from this sheet path.
-            Defaults to "/" (root sheet only). In hierarchical schematics, ERC
-            reports violations from all sheets, but the IR only contains data for
-            one sheet. Fixing cross-sheet violations on the wrong sheet causes
-            no_connect_dangling and missing-label regressions (Bug B).
-            Pass None to include violations from all sheets (use with caution).
+        verify: If True, verify net topology after each repair and rollback on regression.
 
     Returns:
         Dict with:
@@ -171,8 +172,7 @@ def erc_auto_fix(
             iterations: Number of iterations actually run.
             remaining_violations: Count of violations after last iteration.
             unhandled_violations: List of {type, count} for unmapped violation types.
-            (root_cause mode adds: mode, pre_existing_documented, benign_suppressed,
-             config_issues, summary)
+            verification_rollback: List of repairs that were rolled back (when verify=True).
     """
     if mode == "root_cause":
         return erc_auto_fix_root_cause(
@@ -182,6 +182,7 @@ def erc_auto_fix(
     # --- Symptom mode: existing iteration-based repair ---
     all_fixes: list[dict[str, Any]] = []
     all_unhandled: dict[str, int] = {}
+    verification_rollback: list[dict[str, Any]] = []
     iteration_count = 0
     previous_count = -1
 
@@ -244,9 +245,47 @@ def erc_auto_fix(
 
             try:
                 func = _get_repair_function(repair_name)
+
+                # Phase 70: Pre-repair checkpoint and snapshot when verify=True
+                checkpoint = None
+                snapshot_before = None
+                if verify:
+                    from kicad_agent.ops.repair import (
+                        _checkpoint_ir,
+                        _take_net_snapshot,
+                    )
+                    checkpoint = _checkpoint_ir(ir)
+                    snapshot_before = _take_net_snapshot(ir)
+
                 # Call the repair function with (ir, file_path) and default args.
                 # Council KR-04: auto-detect mode -- functions infer what to fix from IR state.
                 func(ir, file_path)
+
+                # Phase 70: Post-repair verification — rollback on regression
+                if verify and snapshot_before is not None:
+                    from kicad_agent.ops.repair import (
+                        _diff_net_snapshots,
+                        _restore_ir,
+                        _take_net_snapshot as _snap,
+                    )
+                    snapshot_after = _snap(ir)
+                    diff = _diff_net_snapshots(snapshot_before, snapshot_after)
+                    if not diff["clean"]:
+                        logger.warning(
+                            "Repair %s caused net regression (lost=%d, gained=%d), rolling back",
+                            repair_name,
+                            diff["lost_net_count"],
+                            diff["gained_net_count"],
+                        )
+                        if checkpoint is not None:
+                            _restore_ir(ir, checkpoint)
+                        verification_rollback.append({
+                            "repair": repair_name,
+                            "lost_nets": diff["lost_nets"],
+                            "gained_nets": diff["gained_nets"],
+                        })
+                        continue
+
                 for vtype, count in matching_types:
                     all_fixes.append({
                         "type": vtype,
@@ -278,6 +317,7 @@ def erc_auto_fix(
             {"type": vtype, "count": count}
             for vtype, count in sorted(all_unhandled.items())
         ],
+        "verification_rollback": verification_rollback,
     }
 
 
