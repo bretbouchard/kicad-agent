@@ -261,6 +261,9 @@ def erc_auto_fix(
                 # Council KR-04: auto-detect mode -- functions infer what to fix from IR state.
                 func(ir, file_path)
 
+                # Persist in-memory mutations to disk so parse_erc sees changes.
+                ir.schematic.to_file(str(file_path))
+
                 # Phase 70: Post-repair verification — rollback on regression
                 if verify and snapshot_before is not None:
                     from kicad_agent.ops.repair import (
@@ -279,6 +282,8 @@ def erc_auto_fix(
                         )
                         if checkpoint is not None:
                             _restore_ir(ir, checkpoint)
+                            # Persist restored state to disk
+                            ir.schematic.to_file(str(file_path))
                         verification_rollback.append({
                             "repair": repair_name,
                             "lost_nets": diff["lost_nets"],
@@ -394,6 +399,8 @@ def erc_auto_fix_root_cause(
         try:
             func = _get_repair_function(repair_name)
             func(ir, file_path)
+            # Persist in-memory mutations to disk so parse_erc sees changes.
+            ir.schematic.to_file(str(file_path))
             fixes_applied.append({
                 "type": diagnosis["violation_type"],
                 "action": recommended["action"],
@@ -568,14 +575,17 @@ def erc_auto_fix_hierarchical(
                 _deregister_parse_result(parse_result)
             continue
 
-        # Run erc_auto_fix on this sheet with matching sheet_filter
+        # Run erc_auto_fix on this sheet.
+        # Individual sub-sheet files report all violations as sheet="/",
+        # so we use "/" as sheet_filter for sub-sheets (not the hierarchical path).
+        effective_filter = "/" if sheet_path != "/" else "/"
         try:
             result = erc_auto_fix(
                 sheet_ir,
                 sheet_file,
                 max_iterations=max_iterations,
                 mode=mode,
-                sheet_filter=sheet_path,
+                sheet_filter=effective_filter,
             )
             per_sheet[sheet_path] = result
             if result.get("fixes_applied"):
