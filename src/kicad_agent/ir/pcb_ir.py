@@ -535,7 +535,7 @@ class PcbIR(BaseIR):
         new_raw = raw[:last_close] + insertion + raw[last_close:]
         self._parse_result = self._parse_result._replace(raw_content=new_raw)
         self._raw_written = True
-        self._mark_dirty()
+        self.mark_dirty("insert_track_segments")
 
 
 def _restore_properties(
