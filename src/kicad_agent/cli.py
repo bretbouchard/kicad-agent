@@ -37,6 +37,45 @@ from kicad_agent.ops.schema import get_operation_schema
 
 _SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "demo", "playground", "dfm"}
 
+_SUBCOMMAND_DESCRIPTIONS = {
+    "collect": "Collect real-world KiCad training data from GitHub.",
+    "erc": "Run ERC (Electrical Rules Check) on a KiCad schematic.",
+    "drc": "Run DRC (Design Rules Check) on a KiCad PCB.",
+    "export": "Export a KiCad PCB to Gerber, BOM, position, or STEP format.",
+    "context": "Show a summary of a KiCad project.",
+    "route": "Auto-route nets on a KiCad PCB using A* pathfinding.",
+    "analyze": "Analyze a PCB or schematic using the fine-tuned local model.",
+    "component-search": "Start the component search MCP server.",
+    "ai-stats": "Show local-first AI intervention metrics and training gaps.",
+    "design-rules": "Run domain-specific design rules against a KiCad schematic.",
+    "review-schematic": "Review a schematic for readability and spatial quality.",
+    "demo": "Generate, validate, and render a schematic in one command.",
+    "playground": "Start interactive web playground.",
+    "dfm": "Run DFM (Design for Manufacturing) analysis on a KiCad PCB.",
+}
+
+
+def _print_help() -> None:
+    """Print top-level help listing all available subcommands."""
+    print("usage: kicad-agent <subcommand> [options]")
+    print("       kicad-agent <operation-json-or-file> [options]")
+    print()
+    print("AI-safe structural editing of KiCad 10+ schematic, PCB, symbol, and footprint files.")
+    print()
+    print("Subcommands:")
+    max_name_len = max(len(name) for name in _SUBCOMMAND_DESCRIPTIONS)
+    for name in sorted(_SUBCOMMAND_DESCRIPTIONS):
+        desc = _SUBCOMMAND_DESCRIPTIONS[name]
+        print(f"  {name:<{max_name_len + 2}} {desc}")
+    print()
+    print("Legacy operation mode:")
+    print("  kicad-agent '<json>'              Run an operation from inline JSON")
+    print("  kicad-agent operation.json         Run an operation from a JSON file")
+    print("  kicad-agent --schema               Print the operation JSON Schema")
+    print("  kicad-agent --dry-run <op>         Validate without executing")
+    print()
+    print("Use 'kicad-agent <subcommand> --help' for subcommand-specific options.")
+
 
 def _build_operation_parser() -> argparse.ArgumentParser:
     """Parser for the legacy operation mode."""
@@ -381,9 +420,15 @@ def _handle_route(argv: list[str]) -> None:
         sys.exit(1)
 
     # Build and execute auto_route operation
+    # Use relative path when possible, fall back to absolute for paths outside CWD
+    try:
+        target_file = str(args.pcb.resolve().relative_to(Path.cwd()))
+    except ValueError:
+        target_file = str(args.pcb.resolve())
+
     op_json = json.dumps({
         "op_type": "auto_route",
-        "target_file": str(args.pcb.resolve().relative_to(Path.cwd())),
+        "target_file": target_file,
         "nets": args.nets,
         "layer": args.layer,
     })
@@ -519,6 +564,12 @@ def _handle_analyze(argv: list[str]) -> None:
 
 def _handle_component_search(argv: list[str]) -> None:
     """Handle the 'component-search' subcommand — start MCP server."""
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent component-search",
+        description="Start the component search MCP server.",
+    )
+    parser.parse_args(argv)  # Handles --help / -h automatically
+
     from kicad_agent.mcp.server import main as mcp_main
     mcp_main()
 
@@ -713,6 +764,11 @@ def main(argv: list[str] | None = None) -> None:
     """Entry point for the kicad-agent CLI."""
     if argv is None:
         argv = sys.argv[1:]
+
+    # Handle --help / -h / no args: print top-level help with subcommand list
+    if not argv or argv[0] in ("--help", "-h"):
+        _print_help()
+        sys.exit(0)
 
     # Route subcommands to their own parsers
     if argv and argv[0] in _SUBCOMMANDS:
