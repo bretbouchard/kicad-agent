@@ -319,7 +319,7 @@ class TestPipelineIntegration:
             ),
         ):
             dataset = run_pipeline(
-                token="fake_token",
+                token="ghp_" + "a" * 36,
                 staging_dir=tmp_path,
                 max_repos=10,
             )
@@ -388,7 +388,7 @@ class TestPipelineIntegration:
             ),
         ):
             dataset = run_pipeline(
-                token="fake_token",
+                token="ghp_" + "a" * 36,
                 staging_dir=tmp_path,
                 max_repos=10,
             )
@@ -453,7 +453,7 @@ class TestPipelineIntegration:
             ),
         ):
             dataset = run_pipeline(
-                token="fake_token",
+                token="ghp_" + "a" * 36,
                 staging_dir=tmp_path,
                 max_repos=10,
                 output_dir=output_dir,

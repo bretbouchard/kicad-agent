@@ -69,11 +69,13 @@ def _resolve_github_token(token: str | None = None) -> str:
     resolved = resolved.strip()
 
     if not _GITHUB_TOKEN_PATTERN.match(resolved):
+        # SEC-1: Don't leak actual token chars in error message
+        prefix = resolved.split("_")[0] + "_" if "_" in resolved else resolved[:4]
         raise ValueError(
             f"GitHub token has invalid format. "
             f"Expected prefix ghp_/gho_/github_pat_/ghs_/ghu_ followed by "
             f"36+ alphanumeric characters. "
-            f"Got: {resolved[:8]}... ({len(resolved)} chars)"
+            f"Got: {prefix}*** ({len(resolved)} chars)"
         )
 
     return resolved

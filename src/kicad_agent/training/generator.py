@@ -151,11 +151,12 @@ def generate_samples_parallel(
         for j in range(i + 1, len(worker_seed_offsets)):
             range_i_max = worker_seed_offsets[i] + chunk_size
             range_j_min = worker_seed_offsets[j]
-            assert range_i_max <= range_j_min, (
-                f"Worker seed ranges overlap: worker {i} max={range_i_max}, "
-                f"worker {j} min={range_j_min}. "
-                f"Increase _SEED_SPACING or reduce n_samples/n_workers."
-            )
+            if range_i_max > range_j_min:
+                raise ValueError(
+                    f"Worker seed ranges overlap: worker {i} max={range_i_max}, "
+                    f"worker {j} min={range_j_min}. "
+                    f"Increase _SEED_SPACING or reduce n_samples/n_workers."
+                )
 
     with ProcessPoolExecutor(max_workers=n_workers) as executor:
         futures = []
