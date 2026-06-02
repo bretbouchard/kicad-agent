@@ -46,7 +46,7 @@ def _euclidean_heuristic(u: tuple[float, ...], v: tuple[float, ...]) -> float:
     return math.hypot(u[0] - v[0], u[1] - v[1])
 
 
-def _path_length(path: list[tuple[float, ...]]) -> float:
+def _path_length(path: list[tuple[float, ...]] | tuple[tuple[float, ...], ...]) -> float:
     """Compute total Euclidean length of a path.
 
     Works with both 2D and 3D tuples by only using x, y coordinates.
@@ -220,21 +220,10 @@ def _route_multi_pin_net(
     total_length = sum(_path_length(p) for p in all_paths)
     return RouteResult(
         net_name=net_name,
-        success=True,
+        success=len(routed_positions) == len(pins),  # False if partial
         path=tuple(merged),
         length_mm=round(total_length, 4),
     )
-
-
-def _path_length(path: tuple | list) -> float:
-    """Compute total Euclidean length of a path."""
-    total = 0.0
-    for i in range(len(path) - 1):
-        total += math.hypot(
-            path[i + 1][0] - path[i][0],
-            path[i + 1][1] - path[i][1],
-        )
-    return total
 
 
 def build_routing_graph(

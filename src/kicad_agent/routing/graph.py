@@ -256,6 +256,7 @@ class RoutingGraph:
             self._layer_index[layer] = {
                 "tree": STRtree(points),
                 "nodes": nodes,
+                "points": points,
             }
 
         # Also build a global index for layer=None queries
@@ -264,6 +265,7 @@ class RoutingGraph:
         self._global_index = {
             "tree": STRtree(all_points),
             "nodes": all_nodes,
+            "points": all_points,
         }
         self._node_index_dirty = False
 
@@ -285,6 +287,8 @@ class RoutingGraph:
             (x, y, layer) tuple for 3D graphs, or (x, y) for backward
             compat, or None if out of tolerance.
         """
+        from shapely.geometry import Point as ShapelyPoint
+
         if not self._graph.nodes:
             return None
 
@@ -307,11 +311,13 @@ class RoutingGraph:
             if self._node_index_dirty:
                 self._build_node_index()
             if hasattr(self, "_layer_index") and layer in self._layer_index:
-                from shapely.geometry import Point as ShapelyPoint
                 idx = self._layer_index[layer]
                 query = ShapelyPoint(x, y)
                 nearest_idx = idx["tree"].nearest(query)
                 nearest_node = idx["nodes"][nearest_idx]
+                # H-05: Validate node still exists in graph
+                if nearest_node not in self._graph:
+                    return None
                 d = math.hypot(x - nearest_node[0], y - nearest_node[1])
                 if d <= tolerance:
                     return nearest_node
@@ -329,10 +335,12 @@ class RoutingGraph:
         if self._node_index_dirty:
             self._build_node_index()
         if hasattr(self, "_global_index"):
-            from shapely.geometry import Point as ShapelyPoint
             query = ShapelyPoint(x, y)
             nearest_idx = self._global_index["tree"].nearest(query)
             nearest_node = self._global_index["nodes"][nearest_idx]
+            # H-05: Validate node still exists in graph
+            if nearest_node not in self._graph:
+                return None
             d = math.hypot(x - nearest_node[0], y - nearest_node[1])
             if d <= tolerance:
                 return nearest_node
@@ -372,17 +380,43 @@ class RoutingGraph:
         path: tuple[tuple[float, ...], ...],
         clearance: float,
     ) -> None:
-        """Remove edges whose segments pass within clearance of any path waypoint."""
+        """Remove edges whose segments pass within clearance of any path waypoint.
+
+        Uses STRtree spatial index for O(W * log N) instead of O(W * N) scan.
+        """
+        from shapely.geometry import Point as ShapelyPoint
+
+        # Ensure spatial index is built
+        if self._node_index_dirty:
+            self._build_node_index()
+
+        # Determine layer from path nodes
+        path_layer = path[0][2] if len(path[0]) >= 3 else None
+
+        # Pick the right index (layer-specific or global)
+        if path_layer is not None and hasattr(self, "_layer_index") and path_layer in self._layer_index:
+            index_data = self._layer_index[path_layer]
+        elif hasattr(self, "_global_index"):
+            index_data = self._global_index
+        else:
+            return
+
+        tree = index_data["tree"]
+        nodes = index_data["nodes"]
+
         for waypoint in path:
             wx, wy = waypoint[0], waypoint[1]
-            # Find all nodes within 2x clearance (conservative search radius)
-            for node in list(self._graph.nodes):
-                nd = math.hypot(wx - node[0], wy - node[1])
-                if nd > clearance * 2:
+            query = ShapelyPoint(wx, wy)
+            # Query tree for nodes within 2x clearance radius
+            search_geom = query.buffer(clearance * 2)
+            candidate_indices = tree.query(search_geom)
+
+            for idx in candidate_indices:
+                node = nodes[idx]
+                if node not in self._graph:
                     continue
                 # Check all edges from this nearby node
                 for neighbor in list(self._graph.neighbors(node)):
-                    # Distance from waypoint to edge segment
                     seg_dist = _point_to_segment_distance(
                         wx, wy, node[0], node[1], neighbor[0], neighbor[1],
                     )

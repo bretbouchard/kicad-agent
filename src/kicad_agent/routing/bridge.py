@@ -74,6 +74,7 @@ def route_to_segments(
     results: dict[str, RouteResult],
     constraints: RoutingConstraints | None = None,
     layer: str = "F.Cu",
+    net_id_map: dict[str, int] | None = None,
 ) -> list[TrackSegment]:
     """Convert routing results into KiCad track segments.
 
@@ -84,6 +85,8 @@ def route_to_segments(
         results: Dict mapping net names to RouteResult objects.
         constraints: Routing constraints for trace width. Uses defaults if None.
         layer: Copper layer for all segments. Default F.Cu (top copper).
+        net_id_map: Optional mapping from net name to KiCad net ID.
+            When provided, segments get correct net IDs for output.
 
     Returns:
         List of TrackSegment objects ready for IR insertion.
@@ -94,6 +97,8 @@ def route_to_segments(
     for net_name, result in results.items():
         if not result.success or len(result.path) < 2:
             continue
+
+        net_id = net_id_map.get(net_name, 0) if net_id_map else 0
 
         for i in range(len(result.path) - 1):
             p0 = result.path[i]
@@ -108,6 +113,7 @@ def route_to_segments(
                 width=constraints.trace_width_mm,
                 layer=layer,
                 net=net_name,
+                net_id=net_id,
             ))
 
     return segments
@@ -176,6 +182,7 @@ class ViaSegment:
 def route_to_segments_multilayer(
     results: dict[str, RouteResult],
     constraints: RoutingConstraints | None = None,
+    net_id_map: dict[str, int] | None = None,
 ) -> list[TrackSegment | ViaSegment]:
     """Convert 3D routing results into track segments and vias.
 
@@ -190,6 +197,8 @@ def route_to_segments_multilayer(
         results: Dict mapping net names to RouteResult objects with 3D paths.
         constraints: Routing constraints for trace/via dimensions.
             Uses defaults if None.
+        net_id_map: Optional mapping from net name to KiCad net ID.
+            When provided, segments/vias get correct net IDs for output.
 
     Returns:
         List of TrackSegment and ViaSegment objects.
@@ -200,6 +209,8 @@ def route_to_segments_multilayer(
     for net_name, result in results.items():
         if not result.success or len(result.path) < 2:
             continue
+
+        net_id = net_id_map.get(net_name, 0) if net_id_map else 0
 
         for i in range(len(result.path) - 1):
             p0 = result.path[i]
@@ -218,6 +229,7 @@ def route_to_segments_multilayer(
                     diameter=constraints.via_diameter_mm,
                     drill=constraints.via_drill_mm,
                     net=net_name,
+                    net_id=net_id,
                 ))
             else:
                 # Same-layer segment.
@@ -232,6 +244,7 @@ def route_to_segments_multilayer(
                     width=constraints.effective_trace_width(layer),
                     layer=layer,
                     net=net_name,
+                    net_id=net_id,
                 ))
 
     return segments
