@@ -232,16 +232,43 @@ def main() -> int:
 
     categories = args.categories or DEFAULT_CATEGORIES
     client = EasyEdaClient(cache_dir=args.cache_dir)
+    output_dir = args.output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    all_samples: list[dict] = []
+    # --- Resume support: load previously collected samples ---
+    checkpoint_path = output_dir / "checkpoint.jsonl"
     seen_lcsc: set[str] = set()
-    sample_id = 0
+    all_samples: list[dict] = []
+    if checkpoint_path.exists():
+        with open(checkpoint_path) as f:
+            for line in f:
+                try:
+                    s = json.loads(line.strip())
+                    all_samples.append(s)
+                    seen_lcsc.add(s["lcsc"])
+                except (json.JSONDecodeError, KeyError):
+                    pass
+        logger.info("Resumed from checkpoint: %d existing samples", len(all_samples))
+
+    sample_id = len(all_samples)
     n_searched = 0
     n_fetched = 0
     n_failed = 0
+    checkpoint_every = 50  # flush to disk every N new samples
+    samples_since_checkpoint = 0
 
     consecutive_failures = 0
     max_consecutive_failures = 10  # skip category after this many in a row
+
+    def flush_checkpoint() -> None:
+        """Append new samples to checkpoint file."""
+        if samples_since_checkpoint == 0:
+            return
+        start = len(all_samples) - samples_since_checkpoint
+        with open(checkpoint_path, "a") as f:
+            for s in all_samples[start:]:
+                f.write(json.dumps(s) + "\n")
+        logger.info("Checkpoint: %d total samples saved", len(all_samples))
 
     for cat_idx, keyword in enumerate(categories):
         if len(all_samples) >= args.max_components:
@@ -342,6 +369,12 @@ def main() -> int:
                 if cad is None:
                     n_failed += 1
 
+                # Periodic checkpoint
+                samples_since_checkpoint += 1
+                if samples_since_checkpoint >= checkpoint_every:
+                    flush_checkpoint()
+                    samples_since_checkpoint = 0
+
                 if len(all_samples) >= args.max_components:
                     break
 
@@ -358,6 +391,11 @@ def main() -> int:
             "  Category '%s' done: %d total components collected",
             keyword, len(all_samples),
         )
+        flush_checkpoint()
+        samples_since_checkpoint = 0
+
+    # Final checkpoint flush
+    flush_checkpoint()
 
     if not all_samples:
         logger.warning("No components collected")
@@ -371,9 +409,8 @@ def main() -> int:
             seen.add(s["lcsc"])
             unique.append(s)
 
-    # Write JSONL splits
+    # Write JSONL splits (final, deduped)
     output_dir = args.output_dir
-    output_dir.mkdir(parents=True, exist_ok=True)
 
     import random
     rng = random.Random(42)
@@ -394,13 +431,13 @@ def main() -> int:
             for s in subset:
                 f.write(json.dumps(s) + "\n")
 
-    # Stats
-    with_pins = sum(1 for s in unique if s["pin_count"] > 0)
-    with_pads = sum(1 for s in unique if s["pad_count"] > 0)
-    total_pins = sum(s["pin_count"] for s in unique)
-    total_pads = sum(s["pad_count"] for s in unique)
-    categories_found = len(set(s["category"] for s in unique))
-    brands_found = len(set(s["brand"] for s in unique))
+    # Stats (use .get() for backward compat with older checkpoint formats)
+    with_pins = sum(1 for s in unique if s.get("pin_count", 0) > 0)
+    with_pads = sum(1 for s in unique if s.get("pad_count", 0) > 0)
+    total_pins = sum(s.get("pin_count", 0) for s in unique)
+    total_pads = sum(s.get("pad_count", 0) for s in unique)
+    categories_found = len(set(s.get("category", "unknown") for s in unique))
+    brands_found = len(set(s.get("brand", "unknown") for s in unique))
 
     print(f"\n{'='*60}")
     print(f"EasyEDA collection complete: {len(unique)} components")
