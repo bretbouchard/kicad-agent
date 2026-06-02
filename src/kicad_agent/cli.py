@@ -697,6 +697,13 @@ def _handle_playground(argv: list[str]) -> None:
 
     from kicad_agent.playground.app import create_app
     app = create_app()
+    if args.host in ("0.0.0.0", "::"):
+        print(
+            f"WARNING: Binding to {args.host} exposes the playground to ALL "
+            "network interfaces. This is intended for development only. "
+            "Ensure you are on a trusted network.",
+            file=sys.stderr,
+        )
     print(f"kicad-agent playground: http://{args.host}:{args.port}")
     print("Press Ctrl+C to stop")
     uvicorn.run(app, host=args.host, port=args.port)

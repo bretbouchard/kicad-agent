@@ -9,10 +9,11 @@ Each template defines a common analog building block with:
 Templates are instantiated by sampling from parameter ranges with a
 deterministic seed, producing a GenerationIntent that can be validated.
 
-Threat model (T-52-03):
-  _eval_predicate uses eval() with restricted builtins (empty __builtins__).
-  Predicate strings are developer-defined constants in this module, never user input.
-  Only numeric parameter values are passed as eval locals.
+Threat model (C-1):
+  _eval_predicate uses safe AST walking — no eval(). Only comparison and
+  arithmetic operators on named parameters are allowed. No function calls,
+  imports, or attribute access. Predicate strings are developer-defined
+  constants in this module, never user input.
 """
 
 from __future__ import annotations
@@ -113,18 +114,71 @@ class CircuitTemplate(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Predicate evaluator (T-52-03: restricted eval)
+# Predicate evaluator — safe AST walker (C-1: replaces eval)
 # ---------------------------------------------------------------------------
+
+import ast as _ast
+import operator as _operator
+
+_SAFE_COMPARE_OPS: dict[type, _operator] = {
+    _ast.Gt: _operator.gt,
+    _ast.GtE: _operator.ge,
+    _ast.Lt: _operator.lt,
+    _ast.LtE: _operator.le,
+    _ast.Eq: _operator.eq,
+    _ast.NotEq: _operator.ne,
+}
+
+_SAFE_BIN_OPS: dict[type, _operator] = {
+    _ast.Add: _operator.add,
+    _ast.Sub: _operator.sub,
+    _ast.Mult: _operator.mul,
+    _ast.Div: _operator.truediv,
+}
+
+
+def _eval_node(node: _ast.AST, params: dict[str, float]) -> float | bool:
+    """Recursively evaluate a single AST node against named parameters."""
+    if isinstance(node, _ast.Constant):
+        return node.value
+    if isinstance(node, _ast.Name):
+        if node.id not in params:
+            raise ValueError(f"Unknown parameter: {node.id}")
+        return params[node.id]
+    if isinstance(node, _ast.Compare):
+        left = _eval_node(node.left, params)
+        for op, comparator in zip(node.ops, node.comparators):
+            right = _eval_node(comparator, params)
+            op_func = _SAFE_COMPARE_OPS.get(type(op))
+            if op_func is None:
+                raise ValueError(f"Unsupported operator: {type(op).__name__}")
+            if not op_func(left, right):
+                return False
+            left = right
+        return True
+    if isinstance(node, _ast.BoolOp):
+        if isinstance(node.op, _ast.And):
+            return all(_eval_node(v, params) for v in node.values)
+        if isinstance(node.op, _ast.Or):
+            return any(_eval_node(v, params) for v in node.values)
+    if isinstance(node, _ast.BinOp):
+        op_func = _SAFE_BIN_OPS.get(type(node.op))
+        if op_func is None:
+            raise ValueError(f"Unsupported operator: {type(node.op).__name__}")
+        return op_func(_eval_node(node.left, params), _eval_node(node.right, params))
+    raise ValueError(f"Unsupported expression: {_ast.dump(node)}")
 
 
 def _eval_predicate(predicate_str: str, params: dict[str, float]) -> bool:
     """Evaluate a validity predicate string against parameter values.
 
-    Safety: __builtins__ is set to empty dict, so no access to
-    import, open, exec, etc. Predicate strings are developer-defined
+    Safety: Uses AST walking — no eval(). Only allows comparison and
+    arithmetic operators on named parameters. No function calls, no
+    imports, no attribute access. Predicate strings are developer-defined
     constants in this module -- never user input.
     """
-    return eval(predicate_str, {"__builtins__": {}}, params)
+    tree = _ast.parse(predicate_str, mode="eval")
+    return bool(_eval_node(tree.body, params))
 
 
 # ---------------------------------------------------------------------------

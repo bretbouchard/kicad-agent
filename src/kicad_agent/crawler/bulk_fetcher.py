@@ -16,6 +16,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -64,8 +65,15 @@ class BulkFetcher:
     def staging_dir(self) -> Path:
         return self._staging_dir
 
+    _REPO_NAME_RE = re.compile(r"^[a-zA-Z0-9_.\-]{1,100}/[a-zA-Z0-9_.\-]{1,100}$")
+
     def _repo_dir(self, repo_name: str) -> Path:
         """Get local directory path for a repo."""
+        if not self._REPO_NAME_RE.match(repo_name):
+            raise ValueError(
+                f"Invalid repo name: {repo_name!r}. "
+                "Expected 'owner/repo' with alphanumeric characters, dots, hyphens, underscores."
+            )
         safe_name = repo_name.replace("/", "_")
         return self._staging_dir / safe_name
 

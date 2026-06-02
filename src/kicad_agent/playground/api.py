@@ -64,6 +64,37 @@ def _validate_filename(filename: str) -> str:
     return filename
 
 
+# KiCad file content signatures (first bytes after whitespace)
+_KICAD_SIGNATURES = (
+    b"(kicad_sch",
+    b"(kicad_pcb",
+    b"(kicad_sym",
+    b"(module ",   # legacy footprint format
+    b"(lib_descr", # legacy symbol library
+)
+
+
+def _validate_content(content: bytes, declared_ext: str) -> None:
+    """Validate file content matches declared KiCad type.
+
+    Rejects files declared as KiCad types that don't start with a
+    known KiCad S-expression signature.
+    """
+    if len(content) < 10:
+        return  # Small/empty files might be templates
+
+    stripped = content.lstrip()
+    for sig in _KICAD_SIGNATURES:
+        if stripped.startswith(sig):
+            return  # Content matches a known KiCad format
+
+    if declared_ext in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File content does not match declared type {declared_ext}",
+        )
+
+
 @router.post("/upload")
 async def upload_file(
     request: Request,
@@ -80,9 +111,11 @@ async def upload_file(
             detail=f"File too large: {len(content)} bytes (max {max_bytes})",
         )
 
+    ext = Path(filename).suffix
+    _validate_content(content, ext)
+
     session_id = str(uuid.uuid4())
     upload_dir: Path = request.app.state.upload_dir
-    ext = Path(filename).suffix
     stored_path = upload_dir / f"{session_id}{ext}"
     stored_path.write_bytes(content)
 

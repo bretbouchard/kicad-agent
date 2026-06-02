@@ -30,24 +30,57 @@ from kicad_agent.ops.schema import (
 
 
 class TestPathConfiment:
-    """Verify path traversal attacks are rejected."""
+    """Verify path traversal attacks are rejected at runtime."""
 
-    def test_resolve_check_exists_in_executor(self):
-        """Verify executor.execute() has path confinement via resolve().is_relative_to()."""
-        import inspect
+    def test_path_traversal_rejected(self, tmp_path: Path) -> None:
+        """Executor rejects target_file paths outside base_dir."""
         from kicad_agent.ops.executor import OperationExecutor
+        from kicad_agent.ops.schema import Operation
 
-        source = inspect.getsource(OperationExecutor.execute)
-        assert "is_relative_to" in source
-        assert "resolve()" in source
+        executor = OperationExecutor(base_dir=tmp_path)
+        with pytest.raises(Exception):
+            executor.execute(Operation.model_validate({
+                "root": {
+                    "op_type": "add_component",
+                    "target_file": "../../etc/passwd",
+                    "library_id": "Device:R",
+                    "reference": "R1",
+                    "value": "1k",
+                }
+            }))
 
-    def test_resolve_check_exists_in_execute_create(self):
-        """Verify _execute_create() also has path confinement."""
-        import inspect
+    def test_absolute_path_outside_rejected(self, tmp_path: Path) -> None:
+        """Executor rejects absolute paths outside base_dir."""
         from kicad_agent.ops.executor import OperationExecutor
+        from kicad_agent.ops.schema import Operation
 
-        source = inspect.getsource(OperationExecutor._execute_create)
-        assert "is_relative_to" in source
+        executor = OperationExecutor(base_dir=tmp_path)
+        with pytest.raises(Exception):
+            executor.execute(Operation.model_validate({
+                "root": {
+                    "op_type": "add_component",
+                    "target_file": "/etc/passwd",
+                    "library_id": "Device:R",
+                    "reference": "R1",
+                    "value": "1k",
+                }
+            }))
+
+    def test_valid_relative_path_accepted(self, tmp_path: Path) -> None:
+        """Executor accepts valid relative paths inside base_dir."""
+        from kicad_agent.ops.executor import OperationExecutor
+        from kicad_agent.ops.schema import Operation
+
+        sch = tmp_path / "test.kicad_sch"
+        sch.write_text("(kicad_sch (version 20231120) (generator kicad-agent))")
+        executor = OperationExecutor(base_dir=tmp_path)
+        result = executor.execute(Operation.model_validate({
+            "root": {
+                "op_type": "parse_erc",
+                "target_file": "test.kicad_sch",
+            }
+        }))
+        assert result is not None
 
 
 # ---------------------------------------------------------------------------
