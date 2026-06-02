@@ -74,6 +74,7 @@ class RoutingGraph:
 
         self.constraints = constraints or RoutingConstraints()
         self._graph = nx.Graph()
+        self._node_index_dirty = True  # H-6: lazy spatial index
 
         active_layers = layers or ["F.Cu"]
 
@@ -234,13 +235,45 @@ class RoutingGraph:
         """Number of edges in the graph."""
         return self._graph.number_of_edges()
 
+    def _build_node_index(self) -> None:
+        """Build spatial index of nodes per layer for O(log n) snap (H-6)."""
+        from shapely.geometry import Point as ShapelyPoint
+        from shapely.strtree import STRtree
+
+        layer_nodes: dict[str, list[tuple]] = {}
+        other_nodes: list[tuple] = []
+
+        for node in self._graph.nodes:
+            if len(node) == 3:
+                layer = node[2]
+                layer_nodes.setdefault(layer, []).append(node)
+            else:
+                other_nodes.append(node)
+
+        self._layer_index: dict[str, dict] = {}
+        for layer, nodes in layer_nodes.items():
+            points = [ShapelyPoint(n[0], n[1]) for n in nodes]
+            self._layer_index[layer] = {
+                "tree": STRtree(points),
+                "nodes": nodes,
+            }
+
+        # Also build a global index for layer=None queries
+        all_nodes = list(self._graph.nodes)
+        all_points = [ShapelyPoint(n[0], n[1]) for n in all_nodes]
+        self._global_index = {
+            "tree": STRtree(all_points),
+            "nodes": all_nodes,
+        }
+        self._node_index_dirty = False
+
     def snap_to_node(
         self, x: float, y: float, layer: str | None = None
     ) -> tuple[float, float, str] | tuple[float, float] | None:
         """Find the nearest grid node to (x, y) within tolerance.
 
         Tolerance is grid_resolution_mm. Returns None if no node is
-        within tolerance.
+        within tolerance. Uses spatial index for O(log n) lookup (H-6).
 
         Args:
             x: X coordinate in mm.
@@ -269,17 +302,19 @@ class RoutingGraph:
                 dist = math.hypot(x - gx, y - gy)
                 if dist <= tolerance:
                     return candidate
-            # Fall back to nearest node on the specified layer.
-            best_node = None
-            best_dist = float("inf")
-            for node in self._graph.nodes:
-                if len(node) == 3 and node[2] == layer:
-                    d = math.hypot(x - node[0], y - node[1])
-                    if d < best_dist:
-                        best_dist = d
-                        best_node = node
-            if best_node is not None and best_dist <= tolerance:
-                return best_node
+
+            # Use spatial index for O(log n) nearest-neighbor (H-6).
+            if self._node_index_dirty:
+                self._build_node_index()
+            if hasattr(self, "_layer_index") and layer in self._layer_index:
+                from shapely.geometry import Point as ShapelyPoint
+                idx = self._layer_index[layer]
+                query = ShapelyPoint(x, y)
+                nearest_idx = idx["tree"].nearest(query)
+                nearest_node = idx["nodes"][nearest_idx]
+                d = math.hypot(x - nearest_node[0], y - nearest_node[1])
+                if d <= tolerance:
+                    return nearest_node
             return None
 
         # No layer specified -- find nearest on any layer.
@@ -290,31 +325,25 @@ class RoutingGraph:
             if dist <= tolerance:
                 return candidate
 
-        # Try 3D grid snap.
-        for node in self._graph.nodes:
-            if node[0] == gx and node[1] == gy:
-                dist = math.hypot(x - gx, y - gy)
-                if dist <= tolerance:
-                    return node
-
-        # Fall back to nearest neighbor search.
-        best_node = None
-        best_dist = float("inf")
-        for node in self._graph.nodes:
-            d = math.hypot(x - node[0], y - node[1])
-            if d < best_dist:
-                best_dist = d
-                best_node = node
-
-        if best_node is not None and best_dist <= tolerance:
-            return best_node
+        # Use global spatial index for nearest-neighbor (H-6).
+        if self._node_index_dirty:
+            self._build_node_index()
+        if hasattr(self, "_global_index"):
+            from shapely.geometry import Point as ShapelyPoint
+            query = ShapelyPoint(x, y)
+            nearest_idx = self._global_index["tree"].nearest(query)
+            nearest_node = self._global_index["nodes"][nearest_idx]
+            d = math.hypot(x - nearest_node[0], y - nearest_node[1])
+            if d <= tolerance:
+                return nearest_node
         return None
 
     def mark_path_as_obstacle(
         self,
         path: tuple[tuple[float, float], ...] | tuple[tuple[float, float, str], ...],
+        clearance: float = 0.0,
     ) -> None:
-        """Remove edges along a routed path so subsequent nets avoid it.
+        """Remove edges along and near a routed path so subsequent nets avoid it.
 
         This provides single-layer multi-net routing by progressively blocking
         already-routed paths. Nodes are kept (they may be needed for other
@@ -323,8 +352,55 @@ class RoutingGraph:
         Args:
             path: Ordered tuple of (x, y) or (x, y, layer) waypoints forming
                 a routed path.
+            clearance: Distance (mm) from path edges to also block. When > 0,
+                also removes edges within the clearance corridor (H-10).
         """
+        # Remove exact edges along path
         for i in range(len(path) - 1):
             u, v = path[i], path[i + 1]
             if self._graph.has_edge(u, v):
                 self._graph.remove_edge(u, v)
+
+        # H-10: Also remove edges within clearance corridor
+        if clearance > 0:
+            self._mark_clearance_corridor(path, clearance)
+        # Mark index dirty after graph mutation
+        self._node_index_dirty = True
+
+    def _mark_clearance_corridor(
+        self,
+        path: tuple[tuple[float, ...], ...],
+        clearance: float,
+    ) -> None:
+        """Remove edges whose segments pass within clearance of any path waypoint."""
+        for waypoint in path:
+            wx, wy = waypoint[0], waypoint[1]
+            # Find all nodes within 2x clearance (conservative search radius)
+            for node in list(self._graph.nodes):
+                nd = math.hypot(wx - node[0], wy - node[1])
+                if nd > clearance * 2:
+                    continue
+                # Check all edges from this nearby node
+                for neighbor in list(self._graph.neighbors(node)):
+                    # Distance from waypoint to edge segment
+                    seg_dist = _point_to_segment_distance(
+                        wx, wy, node[0], node[1], neighbor[0], neighbor[1],
+                    )
+                    if seg_dist <= clearance:
+                        if self._graph.has_edge(node, neighbor):
+                            self._graph.remove_edge(node, neighbor)
+
+
+def _point_to_segment_distance(
+    px: float, py: float,
+    ax: float, ay: float,
+    bx: float, by: float,
+) -> float:
+    """Minimum distance from point (px, py) to line segment (ax, ay)-(bx, by)."""
+    dx, dy = bx - ax, by - ay
+    if dx == 0 and dy == 0:
+        return math.hypot(px - ax, py - ay)
+    t = max(0, min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
+    proj_x = ax + t * dx
+    proj_y = ay + t * dy
+    return math.hypot(px - proj_x, py - proj_y)

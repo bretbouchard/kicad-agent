@@ -121,8 +121,11 @@ def route_all_nets(
 ) -> dict[str, RouteResult]:
     """Route all nets in the netlist, shortest first.
 
-    For each net with >= 2 pins, routes from the first pin to the last
-    pin. Nets are sorted by estimated Euclidean distance (shortest first)
+    For 2-pin nets, routes first pin to last pin (existing behavior).
+    For multi-pin nets (3+ pins), uses sequential nearest-neighbor heuristic
+    to build a Steiner-tree approximation connecting all pins (H-7).
+
+    Nets are sorted by estimated Euclidean distance (shortest first)
     to maximize routability.
 
     Args:
@@ -134,27 +137,104 @@ def route_all_nets(
         that were successfully routed (or attempted but failed).
     """
     # Filter to nets with >= 2 pins and compute estimated distance.
-    routable: list[tuple[str, float, tuple[float, float], tuple[float, float]]] = []
+    routable: list[tuple[str, float, list[tuple[float, float]]]] = []
     for net_name, pins in netlist.items():
         if len(pins) < 2:
             continue
-        first_pin = pins[0]
-        last_pin = pins[-1]
-        est_distance = _euclidean_heuristic(first_pin, last_pin)
-        routable.append((net_name, est_distance, first_pin, last_pin))
+        if len(pins) == 2:
+            est_distance = _euclidean_heuristic(pins[0], pins[-1])
+        else:
+            # Multi-pin: estimate total Steiner tree length
+            est_distance = sum(
+                _euclidean_heuristic(pins[i], pins[i + 1])
+                for i in range(len(pins) - 1)
+            )
+        routable.append((net_name, est_distance, pins))
 
     # Sort by estimated distance (shortest first).
     routable.sort(key=lambda x: x[1])
 
     results: dict[str, RouteResult] = {}
-    for net_name, _, first_pin, last_pin in routable:
-        result = route_net(graph, first_pin, last_pin, net_name)
-        if result is not None:
-            results[net_name] = result
-            # Mark routed path as obstacle for subsequent nets.
-            graph.mark_path_as_obstacle(result.path)
+    for net_name, _, pins in routable:
+        if len(pins) == 2:
+            # Two-pin net: existing fast path
+            result = route_net(graph, pins[0], pins[-1], net_name)
+            if result is not None:
+                results[net_name] = result
+                graph.mark_path_as_obstacle(result.path)
+        else:
+            # Multi-pin net: sequential nearest-neighbor Steiner tree (H-7)
+            multi_result = _route_multi_pin_net(graph, net_name, pins)
+            if multi_result is not None:
+                results[net_name] = multi_result
 
     return results
+
+
+def _route_multi_pin_net(
+    graph: RoutingGraph,
+    net_name: str,
+    pins: list[tuple[float, float]],
+) -> RouteResult | None:
+    """Route a multi-pin net using sequential nearest-neighbor heuristic (H-7).
+
+    Starting from the first pin, greedily connects the nearest unrouted pin.
+    Produces a Steiner-tree approximation. All sub-paths are combined into a
+    single RouteResult.
+    """
+    routed_positions = {pins[0]}
+    unrouted = set(pins[1:])
+    all_paths: list[tuple] = []
+
+    while unrouted:
+        best_result = None
+        best_dist = float("inf")
+        best_pin = None
+
+        for pin in unrouted:
+            for routed in routed_positions:
+                result = route_net(graph, routed, pin, net_name)
+                if result is not None and result.success:
+                    d = _path_length(result.path)
+                    if d < best_dist:
+                        best_dist = d
+                        best_result = result
+                        best_pin = pin
+
+        if best_pin is None:
+            break  # Cannot reach remaining pins
+
+        all_paths.append(best_result.path)
+        routed_positions.add(best_pin)
+        unrouted.discard(best_pin)
+        graph.mark_path_as_obstacle(best_result.path)
+
+    if not all_paths:
+        return None
+
+    # Merge sub-paths into a single path for the result
+    merged = list(all_paths[0])
+    for extra_path in all_paths[1:]:
+        merged.extend(extra_path[1:])  # Skip first node (already in merged)
+
+    total_length = sum(_path_length(p) for p in all_paths)
+    return RouteResult(
+        net_name=net_name,
+        success=True,
+        path=tuple(merged),
+        length_mm=round(total_length, 4),
+    )
+
+
+def _path_length(path: tuple | list) -> float:
+    """Compute total Euclidean length of a path."""
+    total = 0.0
+    for i in range(len(path) - 1):
+        total += math.hypot(
+            path[i + 1][0] - path[i][0],
+            path[i + 1][1] - path[i][1],
+        )
+    return total
 
 
 def build_routing_graph(

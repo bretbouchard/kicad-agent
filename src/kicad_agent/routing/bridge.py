@@ -43,6 +43,7 @@ class TrackSegment:
     width: float
     layer: str
     net: str
+    net_id: int = 0
 
     def to_sexpr(self, uuid_tag: str = "") -> str:
         """Serialize to KiCad S-expression format.
@@ -61,7 +62,8 @@ class TrackSegment:
             f"    (layer \"{self.layer}\")",
         ]
         if self.net:
-            parts.append(f"    (net 0 \"{self.net}\")")
+            nid = self.net_id
+            parts.append(f'    (net {nid} "{self.net}")')
         if uuid_tag:
             parts.append(f"    (uuid {uuid_tag})")
         parts.append("  )")
@@ -144,6 +146,7 @@ class ViaSegment:
     diameter: float
     drill: float
     net: str
+    net_id: int = 0
 
     def to_sexpr(self, uuid_tag: str = "") -> str:
         """Serialize to KiCad via S-expression format.
@@ -162,7 +165,8 @@ class ViaSegment:
             f'    (layers "{self.from_layer}" "{self.to_layer}")',
         ]
         if self.net:
-            parts.append(f'    (net 0 "{self.net}")')
+            nid = self.net_id
+            parts.append(f'    (net {nid} "{self.net}")')
         if uuid_tag:
             parts.append(f"    (uuid {uuid_tag})")
         parts.append("  )")
