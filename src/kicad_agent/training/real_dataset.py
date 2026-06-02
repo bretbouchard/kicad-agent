@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import re
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -30,6 +32,52 @@ from kicad_agent.training.schematic_graph_builder import (
 )
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# GitHub token validation (H-11)
+# ---------------------------------------------------------------------------
+
+_GITHUB_TOKEN_PATTERN = re.compile(
+    r"^(ghp_|gho_|github_pat_|ghs_|ghu_)[a-zA-Z0-9]{36,}$"
+)
+
+
+def _resolve_github_token(token: str | None = None) -> str:
+    """Resolve and validate a GitHub personal access token.
+
+    Accepts an explicit token string or falls back to the GITHUB_TOKEN
+    environment variable. Validates format against known GitHub token
+    prefixes (ghp_, gho_, github_pat_, ghs_, ghu_).
+
+    Args:
+        token: Explicit GitHub token string. If None or empty, reads
+            from the GITHUB_TOKEN environment variable.
+
+    Returns:
+        Validated GitHub token string.
+
+    Raises:
+        ValueError: If no token is provided/found or format is invalid.
+    """
+    resolved = token or os.environ.get("GITHUB_TOKEN", "")
+
+    if not resolved or not resolved.strip():
+        raise ValueError(
+            "GitHub token must be provided via parameter or GITHUB_TOKEN env var"
+        )
+
+    resolved = resolved.strip()
+
+    if not _GITHUB_TOKEN_PATTERN.match(resolved):
+        raise ValueError(
+            f"GitHub token has invalid format. "
+            f"Expected prefix ghp_/gho_/github_pat_/ghs_/ghu_ followed by "
+            f"36+ alphanumeric characters. "
+            f"Got: {resolved[:8]}... ({len(resolved)} chars)"
+        )
+
+    return resolved
+
 
 # ---------------------------------------------------------------------------
 # Quality thresholds (T-13-09)
@@ -364,8 +412,8 @@ def _schematic_result_to_sample(result: SchematicGraphResult, sample_id: int) ->
 
 
 def run_pipeline(
-    token: str,
-    staging_dir: Path,
+    token: str | None = None,
+    staging_dir: Path = Path("staging"),
     max_repos: int = 500,
     output_dir: Path | None = None,
 ) -> RealBoardDataset:
@@ -377,6 +425,7 @@ def run_pipeline(
 
     Args:
         token: GitHub personal access token with public_repo scope.
+            Falls back to GITHUB_TOKEN env var if not provided.
         staging_dir: Local directory for downloaded KiCad files.
         max_repos: Maximum number of repos to discover.
         output_dir: If provided, write train.jsonl, val.jsonl, test.jsonl
@@ -384,12 +433,14 @@ def run_pipeline(
 
     Returns:
         RealBoardDataset with metadata including discovery and filter counts.
+
+    Raises:
+        ValueError: If token is missing or has invalid format.
     """
-    if not token or not token.strip():
-        raise ValueError("GitHub token must be a non-empty string")
+    resolved_token = _resolve_github_token(token)
 
     # 1. Discover repos with KiCad file pairs
-    discovery = GithubDiscovery(token)
+    discovery = GithubDiscovery(resolved_token)
     repo_pairs = discovery.discover_pairs(max_repos=max_repos)
 
     n_discovered = sum(len(pairs) for _, pairs in repo_pairs)

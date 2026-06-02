@@ -104,6 +104,9 @@ def _generate_chunk(
     return results
 
 
+_SEED_SPACING = 1_000_000
+
+
 def generate_samples_parallel(
     n_samples: int = 100_000,
     n_workers: int = 4,
@@ -123,6 +126,9 @@ def generate_samples_parallel(
 
     Returns:
         MazeDataset with all generated samples, deduplicated.
+
+    Raises:
+        AssertionError: If worker seed ranges would overlap.
     """
     if board_configs is None:
         board_configs = DEFAULT_BOARD_CONFIGS
@@ -131,20 +137,38 @@ def generate_samples_parallel(
     seen_hashes: set[str] = set()
     all_samples: list[MazeSample] = []
 
+    # Compute per-worker seed offsets and assert no overlap (H-12)
+    worker_seed_offsets: list[int] = []
+    for worker_id in range(n_workers):
+        start = worker_id * chunk_size
+        if start >= n_samples:
+            break
+        offset = seed_base + worker_id * _SEED_SPACING
+        worker_seed_offsets.append(offset)
+
+    # Assert non-overlapping seed ranges across workers
+    for i in range(len(worker_seed_offsets)):
+        for j in range(i + 1, len(worker_seed_offsets)):
+            range_i_max = worker_seed_offsets[i] + chunk_size
+            range_j_min = worker_seed_offsets[j]
+            assert range_i_max <= range_j_min, (
+                f"Worker seed ranges overlap: worker {i} max={range_i_max}, "
+                f"worker {j} min={range_j_min}. "
+                f"Increase _SEED_SPACING or reduce n_samples/n_workers."
+            )
+
     with ProcessPoolExecutor(max_workers=n_workers) as executor:
         futures = []
-        for worker_id in range(n_workers):
+        for worker_id, seed_offset in enumerate(worker_seed_offsets):
             start = worker_id * chunk_size
             end = min(start + chunk_size, n_samples)
-            if start >= n_samples:
-                break
             actual_chunk_size = end - start
             futures.append(
                 executor.submit(
                     _generate_chunk,
                     chunk_id=worker_id,
                     n_samples=actual_chunk_size,
-                    seed_offset=seed_base,
+                    seed_offset=seed_offset,
                     board_configs=board_configs,
                 )
             )

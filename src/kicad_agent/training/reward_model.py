@@ -15,6 +15,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -289,18 +290,21 @@ class RewardModel:
         """Check if PyTorch model is available."""
         return self.model is not None
 
-    def generate(self, sample) -> Any:
+    def generate(self, sample, reference_model: RewardModel | None = None) -> Any:
         """Generate a chain for a sample using best-of-N selection.
 
         Generates 1 correct solution chain + 4 corrupted variants, scores each
-        with the neural reward model. The chain with the highest predicted
-        reward is selected — no artificial bonus.
+        using independent heuristic scoring (format + step count). Optionally
+        uses an external reference model for neural scoring instead of self.
 
         Args:
             sample: MazeSample to generate a chain for.
+            reference_model: Optional external RewardModel for neural scoring.
+                When provided, its predictions are blended with the independent
+                heuristic score (50/50). When None, only heuristic scoring is used.
 
         Returns:
-            MazeReasoningChain with highest predicted reward.
+            MazeReasoningChain with highest combined score.
         """
         from kicad_agent.training.chains import (
             synthesize_maze_chain,
@@ -319,8 +323,17 @@ class RewardModel:
         best_score = -1.0
 
         for chain in candidates:
-            pred = predict_reward(self, chain.chain_text)
-            score = (pred.format_score + pred.quality_score + pred.accuracy_score) / 3.0
+            # Independent heuristic score (no self-reference)
+            heuristic_score = _independent_score(chain.chain_text)
+
+            # Optionally blend with external reference model predictions
+            if reference_model is not None:
+                pred = predict_reward(reference_model, chain.chain_text)
+                neural_score = (pred.format_score + pred.quality_score + pred.accuracy_score) / 3.0
+                score = 0.5 * heuristic_score + 0.5 * neural_score
+            else:
+                score = heuristic_score
+
             if score > best_score:
                 best_score = score
                 best_chain = chain
@@ -359,6 +372,57 @@ def predict_reward(model: RewardModel, chain_text: str) -> PredictedReward:
         quality_score=qual.item(),
         accuracy_score=acc.item(),
     )
+
+
+# ---------------------------------------------------------------------------
+# Independent scoring (H-14): format + step-count heuristic, no model self-ref
+# ---------------------------------------------------------------------------
+
+# Patterns for format validation
+_STEP_PATTERN = re.compile(r"Step\s+\d+", re.IGNORECASE)
+_OBSERVATION_PATTERN = re.compile(r"Observation:", re.IGNORECASE)
+_REASONING_PATTERN = re.compile(r"Reasoning:", re.IGNORECASE)
+_COORDINATE_PATTERN = re.compile(r"<point\s+[\d.]+\s*,\s*[\d.]+>")
+_CONCLUSION_PATTERN = re.compile(r"Conclusion:", re.IGNORECASE)
+
+
+def _independent_score(chain_text: str) -> float:
+    """Score a chain using deterministic heuristics, not model predictions.
+
+    Evaluates format compliance (presence of expected chain sections) and
+    reasoning depth (step count). This is used for best-of-N selection to
+    avoid self-referential scoring where the model ranks its own outputs.
+
+    Scoring rubric (each 0-1):
+      - Format: fraction of expected section headers present
+      - Depth: normalized step count (capped at 1.0 for 8+ steps)
+
+    The final score is the arithmetic mean of format and depth.
+
+    Args:
+        chain_text: The reasoning chain text to evaluate.
+
+    Returns:
+        Score between 0.0 and 1.0.
+    """
+    if not chain_text or not chain_text.strip():
+        return 0.0
+
+    # Format validation: check for expected sections
+    expected_patterns = [
+        _OBSERVATION_PATTERN,
+        _REASONING_PATTERN,
+        _COORDINATE_PATTERN,
+        _CONCLUSION_PATTERN,
+    ]
+    sections_found = sum(1 for p in expected_patterns if p.search(chain_text))
+    format_score = sections_found / len(expected_patterns)
+
+    # Step count depth (reward longer reasoning chains, cap at 8)
+    steps = _STEP_PATTERN.findall(chain_text)
+    depth_score = min(len(steps) / 8.0, 1.0)
+
+    return (format_score + depth_score) / 2.0
 
 
 def train_reward_model(

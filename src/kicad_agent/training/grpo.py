@@ -93,6 +93,7 @@ class GRPOTrainer:
         self.reward_model = reward_model
         self.ref_model = ref_model
         self.config = config or GRPOConfig()
+        self._step_counter: int = 0
 
     def compute_group_rewards(
         self,
@@ -255,7 +256,8 @@ class GRPOTrainer:
         from kicad_agent.training.reward import score_chain
         from kicad_agent.training.reward_model import predict_reward
 
-        rng = random.Random()
+        rng = random.Random(self.config.seed + self._step_counter)
+        self._step_counter += 1
 
         chain_groups: list[list[str]] = []
         all_chains_by_sample: list[list] = []
