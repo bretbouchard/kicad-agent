@@ -10,6 +10,7 @@ from kicad_agent.ops.registry import (
     get_operations_by_category,
     get_operations_for_file_type,
     get_readonly_operations,
+    validate_dependencies,
     validate_registry_completeness,
     OpMeta,
 )
@@ -137,6 +138,26 @@ class TestQueryFunctions:
         deps = get_operation_dependencies("regenerate_wiring")
         assert deps == ["resolve_pin_positions"]
 
+    def test_diagnose_violations_dependencies(self) -> None:
+        deps = get_operation_dependencies("diagnose_violations")
+        assert deps == ["classify_violations"]
+
+    def test_erc_auto_fix_dependencies(self) -> None:
+        deps = get_operation_dependencies("erc_auto_fix")
+        assert deps == ["parse_erc"]
+
+    def test_erc_auto_fix_hierarchical_dependencies(self) -> None:
+        deps = get_operation_dependencies("erc_auto_fix_hierarchical")
+        assert deps == ["parse_erc"]
+
+    def test_fix_shorted_nets_dependencies(self) -> None:
+        deps = get_operation_dependencies("fix_shorted_nets")
+        assert deps == ["parse_erc"]
+
+    def test_resolve_shorted_nets_dependencies(self) -> None:
+        deps = get_operation_dependencies("resolve_shorted_nets")
+        assert deps == ["parse_erc"]
+
     def test_unknown_op_raises_keyerror(self) -> None:
         with pytest.raises(KeyError, match="nonexistent_op"):
             get_operation_dependencies("nonexistent_op")
@@ -173,3 +194,27 @@ class TestQueryFunctions:
             "propagate_symbol_change",
         }
         assert op_types == expected
+
+
+class TestValidateDependencies:
+    """Test the validate_dependencies function."""
+
+    def test_empty_list_returns_empty(self) -> None:
+        assert validate_dependencies([]) == []
+
+    def test_no_deps_needed(self) -> None:
+        assert validate_dependencies(["add_component"]) == []
+
+    def test_missing_single_prerequisite(self) -> None:
+        assert validate_dependencies(["connect_pins"]) == ["resolve_pin_positions"]
+
+    def test_satisfied_prerequisite(self) -> None:
+        assert validate_dependencies(["resolve_pin_positions", "connect_pins"]) == []
+
+    def test_chain_diagnose_violations(self) -> None:
+        assert validate_dependencies(["diagnose_violations"]) == ["classify_violations"]
+        assert validate_dependencies(["classify_violations", "diagnose_violations"]) == []
+
+    def test_unknown_op_skipped(self) -> None:
+        result = validate_dependencies(["nonexistent_op", "connect_pins"])
+        assert result == ["resolve_pin_positions"]
