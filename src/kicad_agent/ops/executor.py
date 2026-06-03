@@ -1488,6 +1488,9 @@ class OperationExecutor:
         if handler is None:
             raise ValueError(f"Unknown schematic query op_type: {root.op_type!r}")
         details = handler(root, ir, file_path)
+        # Clear registry after query so ParseResult id is released for
+        # subsequent operations in the same process (e.g. tests).
+        _clear_registry()
         return {
             "success": True,
             "operation": root.op_type,
@@ -1571,6 +1574,9 @@ class OperationExecutor:
         if self._cache:
             self._cache.invalidate(file_path)
             self._cache.put(file_path, CacheEntry(parse_result=parse_result))
+
+        # Clear registry so ParseResult id is released for subsequent operations
+        _clear_registry()
 
         return {
             "success": True,

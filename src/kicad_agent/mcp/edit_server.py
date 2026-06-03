@@ -58,10 +58,17 @@ _MAX_RESPONSE_BYTES = 50 * 1024  # 50KB
 # ---------------------------------------------------------------------------
 
 _READ_ONLY_OPS = frozenset({
-    "query_connectivity", "navigate_hierarchy", "validate_power_nets",
-    "validate_schematic", "parse_erc", "extract_violation_positions",
-    "validate_hlabels", "cross_ref_check", "validate_refs",
-    "validate_footprint", "verify_pin_map",
+    # PCB query ops (from _QUERY_HANDLERS)
+    "query_connectivity", "review_schematic",
+    # Schematic query ops (from _SCHEMATIC_QUERY_HANDLERS)
+    "parse_erc", "validate_schematic", "resolve_pin_positions",
+    "classify_violations", "diagnose_violations",
+    "extract_nets", "detect_net_conflicts", "suggest_net_names",
+    "cross_ref_check", "validate_refs",
+    "validate_power_nets", "validate_hlabels",
+    "extract_violation_positions", "verify_pin_map",
+    "navigate_hierarchy", "validate_footprint",
+    "detect_routing_collisions", "detect_pin_overlaps",
 })
 
 _DESTRUCTIVE_OPS = frozenset({

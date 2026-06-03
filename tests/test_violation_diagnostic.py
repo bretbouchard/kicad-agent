@@ -329,9 +329,9 @@ class TestExecutorRegistration:
     """Verify diagnose_violations handler is registered in executor."""
 
     def test_diagnose_violations_in_schematic_handlers(self):
-        """'diagnose_violations' key exists in _SCHEMATIC_HANDLERS."""
-        from kicad_agent.ops.executor import _SCHEMATIC_HANDLERS
-        assert "diagnose_violations" in _SCHEMATIC_HANDLERS
+        """'diagnose_violations' key exists in _SCHEMATIC_QUERY_HANDLERS."""
+        from kicad_agent.ops.executor import _SCHEMATIC_QUERY_HANDLERS
+        assert "diagnose_violations" in _SCHEMATIC_QUERY_HANDLERS
 
     def test_operation_union_validates_diagnose_violations(self):
         """DiagnoseViolationsOp validates through Operation discriminated union."""
