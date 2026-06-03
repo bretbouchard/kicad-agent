@@ -546,6 +546,7 @@ __all__ = [
     "ExtractNetsOp",
     "DetectNetConflictsOp",
     "SuggestNetNamesOp",
+    "InferConnectivityOp",
     # ERC smart ops
     "ClassifyViolationsOp",
     "DiagnoseViolationsOp",

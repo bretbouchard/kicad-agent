@@ -116,6 +116,7 @@ class TestQueryFunctions:
             "extract_nets",
             "detect_net_conflicts",
             "suggest_net_names",
+            "infer_connectivity",
             "classify_violations",
             "diagnose_violations",
             "list_lib_entries",
@@ -172,9 +173,10 @@ class TestQueryFunctions:
             "modify_property",
             "duplicate_component",
             "array_replicate",
+            "snap_components_to_grid",
         ]
         assert op_types == expected
-        assert len(ops) == 6
+        assert len(ops) == 7
 
     def test_destructive_operations(self) -> None:
         ops = get_destructive_operations()
@@ -184,6 +186,7 @@ class TestQueryFunctions:
             "remove_net",
             "remove_wire",
             "remove_label",
+            "remove_labels",
             "remove_junction",
             "remove_no_connect",
             "remove_lib_entry",
