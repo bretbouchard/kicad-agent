@@ -20,8 +20,10 @@ from kicad_agent.ops.repair import (
     _find_position_for_unit,
     _get_unit_pin_map,
     _get_unit_pin_offsets,
+    _is_power_net,
     add_power_flags,
     detect_shorted_nets,
+    fix_shorted_nets,
     place_missing_units,
     place_no_connects,
     place_no_connects_from_erc,
@@ -1106,6 +1108,176 @@ class TestResolveShortedNets:
         assert "resolved" in output
         assert "skipped_power" in output
         assert "details" in output
+
+
+class TestPowerNetProtection:
+    """Tests for power-net protection in fix_shorted_nets — Plan 67-02.
+
+    HI-06 (Phase 66 Council): keep_majority could catastrophically remove
+    +9V labels in favor of AGND. These tests verify the protection logic.
+    """
+
+    def _make_shorted_ir(self, labels: list[tuple[str, float, float]]):
+        """Build a schematic with labels at specified positions, then parse.
+
+        Creates a schematic with pairs of labels at the same position to
+        simulate shorted nets. Returns (ir, path) for use in tests.
+        """
+        import os
+
+        sch = Schematic.create_new()
+        for text, x, y in labels:
+            sch.labels.append(LocalLabel(text=text, position=Position(X=x, Y=y)))
+
+        tmpdir = tempfile.mkdtemp()
+        sch_path = Path(tmpdir) / "test_short.kicad_sch"
+        sch.to_file(str(sch_path))
+        result = parse_schematic(sch_path)
+        ir = SchematicIR(_parse_result=result)
+        return ir, sch_path
+
+    def test_is_power_net_regex_patterns(self):
+        """Regex-based _is_power_net matches common and edge-case power names."""
+        # Standard voltage rails
+        assert _is_power_net("VCC") is True
+        assert _is_power_net("VDD") is True
+        assert _is_power_net("VSS") is True
+        assert _is_power_net("VEE") is True
+        assert _is_power_net("vcc") is True  # case-insensitive
+
+        # Ground variants
+        assert _is_power_net("GND") is True
+        assert _is_power_net("AGND") is True
+        assert _is_power_net("DGND") is True
+        assert _is_power_net("PGND") is True
+        assert _is_power_net("SGND") is True
+        assert _is_power_net("CHASSIS") is True
+
+        # Voltage patterns: +3V3, +5V, +9V, +12V, +15V, 3V3
+        assert _is_power_net("+3V3") is True
+        assert _is_power_net("+5V") is True
+        assert _is_power_net("+9V") is True
+        assert _is_power_net("+12V") is True
+        assert _is_power_net("+15V") is True
+        assert _is_power_net("+24V") is True
+        assert _is_power_net("+48V") is True
+        assert _is_power_net("3V3") is True
+        assert _is_power_net("5V") is True
+
+        # Negative voltage patterns
+        assert _is_power_net("-15V") is True
+        assert _is_power_net("-12V") is True
+        assert _is_power_net("-5V") is True
+
+        # Supply pin patterns
+        assert _is_power_net("VIN") is True
+        assert _is_power_net("VOUT") is True
+        assert _is_power_net("PWR") is True
+
+        # Signal names should NOT match
+        assert _is_power_net("SDA") is False
+        assert _is_power_net("AUDIO_OUT") is False
+        assert _is_power_net("EQ_STAGE_1") is False
+        assert _is_power_net("CLK") is False
+        assert _is_power_net("RESET") is False
+
+    def test_keep_majority_signal_only_keeps_majority(self):
+        """keep_majority with signal-only short keeps the net with more labels."""
+        ir, path = self._make_shorted_ir([
+            ("NET_A", 50.0, 50.0),
+            ("NET_B", 50.0, 50.0),
+        ])
+
+        # Mock detect_shorted_nets to return controlled short data, and
+        # mock NetPositionIndex for the keep_majority connection count.
+        short_data = {"shorts": [{"position": (50.0, 50.0), "nets": ["NET_A", "NET_B"]}], "clean": False}
+        mock_index = MagicMock()
+        mock_index.get_positions_for_net.side_effect = lambda name: (
+            {0, 1, 2} if name == "NET_A" else {0}
+        )
+
+        with patch("kicad_agent.ops.repair.detect_shorted_nets", return_value=short_data), \
+             patch("kicad_agent.ops.repair.NetPositionIndex.from_file", return_value=mock_index):
+            result = fix_shorted_nets(ir, path, strategy="keep_majority", dry_run=True)
+
+        # Should report the short and plan to remove the minority net
+        assert result["shorts_found"] >= 1
+        # The removed label(s) should be NET_B (fewer connections)
+        removed_names = [r["name"] for r in result["labels_removed"]]
+        assert "NET_B" in removed_names
+
+    def test_keep_majority_with_power_and_signal_keeps_power(self):
+        """keep_majority with power+signal short keeps the power net."""
+        ir, path = self._make_shorted_ir([
+            ("AGND", 50.0, 50.0),
+            ("DATA_LINE", 50.0, 50.0),
+        ])
+
+        short_data = {"shorts": [{"position": (50.0, 50.0), "nets": ["AGND", "DATA_LINE"]}], "clean": False}
+        mock_index = MagicMock()
+        mock_index.get_positions_for_net.side_effect = lambda name: (
+            {0} if name == "AGND" else {0, 1, 2, 3, 4}
+        )
+
+        with patch("kicad_agent.ops.repair.detect_shorted_nets", return_value=short_data), \
+             patch("kicad_agent.ops.repair.NetPositionIndex.from_file", return_value=mock_index):
+            result = fix_shorted_nets(ir, path, strategy="keep_majority", dry_run=True)
+
+        # Should keep AGND (power net), remove DATA_LINE
+        removed_names = [r["name"] for r in result["labels_removed"]]
+        assert "DATA_LINE" in removed_names
+        assert "AGND" not in removed_names
+
+    def test_keep_majority_power_to_power_skips(self):
+        """keep_majority with power+power short skips auto-fix entirely."""
+        ir, path = self._make_shorted_ir([
+            ("VCC", 50.0, 50.0),
+            ("+9V", 50.0, 50.0),
+        ])
+
+        short_data = {"shorts": [{"position": (50.0, 50.0), "nets": ["+9V", "VCC"]}], "clean": False}
+        mock_index = MagicMock()
+        mock_index.get_positions_for_net.return_value = {0}
+
+        with patch("kicad_agent.ops.repair.detect_shorted_nets", return_value=short_data), \
+             patch("kicad_agent.ops.repair.NetPositionIndex.from_file", return_value=mock_index):
+            result = fix_shorted_nets(ir, path, strategy="keep_majority", dry_run=True)
+
+        # Should find the short but refuse to fix it (no labels removed)
+        assert result["shorts_found"] >= 1
+        assert result["labels_removed"] == []
+
+    def test_keep_first_blocks_power_net_removal(self):
+        """keep_first refuses to remove a power net (safety guard)."""
+        # AUDIO_SIGNAL comes before VCC alphabetically, so keep_first
+        # keeps AUDIO_SIGNAL and tries to remove VCC -> safety guard blocks.
+        ir, path = self._make_shorted_ir([
+            ("AUDIO_SIGNAL", 50.0, 50.0),
+            ("VCC", 50.0, 50.0),
+        ])
+
+        result = fix_shorted_nets(ir, path, strategy="keep_first", dry_run=True)
+
+        # keep_first keeps AUDIO_SIGNAL (first alphabetically),
+        # would remove VCC (power net) -> safety guard blocks removal
+        assert result["shorts_found"] >= 1
+        assert result["labels_removed"] == []
+
+    def test_manual_strategy_allows_power_net_removal(self):
+        """manual strategy bypasses power-net guard (explicit user choice)."""
+        ir, path = self._make_shorted_ir([
+            ("VCC", 50.0, 50.0),
+            ("DATA_NET", 50.0, 50.0),
+        ])
+
+        result = fix_shorted_nets(
+            ir, path, strategy="manual", keep_nets=["DATA_NET"], dry_run=True,
+        )
+
+        # User explicitly chose DATA_NET over VCC — should be allowed
+        assert result["shorts_found"] >= 1
+        removed_names = [r["name"] for r in result["labels_removed"]]
+        assert "VCC" in removed_names
 
 
 # ---------------------------------------------------------------------------
