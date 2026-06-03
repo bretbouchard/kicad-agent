@@ -257,3 +257,17 @@ class CreateFootprintOp(BaseModel):
     @classmethod
     def _validate_footprint_name(cls, v: str) -> str:
         return _validate_safe_identifier(v, "footprint_name")
+
+
+class ConvertKicad6To10Op(BaseModel):
+    """Convert a KiCad 5/6 format schematic to KiCad 10 format.
+
+    SCHREPAIR-04: Multi-pass format conversion using section-based reassembly.
+
+    Attributes:
+        op_type: Discriminator literal ``"convert_kicad6_to_10"``.
+        target_file: Relative path to the KiCad 5/6 schematic file (H-01 validated).
+    """
+
+    op_type: Literal["convert_kicad6_to_10"] = "convert_kicad6_to_10"
+    target_file: TargetFile

@@ -122,7 +122,7 @@ class TestValidateFootprintReal:
 
     def test_validate_footprint_returns_false_for_missing(self, tmp_path: Path) -> None:
         """validate_footprint must return valid=False for non-existent footprint."""
-        from kicad_agent.ops.executor import _validate_footprint_impl
+        from kicad_agent.ops.handlers.pcb import _validate_footprint_impl
 
         result = _validate_footprint_impl(
             "NonexistentLib:NonexistentFootprint",
@@ -133,7 +133,7 @@ class TestValidateFootprintReal:
 
     def test_validate_footprint_returns_false_when_no_lib_table(self, tmp_path: Path) -> None:
         """validate_footprint must return valid=False when fp-lib-table is missing."""
-        from kicad_agent.ops.executor import _validate_footprint_impl
+        from kicad_agent.ops.handlers.pcb import _validate_footprint_impl
 
         # tmp_path has no fp-lib-table, so any lookup should fail
         result = _validate_footprint_impl(
@@ -145,7 +145,7 @@ class TestValidateFootprintReal:
 
     def test_validate_footprint_invalid_lib_id(self, tmp_path: Path) -> None:
         """validate_footprint must return valid=False for malformed lib_id."""
-        from kicad_agent.ops.executor import _validate_footprint_impl
+        from kicad_agent.ops.handlers.pcb import _validate_footprint_impl
 
         result = _validate_footprint_impl(
             "NoColonHere",
@@ -156,7 +156,7 @@ class TestValidateFootprintReal:
 
     def test_validate_footprint_result_has_lib_id(self, tmp_path: Path) -> None:
         """Result always includes the footprint_lib_id that was checked."""
-        from kicad_agent.ops.executor import _validate_footprint_impl
+        from kicad_agent.ops.handlers.pcb import _validate_footprint_impl
 
         result = _validate_footprint_impl(
             "Library:Footprint",

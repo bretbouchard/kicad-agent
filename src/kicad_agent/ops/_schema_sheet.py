@@ -46,3 +46,18 @@ class NavigateSheetsOp(BaseModel):
     op_type: Literal["navigate_hierarchy"] = "navigate_hierarchy"
     target_file: TargetFile
     max_depth: int = Field(default=-1, ge=-1, le=20, description="Max traversal depth (-1 = unlimited)")
+
+
+class RebuildRootSheetOp(BaseModel):
+    """Rebuild root schematic sheet pins from sub-sheet hierarchical labels.
+
+    SCHREPAIR-08: Reads all sub-sheets, extracts hierarchical labels,
+    and regenerates sheet pins with correct positioning.
+
+    Attributes:
+        op_type: Discriminator literal ``"rebuild_root_sheet"``.
+        target_file: Relative path to the root KiCad schematic file (H-01 validated).
+    """
+
+    op_type: Literal["rebuild_root_sheet"] = "rebuild_root_sheet"
+    target_file: TargetFile

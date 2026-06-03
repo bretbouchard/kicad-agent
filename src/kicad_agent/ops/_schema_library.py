@@ -1,6 +1,6 @@
-"""Library operation schemas -- add and remove library entries."""
+"""Library operation schemas -- add, remove, list, and update library entries."""
 
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -80,3 +80,28 @@ class ListLibEntriesOp(BaseModel):
 
     op_type: Literal["list_lib_entries"] = "list_lib_entries"
     target_file: TargetFile
+
+
+class UpdateSymbolsFromLibraryOp(BaseModel):
+    """Re-embed all mismatched symbols from their libraries.
+
+    Equivalent to KiCad GUI's "Update Symbol from Library" for all symbols
+    whose embedded lib_symbols definition diverges from the library version.
+
+    Attributes:
+        op_type: Discriminator literal ``"update_symbols_from_library"``.
+        target_file: Relative path to the .kicad_sch file.
+        references: Optional list of specific references to update. If None, updates all mismatches.
+        dry_run: If True, report what would change without modifying the file.
+    """
+
+    op_type: Literal["update_symbols_from_library"] = "update_symbols_from_library"
+    target_file: TargetFile
+    references: Optional[list[str]] = Field(
+        default=None,
+        description="Specific references to update, or None for all mismatches",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Report mismatches without modifying the file",
+    )

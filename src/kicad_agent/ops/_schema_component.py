@@ -204,3 +204,55 @@ class ArrayReplicateOp(BaseModel):
     @classmethod
     def _validate_reference(cls, v: str) -> str:
         return _validate_safe_identifier(v, "source_reference")
+
+
+class SwapSymbolOp(BaseModel):
+    """Swap a component's symbol (lib_id) in-place, preserving position and properties.
+
+    Replaces the component's lib_id reference with a new one. Optionally embeds
+    the new symbol definition from the library into the schematic's lib_symbols
+    section if it's not already present.
+
+    The component's Reference, Value, position, and other properties are preserved.
+    Wire connections are not affected (they reference UUIDs, not symbol types).
+
+    Attributes:
+        op_type: Discriminator literal ``"swap_symbol"``.
+        target_file: Relative path to the .kicad_sch file.
+        reference: Reference designator of the component to swap (e.g. ``"U1"``).
+        new_lib_id: New library:symbol ID (e.g. ``"Analog-Ecosystem-SMD:RP2350B"``).
+        library_path: Optional path to .kicad_sym for auto-embedding. If provided,
+            the symbol definition will be embedded into lib_symbols if missing.
+        preserve_position: Keep the component's current (at X Y) coordinates.
+        preserve_properties: Keep the component's current properties (Value, Footprint, etc.).
+    """
+
+    op_type: Literal["swap_symbol"] = "swap_symbol"
+    target_file: TargetFile
+    reference: str = Field(min_length=1, max_length=64)
+    new_lib_id: str = Field(
+        min_length=1, max_length=256,
+        description="New library:symbol ID (e.g. 'Library:SymbolName')",
+    )
+    library_path: Optional[str] = Field(
+        default=None, max_length=512,
+        description="Optional path to .kicad_sym for auto-embedding",
+    )
+    preserve_position: bool = Field(
+        default=True,
+        description="Keep the component's current position",
+    )
+    preserve_properties: bool = Field(
+        default=True,
+        description="Keep the component's current properties",
+    )
+
+    @field_validator("reference")
+    @classmethod
+    def _validate_reference_swap(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "reference")
+
+    @field_validator("new_lib_id")
+    @classmethod
+    def _validate_new_lib_id(cls, v: str) -> str:
+        return _validate_safe_identifier(v, "new_lib_id")

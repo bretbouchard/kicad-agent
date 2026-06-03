@@ -129,3 +129,17 @@ class AddJunctionOp(BaseModel):
     op_type: Literal["add_junction"] = "add_junction"
     target_file: TargetFile
     position: PositionSpec
+
+
+class AddPowerFlagOp(BaseModel):
+    """Place PWR_FLAG symbols at power_pin_not_driven ERC violation positions.
+
+    SCHREPAIR-06: ERC-driven power flag placement.
+
+    Attributes:
+        op_type: Discriminator literal ``"add_power_flag"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+    """
+
+    op_type: Literal["add_power_flag"] = "add_power_flag"
+    target_file: TargetFile

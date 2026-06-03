@@ -12,8 +12,8 @@ Covers:
 import pytest
 from pathlib import Path
 
+from kicad_agent.ops._schema_library import UpdateSymbolsFromLibraryOp
 from kicad_agent.ops._schema_repair import (
-    UpdateSymbolsFromLibraryOp,
     FixShortedNetsOp,
     FixPinTypeMismatchesOp,
     PlaceMissingUnitsOp,

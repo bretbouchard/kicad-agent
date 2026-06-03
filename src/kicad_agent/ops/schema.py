@@ -177,6 +177,7 @@ from kicad_agent.ops._schema_component import (  # noqa: E402
     ModifyPropertyOp,
     DuplicateComponentOp,
     ArrayReplicateOp,
+    SwapSymbolOp,
 )
 from kicad_agent.ops._schema_net import (  # noqa: E402
     AddNetOp,
@@ -202,6 +203,7 @@ from kicad_agent.ops._schema_wire import (  # noqa: E402
     AddPowerOp,
     AddNoConnectOp,
     AddJunctionOp,
+    AddPowerFlagOp,
 )
 from kicad_agent.ops._schema_remove import (  # noqa: E402
     RemoveWireOp,
@@ -216,6 +218,7 @@ from kicad_agent.ops._schema_library import (  # noqa: E402
     AddLibEntryOp,
     RemoveLibEntryOp,
     ListLibEntriesOp,
+    UpdateSymbolsFromLibraryOp,
 )
 from kicad_agent.ops._schema_pcb import (  # noqa: E402
     AddNetClassOp,
@@ -249,28 +252,24 @@ from kicad_agent.ops._schema_create import (  # noqa: E402
     EmbedSymbolOp,
     CreateFootprintOp,
     FootprintPadSpec,
+    ConvertKicad6To10Op,
 )
 from kicad_agent.ops._schema_repair import (  # noqa: E402
     RepairSchematicOp,
-    ConvertKicad6To10Op,
     SnapToGridOp,
-    AddPowerFlagOp,
-    RebuildRootSheetOp,
-    SwapSymbolOp,
-    UpdateSymbolsFromLibraryOp,
     FixShortedNetsOp,
     FixPinTypeMismatchesOp,
     PlaceMissingUnitsOp,
     RemoveDanglingWiresOp,
     BreakWireShortsOp,
     ResolveShortedNetsOp,
-    PlaceNetLabelsOp,
 )
 # ErcAutoFixOp migrated to _schema_erc_smart.py (Council H-02: atomic schema migration)
 from kicad_agent.ops._schema_sheet import (  # noqa: E402
     AddSheetOp,
     AddSheetPinOp,
     NavigateSheetsOp,
+    RebuildRootSheetOp,
 )
 from kicad_agent.ops._schema_crossfile import (  # noqa: E402
     PropagateSymbolChangeOp,
@@ -286,6 +285,7 @@ from kicad_agent.ops._schema_schematic_routing import (  # noqa: E402
     CollisionZone,
     RegenerateWiringOp,
     ResolvePinPositionsOp,
+    PlaceNetLabelsOp,
 )
 from kicad_agent.ops._schema_schematic_intel import (  # noqa: E402
     ExtractNetsOp,

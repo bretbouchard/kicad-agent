@@ -286,3 +286,37 @@ class RegenerateWiringOp(BaseModel):
     collision_zones: list[CollisionZone] = Field(default_factory=list, max_length=50)
     auto_detect_collisions: bool = Field(default=True)
     max_wire_length: float = Field(default=40.0, gt=0)
+
+
+class PlaceNetLabelsOp(BaseModel):
+    """Place net labels on IC pins based on a pin-to-net mapping.
+
+    Issue #8: Takes a pin_map (built-in profile or user-provided JSON) and
+    places global labels at IC pin positions that already have wire connections.
+    Critical safety: labels are ONLY placed at positions with wire endpoints,
+    preventing label_dangling violations.
+
+    Pins mapped to None receive no_connect flags (only if no wire exists).
+
+    Attributes:
+        op_type: Discriminator literal ``"place_net_labels"``.
+        target_file: Relative path to the .kicad_sch file.
+        pin_map: Built-in profile name (e.g. "backplane") or path to JSON mapping file.
+        references: Optional list of specific component references. None = all matching.
+        dry_run: If True, report what would be placed without modifying.
+    """
+
+    op_type: Literal["place_net_labels"] = "place_net_labels"
+    target_file: TargetFile
+    pin_map: str = Field(
+        default="auto",
+        description="Built-in profile name or path to JSON pin_map file",
+    )
+    references: Optional[list[str]] = Field(
+        default=None,
+        description="Specific component references to process, or None for all",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Report placements without modifying the file",
+    )

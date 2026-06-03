@@ -119,9 +119,12 @@ class TestSchemaSplit:
             CreateSymbolOp, EmbedSymbolOp,
         )
         from kicad_agent.ops._schema_repair import (
-            RepairSchematicOp, ConvertKicad6To10Op, SnapToGridOp,
-            AddPowerFlagOp, RebuildRootSheetOp, SwapSymbolOp,
+            RepairSchematicOp, SnapToGridOp,
         )
+        from kicad_agent.ops._schema_component import SwapSymbolOp
+        from kicad_agent.ops._schema_create import ConvertKicad6To10Op
+        from kicad_agent.ops._schema_wire import AddPowerFlagOp
+        from kicad_agent.ops._schema_sheet import RebuildRootSheetOp
         from kicad_agent.ops._schema_remove import (
             RemoveWireOp, RemoveLabelOp, RemoveJunctionOp, RemoveNoConnectOp,
         )
