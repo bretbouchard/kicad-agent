@@ -148,9 +148,10 @@ class TestM5BatchConnectLabelFallback:
     """Verify batch_connect handler uses a meaningful label name fallback."""
 
     def test_no_empty_string_fallback_in_executor(self):
-        """The executor source must not fall back to empty string for label names."""
-        executor_path = "/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/ops/executor.py"
-        with open(executor_path) as f:
+        """The batch_connect handler must not fall back to empty string for label names."""
+        # After Plan 74 refactor, batch_connect handler moved to handlers/schematic.py
+        handler_path = "/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/ops/handlers/schematic.py"
+        with open(handler_path) as f:
             source = f.read()
 
         # Find the batch_connect handler region
