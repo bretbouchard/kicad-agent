@@ -179,6 +179,7 @@ def _handle_infer_connectivity(op: Any, ir: SchematicIR, file_path: Path) -> dic
     from kicad_agent.schematic_routing.net_inference import infer_nets
     return infer_nets(
         sch_path=file_path,
-        pin_map=getattr(op, "pin_map", "auto"),
-        confidence_threshold=getattr(op, "confidence_threshold", "medium"),
+        pin_map=op.pin_map,
+        confidence_threshold=op.confidence_threshold,
+        ir=ir,
     )

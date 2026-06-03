@@ -151,6 +151,10 @@ def _load_pin_map(pin_map: str, file_path: Path) -> dict[str, dict[str, str | No
     Returns:
         Dict mapping component entry_name -> {pin_name -> net_name_or_None}.
     """
+    # "none" means no mapping — used by infer_connectivity to disable suggestions
+    if pin_map == "none":
+        return {}
+
     if pin_map in _BUILTIN_PROFILES:
         return _BUILTIN_PROFILES[pin_map]
 

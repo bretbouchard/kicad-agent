@@ -781,6 +781,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "infer_connectivity": {
+        "category": "schematic_intel",
+        "description": "Infer net connectivity from partial wiring with confidence scoring",
+        "file_types": [".kicad_sch"],
+        "is_readonly": True,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
     "detect_net_conflicts": {
         "category": "schematic_intel",
         "description": "Detect net naming conflicts in a schematic file",

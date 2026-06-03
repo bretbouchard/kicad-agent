@@ -73,3 +73,27 @@ class SuggestNetNamesOp(BaseModel):
         default="ref_pin",
         description="Naming convention for component-ref-based suggestions",
     )
+
+
+class InferConnectivityOp(BaseModel):
+    """Infer net connectivity from partial wiring with confidence scoring.
+
+    SCH-INTEL-04: Returns scored net list and unconnected pin analysis.
+
+    Attributes:
+        op_type: Discriminator literal "infer_connectivity".
+        target_file: Relative path to the target .kicad_sch file.
+        pin_map: Built-in profile name ("auto", "backplane", "channel-strip", "none").
+        confidence_threshold: Minimum confidence to include ("low", "medium", "high").
+    """
+
+    op_type: Literal["infer_connectivity"] = "infer_connectivity"
+    target_file: TargetFile
+    pin_map: Literal["auto", "backplane", "channel-strip", "none"] = Field(
+        default="auto",
+        description="Pin mapping profile: auto, backplane, channel-strip, or none",
+    )
+    confidence_threshold: Literal["low", "medium", "high"] = Field(
+        default="medium",
+        description="Minimum confidence level to include in results",
+    )

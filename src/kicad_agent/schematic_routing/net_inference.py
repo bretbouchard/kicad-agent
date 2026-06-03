@@ -40,6 +40,7 @@ def infer_nets(
     sch_path: Path | str,
     pin_map: str = "auto",
     confidence_threshold: str = "medium",
+    ir: SchematicIR | None = None,
 ) -> dict[str, Any]:
     """Infer net connectivity from partial wiring.
 
@@ -52,6 +53,7 @@ def infer_nets(
         sch_path: Path to the .kicad_sch file.
         pin_map: Built-in profile name or path to JSON mapping file.
         confidence_threshold: Minimum confidence to include ("low", "medium", "high").
+        ir: Optional pre-built SchematicIR to avoid re-parsing (Council CRITICAL #1).
 
     Returns:
         Dict with "nets", "unconnected_pins", and "stats" keys.
@@ -95,7 +97,7 @@ def infer_nets(
     # Step 3: Identify unconnected pins and suggest nets from profiles
     mapping = _safe_load_pin_map(pin_map, sch_path)
     connected_refs = _build_connected_ref_set(raw_nets)
-    unconnected = _find_unconnected_pins(sch_path, connected_refs, mapping)
+    unconnected = _find_unconnected_pins(sch_path, connected_refs, mapping, ir=ir)
 
     return {
         "nets": nets,
@@ -162,13 +164,16 @@ def _find_unconnected_pins(
     sch_path: Path,
     connected: set[tuple[str, str]],
     mapping: dict[str, dict[str, str | None]],
+    ir: SchematicIR | None = None,
 ) -> list[dict[str, Any]]:
     """Find pins not in any net and suggest net names from profiles."""
-    from kicad_agent.parser import parse_schematic
     from kicad_agent.ir.schematic_ir import SchematicIR
 
-    result = parse_schematic(sch_path)
-    ir = SchematicIR(_parse_result=result)
+    if ir is None:
+        from kicad_agent.parser import parse_schematic
+        result = parse_schematic(sch_path)
+        ir = SchematicIR(_parse_result=result)
+
     all_pins = ir.get_pin_positions()
 
     # Build ref -> lib_id lookup
