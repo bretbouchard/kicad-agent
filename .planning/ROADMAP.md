@@ -1185,6 +1185,46 @@ Plans:
 - [ ] 67-02-PLAN.md — Add power-net protection + keep_majority strategy to fix_shorted_nets() (HI-06)
 - [ ] 67-03-PLAN.md — Create atomic resolve_shorted_nets() combining break+fix with graph-bridge wire selection (HI-05, HI-07, ME-04)
 
+### Phase 70: Persistent Undo Stack — Testing & CLI
+**Goal**: Harden PersistentUndoStack with comprehensive tests and add `kicad-agent undo`/`kicad-agent redo` CLI commands
+**Depends on**: Phase 33 (in-memory UndoStack), existing persistent_undo.py
+**GitHub Issue**: #7
+**Requirements**: UNDO-06, UNDO-07, UNDO-08
+**Success Criteria** (what must be TRUE):
+  1. PersistentUndoStack survives process restart — push in one process, pop in another
+  2. Manifest corruption is handled gracefully (missing files, malformed JSON)
+  3. Atomic write guarantees — no partial entries on crash
+  4. prune_old_entries() cleans orphaned files
+  5. `kicad-agent undo` CLI command works end-to-end
+  6. `kicad-agent redo` CLI command works end-to-end
+  7. `.kicad-agent/` auto-added to `.gitignore`
+  8. 15+ tests covering persistence, crash recovery, CLI commands
+**Plans**: 2 plans
+
+Plans:
+- [ ] 70-01-PLAN.md — PersistentUndoStack test suite: persistence, crash recovery, prune, concurrent access (UNDO-06)
+- [ ] 70-02-PLAN.md — CLI undo/redo commands + .gitignore integration (UNDO-07, UNDO-08)
+
+### Phase 71: Pin-to-Net Mapping — Testing & Extended Profiles
+**Goal**: Harden place_net_labels with comprehensive tests, add RP2350B + more IC profiles, and validate against real schematics
+**Depends on**: Phase 38 (schematic routing), existing net_label_placer.py
+**GitHub Issue**: #8
+**Requirements**: PINMAP-01, PINMAP-02, PINMAP-03
+**Success Criteria** (what must be TRUE):
+  1. place_net_labels correctly places labels at wire-connected positions
+  2. Safety gate: zero labels placed at bare pin positions (no label_dangling)
+  3. Existing labels are never duplicated
+  4. dry_run mode returns accurate preview without modifying IR
+  5. None-mapped pins get no_connect flags only when no wire exists
+  6. RP2350B, NE5532, CD4066, CD4060 profiles added to backplane mapping
+  7. Custom JSON pin_map files load correctly
+  8. 20+ tests covering all safety gates, profiles, edge cases
+**Plans**: 2 plans
+
+Plans:
+- [ ] 71-01-PLAN.md — place_net_labels test suite: safety gates, wire check, dry_run, existing labels, edge cases (PINMAP-01, PINMAP-02)
+- [ ] 71-02-PLAN.md — Extended IC profiles (RP2350B, NE5532, CD4066, CD4060), custom JSON loading, integration test (PINMAP-03)
+
 ## v3.1 Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -1197,3 +1237,5 @@ Plans:
 | 65. Architecture Refactor | 0/4 | Planned | — |
 | 66. Netlist-Aware Placement | 1/1 | Complete | 2026-06-02 |
 | 67. Short Resolution | 0/3 | Planned | — |
+| 70. Persistent Undo Testing & CLI | 0/2 | Planned | — |
+| 71. Pin-to-Net Mapping Testing & Profiles | 0/2 | Planned | — |

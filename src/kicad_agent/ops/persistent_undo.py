@@ -69,8 +69,25 @@ class PersistentUndoStack(UndoStack):
         # Ensure directory exists
         self._undo_dir.mkdir(parents=True, exist_ok=True)
 
+        # Auto-add .kicad-agent/ to .gitignore
+        self._ensure_gitignore()
+
         # Load existing entries from disk
         self._load_from_disk()
+
+    def _ensure_gitignore(self) -> None:
+        """Add .kicad-agent/ to .gitignore if not already present."""
+        gitignore = self._project_dir / ".gitignore"
+        entry = ".kicad-agent/"
+        try:
+            if gitignore.exists():
+                content = gitignore.read_text(encoding="utf-8")
+                if entry not in content:
+                    gitignore.write_text(content.rstrip() + "\n" + entry + "\n", encoding="utf-8")
+            else:
+                gitignore.write_text(entry + "\n", encoding="utf-8")
+        except OSError:
+            pass  # Not critical — best effort
 
     def _validate_entry_path(self, entry_file: str) -> Optional[Path]:
         """Validate an entry file path from the manifest, preventing path traversal.
@@ -162,6 +179,7 @@ class PersistentUndoStack(UndoStack):
                         "file_path": str(entry.file_path),
                         "entry_file": entry_file,
                         "op_type": entry.op_type,
+                        "seq": int(entry_file.split("_", 1)[0]),
                     })
 
         # Atomic write via temp file
@@ -191,8 +209,9 @@ class PersistentUndoStack(UndoStack):
 
     def _write_entry(self, entry: UndoEntry) -> None:
         """Write a single undo entry to disk."""
-        seq = self._next_seq
-        self._next_seq += 1
+        with self._manifest_lock:
+            seq = self._next_seq
+            self._next_seq += 1
         safe_name = str(entry.file_path).replace("/", "_").replace(".", "-")
         safe_name = safe_name[:_MAX_SAFE_NAME]
         entry_file = f"{seq:06d}_{safe_name}.json"

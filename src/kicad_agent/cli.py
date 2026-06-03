@@ -35,7 +35,7 @@ from kicad_agent.handler import format_result, handle_operation, validate_operat
 from kicad_agent.logging_config import configure_logging
 from kicad_agent.ops.schema import get_operation_schema
 
-_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "demo", "playground", "dfm"}
+_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "demo", "playground", "dfm", "undo", "redo"}
 
 _SUBCOMMAND_DESCRIPTIONS = {
     "collect": "Collect real-world KiCad training data from GitHub.",
@@ -52,6 +52,8 @@ _SUBCOMMAND_DESCRIPTIONS = {
     "demo": "Generate, validate, and render a schematic in one command.",
     "playground": "Start interactive web playground.",
     "dfm": "Run DFM (Design for Manufacturing) analysis on a KiCad PCB.",
+    "undo": "Undo the last kicad-agent operation on a file.",
+    "redo": "Redo the most recently undone operation.",
 }
 
 
@@ -730,6 +732,56 @@ def _handle_demo(argv: list[str]) -> None:
         sys.exit(1)
 
 
+def _handle_undo(argv: list[str]) -> None:
+    """Handle 'kicad-agent undo [file]'."""
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent undo",
+        description="Undo the last kicad-agent operation on a file.",
+    )
+    parser.add_argument("file", nargs="?", help="File to undo (default: latest)")
+    parser.add_argument("-p", "--project-dir", type=Path, default=None, help="Project directory")
+    args = parser.parse_args(argv)
+
+    from kicad_agent.ops.persistent_undo import PersistentUndoStack
+    from kicad_agent.ops.executor import OperationExecutor
+
+    base_dir = (args.project_dir or Path.cwd()).resolve()
+    stack = PersistentUndoStack(project_dir=base_dir)
+    executor = OperationExecutor(base_dir=base_dir, undo_stack=stack)
+
+    result = executor.undo(target_file=args.file)
+    if result.get("success"):
+        print(f"Undone: {result['undone_op']} on {result['target_file']}")
+    else:
+        print(f"Cannot undo: {result.get('error', 'No operations to undo')}", file=sys.stderr)
+        sys.exit(1)
+
+
+def _handle_redo(argv: list[str]) -> None:
+    """Handle 'kicad-agent redo [file]'."""
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent redo",
+        description="Redo the most recently undone operation.",
+    )
+    parser.add_argument("file", nargs="?", help="File to redo (default: latest)")
+    parser.add_argument("-p", "--project-dir", type=Path, default=None, help="Project directory")
+    args = parser.parse_args(argv)
+
+    from kicad_agent.ops.persistent_undo import PersistentUndoStack
+    from kicad_agent.ops.executor import OperationExecutor
+
+    base_dir = (args.project_dir or Path.cwd()).resolve()
+    stack = PersistentUndoStack(project_dir=base_dir)
+    executor = OperationExecutor(base_dir=base_dir, undo_stack=stack)
+
+    result = executor.redo(target_file=args.file)
+    if result.get("success"):
+        print(f"Redone: {result['redone_op']} on {result['target_file']}")
+    else:
+        print(f"Cannot redo: {result.get('error', 'No operations to redo')}", file=sys.stderr)
+        sys.exit(1)
+
+
 def _handle_playground(argv: list[str]) -> None:
     """Handle the 'playground' subcommand -- start interactive web UI."""
     parser = argparse.ArgumentParser(
@@ -804,6 +856,10 @@ def main(argv: list[str] | None = None) -> None:
             _handle_demo(subcmd_argv)
         elif subcmd == "playground":
             _handle_playground(subcmd_argv)
+        elif subcmd == "undo":
+            _handle_undo(subcmd_argv)
+        elif subcmd == "redo":
+            _handle_redo(subcmd_argv)
         return
 
     # Legacy operation mode

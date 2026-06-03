@@ -53,6 +53,9 @@ _CREATE_HANDLERS: dict[str, Callable] = {}
 # Query handlers: (op, PcbIR, file_path) -> dict -- read-only, no Transaction, no serialization
 _QUERY_HANDLERS: dict[str, Callable] = {}
 
+# Schematic query handlers: (op, SchematicIR, file_path) -> dict -- read-only, no Transaction, no serialization
+_SCHEMATIC_QUERY_HANDLERS: dict[str, Callable] = {}
+
 # Cross-file handlers: (op, dict[Path, BaseIR], base_dir) -> dict
 _CROSSFILE_HANDLERS: dict[str, Callable] = {}
 
@@ -104,6 +107,14 @@ def register_query(op_type: str) -> Callable:
     """Decorator to register a read-only query operation handler."""
     def decorator(fn: Callable) -> Callable:
         _QUERY_HANDLERS[op_type] = fn
+        return fn
+    return decorator
+
+
+def register_schematic_query(op_type: str) -> Callable:
+    """Decorator to register a read-only schematic query operation handler."""
+    def decorator(fn: Callable) -> Callable:
+        _SCHEMATIC_QUERY_HANDLERS[op_type] = fn
         return fn
     return decorator
 
@@ -218,7 +229,7 @@ def _handle_renumber_refs(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
     return {"changes": [{"old": o, "new": n} for o, n in changes]}
 
 
-@register_schematic("validate_refs")
+@register_schematic_query("validate_refs")
 def _handle_validate_refs(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     duplicates = ir.validate_reference_uniqueness()
     return {"duplicates": duplicates, "valid": len(duplicates) == 0}
@@ -230,7 +241,7 @@ def _handle_annotate(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any
     return {"annotated": [{"old": o, "new": n} for o, n in changes]}
 
 
-@register_schematic("cross_ref_check")
+@register_schematic_query("cross_ref_check")
 def _handle_cross_ref_check(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     unresolved = ir.cross_reference_check()
     return {"unresolved": [{"ref": r, "lib_id": l} for r, l in unresolved]}
@@ -247,12 +258,12 @@ def _handle_sch_swap_footprint(op: Any, ir: SchematicIR, file_path: Path) -> dic
     return ir.swap_footprint(reference=op.reference, new_footprint_lib_id=op.new_footprint_lib_id)
 
 
-@register_schematic("validate_footprint")
+@register_schematic_query("validate_footprint")
 def _handle_sch_validate_footprint(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     return _validate_footprint_impl(op.footprint_lib_id, file_path)
 
 
-@register_schematic("verify_pin_map")
+@register_schematic_query("verify_pin_map")
 def _handle_verify_pin_map(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     return ir.verify_pin_map(reference=op.reference, footprint_lib_id=op.footprint_lib_id)
 
@@ -315,13 +326,13 @@ def _handle_repair_schematic(op: Any, ir: SchematicIR, file_path: Path) -> dict[
     return details
 
 
-@register_schematic("validate_power_nets")
+@register_schematic_query("validate_power_nets")
 def _handle_validate_power_nets(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.validation_gates import validate_power_nets
     return validate_power_nets(ir, file_path, check_hierarchical=op.check_hierarchical)
 
 
-@register_schematic("validate_schematic")
+@register_schematic_query("validate_schematic")
 def _handle_validate_schematic(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.validation_gates import validate_schematic_completeness
     return validate_schematic_completeness(
@@ -333,21 +344,21 @@ def _handle_validate_schematic(op: Any, ir: SchematicIR, file_path: Path) -> dic
     )
 
 
-@register_schematic("parse_erc")
+@register_schematic_query("parse_erc")
 def _handle_parse_erc(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.erc_parser import parse_erc
     violations = parse_erc(file_path)
     return {"violations": [dataclasses.asdict(v) for v in violations]}
 
 
-@register_schematic("extract_violation_positions")
+@register_schematic_query("extract_violation_positions")
 def _handle_extract_violation_positions(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.erc_parser import extract_violation_positions
     positions = extract_violation_positions(file_path, op.violation_type)
     return {"positions": [dataclasses.asdict(p) for p in positions], "count": len(positions)}
 
 
-@register_schematic("validate_hlabels")
+@register_schematic_query("validate_hlabels")
 def _handle_validate_hlabels(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.hlabel_guard import validate_hlabels
     expected = set(op.expected_labels) if op.expected_labels else None
@@ -434,7 +445,7 @@ def _handle_add_sheet_pin(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
     return add_sheet_pin(op, ir, file_path)
 
 
-@register_schematic("navigate_hierarchy")
+@register_schematic_query("navigate_hierarchy")
 def _handle_navigate_hierarchy(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.sheet_ops import navigate_hierarchy
     return navigate_hierarchy(op, ir, file_path)
@@ -549,7 +560,7 @@ def _handle_erc_auto_fix_hierarchical(op: Any, ir: SchematicIR, file_path: Path)
     )
 
 
-@register_schematic("classify_violations")
+@register_schematic_query("classify_violations")
 def _handle_classify_violations(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.violation_classifier import classify_violations
     from kicad_agent.ops.erc_parser import parse_erc
@@ -557,7 +568,7 @@ def _handle_classify_violations(op: Any, ir: SchematicIR, file_path: Path) -> di
     return classify_violations(violations, ir, file_path)
 
 
-@register_schematic("diagnose_violations")
+@register_schematic_query("diagnose_violations")
 def _handle_diagnose_violations(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.violation_diagnostic import diagnose_violations
     from kicad_agent.ops.violation_classifier import classify_violations
@@ -570,7 +581,7 @@ def _handle_diagnose_violations(op: Any, ir: SchematicIR, file_path: Path) -> di
     return diagnose_violations(fixable, ir, file_path)
 
 
-@register_schematic("extract_nets")
+@register_schematic_query("extract_nets")
 def _handle_extract_nets(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.schematic_routing.net_extractor import extract_nets
     return extract_nets(
@@ -580,7 +591,7 @@ def _handle_extract_nets(op: Any, ir: SchematicIR, file_path: Path) -> dict[str,
     )
 
 
-@register_schematic("detect_net_conflicts")
+@register_schematic_query("detect_net_conflicts")
 def _handle_detect_net_conflicts(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
     return detect_net_conflicts(
@@ -591,7 +602,7 @@ def _handle_detect_net_conflicts(op: Any, ir: SchematicIR, file_path: Path) -> d
     )
 
 
-@register_schematic("suggest_net_names")
+@register_schematic_query("suggest_net_names")
 def _handle_suggest_net_names(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.schematic_routing.net_namer import suggest_net_names
     return suggest_net_names(
@@ -601,7 +612,7 @@ def _handle_suggest_net_names(op: Any, ir: SchematicIR, file_path: Path) -> dict
     )
 
 
-@register_schematic("resolve_pin_positions")
+@register_schematic_query("resolve_pin_positions")
 def _handle_resolve_pin_positions(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.schematic_routing.pin_resolver import PinResolver
     resolver = PinResolver(file_path)
@@ -614,7 +625,7 @@ def _handle_resolve_pin_positions(op: Any, ir: SchematicIR, file_path: Path) -> 
         return resolver.resolve_all()
 
 
-@register_schematic("detect_routing_collisions")
+@register_schematic_query("detect_routing_collisions")
 def _handle_detect_routing_collisions(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.schematic_routing.collision_detector import CollisionDetector
     detector = CollisionDetector(file_path)
@@ -622,7 +633,7 @@ def _handle_detect_routing_collisions(op: Any, ir: SchematicIR, file_path: Path)
     return {"collision_zones": zones, "count": len(zones)}
 
 
-@register_schematic("detect_pin_overlaps")
+@register_schematic_query("detect_pin_overlaps")
 def _handle_detect_pin_overlaps(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.schematic_routing.collision_detector import CollisionDetector
     detector = CollisionDetector(file_path)
@@ -1360,6 +1371,10 @@ class OperationExecutor:
         if root.op_type in _QUERY_HANDLERS:
             return self._execute_query(op, file_path)
 
+        # Schematic query operations: read-only, parse-only path for .kicad_sch
+        if root.op_type in _SCHEMATIC_QUERY_HANDLERS:
+            return self._execute_schematic_query(op, file_path)
+
         # Clear IR registry to avoid stale registrations across operations
         _clear_registry()
 
@@ -1440,6 +1455,45 @@ class OperationExecutor:
         if handler is not None:
             return handler(op, ir, file_path)
         raise ValueError(f"Unknown query op_type: {op_type!r}")
+
+    def _execute_schematic_query(self, op: Operation, file_path: Path) -> dict[str, Any]:
+        """Execute a read-only schematic query (no Transaction, no serialization).
+
+        Schematic query operations parse the file and build SchematicIR, but skip
+        Transaction wrapping, serialization, and file writes. The file mtime is
+        unchanged.
+
+        Args:
+            op: Validated Operation from the schema.
+            file_path: Resolved path to the target schematic file.
+
+        Returns:
+            Dict with: success, operation, target_file, details.
+        """
+        root = op.root
+
+        # Clear IR registry to avoid stale registrations across operations
+        _clear_registry()
+
+        cached_entry = self._cache.get(file_path) if self._cache else None
+        if cached_entry is not None:
+            parse_result = cached_entry.parse_result
+        else:
+            parse_result = parse_schematic(file_path)
+            if self._cache:
+                self._cache.put(file_path, CacheEntry(parse_result=parse_result))
+
+        ir = SchematicIR(_parse_result=parse_result)
+        handler = _SCHEMATIC_QUERY_HANDLERS.get(root.op_type)
+        if handler is None:
+            raise ValueError(f"Unknown schematic query op_type: {root.op_type!r}")
+        details = handler(root, ir, file_path)
+        return {
+            "success": True,
+            "operation": root.op_type,
+            "target_file": root.target_file,
+            "details": details,
+        }
 
     def _execute_create(self, op: Operation, file_path: Path) -> dict[str, Any]:
         """Execute a file-creation operation (no Transaction, no IR).
@@ -1895,7 +1949,10 @@ class OperationExecutor:
                 elif self._is_project_file(file_path):
                     handler = _PROJECT_HANDLERS.get(root.op_type)
                 else:
-                    handler = _SCHEMATIC_HANDLERS.get(root.op_type)
+                    handler = (
+                        _SCHEMATIC_HANDLERS.get(root.op_type)
+                        or _SCHEMATIC_QUERY_HANDLERS.get(root.op_type)
+                    )
 
                 if handler is None:
                     validation_errors.append(
@@ -1937,7 +1994,15 @@ class OperationExecutor:
                             root.op_type, root, file_path
                         )
                     else:
-                        details = self._dispatch(root.op_type, root, ir, file_path)
+                        handler = _SCHEMATIC_HANDLERS.get(root.op_type)
+                        if handler is not None:
+                            details = handler(root, ir, file_path)
+                        else:
+                            sq_handler = _SCHEMATIC_QUERY_HANDLERS.get(root.op_type)
+                            if sq_handler is not None:
+                                details = sq_handler(root, ir, file_path)
+                            else:
+                                raise ValueError(f"Unknown op_type: {root.op_type!r}")
 
                     all_results.append({
                         "success": True,

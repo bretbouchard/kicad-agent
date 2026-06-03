@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Council Remediation
 status: planning
-stopped_at: Phase 66 complete. Phase 67 (Short Resolution) planned with 3 plans. Ready for execution.
-last_updated: "2026-06-02T12:00:00Z"
-last_activity: 2026-06-02
+stopped_at: Council REJECT. Phases 71-74 planned for tool awareness remediation. Phase 71 ready for execution.
+last_updated: "2026-06-03T01:00:00Z"
+last_activity: 2026-06-03
 progress:
-  total_phases: 67
+  total_phases: 71
   completed_phases: 55
-  total_plans: 217
+  total_plans: 225
   completed_plans: 144
-  percent: 88
+  percent: 79
 ---
 
 # Project State

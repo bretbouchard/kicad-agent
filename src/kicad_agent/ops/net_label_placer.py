@@ -61,6 +61,82 @@ _BUILTIN_PROFILES: dict[str, dict[str, dict[str, str | None]]] = {
         "P82B96DP": {
             "VCC": "VCC_3V3", "GND": "GND",
         },
+        # RP2350B MCU (62 pins)
+        "RP2350B": {
+            "VDD": "VCC_3V3", "USB_VBUS": "VBUS",
+            "GND": "GND",
+            # QSPI flash
+            "QSPI_SCLK": "QSPI_SCLK", "QSPI_SD0": "QSPI_SD0",
+            "QSPI_SD1": "QSPI_SD1", "QSPI_SD2": "QSPI_SD2",
+            "QSPI_SD3": "QSPI_SD3", "QSPI_SS": "QSPI_SS",
+            # USB
+            "USB_DP": "USB_DP", "USB_DM": "USB_DM",
+            # SWD debug
+            "SWCLK": "SWCLK", "SWDIO": "SWDIO",
+            # ADC / GPIO — signal-dependent
+            "ADC0": None, "ADC1": None, "ADC2": None, "ADC3": None,
+            "GPIO0": None, "GPIO1": None, "GPIO2": None, "GPIO3": None,
+            "GPIO4": None, "GPIO5": None, "GPIO6": None, "GPIO7": None,
+        },
+        # NE5532 dual op-amp (8 pins)
+        "NE5532": {
+            "VCC": "VCC_12V", "VEE": "VCC_-12V",
+            "1OUT": None, "1IN-": None, "1IN+": None,
+            "2OUT": None, "2IN-": None, "2IN+": None,
+        },
+        # CD4066 quad bilateral switch (14 pins)
+        "CD4066": {
+            "VDD": "VCC_5V", "VSS": "GND",
+            "1A": None, "1B": None, "1C": None,
+            "2A": None, "2B": None, "2C": None,
+            "3A": None, "3B": None, "3C": None,
+            "4A": None, "4B": None, "4C": None,
+        },
+        # CD4060 14-stage binary counter (16 pins)
+        "CD4060": {
+            "VDD": "VCC_5V", "VSS": "GND",
+            "RESET": None,
+            "RS": None, "RTC": None, "CTC": None,
+            "Q3": None, "Q4": None, "Q5": None, "Q6": None,
+            "Q7": None, "Q8": None, "Q9": None, "Q10": None,
+            "Q11": None, "Q12": None, "Q13": None, "Q14": None,
+        },
+        # LM358 dual op-amp (8 pins)
+        "LM358": {
+            "VCC": "VCC_5V", "GND": "GND",
+            "1OUT": None, "1IN-": None, "1IN+": None,
+            "2OUT": None, "2IN-": None, "2IN+": None,
+        },
+    },
+    "channel-strip": {
+        # NE5532 at ±15V for analog audio
+        "NE5532": {
+            "VCC": "VCC_15V", "VEE": "VCC_-15V",
+            "1OUT": None, "1IN-": None, "1IN+": None,
+            "2OUT": None, "2IN-": None, "2IN+": None,
+        },
+        # THAT4301 VCA
+        "THAT4301": {
+            "VCC": "VCC_15V", "VEE": "VCC_-15V", "GND": "AGND",
+        },
+        # THAT2180 VCA core
+        "THAT2180": {
+            "VCC": "VCC_15V", "VEE": "VCC_-15V",
+        },
+        # LM358 at ±15V
+        "LM358": {
+            "VCC": "VCC_15V", "GND": "AGND",
+            "1OUT": None, "1IN-": None, "1IN+": None,
+            "2OUT": None, "2IN-": None, "2IN+": None,
+        },
+        # CD4066 at 5V / AGND
+        "CD4066": {
+            "VDD": "VCC_5V", "VSS": "AGND",
+        },
+        # CD4060 at 5V / AGND
+        "CD4060": {
+            "VDD": "VCC_5V", "VSS": "AGND",
+        },
     },
 }
 
@@ -90,8 +166,15 @@ def _load_pin_map(pin_map: str, file_path: Path) -> dict[str, dict[str, str | No
     # Try "auto" mode — use all built-in profiles
     if pin_map == "auto":
         merged: dict[str, dict[str, str | None]] = {}
-        for profile in _BUILTIN_PROFILES.values():
-            merged.update(profile)
+        for profile_name, profile in _BUILTIN_PROFILES.items():
+            for ic_name, pins in profile.items():
+                if ic_name in merged:
+                    logger.warning(
+                        "Auto-merge: IC '%s' exists in multiple profiles; "
+                        "'%s' overwrites previous mapping",
+                        ic_name, profile_name,
+                    )
+                merged[ic_name] = pins
         return merged
 
     raise ValueError(
