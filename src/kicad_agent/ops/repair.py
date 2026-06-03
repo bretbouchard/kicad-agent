@@ -295,8 +295,14 @@ def place_no_connects(ir: SchematicIR) -> dict[str, Any]:
         if pos_key in existing_nc:
             continue
 
-        # Skip if connected to a wire or label
+        # Skip if connected to a wire endpoint or label
         if _is_position_connected(px, py, connected):
+            continue
+
+        # Issue #4: Also skip if pin lies on a wire segment (mid-wire
+        # connection). KiCad considers pins on wire midpoints connected
+        # even without a wire endpoint at that position.
+        if _point_on_wire_segment(px, py, wire_endpoints):
             continue
 
         # Place no-connect marker
@@ -352,6 +358,73 @@ def _is_position_connected(
     return False
 
 
+def _point_on_wire_segment(
+    px: float,
+    py: float,
+    wire_endpoints: list[dict[str, Any]],
+    tolerance: float = SNAP_TOLERANCE,
+) -> bool:
+    """Check if a point lies on any wire segment (not just endpoints).
+
+    KiCad wires are axis-aligned (horizontal or vertical). A pin at (10, 25)
+    on a wire from (10, 20) to (10, 30) is connected even though no endpoint
+    is at (10, 25). This function detects mid-wire connections.
+
+    Args:
+        px: Point X coordinate.
+        py: Point Y coordinate.
+        wire_endpoints: List of wire endpoint dicts with start_x/y, end_x/y.
+        tolerance: Maximum distance from the wire line to count as connected.
+
+    Returns:
+        True if the point lies on any wire segment within tolerance.
+    """
+    for we in wire_endpoints:
+        sx, sy = we["start_x"], we["start_y"]
+        ex, ey = we["end_x"], we["end_y"]
+
+        # Horizontal wire: same Y, different X
+        if abs(sy - ey) <= tolerance and abs(py - sy) <= tolerance:
+            min_x, max_x = min(sx, ex), max(sx, ex)
+            if min_x - tolerance <= px <= max_x + tolerance:
+                return True
+
+        # Vertical wire: same X, different Y
+        if abs(sx - ex) <= tolerance and abs(px - sx) <= tolerance:
+            min_y, max_y = min(sy, ey), max(sy, ey)
+            if min_y - tolerance <= py <= max_y + tolerance:
+                return True
+
+    return False
+
+
+def _near_anchor(
+    x: float,
+    y: float,
+    anchor_positions: set[tuple[float, float]],
+    tolerance: float = SNAP_TOLERANCE,
+) -> bool:
+    """Check if a position is within tolerance of any anchor position.
+
+    Replaces exact set membership (``key in anchor_positions``) with a
+    distance-based check. Two positions within SNAP_TOLERANCE can round to
+    different 2-decimal keys, causing false negatives with set membership.
+
+    Args:
+        x: X coordinate to check.
+        y: Y coordinate to check.
+        anchor_positions: Set of (x, y) anchor positions.
+        tolerance: Maximum distance to count as near.
+
+    Returns:
+        True if within tolerance of any anchor.
+    """
+    for ax, ay in anchor_positions:
+        if _distance(x, y, ax, ay) <= tolerance:
+            return True
+    return False
+
+
 def _round_pos(x: float, y: float) -> tuple[float, float]:
     """Round position to SNAP_TOLERANCE precision for grouping."""
     precision = 2  # 0.01mm precision
@@ -366,15 +439,14 @@ def _round_pos(x: float, y: float) -> tuple[float, float]:
 def snap_to_grid(ir: SchematicIR, grid_mm: float = 0.01) -> dict[str, Any]:
     """Snap off-grid wire endpoints to the nearest grid point.
 
-    Groups wire endpoints by proximity first so that co-located endpoints
-    (where two wires meet at an off-grid point) all snap to the SAME grid
-    point, preserving connectivity.
+    Issue #5/#1: Uses tolerance-based clustering (union-find) instead of
+    rounding-based grouping. This ensures that co-located endpoints within
+    SNAP_TOLERANCE always snap to the SAME target, even when their rounded
+    keys differ (e.g., 10.004 vs 10.006 rounding to 10.00 vs 10.01).
 
-    Issue #5/#1: Topology-aware snapping. Before snapping, checks that the
-    snapped position won't break existing connections to pins, labels, or
-    junctions. If a snap would disconnect a wire from its anchor, the snap
-    is skipped. Also skips snaps where the delta is < 0.001mm (floating-point
-    noise, not a real off-grid issue).
+    Before snapping, checks that the snapped position won't break existing
+    connections to pins, labels, or junctions. Skips snaps that would
+    disconnect an anchor. Also skips floating-point noise (< 0.001mm).
 
     SCHREPAIR-05: Grid-snapping for off-grid wire endpoints.
 
@@ -406,62 +478,92 @@ def snap_to_grid(ir: SchematicIR, grid_mm: float = 0.01) -> dict[str, Any]:
     # Minimum snap distance — skip floating-point noise
     MIN_SNAP_DELTA = 0.001
 
-    # First pass: collect all endpoint positions and their wire/point references
-    endpoint_groups: dict[tuple[float, float], list[tuple[int, int]]] = {}
-    # key = rounded position, value = list of (wire_index, point_index)
-
+    # Collect all endpoint positions as (exact_x, exact_y, wire_index, point_index)
+    endpoints: list[tuple[float, float, int, int]] = []
     for wire_info in wire_endpoints:
         wi = wire_info["wire_index"]
         wire = sch.graphicalItems[wi]
         if not hasattr(wire, "points"):
             continue
         for pi, point in enumerate(wire.points):
-            key = (round(point.X, 2), round(point.Y, 2))
-            endpoint_groups.setdefault(key, []).append((wi, pi))
+            endpoints.append((point.X, point.Y, wi, pi))
 
-    # Second pass: for each group, compute shared snap target and apply
+    if not endpoints:
+        return {"snapped_count": 0, "skipped_connectivity": 0, "grid_mm": grid_mm}
+
+    # Issue #5/#1: Tolerance-based clustering via union-find.
+    # Rounding-based grouping (round(x, 2)) can split nearby endpoints
+    # into different groups (e.g., 10.004→10.00, 10.006→10.01), causing
+    # them to snap to different targets and break connectivity.
+    parent = list(range(len(endpoints)))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def union(i: int, j: int) -> None:
+        ri, rj = find(i), find(j)
+        if ri != rj:
+            parent[ri] = rj
+
+    # Merge endpoints within SNAP_TOLERANCE of each other
+    for i in range(len(endpoints)):
+        for j in range(i + 1, len(endpoints)):
+            if _distance(endpoints[i][0], endpoints[i][1],
+                         endpoints[j][0], endpoints[j][1]) <= SNAP_TOLERANCE:
+                union(i, j)
+
+    # Build clusters: root -> list of endpoint indices
+    clusters: dict[int, list[int]] = {}
+    for i in range(len(endpoints)):
+        root = find(i)
+        clusters.setdefault(root, []).append(i)
+
+    # For each cluster, compute shared snap target and apply
     snapped_count = 0
     skipped_connectivity = 0
-    for key, refs in endpoint_groups.items():
-        x, y = key
-        if not _is_on_grid(x, grid_mm) or not _is_on_grid(y, grid_mm):
-            snap_x = round(x / grid_mm) * grid_mm
-            snap_y = round(y / grid_mm) * grid_mm
+    for indices in clusters.values():
+        # Use centroid of cluster as the representative position
+        cx = sum(endpoints[i][0] for i in indices) / len(indices)
+        cy = sum(endpoints[i][1] for i in indices) / len(indices)
 
-            # Issue #5/#1: Skip negligible snaps (floating-point noise)
-            if _distance(x, y, snap_x, snap_y) < MIN_SNAP_DELTA:
-                continue
+        if _is_on_grid(cx, grid_mm) and _is_on_grid(cy, grid_mm):
+            continue
 
-            # Issue #5/#1: Connectivity check. If the original position is
-            # near an anchor (pin/label/junction), verify the snapped position
-            # is also near an anchor. If not, snapping would break the connection.
-            if key in anchor_positions:
-                snap_key = (round(snap_x, 2), round(snap_y, 2))
-                if snap_key not in anchor_positions:
-                    # The snap would move away from an anchor — check if any
-                    # anchor is within tolerance of the snapped position
-                    anchor_nearby = any(
-                        _distance(snap_x, snap_y, ax, ay) <= SNAP_TOLERANCE
-                        for ax, ay in anchor_positions
-                    )
-                    if not anchor_nearby:
-                        skipped_connectivity += 1
-                        logger.debug(
-                            "Skipping snap (%.2f, %.2f) -> (%.2f, %.2f): "
-                            "would break connection to anchor",
-                            x, y, snap_x, snap_y,
-                        )
-                        continue
+        snap_x = round(cx / grid_mm) * grid_mm
+        snap_y = round(cy / grid_mm) * grid_mm
 
-            for wi, pi in refs:
-                wire = sch.graphicalItems[wi]
-                wire.points[pi].X = snap_x
-                wire.points[pi].Y = snap_y
-            snapped_count += 1
-            ir._record_mutation("snap_to_grid", {
-                "group_at": [x, y],
-                "snapped_to": [snap_x, snap_y],
-            })
+        # Skip negligible snaps (floating-point noise)
+        if _distance(cx, cy, snap_x, snap_y) < MIN_SNAP_DELTA:
+            continue
+
+        # Connectivity check: if ANY endpoint in the cluster is near an
+        # anchor, the snap target must also be near an anchor.
+        cluster_near_anchor = any(
+            _near_anchor(endpoints[i][0], endpoints[i][1], anchor_positions)
+            for i in indices
+        )
+        if cluster_near_anchor and not _near_anchor(snap_x, snap_y, anchor_positions):
+            skipped_connectivity += 1
+            logger.debug(
+                "Skipping snap (%.4f, %.4f) -> (%.4f, %.4f): "
+                "would break connection to anchor (cluster of %d endpoints)",
+                cx, cy, snap_x, snap_y, len(indices),
+            )
+            continue
+
+        for i in indices:
+            _, _, wi, pi = endpoints[i]
+            wire = sch.graphicalItems[wi]
+            wire.points[pi].X = snap_x
+            wire.points[pi].Y = snap_y
+        snapped_count += 1
+        ir._record_mutation("snap_to_grid", {
+            "group_at": [cx, cy],
+            "snapped_to": [snap_x, snap_y],
+        })
 
     return {"snapped_count": snapped_count, "skipped_connectivity": skipped_connectivity, "grid_mm": grid_mm}
 
@@ -617,11 +719,23 @@ def place_no_connects_from_erc(ir: SchematicIR, sch_path: Path) -> dict[str, Any
             dup_count += 1
             continue
 
-        # Issue #4: Skip if pin already has a wire or label connection
-        if pos_key in connected_positions:
+        # Issue #4: Skip if pin already has a wire or label connection.
+        # Use tolerance-based check instead of exact set membership —
+        # positions within SNAP_TOLERANCE can round to different keys.
+        if _near_anchor(vp.x, vp.y, connected_positions):
             skipped_connected += 1
             logger.debug(
                 "Skipping no_connect at (%.2f, %.2f): already connected",
+                vp.x, vp.y,
+            )
+            continue
+
+        # Issue #4: Also skip if pin lies on a wire segment (mid-wire
+        # connection). KiCad considers pins on wire midpoints connected.
+        if _point_on_wire_segment(vp.x, vp.y, wire_endpoints):
+            skipped_connected += 1
+            logger.debug(
+                "Skipping no_connect at (%.2f, %.2f): on wire segment",
                 vp.x, vp.y,
             )
             continue

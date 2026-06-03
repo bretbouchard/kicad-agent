@@ -78,4 +78,48 @@ def serialize_schematic(
 
     # Full kiutils re-serialization (original behavior)
     parse_result.kiutils_obj.to_file(str(output_path))
+
+    # Issue #12: kiutils 1.4.8 drops generator_version and unquotes generator.
+    # Post-process to restore these fields so kicad-cli accepts the file.
+    _fix_kiutils_output(output_path)
+
     return output_path
+
+
+def _fix_kiutils_output(path: Path) -> None:
+    """Fix kiutils 1.4.8 serialization defects in .kicad_sch files.
+
+    Known kiutils bugs:
+    1. Drops (generator_version "...") entirely — kicad-cli rejects the file (#12)
+    2. Writes (generator eeschema) instead of (generator "eeschema") — missing quotes (#12)
+    3. NoConnect.to_sexpr() omits rotation: (at X Y) instead of (at X Y 0) (#11)
+    """
+    import re
+
+    content = path.read_text()
+
+    # Fix 1: Ensure generator value is quoted
+    content = re.sub(
+        r'\(generator\s+([a-zA-Z_]\w*)\)',
+        r'(generator "\1")',
+        content,
+    )
+
+    # Fix 2: Add generator_version if missing (after any quoted generator)
+    if 'generator_version' not in content:
+        content = re.sub(
+            r'\(generator\s+"([^"]+)"\)',
+            r'(generator "\1")\n  (generator_version "10.0")',
+            content,
+            count=1,
+        )
+
+    # Fix 3: Add rotation to no_connect (at X Y) -> (at X Y 0)
+    # KiCad 10 requires rotation in all (at ...) elements
+    content = re.sub(
+        r'\(no_connect \(at\s+([\d.]+)\s+([\d.]+)\)',
+        r'(no_connect (at \1 \2 0)',
+        content,
+    )
+
+    path.write_text(content)

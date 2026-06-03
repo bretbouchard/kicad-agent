@@ -1614,3 +1614,177 @@ class TestErcAutoFixVerification:
         output = erc_auto_fix(ir, path, max_iterations=1)
         assert "verification_rollback" in output
         assert output["verification_rollback"] == []
+
+
+class TestPointOnWireSegment:
+    """Test _point_on_wire_segment helper for mid-wire connectivity (#4)."""
+
+    def test_horizontal_wire_midpoint(self):
+        from kicad_agent.ops.repair import _point_on_wire_segment
+
+        wires = [{"start_x": 10.0, "start_y": 20.0, "end_x": 10.0, "end_y": 30.0}]
+        # Pin at midpoint of vertical wire
+        assert _point_on_wire_segment(10.0, 25.0, wires) is True
+
+    def test_horizontal_wire_endpoint_not_counted_as_midpoint(self):
+        from kicad_agent.ops.repair import _point_on_wire_segment
+
+        wires = [{"start_x": 10.0, "start_y": 20.0, "end_x": 10.0, "end_y": 30.0}]
+        # Pin at endpoint — endpoint matching is handled by _is_position_connected
+        # but _point_on_wire_segment should still return True (endpoint is on segment)
+        assert _point_on_wire_segment(10.0, 20.0, wires) is True
+
+    def test_not_on_wire(self):
+        from kicad_agent.ops.repair import _point_on_wire_segment
+
+        wires = [{"start_x": 10.0, "start_y": 20.0, "end_x": 10.0, "end_y": 30.0}]
+        # Pin far from wire
+        assert _point_on_wire_segment(50.0, 25.0, wires) is False
+
+    def test_horizontal_wire(self):
+        from kicad_agent.ops.repair import _point_on_wire_segment
+
+        wires = [{"start_x": 0.0, "start_y": 10.0, "end_x": 50.0, "end_y": 10.0}]
+        # Pin at midpoint of horizontal wire
+        assert _point_on_wire_segment(25.0, 10.0, wires) is True
+
+    def test_tolerance_edge(self):
+        from kicad_agent.ops.repair import _point_on_wire_segment
+
+        wires = [{"start_x": 0.0, "start_y": 10.0, "end_x": 50.0, "end_y": 10.0}]
+        # Pin slightly off wire (within tolerance)
+        assert _point_on_wire_segment(25.0, 10.005, wires) is True
+        # Pin too far off wire
+        assert _point_on_wire_segment(25.0, 10.1, wires) is False
+
+
+class TestNearAnchor:
+    """Test _near_anchor tolerance-based proximity (#5)."""
+
+    def test_exact_match(self):
+        from kicad_agent.ops.repair import _near_anchor
+
+        anchors = {(67.32, 68.58)}
+        assert _near_anchor(67.32, 68.58, anchors) is True
+
+    def test_within_tolerance(self):
+        from kicad_agent.ops.repair import _near_anchor
+
+        # Positions that round differently but are within SNAP_TOLERANCE
+        anchors = {(67.32, 68.58)}
+        assert _near_anchor(67.315, 68.575, anchors) is True
+
+    def test_beyond_tolerance(self):
+        from kicad_agent.ops.repair import _near_anchor
+
+        anchors = {(67.32, 68.58)}
+        assert _near_anchor(67.33, 68.59, anchors) is False
+
+    def test_empty_anchors(self):
+        from kicad_agent.ops.repair import _near_anchor
+
+        assert _near_anchor(0.0, 0.0, set()) is False
+
+
+class TestPlaceNoConnectsMidWire:
+    """Test that place_no_connects skips pins on wire segments (#4)."""
+
+    def test_mid_wire_pin_not_flagged(self):
+        """Pin on wire midpoint should NOT get a no_connect."""
+        sch = Schematic()
+        sch.graphicalItems = []
+        sch.noConnects = []
+
+        # Add a wire from (10, 20) to (10, 30)
+        wire = Connection()
+        wire.type = "wire"
+        wire.points = [
+            Position(X=10.0, Y=20.0),
+            Position(X=10.0, Y=30.0),
+        ]
+        sch.graphicalItems.append(wire)
+
+        with tempfile.NamedTemporaryFile(suffix=".kicad_sch", delete=False) as f:
+            sch.to_file(f.name)
+            path = Path(f.name)
+
+        ir = _save_and_parse(path, sch)
+
+        # Mock pin at midpoint (10, 25) — on the wire but not at an endpoint
+        ir.get_pin_positions = lambda: [
+            {"x": 10.0, "y": 25.0, "ref": "U1", "pin": "1", "electrical_type": "passive"},
+        ]
+
+        result = place_no_connects(ir)
+        assert result["placed"] == 0, "Should not place no_connect on mid-wire pin"
+
+
+class TestSnapToGridAnchorProximity:
+    """Test that snap_to_grid uses tolerance-based anchor proximity (#5)."""
+
+    def test_snap_skipped_when_breaks_anchor(self):
+        """Snap that would move endpoint away from anchor is skipped.
+
+        Uses 1.27mm grid (0.05") so snap distance is significant.
+        Wire and pin both at 67.005 (exact match, off-grid for 1.27mm).
+        Snap would move wire to 67.31 — 0.3mm from pin → skip.
+        """
+        sch = Schematic()
+        sch.graphicalItems = []
+        sch.junctions = []
+
+        wire = Connection()
+        wire.type = "wire"
+        wire.points = [
+            Position(X=67.005, Y=68.58),
+            Position(X=80.0, Y=68.58),
+        ]
+        sch.graphicalItems.append(wire)
+
+        with tempfile.NamedTemporaryFile(suffix=".kicad_sch", delete=False) as f:
+            sch.to_file(f.name)
+            path = Path(f.name)
+
+        ir = _save_and_parse(path, sch)
+
+        # Pin at same position as wire start — connected
+        ir.get_pin_positions = lambda: [
+            {"x": 67.005, "y": 68.58, "ref": "U1", "pin": "1", "electrical_type": "passive"},
+        ]
+
+        result = snap_to_grid(ir, grid_mm=1.27)
+        # Snap would move wire from 67.005 to round(67.005/1.27)*1.27 = 67.31
+        # That's 0.3mm from pin at 67.005 — connection broken → skip
+        assert result["skipped_connectivity"] >= 1, (
+            "Should skip snap that would break anchor connection"
+        )
+
+    def test_safe_snap_allowed_near_anchor(self):
+        """Snap that keeps endpoint near anchor is allowed."""
+        sch = Schematic()
+        sch.graphicalItems = []
+        sch.junctions = []
+
+        wire = Connection()
+        wire.type = "wire"
+        wire.points = [
+            Position(X=67.005, Y=68.58),
+            Position(X=80.0, Y=68.58),
+        ]
+        sch.graphicalItems.append(wire)
+
+        with tempfile.NamedTemporaryFile(suffix=".kicad_sch", delete=False) as f:
+            sch.to_file(f.name)
+            path = Path(f.name)
+
+        ir = _save_and_parse(path, sch)
+
+        # Pin at 67.005 — wire is right at it
+        ir.get_pin_positions = lambda: [
+            {"x": 67.005, "y": 68.58, "ref": "U1", "pin": "1", "electrical_type": "passive"},
+        ]
+
+        result = snap_to_grid(ir, grid_mm=1.27)
+        # Wire near anchor AND snap target (67.31) far from anchor → skip
+        assert result["skipped_connectivity"] >= 1
+

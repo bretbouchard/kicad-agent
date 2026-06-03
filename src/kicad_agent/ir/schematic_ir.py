@@ -615,7 +615,7 @@ class SchematicIR(BaseIR):
         from kiutils.items.schitems import NoConnect
 
         nc = NoConnect(
-            position=Position(X=x, Y=y),
+            position=Position(X=x, Y=y, angle=0),
             uuid=str(uuid.uuid4()),
         )
         self._parse_result.kiutils_obj.noConnects.append(nc)
