@@ -1105,8 +1105,9 @@ class TestResolveShortedNets:
 
         output = resolve_shorted_nets(ir, _EQ_STAGE, dry_run=True)
         assert "shorts_found" in output
-        assert "resolved" in output
-        assert "skipped_power" in output
+        assert "wires_broken" in output
+        assert "labels_fixed" in output
+        assert "unresolved" in output
         assert "details" in output
 
 

@@ -21,7 +21,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from kicad_agent.ir.schematic_ir import SchematicIR
+from kicad_agent.ir.schematic_ir import SchematicIR, _match_lib_symbol
 from kicad_agent.schematic_routing.net_extractor import NetPositionIndex
 
 logger = logging.getLogger(__name__)
@@ -370,6 +370,12 @@ def snap_to_grid(ir: SchematicIR, grid_mm: float = 0.01) -> dict[str, Any]:
     (where two wires meet at an off-grid point) all snap to the SAME grid
     point, preserving connectivity.
 
+    Issue #5/#1: Topology-aware snapping. Before snapping, checks that the
+    snapped position won't break existing connections to pins, labels, or
+    junctions. If a snap would disconnect a wire from its anchor, the snap
+    is skipped. Also skips snaps where the delta is < 0.001mm (floating-point
+    noise, not a real off-grid issue).
+
     SCHREPAIR-05: Grid-snapping for off-grid wire endpoints.
 
     Args:
@@ -377,14 +383,28 @@ def snap_to_grid(ir: SchematicIR, grid_mm: float = 0.01) -> dict[str, Any]:
         grid_mm: Grid spacing in mm (default 0.01 for KiCad 8+).
 
     Returns:
-        Dict with snapped_count and grid_mm.
+        Dict with snapped_count, skipped_connectivity, and grid_mm.
     """
     from kicad_agent.validation.grid_check import _is_on_grid
 
     sch = ir.schematic
     wire_endpoints = ir.get_wire_endpoints()
     if not wire_endpoints:
-        return {"snapped_count": 0, "grid_mm": grid_mm}
+        return {"snapped_count": 0, "skipped_connectivity": 0, "grid_mm": grid_mm}
+
+    # Build anchor positions: pins, labels, junctions that wires connect to
+    pin_positions = ir.get_pin_positions()
+    label_positions_list = ir.get_label_positions()
+    anchor_positions: set[tuple[float, float]] = set()
+    for p in pin_positions:
+        anchor_positions.add((round(p["x"], 2), round(p["y"], 2)))
+    for lp in label_positions_list:
+        anchor_positions.add((round(lp["x"], 2), round(lp["y"], 2)))
+    for junction in sch.junctions:
+        anchor_positions.add((round(junction.position.X, 2), round(junction.position.Y, 2)))
+
+    # Minimum snap distance — skip floating-point noise
+    MIN_SNAP_DELTA = 0.001
 
     # First pass: collect all endpoint positions and their wire/point references
     endpoint_groups: dict[tuple[float, float], list[tuple[int, int]]] = {}
@@ -401,11 +421,38 @@ def snap_to_grid(ir: SchematicIR, grid_mm: float = 0.01) -> dict[str, Any]:
 
     # Second pass: for each group, compute shared snap target and apply
     snapped_count = 0
+    skipped_connectivity = 0
     for key, refs in endpoint_groups.items():
         x, y = key
         if not _is_on_grid(x, grid_mm) or not _is_on_grid(y, grid_mm):
             snap_x = round(x / grid_mm) * grid_mm
             snap_y = round(y / grid_mm) * grid_mm
+
+            # Issue #5/#1: Skip negligible snaps (floating-point noise)
+            if _distance(x, y, snap_x, snap_y) < MIN_SNAP_DELTA:
+                continue
+
+            # Issue #5/#1: Connectivity check. If the original position is
+            # near an anchor (pin/label/junction), verify the snapped position
+            # is also near an anchor. If not, snapping would break the connection.
+            if key in anchor_positions:
+                snap_key = (round(snap_x, 2), round(snap_y, 2))
+                if snap_key not in anchor_positions:
+                    # The snap would move away from an anchor — check if any
+                    # anchor is within tolerance of the snapped position
+                    anchor_nearby = any(
+                        _distance(snap_x, snap_y, ax, ay) <= SNAP_TOLERANCE
+                        for ax, ay in anchor_positions
+                    )
+                    if not anchor_nearby:
+                        skipped_connectivity += 1
+                        logger.debug(
+                            "Skipping snap (%.2f, %.2f) -> (%.2f, %.2f): "
+                            "would break connection to anchor",
+                            x, y, snap_x, snap_y,
+                        )
+                        continue
+
             for wi, pi in refs:
                 wire = sch.graphicalItems[wi]
                 wire.points[pi].X = snap_x
@@ -416,7 +463,7 @@ def snap_to_grid(ir: SchematicIR, grid_mm: float = 0.01) -> dict[str, Any]:
                 "snapped_to": [snap_x, snap_y],
             })
 
-    return {"snapped_count": snapped_count, "grid_mm": grid_mm}
+    return {"snapped_count": snapped_count, "skipped_connectivity": skipped_connectivity, "grid_mm": grid_mm}
 
 
 def add_power_flags(ir: SchematicIR, sch_path: Path) -> dict[str, Any]:
@@ -517,7 +564,8 @@ def place_no_connects_from_erc(ir: SchematicIR, sch_path: Path) -> dict[str, Any
     positions = extract_violation_positions(sch_path, "pin_not_connected")
     if not positions:
         return {"placed": 0, "skipped_duplicates": 0, "positions": [],
-                "skipped_pin_type": 0, "skipped_power_net": 0}
+                "skipped_pin_type": 0, "skipped_power_net": 0,
+                "skipped_connected": 0}
 
     # Build pin position → electrical type lookup from IR
     pin_positions = ir.get_pin_positions()
@@ -544,16 +592,38 @@ def place_no_connects_from_erc(ir: SchematicIR, sch_path: Path) -> dict[str, Any
     for nc in sch.noConnects:
         existing_nc.add((round(nc.position.X, 2), round(nc.position.Y, 2)))
 
+    # Issue #4: Build wire/label connectivity sets to avoid placing no_connects
+    # on already-connected pins. A no_connect on a connected pin creates
+    # no_connect_connected violations.
+    wire_endpoints = ir.get_wire_endpoints()
+    label_positions_list = ir.get_label_positions()
+    connected_positions: set[tuple[float, float]] = set()
+    for we in wire_endpoints:
+        connected_positions.add((round(we["start_x"], 2), round(we["start_y"], 2)))
+        connected_positions.add((round(we["end_x"], 2), round(we["end_y"], 2)))
+    for lp in label_positions_list:
+        connected_positions.add((round(lp["x"], 2), round(lp["y"], 2)))
+
     placed_count = 0
     dup_count = 0
     skipped_pin_type = 0
     skipped_power_net = 0
+    skipped_connected = 0
     placed_positions: list[tuple[float, float]] = []
 
     for vp in positions:
         pos_key = (round(vp.x, 2), round(vp.y, 2))
         if pos_key in existing_nc:
             dup_count += 1
+            continue
+
+        # Issue #4: Skip if pin already has a wire or label connection
+        if pos_key in connected_positions:
+            skipped_connected += 1
+            logger.debug(
+                "Skipping no_connect at (%.2f, %.2f): already connected",
+                vp.x, vp.y,
+            )
             continue
 
         # Check pin electrical type
@@ -588,6 +658,7 @@ def place_no_connects_from_erc(ir: SchematicIR, sch_path: Path) -> dict[str, Any
         "skipped_duplicates": dup_count,
         "skipped_pin_type": skipped_pin_type,
         "skipped_power_net": skipped_power_net,
+        "skipped_connected": skipped_connected,
         "positions": placed_positions,
     }
 
@@ -761,7 +832,7 @@ def update_symbols_from_library(
             new_symbol.libraryNickname = library_name
 
             for i, existing in enumerate(sch.libSymbols):
-                if getattr(existing, "libId", "") == lib_id:
+                if _match_lib_symbol(existing, lib_id):
                     sch.libSymbols[i] = new_symbol
                     break
 
@@ -1286,9 +1357,10 @@ def place_missing_units(
         lib_id = components[0].libId
 
         # Find the embedded symbol definition
+        # Issue #6: Use _match_lib_symbol for nickname-less lib_symbols
         lib_sym = None
         for ls in sch.libSymbols:
-            if getattr(ls, "libId", "") == lib_id:
+            if _match_lib_symbol(ls, lib_id):
                 lib_sym = ls
                 break
 
@@ -2027,120 +2099,241 @@ def _check_orphan_count(
     return orphan_count
 
 
+def _verify_clean_break(
+    wire_endpoints: list[dict[str, Any]],
+    bridge_wire_index: int,
+    net_a_labels: set[tuple[float, float]],
+    net_b_labels: set[tuple[float, float]],
+) -> bool:
+    """Verify that removing bridge_wire_index cleanly separates net_a from net_b.
+
+    Graph-bridge algorithm:
+    1. Build adjacency graph from all wires EXCEPT the candidate bridge wire
+    2. BFS from any net_a label position
+    3. If all net_a labels are reachable and NO net_b labels are reachable,
+       the break is clean (the wire was the sole connection between the two groups)
+
+    Complexity: O(W + P) where W = wire count, P = position count.
+
+    Args:
+        wire_endpoints: All wire endpoint data from ir.get_wire_endpoints().
+        bridge_wire_index: Index of the candidate bridge wire to remove.
+        net_a_labels: Positions of labels belonging to net_a.
+        net_b_labels: Positions of labels belonging to net_b.
+
+    Returns:
+        True if removing the wire cleanly separates the two net groups.
+    """
+    if not net_a_labels or not net_b_labels:
+        return False
+
+    # Build adjacency without the bridge wire
+    adjacency: dict[tuple[float, float], list[tuple[float, float]]] = {}
+    for we in wire_endpoints:
+        if we["wire_index"] == bridge_wire_index:
+            continue
+        start = _round_pos(we["start_x"], we["start_y"])
+        end = _round_pos(we["end_x"], we["end_y"])
+        adjacency.setdefault(start, []).append(end)
+        adjacency.setdefault(end, []).append(start)
+
+    # BFS from a net_a seed
+    seed = next(iter(net_a_labels))
+    visited: set[tuple[float, float]] = set()
+    queue: list[tuple[float, float]] = [seed]
+    visited.add(seed)
+
+    head = 0
+    while head < len(queue):
+        current = queue[head]
+        head += 1
+        for neighbor in adjacency.get(current, []):
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)
+
+    # Check: all net_a labels reachable, no net_b labels reachable
+    net_a_unreachable = net_a_labels - visited
+    net_b_reachable = net_b_labels & visited
+
+    return len(net_a_unreachable) == 0 and len(net_b_reachable) == 0
+
+
 def resolve_shorted_nets(
     ir: SchematicIR, file_path: Path, *,
-    strategy: str = "break_bridge",
+    strategy: str = "smart",
+    keep_nets: list[str] | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Atomic short resolution with power-net protection and orphan checking.
+    """Atomically resolve shorted nets by breaking bridge wires and fixing labels.
 
-    Phase 67: Combines break_wire_shorts + fix_shorted_nets into a single
-    operation with:
-    - Power-net protection: never auto-resolve shorts involving power rails
-    - Orphan checking: reject break points that leave labels/pins disconnected
-    - Graph-bridges algorithm for optimal break point selection
+    Phase 67: Combines break_wire_shorts + fix_shorted_nets into one atomic
+    operation with proper ordering, clean-break verification, and power-net
+    protection.
+
+    Strategy "smart" (default):
+      1. Detect all shorts via NetPositionIndex
+      2. For each short, attempt to find bridge wire(s)
+      3. If bridge wire found and removal is clean (verified via BFS) -> break wire
+      4. If no clean break possible -> fix labels (with power-net protection)
+      5. If neither works -> log warning, skip (manual resolution needed)
+
+    Note: This operation works on single-sheet schematics only.
+    Cross-sheet shorts (via hierarchical labels) require whole-project
+    netlist analysis and are out of scope for this operation.
+
+    For hierarchical projects, use on each sub-sheet individually, then
+    verify with ``kicad-cli sch erc`` on the root schematic.
 
     Args:
         ir: SchematicIR for the target schematic.
         file_path: Resolved path to the schematic file.
-        strategy: "break_bridge" (remove bridge wire), "remove_label"
-            (remove duplicate label), or "manual" (report only).
+        strategy: Resolution strategy:
+            - "smart": try wire break, fall back to label fix (default)
+            - "break_only": only attempt wire breaking
+            - "fix_labels_only": only fix labels (no wire removal)
+            - "manual": report only, no changes
+        keep_nets: For "manual" strategy, which nets to keep.
         dry_run: If True, report without modifying.
 
     Returns:
-        Dict with shorts_found, resolved, skipped_power, and details.
+        Dict with shorts_found, wires_broken, labels_fixed, unresolved,
+        and details.
     """
     shorts_result = detect_shorted_nets(ir)
     shorts = shorts_result["shorts"]
 
     if not shorts:
-        return {"shorts_found": 0, "resolved": 0, "skipped_power": 0, "details": []}
+        return {
+            "shorts_found": 0,
+            "wires_broken": 0,
+            "labels_fixed": 0,
+            "unresolved": 0,
+            "details": [],
+        }
 
     wire_endpoints = ir.get_wire_endpoints()
     label_positions = ir.get_label_positions()
     sch = ir.schematic
 
-    resolved_count = 0
-    skipped_power = 0
-    details: list[dict[str, Any]] = []
+    results: dict[str, Any] = {
+        "shorts_found": len(shorts),
+        "wires_broken": [],
+        "labels_fixed": [],
+        "unresolved": [],
+        "details": [],
+    }
 
     for short in shorts:
         nets = short["nets"]
         if len(nets) < 2:
             continue
 
-        # Power-net protection: skip auto-resolution for power rail shorts
-        if any(_is_power_net(n) for n in nets):
-            skipped_power += 1
-            details.append({
+        # Power-safety check (from plan 67-02)
+        power_nets = [n for n in nets if _is_power_net(n)]
+        if len(power_nets) >= 2:
+            results["unresolved"].append({
                 "nets": sorted(nets),
-                "action": "skipped_power",
+                "reason": "power_to_power",
                 "position": list(short["position"]),
-                "reason": "Short involves power rail — requires manual resolution",
             })
             continue
 
         if strategy == "manual":
-            details.append({
-                "nets": sorted(nets),
-                "action": "manual_only",
-                "position": list(short["position"]),
-            })
+            if keep_nets is not None:
+                results["details"].append({
+                    "nets": sorted(nets),
+                    "action": "manual",
+                    "keep_nets": keep_nets,
+                })
+            else:
+                results["details"].append({
+                    "nets": sorted(nets),
+                    "action": "manual_only",
+                    "position": list(short["position"]),
+                })
             continue
 
-        # Try break_bridge strategy first
-        if strategy == "break_bridge":
+        # Try to find and break bridge wire
+        bridge_found = False
+        if strategy in ("smart", "break_only"):
             bridges = find_bridge_wires(ir, nets[0], nets[1])
 
-            # Check orphan count for each bridge candidate
-            clean_bridge = None
-            for bridge in bridges[:5]:  # limit candidates
-                orphan_count = _check_orphan_count(
-                    wire_endpoints, bridge["wire_index"], label_positions,
+            # Build seed sets for clean-break verification
+            net_a_seeds: set[tuple[float, float]] = set()
+            net_b_seeds: set[tuple[float, float]] = set()
+            for lp in label_positions:
+                pos = _round_pos(lp["x"], lp["y"])
+                if lp["name"] == nets[0]:
+                    net_a_seeds.add(pos)
+                elif lp["name"] == nets[1]:
+                    net_b_seeds.add(pos)
+
+            for bridge in bridges[:5]:  # limit candidate count
+                is_clean = _verify_clean_break(
+                    wire_endpoints, bridge["wire_index"],
+                    net_a_seeds, net_b_seeds,
                 )
-                if orphan_count == 0:
-                    clean_bridge = bridge
+                if not is_clean:
+                    continue
+
+                if dry_run:
+                    results["wires_broken"].append({
+                        "nets": sorted(nets),
+                        "wire_start": bridge["start"],
+                        "wire_end": bridge["end"],
+                        "dry_run": True,
+                    })
+                    bridge_found = True
                     break
 
-            if clean_bridge and not dry_run:
                 # Remove the bridge wire
-                wire_idx = clean_bridge["wire_index"]
+                wire_idx = bridge["wire_index"]
                 if wire_idx < len(sch.graphicalItems):
                     sch.graphicalItems.pop(wire_idx)
-                    resolved_count += 1
                     ir._record_mutation("resolve_shorted_net", {
                         "action": "break_bridge",
                         "nets": sorted(nets),
                         "wire_index": wire_idx,
                     })
-                    details.append({
+                    results["wires_broken"].append({
                         "nets": sorted(nets),
-                        "action": "break_bridge",
-                        "wire_start": clean_bridge["start"],
-                        "wire_end": clean_bridge["end"],
+                        "wire_start": bridge["start"],
+                        "wire_end": bridge["end"],
                     })
-                    continue
+                    bridge_found = True
+                    break
 
-            # No clean break found — try label removal
-            if clean_bridge is None and bridges:
-                details.append({
-                    "nets": sorted(nets),
-                    "action": "no_clean_break",
-                    "position": list(short["position"]),
-                    "reason": "All bridge candidates would orphan connections",
-                })
+        # If no clean break, try label fix (unless break_only)
+        if not bridge_found and strategy != "break_only":
+            # Determine which net to keep (power-net protection from 67-02)
+            if power_nets:
+                # Power-to-signal: always keep the power net
+                keep_net = power_nets[0]
+            else:
+                # Signal-to-signal: keep first (alphabetically)
+                keep_net = sorted(nets)[0]
 
-        # Label removal strategy (fallback or explicit)
-        if strategy == "remove_label" or (strategy == "break_bridge" and not bridges):
-            # Keep the first net, remove labels for the rest
-            keep_net = nets[0]
             remove_nets = set(nets) - {keep_net}
 
-            removed_labels = []
+            # Power-net safety guard: block auto-removal of power nets
+            power_being_removed = [n for n in remove_nets if _is_power_net(n)]
+            if power_being_removed:
+                results["unresolved"].append({
+                    "nets": sorted(nets),
+                    "reason": "would_remove_power_net",
+                    "position": list(short["position"]),
+                })
+                continue
+
+            removed_labels: list[str] = []
             for label in list(sch.labels):
                 if label.text in remove_nets:
                     pos_key = _round_pos(label.position.X, label.position.Y)
-                    short_pos = (round(short["position"][0], 2), round(short["position"][1], 2))
+                    short_pos = (
+                        round(short["position"][0], 2),
+                        round(short["position"][1], 2),
+                    )
                     if pos_key == short_pos or _distance(
                         label.position.X, label.position.Y,
                         short["position"][0], short["position"][1],
@@ -2153,11 +2346,16 @@ def resolve_shorted_nets(
                                 "removed": label.text,
                                 "kept": keep_net,
                             })
+                        else:
+                            removed_labels.append(label.text)
 
             for label in list(sch.globalLabels):
                 if label.text in remove_nets:
                     pos_key = _round_pos(label.position.X, label.position.Y)
-                    short_pos = (round(short["position"][0], 2), round(short["position"][1], 2))
+                    short_pos = (
+                        round(short["position"][0], 2),
+                        round(short["position"][1], 2),
+                    )
                     if pos_key == short_pos or _distance(
                         label.position.X, label.position.Y,
                         short["position"][0], short["position"][1],
@@ -2170,19 +2368,36 @@ def resolve_shorted_nets(
                                 "removed": label.text,
                                 "kept": keep_net,
                             })
+                        else:
+                            removed_labels.append(label.text)
 
             if removed_labels:
-                resolved_count += 1
-                details.append({
+                results["labels_fixed"].append({
                     "nets": sorted(nets),
-                    "action": "remove_label",
                     "kept": keep_net,
                     "removed": removed_labels,
+                    "dry_run": dry_run,
+                })
+            elif not bridge_found:
+                # Neither wire break nor label fix worked
+                results["unresolved"].append({
+                    "nets": sorted(nets),
+                    "reason": "no_clean_break",
+                    "position": list(short["position"]),
                 })
 
+        elif not bridge_found:
+            # break_only strategy found no clean break
+            results["unresolved"].append({
+                "nets": sorted(nets),
+                "reason": "no_clean_break",
+                "position": list(short["position"]),
+            })
+
     return {
-        "shorts_found": len(shorts),
-        "resolved": resolved_count,
-        "skipped_power": skipped_power,
-        "details": details,
+        "shorts_found": results["shorts_found"],
+        "wires_broken": len(results["wires_broken"]),
+        "labels_fixed": len(results["labels_fixed"]),
+        "unresolved": len(results["unresolved"]),
+        "details": results["details"] or results["wires_broken"] + results["labels_fixed"] + results["unresolved"],
     }
