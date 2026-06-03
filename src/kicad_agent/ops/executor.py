@@ -31,6 +31,7 @@ from kicad_agent.parser.uuid_extractor import extract_uuids
 from kicad_agent.ops.ir_cache import CacheEntry, IRCache
 from kicad_agent.ops.undo_stack import UndoStack
 from kicad_agent.serializer import normalize_kicad_output, serialize_pcb, serialize_schematic
+from kicad_agent.ops.registry import validate_dependencies
 
 logger = logging.getLogger(__name__)
 
@@ -1884,6 +1885,15 @@ class OperationExecutor:
                     "results": [],
                     "error": f"Security: path escapes project directory: {op.root.target_file}",
                 }
+
+        # Dependency validation (advisory — warns but does not block)
+        op_type_list = [op.root.op_type for op in ops]
+        missing_deps = validate_dependencies(op_type_list)
+        if missing_deps:
+            logger.warning(
+                "Batch missing prerequisites: %s (ops may have run in prior batch)",
+                missing_deps,
+            )
 
         # Group by target file
         file_ops: dict[Path, list[Operation]] = {}

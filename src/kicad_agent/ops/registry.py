@@ -625,7 +625,7 @@ _RAW_CATALOG: dict[str, dict] = {
         "file_types": [".kicad_sch"],
         "is_readonly": False,
         "scope": "single_file",
-        "requires": [],
+        "requires": ["parse_erc"],
         "conflicts": [],
     },
     "fix_pin_type_mismatches": {
@@ -670,7 +670,7 @@ _RAW_CATALOG: dict[str, dict] = {
         "file_types": [".kicad_sch"],
         "is_readonly": False,
         "scope": "single_file",
-        "requires": [],
+        "requires": ["parse_erc"],
         "conflicts": [],
     },
     "place_net_labels": {
@@ -823,7 +823,7 @@ _RAW_CATALOG: dict[str, dict] = {
         "file_types": [".kicad_sch"],
         "is_readonly": False,
         "scope": "single_file",
-        "requires": [],
+        "requires": ["parse_erc"],
         "conflicts": [],
     },
     "erc_auto_fix_hierarchical": {
@@ -832,7 +832,7 @@ _RAW_CATALOG: dict[str, dict] = {
         "file_types": [".kicad_sch"],
         "is_readonly": False,
         "scope": "multi_file",
-        "requires": [],
+        "requires": ["parse_erc"],
         "conflicts": [],
     },
     # review_schematic was missing from the original catalog but exists in schema
@@ -967,6 +967,34 @@ def validate_registry_completeness() -> dict:
         "missing_from_registry": sorted(schema_types - registry_types),
         "extra_in_registry": sorted(registry_types - schema_types),
     }
+
+
+def validate_dependencies(op_types: list[str]) -> list[str]:
+    """Validate that all prerequisites are satisfied for a sequence of operations.
+
+    Walks the op_types in execution order, tracking which ops have been "seen".
+    For each op, checks that all its declared ``requires`` are in the seen set.
+    Returns a list of missing prerequisite op_types.
+
+    Args:
+        op_types: List of op_type strings in planned execution order.
+
+    Returns:
+        List of missing prerequisite op_type strings. Empty if all deps satisfied.
+    """
+    seen: set[str] = set()
+    missing: list[str] = []
+    for op_type in op_types:
+        meta = OPERATION_REGISTRY.get(op_type)
+        if meta is None:
+            # Unknown op -- skip (not our job to validate existence here)
+            seen.add(op_type)
+            continue
+        for req in meta.requires:
+            if req not in seen:
+                missing.append(req)
+        seen.add(op_type)
+    return missing
 
 
 def get_destructive_operations() -> list[OpMeta]:
