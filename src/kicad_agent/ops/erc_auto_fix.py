@@ -26,6 +26,26 @@ from kicad_agent.ops.erc_parser import parse_erc
 
 logger = logging.getLogger(__name__)
 
+# Repair functions authorized to add symbols (cloned units, PWR_FLAG).
+# Any repair NOT in this set that adds symbols triggers a rollback.
+_AUTHORIZED_SYMBOL_ADDITIONS = frozenset({
+    "place_missing_units",   # clones existing multi-unit symbols
+    "add_power_flags",       # adds PWR_FLAG power symbols
+})
+
+
+def _snapshot_ir_inventory(ir: SchematicIR) -> dict[str, int]:
+    """Count schematic symbols and wires for scope-violation detection."""
+    from kiutils.items.schitems import Connection
+    sch = ir._parse_result.kiutils_obj
+    symbol_count = len(sch.schematicSymbols)
+    wire_count = sum(
+        1 for item in sch.graphicalItems
+        if isinstance(item, Connection) and getattr(item, "type", None) == "wire"
+    )
+    return {"symbols": symbol_count, "wires": wire_count}
+
+
 # ---------------------------------------------------------------------------
 # Violation type -> repair function mapping
 # ---------------------------------------------------------------------------
@@ -257,9 +277,77 @@ def erc_auto_fix(
                     checkpoint = _checkpoint_ir(ir)
                     snapshot_before = _take_net_snapshot(ir)
 
+                # Scope guard: snapshot inventory before repair (issue #3).
+                # Always checkpoint for rollback regardless of verify flag.
+                # If checkpoint fails (e.g. mock IR in tests), skip scope guard.
+                scope_checkpoint = None
+                inventory_before = None
+                try:
+                    from kicad_agent.ops.repair import _checkpoint_ir as _ckpt
+                    scope_checkpoint = _ckpt(ir)
+                    inventory_before = _snapshot_ir_inventory(ir)
+                except Exception:
+                    pass
+
                 # Call the repair function with (ir, file_path) and default args.
                 # Council KR-04: auto-detect mode -- functions infer what to fix from IR state.
                 func(ir, file_path)
+
+                # Scope guard: detect unauthorized additions (issue #3).
+                # No repair function should add wires. Only place_missing_units
+                # and add_power_flags may add symbols.
+                if scope_checkpoint is not None and inventory_before is not None:
+                    inventory_after = _snapshot_ir_inventory(ir)
+                    wire_delta = inventory_after["wires"] - inventory_before["wires"]
+                    symbol_delta = inventory_after["symbols"] - inventory_before["symbols"]
+
+                    # Diagnostic: always log inventory changes for forensics
+                    if wire_delta != 0 or symbol_delta != 0:
+                        logger.info(
+                            "Repair %s inventory: symbols %d->%d (%+d), "
+                            "wires %d->%d (%+d)",
+                            repair_name,
+                            inventory_before["symbols"], inventory_after["symbols"],
+                            symbol_delta,
+                            inventory_before["wires"], inventory_after["wires"],
+                            wire_delta,
+                        )
+
+                    if wire_delta > 0:
+                        logger.error(
+                            "Scope violation: repair %s added %d wires (expected 0). "
+                            "Rolling back. Before: %d wires, After: %d wires.",
+                            repair_name, wire_delta,
+                            inventory_before["wires"], inventory_after["wires"],
+                        )
+                        from kicad_agent.ops.repair import _restore_ir
+                        _restore_ir(ir, scope_checkpoint)
+                        ir.schematic.to_file(str(file_path))
+                        verification_rollback.append({
+                            "repair": repair_name,
+                            "reason": f"added {wire_delta} wires",
+                            "inventory_before": inventory_before,
+                            "inventory_after": inventory_after,
+                        })
+                        continue
+
+                    if symbol_delta > 0 and repair_name not in _AUTHORIZED_SYMBOL_ADDITIONS:
+                        logger.error(
+                            "Scope violation: repair %s added %d symbols (expected 0). "
+                            "Rolling back. Before: %d symbols, After: %d symbols.",
+                            repair_name, symbol_delta,
+                            inventory_before["symbols"], inventory_after["symbols"],
+                        )
+                        from kicad_agent.ops.repair import _restore_ir
+                        _restore_ir(ir, scope_checkpoint)
+                        ir.schematic.to_file(str(file_path))
+                        verification_rollback.append({
+                            "repair": repair_name,
+                            "reason": f"added {symbol_delta} unauthorized symbols",
+                            "inventory_before": inventory_before,
+                            "inventory_after": inventory_after,
+                        })
+                        continue
 
                 # Persist in-memory mutations to disk so parse_erc sees changes.
                 ir.schematic.to_file(str(file_path))
@@ -579,6 +667,16 @@ def erc_auto_fix_hierarchical(
         # Individual sub-sheet files report all violations as sheet="/",
         # so we use "/" as sheet_filter for sub-sheets (not the hierarchical path).
         effective_filter = "/" if sheet_path != "/" else "/"
+
+        # Issue #3 forensics: snapshot inventory before per-sheet repair.
+        # Measures symbol/wire counts before and after to catch unauthorized
+        # additions that the per-repair scope guard might miss.
+        sheet_inventory_before: dict[str, int] | None = None
+        try:
+            sheet_inventory_before = _snapshot_ir_inventory(sheet_ir)
+        except Exception:
+            pass
+
         try:
             result = erc_auto_fix(
                 sheet_ir,
@@ -587,6 +685,26 @@ def erc_auto_fix_hierarchical(
                 mode=mode,
                 sheet_filter=effective_filter,
             )
+
+            # Issue #3 forensics: log per-sheet inventory delta.
+            if sheet_inventory_before is not None:
+                try:
+                    sheet_inventory_after = _snapshot_ir_inventory(sheet_ir)
+                    sym_delta = sheet_inventory_after["symbols"] - sheet_inventory_before["symbols"]
+                    wire_delta = sheet_inventory_after["wires"] - sheet_inventory_before["wires"]
+                    if sym_delta != 0 or wire_delta != 0:
+                        logger.info(
+                            "Sheet %s inventory delta: symbols %+d, wires %+d "
+                            "(before: %d sym / %d wire, after: %d sym / %d wire)",
+                            sheet_path, sym_delta, wire_delta,
+                            sheet_inventory_before["symbols"],
+                            sheet_inventory_before["wires"],
+                            sheet_inventory_after["symbols"],
+                            sheet_inventory_after["wires"],
+                        )
+                except Exception:
+                    pass
+
             per_sheet[sheet_path] = result
             if result.get("fixes_applied"):
                 sheets_with_fixes += 1

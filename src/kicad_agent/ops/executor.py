@@ -62,6 +62,11 @@ _CROSS_FILE_OP_TYPES = {"propagate_symbol_change"}
 # Set of op_types that create new files (bypass file-existence check)
 _CREATE_OP_TYPES = {"create_schematic", "create_pcb", "create_project", "create_symbol", "create_footprint"}
 
+# Set of op_types that manage their own file I/O (skip executor serialization).
+# These handlers write modified files directly and the executor must not
+# overwrite them with the original parse_result.
+_SELF_SERIALIZING_OPS = frozenset({"erc_auto_fix_hierarchical"})
+
 
 def register_schematic(op_type: str) -> Callable:
     """Decorator to register a schematic operation handler."""
@@ -1469,10 +1474,15 @@ class OperationExecutor:
 
         with Transaction(file_path) as txn:
             details = self._dispatch(root.op_type, root, ir, file_path)
-            serialize_schematic(parse_result, file_path)
-            content = file_path.read_text(encoding="utf-8")
-            normalized = normalize_kicad_output(content)
-            file_path.write_text(normalized, encoding="utf-8")
+
+            # Skip serialization for operations that manage their own file I/O
+            # (e.g. erc_auto_fix_hierarchical writes sub-sheets directly).
+            if root.op_type not in _SELF_SERIALIZING_OPS:
+                serialize_schematic(parse_result, file_path)
+                content = file_path.read_text(encoding="utf-8")
+                normalized = normalize_kicad_output(content)
+                file_path.write_text(normalized, encoding="utf-8")
+
             txn.commit()
 
             # Capture post-mutation content for undo stack

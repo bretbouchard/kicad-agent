@@ -16,6 +16,7 @@ Usage:
 
 import logging
 import math
+import re
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -800,7 +801,13 @@ def fix_shorted_nets(
     Args:
         ir: SchematicIR for the target schematic.
         file_path: Resolved path to the schematic file.
-        strategy: "keep_first", "keep_last", or "manual".
+        strategy: "keep_first", "keep_last", "keep_majority", or "manual".
+            - keep_first: keep the first alphabetically.
+            - keep_last: keep the last alphabetically.
+            - keep_majority: keep the net with the most connections (pins +
+              labels). Power nets are always preferred over signal nets.
+              Power-to-power shorts are never auto-resolved.
+            - manual: use the keep_nets list to decide.
         keep_nets: For "manual" strategy, which net names to keep.
         dry_run: If True, report shorts without modifying.
 
@@ -828,6 +835,45 @@ def fix_shorted_nets(
             keep_net = nets[0]
         elif strategy == "keep_last":
             keep_net = nets[-1]
+        elif strategy == "keep_majority":
+            # Count connections per net via NetPositionIndex
+            try:
+                index = NetPositionIndex.from_file(file_path)
+            except Exception:
+                index = None
+
+            net_counts: dict[str, int] = {}
+            for net_name in nets:
+                if index is not None:
+                    positions = index.get_positions_for_net(net_name)
+                    net_counts[net_name] = len(positions)
+                else:
+                    net_counts[net_name] = 0
+
+            # Separate power nets from signal nets
+            power_nets = [n for n in nets if _is_power_net(n)]
+            signal_nets = [n for n in nets if not _is_power_net(n)]
+
+            if len(power_nets) >= 2:
+                # Power-to-power short: NEVER auto-resolve
+                logger.warning(
+                    "Power-to-power short detected: %s. Skipping auto-fix.",
+                    ", ".join(power_nets),
+                )
+                continue
+
+            if power_nets:
+                # Power-to-signal short: always keep the power net
+                keep_net = power_nets[0]
+            else:
+                # Signal-to-signal short: keep the one with more connections
+                keep_net = max(signal_nets, key=lambda n: net_counts.get(n, 0))
+
+            logger.info(
+                "Short resolution (keep_majority): keeping %s, removing %s",
+                keep_net,
+                set(nets) - {keep_net},
+            )
         elif strategy == "manual":
             if keep_nets is None:
                 continue
@@ -841,8 +887,17 @@ def fix_shorted_nets(
         else:
             continue
 
-        # Remove labels for the non-kept nets
+        # Power-net safety guard: block auto-removal of power nets
+        # unless strategy is "manual" (explicit user choice).
         remove_nets = set(nets) - {keep_net}
+        power_being_removed = [n for n in remove_nets if _is_power_net(n)]
+        if power_being_removed and strategy != "manual":
+            logger.warning(
+                "Refusing to auto-remove power net(s) %s. "
+                "Use strategy='manual' with explicit keep_nets.",
+                power_being_removed,
+            )
+            continue
 
         for label in list(sch.labels):
             if label.text in remove_nets:
@@ -1204,6 +1259,10 @@ def place_missing_units(
 
     units_placed: list[dict[str, Any]] = []
 
+    # Issue #3: track occupied positions across all base_ref iterations
+    # to prevent overlapping placements for different ICs.
+    _occupied_positions: set[tuple[float, float]] = set()
+
     # Build net position index for connectivity-aware placement (Phase 66).
     # Try to build from the schematic file; if that fails (e.g. in-memory
     # only), fall back to None which disables net-aware scoring.
@@ -1262,6 +1321,41 @@ def place_missing_units(
         if not missing_unit_nums:
             continue  # All units already placed
 
+        # Issue #3: single-unit usage guard.  When only 1 unit is placed but
+        # the symbol has multiple units, this is likely intentional single-unit
+        # usage (e.g. using one gate of a quad op-amp).  Only place the power
+        # unit if it has power pins; skip all other missing units.
+        if len(components) == 1 and len(missing_unit_nums) > 1:
+            power_unit = max(unit_pin_map.keys())
+            if power_unit not in placed_unit_nums:
+                # Check if the power unit has power-type pins
+                power_offsets = _get_unit_pin_offsets(lib_sym, power_unit)
+                has_power_pins = False
+                if power_offsets:
+                    # Look for power pins in the library symbol's sub-symbols
+                    for sub_sym in lib_sym.units:
+                        sub_name = getattr(sub_sym, "libId", "") or ""
+                        # Sub-symbol naming: <lib_id>_N_M where N=unit, M=body
+                        parts = sub_name.rsplit("_", 2)
+                        if len(parts) >= 3:
+                            try:
+                                u = int(parts[-2])
+                            except ValueError:
+                                continue
+                            if u == power_unit:
+                                for pin in sub_sym.pins:
+                                    if pin.electricalType in ("power_in", "power_out"):
+                                        has_power_pins = True
+                                        break
+                if has_power_pins:
+                    # Only place the power unit, skip other missing units
+                    missing_unit_nums = [power_unit]
+                else:
+                    continue  # Skip: single-unit usage, no power unit needed
+
+        if not missing_unit_nums:
+            continue  # All units already placed
+
         # Get wire endpoints and label positions for position calculation
         wire_endpoints = ir.get_wire_endpoints()
         label_positions = ir.get_label_positions()
@@ -1314,6 +1408,16 @@ def place_missing_units(
                     first_comp.position.X + offset_idx * offset_x,
                     first_comp.position.Y + offset_idx * offset_y,
                 )
+                # Issue #3: avoid position collisions with previously
+                # placed units from other base references.
+                pos_key = _round_pos(pos[0], pos[1])
+                while pos_key in _occupied_positions:
+                    offset_idx += 1
+                    pos = (
+                        first_comp.position.X + offset_idx * offset_x,
+                        first_comp.position.Y + offset_idx * offset_y,
+                    )
+                    pos_key = _round_pos(pos[0], pos[1])
 
             new_x, new_y = pos
 
@@ -1352,6 +1456,9 @@ def place_missing_units(
                     break
 
             sch.schematicSymbols.append(new_comp)
+
+            # Issue #3: record occupied position for deduplication
+            _occupied_positions.add(_round_pos(new_x, new_y))
 
             ir._record_mutation("place_missing_unit", {
                 "base_reference": base_ref,
@@ -1848,20 +1955,27 @@ def break_wire_shorts(
     }
 
 
-# Power net name patterns — never auto-remove these labels
-_POWER_NET_PATTERNS = frozenset({
-    "VCC", "VDD", "VEE", "VSS",
-    "GND", "AGND", "DGND", "PGND", "CHASSIS",
-    "+3V3", "+5V", "+9V", "+12V", "+15V", "+24V", "+48V",
-    "-3V3", "-5V", "-9V", "-12V", "-15V", "-24V", "-48V",
-    "3V3", "5V", "9V", "12V", "15V", "24V", "48V",
-})
+# Power net name patterns — regex patterns that indicate power rails.
+# These nets should NEVER be auto-removed during short resolution.
+# HI-06 (Phase 66 Council): Frozenset approach missed unconventional names
+# like +3.3V, VDD_3V3, VIN, VOUT. Regex covers these systematically.
+_POWER_NET_PATTERNS: list[re.Pattern] = [
+    re.compile(r"^(VCC|VDD|VSS|VEE)$", re.IGNORECASE),
+    re.compile(r"^(GND|AGND|DGND|PGND|SGND|CHASSIS)$", re.IGNORECASE),
+    re.compile(r"^\+?\d+V\d*$"),          # +3V3, +5V, +9V, +12V, +15V, 3V3
+    re.compile(r"^-\d+V\d*$"),             # -15V, -12V
+    re.compile(r"^(PWR|VIN|VOUT)$", re.IGNORECASE),
+]
 
 
 def _is_power_net(net_name: str) -> bool:
-    """Check if a net name is a power rail."""
-    upper = net_name.upper().lstrip("+").lstrip("-")
-    return net_name in _POWER_NET_PATTERNS or upper in _POWER_NET_PATTERNS
+    """Check if a net name looks like a power rail.
+
+    Uses regex patterns to match common power rail naming conventions
+    including voltage rails (+3V3, +5V, -15V), ground variants (GND,
+    AGND, DGND), and supply pins (VCC, VDD, VIN, VOUT).
+    """
+    return any(p.match(net_name) for p in _POWER_NET_PATTERNS)
 
 
 def _check_orphan_count(
