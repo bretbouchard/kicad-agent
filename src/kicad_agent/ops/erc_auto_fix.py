@@ -26,12 +26,17 @@ from kicad_agent.ops.erc_parser import parse_erc
 
 logger = logging.getLogger(__name__)
 
-# Repair functions authorized to add symbols (cloned units, PWR_FLAG).
-# Any repair NOT in this set that adds symbols triggers a rollback.
+# Repair functions authorized to add symbols.
+# Issue #3: place_missing_units was adding 192 unauthorized components.
+# Only add_power_flags is now authorized — it only adds PWR_FLAG symbols.
+# place_missing_units must be audited before re-enabling.
 _AUTHORIZED_SYMBOL_ADDITIONS = frozenset({
-    "place_missing_units",   # clones existing multi-unit symbols
-    "add_power_flags",       # adds PWR_FLAG power symbols
+    "add_power_flags",       # adds PWR_FLAG power symbols only
 })
+
+# Maximum number of symbols a single repair may add. Even authorized
+# repairs are capped to prevent runaway additions.
+_MAX_SYMBOL_ADDITIONS_PER_REPAIR = 20
 
 
 def _snapshot_ir_inventory(ir: SchematicIR) -> dict[str, int]:
@@ -56,15 +61,19 @@ VIOLATION_REPAIR_MAP: dict[str, str] = {
     "pin_not_connected": "place_no_connects_from_erc",
     "power_pin_not_driven": "add_power_flags",
     "pin_to_pin": "fix_pin_type_mismatches",
-    "missing_power_pin": "place_missing_units",
+    # Issue #3: place_missing_units removed from auto-fix. It created 192
+    # unauthorized components. Re-enable only after audit with strict limits.
+    # "missing_power_pin": "place_missing_units",
 }
 
 # Repair priority order. Shorts cause cascading errors and must be fixed first.
-# Then pin type conflicts, missing units, power flags, and finally cosmetic fixes.
+# Then pin type conflicts, power flags, and finally cosmetic fixes.
+# Issue #3: place_missing_units removed from priority list.
+# Phase 67: resolve_shorted_nets replaces separate break_wire_shorts + fix_shorted_nets
+# calls with a single atomic operation (smart strategy: wire break then label fix).
 REPAIR_PRIORITY: list[str] = [
-    "break_wire_shorts",       # shorts cause cascading errors
+    "resolve_shorted_nets",    # atomic short resolution (break + fix)
     "fix_pin_type_mismatches", # type conflicts
-    "place_missing_units",     # missing units
     "add_power_flags",         # power pin issues (maps from power_pin_not_driven)
     "place_no_connects_from_erc",  # unconnected pins / cosmetic (maps from pin_not_connected)
     "snap_to_grid",            # off-grid / cosmetic
@@ -91,6 +100,9 @@ def _get_repair_function(repair_name: str) -> Any:
     elif repair_name == "break_wire_shorts":
         from kicad_agent.ops.repair import break_wire_shorts
         return break_wire_shorts
+    elif repair_name == "resolve_shorted_nets":
+        from kicad_agent.ops.repair import resolve_shorted_nets
+        return resolve_shorted_nets
     elif repair_name == "snap_to_grid":
         from kicad_agent.ops.repair import snap_to_grid
         return snap_to_grid
@@ -111,7 +123,7 @@ def _violation_type_to_repair_name(vtype: str) -> str | None:
 
     # Pattern-based mappings
     if "short" in vtype.lower():
-        return "break_wire_shorts"
+        return "resolve_shorted_nets"
     if "off_grid" in vtype.lower():
         return "snap_to_grid"
 
@@ -125,8 +137,9 @@ def _violation_type_to_repair_name(vtype: str) -> str | None:
 # Maps diagnosis action names to existing repair function names.
 _ACTION_TO_REPAIR_MAP: dict[str, str] = {
     "place_no_connect": "place_no_connects_from_erc",
-    "break_wire_shorts": "break_wire_shorts",
-    "fix_shorted_nets": "fix_shorted_nets",
+    "break_wire_shorts": "resolve_shorted_nets",
+    "fix_shorted_nets": "resolve_shorted_nets",
+    "resolve_shorted_nets": "resolve_shorted_nets",
     "add_power_flag": "add_power_flags",
     "snap_to_grid": "snap_to_grid",
     "fix_pin_type_mismatches": "fix_pin_type_mismatches",
@@ -344,6 +357,25 @@ def erc_auto_fix(
                         verification_rollback.append({
                             "repair": repair_name,
                             "reason": f"added {symbol_delta} unauthorized symbols",
+                            "inventory_before": inventory_before,
+                            "inventory_after": inventory_after,
+                        })
+                        continue
+
+                    # Issue #3: Cap authorized symbol additions
+                    if symbol_delta > _MAX_SYMBOL_ADDITIONS_PER_REPAIR:
+                        logger.error(
+                            "Scope violation: repair %s added %d symbols (max %d). "
+                            "Rolling back. Before: %d symbols, After: %d symbols.",
+                            repair_name, symbol_delta, _MAX_SYMBOL_ADDITIONS_PER_REPAIR,
+                            inventory_before["symbols"], inventory_after["symbols"],
+                        )
+                        from kicad_agent.ops.repair import _restore_ir
+                        _restore_ir(ir, scope_checkpoint)
+                        ir.schematic.to_file(str(file_path))
+                        verification_rollback.append({
+                            "repair": repair_name,
+                            "reason": f"added {symbol_delta} symbols (exceeds cap of {_MAX_SYMBOL_ADDITIONS_PER_REPAIR})",
                             "inventory_before": inventory_before,
                             "inventory_after": inventory_after,
                         })
