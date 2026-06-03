@@ -32,8 +32,8 @@ class TestReviewSchematicOp:
         """Op has sensible defaults."""
         from kicad_agent.ops._schema_readability import ReviewSchematicOp
 
-        op = ReviewSchematicOp(file_path="test.kicad_sch")
-        assert op.operation_type == "review_schematic"
+        op = ReviewSchematicOp(target_file="test.kicad_sch")
+        assert op.op_type == "review_schematic"
         assert op.vision is False
         assert op.output_format == "markdown"
         assert op.config_path is None
@@ -43,7 +43,7 @@ class TestReviewSchematicOp:
         from kicad_agent.ops._schema_readability import ReviewSchematicOp
 
         op = ReviewSchematicOp(
-            file_path="test.kicad_sch",
+            target_file="test.kicad_sch",
             vision=True,
             output_format="json",
             config_path="/path/to/config.yaml",
@@ -58,7 +58,7 @@ class TestReviewSchematicOp:
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError):
-            ReviewSchematicOp(file_path="test.kicad_sch", output_format="xml")
+            ReviewSchematicOp(target_file="test.kicad_sch", output_format="xml")
 
 
 # ---------------------------------------------------------------------------
@@ -216,10 +216,10 @@ class TestExecutorQueryHandler:
         from kicad_agent.ops._schema_readability import ReviewSchematicOp
 
         op = ReviewSchematicOp(
-            operation_type="review_schematic",
-            file_path="test.kicad_sch",
+            op_type="review_schematic",
+            target_file="test.kicad_sch",
         )
-        assert op.operation_type == "review_schematic"
+        assert op.op_type == "review_schematic"
 
     def test_query_handler_registered(self):
         """review_schematic query handler exists in executor registry."""
