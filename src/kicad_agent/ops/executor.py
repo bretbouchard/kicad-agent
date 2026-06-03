@@ -504,6 +504,28 @@ def _handle_break_wire_shorts(op: Any, ir: SchematicIR, file_path: Path) -> dict
     )
 
 
+@register_schematic("resolve_shorted_nets")
+def _handle_resolve_shorted_nets(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.repair import resolve_shorted_nets
+    return resolve_shorted_nets(
+        ir, file_path,
+        strategy=op.strategy,
+        keep_nets=op.keep_nets,
+        dry_run=op.dry_run,
+    )
+
+
+@register_schematic("place_net_labels")
+def _handle_place_net_labels(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.net_label_placer import place_net_labels
+    return place_net_labels(
+        ir, file_path,
+        pin_map=op.pin_map,
+        references=op.references,
+        dry_run=op.dry_run,
+    )
+
+
 @register_schematic("erc_auto_fix")
 def _handle_erc_auto_fix(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.erc_auto_fix import erc_auto_fix
@@ -1478,7 +1500,7 @@ class OperationExecutor:
             # Skip serialization for operations that manage their own file I/O
             # (e.g. erc_auto_fix_hierarchical writes sub-sheets directly).
             if root.op_type not in _SELF_SERIALIZING_OPS:
-                serialize_schematic(parse_result, file_path)
+                serialize_schematic(parse_result, file_path, ir=ir)
                 content = file_path.read_text(encoding="utf-8")
                 normalized = normalize_kicad_output(content)
                 file_path.write_text(normalized, encoding="utf-8")
@@ -1718,7 +1740,7 @@ class OperationExecutor:
                         if not ir.raw_written:
                             serialize_pcb(parse_result, fp, uuid_map=uuid_map)
                     elif isinstance(ir, SchematicIR):
-                        serialize_schematic(ir._parse_result, fp)
+                        serialize_schematic(ir._parse_result, fp, ir=ir)
                         content = fp.read_text(encoding="utf-8")
                         normalized = normalize_kicad_output(content)
                         fp.write_text(normalized, encoding="utf-8")
@@ -1930,7 +1952,7 @@ class OperationExecutor:
                     if not ir.raw_written:
                         serialize_pcb(parse_result, file_path, uuid_map=uuid_map)
                 elif not self._is_project_file(file_path):
-                    serialize_schematic(parse_result, file_path)
+                    serialize_schematic(parse_result, file_path, ir=ir)
                     content = file_path.read_text(encoding="utf-8")
                     normalized = normalize_kicad_output(content)
                     file_path.write_text(normalized, encoding="utf-8")

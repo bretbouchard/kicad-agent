@@ -263,6 +263,8 @@ from kicad_agent.ops._schema_repair import (  # noqa: E402
     PlaceMissingUnitsOp,
     RemoveDanglingWiresOp,
     BreakWireShortsOp,
+    ResolveShortedNetsOp,
+    PlaceNetLabelsOp,
 )
 # ErcAutoFixOp migrated to _schema_erc_smart.py (Council H-02: atomic schema migration)
 from kicad_agent.ops._schema_sheet import (  # noqa: E402
@@ -383,6 +385,8 @@ class Operation(BaseModel):
         | PlaceMissingUnitsOp
         | RemoveDanglingWiresOp
         | BreakWireShortsOp
+        | ResolveShortedNetsOp
+        | PlaceNetLabelsOp
         | ErcAutoFixOp
         | ErcAutoFixHierarchicalOp
         | ModifyCopperZoneOp
@@ -503,6 +507,8 @@ __all__ = [
     "PlaceMissingUnitsOp",
     "RemoveDanglingWiresOp",
     "BreakWireShortsOp",
+    "ResolveShortedNetsOp",
+    "PlaceNetLabelsOp",
     "ErcAutoFixOp",
     "ErcAutoFixHierarchicalOp",
     # Sheet ops

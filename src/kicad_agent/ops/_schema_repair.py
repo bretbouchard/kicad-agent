@@ -328,6 +328,79 @@ class BreakWireShortsOp(BaseModel):
     )
 
 
+class ResolveShortedNetsOp(BaseModel):
+    """Atomically resolve shorted nets with wire breaking and label fixing.
+
+    Phase 67: Combines break_wire_shorts + fix_shorted_nets into one atomic
+    operation with proper ordering, clean-break verification, and power-net
+    protection. The "smart" strategy (default) tries wire break first, then
+    falls back to label removal if no clean break is possible.
+
+    Single-sheet schematics only. Cross-sheet shorts require project-level
+    netlist analysis.
+
+    Attributes:
+        op_type: Discriminator literal ``"resolve_shorted_nets"``.
+        target_file: Relative path to the .kicad_sch file.
+        strategy: Resolution strategy:
+            - ``"smart"``: try wire break, fall back to label fix (default)
+            - ``"break_only"``: only attempt wire breaking
+            - ``"fix_labels_only"``: only fix labels (no wire removal)
+            - ``"manual"``: report only, no changes
+        keep_nets: For "manual" strategy, which net names to keep.
+        dry_run: If True, report what would change without modifying.
+    """
+
+    op_type: Literal["resolve_shorted_nets"] = "resolve_shorted_nets"
+    target_file: TargetFile
+    strategy: Literal["smart", "break_only", "fix_labels_only", "manual"] = Field(
+        default="smart",
+        description="Resolution strategy: smart (default), break_only, fix_labels_only, manual",
+    )
+    keep_nets: Optional[list[str]] = Field(
+        default=None,
+        description='For manual strategy, which net names to keep',
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Report without modifying the file",
+    )
+
+
 # ErcAutoFixOp has been migrated to _schema_erc_smart.py (Council H-02:
 # two classes with the same op_type discriminator cannot coexist in the
 # Operation union). Import from there if needed directly.
+
+
+class PlaceNetLabelsOp(BaseModel):
+    """Place net labels on IC pins based on a pin-to-net mapping.
+
+    Issue #8: Takes a pin_map (built-in profile or user-provided JSON) and
+    places global labels at IC pin positions that already have wire connections.
+    Critical safety: labels are ONLY placed at positions with wire endpoints,
+    preventing label_dangling violations.
+
+    Pins mapped to None receive no_connect flags (only if no wire exists).
+
+    Attributes:
+        op_type: Discriminator literal ``"place_net_labels"``.
+        target_file: Relative path to the .kicad_sch file.
+        pin_map: Built-in profile name (e.g. "backplane") or path to JSON mapping file.
+        references: Optional list of specific component references. None = all matching.
+        dry_run: If True, report what would be placed without modifying.
+    """
+
+    op_type: Literal["place_net_labels"] = "place_net_labels"
+    target_file: TargetFile
+    pin_map: str = Field(
+        default="auto",
+        description="Built-in profile name or path to JSON pin_map file",
+    )
+    references: Optional[list[str]] = Field(
+        default=None,
+        description="Specific component references to process, or None for all",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Report placements without modifying the file",
+    )
