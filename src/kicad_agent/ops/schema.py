@@ -174,6 +174,7 @@ from kicad_agent.ops._schema_component import (  # noqa: E402
     AddComponentOp,
     RemoveComponentOp,
     MoveComponentOp,
+    SnapComponentsToGridOp,
     ModifyPropertyOp,
     DuplicateComponentOp,
     ArrayReplicateOp,
@@ -208,6 +209,7 @@ from kicad_agent.ops._schema_wire import (  # noqa: E402
 from kicad_agent.ops._schema_remove import (  # noqa: E402
     RemoveWireOp,
     RemoveLabelOp,
+    RemoveLabelsOp,
     RemoveJunctionOp,
     RemoveNoConnectOp,
 )
@@ -291,6 +293,7 @@ from kicad_agent.ops._schema_schematic_intel import (  # noqa: E402
     ExtractNetsOp,
     DetectNetConflictsOp,
     SuggestNetNamesOp,
+    InferConnectivityOp,
 )
 from kicad_agent.ops._schema_erc_smart import (  # noqa: E402
     ClassifyViolationsOp,
@@ -320,6 +323,7 @@ class Operation(BaseModel):
         AddComponentOp
         | RemoveComponentOp
         | MoveComponentOp
+        | SnapComponentsToGridOp
         | ModifyPropertyOp
         | DuplicateComponentOp
         | ArrayReplicateOp
@@ -366,6 +370,7 @@ class Operation(BaseModel):
         | SwapSymbolOp
         | RemoveWireOp
         | RemoveLabelOp
+        | RemoveLabelsOp
         | RemoveJunctionOp
         | RemoveNoConnectOp
         | AddSheetOp
@@ -403,6 +408,7 @@ class Operation(BaseModel):
         | ExtractNetsOp
         | DetectNetConflictsOp
         | SuggestNetNamesOp
+        | InferConnectivityOp
         | ClassifyViolationsOp
         | DiagnoseViolationsOp
         | ReviewSchematicOp,
@@ -435,6 +441,7 @@ __all__ = [
     "AddComponentOp",
     "RemoveComponentOp",
     "MoveComponentOp",
+    "SnapComponentsToGridOp",
     "ModifyPropertyOp",
     "DuplicateComponentOp",
     "ArrayReplicateOp",
@@ -462,6 +469,7 @@ __all__ = [
     # Remove ops
     "RemoveWireOp",
     "RemoveLabelOp",
+    "RemoveLabelsOp",
     "RemoveJunctionOp",
     "RemoveNoConnectOp",
     # Library ops

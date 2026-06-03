@@ -268,6 +268,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "remove_labels": {
+        "category": "remove",
+        "description": "Batch remove labels by type and/or name",
+        "file_types": [".kicad_sch"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
     "remove_junction": {
         "category": "remove",
         "description": "Remove a junction dot by UUID",
@@ -577,6 +586,15 @@ _RAW_CATALOG: dict[str, dict] = {
     "snap_to_grid": {
         "category": "repair",
         "description": "Snap off-grid wire endpoints to the nearest grid point",
+        "file_types": [".kicad_sch"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
+    "snap_components_to_grid": {
+        "category": "component",
+        "description": "Snap all or filtered components to grid-aligned positions",
         "file_types": [".kicad_sch"],
         "is_readonly": False,
         "scope": "single_file",

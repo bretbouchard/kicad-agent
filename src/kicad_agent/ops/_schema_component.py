@@ -104,6 +104,39 @@ class MoveComponentOp(BaseModel):
         return _validate_safe_identifier(v, "reference")
 
 
+class SnapComponentsToGridOp(BaseModel):
+    """Snap all (or filtered) components to the nearest grid-aligned position.
+
+    Moves component positions to the nearest grid point to eliminate off-grid
+    violations caused by script-generated schematics.
+
+    Attributes:
+        op_type: Discriminator literal ``"snap_components_to_grid"``.
+        target_file: Relative path to the target KiCad schematic file.
+        grid_size: Grid spacing in mm (default 2.54 = KiCad 50mil standard grid).
+        prefix_filter: Only snap components whose reference starts with this prefix.
+            Empty string means all components.
+        dry_run: If True, report what would move without making changes.
+    """
+
+    op_type: Literal["snap_components_to_grid"] = "snap_components_to_grid"
+    target_file: TargetFile
+    grid_size: float = Field(
+        default=2.54,
+        ge=0.01,
+        le=50.0,
+        description="Grid spacing in mm",
+    )
+    prefix_filter: str = Field(
+        default="",
+        description="Only snap components with this reference prefix (empty = all)",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Report what would move without changing",
+    )
+
+
 class ModifyPropertyOp(BaseModel):
     """Modify a component property (value, footprint, reference, custom field).
 

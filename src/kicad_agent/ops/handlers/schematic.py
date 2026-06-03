@@ -55,6 +55,69 @@ def _handle_move_component(op: Any, ir: SchematicIR, file_path: Path) -> dict[st
     return move_component(op, ir, file_type=ir.file_type)
 
 
+@register_schematic("snap_components_to_grid")
+def _handle_snap_components_to_grid(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    """Snap component positions to the nearest grid point."""
+    grid = op.grid_size
+
+    def _snap(value: float) -> float:
+        nearest = int(value / grid + 0.5)
+        return round(nearest * grid, 2)
+
+    sch = ir._parse_result.kiutils_obj
+    snapped = 0
+    skipped = 0
+    moves: list[dict] = []
+
+    for sym in sch.schematicSymbols:
+        ref = getattr(sym, 'libId', '')  # fallback
+        # Get reference from properties
+        for prop in getattr(sym, 'properties', []):
+            if prop.key == "Reference":
+                ref = prop.value
+                break
+
+        # Apply prefix filter
+        if op.prefix_filter and not ref.startswith(op.prefix_filter):
+            skipped += 1
+            continue
+
+        old_x = sym.position.X
+        old_y = sym.position.Y
+        new_x = _snap(old_x)
+        new_y = _snap(old_y)
+
+        if new_x == old_x and new_y == old_y:
+            skipped += 1
+            continue
+
+        moves.append({
+            "reference": ref,
+            "from": [old_x, old_y],
+            "to": [new_x, new_y],
+        })
+
+        if not op.dry_run:
+            sym.position.X = new_x
+            sym.position.Y = new_y
+            ir._record_mutation("snap_component", {
+                "reference": ref,
+                "from": [old_x, old_y],
+                "to": [new_x, new_y],
+                "grid": grid,
+            })
+
+        snapped += 1
+
+    return {
+        "snapped": snapped,
+        "skipped": skipped,
+        "dry_run": op.dry_run,
+        "grid_size": grid,
+        "moves": moves,
+    }
+
+
 @register_schematic("modify_property")
 def _handle_modify_property(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.modify_property import modify_property
@@ -215,6 +278,56 @@ def _handle_remove_wire(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, 
 def _handle_remove_label(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.remove_ops import remove_label
     return remove_label(op, ir, file_path, file_path.parent)
+
+
+@register_schematic("remove_labels")
+def _handle_remove_labels(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    """Batch remove labels by type and/or name."""
+    sch = ir._parse_result.kiutils_obj
+
+    # Safety: require remove_all=True when no names filter
+    if not op.names and not op.remove_all:
+        raise ValueError(
+            "remove_labels requires either 'names' filter or remove_all=True"
+        )
+
+    name_set = set(op.names) if op.names else None
+    removed_count = 0
+    removed_details: list[dict] = []
+
+    def _remove_from_list(label_list: list, label_type: str) -> int:
+        nonlocal removed_count
+        to_remove = []
+        for lbl in label_list:
+            if name_set is not None and lbl.text not in name_set:
+                continue
+            to_remove.append(lbl)
+        for lbl in to_remove:
+            label_list.remove(lbl)
+            removed_count += 1
+            removed_details.append({
+                "name": lbl.text, "label_type": label_type,
+                "position": [lbl.position.X, lbl.position.Y],
+            })
+        return len(to_remove)
+
+    if op.label_type is None or op.label_type == "global":
+        _remove_from_list(sch.globalLabels, "global")
+    if op.label_type is None or op.label_type == "local":
+        _remove_from_list(sch.labels, "local")
+    if op.label_type is None or op.label_type == "hierarchical":
+        _remove_from_list(sch.hierarchicalLabels, "hierarchical")
+
+    ir._record_mutation("remove_labels", {
+        "label_type": op.label_type,
+        "names": op.names,
+        "removed_count": removed_count,
+    })
+
+    return {
+        "removed_count": removed_count,
+        "removed": removed_details,
+    }
 
 
 @register_schematic("remove_junction")

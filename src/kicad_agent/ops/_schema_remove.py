@@ -1,4 +1,4 @@
-"""Remove operation schemas -- remove_wire, remove_label, remove_junction, remove_no_connect."""
+"""Remove operation schemas -- remove_wire, remove_label, remove_labels, remove_junction, remove_no_connect."""
 
 from typing import Literal
 
@@ -58,6 +58,37 @@ class RemoveLabelOp(BaseModel):
     @classmethod
     def _validate_uuid_sexpr(cls, v: str) -> str:
         return _validate_sexpr_safe_string(v)
+
+
+class RemoveLabelsOp(BaseModel):
+    """Batch remove labels by type and/or name.
+
+    Removes all matching labels from the schematic. Use ``remove_all=True``
+    when no ``names`` filter is provided to confirm intentional bulk removal.
+
+    Attributes:
+        op_type: Discriminator literal ``"remove_labels"``.
+        target_file: Relative path to the target KiCad schematic file.
+        label_type: Label scope to target (``"local"``, ``"global"``, ``"hierarchical"``).
+            None means all types.
+        names: Optional list of label names to remove. None means all names.
+        remove_all: Safety flag — must be True when removing without a names filter.
+    """
+
+    op_type: Literal["remove_labels"] = "remove_labels"
+    target_file: TargetFile
+    label_type: Literal["local", "global", "hierarchical"] | None = Field(
+        default=None,
+        description="Label scope to target. None targets all types.",
+    )
+    names: list[str] | None = Field(
+        default=None,
+        description="Label names to remove. None removes all matching labels.",
+    )
+    remove_all: bool = Field(
+        default=False,
+        description="Must be True when removing without a names filter.",
+    )
 
 
 class RemoveJunctionOp(BaseModel):
