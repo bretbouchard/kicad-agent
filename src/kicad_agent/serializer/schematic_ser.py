@@ -87,39 +87,19 @@ def serialize_schematic(
 
 
 def _fix_kiutils_output(path: Path) -> None:
-    """Fix kiutils 1.4.8 serialization defects in .kicad_sch files.
+    """Fix kiutils serialization defects in .kicad_sch files.
 
-    Known kiutils bugs:
-    1. Drops (generator_version "...") entirely — kicad-cli rejects the file (#12)
-    2. Writes (generator eeschema) instead of (generator "eeschema") — missing quotes (#12)
-    3. NoConnect.to_sexpr() omits rotation: (at X Y) instead of (at X Y 0) (#11)
+    NOTE: As of kiutils 1.4.8, the serializer preserves original formatting
+    well enough that most fixes are unnecessary. The function is kept as a
+    safety net for future kiutils regressions.
+
+    Fix 1 (disabled): generator quoting — kiutils now preserves original format.
+    Fix 2 (disabled): generator_version — kiutils now preserves original format.
+    Fix 3 (REMOVED): no_connect rotation — KiCad 10 does NOT accept rotation
+        in no_connect S-expressions. Adding (at X Y 0) causes "Failed to load
+        schematic". Issue #11 was incorrect. See issue #21 for diagnosis.
     """
-    import re
-
-    content = path.read_text()
-
-    # Fix 1: Ensure generator value is quoted
-    content = re.sub(
-        r'\(generator\s+([a-zA-Z_]\w*)\)',
-        r'(generator "\1")',
-        content,
-    )
-
-    # Fix 2: Add generator_version if missing (after any quoted generator)
-    if 'generator_version' not in content:
-        content = re.sub(
-            r'\(generator\s+"([^"]+)"\)',
-            r'(generator "\1")\n  (generator_version "10.0")',
-            content,
-            count=1,
-        )
-
-    # Fix 3: Add rotation to no_connect (at X Y) -> (at X Y 0)
-    # KiCad 10 requires rotation in all (at ...) elements
-    content = re.sub(
-        r'\(no_connect \(at\s+([\d.]+)\s+([\d.]+)\)',
-        r'(no_connect (at \1 \2 0)',
-        content,
-    )
-
-    path.write_text(content)
+    # Currently no fixes are needed — kiutils preserves the format correctly.
+    # If kiutils introduces regressions in a future version, re-enable specific
+    # fixes here with targeted regex. Do NOT add no_connect rotation.
+    pass
