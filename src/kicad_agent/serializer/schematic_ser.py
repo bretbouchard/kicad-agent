@@ -89,17 +89,39 @@ def serialize_schematic(
 def _fix_kiutils_output(path: Path) -> None:
     """Fix kiutils serialization defects in .kicad_sch files.
 
-    NOTE: As of kiutils 1.4.8, the serializer preserves original formatting
-    well enough that most fixes are unnecessary. The function is kept as a
-    safety net for future kiutils regressions.
+    kiutils re-serialization changes three things that can break kicad-cli:
+    1. (generator "eeschema") → (generator eeschema) — unquotes generator value
+    2. Drops (generator_version "10.0") line entirely
+    3. Minor whitespace changes to no_connect and other elements
 
-    Fix 1 (disabled): generator quoting — kiutils now preserves original format.
-    Fix 2 (disabled): generator_version — kiutils now preserves original format.
-    Fix 3 (REMOVED): no_connect rotation — KiCad 10 does NOT accept rotation
-        in no_connect S-expressions. Adding (at X Y 0) causes "Failed to load
-        schematic". Issue #11 was incorrect. See issue #21 for diagnosis.
+    This function restores proper formatting as a safety net.
+    Does NOT add rotation to no_connects — that breaks KiCad 10.
     """
-    # Currently no fixes are needed — kiutils preserves the format correctly.
-    # If kiutils introduces regressions in a future version, re-enable specific
-    # fixes here with targeted regex. Do NOT add no_connect rotation.
-    pass
+    import re
+
+    content = path.read_text(encoding="utf-8")
+    modified = False
+
+    # Fix 1: Re-quote unquoted generator values.
+    # kiutils outputs (generator eeschema) but KiCad expects (generator "eeschema")
+    if re.search(r'\(generator\s+[^")\s]+\)', content):
+        content = re.sub(
+            r'\(generator\s+([^")\s]+)\)',
+            r'(generator "\1")',
+            content,
+        )
+        modified = True
+
+    # Fix 2: Restore generator_version if missing.
+    # kiutils drops this line but kicad-cli may require it.
+    if not re.search(r'\(generator_version\b', content):
+        # Insert after the (generator ...) line
+        gen_line = re.search(r'\(generator\s+"[^"]*"\)\s*\n', content)
+        if gen_line:
+            insert_pos = gen_line.end()
+            version_line = '  (generator_version "10.0")\n'
+            content = content[:insert_pos] + version_line + content[insert_pos:]
+            modified = True
+
+    if modified:
+        path.write_text(content, encoding="utf-8")

@@ -213,9 +213,18 @@ def run_erc(schematic_path: Path, *, timeout: int = 120) -> ErcResult:
         )
 
     tempdir = None
+    pro_backup = None  # renamed .kicad_pro if present
     try:
         tempdir = tempfile.mkdtemp(prefix="kicad-agent-erc-")
         output_file = Path(tempdir) / "erc_report.json"
+
+        # Issue #28: Temporarily rename .kicad_pro file if present.
+        # kicad-cli sch erc fails when a .kicad_pro exists alongside the schematic.
+        pro_file = schematic_path.with_suffix(".kicad_pro")
+        if pro_file.exists():
+            pro_backup = pro_file.with_suffix(".kicad_pro.bak")
+            pro_file.rename(pro_backup)
+            logger.debug("Temporarily renamed %s to avoid kicad-cli conflict", pro_file.name)
 
         cmd = [
             cli_path,
@@ -302,6 +311,12 @@ def run_erc(schematic_path: Path, *, timeout: int = 120) -> ErcResult:
         )
 
     finally:
+        # Restore .kicad_pro if we renamed it (issue #28)
+        if pro_backup is not None and pro_backup.exists():
+            try:
+                pro_backup.rename(pro_backup.with_suffix(".kicad_pro"))
+            except Exception:
+                logger.warning("Failed to restore %s", pro_backup.name)
         if tempdir is not None:
             try:
                 shutil.rmtree(tempdir, ignore_errors=True)
