@@ -373,6 +373,8 @@ class NetPositionIndex:
         self._root_to_net: dict[tuple[float, float], str] = {}
         self._root_to_positions: dict[tuple[float, float], set[tuple[float, float]]] = {}
         self._net_to_positions: dict[str, set[tuple[float, float]]] = {}
+        # Label names per component for short detection (populated in _build)
+        self._root_to_label_names: dict[tuple[float, float], set[str]] = {}
 
         self._build(graph, pin_index)
 
@@ -399,6 +401,30 @@ class NetPositionIndex:
             self._net_to_positions.setdefault(net_name, set()).update(positions)
             for pos in positions:
                 self._pos_to_root[pos] = root
+
+            # Collect all label names in this component for short detection
+            label_names: set[str] = set()
+            for pos in positions:
+                if pos in label_pos_map:
+                    label_names.add(label_pos_map[pos].name)
+            if len(label_names) > 1:
+                self._root_to_label_names[root] = label_names
+
+    def detect_shorts(self) -> list[dict[str, Any]]:
+        """Find connected components where multiple named nets overlap.
+
+        Returns list of dicts, each with:
+        - 'position': tuple (x, y) of the component root (rounded to 4 decimals)
+        - 'nets': sorted list of net label names in this component
+        """
+        shorts: list[dict[str, Any]] = []
+        for root, names in self._root_to_label_names.items():
+            if len(names) > 1:
+                shorts.append({
+                    "position": (round(root[0], 4), round(root[1], 4)),
+                    "nets": sorted(names),
+                })
+        return shorts
 
     def get_net_at(self, pos: tuple[float, float]) -> str | None:
         """Return the net name at *pos*, or None if not connected."""
