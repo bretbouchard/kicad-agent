@@ -7,6 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from kicad_agent.ops.schema import TargetFile
+
 
 class ReviewSchematicOp(BaseModel):
     """Review a schematic for readability and spatial quality.
@@ -15,10 +17,17 @@ class ReviewSchematicOp(BaseModel):
     renders the schematic for Claude vision review.
 
     This is a read-only operation -- no file mutation occurs.
+
+    Attributes:
+        op_type: Discriminator literal ``"review_schematic"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        vision: Include Claude vision review of rendered schematic.
+        output_format: Output format for review report.
+        config_path: Optional path to YAML rule configuration.
     """
 
-    operation_type: Literal["review_schematic"] = "review_schematic"
-    file_path: str = Field(description="Path to .kicad_sch file to review")
+    op_type: Literal["review_schematic"] = "review_schematic"
+    target_file: TargetFile
     vision: bool = Field(
         default=False,
         description="Include Claude vision review of rendered schematic",

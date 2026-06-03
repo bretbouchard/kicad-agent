@@ -298,6 +298,9 @@ from kicad_agent.ops._schema_erc_smart import (  # noqa: E402
     ErcAutoFixHierarchicalOp,
     ErcAutoFixOp,
 )
+from kicad_agent.ops._schema_readability import (  # noqa: E402
+    ReviewSchematicOp,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -401,7 +404,8 @@ class Operation(BaseModel):
         | DetectNetConflictsOp
         | SuggestNetNamesOp
         | ClassifyViolationsOp
-        | DiagnoseViolationsOp,
+        | DiagnoseViolationsOp
+        | ReviewSchematicOp,
         Field(discriminator="op_type"),
     ]
 
@@ -537,6 +541,8 @@ __all__ = [
     # ERC smart ops
     "ClassifyViolationsOp",
     "DiagnoseViolationsOp",
+    # Readability ops
+    "ReviewSchematicOp",
     # Union and helpers
     "Operation",
     "get_operation_schema",

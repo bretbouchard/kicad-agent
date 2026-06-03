@@ -19,6 +19,7 @@ from kicad_agent.ops.schema import (
     Operation,
     PositionSpec,
     RemoveComponentOp,
+    ReviewSchematicOp,
     get_operation_schema,
 )
 
@@ -307,3 +308,91 @@ class TestPositionSpec:
         """PositionSpec accepts an explicit angle."""
         pos = PositionSpec(x=1.0, y=2.0, angle=90.0)
         assert pos.angle == 90.0
+
+
+# ======================================================================
+# TestReviewSchematicOp (schema fix: op_type + target_file)
+# ======================================================================
+
+
+class TestReviewSchematicOp:
+    """Verify ReviewSchematicOp validates through Operation union."""
+
+    def test_valid_minimal(self) -> None:
+        """review_schematic with only target_file validates and uses defaults."""
+        op = Operation.model_validate(
+            {
+                "root": {
+                    "op_type": "review_schematic",
+                    "target_file": "test.kicad_sch",
+                }
+            }
+        )
+        assert op.root.op_type == "review_schematic"
+        assert op.root.target_file == "test.kicad_sch"
+        assert op.root.vision is False
+        assert op.root.output_format == "markdown"
+        assert op.root.config_path is None
+
+    def test_valid_all_fields(self) -> None:
+        """review_schematic with all fields validates correctly."""
+        op = Operation.model_validate(
+            {
+                "root": {
+                    "op_type": "review_schematic",
+                    "target_file": "board.kicad_sch",
+                    "vision": True,
+                    "output_format": "json",
+                    "config_path": "/tmp/rules.yaml",
+                }
+            }
+        )
+        assert op.root.vision is True
+        assert op.root.output_format == "json"
+        assert op.root.config_path == "/tmp/rules.yaml"
+
+    def test_direct_class_instantiation(self) -> None:
+        """ReviewSchematicOp can be instantiated directly."""
+        op = ReviewSchematicOp(target_file="sch.kicad_sch")
+        assert op.op_type == "review_schematic"
+        assert op.target_file == "sch.kicad_sch"
+
+    def test_old_field_names_rejected(self) -> None:
+        """Old field names (operation_type, file_path) are rejected."""
+        with pytest.raises(ValidationError):
+            Operation.model_validate(
+                {
+                    "root": {
+                        "operation_type": "review_schematic",
+                        "file_path": "test.kicad_sch",
+                    }
+                }
+            )
+
+    def test_target_file_validation_applies(self) -> None:
+        """Path traversal in target_file is rejected (Council H-01)."""
+        with pytest.raises(ValidationError, match="traversal"):
+            Operation.model_validate(
+                {
+                    "root": {
+                        "op_type": "review_schematic",
+                        "target_file": "../../etc/passwd",
+                    }
+                }
+            )
+
+    def test_missing_target_file_rejected(self) -> None:
+        """Missing target_file is rejected."""
+        with pytest.raises(ValidationError):
+            Operation.model_validate(
+                {
+                    "root": {
+                        "op_type": "review_schematic",
+                    }
+                }
+            )
+
+    def test_schema_export_includes_review_schematic(self) -> None:
+        """review_schematic appears in exported JSON schema."""
+        schema = get_operation_schema()
+        assert "review_schematic" in str(schema)
