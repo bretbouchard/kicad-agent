@@ -15,7 +15,7 @@ Build an AI-safe KiCad structural editing tool across multiple milestones. First
 - **v2.4 Schematic Intelligence** - Phases 38-40 (shipped 2026-05-31)
 - **v2.5 Benchmark Suite** - Phases 41-44 (shipped 2026-05-31)
 - **v3.0 Full-Stack EDA** - Phases 50-54 (shipped 2026-06-01)
-- **v3.1 Council Remediation** - Phases 60-65 (planned)
+- **v3.1 Council Remediation** - Phases 60-67 (planned)
 
 ## Phases
 
@@ -1155,6 +1155,36 @@ Plans:
 - [ ] 65-03-PLAN.md — Split topology_graph.py (950→<800) into topology_builder (H-20)
 - [ ] 65-04-PLAN.md — Fix all 12 MEDIUM findings (M-1 through M-12)
 
+### Phase 66: Netlist-Aware Unit Placement
+**Goal**: Use NetPositionIndex from net_extractor.py for connectivity-aware multi-unit component placement, replacing ad-hoc position scoring with net-aware matching
+**Depends on**: None (uses existing NetPositionIndex in net_extractor.py)
+**Success Criteria** (what must be TRUE):
+  1. `place_missing_units()` uses `NetPositionIndex` to score candidate positions by net connectivity
+  2. KiCad internal symbols (#PWR, #FLG) excluded from multi-unit placement
+  3. Shared union-find pipeline in net_extractor.py eliminates duplicate logic
+  4. All existing tests pass, no regressions
+**Plans**: 1 plan (COMPLETE)
+
+### Phase 67: Connectivity-Aware Short Resolution
+**Goal**: Rewrite detect_shorted_nets() to use NetPositionIndex (eliminating ad-hoc union-find), add power-net protection to fix_shorted_nets(), combine break+fix into atomic resolve_shorted_nets() operation
+**Depends on**: Phase 66 (NetPositionIndex)
+**Findings**: HI-04, HI-05, HI-06, HI-07, ME-03, ME-04, LO-03, LO-04 (from Phase 66 Council review)
+**Success Criteria** (what must be TRUE):
+  1. detect_shorted_nets() uses NetPositionIndex instead of ad-hoc union-find — single source of truth
+  2. Shorts detected by finding connected components with multiple net names (from labels)
+  3. fix_shorted_nets() has power-net protection: VCC/VDD/GND/+N/-N rails NEVER auto-removed
+  4. New resolve_shorted_nets() combines break_wire + fix_labels atomically with correct ordering
+  5. Bridge wire identification uses graph-bridge algorithm (remove candidate → check component split)
+  6. Cross-sheet short limitation documented explicitly (single-sheet only)
+  7. All existing short detection/fix tests pass, new tests for power-net protection and atomic resolve
+  8. repair.py does not grow — new logic lives in net_extractor.py or a new repair_shorts.py module
+**Plans**: 3 plans
+
+Plans:
+- [ ] 67-01-PLAN.md — Rewrite detect_shorted_nets() to use NetPositionIndex (HI-04, single source of truth)
+- [ ] 67-02-PLAN.md — Add power-net protection + keep_majority strategy to fix_shorted_nets() (HI-06)
+- [ ] 67-03-PLAN.md — Create atomic resolve_shorted_nets() combining break+fix with graph-bridge wire selection (HI-05, HI-07, ME-04)
+
 ## v3.1 Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -1165,3 +1195,5 @@ Plans:
 | 63. Training Integrity | 0/4 | Planned | — |
 | 64. CLI/UX Polish | 0/3 | Planned | — |
 | 65. Architecture Refactor | 0/4 | Planned | — |
+| 66. Netlist-Aware Placement | 1/1 | Complete | 2026-06-02 |
+| 67. Short Resolution | 0/3 | Planned | — |

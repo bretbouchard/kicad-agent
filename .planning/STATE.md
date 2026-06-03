@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Council Remediation
 status: planning
-stopped_at: Plans created for phases 60-65 covering all ~50 Council findings. Ready for execution.
-last_updated: "2026-06-01T23:30:00Z"
-last_activity: 2026-06-01
+stopped_at: Phase 66 complete. Phase 67 (Short Resolution) planned with 3 plans. Ready for execution.
+last_updated: "2026-06-02T12:00:00Z"
+last_activity: 2026-06-02
 progress:
-  total_phases: 60
-  completed_phases: 54
-  total_plans: 214
-  completed_plans: 143
-  percent: 90
+  total_phases: 67
+  completed_phases: 55
+  total_plans: 217
+  completed_plans: 144
+  percent: 88
 ---
 
 # Project State

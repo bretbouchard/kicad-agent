@@ -28,6 +28,34 @@ from kicad_agent.parser.uuid_extractor import UUIDMap
 _REF_PATTERN = re.compile(r"^([#A-Za-z]+)(\d+|\?)$")
 
 
+def _match_lib_symbol(lib_sym, comp_lib_id: str) -> bool:
+    """Check if a lib_symbol matches a component's libId.
+
+    Handles Issue #6: when libraryNickname is None on the lib symbol,
+    its libId may lack the library prefix (e.g., "AK4619VN" instead of
+    "Audio_Codec:AK4619VN"). Falls back to matching on entryName alone.
+
+    Args:
+        lib_sym: A kiutils lib symbol object with libId and entryName attrs.
+        comp_lib_id: The component's libId (e.g., "Audio_Codec:AK4619VN").
+
+    Returns:
+        True if the lib symbol matches the component's libId.
+    """
+    sym_lib_id = getattr(lib_sym, "libId", "")
+    if sym_lib_id == comp_lib_id:
+        return True
+    # Fallback: match by entryName when lib symbol has no nickname
+    if ":" in comp_lib_id:
+        comp_entry = comp_lib_id.split(":")[-1]
+        sym_entry = getattr(lib_sym, "entryName", None) or (
+            sym_lib_id.split(":")[-1] if ":" in sym_lib_id else sym_lib_id
+        )
+        if sym_entry and sym_entry == comp_entry and ":" not in sym_lib_id:
+            return True
+    return False
+
+
 @dataclass
 class SchematicIR(BaseIR):
     """Thin wrapper over a kiutils Schematic object with mutation tracking.
@@ -339,7 +367,7 @@ class SchematicIR(BaseIR):
             lib_symbols = self._parse_result.kiutils_obj.libSymbols
             if lib_symbols:
                 for lib_sym in lib_symbols:
-                    if lib_sym.libId == comp_lib_id:
+                    if _match_lib_symbol(lib_sym, comp_lib_id):
                         # Collect pin numbers from all units
                         for unit in lib_sym.units:
                             for pin in unit.pins:
@@ -380,11 +408,23 @@ class SchematicIR(BaseIR):
                     # The extending symbol inherits from the parent
                     pass
 
+        # Issue #6: Also check entryName-based matching for nickname-less symbols
+        entry_name_map: dict[str, str] = {}
+        for sym in lib_symbols or []:
+            sym_lib_id = getattr(sym, "libId", "")
+            if ":" not in sym_lib_id and sym_lib_id:
+                entry_name_map[sym_lib_id] = sym_lib_id
+
         unresolved: list[tuple[str, str]] = []
         for comp in self._parse_result.kiutils_obj.schematicSymbols:
             ref = self.get_component_property(comp, "Reference") or ""
             lib_id = comp.libId
             if lib_id and lib_id not in valid_lib_ids:
+                # Issue #6 fallback: check by entryName
+                if ":" in lib_id:
+                    entry = lib_id.split(":")[-1]
+                    if entry in entry_name_map:
+                        continue
                 unresolved.append((ref, lib_id))
 
         return unresolved
@@ -627,14 +667,26 @@ class SchematicIR(BaseIR):
 
         sch = self._parse_result.kiutils_obj
 
-        # Build libId -> list of pin definitions from embedded libSymbols
+        # Build libId -> list of pin definitions from embedded libSymbols.
+        # Issue #6: When libraryNickname is None, the lib symbol's libId may
+        # not include the library prefix (e.g., "AK4619VN" vs "Audio_Codec:AK4619VN").
+        # We build both a primary map (exact libId match) and a fallback map
+        # keyed by entryName alone for nickname-less symbols.
         lib_pin_map: dict[str, list] = {}
+        fallback_pin_map: dict[str, list] = {}
         for lib_sym in sch.libSymbols:
             lib_id = getattr(lib_sym, "libId", "")
             pins: list = []
             for unit in lib_sym.units:
                 pins.extend(unit.pins)
-            lib_pin_map[lib_id] = pins
+            if pins:
+                lib_pin_map[lib_id] = pins
+                entry_name = getattr(lib_sym, "entryName", None) or (
+                    lib_id.split(":")[-1] if ":" in lib_id else lib_id
+                )
+                # Only add fallback if libId doesn't already contain a nickname
+                if ":" not in lib_id and entry_name:
+                    fallback_pin_map[entry_name] = pins
 
         result: list[dict[str, Any]] = []
         for sym in sch.schematicSymbols:
@@ -645,7 +697,12 @@ class SchematicIR(BaseIR):
             angle_deg = sym.position.angle or 0.0
             angle_rad = math.radians(angle_deg)
 
-            pin_defs = lib_pin_map.get(lib_id, [])
+            pin_defs = lib_pin_map.get(lib_id)
+            if pin_defs is None:
+                # Issue #6 fallback: try matching by entryName when the lib
+                # symbol has no libraryNickname (libId lacks the prefix).
+                entry = lib_id.split(":")[-1] if ":" in lib_id else lib_id
+                pin_defs = fallback_pin_map.get(entry, [])
             for pin_def in pin_defs:
                 px = pin_def.position.X
                 py = pin_def.position.Y

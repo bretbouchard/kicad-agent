@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
-from kicad_agent.ir.schematic_ir import SchematicIR
+from kicad_agent.ir.schematic_ir import SchematicIR, _match_lib_symbol
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ def _get_embedded_pin_signature(ir: SchematicIR, lib_id: str) -> dict[str, dict[
     pin_map: dict[str, dict[str, str]] = {}
 
     for lib_sym in sch.libSymbols:
-        if getattr(lib_sym, "libId", "") == lib_id:
+        if _match_lib_symbol(lib_sym, lib_id):
             for unit in lib_sym.units:
                 for pin in unit.pins:
                     pin_map[pin.number] = {

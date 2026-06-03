@@ -337,7 +337,15 @@ async def server_lifespan(server: Server):  # type: ignore[type-arg]
         max_undo = max(1, int(os.environ.get("KICAD_UNDO_MAX_SIZE", "50")))
     except (ValueError, TypeError):
         max_undo = 50
-    undo_stack = UndoStack(max_size=max_undo)
+
+    # Issue #7: Use PersistentUndoStack when project dir is known,
+    # so undo survives process restarts.
+    try:
+        from kicad_agent.ops.persistent_undo import PersistentUndoStack
+        undo_stack = PersistentUndoStack(project_dir=base_dir, max_size=max_undo)
+    except Exception as exc:
+        logger.info("Falling back to in-memory undo stack: %s", exc)
+        undo_stack = UndoStack(max_size=max_undo)
     executor = OperationExecutor(base_dir=base_dir, undo_stack=undo_stack)
     yield {"executor": executor, "base_dir": base_dir}
 
