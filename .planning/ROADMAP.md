@@ -1225,6 +1225,24 @@ Plans:
 - [ ] 71-01-PLAN.md — place_net_labels test suite: safety gates, wire check, dry_run, existing labels, edge cases (PINMAP-01, PINMAP-02)
 - [ ] 71-02-PLAN.md — Extended IC profiles (RP2350B, NE5532, CD4066, CD4060), custom JSON loading, integration test (PINMAP-03)
 
+### Phase 72: No-Connect Corruption Fix + Connectivity Inference
+**Goal**: Fix spurious no_connect markers on multi-sheet schematics (power symbol pins misidentified as unconnected) and add connectivity inference engine for partially-wired schematics
+**Depends on**: Phase 38 (schematic routing), Phase 39 (net extraction), Phase 71 (pin-to-net mapping)
+**GitHub Issues**: #13, #14
+**Requirements**: REPAIR-09, INFER-01, INFER-02, INFER-03
+**Success Criteria** (what must be TRUE):
+  1. place_no_connects() detects power symbol pin co-location — no spurious markers on power pins
+  2. place_no_connects_from_erc() has same power symbol awareness
+  3. infer_connectivity operation returns confidence-scored nets compatible with batch_wiring
+  4. Power pin inference uses pin-to-net profiles from net_label_placer
+  5. Unconnected pin analysis groups pins by proximity and pin type
+  6. 20+ tests covering power symbol detection, inference scoring, batch_wiring compatibility
+**Plans**: 2 plans
+
+Plans:
+- [ ] 72-01-PLAN.md — Fix no_connect corruption: power symbol pin detection in place_no_connects + place_no_connects_from_erc (REPAIR-09)
+- [ ] 72-02-PLAN.md — Connectivity inference engine: confidence scoring, power pin inference, batch_wiring-compatible output (INFER-01, INFER-02, INFER-03)
+
 ## v3.1 Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -1239,3 +1257,4 @@ Plans:
 | 67. Short Resolution | 0/3 | Planned | — |
 | 70. Persistent Undo Testing & CLI | 0/2 | Planned | — |
 | 71. Pin-to-Net Mapping Testing & Profiles | 0/2 | Planned | — |
+| 72. No-Connect Fix + Connectivity Inference | 0/2 | Planned | — |

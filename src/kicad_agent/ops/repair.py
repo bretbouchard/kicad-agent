@@ -279,6 +279,14 @@ def place_no_connects(ir: SchematicIR) -> dict[str, Any]:
     for lp in label_positions_list:
         connected.append((lp["x"], lp["y"]))
 
+    # Issue #13: Also consider pin-to-pin co-location as "connected".
+    # Power symbols (power:+5V, power:GND, etc.) connect to component pins
+    # by sharing the same position — no wire required. Without this check,
+    # place_no_connects marks power pins as unconnected and corrupts the file.
+    other_pin_positions: list[tuple[float, float]] = []
+    for p in pin_positions:
+        other_pin_positions.append((p["x"], p["y"]))
+
     # Also check existing no-connect positions to avoid duplicates
     existing_nc: set[tuple[float, float]] = set()
     for nc in sch.noConnects:
@@ -303,6 +311,17 @@ def place_no_connects(ir: SchematicIR) -> dict[str, Any]:
         # connection). KiCad considers pins on wire midpoints connected
         # even without a wire endpoint at that position.
         if _point_on_wire_segment(px, py, wire_endpoints):
+            continue
+
+        # Issue #13: Skip if another symbol's pin is co-located at this
+        # position. Power symbols (power:+5V, power:GND) connect to
+        # component pins implicitly by sharing coordinates — no wire needed.
+        # Count how many pins occupy this position; if >1, it's connected.
+        colocated = sum(
+            1 for opx, opy in other_pin_positions
+            if abs(px - opx) <= SNAP_TOLERANCE and abs(py - opy) <= SNAP_TOLERANCE
+        )
+        if colocated > 1:
             continue
 
         # Place no-connect marker
@@ -676,6 +695,14 @@ def place_no_connects_from_erc(ir: SchematicIR, sch_path: Path) -> dict[str, Any
         key = (round(p["x"], 2), round(p["y"], 2))
         pos_to_type[key] = p.get("electrical_type", "passive")
 
+    # Issue #13: Build pin position list for co-location detection.
+    # Power symbols connect to component pins by sharing coordinates.
+    # Use tolerance-based matching (not rounding) to avoid edge cases
+    # where positions 0.002mm apart round to different keys (Council HIGH-1).
+    all_pin_xy: list[tuple[float, float]] = [
+        (p["x"], p["y"]) for p in pin_positions
+    ]
+
     # Try to build net index for power-net checking
     net_index: NetPositionIndex | None = None
     try:
@@ -736,6 +763,21 @@ def place_no_connects_from_erc(ir: SchematicIR, sch_path: Path) -> dict[str, Any
             skipped_connected += 1
             logger.debug(
                 "Skipping no_connect at (%.2f, %.2f): on wire segment",
+                vp.x, vp.y,
+            )
+            continue
+
+        # Issue #13: Skip if multiple pins share this position (pin-to-pin
+        # co-location). Power symbols connect implicitly by sharing coords.
+        # Use SNAP_TOLERANCE-based count for consistent semantics (Council HIGH-1).
+        colocated = sum(
+            1 for px, py in all_pin_xy
+            if abs(vp.x - px) <= SNAP_TOLERANCE and abs(vp.y - py) <= SNAP_TOLERANCE
+        )
+        if colocated > 1:
+            skipped_connected += 1
+            logger.debug(
+                "Skipping no_connect at (%.2f, %.2f): pin co-located with another pin",
                 vp.x, vp.y,
             )
             continue

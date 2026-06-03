@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Council Remediation
-status: planning
-stopped_at: Council REJECT. Phases 71-74 planned for tool awareness remediation. Phase 71 ready for execution.
-last_updated: "2026-06-03T01:00:00Z"
+status: execute
+stopped_at: Completed Plan 74 - executor refactor and schema reorganization
+last_updated: "2026-06-03T09:40:00Z"
 last_activity: 2026-06-03
 progress:
   total_phases: 71
-  completed_phases: 55
+  completed_phases: 56
   total_plans: 225
-  completed_plans: 144
-  percent: 79
+  completed_plans: 146
+  percent: 81
 ---
 
 # Project State
@@ -201,5 +201,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: All milestones shipped (v1.0 through v3.0). 54 phases, 143 plans, 3171+ tests.
-Resume with: `/gsd-new-milestone` to plan the next milestone.
+Stopped at: Phase 73 complete - workflow templates and dependency validation (54 tests, 2 commits).
+Resume with: `/gsd-execute-phase` for next phase in v3.1 milestone.

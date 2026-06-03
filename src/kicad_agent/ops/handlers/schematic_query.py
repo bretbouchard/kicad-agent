@@ -172,3 +172,13 @@ def _handle_detect_pin_overlaps(op: Any, ir: SchematicIR, file_path: Path) -> di
     detector = CollisionDetector(file_path)
     overlaps = detector.detect_pin_overlaps(tolerance=op.tolerance)
     return {"overlaps": overlaps, "count": len(overlaps)}
+
+
+@register_schematic_query("infer_connectivity")
+def _handle_infer_connectivity(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.schematic_routing.net_inference import infer_nets
+    return infer_nets(
+        sch_path=file_path,
+        pin_map=getattr(op, "pin_map", "auto"),
+        confidence_threshold=getattr(op, "confidence_threshold", "medium"),
+    )
