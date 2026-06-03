@@ -1455,55 +1455,186 @@ Net names reject whitespace-only strings. If a name is `"   "` (spaces only), th
 
 ## Operation Quick Reference
 
-| Operation | File Types | Required Fields |
-|-----------|-----------|-----------------|
-| `add_component` | sch, pcb | target_file, library_id, position |
-| `remove_component` | sch, pcb | target_file, reference |
-| `move_component` | sch, pcb | target_file, reference, position |
-| `modify_property` | sch, pcb | target_file, reference, property_name, new_value |
-| `duplicate_component` | sch, pcb | target_file, source_reference |
-| `array_replicate` | sch, pcb | target_file, source_reference, pattern, spacing |
-| `add_net` | pcb | target_file |
-| `remove_net` | pcb | target_file, net_name |
-| `rename_net` | pcb | target_file, old_name, new_name |
-| `renumber_refs` | sch | target_file |
-| `validate_refs` | sch | target_file |
-| `annotate` | sch | target_file |
-| `cross_ref_check` | sch | target_file |
-| `assign_footprint` | sch | target_file, reference, footprint_lib_id |
-| `swap_footprint` | pcb | target_file, reference, new_footprint_lib_id |
-| `validate_footprint` | all | target_file, footprint_lib_id |
-| `verify_pin_map` | all | target_file, reference, footprint_lib_id |
-| `update_footprint_from_library` | pcb | target_file, reference |
-| `add_wire` | sch | target_file, start_x, start_y, end_x, end_y |
-| `add_label` | sch | target_file, name, position |
-| `add_power` | sch | target_file, name, position |
-| `add_no_connect` | sch | target_file, position |
-| `add_junction` | sch | target_file, position |
-| `add_lib_entry` | lib-table | target_file, lib_name, uri |
-| `remove_lib_entry` | lib-table | target_file, lib_name |
-| `add_net_class` | dru | target_file, name, clearance, track_width, via_diameter, via_drill |
-| `assign_net_class` | pcb | target_file, net_name, net_class_name |
-| `add_design_rule` | dru | target_file, name, constraint_type |
-| `repair_schematic` | sch | target_file |
-| `validate_power_nets` | sch | target_file |
-| `validate_schematic` | sch | target_file, check_symbol_resolution, check_format, check_power_nets, check_annotation |
-| `add_copper_zone` | pcb | target_file, net_name |
-| `set_board_outline` | pcb | target_file, width, height |
-| `auto_route` | pcb | target_file |
-| `create_schematic` | new sch | target_file |
-| `create_pcb` | new pcb | target_file |
-| `create_project` | new pro | target_file |
-| `create_symbol` | sym | target_file, symbol_name |
-| `parse_erc` | sch | target_file |
-| `extract_violation_positions` | sch | target_file, violation_type |
-| `validate_hlabels` | sch | target_file, expected_labels |
-| `convert_kicad6_to_10` | sch | target_file |
-| `snap_to_grid` | sch | target_file, grid_mm |
-| `add_power_flag` | sch | target_file |
-| `rebuild_root_sheet` | sch | target_file |
-| `embed_symbol` | sch | target_file, lib_id, library_path |
-| `swap_symbol` | sch | target_file, reference, new_lib_id |
+89 operations across 18 categories. RO = read-only, RW = modifies files.
+
+### Component (6)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `add_component` | sch, pcb | Add a component to a schematic or PCB file | RW |
+| `remove_component` | sch | Remove a component by reference designator | RW |
+| `move_component` | sch | Move a component to a new position | RW |
+| `modify_property` | sch | Modify a component property (value, footprint, reference, custom field) | RW |
+| `duplicate_component` | sch | Duplicate a component with fresh UUID and incremented reference | RW |
+| `array_replicate` | sch | Replicate a component in a linear, circular, or matrix array pattern | RW |
+
+### Wire (5)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `add_wire` | sch | Add a wire segment between two points in a schematic | RW |
+| `add_label` | sch | Add a net label to a schematic (local, global, or hierarchical) | RW |
+| `add_power` | sch | Add a power symbol to a schematic (e.g. +5V, GND, +3V3) | RW |
+| `add_no_connect` | sch | Add a no-connect flag to a schematic pin | RW |
+| `add_junction` | sch | Add a junction dot at a wire intersection in a schematic | RW |
+
+### Remove (4)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `remove_wire` | sch | Remove a wire segment by UUID | RW |
+| `remove_label` | sch | Remove a net label by UUID | RW |
+| `remove_junction` | sch | Remove a junction dot by UUID | RW |
+| `remove_no_connect` | sch | Remove a no-connect flag by UUID | RW |
+
+### Net (3)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `add_net` | pcb | Add a net to a PCB | RW |
+| `remove_net` | pcb | Remove a net from a PCB, disconnecting all pads | RW |
+| `rename_net` | pcb | Rename a net, propagating to all connected pads | RW |
+
+### Reference (4)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `renumber_refs` | sch | Renumber component references with configurable prefix and sequencing | RW |
+| `validate_refs` | sch | Validate that all component references are unique | RO |
+| `annotate` | sch | Auto-assign references to unannotated components (refs ending in '?') | RW |
+| `cross_ref_check` | sch | Verify all symbol libIds resolve to entries in the embedded libSymbols | RO |
+
+### Footprint (5)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `assign_footprint` | sch | Assign a footprint to a schematic component | RW |
+| `swap_footprint` | pcb | Swap a PCB footprint while preserving pad-to-net connections | RW |
+| `validate_footprint` | pcb, sch | Validate that a footprint exists in the available libraries | RO |
+| `verify_pin_map` | pcb, sch | Verify that symbol pin numbers match footprint pad numbers | RO |
+| `update_footprint_from_library` | pcb | Reload a PCB footprint's geometry from the library, preserving placement | RW |
+
+### Library (3)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `add_lib_entry` | lib-table | Add a library entry to sym-lib-table or fp-lib-table | RW |
+| `remove_lib_entry` | lib-table | Remove a library entry from sym-lib-table or fp-lib-table | RW |
+| `list_lib_entries` | lib-table | List all library entries in a sym-lib-table or fp-lib-table | RO |
+
+### ERC (5)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `validate_power_nets` | sch | Check all power pins have connected power symbols | RO |
+| `validate_schematic` | sch | Comprehensive schematic validation combining multiple checks | RO |
+| `parse_erc` | sch | Parse ERC results for a schematic file | RO |
+| `extract_violation_positions` | sch | Extract positions for a specific ERC violation type | RO |
+| `validate_hlabels` | sch | Validate hierarchical labels in a schematic | RO |
+
+### ERC Smart (4)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `classify_violations` | sch | Classify ERC violations into actionable categories | RO |
+| `diagnose_violations` | sch | Diagnose root causes for fixable ERC violations and propose targeted fixes | RO |
+| `erc_auto_fix` | sch | Meta-operation: run ERC, dispatch repairs by violation type, iterate | RW |
+| `erc_auto_fix_hierarchical` | sch | Run ERC auto-fix across all sheets in a hierarchical schematic | RW |
+
+### Repair (14)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `repair_schematic` | sch | Auto-repair common ERC errors in a schematic | RW |
+| `convert_kicad6_to_10` | sch | Convert a KiCad 5/6 format schematic to KiCad 10 format | RW |
+| `snap_to_grid` | sch | Snap off-grid wire endpoints to the nearest grid point | RW |
+| `add_power_flag` | sch | Place PWR_FLAG symbols at power_pin_not_driven ERC violation positions | RW |
+| `rebuild_root_sheet` | sch | Rebuild root schematic sheet pins from sub-sheet hierarchical labels | RW |
+| `swap_symbol` | sch | Swap a component's symbol (lib_id) in-place, preserving position and properties | RW |
+| `update_symbols_from_library` | sch | Re-embed all mismatched symbols from their libraries | RW |
+| `fix_shorted_nets` | sch | Fix positions where multiple net names connect to the same items | RW |
+| `fix_pin_type_mismatches` | sch | Fix pin electrical type mismatches in embedded lib_symbols | RW |
+| `place_missing_units` | sch | Place all unplaced units of multi-unit symbols | RW |
+| `remove_dangling_wires` | sch | Remove wire segments with unconnected endpoints | RW |
+| `break_wire_shorts` | sch | Break wire segments that short different nets together | RW |
+| `resolve_shorted_nets` | sch | Atomically resolve shorted nets with wire breaking and label fixing | RW |
+| `place_net_labels` | sch | Place net labels on IC pins based on a pin-to-net mapping | RW |
+
+### Routing (6)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `resolve_pin_positions` | sch | Resolve absolute pin positions for schematic components | RO |
+| `detect_routing_collisions` | sch | Detect collision zones in a schematic where wires would short pins | RO |
+| `detect_pin_overlaps` | sch | Detect pins from different nets at the exact same position | RO |
+| `connect_pins` | sch | Connect pins into a net with wire/label generation | RW |
+| `batch_connect` | sch | Batch-connect multiple nets in a single call | RW |
+| `regenerate_wiring` | sch | Strip all wires/labels/no_connects and regenerate from netlist definition | RW |
+
+### Schematic Intel (3)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `extract_nets` | sch | Extract complete net topology from a schematic file | RO |
+| `detect_net_conflicts` | sch | Detect net naming conflicts in a schematic file | RO |
+| `suggest_net_names` | sch | Suggest canonical net names based on labels and topology | RO |
+
+### Sheet (3)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `add_sheet` | sch | Add a hierarchical sheet to a schematic | RW |
+| `add_sheet_pin` | sch | Add a pin to a hierarchical sheet | RW |
+| `navigate_hierarchy` | sch | Navigate hierarchical schematic sheets | RO |
+
+### PCB (15)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `add_net_class` | dru | Add a net class with track/via/clearance dimensions | RW |
+| `add_design_rule` | dru | Add a custom DRC rule to .kicad_dru | RW |
+| `add_copper_zone` | pcb | Add a copper zone/ground pour to a PCB | RW |
+| `set_board_outline` | pcb | Define PCB board shape as a rectangle on Edge.Cuts | RW |
+| `assign_net_class` | pcb | Assign a net class to a specific net in the PCB | RW |
+| `auto_route` | pcb | Auto-route nets on a PCB using A* pathfinding | RW |
+| `modify_net_class` | dru | Modify an existing net class in .kicad_dru | RW |
+| `remove_net_class` | dru | Remove a net class from .kicad_dru | RW |
+| `list_net_classes` | dru | List all net classes in a .kicad_dru file | RO |
+| `modify_design_rule` | dru | Modify an existing custom DRC rule in .kicad_dru | RW |
+| `remove_design_rule` | dru | Remove a custom DRC rule from .kicad_dru | RW |
+| `list_design_rules` | dru | List all custom DRC rules in a .kicad_dru file | RO |
+| `modify_project_settings` | pro | Modify settings in a .kicad_pro project file | RW |
+| `modify_copper_zone` | pcb | Modify an existing copper zone on a PCB | RW |
+| `remove_copper_zone` | pcb | Remove a copper zone from a PCB | RW |
+
+### Create (6)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `create_schematic` | sch | Create a new empty .kicad_sch file | RW |
+| `create_pcb` | pcb | Create a new empty .kicad_pcb file | RW |
+| `create_project` | pro | Create a new empty .kicad_pro project file | RW |
+| `create_symbol` | sym | Create a new symbol definition in a .kicad_sym library file | RW |
+| `embed_symbol` | sch | Embed a symbol definition from a .kicad_sym library into a schematic's lib_symbols | RW |
+| `create_footprint` | mod | Create a new footprint definition in a .kicad_mod file | RW |
+
+### Query (1)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `query_connectivity` | pcb | Query PCB connectivity via NetGraph | RO |
+
+### Cross-file (1)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `propagate_symbol_change` | pcb, sch | Propagate a symbol/footprint library reference change across multiple files atomically | RW |
+
+### Readability (1)
+
+| Operation | File Types | Description | Mode |
+|-----------|-----------|-------------|------|
+| `review_schematic` | sch | Review schematic readability and generate SRS report with suggestions | RO |
 
 ---
 
