@@ -191,9 +191,10 @@ class FixShortedNetsOp(BaseModel):
 
     op_type: Literal["fix_shorted_nets"] = "fix_shorted_nets"
     target_file: TargetFile
-    strategy: Literal["keep_first", "keep_last", "manual"] = Field(
+    strategy: Literal["keep_first", "keep_last", "keep_majority", "manual"] = Field(
         default="keep_first",
-        description="Which label to keep at short positions",
+        description="Which label to keep at short positions. "
+        "'keep_majority' keeps the net with most connections, with power-net protection.",
     )
     keep_nets: Optional[list[str]] = Field(
         default=None,
