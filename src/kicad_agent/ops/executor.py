@@ -1500,7 +1500,7 @@ class OperationExecutor:
             # Skip serialization for operations that manage their own file I/O
             # (e.g. erc_auto_fix_hierarchical writes sub-sheets directly).
             if root.op_type not in _SELF_SERIALIZING_OPS:
-                serialize_schematic(parse_result, file_path, ir=ir)
+                serialize_schematic(parse_result, file_path)
                 content = file_path.read_text(encoding="utf-8")
                 normalized = normalize_kicad_output(content)
                 file_path.write_text(normalized, encoding="utf-8")
@@ -1740,7 +1740,7 @@ class OperationExecutor:
                         if not ir.raw_written:
                             serialize_pcb(parse_result, fp, uuid_map=uuid_map)
                     elif isinstance(ir, SchematicIR):
-                        serialize_schematic(ir._parse_result, fp, ir=ir)
+                        serialize_schematic(ir._parse_result, fp)
                         content = fp.read_text(encoding="utf-8")
                         normalized = normalize_kicad_output(content)
                         fp.write_text(normalized, encoding="utf-8")
@@ -1952,7 +1952,7 @@ class OperationExecutor:
                     if not ir.raw_written:
                         serialize_pcb(parse_result, file_path, uuid_map=uuid_map)
                 elif not self._is_project_file(file_path):
-                    serialize_schematic(parse_result, file_path, ir=ir)
+                    serialize_schematic(parse_result, file_path)
                     content = file_path.read_text(encoding="utf-8")
                     normalized = normalize_kicad_output(content)
                     file_path.write_text(normalized, encoding="utf-8")

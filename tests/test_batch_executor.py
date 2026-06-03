@@ -112,9 +112,9 @@ class TestBatchExecutor:
 
         with patch(
             "kicad_agent.ops.executor.serialize_schematic",
-            side_effect=lambda pr, fp: __import__(
+            side_effect=lambda pr, fp, **kwargs: __import__(
                 "kicad_agent.serializer", fromlist=["serialize_schematic"]
-            ).serialize_schematic(pr, fp),
+            ).serialize_schematic(pr, fp, **kwargs),
         ) as mock_serialize:
             result = executor.execute_batch(ops)
 

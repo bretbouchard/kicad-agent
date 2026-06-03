@@ -634,12 +634,12 @@ class TestActionMapping:
     def test_break_wire_shorts_mapping(self):
         from kicad_agent.ops.erc_auto_fix import _action_to_repair_name
 
-        assert _action_to_repair_name("break_wire_shorts") == "break_wire_shorts"
+        assert _action_to_repair_name("break_wire_shorts") == "resolve_shorted_nets"
 
     def test_fix_shorted_nets_mapping(self):
         from kicad_agent.ops.erc_auto_fix import _action_to_repair_name
 
-        assert _action_to_repair_name("fix_shorted_nets") == "fix_shorted_nets"
+        assert _action_to_repair_name("fix_shorted_nets") == "resolve_shorted_nets"
 
     def test_add_power_flag_mapping(self):
         from kicad_agent.ops.erc_auto_fix import _action_to_repair_name

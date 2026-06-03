@@ -83,7 +83,7 @@ def _generate_no_connect_sexp(x: float, y: float, uid: str | None = None) -> str
     """Generate S-expression text for a no_connect flag."""
     if uid is None:
         uid = str(uuid.uuid4())
-    return f'  (no_connect (at {_format_coord(x)} {_format_coord(y)}) (uuid {uid}))'
+    return f'  (no_connect (at {_format_coord(x)} {_format_coord(y)} 0) (uuid {uid}))'
 
 
 def _generate_junction_sexp(x: float, y: float, uid: str | None = None, diameter: float = 0.0) -> str:
@@ -167,7 +167,7 @@ def _patch_coordinates(content: str, mutations: list[dict[str, Any]]) -> str:
     position data. We find coordinates by value and replace them.
     """
     for mut in mutations:
-        mut_type = mut.get("type", "")
+        mut_type = mut.get("description", "")
         if mut_type not in ("repair_wire_snap", "snap_to_grid"):
             continue
 
@@ -232,7 +232,7 @@ def patch_serialize(
     coord_mutations: list[dict[str, Any]] = []
 
     for mut in mutation_log:
-        mut_type = mut.get("type", "")
+        mut_type = mut.get("description", "")
         if mut_type in ("repair_wire_snap", "snap_to_grid"):
             coord_mutations.append(mut)
         elif mut_type in (
@@ -252,7 +252,7 @@ def patch_serialize(
 
     for mut in additive_mutations:
         details = mut.get("details", {})
-        mut_type = mut.get("type", "")
+        mut_type = mut.get("description", "")
 
         if mut_type == "add_no_connect":
             pos = details.get("position", [0, 0])
@@ -311,10 +311,10 @@ def can_patch_serialize(mutation_log: list[dict[str, Any]]) -> bool:
         "add_power_symbol", "add_power_flag",
     })
     for mut in mutation_log:
-        mut_type = mut.get("type", "")
+        mut_type = mut.get("description", "")
         if not mut_type:
-            # Mutations without a type field (e.g. add_component with only
-            # "description") require full re-serialization since we cannot
+            # Mutations without a description field require full
+            # re-serialization since we cannot
             # determine how to patch them.
             return False
         if mut_type in UNSUPPORTED:
