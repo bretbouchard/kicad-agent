@@ -166,7 +166,7 @@ class TestMoveComponent:
 
         assert len(setup_schematic["ir"].mutation_log) == initial_mutations + 1
         last_mutation = setup_schematic["ir"].mutation_log[-1]
-        assert last_mutation["description"] == "move_component"
+        assert last_mutation["type"] == "move_component"
         assert last_mutation["reference"] == "J1"
         assert "old_position" in last_mutation
         assert "new_position" in last_mutation

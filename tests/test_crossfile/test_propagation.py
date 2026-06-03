@@ -113,7 +113,7 @@ class TestSymbolPropagation:
         propagate_symbol_ref(schematic_ir, old_id, new_id)
         assert len(schematic_ir.mutation_log) == 1
         entry = schematic_ir.mutation_log[0]
-        assert entry["description"] == "propagate_symbol_ref"
+        assert entry["type"] == "propagate_symbol_ref"
         assert entry["old_lib_id"] == old_id
         assert entry["new_lib_id"] == new_id
         assert entry["updated_count"] > 0
@@ -210,7 +210,7 @@ class TestFootprintPropagation:
         propagate_footprint_ref(pcb_ir, old_ref, new_ref)
         assert len(pcb_ir.mutation_log) == 1
         entry = pcb_ir.mutation_log[0]
-        assert entry["description"] == "propagate_footprint_ref"
+        assert entry["type"] == "propagate_footprint_ref"
         assert entry["old_lib_ref"] == old_ref
         assert entry["new_lib_ref"] == new_ref
         assert entry["updated_count"] > 0

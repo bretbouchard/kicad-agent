@@ -235,7 +235,7 @@ class TestDuplicateComponentHandler:
 
         assert len(setup_schematic["ir"].mutation_log) == initial_mutations + 1
         last = setup_schematic["ir"].mutation_log[-1]
-        assert last["description"] == "duplicate_component"
+        assert last["type"] == "duplicate_component"
 
 
 class TestDuplicateComponentSchema:

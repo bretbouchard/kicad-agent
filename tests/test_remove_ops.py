@@ -188,7 +188,7 @@ class TestRemoveWire:
 
         assert len(ir2.mutation_log) == initial_mutations + 1
         last = ir2.mutation_log[-1]
-        assert last["description"] == "remove_wire"
+        assert last["type"] == "remove_wire"
         assert last["uuid"] == wire_uuid
 
 
@@ -298,7 +298,7 @@ class TestRemoveLabel:
 
         assert len(ir.mutation_log) == initial_mutations + 1
         last = ir.mutation_log[-1]
-        assert last["description"] == "remove_label"
+        assert last["type"] == "remove_label"
         assert last["uuid"] == uuid
         assert last["label_type"] == "local"
 
@@ -393,7 +393,7 @@ class TestRemoveJunction:
 
         assert len(ir.mutation_log) == initial_mutations + 1
         last = ir.mutation_log[-1]
-        assert last["description"] == "remove_junction"
+        assert last["type"] == "remove_junction"
         assert last["uuid"] == jct_uuid
 
 
@@ -486,7 +486,7 @@ class TestRemoveNoConnect:
 
         assert len(ir.mutation_log) == initial_mutations + 1
         last = ir.mutation_log[-1]
-        assert last["description"] == "remove_no_connect"
+        assert last["type"] == "remove_no_connect"
         assert last["uuid"] == nc_uuid
 
 

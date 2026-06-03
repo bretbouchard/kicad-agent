@@ -477,6 +477,9 @@ class SchematicIR(BaseIR):
     ) -> dict[str, Any]:
         """Add a net label to the schematic.
 
+        Skips creation if a label with the same name and type already exists
+        at the same position (within 0.01mm tolerance).
+
         Args:
             name: Label text.
             label_type: One of "local", "global", "hierarchical".
@@ -489,8 +492,14 @@ class SchematicIR(BaseIR):
             Dict with label details.
         """
         import uuid
-        from kiutils.items.common import Position
+        from kiutils.items.common import Position, Property
         from kiutils.items.schitems import LocalLabel, GlobalLabel, HierarchicalLabel
+
+        # Duplicate detection: skip if same name+type already exists at same position
+        tolerance = 0.01
+        existing = self._find_existing_label(name, label_type, x, y, tolerance)
+        if existing is not None:
+            return existing
 
         pos = Position(X=x, Y=y, angle=angle)
 
@@ -501,6 +510,8 @@ class SchematicIR(BaseIR):
                 position=pos,
                 uuid=str(uuid.uuid4()),
             )
+            label.fieldsAutoplaced = True
+            label.properties.append(Property(key="Intersheets", value=""))
             self._parse_result.kiutils_obj.globalLabels.append(label)
         elif label_type == "hierarchical":
             label = HierarchicalLabel(
@@ -509,6 +520,7 @@ class SchematicIR(BaseIR):
                 position=pos,
                 uuid=str(uuid.uuid4()),
             )
+            label.fieldsAutoplaced = True
             self._parse_result.kiutils_obj.hierarchicalLabels.append(label)
         else:
             label = LocalLabel(
@@ -522,12 +534,36 @@ class SchematicIR(BaseIR):
             "name": name,
             "label_type": label_type,
             "position": [x, y, angle],
+            "shape": shape,
         })
         return {
             "name": name,
             "label_type": label_type,
             "position": [x, y],
         }
+
+    def _find_existing_label(
+        self, name: str, label_type: str, x: float, y: float, tolerance: float,
+    ) -> dict[str, Any] | None:
+        """Check if a label with same name and type exists at the given position.
+
+        Returns existing label dict if found, None otherwise.
+        """
+        sch = self._parse_result.kiutils_obj
+        if label_type == "global":
+            existing_labels = sch.globalLabels
+        elif label_type == "hierarchical":
+            existing_labels = sch.hierarchicalLabels
+        else:
+            existing_labels = sch.labels
+
+        for lbl in existing_labels:
+            if hasattr(lbl, 'text') and lbl.text == name:
+                lbl_x = lbl.position.X if hasattr(lbl.position, 'X') else 0
+                lbl_y = lbl.position.Y if hasattr(lbl.position, 'Y') else 0
+                if abs(lbl_x - x) <= tolerance and abs(lbl_y - y) <= tolerance:
+                    return {"name": name, "label_type": label_type, "position": [lbl_x, lbl_y]}
+        return None
 
     def add_power_symbol(
         self,

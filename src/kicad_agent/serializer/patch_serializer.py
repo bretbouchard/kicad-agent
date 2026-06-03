@@ -107,8 +107,13 @@ def _generate_wire_sexp(start_x: float, start_y: float, end_x: float, end_y: flo
 
 
 def _generate_label_sexp(name: str, x: float, y: float, angle: float = 0.0,
-                          label_type: str = "label", uid: str | None = None) -> str:
+                          label_type: str = "label", uid: str | None = None,
+                          shape: str = "input") -> str:
     """Generate S-expression text for a label.
+
+    Global and hierarchical labels require (shape ...), (fields_autoplaced),
+    (effects ...), and (property "Intersheets" ...) for kicad-cli compatibility.
+    Local labels use a minimal format.
 
     Args:
         name: Label text (will be escaped for S-expression safety).
@@ -117,6 +122,8 @@ def _generate_label_sexp(name: str, x: float, y: float, angle: float = 0.0,
         label_type: One of "local", "global", "hierarchical", "label",
                     "global_label", "hierarchical_label".
         uid: Optional UUID (generated if None).
+        shape: Shape for global/hierarchical labels (input, output, bidirectional,
+               tri_state, passive).
     """
     tag = _LABEL_TYPE_TO_TAG.get(label_type, "label")
     if tag not in _VALID_LABEL_TAGS:
@@ -125,9 +132,32 @@ def _generate_label_sexp(name: str, x: float, y: float, angle: float = 0.0,
     safe_name = _escape_sexp_string(name)
     if uid is None:
         uid = str(uuid.uuid4())
+
+    if tag == "label":
+        # Local labels: minimal format
+        return (
+            f'  ({tag} "{safe_name}" (at {_format_coord(x)} {_format_coord(y)} {_format_coord(angle)}) '
+            f'(uuid {uid}))'
+        )
+
+    if tag == "global_label":
+        # Global labels: full KiCad 10 format with Intersheets property
+        return (
+            f'  ({tag} "{safe_name}" (shape {shape}) (at {_format_coord(x)} {_format_coord(y)} {_format_coord(angle)}) (fields_autoplaced)\n'
+            f'    (effects (font (size 1.27 1.27)))\n'
+            f'    (uuid {uid})\n'
+            f'    (property "Intersheets" "" (at 0 0 0)\n'
+            f'      (effects (font (size 1.27 1.27)) (justify left))\n'
+            f'    )\n'
+            f'  )'
+        )
+
+    # Hierarchical labels: shape + fields_autoplaced + effects (no Intersheets)
     return (
-        f'  ({tag} "{safe_name}" (at {_format_coord(x)} {_format_coord(y)} {_format_coord(angle)}) '
-        f'(uuid {uid}))'
+        f'  ({tag} "{safe_name}" (shape {shape}) (at {_format_coord(x)} {_format_coord(y)} {_format_coord(angle)}) (fields_autoplaced)\n'
+        f'    (effects (font (size 1.27 1.27)))\n'
+        f'    (uuid {uid})\n'
+        f'  )'
     )
 
 
@@ -167,7 +197,7 @@ def _patch_coordinates(content: str, mutations: list[dict[str, Any]]) -> str:
     position data. We find coordinates by value and replace them.
     """
     for mut in mutations:
-        mut_type = mut.get("description", "")
+        mut_type = mut.get("type", "")
         if mut_type not in ("repair_wire_snap", "snap_to_grid"):
             continue
 
@@ -232,7 +262,7 @@ def patch_serialize(
     coord_mutations: list[dict[str, Any]] = []
 
     for mut in mutation_log:
-        mut_type = mut.get("description", "")
+        mut_type = mut.get("type", "")
         if mut_type in ("repair_wire_snap", "snap_to_grid"):
             coord_mutations.append(mut)
         elif mut_type in (
@@ -252,7 +282,7 @@ def patch_serialize(
 
     for mut in additive_mutations:
         details = mut.get("details", {})
-        mut_type = mut.get("description", "")
+        mut_type = mut.get("type", "")
 
         if mut_type == "add_no_connect":
             pos = details.get("position", [0, 0])
@@ -275,8 +305,10 @@ def patch_serialize(
             name = details.get("name", "")
             pos = details.get("position", [0, 0, 0])
             label_type = details.get("label_type", "label")
+            shape = details.get("shape", "input")
             new_sexps.append(_generate_label_sexp(
                 name, pos[0], pos[1], pos[2] if len(pos) > 2 else 0.0, label_type,
+                shape=shape,
             ))
 
         elif mut_type in ("add_power_symbol", "add_power_flag"):
@@ -311,7 +343,7 @@ def can_patch_serialize(mutation_log: list[dict[str, Any]]) -> bool:
         "add_power_symbol", "add_power_flag",
     })
     for mut in mutation_log:
-        mut_type = mut.get("description", "")
+        mut_type = mut.get("type", "")
         if not mut_type:
             # Mutations without a description field require full
             # re-serialization since we cannot

@@ -187,7 +187,7 @@ class TestSchematicIRAssignFootprint:
         assert self.ir.dirty
         mutations = [
             m for m in self.ir.mutation_log
-            if m["description"] == "assign_footprint"
+            if m["type"] == "assign_footprint"
         ]
         assert len(mutations) == 1
         assert mutations[0]["reference"] == "J1"
@@ -272,7 +272,7 @@ class TestPcbIRSwapFootprint:
         assert self.ir.dirty
         mutations = [
             m for m in self.ir.mutation_log
-            if m["description"] == "swap_footprint"
+            if m["type"] == "swap_footprint"
         ]
         assert len(mutations) == 1
         assert mutations[0]["old_lib_id"] is not None

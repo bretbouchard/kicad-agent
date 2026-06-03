@@ -455,7 +455,7 @@ def _round_pos(x: float, y: float) -> tuple[float, float]:
 # ---------------------------------------------------------------------------
 
 
-def snap_to_grid(ir: SchematicIR, grid_mm: float = 0.01) -> dict[str, Any]:
+def snap_to_grid(ir: SchematicIR, file_path: Any = None, *, grid_mm: float = 0.01) -> dict[str, Any]:
     """Snap off-grid wire endpoints to the nearest grid point.
 
     Issue #5/#1: Uses tolerance-based clustering (union-find) instead of
@@ -471,6 +471,8 @@ def snap_to_grid(ir: SchematicIR, grid_mm: float = 0.01) -> dict[str, Any]:
 
     Args:
         ir: SchematicIR for the target schematic.
+        file_path: Path to schematic file (accepted for erc_auto_fix compatibility,
+                   not used by this function).
         grid_mm: Grid spacing in mm (default 0.01 for KiCad 8+).
 
     Returns:
@@ -823,7 +825,7 @@ def _find_net_name_at_position(
     x: float,
     y: float,
     label_positions: list[dict[str, Any]],
-    tolerance: float = 0.01,
+    tolerance: float = 2.54,
 ) -> str | None:
     """Find the net label name at or near a given position.
 
@@ -831,15 +833,58 @@ def _find_net_name_at_position(
         x: X coordinate to search.
         y: Y coordinate to search.
         label_positions: List of label position dicts from get_label_positions().
-        tolerance: Maximum distance in mm for a match.
+        tolerance: Maximum distance in mm for a match (default 2.54mm = 1 grid space).
 
     Returns:
         Net name string if found, None otherwise.
     """
+    best_match: str | None = None
+    best_dist = tolerance
     for lp in label_positions:
-        if _distance(x, y, lp["x"], lp["y"]) <= tolerance:
-            return lp["name"]
-    return None
+        d = _distance(x, y, lp["x"], lp["y"])
+        if d <= best_dist:
+            best_dist = d
+            best_match = lp["name"]
+    return best_match
+
+
+def add_junctions_at_labels(
+    ir: SchematicIR, sch_path: Any = None,
+) -> dict[str, Any]:
+    """Add junctions at label positions where multiple wires meet.
+
+    Fixes label_multiple_wires ERC violations by placing junction dots at
+    label positions that have 2+ wire endpoints within tolerance.
+
+    Args:
+        ir: SchematicIR for the target schematic.
+        sch_path: Path to schematic (accepted for erc_auto_fix compatibility).
+
+    Returns:
+        Dict with added count and positions.
+    """
+    label_positions = ir.get_label_positions()
+    wire_endpoints = ir.get_wire_endpoints()
+    if not label_positions or not wire_endpoints:
+        return {"added": 0, "positions": []}
+
+    # Build a map of position -> count of wire endpoints nearby
+    TOLERANCE = 0.5  # mm
+    added = 0
+    positions: list[tuple[float, float]] = []
+
+    for lp in label_positions:
+        lx, ly = lp["x"], lp["y"]
+        nearby_count = sum(
+            1 for ep in wire_endpoints
+            if _distance(lx, ly, ep["x"], ep["y"]) <= TOLERANCE
+        )
+        if nearby_count >= 2:
+            ir.add_junction(lx, ly)
+            added += 1
+            positions.append((round(lx, 4), round(ly, 4)))
+
+    return {"added": added, "positions": positions}
 
 
 # ---------------------------------------------------------------------------

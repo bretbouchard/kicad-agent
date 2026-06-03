@@ -124,7 +124,7 @@ class BaseIR:
                 "Mutation log cap reached (%d). Oldest entries auto-evicted.",
                 self._mutation_log.maxlen,
             )
-        self._mutation_log.append({"description": description, **details})
+        self._mutation_log.append({"type": description, **details})
         self._dirty = True
 
     def mark_dirty(self, description: str = "external_mark") -> None:

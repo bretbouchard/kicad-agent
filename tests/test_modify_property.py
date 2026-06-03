@@ -201,7 +201,7 @@ class TestModifyProperty:
 
         assert len(setup_schematic["ir"].mutation_log) == initial_mutations + 1
         last_mutation = setup_schematic["ir"].mutation_log[-1]
-        assert last_mutation["description"] == "modify_property"
+        assert last_mutation["type"] == "modify_property"
         assert last_mutation["reference"] == "J1"
         assert last_mutation["property"] == "Value"
         assert last_mutation["old_value"] == "GPIO"

@@ -53,9 +53,9 @@ class TestBaseIRMutationTracking:
 
         log = schematic_ir.mutation_log
         assert len(log) == 2
-        assert log[0]["description"] == "first"
+        assert log[0]["type"] == "first"
         assert log[0]["field"] == "a"
-        assert log[1]["description"] == "second"
+        assert log[1]["type"] == "second"
         assert log[1]["field"] == "b"
 
     def test_mutation_log_is_copy(self, schematic_ir: SchematicIR) -> None:
@@ -76,9 +76,9 @@ class TestBaseIRMutationTracking:
         log = schematic_ir.mutation_log
         assert len(log) == cap
         # Oldest entries were auto-evicted by deque -- first entry should be mutation_10
-        assert log[0]["description"] == "mutation_10"
+        assert log[0]["type"] == "mutation_10"
         # Most recent entry should be the last one recorded
-        assert log[-1]["description"] == f"mutation_{cap + 9}"
+        assert log[-1]["type"] == f"mutation_{cap + 9}"
 
 
 class TestOneIRPerParseResult:

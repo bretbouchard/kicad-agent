@@ -45,6 +45,9 @@ class NetConnector:
         )
     """
 
+    # KiCad standard grid spacing (50 mils)
+    GRID_MM = 2.54
+
     def __init__(self, filepath: str | Path) -> None:
         """Initialize NetConnector with a schematic file path.
 
@@ -53,6 +56,11 @@ class NetConnector:
         """
         self._filepath = Path(filepath)
         self._resolver = PinResolver(self._filepath)
+
+    def _snap_coord(self, value: float) -> float:
+        """Snap a coordinate to the nearest grid point."""
+        nearest = int(value / self.GRID_MM + 0.5)
+        return round(nearest * self.GRID_MM, 2)
 
     def connect_pins(
         self,
@@ -271,7 +279,9 @@ class NetConnector:
                     wire_segments = [(ax, ay, bx, by)]
                 else:
                     # L-shaped wire: horizontal then vertical
-                    mid_x, mid_y = bx, ay  # horizontal first
+                    # Snap midpoint to grid to avoid off-grid vertices
+                    mid_x = self._snap_coord(bx)
+                    mid_y = self._snap_coord(ay)
                     wire_segments = [
                         (ax, ay, mid_x, mid_y),
                         (mid_x, mid_y, bx, by),

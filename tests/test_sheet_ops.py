@@ -441,7 +441,7 @@ class TestAddSheetHandler:
         add_sheet(op, ir, schematic_path)
         assert ir.dirty is True
         assert len(ir._mutation_log) == 1
-        assert ir._mutation_log[0]["description"] == "add_sheet"
+        assert ir._mutation_log[0]["type"] == "add_sheet"
 
 
 class TestAddSheetPinHandler:

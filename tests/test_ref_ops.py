@@ -238,7 +238,7 @@ class TestSchematicIRRenumberReferences:
         self.ir._set_component_reference(comp, "J50")
 
         self.ir.renumber_references(prefix="J", start_index=1, step=1)
-        mutations = [m for m in self.ir.mutation_log if m["description"] == "renumber_reference"]
+        mutations = [m for m in self.ir.mutation_log if m["type"] == "renumber_reference"]
         assert len(mutations) > 0
 
     def test_renumber_sets_dirty(self) -> None:

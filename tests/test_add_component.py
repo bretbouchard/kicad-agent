@@ -159,7 +159,7 @@ class TestAddComponent:
         assert len(setup_schematic["ir"].mutation_log) == initial_mutations + 1
 
         last_mutation = setup_schematic["ir"].mutation_log[-1]
-        assert last_mutation["description"] == "add_component"
+        assert last_mutation["type"] == "add_component"
         assert last_mutation["reference"] == "R102"
 
     def test_raises_on_invalid_library_id(self, setup_schematic: dict) -> None:

@@ -175,7 +175,7 @@ class TestPcbIRAddNet:
         # Should have a valid net number
         assert net.number > 0
         # Mutation logged
-        assert any(m["description"] == "add_net" for m in self.ir.mutation_log)
+        assert any(m["type"] == "add_net" for m in self.ir.mutation_log)
 
     def test_add_auto_named_net(self) -> None:
         """Test 12: add_net with empty name generates N_<number>."""

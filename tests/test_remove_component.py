@@ -131,7 +131,7 @@ class TestRemoveComponent:
         assert len(setup_schematic["ir"].mutation_log) == initial_mutations + 1
 
         last_mutation = setup_schematic["ir"].mutation_log[-1]
-        assert last_mutation["description"] == "remove_component"
+        assert last_mutation["type"] == "remove_component"
         assert last_mutation["reference"] == "R1"
 
     def test_other_components_unchanged(

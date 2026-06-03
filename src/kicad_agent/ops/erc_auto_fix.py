@@ -61,6 +61,7 @@ VIOLATION_REPAIR_MAP: dict[str, str] = {
     "pin_not_connected": "place_no_connects_from_erc",
     "power_pin_not_driven": "add_power_flags",
     "pin_to_pin": "fix_pin_type_mismatches",
+    "label_multiple_wires": "add_junctions_at_labels",
     # Issue #3: place_missing_units removed from auto-fix. It created 192
     # unauthorized components. Re-enable only after audit with strict limits.
     # "missing_power_pin": "place_missing_units",
@@ -76,6 +77,7 @@ REPAIR_PRIORITY: list[str] = [
     "fix_pin_type_mismatches", # type conflicts
     "add_power_flags",         # power pin issues (maps from power_pin_not_driven)
     "place_no_connects_from_erc",  # unconnected pins / cosmetic (maps from pin_not_connected)
+    "add_junctions_at_labels", # label at wire intersections (maps from label_multiple_wires)
     "snap_to_grid",            # off-grid / cosmetic
 ]
 
@@ -106,6 +108,9 @@ def _get_repair_function(repair_name: str) -> Any:
     elif repair_name == "snap_to_grid":
         from kicad_agent.ops.repair import snap_to_grid
         return snap_to_grid
+    elif repair_name == "add_junctions_at_labels":
+        from kicad_agent.ops.repair import add_junctions_at_labels
+        return add_junctions_at_labels
     else:
         raise ValueError(f"Unknown repair function: {repair_name}")
 
