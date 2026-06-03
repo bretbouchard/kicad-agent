@@ -228,11 +228,12 @@ def remove_orphaned_labels(ir: SchematicIR) -> dict[str, Any]:
 
 
 def detect_shorted_nets(ir: SchematicIR) -> dict[str, Any]:
-    """Find junction points where wires from different named nets overlap.
+    """Find connected components where multiple named nets overlap.
 
-    Detects positions where two wires on different named nets share a
-    common coordinate (within 0.01mm tolerance). This indicates a
-    short circuit.
+    Delegates to NetPositionIndex.detect_shorts() which uses the
+    full union-find pipeline with mid-point connectivity, junction
+    handling, and pin-aware grouping -- replacing the former ad-hoc
+    union-find that only checked wire start/end positions.
 
     Args:
         ir: SchematicIR for the target schematic.
@@ -240,92 +241,15 @@ def detect_shorted_nets(ir: SchematicIR) -> dict[str, Any]:
     Returns:
         Dict with shorts (list of {position, nets}) and clean (bool).
     """
-    label_positions = ir.get_label_positions()
-    wire_endpoints = ir.get_wire_endpoints()
+    # Build NetPositionIndex from the schematic file on disk.
+    # ir.file_path points to the original parsed file; callers invoke
+    # detect_shorted_nets before making mutations so disk state matches.
+    file_path = ir.file_path
+    if file_path is None:
+        return {"shorts": [], "clean": True}
 
-    # Map positions to net names via labels
-    # A wire inherits the net name of any label at its endpoints
-    pos_to_nets: dict[tuple[float, float], set[str]] = {}
-
-    for label in label_positions:
-        key = _round_pos(label["x"], label["y"])
-        pos_to_nets.setdefault(key, set()).add(label["name"])
-
-    # For each wire, propagate net names through connected endpoints
-    # Build adjacency: wire endpoints that share coordinates are connected
-    endpoint_to_wires: dict[tuple[float, float], list[int]] = {}
-    wire_endpoints_map: dict[int, dict] = {}
-    for we in wire_endpoints:
-        wi = we["wire_index"]
-        start_key = _round_pos(we["start_x"], we["start_y"])
-        end_key = _round_pos(we["end_x"], we["end_y"])
-        endpoint_to_wires.setdefault(start_key, []).append(wi)
-        endpoint_to_wires.setdefault(end_key, []).append(wi)
-        wire_endpoints_map[wi] = we
-
-    # Propagate net names through wire connectivity using union-find.
-    # Build connected components of positions linked by wires, then merge
-    # all net names within each connected component.
-    # Map each position to a canonical representative (union-find).
-    parent: dict[tuple[float, float], tuple[float, float]] = {}
-
-    def _find(pos: tuple[float, float]) -> tuple[float, float]:
-        while parent.get(pos, pos) != pos:
-            parent[pos] = parent.get(parent[pos], parent[pos])
-            pos = parent[pos]
-        return pos
-
-    def _union(a: tuple[float, float], b: tuple[float, float]) -> None:
-        ra, rb = _find(a), _find(b)
-        if ra != rb:
-            parent[ra] = rb
-
-    # Union wire start/end positions (each wire connects its two endpoints)
-    for we in wire_endpoints:
-        start_key = _round_pos(we["start_x"], we["start_y"])
-        end_key = _round_pos(we["end_x"], we["end_y"])
-        _union(start_key, end_key)
-
-    # Merge net names across connected positions
-    # First, collect all positions that have labels into their components
-    component_nets: dict[tuple[float, float], set[str]] = {}
-    for pos_key, nets in pos_to_nets.items():
-        root = _find(pos_key)
-        component_nets.setdefault(root, set()).update(nets)
-
-    # Also propagate: for each label position, find its connected component
-    # and check if any other label in the same component has a different name
-    for pos_key in pos_to_nets:
-        root = _find(pos_key)
-        component_nets.setdefault(root, set()).update(pos_to_nets[pos_key])
-
-    # Shorts: components where multiple different net names are connected
-    shorts: list[dict[str, Any]] = []
-
-    # 1. Same-position shorts (labels at exact same coordinates)
-    for pos_key, nets in pos_to_nets.items():
-        if len(nets) > 1:
-            net_list = sorted(nets)
-            shorts.append({
-                "position": (round(pos_key[0], 4), round(pos_key[1], 4)),
-                "nets": net_list,
-            })
-
-    # 2. Wire-connected shorts (different net labels connected via wire path)
-    seen_shorts: set[frozenset[str]] = {
-        frozenset(s["nets"]) for s in shorts
-    }
-    for root, nets in component_nets.items():
-        if len(nets) > 1:
-            key = frozenset(nets)
-            if key not in seen_shorts:
-                net_list = sorted(nets)
-                shorts.append({
-                    "position": (round(root[0], 4), round(root[1], 4)),
-                    "nets": net_list,
-                })
-                seen_shorts.add(key)
-
+    index = NetPositionIndex.from_file(file_path)
+    shorts = index.detect_shorts()
     return {"shorts": shorts, "clean": len(shorts) == 0}
 
 

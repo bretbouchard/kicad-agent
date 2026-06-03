@@ -402,11 +402,14 @@ class NetPositionIndex:
             for pos in positions:
                 self._pos_to_root[pos] = root
 
-            # Collect all label names in this component for short detection
+            # Collect all label names in this component for short detection.
+            # Use graph.labels directly (not label_pos_map) because label_pos_map
+            # deduplicates same-position labels, losing multi-name collision info.
             label_names: set[str] = set()
-            for pos in positions:
-                if pos in label_pos_map:
-                    label_names.add(label_pos_map[pos].name)
+            for label in graph.labels:
+                label_pos = _round_pos(label.position)
+                if label_pos in positions:
+                    label_names.add(label.name)
             if len(label_names) > 1:
                 self._root_to_label_names[root] = label_names
 
