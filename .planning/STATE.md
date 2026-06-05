@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Council Remediation
 status: execute
-stopped_at: Completed Phase 76 Plan 02 - Wire NativeParser into PcbIR and Executor
-last_updated: "2026-06-05T06:02:27Z"
+stopped_at: Completed Phase 76 - Native KiCad 10 PCB Parser (all plans + code review fixes)
+last_updated: "2026-06-05T07:30:00Z"
 last_activity: 2026-06-05
 progress:
   total_phases: 76
   completed_phases: 57
   total_plans: 228
   completed_plans: 149
-  percent: 83
+  percent: 84
 ---
 
 # Project State
@@ -53,6 +53,12 @@ Last activity: 2026-06-01
   - Executor dual-parser: native for reads, kiutils for serialization (zero regression)
   - _try_native_parse() with Exception catch per CRITICAL-1
   - 41 integration tests, all passing. 73 total (adapter + pcb_ops + handler), zero regression.
+
+  - Code review fixes (3 HIGH findings addressed):
+    - HIGH-1: update_footprint_from_library() native path (was only mutation method missing _is_native branch)
+    - HIGH-2: External consumers (extractor, graph_builder, spatial_drc) duck-typed for tuple positions
+    - HIGH-3: CacheEntry stores native_board; cache hits preserve native parser benefit
+    - 185 total tests passing after fixes, zero regression
 
 ### Phase 75: Pre-Analysis Gate & Context Intelligence (v3.1)
 
