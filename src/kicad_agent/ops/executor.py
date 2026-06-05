@@ -54,7 +54,19 @@ from kicad_agent.ops.handlers import (
 logger = logging.getLogger(__name__)
 
 # Set of op_types that use cross-file dispatch path
-_CROSS_FILE_OP_TYPES = {"propagate_symbol_change"}
+_CROSS_FILE_OP_TYPES = {"propagate_symbol_change", "update_pcb_from_schematic"}
+
+# Pre-analysis gate: shared instance (stateless, safe to reuse)
+_PRE_ANALYSIS_GATE = None
+
+
+def _get_pre_analysis_gate():
+    """Lazy-load the pre-analysis gate to avoid import overhead."""
+    global _PRE_ANALYSIS_GATE
+    if _PRE_ANALYSIS_GATE is None:
+        from kicad_agent.ops.pre_analysis import PreAnalysisGate
+        _PRE_ANALYSIS_GATE = PreAnalysisGate()
+    return _PRE_ANALYSIS_GATE
 
 # Set of op_types that create new files (bypass file-existence check)
 _CREATE_OP_TYPES = {"create_schematic", "create_pcb", "create_project", "create_symbol", "create_footprint"}
@@ -307,6 +319,22 @@ class OperationExecutor:
 
         ir = SchematicIR(_parse_result=parse_result)
 
+        # Pre-analysis gate: check before mutating
+        gate = _get_pre_analysis_gate()
+        pre_result = gate.analyze(root, ir, file_path)
+        if pre_result.blocked:
+            blocker_msgs = [f.message for f in pre_result.blockers]
+            return {
+                "success": False,
+                "operation": root.op_type,
+                "target_file": root.target_file,
+                "pre_analysis": pre_result.to_dict(),
+                "error": f"Pre-analysis blocked: {'; '.join(blocker_msgs)}",
+            }
+        if pre_result.warnings:
+            for w in pre_result.warnings:
+                logger.warning("Pre-analysis warning [%s]: %s", w.category, w.message)
+
         with Transaction(file_path) as txn:
             details = self._dispatch(root.op_type, root, ir, file_path)
 
@@ -339,7 +367,21 @@ class OperationExecutor:
             "operation": root.op_type,
             "target_file": root.target_file,
             "details": details,
+            "pre_analysis": pre_result.to_dict(),
         }
+
+    @staticmethod
+    def _raw_write_atomic(file_path: Path, content: str) -> None:
+        """Write content to file atomically via temp + rename (Council C-01).
+
+        Args:
+            file_path: Target file path.
+            content: Content to write.
+        """
+        import os
+        tmp = file_path.with_suffix(".tmp")
+        tmp.write_text(content, encoding="utf-8")
+        os.replace(str(tmp), str(file_path))
 
     def _execute_pcb(self, op: Operation, file_path: Path) -> dict[str, Any]:
         """Execute an operation targeting a PCB file."""
@@ -354,13 +396,21 @@ class OperationExecutor:
         if cached_entry is not None:
             parse_result = cached_entry.parse_result
             uuid_map = cached_entry.uuid_map
+            ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
         else:
+            # Always parse with kiutils for serialization support
             parse_result = parse_pcb(file_path)
             uuid_map = extract_uuids(parse_result.raw_content, "pcb")
+
+            # Try native parser for read path (Plan 01)
+            native_board = self._try_native_parse(file_path)
+            if native_board is not None:
+                ir = PcbIR.from_native(native_board)
+            else:
+                ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
+
             if self._cache:
                 self._cache.put(file_path, CacheEntry(parse_result=parse_result, uuid_map=uuid_map))
-
-        ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
 
         with Transaction(file_path) as txn:
             details = self._dispatch_pcb(root.op_type, root, ir, file_path)
@@ -389,6 +439,32 @@ class OperationExecutor:
             "target_file": root.target_file,
             "details": details,
         }
+
+    @staticmethod
+    def _try_native_parse(file_path: Path) -> "NativeBoard | None":
+        """Try native parser. Returns NativeBoard on success, None on failure.
+
+        CRITICAL-1: Catches Exception (not just RecursionError) since
+        the depth pre-scan prevents RecursionError from occurring.
+        """
+        from kicad_agent.parser.pcb_native_parser import NativeParser
+
+        try:
+            native_board = NativeParser.parse_pcb(file_path)
+            # Validate parse succeeded (has nets or footprints)
+            if native_board.nets or native_board.footprints:
+                return native_board
+            logger.warning(
+                "NativeParser returned empty board for %s, falling back to kiutils",
+                file_path,
+            )
+        except Exception:
+            logger.warning(
+                "NativeParser failed for %s, falling back to kiutils",
+                file_path,
+                exc_info=True,
+            )
+        return None
 
     def _dispatch(
         self,
@@ -721,6 +797,26 @@ class OperationExecutor:
                         f"No handler for op_type '{root.op_type}' on "
                         f"{file_path.suffix or file_path.name}"
                     )
+
+            # Pre-analysis gate: check all ops against this file's IR
+            if file_path.suffix == ".kicad_sch":
+                gate = _get_pre_analysis_gate()
+                ir = ir_map[file_path]
+                for op in ops_for_file:
+                    root = op.root
+                    pre = gate.analyze(root, ir, file_path)
+                    if pre.blocked:
+                        msgs = [f.message for f in pre.blockers]
+                        validation_errors.append(
+                            f"Pre-analysis blocked '{root.op_type}': "
+                            + "; ".join(msgs)
+                        )
+                    if pre.warnings:
+                        for w in pre.warnings:
+                            logger.warning(
+                                "Pre-analysis warning [%s] for '%s': %s",
+                                w.category, root.op_type, w.message,
+                            )
 
         if validation_errors:
             return {

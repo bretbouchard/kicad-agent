@@ -1,14 +1,26 @@
-"""PCB IR -- thin wrapper over a kiutils Board object with mutation tracking.
+"""PCB IR -- thin wrapper over a Board object with mutation tracking.
 
-D-05: Holds reference to kiutils Board (not a copy).
+D-05: Holds reference to Board (not a copy).
 D-06: Tracks mutations, dirty flag.
 D-07: PCB-specific IR.
 
-CRITICAL: kiutils drops all UUID tokens from PCB files (only handles legacy tstamp).
-_uuid_map is required for serialization. The PCB IR constructor enforces this
-requirement.
+Supports two Board backends:
+  1. NativeBoard (native parser, Plan 01) -- preferred, no UUID loss.
+  2. kiutils Board (legacy fallback) -- requires UUID map.
 
-Usage:
+When the native parser succeeds, _native_board is set and PcbIR methods
+use NativeBoard attributes directly. When it fails, PcbIR falls back to
+the kiutils path and requires a UUID map.
+
+Usage (native path):
+    from kicad_agent.ir.pcb_ir import PcbIR
+    from kicad_agent.parser.pcb_native_parser import NativeParser
+
+    native_board = NativeParser.parse_pcb(Path("my_board.kicad_pcb"))
+    ir = PcbIR.from_native(native_board)
+    footprints = ir.footprints
+
+Usage (kiutils fallback):
     from kicad_agent.ir.pcb_ir import PcbIR
     from kicad_agent.parser import parse_pcb
     from kicad_agent.parser.uuid_extractor import extract_uuids
@@ -19,10 +31,11 @@ Usage:
     footprints = ir.footprints
 """
 
+import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
 
 from kiutils.board import Board
 from kiutils.footprint import Footprint
@@ -32,20 +45,31 @@ from kicad_agent.ir.base import BaseIR
 from kicad_agent.parser.types import ParseResult
 from kicad_agent.parser.uuid_extractor import UUIDMap
 
+if TYPE_CHECKING:
+    from kicad_agent.parser.pcb_native_types import (
+        NativeBoard,
+        NativeNet,
+        NativeFootprint,
+        NativePad,
+    )
+
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class PcbIR(BaseIR):
-    """Thin wrapper over a kiutils Board object with mutation tracking.
+    """Thin wrapper over a Board object with mutation tracking.
 
-    D-05: Holds reference to kiutils Board (not a copy).
+    D-05: Holds reference to Board (not a copy).
     D-06: Tracks mutations, dirty flag, UUID map reference.
     D-07: PCB-specific IR.
 
-    CRITICAL: kiutils drops all UUID tokens from PCB files. _uuid_map is
-    required for serialization.
+    Supports NativeBoard (preferred) and kiutils Board (fallback).
+    When _native_board is set, UUID map is not required.
     """
 
     _raw_written: bool = False  # Set when raw sexp manipulation writes the file directly
+    _native_board: "NativeBoard | None" = None
 
     @property
     def raw_written(self) -> bool:
@@ -55,45 +79,80 @@ class PcbIR(BaseIR):
         """
         return self._raw_written
 
+    @property
+    def _is_native(self) -> bool:
+        """Whether this IR wraps a NativeBoard (True) or kiutils Board (False)."""
+        return self._native_board is not None
+
+    @classmethod
+    def from_native(cls, native_board: "NativeBoard") -> "PcbIR":
+        """Create PcbIR from a NativeBoard (no kiutils dependency).
+
+        Args:
+            native_board: Parsed NativeBoard from NativeParser.
+
+        Returns:
+            PcbIR instance backed by NativeBoard. No UUID map required.
+        """
+        # Create a minimal ParseResult -- kiutils_obj is the NativeBoard itself
+        parse_result = ParseResult(
+            kiutils_obj=native_board,
+            raw_content=native_board.raw_content,
+            file_path=Path(native_board.file_path) if native_board.file_path else Path(""),
+            file_type="pcb",
+        )
+        return cls(_parse_result=parse_result, _uuid_map=None, _native_board=native_board)
+
     def __post_init__(self) -> None:
-        """Validate file type matches PCB and UUID map is provided."""
+        """Validate file type matches PCB. UUID map only required for kiutils path."""
         super().__post_init__()
         if self.file_type != "pcb":
             raise ValueError(
                 f"Expected file_type='pcb', got {self.file_type!r}"
             )
-        if self._uuid_map is None:
+        # UUID map required only for kiutils fallback (native path preserves UUIDs)
+        if self._native_board is None and self._uuid_map is None:
             raise ValueError(
-                "PcbIR requires a UUID map for serialization. "
+                "PcbIR requires a UUID map for kiutils serialization. "
                 "kiutils drops all UUID tokens from PCB files. "
-                "Use extract_uuids() from kicad_agent.parser.uuid_extractor."
+                "Use extract_uuids() from kicad_agent.parser.uuid_extractor, "
+                "or use PcbIR.from_native() with NativeParser."
             )
 
     @property
-    def board(self) -> Board:
-        """Direct access to the kiutils Board object."""
+    def board(self) -> Any:
+        """Direct access to the underlying Board object.
+
+        Returns NativeBoard when native parser succeeded, kiutils Board otherwise.
+        """
+        if self._native_board is not None:
+            return self._native_board
         return self._parse_result.kiutils_obj
 
     @property
     def footprints(self) -> list:
         """Access to PCB footprints."""
+        if self._native_board is not None:
+            return self._native_board.footprints
         return self._parse_result.kiutils_obj.footprints
 
     @property
     def nets(self) -> list:
         """Access to PCB nets."""
+        if self._native_board is not None:
+            return self._native_board.nets
         return self._parse_result.kiutils_obj.nets
 
     @property
     def trace_items(self) -> list:
         """Access to PCB trace items (segments, arcs, vias)."""
-        return self._parse_result.kiutils_obj.traceItems
+        return self.board.traceItems
 
     # -------------------------------------------------------------------
     # Net mutation methods
     # -------------------------------------------------------------------
 
-    def add_net(self, net_name: str = "", net_number: Optional[int] = None) -> Net:
+    def add_net(self, net_name: str = "", net_number: Optional[int] = None) -> Any:
         """Add a new net to the PCB.
 
         Args:
@@ -101,7 +160,7 @@ class PcbIR(BaseIR):
             net_number: Explicit net number. None triggers auto-assignment (max existing + 1).
 
         Returns:
-            The created Net object.
+            The created Net or NativeNet object.
 
         Raises:
             ValueError: If net_name already exists (when explicitly named).
@@ -124,7 +183,12 @@ class PcbIR(BaseIR):
             if n.number == net_number:
                 raise ValueError(f"Net number {net_number} already in use by '{n.name}'")
 
-        net = Net(number=net_number, name=net_name)
+        if self._is_native:
+            from kicad_agent.parser.pcb_native_types import NativeNet
+            net = NativeNet(number=net_number, name=net_name)
+        else:
+            net = Net(number=net_number, name=net_name)
+
         self.board.nets.append(net)
         self._record_mutation("add_net", {
             "net_name": net_name,
@@ -148,8 +212,15 @@ class PcbIR(BaseIR):
         # Disconnect all pads connected to this net
         for fp in self.board.footprints:
             for pad in fp.pads:
-                if pad.net is not None and pad.net.name == net_name:
-                    pad.net = None
+                if self._is_native:
+                    # NativePad has .net_name directly
+                    if pad.net_name == net_name:
+                        pad.net_name = ""
+                        pad.net_number = 0
+                else:
+                    # kiutils pad has .net (Net object)
+                    if pad.net is not None and pad.net.name == net_name:
+                        pad.net = None
 
         # Remove the net from the board in-place (avoids stale list references)
         self.board.nets[:] = [n for n in self.board.nets if n.name != net_name]
@@ -168,24 +239,37 @@ class PcbIR(BaseIR):
         if self.get_net_by_name(new_name) is not None:
             raise ValueError(f"Net '{new_name}' already exists")
 
-        # Update the net in board.nets
-        for i, n in enumerate(self.board.nets):
-            if n.name == old_name:
-                self.board.nets[i] = Net(number=n.number, name=new_name)
-                break
+        if self._is_native:
+            # Update the net in board.nets
+            for i, n in enumerate(self.board.nets):
+                if n.name == old_name:
+                    n.name = new_name
+                    break
 
-        # Propagate to all connected pads (create new Net to avoid shared reference)
-        for fp in self.board.footprints:
-            for pad in fp.pads:
-                if pad.net is not None and pad.net.name == old_name:
-                    pad.net = Net(number=pad.net.number, name=new_name)
+            # Propagate to all connected pads
+            for fp in self.board.footprints:
+                for pad in fp.pads:
+                    if pad.net_name == old_name:
+                        pad.net_name = new_name
+        else:
+            # Update the net in board.nets
+            for i, n in enumerate(self.board.nets):
+                if n.name == old_name:
+                    self.board.nets[i] = Net(number=n.number, name=new_name)
+                    break
+
+            # Propagate to all connected pads (create new Net to avoid shared reference)
+            for fp in self.board.footprints:
+                for pad in fp.pads:
+                    if pad.net is not None and pad.net.name == old_name:
+                        pad.net = Net(number=pad.net.number, name=new_name)
 
         self._record_mutation("rename_net", {
             "old_name": old_name,
             "new_name": new_name,
         })
 
-    def get_net_by_name(self, net_name: str) -> Optional[Net]:
+    def get_net_by_name(self, net_name: str) -> Any:
         """Find a net by name. Returns None if not found."""
         for n in self.board.nets:
             if n.name == net_name:
@@ -201,9 +285,14 @@ class PcbIR(BaseIR):
         """
         pads: list[tuple[str, str]] = []
         for fp in self.board.footprints:
+            fp_lib_id = getattr(fp, "lib_id", None) or getattr(fp, "libId", "")
             for pad in fp.pads:
-                if pad.net is not None and pad.net.name == net_name:
-                    pads.append((fp.libId, pad.number))
+                if self._is_native:
+                    if pad.net_name == net_name:
+                        pads.append((fp_lib_id, pad.number))
+                else:
+                    if pad.net is not None and pad.net.name == net_name:
+                        pads.append((fp_lib_id, pad.number))
         return pads
 
     # -------------------------------------------------------------------
@@ -231,11 +320,11 @@ class PcbIR(BaseIR):
     def swap_footprint(self, reference: str, new_footprint_lib_id: str) -> dict[str, Any]:
         """Swap a footprint while preserving all pad-to-net connections.
 
-        This changes the footprint's libId but preserves pad.net assignments
+        This changes the footprint's lib_id but preserves pad net assignments
         for pads that exist in the new footprint (by matching pad numbers).
 
         IMPORTANT: This does NOT reload the footprint geometry from the library.
-        It only updates the libId string and preserves pad net connections.
+        It only updates the lib_id string and preserves pad net connections.
 
         Args:
             reference: Reference designator of the footprint to swap.
@@ -251,25 +340,45 @@ class PcbIR(BaseIR):
         if fp is None:
             raise ValueError(f"Footprint '{reference}' not found")
 
-        old_lib_id = fp.libId
+        old_lib_id = getattr(fp, "lib_id", None) or getattr(fp, "libId", "")
 
-        # Save current pad-to-net mapping
-        pad_nets: dict[str, Any] = {}
-        for pad in fp.pads:
-            if pad.net is not None:
-                pad_nets[pad.number] = Net(number=pad.net.number, name=pad.net.name)
+        if self._is_native:
+            # Save current pad-to-net mapping
+            pad_nets: dict[str, tuple[str, int]] = {}
+            for pad in fp.pads:
+                if pad.net_name:
+                    pad_nets[pad.number] = (pad.net_name, pad.net_number)
 
-        # Update the libId
-        fp.libId = new_footprint_lib_id
+            # Update the lib_id
+            fp.lib_id = new_footprint_lib_id
 
-        # Restore pad nets for matching pad numbers
-        preserved_count = 0
-        for pad in fp.pads:
-            if pad.number in pad_nets:
-                pad.net = Net(number=pad_nets[pad.number].number, name=pad_nets[pad.number].name)
-                preserved_count += 1
-            else:
-                pad.net = None
+            # Restore pad nets for matching pad numbers
+            preserved_count = 0
+            for pad in fp.pads:
+                if pad.number in pad_nets:
+                    pad.net_name, pad.net_number = pad_nets[pad.number]
+                    preserved_count += 1
+                else:
+                    pad.net_name = ""
+                    pad.net_number = 0
+        else:
+            # Save current pad-to-net mapping
+            pad_nets_k: dict[str, Any] = {}
+            for pad in fp.pads:
+                if pad.net is not None:
+                    pad_nets_k[pad.number] = Net(number=pad.net.number, name=pad.net.name)
+
+            # Update the libId
+            fp.libId = new_footprint_lib_id
+
+            # Restore pad nets for matching pad numbers
+            preserved_count = 0
+            for pad in fp.pads:
+                if pad.number in pad_nets_k:
+                    pad.net = Net(number=pad_nets_k[pad.number].number, name=pad_nets_k[pad.number].name)
+                    preserved_count += 1
+                else:
+                    pad.net = None
 
         self._record_mutation("swap_footprint", {
             "reference": reference,
@@ -415,11 +524,12 @@ class PcbIR(BaseIR):
         new_fp_indented = "\t" + new_fp_sexpr.replace("\n", "\n\t")
         new_raw = raw_content[:old_fp_start] + new_fp_indented + raw_content[old_fp_end:]
 
-        # Write back atomically: write to temp, then rename
+        # Write atomically via executor helper (Council C-02)
+        from kicad_agent.ops.executor import OperationExecutor
+
         file_path = self._parse_result.file_path
-        tmp = file_path.with_suffix('.tmp')
-        tmp.write_text(new_raw, encoding="utf-8")
-        tmp.rename(file_path)
+        OperationExecutor._raw_write_atomic(file_path, new_raw)
+        self._parse_result = replace(self._parse_result, raw_content=new_raw)
         self._raw_written = True
 
         self._record_mutation("update_footprint_from_library", {
@@ -454,7 +564,10 @@ class PcbIR(BaseIR):
             return []
         result: list[tuple[str, str]] = []
         for pad in fp.pads:
-            net_name = pad.net.name if pad.net is not None else ""
+            if self._is_native:
+                net_name = pad.net_name
+            else:
+                net_name = pad.net.name if pad.net is not None else ""
             result.append((pad.number, net_name))
         return result
 
@@ -469,11 +582,13 @@ class PcbIR(BaseIR):
         """
         segments: list[tuple[float, float]] = []
         for graphic in self.board.graphicItems:
-            if hasattr(graphic, 'layer') and graphic.layer == "Edge.Cuts":
-                if hasattr(graphic, 'start') and hasattr(graphic, 'end'):
-                    segments.append((graphic.start.X, graphic.start.Y))
-                    segments.append((graphic.end.X, graphic.end.Y))
-                elif hasattr(graphic, 'center'):
+            if getattr(graphic, 'layer', None) == "Edge.Cuts":
+                start = getattr(graphic, 'start', None)
+                end = getattr(graphic, 'end', None)
+                if start is not None and end is not None:
+                    segments.append((start.X, start.Y))
+                    segments.append((end.X, end.Y))
+                elif getattr(graphic, 'center', None) is not None:
                     cx, cy = graphic.center.X, graphic.center.Y
                     r = getattr(graphic, 'radius', getattr(graphic, 'end', None))
                     if r is not None:
@@ -483,13 +598,20 @@ class PcbIR(BaseIR):
 
         # Also check footprint graphics on Edge.Cuts
         for fp in self.footprints:
-            for graphic in fp.graphicItems:
-                if hasattr(graphic, 'layer') and graphic.layer == "Edge.Cuts":
-                    if hasattr(graphic, 'start') and hasattr(graphic, 'end'):
-                        fp_x = fp.position.X if hasattr(fp.position, 'X') else 0
-                        fp_y = fp.position.Y if hasattr(fp.position, 'Y') else 0
-                        segments.append((graphic.start.X + fp_x, graphic.start.Y + fp_y))
-                        segments.append((graphic.end.X + fp_x, graphic.end.Y + fp_y))
+            fp_gi = getattr(fp, 'graphic_items', None) or getattr(fp, 'graphicItems', [])
+            for graphic in fp_gi:
+                if getattr(graphic, 'layer', None) == "Edge.Cuts":
+                    start = getattr(graphic, 'start', None)
+                    end = getattr(graphic, 'end', None)
+                    if start is not None and end is not None:
+                        fp_pos = fp.position
+                        if hasattr(fp_pos, 'X'):
+                            fp_x, fp_y = fp_pos.X, fp_pos.Y
+                        else:
+                            fp_x = fp_pos[0] if len(fp_pos) > 0 else 0.0
+                            fp_y = fp_pos[1] if len(fp_pos) > 1 else 0.0
+                        segments.append((start.X + fp_x, start.Y + fp_y))
+                        segments.append((end.X + fp_x, end.Y + fp_y))
 
         if not segments:
             return None
@@ -506,36 +628,69 @@ class PcbIR(BaseIR):
         """
         netlist: dict[str, list[tuple[float, float]]] = {}
         for fp in self.footprints:
-            fp_x = fp.position.X if hasattr(fp.position, 'X') else 0
-            fp_y = fp.position.Y if hasattr(fp.position, 'Y') else 0
+            fp_pos = fp.position
+            if hasattr(fp_pos, 'X'):
+                fp_x, fp_y = fp_pos.X, fp_pos.Y
+            else:
+                fp_x = fp_pos[0] if len(fp_pos) > 0 else 0.0
+                fp_y = fp_pos[1] if len(fp_pos) > 1 else 0.0
+
             for pad in fp.pads:
-                if pad.net is not None and pad.net.name:
-                    pad_x = fp_x + (pad.position.X if hasattr(pad.position, 'X') else 0)
-                    pad_y = fp_y + (pad.position.Y if hasattr(pad.position, 'Y') else 0)
-                    net_name = pad.net.name
-                    if net_name not in netlist:
-                        netlist[net_name] = []
-                    netlist[net_name].append((round(pad_x, 4), round(pad_y, 4)))
+                if self._is_native:
+                    if pad.net_name:
+                        pad_pos = pad.position
+                        pad_x = fp_x + (pad_pos[0] if len(pad_pos) > 0 else 0.0)
+                        pad_y = fp_y + (pad_pos[1] if len(pad_pos) > 1 else 0.0)
+                        net_name = pad.net_name
+                        if net_name not in netlist:
+                            netlist[net_name] = []
+                        netlist[net_name].append((round(pad_x, 4), round(pad_y, 4)))
+                else:
+                    if pad.net is not None and pad.net.name:
+                        pad_x = fp_x + (pad.position.X if hasattr(pad.position, 'X') else 0)
+                        pad_y = fp_y + (pad.position.Y if hasattr(pad.position, 'Y') else 0)
+                        net_name = pad.net.name
+                        if net_name not in netlist:
+                            netlist[net_name] = []
+                        netlist[net_name].append((round(pad_x, 4), round(pad_y, 4)))
         return netlist
 
     def insert_track_segments(self, sexpr_block: str) -> None:
         """Insert track segment S-expressions into the PCB file.
 
         Appends the segments before the closing ) of the .kicad_pcb file.
-
-        Args:
-            sexpr_block: Block of (segment ...) S-expressions.
+        Delegates to PcbRawWriter for content manipulation (Council C-02).
         """
+        from kicad_agent.ops.executor import OperationExecutor
+        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
         raw = self._parse_result.raw_content
-        # Find the last closing paren of the file
-        last_close = raw.rfind(')')
-        if last_close == -1:
+        new_raw = PcbRawWriter.insert_segments(raw, sexpr_block)
+        if new_raw == raw:
             return
-        insertion = "\n" + sexpr_block + "\n"
-        new_raw = raw[:last_close] + insertion + raw[last_close:]
-        self._parse_result = self._parse_result._replace(raw_content=new_raw)
+        self._parse_result = replace(self._parse_result, raw_content=new_raw)
+        OperationExecutor._raw_write_atomic(self._parse_result.file_path, new_raw)
         self._raw_written = True
         self.mark_dirty("insert_track_segments")
+
+    def _update_parse_result(self, new_result: ParseResult, new_uuid_map: UUIDMap) -> None:
+        """Update parse result after raw content write.
+
+        Re-parses the file to keep the in-memory kiutils Board in sync
+        with raw S-expression modifications. Handles IR registry bookkeeping.
+        """
+        from kicad_agent.ir.base import _ir_registry, _ir_registry_lock
+
+        old_id = id(self._parse_result)
+        new_id = id(new_result)
+        with _ir_registry_lock:
+            _ir_registry.discard(old_id)
+            if new_id in _ir_registry:
+                raise RuntimeError("New ParseResult already has an IR wrapper")
+            _ir_registry.add(new_id)
+        self._parse_result = new_result
+        self._uuid_map = new_uuid_map
+        self._raw_written = True
 
 
 def _restore_properties(
@@ -557,60 +712,19 @@ def _restore_properties(
 def _find_footprint_block(content: str, reference: str) -> tuple[Optional[int], Optional[int]]:
     """Find the start and end positions of a footprint block by reference.
 
-    Scans for ``(footprint ...`` blocks and checks their Reference property.
-    Returns (start, end) byte offsets, or (None, None) if not found.
+    Delegates to PcbRawWriter._find_footprint_block (Council C-02 consolidation).
     """
-
-    # Find all top-level footprint blocks (one tab indent)
-    for match in re.finditer(r'^\t\(footprint ', content, re.MULTILINE):
-        start = match.start()
-        end = _find_matching_close(content, start + 1)  # +1 to skip the opening (
-        if end is None:
-            continue
-
-        block = content[start:end + 1]
-
-        # Check if this block has the target reference
-        ref_match = re.search(r'\(property "Reference" "' + re.escape(reference) + r'"', block)
-        if ref_match:
-            return start, end + 1
-
-    return None, None
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+    return PcbRawWriter._find_footprint_block(content, reference)
 
 
 def _find_matching_close(content: str, open_pos: int) -> Optional[int]:
-    """Find the matching closing paren for an S-expression starting at open_pos.
+    """Find the matching closing paren for an S-expression.
 
-    Handles nested parens and quoted strings.
+    Delegates to PcbRawWriter._find_matching_close (Council C-02 consolidation).
     """
-    depth = 0
-    i = open_pos
-    in_string = False
-
-    while i < len(content):
-        c = content[i]
-
-        if in_string:
-            if c == '"':
-                # Check for escaped quote
-                if i + 1 < len(content) and content[i + 1] == '"':
-                    i += 2
-                    continue
-                in_string = False
-            i += 1
-            continue
-
-        if c == '"':
-            in_string = True
-        elif c == '(':
-            depth += 1
-        elif c == ')':
-            depth -= 1
-            if depth == 0:
-                return i
-        i += 1
-
-    return None
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+    return PcbRawWriter._find_matching_close(content, open_pos)
 
 
 def _strip_library_metadata(sexp: str) -> str:
@@ -681,8 +795,11 @@ def _inject_layer(sexp: str, layer: str) -> str:
 
 
 def _escape_sexpr_value(s: str) -> str:
-    """Escape special characters for safe embedding in S-expression strings."""
-    return s.replace("\\", "\\\\").replace('"', '\\"')
+    """Escape special characters for safe embedding in S-expression strings.
+
+    Uses KiCad's doubled-quote convention: literal quotes become "".
+    """
+    return s.replace('"', '""')
 
 
 def _inject_reference(sexp: str, reference: str) -> str:
