@@ -94,6 +94,18 @@ def _build_spatial_context(
     return base
 
 
+def _fp_position(fp: Any) -> tuple[float, float]:
+    """Extract (x, y) from footprint position.
+
+    Works with both kiutils Position objects (with .X, .Y)
+    and plain tuples from the native parser.
+    """
+    pos = fp.position
+    if hasattr(pos, "X"):
+        return (pos.X, pos.Y)
+    return (pos[0], pos[1])
+
+
 def _find_nearest_footprint(x: float, y: float, pcb_ir: Any) -> str | None:
     """Find the nearest footprint reference to a coordinate.
 
@@ -114,8 +126,7 @@ def _find_nearest_footprint(x: float, y: float, pcb_ir: Any) -> str | None:
     best_dist = float("inf")
 
     for fp in pcb_ir.footprints:
-        fp_x = fp.position.X
-        fp_y = fp.position.Y
+        fp_x, fp_y = _fp_position(fp)
         dist = math.sqrt((fp_x - x) ** 2 + (fp_y - y) ** 2)
         if dist < best_dist:
             best_dist = dist

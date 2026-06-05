@@ -32,9 +32,38 @@ from kicad_agent.ir.schematic_ir import SchematicIR
 from kicad_agent.parser.pcb_parser import parse_pcb
 from kicad_agent.parser.schematic_parser import parse_schematic
 from kicad_agent.parser.uuid_extractor import extract_uuids
-from kicad_agent.spatial.extractor import extract_all
+from kicad_agent.spatial.extractor import extract_all, extract_schematic_all
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Position extraction helpers (kiutils Position vs native parser tuples)
+# ---------------------------------------------------------------------------
+
+
+def _fp_position(fp: Any) -> tuple[float, float, float]:
+    """Extract (x, y, angle) from footprint position.
+
+    Works with both kiutils Position objects (with .X, .Y, .angle)
+    and plain tuples from the native parser.
+    """
+    pos = fp.position
+    if hasattr(pos, "X"):
+        return (pos.X, pos.Y, getattr(pos, "angle", None) or 0.0)
+    return (pos[0], pos[1], pos[2] if len(pos) > 2 else 0.0)
+
+
+def _pad_position(pad: Any) -> tuple[float, float]:
+    """Extract (x, y) from pad position.
+
+    Works with both kiutils Position objects (with .X, .Y)
+    and plain tuples from the native parser.
+    """
+    pos = pad.position
+    if hasattr(pos, "X"):
+        return (pos.X, pos.Y)
+    return (pos[0], pos[1])
 
 # ---------------------------------------------------------------------------
 # KiCad format version constants
@@ -310,8 +339,17 @@ def build_board_graph(
         # 6. Build connectivity graph from PCB
         net_graph = NetGraph.from_pcb_ir(pcb_ir)
 
-        # 7. Extract spatial features
-        spatial_data = extract_all(pcb_ir)
+        # 7. Extract spatial features from PCB and schematic
+        pcb_spatial = extract_all(pcb_ir)
+        sch_spatial = extract_schematic_all(sch_ir)
+
+        # Merge: combine points, boxes, paths from both sources
+        spatial_data = {
+            "points": pcb_spatial["points"] + sch_spatial["points"],
+            "boxes": pcb_spatial["boxes"] + sch_spatial["boxes"],
+            "paths": pcb_spatial["paths"] + sch_spatial["paths"],
+            "regions": pcb_spatial["regions"],
+        }
 
         # 8. Build unified graph
         G = nx.Graph()
@@ -358,13 +396,7 @@ def build_board_graph(
         for fp in pcb_ir.footprints:
             fp_ref = fp.properties.get("Reference", "")
             if fp_ref and fp_ref in G.nodes:
-                x_mm = fp.position.X
-                y_mm = fp.position.Y
-                rotation_deg = (
-                    fp.position.angle
-                    if hasattr(fp.position, "angle") and fp.position.angle is not None
-                    else 0.0
-                )
+                x_mm, y_mm, rotation_deg = _fp_position(fp)
 
                 # Compute bounding box from pad positions
                 bbox_width_mm = 0.0
@@ -373,8 +405,9 @@ def build_board_graph(
                     pad_xs: list[float] = []
                     pad_ys: list[float] = []
                     for pad in fp.pads:
-                        pad_xs.append(pad.position.X)
-                        pad_ys.append(pad.position.Y)
+                        pad_x, pad_y = _pad_position(pad)
+                        pad_xs.append(pad_x)
+                        pad_ys.append(pad_y)
                     if pad_xs and pad_ys:
                         bbox_width_mm = max(pad_xs) - min(pad_xs)
                         bbox_height_mm = max(pad_ys) - min(pad_ys)

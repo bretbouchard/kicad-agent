@@ -425,11 +425,29 @@ class PcbIR(BaseIR):
         if fp is None:
             raise ValueError(f"Footprint '{reference}' not found")
 
-        lib_id = lib_id_override or fp.libId
+        if self._is_native:
+            lib_id = lib_id_override or fp.lib_id
+            saved_angle = fp.position[2] if len(fp.position) > 2 else 0.0
+            saved_x, saved_y = fp.position[0], fp.position[1]
+            saved_lib_id = fp.lib_id
+
+            pad_nets: dict[str, tuple[str, str]] = {}
+            for pad in fp.pads:
+                if pad.net_name:
+                    pad_nets[pad.number] = (pad.net_name, "")
+        else:
+            lib_id = lib_id_override or fp.libId
+            saved_angle = fp.position.angle if fp.position.angle is not None else 0.0
+            saved_x, saved_y = fp.position.X, fp.position.Y
+            saved_lib_id = fp.libId
+
+            pad_nets: dict[str, tuple[str, str]] = {}
+            for pad in fp.pads:
+                if pad.net is not None:
+                    pad_nets[pad.number] = (pad.net.name, "")
 
         # --- Save state to preserve ---
-        saved_angle = fp.position.angle if fp.position.angle is not None else 0.0
-        saved_position = f"(at {fp.position.X} {fp.position.Y}"
+        saved_position = f"(at {saved_x} {saved_y}"
         if saved_angle != 0.0:
             saved_position += f" {saved_angle}"
         saved_position += ")"
@@ -437,13 +455,6 @@ class PcbIR(BaseIR):
         saved_reference = fp.properties.get("Reference", "")
         saved_value = fp.properties.get("Value", "")
         saved_layer = fp.layer
-        saved_lib_id = fp.libId
-
-        # Save pad-to-net mapping
-        pad_nets: dict[str, tuple[str, str]] = {}  # pad_number -> (net_name, raw_net_sexp)
-        for pad in fp.pads:
-            if pad.net is not None:
-                pad_nets[pad.number] = (pad.net.name, "")
 
         # --- Save PCB-embedded-only fields from raw content ---
         # These fields exist only in PCB-embedded footprints, not in library .kicad_mod files

@@ -396,7 +396,10 @@ class OperationExecutor:
         if cached_entry is not None:
             parse_result = cached_entry.parse_result
             uuid_map = cached_entry.uuid_map
-            ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
+            if cached_entry.native_board is not None:
+                ir = PcbIR.from_native(cached_entry.native_board)
+            else:
+                ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
         else:
             # Always parse with kiutils for serialization support
             parse_result = parse_pcb(file_path)
@@ -410,7 +413,7 @@ class OperationExecutor:
                 ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
 
             if self._cache:
-                self._cache.put(file_path, CacheEntry(parse_result=parse_result, uuid_map=uuid_map))
+                self._cache.put(file_path, CacheEntry(parse_result=parse_result, uuid_map=uuid_map, native_board=native_board))
 
         with Transaction(file_path) as txn:
             details = self._dispatch_pcb(root.op_type, root, ir, file_path)

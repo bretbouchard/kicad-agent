@@ -36,10 +36,12 @@ class CacheEntry:
     Attributes:
         parse_result: The parsed file content (kiutils object + raw text).
         uuid_map: Optional UUID map extracted from the file (PCB/footprint only).
+        native_board: Optional NativeBoard from native PCB parser (PCB only).
     """
 
     parse_result: ParseResult
     uuid_map: Optional[Any] = None
+    native_board: Optional[Any] = None
 
 
 class IRCache:
