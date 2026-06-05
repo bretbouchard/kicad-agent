@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Council Remediation
 status: execute
-stopped_at: Completed Plan 74 - executor refactor and schema reorganization
-last_updated: "2026-06-03T09:40:00Z"
-last_activity: 2026-06-03
+stopped_at: Completed Phase 75 - Pre-Analysis Gate and Context Intelligence (retroactive)
+last_updated: "2026-06-05T05:35:00Z"
+last_activity: 2026-06-05
 progress:
-  total_phases: 71
-  completed_phases: 56
-  total_plans: 225
-  completed_plans: 146
-  percent: 81
+  total_phases: 76
+  completed_phases: 57
+  total_plans: 228
+  completed_plans: 148
+  percent: 82
 ---
 
 # Project State
@@ -37,6 +37,24 @@ Last milestone: v3.0 Full-Stack EDA (Phases 50-54)
 Council review: 4 findings fixed, all passing.
 
 Last activity: 2026-06-01
+
+### Phase 76: Native KiCad 10 PCB Parser (v3.1)
+
+- Plan 76-01: NativeBoard dataclass types and sexpdata-based parser (COMPLETE)
+  - 13 mutable dataclasses + _NativePosition NamedTuple in pcb_native_types.py
+  - NativeParser with parse_pcb()/parse_pcb_content() and depth pre-scan (CRITICAL-1)
+  - Kiutils-compatible properties: graphicItems, traceItems, layers, zone.tstamp/net/netName/minThickness
+  - 6 graphic item types (line/arc/circle/rect/poly/curve), np_thru_hole pad type, pinfunction/pintype
+  - 68 tests, all passing. Zero kiutils imports, zero new dependencies.
+
+### Phase 75: Pre-Analysis Gate & Context Intelligence (v3.1)
+
+- Plan 75-01: PreAnalysisGate, executor wiring, context upgrade (COMPLETE, retroactive)
+  - PreAnalysisGate with overlap detection, collision zones, pin resolution, wire collision check
+  - Tiered enforcement: blockers prevent execution, warnings log but proceed
+  - render_component_intelligence() with per-component pin maps, connectivity, power nets
+  - Wired into executor._execute_schematic() and execute_batch() validation loop
+  - 32 new tests, all passing. No new dependencies.
 
 ### Phase 47: Circuit Intent Inference
 
@@ -190,6 +208,7 @@ Recent decisions affecting current work:
 ### Pending Todos
 
 - All milestones shipped. Ready for next milestone planning.
+- Phase 75 added retroactively: Pre-Analysis Gate and Context Intelligence (ad-hoc work tracked post-hoc)
 
 ### Blockers/Concerns
 
@@ -201,5 +220,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 73 complete - workflow templates and dependency validation (54 tests, 2 commits).
-Resume with: `/gsd-execute-phase` for next phase in v3.1 milestone.
+Stopped at: Completed Phase 76 Plan 01 - Native PCB Dataclass Types and sexpdata-based Parser (68 tests).
+Resume with: Phase 76 Plan 02 (wire into PcbIR and executor) or `/gsd-execute-phase`.
