@@ -19,7 +19,7 @@ VALID_ADD = json.dumps({
     "op_type": "add_component",
     "target_file": "tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_sch",
     "library_id": "Device:R_Small_US",
-    "position": {"x": 50.0, "y": 30.0},
+    "position": {"x": 1.0, "y": 1.0},
 })
 
 INVALID_JSON_STR = "{bad json}"
@@ -59,9 +59,25 @@ def test_schema_flag_returns_valid_json_schema() -> None:
 # Test 2: Valid inline JSON exits 0
 # ---------------------------------------------------------------------------
 def test_valid_inline_json_exits_zero() -> None:
-    result = _run(VALID_ADD)
-    assert result.returncode == 0
-    assert "[OK]" in result.stdout or "add_component" in result.stdout
+    # Use a minimal schematic in a temp dir to avoid overlap with real fixture
+    from kiutils.schematic import Schematic
+    tmpdir = tempfile.mkdtemp()
+    sch = Schematic.create_new()
+    sch_path = Path(tmpdir) / "test.kicad_sch"
+    sch.to_file(str(sch_path))
+    op = json.dumps({
+        "op_type": "add_component",
+        "target_file": sch_path.name,
+        "library_id": "Device:R_Small_US",
+        "position": {"x": 50.0, "y": 50.0},
+    })
+    try:
+        result = _run(op, cwd=tmpdir)
+        assert result.returncode == 0
+        assert "[OK]" in result.stdout or "add_component" in result.stdout
+    finally:
+        import shutil
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------

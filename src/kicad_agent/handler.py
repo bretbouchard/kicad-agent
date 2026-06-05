@@ -126,6 +126,18 @@ def handle_operation(
         from kicad_agent.ops.executor import OperationExecutor
         executor = OperationExecutor(base_dir=base_dir)
         result = executor.execute(op)
+
+        # Executor may return success=False for pre-analysis blocks
+        # (e.g. unknown reference, validation gate failures).
+        if not result.get("success", True):
+            concrete = op.root
+            return OperationError(
+                success=False,
+                operation_type=result.get("operation", concrete.op_type),
+                error=result.get("error", "Operation blocked by pre-analysis"),
+                suggestion="Check the operation parameters and target file.",
+            )
+
         return OperationResult(
             success=True,
             operation_type=result["operation"],

@@ -135,17 +135,28 @@ def test_validate_path_traversal():
 def test_handle_operation_valid():
     """handle_operation with a valid operation on a real file returns OperationResult."""
     import pathlib
-    fixture = pathlib.Path("tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_sch")
-    json_str = json.dumps({
-        "op_type": "move_component",
-        "target_file": str(fixture),
-        "reference": "J1",
-        "position": {"x": 50.0, "y": 30.0},
-    })
-    result = handle_operation(json_str)
-    assert isinstance(result, OperationResult)
-    assert result.success is True
-    assert result.operation_type == "move_component"
+    import shutil
+    import tempfile
+
+    # Copy fixture to temp dir to avoid modifying the original
+    fixture_src = pathlib.Path("tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_sch")
+    tmpdir = pathlib.Path(tempfile.mkdtemp())
+    fixture = tmpdir / "Arduino_Mega.kicad_sch"
+    shutil.copy2(fixture_src, fixture)
+
+    try:
+        json_str = json.dumps({
+            "op_type": "move_component",
+            "target_file": fixture.name,
+            "reference": "J1",
+            "position": {"x": 200.0, "y": 200.0},
+        })
+        result = handle_operation(json_str, project_dir=tmpdir)
+        assert isinstance(result, OperationResult)
+        assert result.success is True
+        assert result.operation_type == "move_component"
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------

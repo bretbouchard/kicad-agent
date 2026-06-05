@@ -88,28 +88,28 @@ def _get_repair_function(repair_name: str) -> Any:
     Import paths follow the lazy-import pattern used throughout the executor.
     """
     if repair_name == "place_no_connects_from_erc":
-        from kicad_agent.ops.repair import place_no_connects_from_erc
+        from kicad_agent.ops.repair_erc import place_no_connects_from_erc
         return place_no_connects_from_erc
     elif repair_name == "add_power_flags":
-        from kicad_agent.ops.repair import add_power_flags
+        from kicad_agent.ops.repair_erc import add_power_flags
         return add_power_flags
     elif repair_name == "fix_pin_type_mismatches":
-        from kicad_agent.ops.repair import fix_pin_type_mismatches
+        from kicad_agent.ops.repair_components import fix_pin_type_mismatches
         return fix_pin_type_mismatches
     elif repair_name == "place_missing_units":
-        from kicad_agent.ops.repair import place_missing_units
+        from kicad_agent.ops.repair_components import place_missing_units
         return place_missing_units
     elif repair_name == "break_wire_shorts":
-        from kicad_agent.ops.repair import break_wire_shorts
+        from kicad_agent.ops.repair_wires import break_wire_shorts
         return break_wire_shorts
     elif repair_name == "resolve_shorted_nets":
-        from kicad_agent.ops.repair import resolve_shorted_nets
+        from kicad_agent.ops.repair_nets import resolve_shorted_nets
         return resolve_shorted_nets
     elif repair_name == "snap_to_grid":
-        from kicad_agent.ops.repair import snap_to_grid
+        from kicad_agent.ops.repair_wires import snap_to_grid
         return snap_to_grid
     elif repair_name == "add_junctions_at_labels":
-        from kicad_agent.ops.repair import add_junctions_at_labels
+        from kicad_agent.ops.repair_erc import add_junctions_at_labels
         return add_junctions_at_labels
     else:
         raise ValueError(f"Unknown repair function: {repair_name}")
@@ -288,10 +288,8 @@ def erc_auto_fix(
                 checkpoint = None
                 snapshot_before = None
                 if verify:
-                    from kicad_agent.ops.repair import (
-                        _checkpoint_ir,
-                        _take_net_snapshot,
-                    )
+                    from kicad_agent.ops.repair_erc import _checkpoint_ir
+                    from kicad_agent.ops.repair_nets import _take_net_snapshot
                     checkpoint = _checkpoint_ir(ir)
                     snapshot_before = _take_net_snapshot(ir)
 
@@ -301,7 +299,7 @@ def erc_auto_fix(
                 scope_checkpoint = None
                 inventory_before = None
                 try:
-                    from kicad_agent.ops.repair import _checkpoint_ir as _ckpt
+                    from kicad_agent.ops.repair_erc import _checkpoint_ir as _ckpt
                     scope_checkpoint = _ckpt(ir)
                     inventory_before = _snapshot_ir_inventory(ir)
                 except Exception:
@@ -338,7 +336,7 @@ def erc_auto_fix(
                             repair_name, wire_delta,
                             inventory_before["wires"], inventory_after["wires"],
                         )
-                        from kicad_agent.ops.repair import _restore_ir
+                        from kicad_agent.ops.repair_erc import _restore_ir
                         _restore_ir(ir, scope_checkpoint)
                         ir.schematic.to_file(str(file_path))
                         verification_rollback.append({
@@ -356,7 +354,7 @@ def erc_auto_fix(
                             repair_name, symbol_delta,
                             inventory_before["symbols"], inventory_after["symbols"],
                         )
-                        from kicad_agent.ops.repair import _restore_ir
+                        from kicad_agent.ops.repair_erc import _restore_ir
                         _restore_ir(ir, scope_checkpoint)
                         ir.schematic.to_file(str(file_path))
                         verification_rollback.append({
@@ -375,7 +373,7 @@ def erc_auto_fix(
                             repair_name, symbol_delta, _MAX_SYMBOL_ADDITIONS_PER_REPAIR,
                             inventory_before["symbols"], inventory_after["symbols"],
                         )
-                        from kicad_agent.ops.repair import _restore_ir
+                        from kicad_agent.ops.repair_erc import _restore_ir
                         _restore_ir(ir, scope_checkpoint)
                         ir.schematic.to_file(str(file_path))
                         verification_rollback.append({
@@ -391,11 +389,11 @@ def erc_auto_fix(
 
                 # Phase 70: Post-repair verification — rollback on regression
                 if verify and snapshot_before is not None:
-                    from kicad_agent.ops.repair import (
+                    from kicad_agent.ops.repair_nets import (
                         _diff_net_snapshots,
-                        _restore_ir,
                         _take_net_snapshot as _snap,
                     )
+                    from kicad_agent.ops.repair_erc import _restore_ir
                     snapshot_after = _snap(ir)
                     diff = _diff_net_snapshots(snapshot_before, snapshot_after)
                     if not diff["clean"]:

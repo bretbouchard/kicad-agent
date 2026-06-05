@@ -297,7 +297,7 @@ def _apply_place_no_connects(sch_path: Path) -> int:
     try:
         from kicad_agent.parser import parse_schematic
         from kicad_agent.ir.schematic_ir import SchematicIR
-        from kicad_agent.ops.repair import place_no_connects
+        from kicad_agent.ops.repair_erc import place_no_connects
         from kicad_agent.serializer import normalize_kicad_output, serialize_schematic
 
         parse_result = parse_schematic(sch_path)
@@ -327,7 +327,7 @@ def _apply_wire_snapping(sch_path: Path) -> int:
     try:
         from kicad_agent.parser import parse_schematic
         from kicad_agent.ir.schematic_ir import SchematicIR
-        from kicad_agent.ops.repair import repair_wire_snapping
+        from kicad_agent.ops.repair_wires import repair_wire_snapping
         from kicad_agent.serializer import normalize_kicad_output, serialize_schematic
 
         parse_result = parse_schematic(sch_path)

@@ -20,6 +20,7 @@ Usage:
     result = add_component(op, ir, file_path)
 """
 
+import logging
 import uuid
 from typing import Any
 
@@ -27,6 +28,8 @@ from kiutils.items.common import Effects, Font, Position, Property
 from kiutils.items.schitems import SchematicSymbol
 
 from kicad_agent.ops.schema import AddComponentOp
+
+logger = logging.getLogger(__name__)
 
 
 class AddComponentError(Exception):
@@ -114,6 +117,8 @@ def add_component(
     ]
 
     # Create SchematicSymbol with all fields
+    # inBom/onBoard default to True — standard for real component instances.
+    # Power symbols use False, handled separately.
     symbol = SchematicSymbol(
         libraryNickname=library_nickname,
         entryName=entry_name,
@@ -123,6 +128,7 @@ def add_component(
         properties=properties,
         inBom=True,
         onBoard=True,
+        unit=1,
     )
 
     # Append to schematicSymbols list
@@ -133,6 +139,12 @@ def add_component(
         op.library_id, library_nickname, entry_name,
         ir, file_path,
     )
+
+    # Populate pin UUID references from the embedded lib_symbol.
+    # KiCad 10 requires (pin "N" (uuid ...)) entries in every component
+    # instance to link pins to the lib_symbol definition. Without these,
+    # kicad-cli ERC refuses to load the schematic.
+    _populate_pin_uuids(symbol, op.library_id, ir)
 
     # Record mutation for audit trail
     ir._record_mutation(
@@ -214,8 +226,93 @@ def _auto_embed_lib_symbol(
     new_symbol.libraryNickname = library_nickname
     sch.libSymbols.append(new_symbol)
 
+    # Recursively embed parent symbols if this symbol extends another
+    _embed_parent_chain(new_symbol, lib, library_nickname, sch, logger)
+
     logger.info("Auto-embedded symbol %s from %s", library_id, lib_path.name)
     return "embedded"
+
+
+def _embed_parent_chain(child_symbol: Any, lib: Any, lib_nickname: str, sch: Any, logger: Any) -> None:
+    """Flatten symbol inheritance by merging parent pins/graphics into child.
+
+    KiCad symbols can use (extends "ParentSymbol") to inherit from a base.
+    kicad-cli 10.0.1 cannot parse (extends ...) in embedded lib_symbols even
+    when the parent is present. The fix: recursively flatten the inheritance
+    chain by merging parent data into the child and removing the extends field.
+    """
+    import copy
+
+    extends = getattr(child_symbol, "extends", None)
+    if not extends:
+        return
+
+    # Find parent in the library
+    parent = None
+    for sym in lib.symbols:
+        if sym.entryName == extends:
+            parent = sym
+            break
+
+    if parent is None:
+        logger.warning(
+            "Parent symbol %r (extended by %s) not found in library. "
+            "Cannot flatten inheritance.",
+            extends,
+            getattr(child_symbol, "libId", "?"),
+        )
+        return
+
+    # Recursively flatten the parent first (in case parent extends grandparent)
+    parent_copy = copy.deepcopy(parent)
+    _embed_parent_chain(parent_copy, lib, lib_nickname, sch, logger)
+
+    # Merge parent's units (graphic sub-symbols + pin sub-symbols) into child
+    # KiCad Symbol uses `units: List[Symbol]` for sub-symbols
+    parent_units = getattr(parent_copy, "units", [])
+    child_units = getattr(child_symbol, "units", [])
+
+    # Also merge pins from parent (child may have no pins if it relies on parent)
+    parent_pins = getattr(parent_copy, "pins", [])
+    child_pins = getattr(child_symbol, "pins", [])
+    if not child_pins:
+        child_pins.extend(parent_pins)
+
+    # Merge properties from parent that child doesn't override
+    parent_props = getattr(parent_copy, "properties", [])
+    child_props = getattr(child_symbol, "properties", [])
+    parent_prop_keys = {p.key for p in child_props}
+    for pp in parent_props:
+        if pp.key not in parent_prop_keys:
+            child_props.append(copy.deepcopy(pp))
+
+    # Merge units (contains graphic sub-symbols like polylines, rectangles, text)
+    child_units.extend(copy.deepcopy(parent_units))
+
+    # Copy pin_names from parent if child doesn't have them
+    if not getattr(child_symbol, "pinNames", None) and getattr(parent_copy, "pinNames", None):
+        child_symbol.pinNames = parent_copy.pinNames
+    # Copy pinNamesOffset if missing
+    if getattr(child_symbol, "pinNamesOffset", None) is None and getattr(parent_copy, "pinNamesOffset", None) is not None:
+        child_symbol.pinNamesOffset = parent_copy.pinNamesOffset
+
+    # Copy in_bom and on_board from parent if child doesn't have them
+    if not child_symbol.inBom and parent_copy.inBom:
+        child_symbol.inBom = parent_copy.inBom
+    if not child_symbol.onBoard and parent_copy.onBoard:
+        child_symbol.onBoard = parent_copy.onBoard
+
+    # Remove the extends field to make child self-contained
+    if hasattr(child_symbol, "extends"):
+        del child_symbol.extends
+
+    logger.info(
+        "Flattened inheritance: %s (was extends %s), merged %d units + %d pins",
+        getattr(child_symbol, "libId", "?"),
+        extends,
+        len(parent_units),
+        len(parent_pins),
+    )
 
 
 def _resolve_library_path(library_name: str, file_path: Any) -> Any | None:
@@ -247,3 +344,64 @@ def _resolve_library_path(library_name: str, file_path: Any) -> Any | None:
         return relative
 
     return None
+
+
+def _populate_pin_uuids(
+    component: SchematicSymbol,
+    library_id: str,
+    ir: Any,
+) -> None:
+    """Generate pin UUID references from the embedded lib_symbol.
+
+    KiCad 10 requires every component instance to have (pin "N" (uuid ...))
+    entries linking back to the embedded lib_symbol's pin definitions.
+    Without these, kicad-cli ERC fails with "Failed to load schematic".
+
+    kiutils Symbol units use ``unitId`` (integer) to identify sub-symbols.
+    For a component with unit=1, match the lib_symbol unit with unitId=1.
+    """
+    sch = ir._parse_result.kiutils_obj
+
+    # Find the embedded lib_symbol
+    lib_symbol = None
+    for sym in sch.libSymbols:
+        if sym.libId == library_id:
+            lib_symbol = sym
+            break
+
+    if lib_symbol is None:
+        logger.debug("No embedded lib_symbol for %s — cannot populate pin UUIDs", library_id)
+        return
+
+    # Determine which unit the component references (default 1)
+    unit_num = getattr(component, "unit", 1) or 1
+
+    # Find the pin-bearing unit matching the component's unit number.
+    # kiutils Symbol units use unitId (int) not unitName.
+    pin_unit = None
+
+    # First: exact unitId match with pins
+    for u in lib_symbol.units:
+        if getattr(u, "unitId", None) == unit_num and u.pins:
+            pin_unit = u
+            break
+
+    # Fallback: any unit with pins (for symbols with only one pin unit)
+    if pin_unit is None:
+        for u in lib_symbol.units:
+            if u.pins:
+                pin_unit = u
+                break
+
+    # Second fallback: root symbol pins
+    if pin_unit is None and lib_symbol.pins:
+        pin_unit = lib_symbol
+
+    if pin_unit is None:
+        logger.debug("No pin-bearing unit found for %s unit %d", library_id, unit_num)
+        return
+
+    # Generate fresh UUIDs for each pin and populate the component's pins dict
+    for pin in pin_unit.pins:
+        pin_uuid = str(uuid.uuid4())
+        component.pins[pin.number] = pin_uuid

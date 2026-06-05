@@ -89,33 +89,36 @@ class TestPathConfiment:
 
 
 class TestSexprEscaping:
-    """Verify S-expression injection is escaped in all _inject_* functions."""
+    """Verify S-expression injection is escaped in all _inject_* functions.
+
+    KiCad uses doubled-quote convention: literal quotes become "".
+    """
 
     def test_inject_lib_id_escapes_quotes(self):
-        """Double quotes in lib_id are escaped."""
+        """Double quotes in lib_id are escaped using KiCad doubled-quote."""
         result = _inject_lib_id('(footprint "original")', 'lib"evil')
-        assert '\\"' in result
-        assert result == '(footprint "lib\\"evil")'
+        assert '""' in result
+        assert result == '(footprint "lib""evil")'
 
     def test_inject_layer_escapes_parens(self):
-        """Parentheses in layer names are escaped."""
+        """Parentheses in layer names are escaped using KiCad doubled-quote."""
         result = _inject_layer('\t(layer "F.Cu")', 'F.Cu") (evil')
-        assert '\\"' in result
+        assert '""' in result
 
     def test_inject_pad_net_escapes_net_name(self):
-        """Net names with special characters are escaped."""
+        """Net names with special characters are escaped using KiCad doubled-quote."""
         sexp = '(pad "1" thru_hole circle (at 0 0) (size 1 1) (drill 0.5))'
         result = _inject_pad_net(sexp, "1", 'net"evil')
         assert result is not None
-        assert '\\"' in result
+        assert '""' in result
 
     def test_escape_sexpr_value_backslash(self):
-        """Backslashes are double-escaped."""
-        assert _escape_sexpr_value("a\\b") == "a\\\\b"
+        """Backslashes pass through unchanged (KiCad doesn't use backslash escaping)."""
+        assert _escape_sexpr_value("a\\b") == "a\\b"
 
     def test_escape_sexpr_value_quote(self):
-        """Double quotes are escaped."""
-        assert _escape_sexpr_value('a"b') == 'a\\"b'
+        """Double quotes are escaped using KiCad doubled-quote convention."""
+        assert _escape_sexpr_value('a"b') == 'a""b'
 
 
 # ---------------------------------------------------------------------------

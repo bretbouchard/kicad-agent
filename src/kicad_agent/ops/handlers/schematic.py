@@ -207,9 +207,11 @@ def _handle_add_junction(op: Any, ir: SchematicIR, file_path: Path) -> dict[str,
 
 @register_schematic("repair_schematic")
 def _handle_repair_schematic(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.repair import (
+    from kicad_agent.ops.repair_erc import (
         place_no_connects,
         remove_orphaned_labels,
+    )
+    from kicad_agent.ops.repair_wires import (
         repair_wire_snapping,
         snap_to_grid,
     )
@@ -236,13 +238,13 @@ def _handle_convert_kicad6_to_10(op: Any, ir: SchematicIR, file_path: Path) -> d
 
 @register_schematic("snap_to_grid")
 def _handle_snap_to_grid(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.repair import snap_to_grid
+    from kicad_agent.ops.repair_wires import snap_to_grid
     return snap_to_grid(ir, grid_mm=op.grid_mm)
 
 
 @register_schematic("add_power_flag")
 def _handle_add_power_flag(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.repair import add_power_flags
+    from kicad_agent.ops.repair_erc import add_power_flags
     return add_power_flags(ir, file_path)
 
 
@@ -356,7 +358,7 @@ def _handle_add_sheet_pin(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
 
 @register_schematic("update_symbols_from_library")
 def _handle_update_symbols_from_library(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.repair import update_symbols_from_library
+    from kicad_agent.ops.repair_components import update_symbols_from_library
     return update_symbols_from_library(
         ir, file_path,
         references=op.references,
@@ -366,7 +368,7 @@ def _handle_update_symbols_from_library(op: Any, ir: SchematicIR, file_path: Pat
 
 @register_schematic("fix_shorted_nets")
 def _handle_fix_shorted_nets(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.repair import fix_shorted_nets
+    from kicad_agent.ops.repair_nets import fix_shorted_nets
     return fix_shorted_nets(
         ir, file_path,
         strategy=op.strategy,
@@ -377,7 +379,7 @@ def _handle_fix_shorted_nets(op: Any, ir: SchematicIR, file_path: Path) -> dict[
 
 @register_schematic("fix_pin_type_mismatches")
 def _handle_fix_pin_type_mismatches(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.repair import fix_pin_type_mismatches
+    from kicad_agent.ops.repair_components import fix_pin_type_mismatches
     return fix_pin_type_mismatches(
         ir, file_path,
         pin_type_map=op.pin_type_map,
@@ -387,7 +389,7 @@ def _handle_fix_pin_type_mismatches(op: Any, ir: SchematicIR, file_path: Path) -
 
 @register_schematic("place_missing_units")
 def _handle_place_missing_units(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.repair import place_missing_units
+    from kicad_agent.ops.repair_components import place_missing_units
     return place_missing_units(
         ir, file_path,
         references=op.references,
@@ -399,7 +401,7 @@ def _handle_place_missing_units(op: Any, ir: SchematicIR, file_path: Path) -> di
 
 @register_schematic("remove_dangling_wires")
 def _handle_remove_dangling_wires(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.repair import remove_dangling_wires
+    from kicad_agent.ops.repair_wires import remove_dangling_wires
     return remove_dangling_wires(
         ir, file_path,
         max_length_mm=op.max_length_mm,
@@ -409,7 +411,7 @@ def _handle_remove_dangling_wires(op: Any, ir: SchematicIR, file_path: Path) -> 
 
 @register_schematic("break_wire_shorts")
 def _handle_break_wire_shorts(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.repair import break_wire_shorts
+    from kicad_agent.ops.repair_wires import break_wire_shorts
     return break_wire_shorts(
         ir, file_path,
         net_pairs=op.net_pairs,
@@ -420,7 +422,7 @@ def _handle_break_wire_shorts(op: Any, ir: SchematicIR, file_path: Path) -> dict
 
 @register_schematic("resolve_shorted_nets")
 def _handle_resolve_shorted_nets(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.repair import resolve_shorted_nets
+    from kicad_agent.ops.repair_nets import resolve_shorted_nets
     return resolve_shorted_nets(
         ir, file_path,
         strategy=op.strategy,
