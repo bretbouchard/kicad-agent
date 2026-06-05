@@ -176,8 +176,9 @@ class RoutingGraph:
                 # Check clearance at edge midpoint.
                 min_distance = self._min_obstacle_distance(mid_x, mid_y)
 
-                # Use relaxed threshold for edges touching pad nodes.
-                threshold = pad_threshold if is_required else clearance_threshold
+                # Use relaxed threshold if EITHER endpoint is a pad node.
+                neighbor_required = (neighbor[0], neighbor[1]) in required_grid_nodes
+                threshold = pad_threshold if (is_required or neighbor_required) else clearance_threshold
 
                 if min_distance is not None and min_distance < threshold:
                     # Edge violates clearance -- omit it.
@@ -209,32 +210,48 @@ class RoutingGraph:
                     )
 
         # Add escape edges for isolated required nodes (pads inside courtyards).
-        # A pad node with zero edges is unreachable. Find the nearest
-        # free-space node and add a penalty edge so A* can escape.
-        _ESCAPE_COST = 1000.0  # High penalty — A* avoids unless necessary.
+        # A pad node that lacks same-layer edges is unreachable on that layer.
+        # Via edges (same position, different layer) don't help — search in
+        # expanding rings for the nearest same-layer connected node.
+        _ESCAPE_COST = 50.0  # Penalty to discourage routing through courtyards.
+        _MAX_ESCAPE_RINGS = 10  # Search up to 10 grid steps (~2.5mm at 0.25mm grid).
         if required_grid_nodes:
             for gx, gy in required_grid_nodes:
                 for layer in active_layers:
                     node = (gx, gy, layer)
                     if node not in self._graph:
                         continue
-                    if self._graph.degree(node) > 0:
-                        continue  # Already connected
-                    # Find nearest node with edges
+                    # Check same-layer degree (ignore via edges to other layers).
+                    same_layer_edges = 0
+                    for neighbor in self._graph.neighbors(node):
+                        if len(neighbor) == 3 and neighbor[2] == layer:
+                            same_layer_edges += 1
+                    if same_layer_edges > 0:
+                        continue  # Already has same-layer connectivity
+                    # Search in expanding rings for nearest connected node.
                     best_dist = float("inf")
                     best_neighbor = None
-                    for dx in (-grid_res, 0, grid_res):
-                        for dy in (-grid_res, 0, grid_res):
-                            if dx == 0 and dy == 0:
-                                continue
-                            candidate = (
-                                round(gx + dx, 6), round(gy + dy, 6), layer,
-                            )
-                            if candidate in self._graph and self._graph.degree(candidate) > 0:
-                                d = math.hypot(dx, dy)
-                                if d < best_dist:
-                                    best_dist = d
-                                    best_neighbor = candidate
+                    for ring in range(1, _MAX_ESCAPE_RINGS + 1):
+                        for dx in range(-ring, ring + 1):
+                            for dy in range(-ring, ring + 1):
+                                if abs(dx) != ring and abs(dy) != ring:
+                                    continue  # Only check ring perimeter
+                                cx = round(gx + dx * grid_res, 6)
+                                cy = round(gy + dy * grid_res, 6)
+                                candidate = (cx, cy, layer)
+                                if candidate in self._graph:
+                                    # Prefer candidates with same-layer edges.
+                                    cand_has_layer_edges = any(
+                                        len(n) == 3 and n[2] == layer
+                                        for n in self._graph.neighbors(candidate)
+                                    )
+                                    if cand_has_layer_edges:
+                                        d = math.hypot(dx * grid_res, dy * grid_res)
+                                        if d < best_dist:
+                                            best_dist = d
+                                            best_neighbor = candidate
+                        if best_neighbor is not None:
+                            break  # Found in this ring, stop searching
                     if best_neighbor is not None:
                         self._graph.add_edge(
                             node, best_neighbor, weight=_ESCAPE_COST,

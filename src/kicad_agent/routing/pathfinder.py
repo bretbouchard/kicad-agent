@@ -84,8 +84,11 @@ def route_net(
     is_3d = any(len(n) == 3 for n in graph.graph.nodes)
 
     if is_3d:
-        src_layer = source[2] if len(source) == 3 else None
-        tgt_layer = target[2] if len(target) == 3 else None
+        # Collect available layers from graph nodes.
+        _graph_layers = sorted({n[2] for n in graph.graph.nodes if len(n) == 3})
+        default_layer = _graph_layers[0] if _graph_layers else None
+        src_layer = source[2] if len(source) == 3 else default_layer
+        tgt_layer = target[2] if len(target) == 3 else default_layer
         src_node = graph.snap_to_node(source[0], source[1], src_layer)
         tgt_node = graph.snap_to_node(target[0], target[1], tgt_layer)
     else:
