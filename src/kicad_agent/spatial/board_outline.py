@@ -144,43 +144,50 @@ def _arc_to_linestring(
 
 
 def _is_gr_line(item: Any) -> bool:
-    """Check if item is a GrLine (has start and end, no mid, no center)."""
+    """Check if item is a GrLine (has start and end, no mid, no center, no filled).
+
+    Uses getattr with None default instead of hasattr to correctly handle
+    NativeGraphicItem dataclass fields that are always present but may be None.
+    """
     return (
-        hasattr(item, "start")
-        and hasattr(item, "end")
-        and not hasattr(item, "mid")
-        and not hasattr(item, "center")
+        getattr(item, "start", None) is not None
+        and getattr(item, "end", None) is not None
+        and getattr(item, "mid", None) is None
+        and getattr(item, "center", None) is None
+        and getattr(item, "filled", None) is None
     )
 
 
 def _is_gr_arc(item: Any) -> bool:
     """Check if item is a GrArc (has start, mid, end)."""
-    return hasattr(item, "start") and hasattr(item, "mid") and hasattr(item, "end")
+    return (
+        getattr(item, "start", None) is not None
+        and getattr(item, "mid", None) is not None
+        and getattr(item, "end", None) is not None
+    )
 
 
 def _is_gr_circle(item: Any) -> bool:
     """Check if item is a GrCircle (has center and end, no start)."""
     return (
-        hasattr(item, "center")
-        and hasattr(item, "end")
-        and not hasattr(item, "start")
+        getattr(item, "center", None) is not None
+        and getattr(item, "end", None) is not None
+        and getattr(item, "start", None) is None
     )
 
 
 def _is_gr_rect(item: Any) -> bool:
-    """Check if item is a GrRect (has start and end, layer, no mid, no center).
+    """Check if item is a GrRect (has start and end, no mid, no center).
 
-    GrRect has start/end like GrLine but also has a 'layer' attribute
-    and lacks 'mid'. Distinguished from GrLine by checking for an
-    additional 'filled' or 'stroke' attribute that GrLine lacks, or
-    simply by process of elimination after other types are checked.
+    GrRect has start/end like GrLine but also has a 'filled' attribute.
+    Uses getattr with None default for NativeGraphicItem compatibility.
     """
     return (
-        hasattr(item, "start")
-        and hasattr(item, "end")
-        and not hasattr(item, "mid")
-        and not hasattr(item, "center")
-        and hasattr(item, "filled")
+        getattr(item, "start", None) is not None
+        and getattr(item, "end", None) is not None
+        and getattr(item, "mid", None) is None
+        and getattr(item, "center", None) is None
+        and getattr(item, "filled", None) is not None
     )
 
 
