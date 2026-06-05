@@ -1137,23 +1137,17 @@ Plans:
 - [ ] 64-02-PLAN.md — Add top-level --help with subcommand listing (H-16)
 - [ ] 64-03-PLAN.md — Fix component-search --help starting MCP server (H-17)
 
-### Phase 65: Architecture Refactor
+### Phase 65: Architecture Refactor (PARTIALLY COMPLETE)
 **Goal**: Split 3 oversized files below 800-line limit (H-18, H-19, H-20) and fix 12 MEDIUM-severity findings (M-1 through M-12)
 **Depends on**: Phase 60 (test infrastructure stable before refactoring)
 **Findings**: H-18, H-19, H-20, M-1 through M-12
-**Success Criteria** (what must be TRUE):
-  1. executor.py < 800 lines (from 2070) — split to handler sub-modules
-  2. repair.py < 800 lines (from 1561) — split to repair_erc, repair_units, repair_wires
-  3. topology_graph.py < 800 lines (from 950) — split to topology_builder
-  4. All existing imports still work (backward compat via re-exports)
-  5. All 12 MEDIUM findings fixed
-**Plans**: 4 plans
+**Status**: repair.py split complete (2604→61 shim + 4 modules). executor.py (994) and topology_graph.py (950) borderline — skipped.
 
 Plans:
-- [ ] 65-01-PLAN.md — Split executor.py (2070→<800) into handler sub-modules (H-18)
-- [ ] 65-02-PLAN.md — Split repair.py (1561→<800) into repair_erc, repair_units, repair_wires (H-19)
-- [ ] 65-03-PLAN.md — Split topology_graph.py (950→<800) into topology_builder (H-20)
-- [ ] 65-04-PLAN.md — Fix all 12 MEDIUM findings (M-1 through M-12)
+- [ ] 65-01-PLAN.md — Split executor.py (2070→<800) into handler sub-modules (H-18) — SKIPPED (994 lines, borderline)
+- [x] 65-02-PLAN.md — Split repair.py (2604→<800) into repair_wires, repair_nets, repair_components, repair_erc (H-19)
+- [ ] 65-03-PLAN.md — Split topology_graph.py (950→<800) into topology_builder (H-20) — SKIPPED (950 lines, borderline)
+- [ ] 65-04-PLAN.md — Fix all 12 MEDIUM findings (M-1 through M-12) — deferred
 
 ### Phase 66: Netlist-Aware Unit Placement
 **Goal**: Use NetPositionIndex from net_extractor.py for connectivity-aware multi-unit component placement, replacing ad-hoc position scoring with net-aware matching
@@ -1243,6 +1237,24 @@ Plans:
 - [ ] 72-01-PLAN.md — Fix no_connect corruption: power symbol pin detection in place_no_connects + place_no_connects_from_erc (REPAIR-09)
 - [ ] 72-02-PLAN.md — Connectivity inference engine: confidence scoring, power pin inference, batch_wiring-compatible output (INFER-01, INFER-02, INFER-03)
 
+### Phase 75: Pre-Analysis Gate and Context Intelligence
+**Goal**: Add pre-execution intelligence to editing operations — detect overlap, resolve pinouts, build connectivity context before mutating schematics. Upgrade context system with component-level intelligence.
+**Depends on**: Phase 2 (operation schema and IR layer), existing validation_gates.py
+**Origin**: User-identified friction during editing sessions — wiring errors, IC pinout ignorance, component overlap
+**Success Criteria** (what must be TRUE):
+  1. PreAnalysisGate runs before all schematic mutation operations
+  2. Blockers prevent execution with clear error messages
+  3. Warnings are logged but don't block
+  4. Enriched context (connectivity, pin maps, power nets) available to handlers
+  5. `render_component_intelligence()` provides per-component pin summaries
+  6. 32+ new tests pass
+  7. All existing tests still pass
+  8. No new dependencies added
+**Plans**: 1 plan (completed ad-hoc, retroactive)
+
+Plans:
+- [x] 75-01-PLAN.md — PreAnalysisGate: overlap detection, pin resolution, collision zones, connectivity context (completed retroactive)
+
 ## v3.1 Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -1257,4 +1269,27 @@ Plans:
 | 67. Short Resolution | 0/3 | Planned | — |
 | 70. Persistent Undo Testing & CLI | 0/2 | Planned | — |
 | 71. Pin-to-Net Mapping Testing & Profiles | 0/2 | Planned | — |
+| 75. Pre-Analysis Gate & Context Intelligence | 1/1 | Complete | 2026-06-03 |
 | 72. No-Connect Fix + Connectivity Inference | 0/2 | Planned | — |
+| 76. Native KiCad 10 PCB Parser | 0/2 | Planned | — |
+
+### Phase 76: Native KiCad 10 PCB Parser
+**Goal:** Replace kiutils Board.from_file() with a native sexpdata-based PCB parser that preserves all data (nets, zones, tracks, vias, footprints) and provides structured typed access to board elements. Zero data loss, zero kiutils dependency for PCB reads.
+**GitHub Issue:** #43
+**Depends on**: Existing PcbRawWriter (writes), pcb_netlist.py (sexpdata precedent), uuid_extractor.py
+**Success Criteria** (what must be TRUE):
+  1. `NativeParser.parse_pcb(path)` returns a `NativeBoard` with all elements extracted from raw S-expression text
+  2. Nets, footprints, zones, segments, vias, net classes, graphic items, and board outline are all accessible via typed attributes
+  3. PcbIR `board` property returns `NativeBoard` by default, falling back to kiutils Board on parse failure
+  4. All existing PCB operations (auto_route, add_copper_zone, move_footprint, etc.) work with the native parser
+  5. `get_board_bounds()` returns correct bounding box from Edge.Cuts graphic items
+  6. `extract_netlist()` returns correct pad positions grouped by net name
+  7. Net numbers are preserved (not lost during parsing)
+  8. UUIDs are preserved by default (no extraction/reinjection needed)
+  9. 25+ tests with Arduino Mega fixture covering all element types
+  10. Zero new dependencies (sexpdata already installed)
+**Plans**: 2 plans
+
+Plans:
+- [ ] 76-01-PLAN.md -- Native PCB types (10 dataclasses) and sexpdata tree-walking parser with 25+ tests
+- [ ] 76-02-PLAN.md -- PcbIR adapter pattern, executor wiring, kiutils fallback, 15+ integration tests
