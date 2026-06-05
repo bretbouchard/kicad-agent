@@ -60,11 +60,12 @@ _VALID_LABEL_TAGS = frozenset(_LABEL_TYPE_TO_TAG.values())
 
 
 def _escape_sexp_string(s: str) -> str:
-    """Escape a string for safe inclusion in a KiCad S-expression quoted value."""
-    # Replace backslash first, then quotes
-    s = s.replace("\\", "\\\\")
-    s = s.replace('"', '\\"')
-    return s
+    """Escape a string for safe inclusion in a KiCad S-expression quoted value.
+
+    Uses KiCad's doubled-quote convention: literal quotes become "".
+    Consistent with PcbRawWriter._find_matching_close and pcb_ir._escape_sexpr_value.
+    """
+    return s.replace('"', '""')
 
 
 def _format_coord(value: float) -> str:

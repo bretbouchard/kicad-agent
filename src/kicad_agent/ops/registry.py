@@ -1,6 +1,6 @@
 """Unified operation registry with metadata and query functions.
 
-Provides a central catalog of all 89 KiCad operations with rich metadata
+Provides a central catalog of all 93 KiCad operations with rich metadata
 including category, file types, read-only status, scope, and dependencies.
 Used by MCP server, LLM tool selection, and validation gates.
 
@@ -376,6 +376,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "move_footprint": {
+        "category": "pcb",
+        "description": "Move a footprint to a new position on the PCB",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_point",
+        "requires": [],
+        "conflicts": [],
+    },
     "auto_route": {
         "category": "pcb",
         "description": "Auto-route nets on a PCB using A* pathfinding",
@@ -734,6 +743,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "is_readonly": False,
         "scope": "multi_file",
         "requires": [],
+        "conflicts": [],
+    },
+    "update_pcb_from_schematic": {
+        "category": "crossfile",
+        "description": "Synchronize PCB footprints and netlist from schematic source of truth via kicad-cli netlist export",
+        "file_types": [".kicad_sch", ".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "multi_file",
+        "requires": ["kicad-cli"],
         "conflicts": [],
     },
     "resolve_pin_positions": {

@@ -52,6 +52,7 @@ class RoutingGraph:
         constraints: RoutingConstraints | None = None,
         query_engine: SpatialQueryEngine | None = None,
         layers: list[str] | None = None,
+        required_nodes: set[tuple[float, float]] | None = None,
     ) -> None:
         """Build routing graph from board bounds, obstacles, and constraints.
 
@@ -63,6 +64,9 @@ class RoutingGraph:
                 queries. Built from obstacles if not provided.
             layers: List of copper layer names for multi-layer routing.
                 Defaults to ["F.Cu"] for single-layer backward compatibility.
+            required_nodes: Set of (x, y) positions (pad locations) that must
+                exist as graph nodes even if inside an obstacle. Pads are
+                inside footprints but must be routable.
 
         Raises:
             ValueError: If grid would exceed max_nodes.
@@ -89,15 +93,28 @@ class RoutingGraph:
                 obstacle_geoms.append(obs.to_shapely())
                 obstacle_ids.append(obs.entity_id)
 
-        # Generate grid nodes.
+        # Snap required nodes (pad positions) to grid.
+        required_grid_nodes: set[tuple[float, float]] = set()
+        if required_nodes:
+            for px, py in required_nodes:
+                gx = round(round(px / grid_res) * grid_res, 6)
+                gy = round(round(py / grid_res) * grid_res, 6)
+                required_grid_nodes.add((gx, gy))
+
+        # Generate grid nodes. Align to grid resolution so that pads
+        # at grid-aligned positions (e.g. 119.0 on a 0.5mm grid) are
+        # guaranteed to have nodes.
+        grid_x0 = round(round(x_min / grid_res) * grid_res, 6)
+        grid_y0 = round(round(y_min / grid_res) * grid_res, 6)
+
         xs = []
-        x = x_min
+        x = grid_x0
         while x <= x_max + grid_res * 0.01:
             xs.append(round(x, 6))
             x += grid_res
 
         ys = []
-        y = y_min
+        y = grid_y0
         while y <= y_max + grid_res * 0.01:
             ys.append(round(y, 6))
             y += grid_res
@@ -107,10 +124,12 @@ class RoutingGraph:
             for gx in xs:
                 for gy in ys:
                     pt = ShapelyPoint(gx, gy)
-                    # Skip nodes inside any obstacle.
+                    # Skip nodes inside any obstacle, UNLESS it's a required
+                    # node (pad position inside its own footprint courtyard).
                     inside = any(pt.within(geom) for geom in obstacle_geoms)
-                    if not inside:
-                        nodes.append((gx, gy, layer))
+                    if inside and (gx, gy) not in required_grid_nodes:
+                        continue
+                    nodes.append((gx, gy, layer))
 
         if len(nodes) > self.constraints.max_nodes:
             raise ValueError(
@@ -138,8 +157,13 @@ class RoutingGraph:
             self.constraints.clearance_mm
             + self.constraints.trace_width_mm / 2.0
         )
+        # Relaxed threshold for edges connected to required (pad) nodes.
+        # Pads are inside courtyards — traces exiting pads only need trace_width
+        # clearance, not the full clearance + trace_width check.
+        pad_threshold = self.constraints.trace_width_mm / 2.0
 
         for gx, gy, layer in nodes:
+            is_required = (gx, gy) in required_grid_nodes
             for dx, dy in ((grid_res, 0), (0, grid_res)):
                 neighbor = (round(gx + dx, 6), round(gy + dy, 6), layer)
                 if neighbor not in node_set:
@@ -152,7 +176,10 @@ class RoutingGraph:
                 # Check clearance at edge midpoint.
                 min_distance = self._min_obstacle_distance(mid_x, mid_y)
 
-                if min_distance is not None and min_distance < clearance_threshold:
+                # Use relaxed threshold for edges touching pad nodes.
+                threshold = pad_threshold if is_required else clearance_threshold
+
+                if min_distance is not None and min_distance < threshold:
                     # Edge violates clearance -- omit it.
                     continue
 
@@ -180,6 +207,38 @@ class RoutingGraph:
                         (gx, gy, layer_a), (gx, gy, layer_b),
                         weight=via_cost,
                     )
+
+        # Add escape edges for isolated required nodes (pads inside courtyards).
+        # A pad node with zero edges is unreachable. Find the nearest
+        # free-space node and add a penalty edge so A* can escape.
+        _ESCAPE_COST = 1000.0  # High penalty — A* avoids unless necessary.
+        if required_grid_nodes:
+            for gx, gy in required_grid_nodes:
+                for layer in active_layers:
+                    node = (gx, gy, layer)
+                    if node not in self._graph:
+                        continue
+                    if self._graph.degree(node) > 0:
+                        continue  # Already connected
+                    # Find nearest node with edges
+                    best_dist = float("inf")
+                    best_neighbor = None
+                    for dx in (-grid_res, 0, grid_res):
+                        for dy in (-grid_res, 0, grid_res):
+                            if dx == 0 and dy == 0:
+                                continue
+                            candidate = (
+                                round(gx + dx, 6), round(gy + dy, 6), layer,
+                            )
+                            if candidate in self._graph and self._graph.degree(candidate) > 0:
+                                d = math.hypot(dx, dy)
+                                if d < best_dist:
+                                    best_dist = d
+                                    best_neighbor = candidate
+                    if best_neighbor is not None:
+                        self._graph.add_edge(
+                            node, best_neighbor, weight=_ESCAPE_COST,
+                        )
 
     @staticmethod
     def _build_query_engine(obstacles: list) -> SpatialQueryEngine:

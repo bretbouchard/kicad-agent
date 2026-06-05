@@ -43,12 +43,14 @@ def _mock_ir(
     pin_positions: list[dict[str, Any]] | None = None,
     wire_endpoints: list[dict[str, Any]] | None = None,
     label_positions: list[dict[str, Any]] | None = None,
+    component_lib_ids: list[tuple[str, str]] | None = None,
 ) -> MagicMock:
     """Create a mock SchematicIR with the methods the classifier needs."""
     ir = MagicMock()
     ir.get_pin_positions.return_value = pin_positions or []
     ir.get_wire_endpoints.return_value = wire_endpoints or []
     ir.get_label_positions.return_value = label_positions or []
+    ir.get_component_lib_ids.return_value = component_lib_ids or []
     return ir
 
 
@@ -371,3 +373,165 @@ class TestExecutorRegistration:
         op = ErcAutoFixOp(target_file="test.kicad_sch")
         assert op.op_type == "erc_auto_fix"
         assert op.max_iterations == 3
+
+
+class TestSwitchDiodeWireDanglingFP:
+    """Bug #33: wire_dangling on switch-diode connections classified as BENIGN."""
+
+    def test_switch_diode_wire_dangling_is_benign(self):
+        """wire_dangling near switch and diode pins -> BENIGN, medium confidence."""
+        from kicad_agent.ops.violation_classifier import classify_violations
+        ir = _mock_ir(
+            pin_positions=[
+                {
+                    "reference": "SW1",
+                    "pin_name": "2",
+                    "x": 200.66,
+                    "y": 233.68,
+                },
+                {
+                    "reference": "D1",
+                    "pin_name": "2",
+                    "x": 200.66,
+                    "y": 233.68,
+                },
+            ],
+            component_lib_ids=[
+                ("SW1", "Button_Switch_SMD:SW_Push_1P1T_XKB"),
+                ("D1", "Diode:1N4148"),
+            ],
+        )
+        violations = [
+            _v(
+                "wire_dangling",
+                "wire_dangling: (200.66 233.68) on wire connected to SW1 Pin 2",
+                positions=[(200.66, 233.68)],
+            ),
+        ]
+        result = classify_violations(violations, ir, Path("test.kicad_sch"))
+        assert len(result["benign"]) == 1
+        cv = result["benign"][0]
+        assert cv["category"] == "BENIGN"
+        assert cv["confidence"] == "medium"
+        assert cv["root_cause"] == "kiCad10_wire_dangling_fp"
+
+    def test_generic_wire_dangling_stays_fixable(self):
+        """wire_dangling not near switch/diode -> stays FIXABLE (default)."""
+        from kicad_agent.ops.violation_classifier import classify_violations
+        ir = _mock_ir(
+            pin_positions=[
+                {
+                    "reference": "R1",
+                    "pin_name": "1",
+                    "x": 100.0,
+                    "y": 200.0,
+                },
+            ],
+            component_lib_ids=[("R1", "Device:R")],
+        )
+        violations = [
+            _v(
+                "wire_dangling",
+                "wire_dangling: (100.0 200.0) on wire",
+                positions=[(100.0, 200.0)],
+            ),
+        ]
+        result = classify_violations(violations, ir, Path("test.kicad_sch"))
+        assert len(result["benign"]) == 0
+        assert len(result["fixable"]) == 1
+        cv = result["fixable"][0]
+        assert cv["root_cause"] == "unknown"
+
+    def test_switch_only_wire_dangling_stays_fixable(self):
+        """wire_dangling near switch but NOT diode -> stays FIXABLE."""
+        from kicad_agent.ops.violation_classifier import classify_violations
+        ir = _mock_ir(
+            pin_positions=[
+                {
+                    "reference": "SW1",
+                    "pin_name": "2",
+                    "x": 50.0,
+                    "y": 30.0,
+                },
+            ],
+            component_lib_ids=[("SW1", "Button_Switch_SMD:SW_Push_1P1T_XKB")],
+        )
+        violations = [
+            _v(
+                "wire_dangling",
+                "wire_dangling: (50.0 30.0) on wire connected to SW1 Pin 2",
+                positions=[(50.0, 30.0)],
+            ),
+        ]
+        result = classify_violations(violations, ir, Path("test.kicad_sch"))
+        assert len(result["benign"]) == 0
+        assert len(result["fixable"]) == 1
+
+    def test_diode_only_wire_dangling_stays_fixable(self):
+        """wire_dangling near diode but NOT switch -> stays FIXABLE."""
+        from kicad_agent.ops.violation_classifier import classify_violations
+        ir = _mock_ir(
+            pin_positions=[
+                {
+                    "reference": "D1",
+                    "pin_name": "1",
+                    "x": 50.0,
+                    "y": 30.0,
+                },
+            ],
+            component_lib_ids=[("D1", "Diode:1N4148")],
+        )
+        violations = [
+            _v(
+                "wire_dangling",
+                "wire_dangling: (50.0 30.0) on wire connected to D1 Pin 1",
+                positions=[(50.0, 30.0)],
+            ),
+        ]
+        result = classify_violations(violations, ir, Path("test.kicad_sch"))
+        assert len(result["benign"]) == 0
+        assert len(result["fixable"]) == 1
+
+    def test_no_pin_data_wire_dangling_stays_fixable(self):
+        """wire_dangling with no pin data -> stays FIXABLE."""
+        from kicad_agent.ops.violation_classifier import classify_violations
+        ir = _mock_ir()
+        violations = [
+            _v(
+                "wire_dangling",
+                "wire_dangling: (50.0 30.0) on wire",
+                positions=[(50.0, 30.0)],
+            ),
+        ]
+        result = classify_violations(violations, ir, Path("test.kicad_sch"))
+        assert len(result["benign"]) == 0
+        assert len(result["fixable"]) == 1
+
+    def test_button_lib_id_detected_as_switch(self):
+        """Button library IDs are detected as switch symbols."""
+        from kicad_agent.ops.violation_classifier import classify_violations
+        ir = _mock_ir(
+            pin_positions=[
+                {
+                    "reference": "B1",
+                    "pin_name": "1",
+                    "x": 50.0,
+                    "y": 30.0,
+                },
+                {
+                    "reference": "D1",
+                    "pin_name": "2",
+                    "x": 50.0,
+                    "y": 30.0,
+                },
+            ],
+            component_lib_ids=[
+                ("B1", "Button:SW_Push"),
+                ("D1", "Diode:1N4148"),
+            ],
+        )
+        violations = [
+            _v("wire_dangling", positions=[(50.0, 30.0)]),
+        ]
+        result = classify_violations(violations, ir, Path("test.kicad_sch"))
+        assert len(result["benign"]) == 1

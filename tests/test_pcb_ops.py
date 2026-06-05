@@ -127,7 +127,45 @@ class TestAddCopperZone:
             assert result["layer"] == "B.Cu"
             zone = ir.board.zones[0]
             assert len(zone.polygons) == 1
-            assert len(zone.polygons[0]) == 4
+            assert len(zone.polygons[0].coordinates) == 4
+
+    def test_add_copper_zone_kicad10_net_format(self):
+        """Verify zone uses KiCad 10 net format: (net N) (net_name "NAME"), not (net "NAME").
+
+        Regression test for bugs #34 and #38.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pcb_path, ir = _create_minimal_pcb(Path(tmpdir))
+
+            add_copper_zone(ir, pcb_path, net_name="GND", layer="F.Cu", clearance=0.5)
+
+            raw = pcb_path.read_text()
+            # KiCad 10 format: (net 1) (net_name "GND")
+            assert "(net 1)" in raw, "Zone should use integer net number"
+            assert '(net_name "GND")' in raw, "Zone should have net_name field"
+            # Bug #34: should NOT have plain list in polygons (kiutils ZonePolygon crash)
+            assert "(zone" in raw
+            # Verify zone polygon points present
+            assert "(xy" in raw
+
+    def test_add_copper_zone_custom_clearance_in_raw(self):
+        """Verify custom clearance values appear in raw S-expression output."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pcb_path, ir = _create_minimal_pcb(Path(tmpdir))
+
+            add_copper_zone(
+                ir, pcb_path,
+                net_name="GND",
+                layer="F.Cu",
+                clearance=0.3,
+                min_width=0.15,
+                priority=7,
+            )
+
+            raw = pcb_path.read_text()
+            assert "(clearance 0.300000)" in raw
+            assert "(min_thickness 0.150000)" in raw
+            assert "(priority 7)" in raw
 
 
 class TestSetBoardOutline:
@@ -368,6 +406,41 @@ class TestRemoveCopperZone:
             from kicad_agent.ops.pcb_ops import remove_copper_zone
             with pytest.raises(IndexError):
                 remove_copper_zone(ir, pcb_path, zone_index=99)
+
+
+class TestInsertTrackSegments:
+    """Issue #37 regression: verify insert_track_segments persists on disk."""
+
+    def test_segments_persist_on_disk(self):
+        """Track segments written by insert_track_segments are present after re-read."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            pcb_path, ir = _create_minimal_pcb(tmpdir_path)
+
+            # Insert a track segment
+            sexpr = (
+                '(segment (start 10.0 20.0) (end 30.0 40.0) '
+                '(width 0.25) (layer "F.Cu") (net 0) '
+                '(tstamp "00000000-0000-0000-0000-000000000001"))'
+            )
+            ir.insert_track_segments(sexpr)
+
+            # Re-read the file from disk
+            content = pcb_path.read_text(encoding="utf-8")
+            assert "(start 10.0 20.0)" in content
+            assert "(end 30.0 40.0)" in content
+            assert "(width 0.25)" in content
+            assert ir.raw_written is True
+
+    def test_ir_marked_dirty_after_insert(self):
+        """IR is marked dirty after insert_track_segments."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            pcb_path, ir = _create_minimal_pcb(tmpdir_path)
+
+            assert ir.dirty is False
+            ir.insert_track_segments("(segment (start 0 0) (end 10 10))")
+            assert ir.dirty is True
 
 
 class TestSetBoardOutlineOperation:

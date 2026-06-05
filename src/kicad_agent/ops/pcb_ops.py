@@ -17,14 +17,12 @@ Usage:
 """
 
 import logging
-import re
 import uuid
 from typing import Any
 
 from kiutils.board import Board
 from kiutils.items.common import Net, Position
 from kiutils.items.gritems import GrLine
-from kiutils.items.zones import Zone
 
 from kicad_agent.ir.pcb_ir import PcbIR
 
@@ -43,8 +41,10 @@ def add_copper_zone(
 ) -> dict[str, Any]:
     """Add a copper zone/ground pour to a PCB.
 
-    Creates a kiutils Zone with the specified parameters and adds it to
-    the board's zones list.
+    Uses PcbRawWriter to generate KiCad 10-compatible S-expressions directly,
+    bypassing kiutils Zone serialization which has two bugs:
+    - Appends plain lists instead of ZonePolygon objects (#34)
+    - Generates wrong net format (net "NAME") vs KiCad 10 (net N) (#38)
 
     Args:
         ir: PcbIR for the target PCB.
@@ -60,6 +60,11 @@ def add_copper_zone(
     Returns:
         Dict with zone_added, net, layer, clearance.
     """
+    from dataclasses import replace
+
+    from kicad_agent.ops.executor import OperationExecutor
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
     board = ir.board
 
     # Resolve net number from name
@@ -79,20 +84,33 @@ def add_copper_zone(
     else:
         points = outline_points
 
-    # Create polygon positions
-    polygon = [Position(X=x, Y=y) for x, y in points]
-
-    zone = Zone(
-        net=net_number,
-        netName=net_name,
-        layers=[layer],
+    # Generate KiCad 10 zone S-expression via PcbRawWriter
+    zone_uuid = str(uuid.uuid4())
+    zone_sexp = PcbRawWriter.build_zone_sexp(
+        net_number=net_number,
+        net_name=net_name,
+        layer=layer,
+        polygon=points,
         clearance=clearance,
-        minThickness=min_width,
+        min_thickness=min_width,
         priority=priority,
-        tstamp=str(uuid.uuid4()),
+        uuid=zone_uuid,
     )
-    zone.polygons.append(polygon)
-    board.zones.append(zone)
+
+    # Insert into raw content and write atomically
+    raw = ir._parse_result.raw_content
+    new_raw = PcbRawWriter.insert_zone(raw, zone_sexp)
+    OperationExecutor._raw_write_atomic(ir._parse_result.file_path, new_raw)
+    ir._parse_result = replace(ir._parse_result, raw_content=new_raw)
+    ir._raw_written = True
+
+    # Re-parse to update in-memory board for subsequent modify/remove operations
+    from kicad_agent.parser import parse_pcb
+    from kicad_agent.parser.uuid_extractor import extract_uuids
+
+    result = parse_pcb(ir._parse_result.file_path)
+    uuid_map = extract_uuids(result.raw_content, "pcb")
+    ir._update_parse_result(result, uuid_map)
 
     ir._record_mutation("add_copper_zone", {
         "net_name": net_name,
@@ -297,71 +315,24 @@ def assign_net_class(
 ) -> dict[str, Any]:
     """Assign a net class to a specific net in the PCB.
 
-    Modifies the raw S-expression content to add or update the net class
-    assignment, since kiutils does not natively handle net_class blocks.
-
-    The PCB file stores net classes as:
-        (net_class "ClassName" "description"
-          (add_net "net_name")
-          ...
-        )
-
-    Args:
-        ir: PcbIR for the target PCB.
-        file_path: Path to the PCB file (Path or str).
-        net_name: Name of the net to assign.
-        net_class_name: Name of the net class to assign.
-
-    Returns:
-        Dict with net and class names.
+    Delegates to PcbRawWriter for raw S-expression manipulation (Council C-02).
     """
-    raw_content = ir.raw_content
+    from kicad_agent.ops.executor import OperationExecutor
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
 
     # Check if net exists in the board
     found_net = ir.get_net_by_name(net_name)
     if found_net is None:
         raise ValueError(f"Net '{net_name}' not found in PCB")
 
-    # First, remove this net from any existing net_class blocks
-    # Pattern: (add_net "net_name") within a net_class block
-    add_net_pattern = re.compile(
-        r'\(add_net "' + re.escape(net_name) + r'"\)\s*\n?'
-    )
-    raw_content = add_net_pattern.sub('', raw_content)
+    raw_content = ir.raw_content
+    new_content = PcbRawWriter.assign_net_class(raw_content, net_name, net_class_name)
 
-    # Find or create the target net_class block
-    class_pattern = re.compile(
-        r'\(net_class "' + re.escape(net_class_name) + r'"'
-    )
-    if class_pattern.search(raw_content):
-        # Append add_net to existing net_class block
-        # Find the closing paren of this net_class block
-        match = class_pattern.search(raw_content)
-        start = match.start()
-        end = _find_matching_close(raw_content, start)
-        if end is not None:
-            # Insert (add_net "net_name") before the closing paren
-            insertion = f'\n      (add_net "{net_name}")'
-            raw_content = raw_content[:end] + insertion + raw_content[end:]
-    else:
-        # Create new net_class block before the closing (net ... entries or end of setup
-        new_class = (
-            f'  (net_class "{net_class_name}" ""\n'
-            f'    (add_net "{net_name}")\n'
-            f'  )\n'
-        )
-        # Insert before the first (net ... ) line or at end of setup
-        first_net = re.search(r'\n  \(net \d+ ', raw_content)
-        if first_net:
-            raw_content = (
-                raw_content[:first_net.start()] + '\n' + new_class + raw_content[first_net.start():]
-            )
-        else:
-            # Append at end before closing paren
-            raw_content = raw_content.rstrip() + '\n' + new_class + ')\n'
+    # Write atomically and update IR cache
+    from dataclasses import replace
 
-    # Write the modified content back
-    ir._parse_result.file_path.write_text(raw_content, encoding="utf-8")
+    OperationExecutor._raw_write_atomic(ir._parse_result.file_path, new_content)
+    ir._parse_result = replace(ir._parse_result, raw_content=new_content)
     ir._raw_written = True
 
     ir._record_mutation("assign_net_class", {
@@ -414,33 +385,3 @@ def _get_board_bbox_points(board: Board, margin: float = 1.0) -> list[tuple[floa
         (min_x - margin, max_y + margin),
     ]
 
-
-def _find_matching_close(content: str, open_pos: int) -> int | None:
-    """Find the matching closing paren for an S-expression starting at open_pos."""
-    depth = 0
-    i = open_pos
-    in_string = False
-
-    while i < len(content):
-        c = content[i]
-
-        if in_string:
-            if c == '"':
-                if i + 1 < len(content) and content[i + 1] == '"':
-                    i += 2
-                    continue
-                in_string = False
-            i += 1
-            continue
-
-        if c == '"':
-            in_string = True
-        elif c == '(':
-            depth += 1
-        elif c == ')':
-            depth -= 1
-            if depth == 0:
-                return i
-        i += 1
-
-    return None

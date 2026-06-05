@@ -107,6 +107,42 @@ def _is_lib_symbol_issues(violation: ErcViolation, _ir_data: dict) -> bool:
     return violation.type == "lib_symbol_issues"
 
 
+def _is_switch_diode_wire_dangling_fp(
+    violation: ErcViolation, ir_data: dict
+) -> bool:
+    """wire_dangling on wires between switch and diode pins (KiCad 10 false positive).
+
+    KiCad 10 ERC reports wire_dangling on properly-connected wires between
+    switch pin2 and diode pin1 (cathode) in button matrix topology. These are
+    real electrical connections that KiCad 10 fails to recognize.
+
+    Requires both a switch symbol pin and a diode symbol pin near the violation
+    position. Detection uses ref→lib_id map: 'Switch'/'Button' for switches,
+    'Diode' for diodes.
+    """
+    if violation.type != "wire_dangling":
+        return False
+
+    pin_positions = ir_data.get("pin_positions", [])
+    ref_to_lib_id = ir_data.get("ref_to_lib_id", {})
+    has_switch_pin = False
+    has_diode_pin = False
+
+    for pin in pin_positions:
+        pin_pos = (pin.get("x", 0), pin.get("y", 0))
+        for vp in violation.positions:
+            if not _positions_close(vp, pin_pos):
+                continue
+            ref = pin.get("reference", "")
+            lib_id = ref_to_lib_id.get(ref, "").lower()
+            if any(kw in lib_id for kw in ("switch", "button")):
+                has_switch_pin = True
+            if "diode" in lib_id:
+                has_diode_pin = True
+
+    return has_switch_pin and has_diode_pin
+
+
 def _is_pin_to_pin_unspecified(violation: ErcViolation, _ir_data: dict) -> bool:
     """pin_to_pin with 'Unspecified' or 'unspecified' in description."""
     return (
@@ -151,6 +187,7 @@ _CLASSIFICATION_RULES: list[RuleTuple] = [
     # Benign
     (_is_same_local_global_label, ViolationCategory.BENIGN, "cosmetic_duplicate", "high"),
     (_is_missing_unit, ViolationCategory.BENIGN, "unused_unit_by_design", "high"),
+    (_is_switch_diode_wire_dangling_fp, ViolationCategory.BENIGN, "kiCad10_wire_dangling_fp", "medium"),
     # Config issues
     (_is_lib_symbol_issues, ViolationCategory.CONFIG_ISSUE, "missing_library", "high"),
     # Fixable (specific)
@@ -197,7 +234,8 @@ def _has_wire_or_label_at(
 def _extract_ir_data(ir: Any) -> dict[str, Any]:
     """Extract position data from IR for classification rules.
 
-    Uses get_pin_positions(), get_wire_endpoints(), get_label_positions().
+    Uses get_pin_positions(), get_wire_endpoints(), get_label_positions(),
+    get_component_lib_ids().
     Handles both real SchematicIR and mock objects gracefully.
     """
     try:
@@ -212,10 +250,16 @@ def _extract_ir_data(ir: Any) -> dict[str, Any]:
         label_positions = ir.get_label_positions()
     except (AttributeError, TypeError, ValueError):
         label_positions = []
+    try:
+        lib_ids = ir.get_component_lib_ids()
+        ref_to_lib_id = {ref: lib_id for ref, lib_id in lib_ids}
+    except (AttributeError, TypeError, ValueError):
+        ref_to_lib_id = {}
     return {
         "pin_positions": pin_positions,
         "wire_endpoints": wire_endpoints,
         "label_positions": label_positions,
+        "ref_to_lib_id": ref_to_lib_id,
     }
 
 

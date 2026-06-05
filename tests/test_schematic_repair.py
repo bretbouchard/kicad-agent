@@ -616,7 +616,7 @@ class TestErcAutoFix:
         violations = self._make_violation("pin_not_connected", count=3)
         # Iteration 1: violations, iteration 2: empty, final check: empty
         with patch("kicad_agent.ops.erc_auto_fix.parse_erc", side_effect=[violations, [], []]), \
-             patch("kicad_agent.ops.repair.place_no_connects_from_erc", return_value={"placed": 3, "skipped_duplicates": 0}) as mock_nc:
+             patch("kicad_agent.ops.repair_erc.place_no_connects_from_erc", return_value={"placed": 3, "skipped_duplicates": 0}) as mock_nc:
             result = erc_auto_fix(ir, Path("test.kicad_sch"))
 
         mock_nc.assert_called_once()
@@ -630,7 +630,7 @@ class TestErcAutoFix:
         violations = self._make_violation("power_pin_not_driven", count=2)
         # Iteration 1: violations, iteration 2: empty, final check: empty
         with patch("kicad_agent.ops.erc_auto_fix.parse_erc", side_effect=[violations, [], []]), \
-             patch("kicad_agent.ops.repair.add_power_flags", return_value={"placed": 2, "skipped": 0, "positions": [], "net_names": []}) as mock_pf:
+             patch("kicad_agent.ops.repair_erc.add_power_flags", return_value={"placed": 2, "skipped": 0, "positions": [], "net_names": []}) as mock_pf:
             result = erc_auto_fix(ir, Path("test.kicad_sch"))
 
         mock_pf.assert_called_once()
@@ -644,7 +644,7 @@ class TestErcAutoFix:
         violations = self._make_violation("pin_not_connected", count=5)
         # parse_erc always returns violations (never decreases)
         with patch("kicad_agent.ops.erc_auto_fix.parse_erc", return_value=violations), \
-             patch("kicad_agent.ops.repair.place_no_connects_from_erc", return_value={"placed": 5, "skipped_duplicates": 0}):
+             patch("kicad_agent.ops.repair_erc.place_no_connects_from_erc", return_value={"placed": 5, "skipped_duplicates": 0}):
             result = erc_auto_fix(ir, Path("test.kicad_sch"), max_iterations=2)
 
         # Should run exactly 2 iterations (stops when count doesn't decrease after iteration 1,
@@ -659,7 +659,7 @@ class TestErcAutoFix:
         violations = self._make_violation("pin_not_connected", count=5)
         # Always returns same violations -- count never decreases
         with patch("kicad_agent.ops.erc_auto_fix.parse_erc", return_value=violations), \
-             patch("kicad_agent.ops.repair.place_no_connects_from_erc", return_value={"placed": 0, "skipped_duplicates": 0}):
+             patch("kicad_agent.ops.repair_erc.place_no_connects_from_erc", return_value={"placed": 0, "skipped_duplicates": 0}):
             result = erc_auto_fix(ir, Path("test.kicad_sch"), max_iterations=10)
 
         # Should stop after 2 iterations: first runs repairs, second sees no decrease and stops
@@ -720,8 +720,8 @@ class TestErcAutoFix:
             return wrapper
 
         with patch("kicad_agent.ops.erc_auto_fix.parse_erc", side_effect=[violations, [], []]), \
-             patch("kicad_agent.ops.repair.add_power_flags", side_effect=track_call("power_flags")), \
-             patch("kicad_agent.ops.repair.place_no_connects_from_erc", side_effect=track_call("no_connects")):
+             patch("kicad_agent.ops.repair_erc.add_power_flags", side_effect=track_call("power_flags")), \
+             patch("kicad_agent.ops.repair_erc.place_no_connects_from_erc", side_effect=track_call("no_connects")):
             result = erc_auto_fix(ir, Path("test.kicad_sch"))
 
         # power_pin_not_driven should be called before pin_not_connected
@@ -1197,8 +1197,8 @@ class TestPowerNetProtection:
             {0, 1, 2} if name == "NET_A" else {0}
         )
 
-        with patch("kicad_agent.ops.repair.detect_shorted_nets", return_value=short_data), \
-             patch("kicad_agent.ops.repair.NetPositionIndex.from_file", return_value=mock_index):
+        with patch("kicad_agent.ops.repair_nets.detect_shorted_nets", return_value=short_data), \
+             patch("kicad_agent.ops.repair_nets.NetPositionIndex.from_file", return_value=mock_index):
             result = fix_shorted_nets(ir, path, strategy="keep_majority", dry_run=True)
 
         # Should report the short and plan to remove the minority net
@@ -1220,8 +1220,8 @@ class TestPowerNetProtection:
             {0} if name == "AGND" else {0, 1, 2, 3, 4}
         )
 
-        with patch("kicad_agent.ops.repair.detect_shorted_nets", return_value=short_data), \
-             patch("kicad_agent.ops.repair.NetPositionIndex.from_file", return_value=mock_index):
+        with patch("kicad_agent.ops.repair_nets.detect_shorted_nets", return_value=short_data), \
+             patch("kicad_agent.ops.repair_nets.NetPositionIndex.from_file", return_value=mock_index):
             result = fix_shorted_nets(ir, path, strategy="keep_majority", dry_run=True)
 
         # Should keep AGND (power net), remove DATA_LINE
@@ -1240,8 +1240,8 @@ class TestPowerNetProtection:
         mock_index = MagicMock()
         mock_index.get_positions_for_net.return_value = {0}
 
-        with patch("kicad_agent.ops.repair.detect_shorted_nets", return_value=short_data), \
-             patch("kicad_agent.ops.repair.NetPositionIndex.from_file", return_value=mock_index):
+        with patch("kicad_agent.ops.repair_nets.detect_shorted_nets", return_value=short_data), \
+             patch("kicad_agent.ops.repair_nets.NetPositionIndex.from_file", return_value=mock_index):
             result = fix_shorted_nets(ir, path, strategy="keep_majority", dry_run=True)
 
         # Should find the short but refuse to fix it (no labels removed)

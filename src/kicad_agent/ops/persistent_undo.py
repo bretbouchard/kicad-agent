@@ -116,14 +116,22 @@ class PersistentUndoStack(UndoStack):
 
         entries = data.get("entries", [])
         if not entries:
+            # Restore next_seq even with no entries
+            persisted_seq = data.get("next_seq", 0)
+            if persisted_seq > self._next_seq:
+                self._next_seq = persisted_seq
             return
+
+        # Restore next_seq from manifest
+        persisted_seq = data.get("next_seq", 0)
+        if persisted_seq > self._next_seq:
+            self._next_seq = persisted_seq
 
         loaded = 0
         for entry_data in entries:
             try:
                 file_path_str = entry_data.get("file_path", "")
                 entry_file = entry_data.get("entry_file", "")
-                seq = entry_data.get("seq", 0)
                 if not file_path_str or not entry_file:
                     continue
 
@@ -152,10 +160,6 @@ class PersistentUndoStack(UndoStack):
                 entry_id = id(entry)
                 self._entry_filenames[entry_id] = entry_file
 
-                # Track sequence number
-                if seq >= self._next_seq:
-                    self._next_seq = seq + 1
-
             except Exception as exc:
                 logger.debug("Failed to load undo entry: %s", exc)
                 continue
@@ -165,9 +169,10 @@ class PersistentUndoStack(UndoStack):
 
     def _save_manifest(self) -> None:
         """Write the manifest file atomically."""
-        manifest: dict[str, list[dict]] = {"entries": []}
+        manifest: dict[str, Any] = {"next_seq": 0, "entries": []}
 
         with self._lock:
+            manifest["next_seq"] = self._next_seq
             for resolved, dq in self._undo.items():
                 for entry in dq:
                     entry_file = self._entry_filenames.get(id(entry))
@@ -179,7 +184,6 @@ class PersistentUndoStack(UndoStack):
                         "file_path": str(entry.file_path),
                         "entry_file": entry_file,
                         "op_type": entry.op_type,
-                        "seq": int(entry_file.split("_", 1)[0]),
                     })
 
         # Atomic write via temp file
@@ -208,44 +212,49 @@ class PersistentUndoStack(UndoStack):
         return f"{self._next_seq:06d}_{safe_name}.json"
 
     def _write_entry(self, entry: UndoEntry) -> None:
-        """Write a single undo entry to disk."""
+        """Write a single undo entry to disk.
+
+        The entire seq allocation + file write happens under the manifest
+        lock to prevent race conditions (concurrent pushes getting the same seq).
+        """
         with self._manifest_lock:
             seq = self._next_seq
             self._next_seq += 1
-        safe_name = str(entry.file_path).replace("/", "_").replace(".", "-")
-        safe_name = safe_name[:_MAX_SAFE_NAME]
-        entry_file = f"{seq:06d}_{safe_name}.json"
 
-        # Store filename for precise deletion later
-        self._entry_filenames[id(entry)] = entry_file
+            safe_name = str(entry.file_path).replace("/", "_").replace(".", "-")
+            safe_name = safe_name[:_MAX_SAFE_NAME]
+            entry_file = f"{seq:06d}_{safe_name}.json"
 
-        entry_path = self._undo_dir / entry_file
+            # Store filename for precise deletion later
+            self._entry_filenames[id(entry)] = entry_file
 
-        data = {
-            "file_path": str(entry.file_path),
-            "op_type": entry.op_type,
-            "post_mtime": entry.post_mtime,
-            "pre_content": entry.pre_content,
-            "post_content": entry.post_content,
-        }
+            entry_path = self._undo_dir / entry_file
 
-        try:
-            content = json.dumps(data)
-            fd, tmp_path = tempfile.mkstemp(
-                dir=str(self._undo_dir), suffix=".tmp"
-            )
+            data = {
+                "file_path": str(entry.file_path),
+                "op_type": entry.op_type,
+                "post_mtime": entry.post_mtime,
+                "pre_content": entry.pre_content,
+                "post_content": entry.post_content,
+            }
+
             try:
-                os.write(fd, content.encode("utf-8"))
-                os.close(fd)
-                os.rename(tmp_path, str(entry_path))
-            except Exception:
+                content = json.dumps(data)
+                fd, tmp_path = tempfile.mkstemp(
+                    dir=str(self._undo_dir), suffix=".tmp"
+                )
                 try:
+                    os.write(fd, content.encode("utf-8"))
                     os.close(fd)
-                except OSError:
-                    pass
-                raise
-        except OSError as exc:
-            logger.warning("Failed to write undo entry: %s", exc)
+                    os.rename(tmp_path, str(entry_path))
+                except Exception:
+                    try:
+                        os.close(fd)
+                    except OSError:
+                        pass
+                    raise
+            except OSError as exc:
+                logger.warning("Failed to write undo entry: %s", exc)
 
     def _remove_entry_file(self, entry: UndoEntry) -> None:
         """Remove the disk file for a specific entry using tracked filename."""

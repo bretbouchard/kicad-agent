@@ -35,11 +35,11 @@ class TestScientificNotation:
         result = normalize_kicad_output("(at 1.5e-07 0.0)")
         assert "0.000000" in result
 
-    def test_preserves_regular_floats(self) -> None:
-        """Regular floats are left unchanged."""
+    def test_regular_floats_get_angle(self) -> None:
+        """Bug #29: Regular floats in (at X Y) get angle 0 appended."""
         input_str = "(at 10.5 20.3)"
         result = normalize_kicad_output(input_str)
-        assert result == input_str
+        assert "(at 10.5 20.3 0)" in result
 
     def test_preserves_integers(self) -> None:
         """Integers are left unchanged."""
@@ -76,19 +76,145 @@ class TestScientificNotation:
         assert "20.000000" in result
 
 
+class TestAtAngleFix:
+    """Bug #29: Missing rotation angle in (at X Y) position elements."""
+
+    def test_property_at_gets_angle(self) -> None:
+        """(at X Y) in property context gets angle 0 appended."""
+        result = normalize_kicad_output(
+            '(property "Reference" "R1" (at 10.5 20.3))'
+        )
+        assert "(at 10.5 20.3 0)" in result
+
+    def test_label_at_gets_angle(self) -> None:
+        """(at X Y) in label context gets angle 0 appended."""
+        result = normalize_kicad_output(
+            '(label "NET1" (at 50.0 75.0))'
+        )
+        assert "(at 50.0 75.0 0)" in result
+
+    def test_global_label_at_gets_angle(self) -> None:
+        """(at X Y) in global_label context gets angle 0 appended."""
+        result = normalize_kicad_output(
+            '(global_label "VCC" (at 30.0 20.0))'
+        )
+        assert "(at 30.0 20.0 0)" in result
+
+    def test_hierarchical_label_at_gets_angle(self) -> None:
+        """(at X Y) in hierarchical_label context gets angle 0 appended."""
+        result = normalize_kicad_output(
+            '(hierarchical_label "CLK" (at 15.0 40.0))'
+        )
+        assert "(at 15.0 40.0 0)" in result
+
+    def test_junction_at_not_modified(self) -> None:
+        """(junction (at X Y)) must NOT get angle added — native KiCad format."""
+        result = normalize_kicad_output(
+            '(junction (at 21.59 132.08) (diameter 0) (color 0 0 0 0) (uuid abc))'
+        )
+        assert "(at 21.59 132.08)" in result
+        assert "(at 21.59 132.08 0)" not in result
+
+    def test_no_connect_at_not_modified(self) -> None:
+        """(no_connect (at X Y)) must NOT get angle added — native KiCad format."""
+        result = normalize_kicad_output(
+            '(no_connect (at 34.29 31.75) (uuid abc))'
+        )
+        assert "(at 34.29 31.75)" in result
+
+    def test_at_with_existing_angle_not_doubled(self) -> None:
+        """(at X Y 0) already with angle must not be doubled to (at X Y 0 0)."""
+        result = normalize_kicad_output(
+            '(property "Reference" "R1" (at 10.5 20.3 0))'
+        )
+        assert "(at 10.5 20.3 0)" in result
+        assert "(at 10.5 20.3 0 0)" not in result
+
+    def test_at_with_nonzero_angle_not_modified(self) -> None:
+        """(at X Y 180) with nonzero angle must not be changed."""
+        result = normalize_kicad_output(
+            '(label "NET1" (at 50.0 75.0 180))'
+        )
+        assert "(at 50.0 75.0 180)" in result
+        assert "(at 50.0 75.0 180 0)" not in result
+
+    def test_symbol_at_without_angle_not_modified(self) -> None:
+        """Symbol (at X Y) without angle must not be modified (KiCad omits for 0-deg non-power)."""
+        result = normalize_kicad_output(
+            '(symbol (lib_id "Device:R") (at 100.0 200.0) (unit 1) (uuid abc))'
+        )
+        assert "(at 100.0 200.0)" in result
+        assert "(at 100.0 200.0 0)" not in result
+
+    def test_symbol_at_with_mirror_not_modified(self) -> None:
+        """Symbol (at X Y) followed by (mirror must not get angle."""
+        result = normalize_kicad_output(
+            '(symbol (lib_id "Device:R") (at 100.0 200.0) (mirror y) (unit 1) (uuid abc))'
+        )
+        assert "(at 100.0 200.0)" in result
+
+    def test_power_symbol_at_with_angle_preserved(self) -> None:
+        """Power symbol (at X Y 0) already has angle — do not double."""
+        result = normalize_kicad_output(
+            '(symbol (lib_id "power:+3V3") (at 31.75 26.67 0) (unit 1) (uuid abc))'
+        )
+        assert "(at 31.75 26.67 0)" in result
+        assert "(at 31.75 26.67 0 0)" not in result
+
+    def test_at_in_quoted_string_not_modified(self) -> None:
+        """(at X Y) inside quoted strings must not be modified."""
+        result = normalize_kicad_output(
+            '(property "note" "connect at 10 20") (at 30 40))'
+        )
+        assert "(at 30 40 0)" in result
+        assert "at 10 20" in result  # Inside quoted string, unchanged
+
+    def test_negative_y_values_get_angle(self) -> None:
+        """Negative Y coordinates (common in KiCad) get angle appended."""
+        result = normalize_kicad_output(
+            '(property "Ref" "R1" (at 10.5 -20.3))'
+        )
+        assert "(at 10.5 -20.3 0)" in result
+
+    def test_idempotent_angle_fix(self) -> None:
+        """Normalizing twice produces same result."""
+        input_str = '(property "Ref" "R1" (at 10 20))'
+        first = normalize_kicad_output(input_str)
+        second = normalize_kicad_output(first)
+        assert first == second
+
+    def test_multiple_at_in_same_line(self) -> None:
+        """Multiple (at X Y) in one line all get angle."""
+        result = normalize_kicad_output(
+            '(property "Ref" "R1" (at 10 20)) (property "Val" "1k" (at 30 40))'
+        )
+        assert "(at 10 20 0)" in result
+        assert "(at 30 40 0)" in result
+
+    def test_real_schematic_junctions_preserved(self, arduino_mega_sch: Path) -> None:
+        """Junctions in real KiCad schematic are not modified by angle fix."""
+        parse_result = parse_schematic(arduino_mega_sch)
+        raw_output = parse_result.kiutils_obj.to_sexpr()
+        normalized = normalize_kicad_output(raw_output)
+
+        import re
+        # Match junction (at X Y) — no angle expected in native format
+        junction_re = re.compile(r'junction \(at ([\d.-]+) ([\d.-]+)\)')
+        junctions_orig = junction_re.findall(raw_output)
+        junctions_norm = junction_re.findall(normalized)
+        assert junctions_orig == junctions_norm, (
+            f"Junctions modified: {len(junctions_orig)} → {len(junctions_norm)}"
+        )
+
+
 class TestWhitespaceNormalization:
     """D-12: Whitespace normalization."""
 
     def test_tabs_replaced_with_spaces(self) -> None:
-        """Tabs are replaced with 4 spaces."""
+        """Tabs are replaced with 4 spaces and angle is added (Bug #29)."""
         result = normalize_kicad_output("(at\t10 20)")
-        assert result == "(at    10 20)"
+        assert result == "(at 10 20 0)"
 
-    def test_already_normalized_unchanged(self) -> None:
-        """Content without tabs is unchanged (except sci-notation fixes)."""
-        input_str = "(at 10 20)"
-        result = normalize_kicad_output(input_str)
-        assert result == input_str
 
 
 class TestDeterminism:

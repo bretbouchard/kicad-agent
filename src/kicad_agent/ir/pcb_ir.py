@@ -666,6 +666,166 @@ class PcbIR(BaseIR):
                         netlist[net_name].append((round(pad_x, 4), round(pad_y, 4)))
         return netlist
 
+    def extract_obstacles(
+        self,
+        clearance_mm: float = 0.3,
+    ) -> list:
+        """Extract SpatialBox obstacles from all placed footprints.
+
+        For each footprint, extracts courtyard bounding boxes (F.CrtYd / B.CrtYd
+        graphic items) as forbidden routing zones. If no courtyard is defined,
+        computes a bounding box from pad positions plus clearance margin.
+
+        Args:
+            clearance_mm: Extra clearance margin around obstacles in mm.
+                Defaults to 0.3mm (sufficient for most SMD clearances).
+
+        Returns:
+            List of SpatialBox objects for use by RoutingGraph.
+        """
+        from kicad_agent.spatial.primitives import SpatialBox
+
+        obstacles: list[SpatialBox] = []
+
+        for fp in self.footprints:
+            fp_pos = fp.position
+            if hasattr(fp_pos, "__len__") and len(fp_pos) >= 2:
+                fp_x = fp_pos[0] if len(fp_pos) > 0 else 0.0
+                fp_y = fp_pos[1] if len(fp_pos) > 1 else 0.0
+                fp_angle = fp_pos[2] if len(fp_pos) > 2 else 0.0
+            elif hasattr(fp_pos, "X"):
+                fp_x, fp_y = fp_pos.X, fp_pos.Y
+                fp_angle = getattr(fp_pos, "angle", None) or 0.0
+            else:
+                continue
+
+            ref = fp.properties.get("Reference", fp.reference if hasattr(fp, "reference") else "?")
+
+            # Strategy 1: Use courtyard data if available.
+            # NativeBoard uses graphic_items with rect items.
+            # kiutils uses graphicItems with FpLine segments.
+            courtyard_found = False
+            courtyard_xs: list[float] = []
+            courtyard_ys: list[float] = []
+
+            # Try native format (graphic_items with rects).
+            graphic_items = getattr(fp, "graphic_items", None) or []
+            for gi in graphic_items:
+                if (getattr(gi, "item_type", None) == "rect"
+                        and getattr(gi, "layer", None) in ("F.CrtYd", "B.CrtYd")):
+                    if gi.start is not None and gi.end is not None:
+                        courtyard_xs.extend([gi.start.X, gi.end.X])
+                        courtyard_ys.extend([gi.start.Y, gi.end.Y])
+                        courtyard_found = True
+
+            # Try kiutils format (graphicItems with lines).
+            if not courtyard_found:
+                graphic_items_ki = getattr(fp, "graphicItems", None) or []
+                for gi in graphic_items_ki:
+                    layer = getattr(gi, "layer", "")
+                    if layer in ("F.CrtYd", "B.CrtYd"):
+                        if (hasattr(gi, "start") and gi.start is not None
+                                and hasattr(gi, "end") and gi.end is not None):
+                            courtyard_xs.extend([gi.start.X, gi.end.X])
+                            courtyard_ys.extend([gi.start.Y, gi.end.Y])
+                            courtyard_found = True
+
+            if courtyard_found and courtyard_xs:
+                x1 = min(courtyard_xs)
+                y1 = min(courtyard_ys)
+                x2 = max(courtyard_xs)
+                y2 = max(courtyard_ys)
+                # Apply footprint rotation to courtyard corners.
+                if fp_angle != 0.0:
+                    import math as _math
+                    _rad = _math.radians(fp_angle)
+                    _cos = _math.cos(_rad)
+                    _sin = _math.sin(_rad)
+                    corners = [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
+                    rotated = [
+                        (fp_x + cx * _cos - cy * _sin,
+                         fp_y + cx * _sin + cy * _cos)
+                        for cx, cy in corners
+                    ]
+                    rxs = [c[0] for c in rotated]
+                    rys = [c[1] for c in rotated]
+                    x1, y1 = min(rxs), min(rys)
+                    x2, y2 = max(rxs), max(rys)
+                else:
+                    x1 += fp_x
+                    y1 += fp_y
+                    x2 += fp_x
+                    y2 += fp_y
+                obstacles.append(SpatialBox(
+                    x1=round(x1 - clearance_mm, 4),
+                    y1=round(y1 - clearance_mm, 4),
+                    x2=round(x2 + clearance_mm, 4),
+                    y2=round(y2 + clearance_mm, 4),
+                    entity_type="footprint",
+                    entity_id=fp.uuid if hasattr(fp, "uuid") else "",
+                    layer="F.CrtYd",
+                    reference=ref,
+                ))
+                continue
+
+            if courtyard_found:
+                continue
+
+            # Strategy 2: Compute bounding box from pads + margin.
+            pad_xs: list[float] = []
+            pad_ys: list[float] = []
+            for pad in fp.pads:
+                pad_pos = pad.position
+                if hasattr(pad_pos, "X"):
+                    local_x, local_y = pad_pos.X, pad_pos.Y
+                elif hasattr(pad_pos, "__len__") and len(pad_pos) >= 2:
+                    local_x = pad_pos[0]
+                    local_y = pad_pos[1]
+                else:
+                    continue
+                if fp_angle != 0.0:
+                    import math as _math
+                    _rad = _math.radians(fp_angle)
+                    _cos = _math.cos(_rad)
+                    _sin = _math.sin(_rad)
+                    px = fp_x + local_x * _cos - local_y * _sin
+                    py = fp_y + local_x * _sin + local_y * _cos
+                else:
+                    px = fp_x + local_x
+                    py = fp_y + local_y
+                pad_xs.append(px)
+                pad_ys.append(py)
+
+            if pad_xs:
+                # Add pad half-size estimate as extra margin
+                obstacles.append(SpatialBox(
+                    x1=round(min(pad_xs) - clearance_mm, 4),
+                    y1=round(min(pad_ys) - clearance_mm, 4),
+                    x2=round(max(pad_xs) + clearance_mm, 4),
+                    y2=round(max(pad_ys) + clearance_mm, 4),
+                    entity_type="footprint",
+                    entity_id=fp.uuid if hasattr(fp, "uuid") else "",
+                    layer="",
+                    reference=ref,
+                ))
+
+        return obstacles
+
+    def extract_net_id_map(self) -> dict[str, int]:
+        """Extract mapping from net name to net ID number.
+
+        Returns:
+            Dict mapping net names to their integer net ID.
+        """
+        net_map: dict[str, int] = {}
+        if self._is_native:
+            for net in self.board.nets:
+                net_map[net.name] = net.number
+        else:
+            for net in self.board.nets:
+                net_map[net.name] = net.number
+        return net_map
+
     def insert_track_segments(self, sexpr_block: str) -> None:
         """Insert track segment S-expressions into the PCB file.
 

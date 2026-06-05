@@ -31,7 +31,12 @@ from mlx_lm.tuner.utils import linear_to_lora_layers
 
 
 def load_chatml_dataset(data_path: Path) -> list[dict]:
-    """Load ChatML JSONL into messages format for mlx-lm ChatDataset."""
+    """Load ChatML JSONL into messages format for mlx-lm ChatDataset.
+
+    Supports two input formats:
+      - {"text": "<|im_start|>system\\n...<|im_end|>..."} (legacy)
+      - {"messages": [{"role": "system", "content": "..."}, ...]} (new)
+    """
     samples = []
     with open(data_path) as f:
         for line in f:
@@ -39,10 +44,15 @@ def load_chatml_dataset(data_path: Path) -> list[dict]:
             if not line:
                 continue
             record = json.loads(line)
-            text = record["text"]
-            messages = _parse_chatml(text)
-            if messages:
-                samples.append({"messages": messages})
+
+            if "messages" in record:
+                messages = record["messages"]
+                if len(messages) >= 2:
+                    samples.append({"messages": messages})
+            elif "text" in record:
+                messages = _parse_chatml(record["text"])
+                if messages:
+                    samples.append({"messages": messages})
     return samples
 
 

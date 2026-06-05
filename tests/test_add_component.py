@@ -239,7 +239,7 @@ class TestOperationExecutorAdd:
                 "library_id": "Device:R_Small_US",
                 "reference": "R200",
                 "value": "10k",
-                "position": {"x": 50.0, "y": 30.0},
+                "position": {"x": 250.0, "y": 200.0},
             }
         })
 

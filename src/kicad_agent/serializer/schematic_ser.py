@@ -87,41 +87,101 @@ def serialize_schematic(
 
 
 def _fix_kiutils_output(path: Path) -> None:
-    """Fix kiutils serialization defects in .kicad_sch files.
+    """Fix kiutils 1.4.8 serialization defects so kicad-cli can load the file.
 
-    kiutils re-serialization changes three things that can break kicad-cli:
-    1. (generator "eeschema") → (generator eeschema) — unquotes generator value
-    2. Drops (generator_version "10.0") line entirely
-    3. Minor whitespace changes to no_connect and other elements
+    kiutils 1.4.8 re-serialization issues that break KiCad 10:
+    1. Quotes the generator token: (generator "eeschema") — KiCad expects unquoted
+    2. Adds (generator_version "10.0") — not present in native KiCad files
+    3. Adds (lib_name "...") inline in component symbols — KiCad doesn't expect this
+    4. Adds (id N) to property lines — KiCad native format omits these
+    5. Omits rotation angle from property (at X Y) — KiCad requires (at X Y 0)
+    6. Sets (in_bom yes) (on_board yes) — KiCad uses (in_bom no) for lib refs
 
-    This function restores proper formatting as a safety net.
-    Does NOT add rotation to no_connects — that breaks KiCad 10.
+    Fixes 1-2 are applied globally. Fixes 3-6 are applied only to
+    component symbols (outside the lib_symbols section).
     """
     import re
 
     content = path.read_text(encoding="utf-8")
     modified = False
 
-    # Fix 1: Re-quote unquoted generator values.
-    # kiutils outputs (generator eeschema) but KiCad expects (generator "eeschema")
-    if re.search(r'\(generator\s+[^")\s]+\)', content):
-        content = re.sub(
-            r'\(generator\s+([^")\s]+)\)',
-            r'(generator "\1")',
-            content,
-        )
+    # --- Global fixes (header) ---
+
+    if '(generator "eeschema")' in content:
+        content = content.replace('(generator "eeschema")', '(generator eeschema)')
+        modified = True
+    if '(generator "kiutils")' in content:
+        content = content.replace('(generator "kiutils")', '(generator eeschema)')
         modified = True
 
-    # Fix 2: Restore generator_version if missing.
-    # kiutils drops this line but kicad-cli may require it.
-    if not re.search(r'\(generator_version\b', content):
-        # Insert after the (generator ...) line
-        gen_line = re.search(r'\(generator\s+"[^"]*"\)\s*\n', content)
-        if gen_line:
-            insert_pos = gen_line.end()
-            version_line = '  (generator_version "10.0")\n'
-            content = content[:insert_pos] + version_line + content[insert_pos:]
-            modified = True
+    if re.search(r'\(generator_version\b', content):
+        content = re.sub(r'^\s*\(generator_version\s+"[^"]*"\)\n', '', content, flags=re.MULTILINE)
+        modified = True
+
+    # --- Component symbol fixes (outside lib_symbols section) ---
+
+    # Find the end of the lib_symbols section
+    lib_idx = content.find('(lib_symbols')
+    if lib_idx < 0:
+        before = ""
+        after = content
+    else:
+        depth = 0
+        lib_end = lib_idx
+        for i in range(lib_idx, len(content)):
+            if content[i] == '(':
+                depth += 1
+            elif content[i] == ')':
+                depth -= 1
+                if depth == 0:
+                    lib_end = i + 1
+                    if lib_end < len(content) and content[lib_end] == '\n':
+                        lib_end += 1
+                    break
+
+        before = content[:lib_idx]
+        lib_section = content[lib_idx:lib_end]
+        after = content[lib_end:]
+
+    # Fix 3: Remove (lib_name "...") from component symbol lines.
+    # kiutils places it inline: (symbol (lib_name "Lib:Sym") (lib_id ...))
+    after = re.sub(r'\(lib_name "[^"]*"\) ', '', after)
+    if after != content[lib_end:]:
+        modified = True
+
+    # Fix 4: Remove (id N) from property lines in component section.
+    # kiutils adds (id N) to every property: (property "Key" (id 0) ...)
+    new_after = re.sub(r' \(id \d+\)', '', after)
+    if new_after != after:
+        after = new_after
+        modified = True
+
+    # Fix 5: Add missing rotation angle to property (at X Y) lines.
+    # KiCad requires (at X Y ANGLE) with 3 values on property position.
+    # kiutils omits the angle when 0, producing (at X Y).
+    # Must NOT touch (no_connect (at X Y)) or (symbol (at X Y 0)) lines.
+    def _fix_property_angle(m: re.Match) -> str:
+        return m.group(0)[:-1] + ' 0)'
+
+    new_after = re.sub(
+        r'\(property "[^"]*"[^)]*\(at (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)\)',
+        _fix_property_angle,
+        after,
+    )
+    if new_after != after:
+        after = new_after
+        modified = True
+
+    # Fix 6: Change (in_bom yes) (on_board yes) to (in_bom no) (on_board no)
+    # for component symbols referencing lib_symbols.
+    new_after = after.replace('(in_bom yes) (on_board yes)', '(in_bom no) (on_board no)')
+    if new_after != after:
+        after = new_after
+        modified = True
 
     if modified:
+        if lib_idx < 0:
+            content = after
+        else:
+            content = before + lib_section + after
         path.write_text(content, encoding="utf-8")

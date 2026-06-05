@@ -231,6 +231,7 @@ def build_routing_graph(
     obstacles: list | None = None,
     constraints: RoutingConstraints | None = None,
     layers: list[str] | None = None,
+    required_nodes: set[tuple[float, float]] | None = None,
 ) -> RoutingGraph:
     """Convenience function to build a routing graph.
 
@@ -240,6 +241,7 @@ def build_routing_graph(
         constraints: Routing constraints. Uses defaults if not provided.
         layers: List of copper layer names for multi-layer routing.
             Defaults to ["F.Cu"] for single-layer.
+        required_nodes: Set of (x, y) pad positions that must be routable.
 
     Returns:
         Constructed RoutingGraph.
@@ -251,4 +253,5 @@ def build_routing_graph(
         obstacles=obstacles or [],
         constraints=constraints or RC(),
         layers=layers,
+        required_nodes=required_nodes,
     )

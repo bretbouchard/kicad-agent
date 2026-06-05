@@ -12,8 +12,10 @@ Threat model mitigations:
 from __future__ import annotations
 
 import logging
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from kicad_agent.ir import SchematicIR, PcbIR
 from kicad_agent.parser import parse_schematic, parse_pcb
@@ -215,5 +217,139 @@ def render_project_context(project_dir: Path, enrich: bool = True) -> str:
         lines.append("  Footprint Libraries:")
         for f in summary.footprint_files:
             lines.append(f"    - {f}")
+
+    return "\n".join(lines)
+
+
+def render_component_intelligence(project_dir: Path) -> str:
+    """Render component-level intelligence for AI context injection.
+
+    Goes beyond file-level stats to provide per-component intelligence:
+    pinouts, pin types, net memberships, and connectivity state. This is
+    what the pre-analysis gate and callers need to make informed decisions.
+
+    Args:
+        project_dir: Path to the project directory.
+
+    Returns:
+        Formatted text with component intelligence, or empty string if
+        no schematics found.
+    """
+    summary = discover_kicad_files(project_dir)
+    if not summary.schematic_files:
+        return ""
+
+    lines: list[str] = ["## Component Intelligence"]
+
+    for rel_path in summary.schematic_files:
+        abs_path = summary.project_dir / rel_path
+        try:
+            result = parse_schematic(abs_path)
+            ir = SchematicIR(_parse_result=result)
+        except Exception as exc:
+            logger.warning("Failed to parse %s: %s", rel_path, exc)
+            continue
+
+        lines.append(f"\n### {rel_path}")
+
+        # Component list with pin summaries
+        pin_positions = ir.get_pin_positions()
+        wire_endpoints = ir.get_wire_endpoints()
+        label_positions = ir.get_label_positions()
+
+        # Build set of connected pin positions for fast lookup
+        connected_positions: set[tuple[float, float]] = set()
+        for we in wire_endpoints:
+            connected_positions.add((round(we["start_x"], 2), round(we["start_y"], 2)))
+            connected_positions.add((round(we["end_x"], 2), round(we["end_y"], 2)))
+
+        # Group pins by reference
+        pins_by_ref: dict[str, list[dict[str, Any]]] = {}
+        for pin in pin_positions:
+            ref = pin["reference"]
+            pins_by_ref.setdefault(ref, []).append(pin)
+
+        # Count pins per electrical type across all components
+        pin_type_counts: Counter[str] = Counter()
+        for pin in pin_positions:
+            pin_type_counts[pin["electrical_type"]] += 1
+
+        # Component summaries
+        for sym in ir.components:
+            ref = ""
+            value = ""
+            lib_id = getattr(sym, "libId", "")
+            for prop in sym.properties:
+                if prop.key == "Reference":
+                    ref = prop.value
+                elif prop.key == "Value":
+                    value = prop.value
+            if not ref:
+                continue
+
+            pins = pins_by_ref.get(ref, [])
+            connected_count = sum(
+                1 for p in pins
+                if (round(p["x"], 2), round(p["y"], 2)) in connected_positions
+            )
+
+            pin_types = Counter(p["electrical_type"] for p in pins)
+            type_summary = ", ".join(
+                f"{count} {ptype}" for ptype, count in sorted(pin_types.items())
+            ) if pins else "no pins"
+
+            lines.append(f"  {ref} ({lib_id})")
+            if value:
+                lines.append(f"    Value: {value}")
+            lines.append(f"    Pins: {len(pins)} total ({type_summary})")
+            lines.append(
+                f"    Connected: {connected_count}/{len(pins)}"
+                if pins else "    Connected: N/A"
+            )
+
+            # Show pin details for ICs (more than 4 pins suggests an IC)
+            if len(pins) > 4:
+                for pin in sorted(pins, key=lambda p: p["pin_number"]):
+                    is_connected = (
+                        round(pin["x"], 2), round(pin["y"], 2)
+                    ) in connected_positions
+                    conn_marker = "*" if is_connected else " "
+                    lines.append(
+                        f"    {conn_marker} Pin {pin['pin_number']}: "
+                        f"{pin['pin_name']} ({pin['electrical_type']}) "
+                        f"@ ({pin['x']:.1f}, {pin['y']:.1f})"
+                    )
+
+        # Net label inventory
+        net_labels = [lp for lp in label_positions if lp["label_type"] != "local"]
+        if net_labels:
+            lines.append("\n  Net Labels:")
+            for lp in sorted(net_labels, key=lambda l: l["name"]):
+                lines.append(
+                    f"    {lp['name']} ({lp['label_type']}) "
+                    f"@ ({lp['x']:.1f}, {lp['y']:.1f})"
+                )
+
+        # Power nets
+        power_nets: list[str] = []
+        for sym in ir.components:
+            if getattr(sym, "libId", "").startswith("power:"):
+                net_name = sym.libId.split(":", 1)[1]
+                for prop in sym.properties:
+                    if prop.key == "Value":
+                        net_name = prop.value
+                        break
+                power_nets.append(net_name)
+        if power_nets:
+            lines.append(f"\n  Power Nets: {', '.join(sorted(set(power_nets)))}")
+
+        # Connectivity summary
+        total_pins = len(pin_positions)
+        total_connected = sum(1 for p in pin_positions if (round(p["x"], 2), round(p["y"], 2)) in connected_positions)
+        if total_pins > 0:
+            lines.append(
+                f"\n  Connectivity: {total_connected}/{total_pins} pins connected "
+                f"({100 * total_connected // max(total_pins, 1)}%)"
+            )
 
     return "\n".join(lines)

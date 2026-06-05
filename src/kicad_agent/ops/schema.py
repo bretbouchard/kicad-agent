@@ -238,6 +238,7 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
     ModifyProjectSettingsOp,
     ModifyCopperZoneOp,
     RemoveCopperZoneOp,
+    MoveFootprintOp,
 )
 from kicad_agent.ops._schema_validation import (  # noqa: E402
     ValidatePowerNetsOp,
@@ -275,6 +276,7 @@ from kicad_agent.ops._schema_sheet import (  # noqa: E402
 )
 from kicad_agent.ops._schema_crossfile import (  # noqa: E402
     PropagateSymbolChangeOp,
+    UpdatePcbFromSchematicOp,
 )
 from kicad_agent.ops._schema_schematic_routing import (  # noqa: E402
     BatchConnectOp,
@@ -399,6 +401,7 @@ class Operation(BaseModel):
         | ErcAutoFixHierarchicalOp
         | ModifyCopperZoneOp
         | RemoveCopperZoneOp
+        | MoveFootprintOp
         | ResolvePinPositionsOp
         | DetectRoutingCollisionsOp
         | DetectPinOverlapsOp
@@ -411,7 +414,8 @@ class Operation(BaseModel):
         | InferConnectivityOp
         | ClassifyViolationsOp
         | DiagnoseViolationsOp
-        | ReviewSchematicOp,
+        | ReviewSchematicOp
+        | UpdatePcbFromSchematicOp,
         Field(discriminator="op_type"),
     ]
 
@@ -492,6 +496,7 @@ __all__ = [
     "ModifyProjectSettingsOp",
     "ModifyCopperZoneOp",
     "RemoveCopperZoneOp",
+    "MoveFootprintOp",
     # Validation ops
     "ValidatePowerNetsOp",
     "ValidateSchematicOp",
@@ -531,6 +536,7 @@ __all__ = [
     "QueryConnectivityOp",
     # Cross-file ops
     "PropagateSymbolChangeOp",
+    "UpdatePcbFromSchematicOp",
     # Schematic routing ops
     "ResolvePinPositionsOp",
     "DetectRoutingCollisionsOp",

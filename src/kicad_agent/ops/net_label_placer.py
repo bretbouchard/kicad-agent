@@ -168,9 +168,11 @@ def _load_pin_map(pin_map: str, file_path: Path) -> dict[str, dict[str, str | No
             return json.load(f)
 
     # Try "auto" mode — use all built-in profiles
+    # Sort by profile name for deterministic merge order
     if pin_map == "auto":
         merged: dict[str, dict[str, str | None]] = {}
-        for profile_name, profile in _BUILTIN_PROFILES.items():
+        for profile_name in sorted(_BUILTIN_PROFILES.keys()):
+            profile = _BUILTIN_PROFILES[profile_name]
             for ic_name, pins in profile.items():
                 if ic_name in merged:
                     logger.warning(

@@ -168,6 +168,13 @@ class AutoRouteOp(BaseModel):
                     "[(net_a, net_b, tolerance_mm), ...]. "
                     "Sawtooth pattern applied to shorter net. None = no matching.",
     )
+    strategy: str = Field(
+        default="single_pass",
+        pattern=r"^(?:single_pass|multi_pass)$",
+        description="Routing strategy: 'single_pass' (existing A*) or "
+                    "'multi_pass' (3-pass with rip-up and aggressive). "
+                    "Council C-03: max 3 passes, diff pairs deferred.",
+    )
 
     @field_validator("layers")
     @classmethod
@@ -370,3 +377,27 @@ class RemoveCopperZoneOp(BaseModel):
         if self.zone_uuid is None and self.zone_index is None:
             raise ValueError("Must specify at least one of zone_uuid or zone_index")
         return self
+
+
+class MoveFootprintOp(BaseModel):
+    """Move a footprint to a new position on the PCB.
+
+    Uses PcbRawWriter for raw S-expression manipulation (Council C-01).
+    The handler calls PcbRawWriter.modify_footprint_position which returns
+    modified content, then the executor writes via atomic temp+rename.
+
+    Attributes:
+        op_type: Discriminator literal ``"move_footprint"``.
+        target_file: Relative path to the target KiCad PCB file (H-01 validated).
+        reference: Reference designator of the footprint to move.
+        x: New X position in mm.
+        y: New Y position in mm.
+        angle: New rotation angle in degrees.
+    """
+
+    op_type: Literal["move_footprint"] = "move_footprint"
+    target_file: TargetFile
+    reference: str = Field(min_length=1, max_length=32, description="Reference designator")
+    x: float = Field(description="New X position in mm")
+    y: float = Field(description="New Y position in mm")
+    angle: float = Field(default=0.0, description="New rotation angle in degrees")

@@ -20,8 +20,8 @@ class TestRegistryCompleteness:
     """Verify the registry has the expected number of operations."""
 
     def test_registry_has_92_operations(self) -> None:
-        # 88 from catalog + review_schematic + regenerate_wiring + remove_labels + snap_components_to_grid
-        assert len(OPERATION_REGISTRY) == 92
+        # 88 from catalog + review_schematic + regenerate_wiring + remove_labels + snap_components_to_grid + move_footprint
+        assert len(OPERATION_REGISTRY) == 93
 
     def test_validate_registry_completeness_passes(self) -> None:
         result = validate_registry_completeness()

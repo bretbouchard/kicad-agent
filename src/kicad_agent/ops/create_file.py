@@ -13,6 +13,7 @@ Handlers:
 
 import json
 import os
+import re
 import tempfile
 import uuid
 from pathlib import Path
@@ -116,6 +117,7 @@ def create_schematic(op: Any, file_path: Path) -> dict[str, Any]:
     file_path.parent.mkdir(parents=True, exist_ok=True)
 
     schematic = Schematic.create_new()
+    schematic.version = "20260306"  # KiCad 10 format (kiutils defaults to 20211014)
     schematic.uuid = str(uuid.uuid4())
     schematic.generator = "eeschema"
     schematic.paper.paperSize = op.paper
@@ -128,8 +130,11 @@ def create_schematic(op: Any, file_path: Path) -> dict[str, Any]:
 
     schematic.to_file(str(file_path))
 
-    # Normalize S-expression formatting
+    # Normalize S-expression formatting + fix kiutils quirks
     content = file_path.read_text(encoding="utf-8")
+    content = content.replace('(generator "eeschema")', '(generator eeschema)')
+    content = content.replace('(generator "kiutils")', '(generator eeschema)')
+    content = re.sub(r'^\(generator_version\s+"[^"]*"\)\n', '', content, flags=re.MULTILINE)
     normalized = normalize_kicad_output(content)
     _atomic_write(file_path, normalized)
 
@@ -264,7 +269,7 @@ def create_symbol(op: Any, file_path: Path) -> dict[str, Any]:
                     f"Symbol '{op.symbol_name}' already exists in {op.target_file}"
                 )
     else:
-        lib = SymbolLib(version="20211014", generator="kicad_symbol_editor")
+        lib = SymbolLib(version="20260306", generator="kicad_symbol_editor")
 
     # Build properties: Reference(0), Value(1), Footprint(2), Datasheet(3)
     properties: list[Property] = [

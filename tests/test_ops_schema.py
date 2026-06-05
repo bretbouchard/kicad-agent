@@ -124,6 +124,99 @@ class TestValidOperations:
 # ======================================================================
 
 
+class TestUpdatePcbFromSchematicOp:
+    """Verify update_pcb_from_schematic schema validation."""
+
+    def test_valid_minimal(self) -> None:
+        """Minimal valid intent with required fields only."""
+        op = Operation.model_validate(
+            {
+                "root": {
+                    "op_type": "update_pcb_from_schematic",
+                    "target_file": "board.kicad_pcb",
+                    "target_files": ["board.kicad_pcb", "root.kicad_sch"],
+                }
+            }
+        )
+        assert op.root.op_type == "update_pcb_from_schematic"
+        assert op.root.target_file == "board.kicad_pcb"
+        assert len(op.root.target_files) == 2
+        assert op.root.sync_netlist is True  # default
+        assert op.root.sync_footprints is True  # default
+        assert op.root.add_new_components is True  # default
+        assert op.root.remove_orphans is False  # default
+
+    def test_valid_all_flags(self) -> None:
+        """All optional flags set explicitly."""
+        op = Operation.model_validate(
+            {
+                "root": {
+                    "op_type": "update_pcb_from_schematic",
+                    "target_file": "board.kicad_pcb",
+                    "target_files": ["board.kicad_pcb", "root.kicad_sch"],
+                    "sync_netlist": False,
+                    "sync_footprints": False,
+                    "add_new_components": False,
+                    "remove_orphans": True,
+                }
+            }
+        )
+        assert op.root.sync_netlist is False
+        assert op.root.remove_orphans is True
+
+    def test_rejects_missing_schematic(self) -> None:
+        """Rejects target_files without a .kicad_sch."""
+        with pytest.raises(ValidationError):
+            Operation.model_validate(
+                {
+                    "root": {
+                        "op_type": "update_pcb_from_schematic",
+                        "target_file": "board.kicad_pcb",
+                        "target_files": ["board.kicad_pcb", "other.kicad_pcb"],
+                    }
+                }
+            )
+
+    def test_rejects_missing_pcb(self) -> None:
+        """Rejects target_files without a .kicad_pcb."""
+        with pytest.raises(ValidationError):
+            Operation.model_validate(
+                {
+                    "root": {
+                        "op_type": "update_pcb_from_schematic",
+                        "target_file": "board.kicad_pcb",
+                        "target_files": ["root.kicad_sch", "other.kicad_sch"],
+                    }
+                }
+            )
+
+    def test_rejects_single_file(self) -> None:
+        """Rejects target_files with only one entry."""
+        with pytest.raises(ValidationError):
+            Operation.model_validate(
+                {
+                    "root": {
+                        "op_type": "update_pcb_from_schematic",
+                        "target_file": "board.kicad_pcb",
+                        "target_files": ["board.kicad_pcb"],
+                    }
+                }
+            )
+
+    def test_rejects_path_traversal(self) -> None:
+        """Rejects path traversal in target_files (Council H-01)."""
+        with pytest.raises(ValidationError):
+            Operation.model_validate(
+                {
+                    "root": {
+                        "op_type": "update_pcb_from_schematic",
+                        "target_file": "board.kicad_pcb",
+                        "target_files": ["board.kicad_pcb", "../evil.kicad_sch"],
+                    }
+                }
+            )
+
+
 class TestInvalidOperations:
     """Verify that structurally invalid intents raise ValidationError."""
 

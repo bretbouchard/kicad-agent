@@ -401,15 +401,17 @@ class OperationExecutor:
             else:
                 ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
         else:
-            # Always parse with kiutils for serialization support
-            parse_result = parse_pcb(file_path)
-            uuid_map = extract_uuids(parse_result.raw_content, "pcb")
-
-            # Try native parser for read path (Plan 01)
+            # Try native parser first (kiutils corrupts some PCB files)
             native_board = self._try_native_parse(file_path)
+            parse_result = None
+            uuid_map = None
+
             if native_board is not None:
                 ir = PcbIR.from_native(native_board)
             else:
+                # Fall back to kiutils for serialization support
+                parse_result = parse_pcb(file_path)
+                uuid_map = extract_uuids(parse_result.raw_content, "pcb")
                 ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
 
             if self._cache:
@@ -419,8 +421,9 @@ class OperationExecutor:
             details = self._dispatch_pcb(root.op_type, root, ir, file_path)
 
             # Skip kiutils serialization if the IR method already wrote directly
-            # via raw S-expression manipulation (avoids data loss from kiutils)
-            if not ir.raw_written:
+            # via raw S-expression manipulation, or if native parser was used
+            # (no kiutils parse_result available).
+            if not ir.raw_written and parse_result is not None:
                 serialize_pcb(parse_result, file_path, uuid_map=uuid_map)
 
             txn.commit()

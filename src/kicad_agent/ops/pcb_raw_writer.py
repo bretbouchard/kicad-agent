@@ -1,0 +1,343 @@
+"""PcbRawWriter -- centralized raw S-expression manipulation for PCB files.
+
+All methods return modified content strings (Council C-01). The caller
+(executor or handler) is responsible for writing to disk via atomic
+temp+rename and cache invalidation.
+
+Consolidates raw-write sites (Council C-02):
+- insert_track_segments (was in ir/pcb_ir.py)
+- assign_net_class (was in ops/pcb_ops.py)
+- update_footprint (was in ir/pcb_ir.py)
+- insert_zone (new for #38)
+- modify_footprint_position (new for #39)
+
+Usage:
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    content = PcbRawWriter.insert_segments(raw, sexpr_blocks)
+    content = PcbRawWriter.assign_net_class(raw, net_name, class_name)
+"""
+
+import re
+from typing import Optional
+
+
+class PcbRawWriter:
+    """Stateless utility class for raw PCB S-expression manipulation.
+
+    Every method takes raw S-expression content and returns new content.
+    No method writes to disk or accesses the filesystem.
+    """
+
+    # ------------------------------------------------------------------
+    # Track segments (#37)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def insert_segments(content: str, sexpr_blocks: str) -> str:
+        """Insert track segment S-expressions before the closing paren.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            sexpr_blocks: One or more (segment ...) S-expression strings.
+
+        Returns:
+            Modified content with segments inserted.
+        """
+        last_close = content.rfind(")")
+        if last_close == -1:
+            return content
+        insertion = "\n" + sexpr_blocks + "\n"
+        return content[:last_close] + insertion + content[last_close:]
+
+    # ------------------------------------------------------------------
+    # Copper zone (#38)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def insert_zone(
+        content: str,
+        zone_sexp: str,
+    ) -> str:
+        """Insert a copper zone S-expression before the closing paren.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            zone_sexp: Complete (zone ...) S-expression block.
+
+        Returns:
+            Modified content with zone inserted.
+        """
+        last_close = content.rfind(")")
+        if last_close == -1:
+            return content
+        insertion = "\n" + zone_sexp + "\n"
+        return content[:last_close] + insertion + content[last_close:]
+
+    @staticmethod
+    def build_zone_sexp(
+        net_number: int,
+        net_name: str,
+        layer: str,
+        polygon: list[tuple[float, float]],
+        clearance: float = 0.5,
+        min_thickness: float = 0.25,
+        priority: int = 0,
+        uuid: str = "00000000-0000-0000-0000-000000000000",
+    ) -> str:
+        """Build a KiCad 10 copper zone S-expression.
+
+        Args:
+            net_number: Net number for the zone.
+            net_name: Net name (e.g. "GND").
+            layer: Copper layer (e.g. "F.Cu", "B.Cu").
+            polygon: Outline polygon as [(x, y), ...].
+            clearance: Zone clearance in mm.
+            min_thickness: Minimum fill width in mm.
+            priority: Zone priority (higher = filled first).
+            uuid: Zone UUID/tstamp.
+
+        Returns:
+            Complete (zone ...) S-expression string.
+        """
+        # Build polygon points
+        pts = ""
+        for x, y in polygon:
+            pts += f"      (xy {x:.6f} {y:.6f})\n"
+        pts = pts.rstrip("\n")
+
+        return (
+            f'  (zone (net {net_number}) (net_name "{net_name}")\n'
+            f'    (layer "{layer}")\n'
+            f'    (tstamp {uuid})\n'
+            f'    (name "{net_name}" 0)\n'
+            f'    (hatch edge 0.5)\n'
+            f'    (priority {priority})\n'
+            f'    (attr exclude)\n'
+            f'    (connect_pads\n'
+            f'      (clearance {clearance:.6f})\n'
+            f'    )\n'
+            f'    (min_thickness {min_thickness:.6f})\n'
+            f'    (filled_areas_thickness no)\n'
+            f'    (fill yes\n'
+            f'      (thermal_gap {clearance:.6f})\n'
+            f'      (thermal_bridge_width {clearance:.6f})\n'
+            f'    )\n'
+            f'    (polygon\n'
+            f'      (pts\n'
+            f"{pts}\n"
+            f'      )\n'
+            f'    )\n'
+            f'    (filled_polygon\n'
+            f'      (layer "{layer}")\n'
+            f'      (pts\n'
+            f"        (xy {polygon[0][0]:.6f} {polygon[0][1]:.6f})\n"
+            f"        (xy {polygon[0][0]:.6f} {polygon[0][1]:.6f})\n"
+            f"      )\n"
+            f'    )\n'
+            f'    (zone_locks)\n'
+            f'  )\n'
+        )
+
+    # ------------------------------------------------------------------
+    # Net class (#40 migration)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def assign_net_class(
+        content: str,
+        net_name: str,
+        net_class_name: str,
+    ) -> str:
+        """Add or update a net class assignment in raw PCB content.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            net_name: Name of the net to assign.
+            net_class_name: Name of the net class.
+
+        Returns:
+            Modified content string.
+        """
+        # Remove this net from any existing net_class blocks
+        add_net_pattern = re.compile(
+            r'\(add_net "' + re.escape(net_name) + r'"\)\s*\n?'
+        )
+        content = add_net_pattern.sub("", content)
+
+        # Find or create the target net_class block
+        class_pattern = re.compile(
+            r'\(net_class "' + re.escape(net_class_name) + r'"'
+        )
+        match = class_pattern.search(content)
+        if match:
+            start = match.start()
+            end = PcbRawWriter._find_matching_close(content, start)
+            if end is not None:
+                insertion = f'\n      (add_net "{net_name}")'
+                content = content[:end] + insertion + content[end:]
+        else:
+            # Create new net_class block before the first (net ... ) line
+            new_class = (
+                f'  (net_class "{net_class_name}" ""\n'
+                f'    (add_net "{net_name}")\n'
+                f'  )\n'
+            )
+            first_net = re.search(r'\n  \(net \d+ ', content)
+            if first_net:
+                content = (
+                    content[:first_net.start()]
+                    + "\n"
+                    + new_class
+                    + content[first_net.start() :]
+                )
+            else:
+                content = content.rstrip() + "\n" + new_class + ")\n"
+
+        return content
+
+    # ------------------------------------------------------------------
+    # Footprint position (#39)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def modify_footprint_position(
+        content: str,
+        reference: str,
+        x: float,
+        y: float,
+        angle: float = 0.0,
+    ) -> str:
+        """Move a footprint to a new position in raw PCB content.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            reference: Reference designator (e.g. "R1").
+            x: New X position in mm.
+            y: New Y position in mm.
+            angle: New rotation angle in degrees.
+
+        Returns:
+            Modified content string, or original if footprint not found.
+        """
+        start, end = PcbRawWriter._find_footprint_block(content, reference)
+        if start is None or end is None:
+            return content
+
+        block = content[start:end]
+
+        # Replace (at X Y angle) in the footprint block
+        at_pattern = re.compile(
+            r'\(at\s+[-\d.]+\s+[-\d.]+(?:\s+[-\d.]+)?\s*\)'
+        )
+        new_at = f"(at {x:.6f} {y:.6f} {angle:.6f})"
+        new_block = at_pattern.sub(new_at, block, count=1)
+
+        return content[:start] + new_block + content[end:]
+
+    # ------------------------------------------------------------------
+    # Footprint update (#40 migration)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def update_footprint(
+        content: str,
+        reference: str,
+        new_fp_sexpr: str,
+    ) -> str:
+        """Replace a footprint block with new content.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            reference: Reference designator of the footprint to replace.
+            new_fp_sexpr: New footprint S-expression (unindented).
+
+        Returns:
+            Modified content string, or original if footprint not found.
+        """
+        start, end = PcbRawWriter._find_footprint_block(content, reference)
+        if start is None or end is None:
+            return content
+
+        # Preserve original indentation from the line containing the footprint
+        line_start = content.rfind("\n", 0, start) + 1
+        # indent = whitespace from line start to the opening paren of (footprint
+        fp_open = content.index("(", line_start)
+        indent = content[line_start:fp_open]
+        new_fp_indented = indent + new_fp_sexpr.replace("\n", "\n" + indent)
+        return content[:start] + new_fp_indented + content[end:]
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _find_matching_close(content: str, open_pos: int) -> Optional[int]:
+        """Find the matching closing paren for an S-expression.
+
+        Handles nested parens and quoted strings using KiCad's doubled-quote
+        escaping convention (``""`` inside a string represents a literal quote).
+
+        Args:
+            content: Raw S-expression text.
+            open_pos: Position of the opening paren.
+
+        Returns:
+            Position of the matching close paren, or None.
+        """
+        depth = 0
+        i = open_pos
+        in_string = False
+
+        while i < len(content):
+            c = content[i]
+            if in_string:
+                if c == '"':
+                    # KiCad doubled-quote escape: "" inside string = literal "
+                    if i + 1 < len(content) and content[i + 1] == '"':
+                        i += 2
+                        continue
+                    in_string = False
+                i += 1
+                continue
+            if c == '"':
+                in_string = True
+            elif c == "(":
+                depth += 1
+            elif c == ")":
+                depth -= 1
+                if depth == 0:
+                    return i
+            i += 1
+        return None
+
+    @staticmethod
+    def _find_footprint_block(
+        content: str, reference: str
+    ) -> tuple[Optional[int], Optional[int]]:
+        """Find the start and end positions of a footprint block by reference.
+
+        Scans for ``(footprint ...`` blocks and checks their Reference property.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            reference: Reference designator to find.
+
+        Returns:
+            (start, end) byte offsets, or (None, None) if not found.
+        """
+        for match in re.finditer(r"^[ \t]+\(footprint ", content, re.MULTILINE):
+            start = match.start()
+            end = PcbRawWriter._find_matching_close(content, start + 1)
+            if end is None:
+                continue
+
+            block = content[start : end + 1]
+            ref_match = re.search(
+                r'\(property "Reference" "' + re.escape(reference) + r'"',
+                block,
+            )
+            if ref_match:
+                return start, end + 1
+
+        return None, None
