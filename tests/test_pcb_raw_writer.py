@@ -101,11 +101,11 @@ class TestBuildZoneSexpr:
             layer="F.Cu",
             polygon=[(0, 0), (100, 0), (100, 100), (0, 100)],
         )
-        # KiCad format: (net N "name")
-        assert '(net 1 "GND")' in result
+        # KiCad format: (net "name") — universal across all versions
+        assert '(net "GND")' in result
         assert '(layer "F.Cu")' in result
-        assert "(xy 0.000000 0.000000)" in result
-        assert "(xy 100.000000 100.000000)" in result
+        assert "(xy 0 0)" in result
+        assert "(xy 100 100)" in result
         # UUID must be quoted (fixes #65)
         assert '(uuid "00000000-0000-0000-0000-000000000000")' in result
         # No stub filled_polygon (fixes #65)
@@ -124,7 +124,7 @@ class TestBuildZoneSexpr:
             clearance=0.3,
             min_thickness=0.15,
         )
-        assert "(min_thickness 0.150000)" in result
+        assert "(min_thickness 0.15)" in result
         assert '(layer "B.Cu")' in result
 
     def test_custom_uuid(self):

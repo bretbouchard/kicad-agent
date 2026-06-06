@@ -88,9 +88,9 @@ class TestAddCopperZone:
             # The raw S-expression on disk is authoritative.
             assert "(zone" in pcb_path.read_text()
             raw = pcb_path.read_text()
-            assert '(net 1 "GND")' in raw
+            assert '(net "GND")' in raw
             assert '(layer "F.Cu")' in raw
-            assert "(clearance 0.500000)" in raw
+            assert "(clearance 0.5)" in raw
 
     def test_add_copper_zone_custom_clearance(self):
         """Add zone with 0.3mm clearance, verify clearance value."""
@@ -109,8 +109,8 @@ class TestAddCopperZone:
             assert result["clearance"] == 0.3
             # Verify raw S-expression has correct values
             raw = pcb_path.read_text()
-            assert "(clearance 0.300000)" in raw
-            assert "(min_thickness 0.200000)" in raw
+            assert "(clearance 0.3)" in raw
+            assert "(min_thickness 0.2)" in raw
 
     def test_add_copper_zone_with_custom_outline(self):
         """Add zone with custom outline points."""
@@ -143,7 +143,7 @@ class TestAddCopperZone:
 
             raw = pcb_path.read_text()
             # Correct format: (net 1 "GND") — not (net 1) (net_name "GND")
-            assert '(net 1 "GND")' in raw, "Zone should use (net N \"name\") format"
+            assert '(net "GND")' in raw, "Zone should use (net N \"name\") format"
             assert 'net_name' not in raw, "Zone should NOT have net_name field"
             # UUID quoted (fix #65)
             assert '(uuid "' in raw, "UUID must be quoted"
@@ -167,8 +167,8 @@ class TestAddCopperZone:
             )
 
             raw = pcb_path.read_text()
-            assert "(clearance 0.300000)" in raw
-            assert "(min_thickness 0.150000)" in raw
+            assert "(clearance 0.3)" in raw
+            assert "(min_thickness 0.15)" in raw
 
 
 class TestSetBoardOutline:

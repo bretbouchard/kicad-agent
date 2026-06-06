@@ -112,14 +112,14 @@ class PcbRawWriter:
         """
         # Build polygon points as single-line (xy ...) entries
         xy_entries = " ".join(
-            f"(xy {x:.6f} {y:.6f})" for x, y in polygon
+            f"(xy {x:g} {y:g})" for x, y in polygon
         )
 
-        # Net format: (net N "name") for backward compat with older
-        # KiCad files; (net "name") for newer ones without net numbers.
-        if net_number > 0 and net_name:
-            net_line = f'(net {net_number} "{net_name}")'
-        elif net_name:
+        # Net format: always use (net "name") for zones. KiCad 10+ zones
+        # resolve the net name to number internally; using (net N "name")
+        # breaks older file formats (version 20250125) which reject numbered
+        # net references in zones. Name-only is universal across all versions.
+        if net_name:
             net_line = f'(net "{net_name}")'
         else:
             net_line = '(net 0 "")'
@@ -134,12 +134,12 @@ class PcbRawWriter:
             f'    {uuid_line}',
             '    (hatch edge 0.5)',
             '    (connect_pads',
-            f'      (clearance {clearance:.6f})',
+            f'      (clearance {clearance:g})',
             '    )',
-            f'    (min_thickness {min_thickness:.6f})',
+            f'    (min_thickness {min_thickness:g})',
             '    (fill yes',
-            f'      (thermal_gap {clearance:.6f})',
-            f'      (thermal_bridge_width {clearance:.6f})',
+            f'      (thermal_gap {clearance:g})',
+            f'      (thermal_bridge_width {clearance:g})',
             '      (island_removal_mode 1)',
             '    )',
             '    (polygon',
