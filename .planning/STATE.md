@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Council Remediation
 status: execute
-stopped_at: Completed Phase 72 - Read-Only Dispatch & MCP Annotations: Verified schematic query dispatch path, auto-derived MCP annotations from registry (2 plans)
-last_updated: "2026-06-06T20:11:12Z"
+stopped_at: Completed Phase 73 - Workflow Templates & Dependency Graph: Operation dependency and conflict validation in batch executor, 8 workflow templates as MCP meta-tools (2 plans)
+last_updated: "2026-06-06T20:17:00Z"
 last_activity: 2026-06-06
 progress:
   total_phases: 76
   completed_phases: 62
   total_plans: 236
-  completed_plans: 176
-  percent: 74
+  completed_plans: 178
+  percent: 75
 ---
 
 # Project State
@@ -121,6 +121,23 @@ Last activity: 2026-06-01
   - Replaced manual _DESTRUCTIVE_OPS frozenset (8 ops) with auto-derived set from registry (13 ops)
   - 5 previously missing readonly ops now annotated: analyze_split_plane, infer_connectivity, list_design_rules, list_lib_entries, list_net_classes
   - Bidirectional consistency test ensures registry and MCP annotations stay in sync
+
+### Phase 73: Workflow Templates & Dependency Graph (v3.1)
+
+- Plan 73-01: Operation Dependency Validation (COMPLETE)
+  - Added `validate_conflicts()` to registry for detecting conflicting op sequences
+  - Integrated `validate_dependencies()` and `validate_conflicts()` into `execute_batch()`
+  - Added multi_file scope rejection in batch executor (generic, not name-based)
+  - Filled missing metadata: `repair_schematic` requires `parse_erc` and conflicts with `remove_component`
+  - `batch_connect` also requires `detect_routing_collisions` for correct batch ordering
+  - 6 new batch dependency tests, 5 new registry conflict/dependency tests
+
+- Plan 73-02: Workflow Templates as MCP Meta-Tools (COMPLETE)
+  - 8 predefined workflow templates: fix_erc_errors, wire_schematic, add_component_full, repair_schematic, pcb_setup, design_review, full_pcb_layout, convert_legacy_schematic
+  - Exposed `list_workflows` and `get_workflow` as read-only MCP meta-tools
+  - All workflows validated against registry dependency chains and conflict checks
+  - 6 new MCP dispatch tests for workflow tools
+  - Meta-tool count updated from 7 to 9
 
 ### Phase 64: CLI/UX Polish (v3.1)
 
