@@ -12,6 +12,15 @@ Handler functions are organized in the handlers/ sub-package by category:
   - handlers/query.py           -- PCB query operations
   - handlers/crossfile.py       -- cross-file operations
 
+File-type execution logic lives in execution.py:
+  - execute_schematic / dispatch_schematic
+  - execute_pcb / dispatch_pcb
+  - execute_query / dispatch_query
+  - execute_schematic_query
+  - execute_create
+  - execute_project / dispatch_project
+  - execute_cross_file
+
 Security (threat model):
 - T-04-06: Dispatch uses exact op_type matching; unknown raises ValueError
 - T-04-01: UUID generated server-side in handlers
@@ -28,20 +37,13 @@ import logging
 from pathlib import Path
 from typing import Any, Optional
 
-from kicad_agent.crossfile.atomic import AtomicOperation
 from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.ir.transaction import Transaction
 from kicad_agent.ops.schema import Operation
-from kicad_agent.parser import parse_pcb, parse_schematic
-from kicad_agent.parser.uuid_extractor import extract_uuids
-from kicad_agent.ops.ir_cache import CacheEntry, IRCache
+from kicad_agent.ops.ir_cache import IRCache
 from kicad_agent.ops.undo_stack import UndoStack
-from kicad_agent.serializer import normalize_kicad_output, serialize_pcb, serialize_schematic
 
-# Import handler registries from sub-modules
-from kicad_agent.ops.handlers import (
+# Re-export handler registries for backward compatibility with tests
+from kicad_agent.ops.handlers import (  # noqa: F401
     _SCHEMATIC_HANDLERS,
     _SCHEMATIC_QUERY_HANDLERS,
     _PCB_HANDLERS,
@@ -51,24 +53,26 @@ from kicad_agent.ops.handlers import (
     _CROSSFILE_HANDLERS,
 )
 
+# Import execution functions and constants
+# Tests import these from kicad_agent.ops.executor for backward compatibility
+from kicad_agent.ops.execution import (  # noqa: F401
+    CROSS_FILE_OP_TYPES as _CROSS_FILE_OP_TYPES,
+    CREATE_OP_TYPES as _CREATE_OP_TYPES,
+    SELF_SERIALIZING_OPS as _SELF_SERIALIZING_OPS,
+    is_project_file,
+    dispatch_schematic,
+    dispatch_pcb,
+    dispatch_project,
+    execute_create,
+    execute_cross_file,
+    execute_pcb,
+    execute_project,
+    execute_query,
+    execute_schematic,
+    execute_schematic_query,
+)
+
 logger = logging.getLogger(__name__)
-
-# Op-type classification sets
-_CROSS_FILE_OP_TYPES = {"propagate_symbol_change", "update_pcb_from_schematic"}
-_CREATE_OP_TYPES = {"create_schematic", "create_pcb", "create_project", "create_symbol", "create_footprint"}
-_SELF_SERIALIZING_OPS = frozenset({"erc_auto_fix_hierarchical"})
-
-# Pre-analysis gate: shared instance (stateless, safe to reuse)
-_PRE_ANALYSIS_GATE = None
-
-
-def _get_pre_analysis_gate():
-    """Lazy-load the pre-analysis gate to avoid import overhead."""
-    global _PRE_ANALYSIS_GATE
-    if _PRE_ANALYSIS_GATE is None:
-        from kicad_agent.ops.pre_analysis import PreAnalysisGate
-        _PRE_ANALYSIS_GATE = PreAnalysisGate()
-    return _PRE_ANALYSIS_GATE
 
 
 # ---------------------------------------------------------------------------
@@ -120,550 +124,33 @@ class OperationExecutor:
 
         # Cross-file operations: coordinate multiple files atomically
         if root.op_type in _CROSS_FILE_OP_TYPES:
-            return self._execute_cross_file(op, file_path)
+            return execute_cross_file(op, file_path, self._base_dir, self._cache, self._undo_stack)
 
         # Create operations: file does not exist yet (bypass existence check)
         if root.op_type in _CREATE_OP_TYPES:
-            return self._execute_create(op, file_path)
+            return execute_create(op, file_path, self._base_dir)
 
         if not file_path.exists():
             raise FileNotFoundError(f"Target file not found: {file_path}")
 
         # Query operations: read-only, no Transaction, no serialization
         if root.op_type in _QUERY_HANDLERS:
-            return self._execute_query(op, file_path)
+            return execute_query(op, file_path, self._cache)
 
         # Schematic query operations: read-only, parse-only path for .kicad_sch
         if root.op_type in _SCHEMATIC_QUERY_HANDLERS:
-            return self._execute_schematic_query(op, file_path)
+            return execute_schematic_query(op, file_path, self._cache)
 
         # Clear IR registry to avoid stale registrations across operations
         _clear_registry()
 
         # Branch on file type
         if file_path.suffix == ".kicad_pcb":
-            return self._execute_pcb(op, file_path)
-        elif self._is_project_file(file_path):
-            return self._execute_project(op, file_path)
+            return execute_pcb(op, file_path, self._cache, self._undo_stack)
+        elif is_project_file(file_path):
+            return execute_project(op, file_path, self._undo_stack)
         else:
-            return self._execute_schematic(op, file_path)
-
-    @staticmethod
-    def _is_project_file(file_path: Path) -> bool:
-        """Check if the file is a project-level file (not schematic/PCB)."""
-        name = file_path.name
-        suffix = file_path.suffix
-        return (
-            name in ("sym-lib-table", "fp-lib-table")
-            or suffix in (".kicad_dru", ".kicad_pro")
-        )
-
-    def _execute_query(self, op: Operation, file_path: Path) -> dict[str, Any]:
-        """Execute a read-only query operation (no Transaction, no serialization).
-
-        Query operations parse the file and build IR, but skip Transaction
-        wrapping, serialization, and file writes. The file mtime is unchanged.
-
-        Args:
-            op: Validated Operation from the schema.
-            file_path: Resolved path to the target file.
-
-        Returns:
-            Dict with: success, operation, target_file, details.
-        """
-        root = op.root
-
-        cached_entry = self._cache.get(file_path) if self._cache else None
-        if cached_entry is not None:
-            parse_result = cached_entry.parse_result
-            uuid_map = cached_entry.uuid_map
-        else:
-            parse_result = parse_pcb(file_path)
-            uuid_map = extract_uuids(parse_result.raw_content, "pcb")
-            if self._cache:
-                self._cache.put(file_path, CacheEntry(parse_result=parse_result, uuid_map=uuid_map))
-
-        ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
-        details = self._dispatch_query(root.op_type, root, ir, file_path)
-        return {
-            "success": True,
-            "operation": root.op_type,
-            "target_file": root.target_file,
-            "details": details,
-        }
-
-    def _dispatch_query(
-        self,
-        op_type: str,
-        op: Any,
-        ir: PcbIR,
-        file_path: Path,
-    ) -> dict[str, Any]:
-        """Dispatch query operations via registry.
-
-        Args:
-            op_type: The operation type string.
-            op: The operation's root model.
-            ir: PcbIR for the target PCB file.
-            file_path: Resolved path to the target file.
-
-        Returns:
-            Handler result dict.
-
-        Raises:
-            ValueError: For unknown op_type.
-        """
-        handler = _QUERY_HANDLERS.get(op_type)
-        if handler is not None:
-            return handler(op, ir, file_path)
-        raise ValueError(f"Unknown query op_type: {op_type!r}")
-
-    def _execute_schematic_query(self, op: Operation, file_path: Path) -> dict[str, Any]:
-        """Execute a read-only schematic query (no Transaction, no serialization).
-
-        Schematic query operations parse the file and build SchematicIR, but skip
-        Transaction wrapping, serialization, and file writes. The file mtime is
-        unchanged.
-
-        Args:
-            op: Validated Operation from the schema.
-            file_path: Resolved path to the target schematic file.
-
-        Returns:
-            Dict with: success, operation, target_file, details.
-        """
-        root = op.root
-
-        # Clear IR registry to avoid stale registrations across operations
-        _clear_registry()
-
-        cached_entry = self._cache.get(file_path) if self._cache else None
-        if cached_entry is not None:
-            parse_result = cached_entry.parse_result
-        else:
-            parse_result = parse_schematic(file_path)
-            if self._cache:
-                self._cache.put(file_path, CacheEntry(parse_result=parse_result))
-
-        ir = SchematicIR(_parse_result=parse_result)
-        handler = _SCHEMATIC_QUERY_HANDLERS.get(root.op_type)
-        if handler is None:
-            raise ValueError(f"Unknown schematic query op_type: {root.op_type!r}")
-        details = handler(root, ir, file_path)
-        # Clear registry after query so ParseResult id is released for
-        # subsequent operations in the same process (e.g. tests).
-        _clear_registry()
-        return {
-            "success": True,
-            "operation": root.op_type,
-            "target_file": root.target_file,
-            "details": details,
-        }
-
-    def _execute_create(self, op: Operation, file_path: Path) -> dict[str, Any]:
-        """Execute a file-creation operation (no Transaction, no IR).
-
-        Create operations generate new files from scratch. They do not need
-        Transaction wrapping since there is nothing to roll back to.
-
-        Args:
-            op: Validated Operation from the schema.
-            file_path: Resolved path for the new file.
-
-        Returns:
-            Dict with: success, operation, target_file, details.
-        """
-        # Security (T-24-01): path confinement for create operations too
-        resolved = file_path.resolve()
-        base_resolved = self._base_dir.resolve()
-        if not resolved.is_relative_to(base_resolved):
-            raise ValueError(
-                f"Security: path escapes project directory: {op.root.target_file}"
-            )
-
-        root = op.root
-        handler = _CREATE_HANDLERS.get(root.op_type)
-        if handler is None:
-            raise ValueError(f"Unknown create op_type: {root.op_type!r}")
-
-        details = handler(root, file_path)
-        return {
-            "success": True,
-            "operation": root.op_type,
-            "target_file": root.target_file,
-            "details": details,
-        }
-
-    def _execute_schematic(self, op: Operation, file_path: Path) -> dict[str, Any]:
-        """Execute an operation targeting a schematic file."""
-        root = op.root
-
-        # Capture pre-mutation content for undo stack
-        pre_content: Optional[str] = None
-        if self._undo_stack is not None:
-            pre_content = file_path.read_text(encoding="utf-8")
-
-        cached_entry = self._cache.get(file_path) if self._cache else None
-        if cached_entry is not None:
-            parse_result = cached_entry.parse_result
-        else:
-            parse_result = parse_schematic(file_path)
-            if self._cache:
-                self._cache.put(file_path, CacheEntry(parse_result=parse_result))
-
-        ir = SchematicIR(_parse_result=parse_result)
-
-        # Pre-analysis gate: check before mutating
-        gate = _get_pre_analysis_gate()
-        pre_result = gate.analyze(root, ir, file_path)
-        if pre_result.blocked:
-            blocker_msgs = [f.message for f in pre_result.blockers]
-            return {
-                "success": False,
-                "operation": root.op_type,
-                "target_file": root.target_file,
-                "pre_analysis": pre_result.to_dict(),
-                "error": f"Pre-analysis blocked: {'; '.join(blocker_msgs)}",
-            }
-        if pre_result.warnings:
-            for w in pre_result.warnings:
-                logger.warning("Pre-analysis warning [%s]: %s", w.category, w.message)
-
-        with Transaction(file_path) as txn:
-            details = self._dispatch(root.op_type, root, ir, file_path)
-
-            # Skip serialization for operations that manage their own file I/O
-            # (e.g. erc_auto_fix_hierarchical writes sub-sheets directly).
-            if root.op_type not in _SELF_SERIALIZING_OPS:
-                serialize_schematic(parse_result, file_path)
-                content = file_path.read_text(encoding="utf-8")
-                normalized = normalize_kicad_output(content)
-                file_path.write_text(normalized, encoding="utf-8")
-
-            txn.commit()
-
-            # Capture post-mutation content for undo stack
-            if self._undo_stack is not None and pre_content is not None:
-                post_content = file_path.read_text(encoding="utf-8")
-                post_mtime = file_path.stat().st_mtime_ns
-                self._undo_stack.push(file_path, pre_content, post_content, root.op_type, post_mtime)
-
-        # Invalidate old cache entry and store fresh one after write
-        if self._cache:
-            self._cache.invalidate(file_path)
-            self._cache.put(file_path, CacheEntry(parse_result=parse_result))
-
-        # Clear registry so ParseResult id is released for subsequent operations
-        _clear_registry()
-
-        return {
-            "success": True,
-            "operation": root.op_type,
-            "target_file": root.target_file,
-            "details": details,
-            "pre_analysis": pre_result.to_dict(),
-        }
-
-    @staticmethod
-    def _raw_write_atomic(file_path: Path, content: str) -> None:
-        """Write content to file atomically via fsync + rename.
-
-        Delegates to shared atomic_write (io.atomic_write) to break
-        circular dependency from IR -> executor and to add fsync
-        durability and proper cleanup.
-        """
-        from kicad_agent.io.atomic_write import atomic_write
-        atomic_write(file_path, content)
-
-    def _execute_pcb(self, op: Operation, file_path: Path) -> dict[str, Any]:
-        """Execute an operation targeting a PCB file."""
-        root = op.root
-
-        # Capture pre-mutation content for undo stack
-        pre_content: Optional[str] = None
-        if self._undo_stack is not None:
-            pre_content = file_path.read_text(encoding="utf-8")
-
-        cached_entry = self._cache.get(file_path) if self._cache else None
-        if cached_entry is not None:
-            parse_result = cached_entry.parse_result
-            uuid_map = cached_entry.uuid_map
-            if cached_entry.native_board is not None:
-                ir = PcbIR.from_native(cached_entry.native_board)
-            else:
-                ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
-        else:
-            # Try native parser first (kiutils corrupts some PCB files)
-            native_board = self._try_native_parse(file_path)
-            parse_result = None
-            uuid_map = None
-
-            if native_board is not None:
-                ir = PcbIR.from_native(native_board)
-            else:
-                # Fall back to kiutils for serialization support
-                parse_result = parse_pcb(file_path)
-                uuid_map = extract_uuids(parse_result.raw_content, "pcb")
-                ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
-
-            if self._cache:
-                self._cache.put(file_path, CacheEntry(parse_result=parse_result, uuid_map=uuid_map, native_board=native_board))
-
-        with Transaction(file_path) as txn:
-            details = self._dispatch_pcb(root.op_type, root, ir, file_path)
-
-            # Skip kiutils serialization if the IR method already wrote directly
-            # via raw S-expression manipulation, or if native parser was used
-            # (no kiutils parse_result available).
-            if ir.needs_serialization() and parse_result is not None:
-                serialize_pcb(parse_result, file_path, uuid_map=uuid_map)
-
-            txn.commit()
-
-            # Capture post-mutation content for undo stack
-            if self._undo_stack is not None and pre_content is not None:
-                post_content = file_path.read_text(encoding="utf-8")
-                post_mtime = file_path.stat().st_mtime_ns
-                self._undo_stack.push(file_path, pre_content, post_content, root.op_type, post_mtime)
-
-        # Invalidate old cache entry and store fresh one after write
-        if self._cache:
-            self._cache.invalidate(file_path)
-            self._cache.put(file_path, CacheEntry(parse_result=parse_result, uuid_map=uuid_map))
-
-        return {
-            "success": True,
-            "operation": root.op_type,
-            "target_file": root.target_file,
-            "details": details,
-        }
-
-    @staticmethod
-    def _try_native_parse(file_path: Path) -> "NativeBoard | None":
-        """Try native parser. Returns NativeBoard on success, None on failure.
-
-        CRITICAL-1: Catches Exception (not just RecursionError) since
-        the depth pre-scan prevents RecursionError from occurring.
-        """
-        from kicad_agent.parser.pcb_native_parser import NativeParser
-
-        try:
-            native_board = NativeParser.parse_pcb(file_path)
-            # Validate parse succeeded (has nets or footprints)
-            if native_board.nets or native_board.footprints:
-                return native_board
-            logger.warning(
-                "NativeParser returned empty board for %s, falling back to kiutils",
-                file_path,
-            )
-        except Exception:
-            logger.warning(
-                "NativeParser failed for %s, falling back to kiutils",
-                file_path,
-                exc_info=True,
-            )
-        return None
-
-    def _dispatch(
-        self,
-        op_type: str,
-        op: Any,
-        ir: SchematicIR,
-        file_path: Path,
-    ) -> dict[str, Any]:
-        """Dispatch to the appropriate schematic handler via registry.
-
-        T-04-06: Exact string matching. Unknown op_type raises ValueError.
-
-        Args:
-            op_type: The operation type string.
-            op: The operation's root model (e.g. AddComponentOp).
-            ir: SchematicIR for the target file.
-            file_path: Resolved path to the target file.
-
-        Returns:
-            Handler result dict.
-
-        Raises:
-            ValueError: For unknown op_type.
-        """
-        handler = _SCHEMATIC_HANDLERS.get(op_type)
-        if handler is not None:
-            return handler(op, ir, file_path)
-        raise ValueError(f"Unknown op_type: {op_type!r}")
-
-    def _dispatch_pcb(
-        self,
-        op_type: str,
-        op: Any,
-        ir: PcbIR,
-        file_path: Path,
-    ) -> dict[str, Any]:
-        """Dispatch PCB-specific operations via registry.
-
-        Args:
-            op_type: The operation type string.
-            op: The operation's root model.
-            ir: PcbIR for the target PCB file.
-            file_path: Resolved path to the target PCB file.
-
-        Returns:
-            Handler result dict.
-
-        Raises:
-            ValueError: For unknown op_type.
-        """
-        handler = _PCB_HANDLERS.get(op_type)
-        if handler is not None:
-            return handler(op, ir, file_path)
-        raise ValueError(f"Unknown PCB op_type: {op_type!r}")
-
-    def _execute_project(self, op: Operation, file_path: Path) -> dict[str, Any]:
-        """Execute an operation targeting a project-level file.
-
-        Handles sym-lib-table, fp-lib-table, .kicad_dru, and .kicad_pro files
-        using the project module parsers and editors.
-
-        Args:
-            op: Validated Operation from the schema.
-            file_path: Resolved path to the target file.
-
-        Returns:
-            Dict with: success, operation, target_file, details.
-        """
-        root = op.root
-        pre_content: Optional[str] = None
-        if self._undo_stack is not None and file_path.exists():
-            pre_content = file_path.read_text(encoding="utf-8")
-        details = self._dispatch_project(root.op_type, root, file_path)
-        if self._undo_stack is not None and pre_content is not None:
-            post_content = file_path.read_text(encoding="utf-8")
-            post_mtime = file_path.stat().st_mtime_ns
-            self._undo_stack.push(file_path, pre_content, post_content, root.op_type, post_mtime)
-        return {
-            "success": True,
-            "operation": root.op_type,
-            "target_file": root.target_file,
-            "details": details,
-        }
-
-    def _dispatch_project(
-        self,
-        op_type: str,
-        op: Any,
-        file_path: Path,
-    ) -> dict[str, Any]:
-        """Dispatch project-file operations via registry.
-
-        Args:
-            op_type: The operation type string.
-            op: The operation's root model.
-            file_path: Resolved path to the target file.
-
-        Returns:
-            Handler result dict.
-
-        Raises:
-            ValueError: For unknown op_type.
-        """
-        handler = _PROJECT_HANDLERS.get(op_type)
-        if handler is not None:
-            return handler(op, file_path)
-        raise ValueError(f"Unknown project op_type: {op_type!r}")
-
-    def _execute_cross_file(self, op: Operation, file_path: Path) -> dict[str, Any]:
-        """Execute a cross-file operation targeting multiple files atomically."""
-        root = op.root
-
-        # Resolve all target file paths relative to base_dir
-        file_paths = self._resolve_cross_file_paths(root)
-        if not file_paths:
-            raise ValueError(f"Cross-file operation {root.op_type!r} requires at least one target file")
-
-        # Security (T-24-01): path confinement for ALL files in cross-file operation
-        base_resolved = self._base_dir.resolve()
-        for fp in file_paths:
-            if not fp.resolve().is_relative_to(base_resolved):
-                raise ValueError(
-                    f"Security: path escapes project directory in cross-file op: {fp}"
-                )
-            if not fp.exists():
-                raise FileNotFoundError(f"Cross-file target not found: {fp}")
-
-        # Clear IR registry to avoid stale registrations
-        _clear_registry()
-
-        # Phase 1: Parse all files and build IR map (XFILE-07: validate before Transaction)
-        ir_map: dict[Path, Any] = {}
-        for fp in file_paths:
-            if fp.suffix == ".kicad_pcb":
-                parse_result = parse_pcb(fp)
-                uuid_map = extract_uuids(parse_result.raw_content, "pcb")
-                ir_map[fp] = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
-            elif fp.suffix == ".kicad_sch":
-                parse_result = parse_schematic(fp)
-                ir_map[fp] = SchematicIR(_parse_result=parse_result)
-            else:
-                raise ValueError(f"Cross-file operation unsupported file type: {fp.suffix}")
-
-        # Phase 2: Capture pre-mutation content for undo stack
-        pre_contents: dict[Path, str] = {}
-        if self._undo_stack is not None:
-            for fp in file_paths:
-                if fp.exists():
-                    pre_contents[fp] = fp.read_text(encoding="utf-8")
-
-        # Phase 3: Open AtomicOperation and execute handler
-        with AtomicOperation(file_paths) as atomic:
-            handler = _CROSSFILE_HANDLERS.get(root.op_type)
-            if handler is None:
-                raise ValueError(f"Unknown cross-file op_type: {root.op_type!r}")
-
-            details = handler(root, ir_map, self._base_dir)
-
-            # Phase 4: Serialize all dirty IRs
-            for fp, ir in ir_map.items():
-                if ir.dirty:
-                    if isinstance(ir, PcbIR):
-                        parse_result = ir._parse_result
-                        uuid_map = ir.uuid_map
-                        if ir.needs_serialization():
-                            serialize_pcb(parse_result, fp, uuid_map=uuid_map)
-                    elif isinstance(ir, SchematicIR):
-                        serialize_schematic(ir._parse_result, fp)
-                        content = fp.read_text(encoding="utf-8")
-                        normalized = normalize_kicad_output(content)
-                        fp.write_text(normalized, encoding="utf-8")
-
-            # Phase 5: Commit atomic operation
-            atomic_result = atomic.commit()
-            if not atomic_result.success:
-                return {
-                    "success": False,
-                    "operation": root.op_type,
-                    "details": details,
-                    "error": atomic_result.error,
-                }
-
-        # Push undo entries for all dirty files after successful commit
-        if self._undo_stack is not None:
-            for fp, ir in ir_map.items():
-                if ir.dirty and fp in pre_contents:
-                    post_content = fp.read_text(encoding="utf-8")
-                    post_mtime = fp.stat().st_mtime_ns
-                    self._undo_stack.push(fp, pre_contents[fp], post_content, root.op_type, post_mtime)
-
-        return {
-            "success": True,
-            "operation": root.op_type,
-            "details": details,
-        }
-
-    def _resolve_cross_file_paths(self, op: Any) -> list[Path]:
-        """Resolve file paths from a cross-file operation schema."""
-        if hasattr(op, "target_files"):
-            return [self._base_dir / tf for tf in op.target_files]
-        return []
+            return execute_schematic(op, file_path, self._cache, self._undo_stack)
 
     # ------------------------------------------------------------------
     # Batch execution: single parse/write per file

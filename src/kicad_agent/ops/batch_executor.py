@@ -24,6 +24,13 @@ from kicad_agent.ir.base import _clear_registry
 from kicad_agent.ir.pcb_ir import PcbIR
 from kicad_agent.ir.schematic_ir import SchematicIR
 from kicad_agent.ir.transaction import Transaction
+from kicad_agent.ops.execution import (
+    dispatch_pcb,
+    dispatch_project,
+    is_project_file,
+    CROSS_FILE_OP_TYPES,
+    CREATE_OP_TYPES,
+)
 from kicad_agent.ops.ir_cache import CacheEntry
 from kicad_agent.ops.schema import Operation
 from kicad_agent.parser import parse_pcb, parse_schematic
@@ -67,9 +74,9 @@ def execute_batch(executor: OperationExecutor, ops: list[Operation]) -> dict[str
         _SCHEMATIC_QUERY_HANDLERS,
     )
 
-    # Op-type classification sets (mirrored from executor.py to avoid circular import)
-    _CROSS_FILE_OP_TYPES = {"propagate_symbol_change", "update_pcb_from_schematic"}
-    _CREATE_OP_TYPES = {"create_schematic", "create_pcb", "create_project", "create_symbol", "create_footprint"}
+    # Op-type classification sets (from execution.py)
+    _CROSS_FILE_OP_TYPES = CROSS_FILE_OP_TYPES
+    _CREATE_OP_TYPES = CREATE_OP_TYPES
 
     base_dir = executor._base_dir
     cache = executor._cache
@@ -217,7 +224,7 @@ def execute_batch(executor: OperationExecutor, ops: list[Operation]) -> dict[str
             root = op.root
             if file_path.suffix == ".kicad_pcb":
                 handler = _PCB_HANDLERS.get(root.op_type)
-            elif executor._is_project_file(file_path):
+            elif is_project_file(file_path):
                 handler = _PROJECT_HANDLERS.get(root.op_type)
             else:
                 handler = (
@@ -279,9 +286,9 @@ def execute_batch(executor: OperationExecutor, ops: list[Operation]) -> dict[str
             for op in ops_for_file:
                 root = op.root
                 if file_path.suffix == ".kicad_pcb":
-                    details = executor._dispatch_pcb(root.op_type, root, ir, file_path)
-                elif executor._is_project_file(file_path):
-                    details = executor._dispatch_project(
+                    details = dispatch_pcb(root.op_type, root, ir, file_path)
+                elif is_project_file(file_path):
+                    details = dispatch_project(
                         root.op_type, root, file_path
                     )
                 else:
@@ -307,7 +314,7 @@ def execute_batch(executor: OperationExecutor, ops: list[Operation]) -> dict[str
                 uuid_map = uuid_map_store.get(file_path)
                 if ir.needs_serialization():
                     serialize_pcb(parse_result, file_path, uuid_map=uuid_map)
-            elif not executor._is_project_file(file_path):
+            elif not is_project_file(file_path):
                 serialize_schematic(parse_result, file_path)
                 content = file_path.read_text(encoding="utf-8")
                 normalized = normalize_kicad_output(content)
@@ -333,7 +340,7 @@ def execute_batch(executor: OperationExecutor, ops: list[Operation]) -> dict[str
                         uuid_map=uuid_map_store.get(file_path),
                     ),
                 )
-            elif not executor._is_project_file(file_path):
+            elif not is_project_file(file_path):
                 cache.put(
                     file_path, CacheEntry(parse_result=parse_result)
                 )

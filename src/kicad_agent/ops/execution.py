@@ -1,0 +1,640 @@
+"""File-type execution paths -- parse, dispatch, serialize, transaction.
+
+These functions implement the per-file-type execution logic that the
+OperationExecutor routes to based on file extension and op_type.
+
+Each function is a standalone extraction from OperationExecutor methods,
+taking explicit parameters instead of self to keep executor.py small.
+
+Security (threat model):
+- T-04-06: Dispatch uses exact op_type matching; unknown raises ValueError
+- T-24-01: Path confinement checks for cross-file and create operations
+- H-04: Symlink protection in undo stack push
+- L-05: External modification detection via mtime
+"""
+
+import logging
+from pathlib import Path
+from typing import Any, Optional
+
+from kicad_agent.crossfile.atomic import AtomicOperation
+from kicad_agent.ir.base import _clear_registry
+from kicad_agent.ir.pcb_ir import PcbIR
+from kicad_agent.ir.schematic_ir import SchematicIR
+from kicad_agent.ir.transaction import Transaction
+from kicad_agent.ops.schema import Operation
+from kicad_agent.parser import parse_pcb, parse_schematic
+from kicad_agent.parser.uuid_extractor import extract_uuids
+from kicad_agent.ops.ir_cache import CacheEntry, IRCache
+from kicad_agent.ops.undo_stack import UndoStack
+from kicad_agent.serializer import normalize_kicad_output, serialize_pcb, serialize_schematic
+
+# Import handler registries from sub-modules
+from kicad_agent.ops.handlers import (
+    _SCHEMATIC_HANDLERS,
+    _SCHEMATIC_QUERY_HANDLERS,
+    _PCB_HANDLERS,
+    _PROJECT_HANDLERS,
+    _CREATE_HANDLERS,
+    _QUERY_HANDLERS,
+    _CROSSFILE_HANDLERS,
+)
+
+logger = logging.getLogger(__name__)
+
+# Op-type classification sets
+CROSS_FILE_OP_TYPES = {"propagate_symbol_change", "update_pcb_from_schematic"}
+CREATE_OP_TYPES = {"create_schematic", "create_pcb", "create_project", "create_symbol", "create_footprint"}
+SELF_SERIALIZING_OPS = frozenset({"erc_auto_fix_hierarchical"})
+
+# Pre-analysis gate: shared instance (stateless, safe to reuse)
+_PRE_ANALYSIS_GATE = None
+
+
+def get_pre_analysis_gate():
+    """Lazy-load the pre-analysis gate to avoid import overhead."""
+    global _PRE_ANALYSIS_GATE
+    if _PRE_ANALYSIS_GATE is None:
+        from kicad_agent.ops.pre_analysis import PreAnalysisGate
+        _PRE_ANALYSIS_GATE = PreAnalysisGate()
+    return _PRE_ANALYSIS_GATE
+
+
+def is_project_file(file_path: Path) -> bool:
+    """Check if the file is a project-level file (not schematic/PCB)."""
+    name = file_path.name
+    suffix = file_path.suffix
+    return (
+        name in ("sym-lib-table", "fp-lib-table")
+        or suffix in (".kicad_dru", ".kicad_pro")
+    )
+
+
+def try_native_parse(file_path: Path) -> "NativeBoard | None":
+    """Try native parser. Returns NativeBoard on success, None on failure.
+
+    CRITICAL-1: Catches Exception (not just RecursionError) since
+    the depth pre-scan prevents RecursionError from occurring.
+    """
+    from kicad_agent.parser.pcb_native_parser import NativeParser
+
+    try:
+        native_board = NativeParser.parse_pcb(file_path)
+        # Validate parse succeeded (has nets or footprints)
+        if native_board.nets or native_board.footprints:
+            return native_board
+        logger.warning(
+            "NativeParser returned empty board for %s, falling back to kiutils",
+            file_path,
+        )
+    except Exception:
+        logger.warning(
+            "NativeParser failed for %s, falling back to kiutils",
+            file_path,
+            exc_info=True,
+        )
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Query execution (read-only, no Transaction, no serialization)
+# ---------------------------------------------------------------------------
+
+
+def execute_query(
+    op: Operation,
+    file_path: Path,
+    cache: Optional[IRCache],
+) -> dict[str, Any]:
+    """Execute a read-only query operation (no Transaction, no serialization).
+
+    Query operations parse the file and build IR, but skip Transaction
+    wrapping, serialization, and file writes. The file mtime is unchanged.
+
+    Args:
+        op: Validated Operation from the schema.
+        file_path: Resolved path to the target file.
+        cache: Optional IR cache for parse results.
+
+    Returns:
+        Dict with: success, operation, target_file, details.
+    """
+    root = op.root
+
+    cached_entry = cache.get(file_path) if cache else None
+    if cached_entry is not None:
+        parse_result = cached_entry.parse_result
+        uuid_map = cached_entry.uuid_map
+    else:
+        parse_result = parse_pcb(file_path)
+        uuid_map = extract_uuids(parse_result.raw_content, "pcb")
+        if cache:
+            cache.put(file_path, CacheEntry(parse_result=parse_result, uuid_map=uuid_map))
+
+    ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
+    details = dispatch_query(root.op_type, root, ir, file_path)
+    return {
+        "success": True,
+        "operation": root.op_type,
+        "target_file": root.target_file,
+        "details": details,
+    }
+
+
+def dispatch_query(
+    op_type: str,
+    op: Any,
+    ir: PcbIR,
+    file_path: Path,
+) -> dict[str, Any]:
+    """Dispatch query operations via registry.
+
+    Args:
+        op_type: The operation type string.
+        op: The operation's root model.
+        ir: PcbIR for the target PCB file.
+        file_path: Resolved path to the target file.
+
+    Returns:
+        Handler result dict.
+
+    Raises:
+        ValueError: For unknown op_type.
+    """
+    handler = _QUERY_HANDLERS.get(op_type)
+    if handler is not None:
+        return handler(op, ir, file_path)
+    raise ValueError(f"Unknown query op_type: {op_type!r}")
+
+
+def execute_schematic_query(
+    op: Operation,
+    file_path: Path,
+    cache: Optional[IRCache],
+) -> dict[str, Any]:
+    """Execute a read-only schematic query (no Transaction, no serialization).
+
+    Schematic query operations parse the file and build SchematicIR, but skip
+    Transaction wrapping, serialization, and file writes. The file mtime is
+    unchanged.
+
+    Args:
+        op: Validated Operation from the schema.
+        file_path: Resolved path to the target schematic file.
+        cache: Optional IR cache for parse results.
+
+    Returns:
+        Dict with: success, operation, target_file, details.
+    """
+    root = op.root
+
+    # Clear IR registry to avoid stale registrations across operations
+    _clear_registry()
+
+    cached_entry = cache.get(file_path) if cache else None
+    if cached_entry is not None:
+        parse_result = cached_entry.parse_result
+    else:
+        parse_result = parse_schematic(file_path)
+        if cache:
+            cache.put(file_path, CacheEntry(parse_result=parse_result))
+
+    ir = SchematicIR(_parse_result=parse_result)
+    handler = _SCHEMATIC_QUERY_HANDLERS.get(root.op_type)
+    if handler is None:
+        raise ValueError(f"Unknown schematic query op_type: {root.op_type!r}")
+    details = handler(root, ir, file_path)
+    # Clear registry after query so ParseResult id is released for
+    # subsequent operations in the same process (e.g. tests).
+    _clear_registry()
+    return {
+        "success": True,
+        "operation": root.op_type,
+        "target_file": root.target_file,
+        "details": details,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Create execution (no Transaction, no IR)
+# ---------------------------------------------------------------------------
+
+
+def execute_create(
+    op: Operation,
+    file_path: Path,
+    base_dir: Path,
+) -> dict[str, Any]:
+    """Execute a file-creation operation (no Transaction, no IR).
+
+    Create operations generate new files from scratch. They do not need
+    Transaction wrapping since there is nothing to roll back to.
+
+    Args:
+        op: Validated Operation from the schema.
+        file_path: Resolved path for the new file.
+        base_dir: Base directory for security checks.
+
+    Returns:
+        Dict with: success, operation, target_file, details.
+    """
+    # Security (T-24-01): path confinement for create operations too
+    resolved = file_path.resolve()
+    base_resolved = base_dir.resolve()
+    if not resolved.is_relative_to(base_resolved):
+        raise ValueError(
+            f"Security: path escapes project directory: {op.root.target_file}"
+        )
+
+    root = op.root
+    handler = _CREATE_HANDLERS.get(root.op_type)
+    if handler is None:
+        raise ValueError(f"Unknown create op_type: {root.op_type!r}")
+
+    details = handler(root, file_path)
+    return {
+        "success": True,
+        "operation": root.op_type,
+        "target_file": root.target_file,
+        "details": details,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Schematic execution (parse, dispatch, serialize, transaction)
+# ---------------------------------------------------------------------------
+
+
+def execute_schematic(
+    op: Operation,
+    file_path: Path,
+    cache: Optional[IRCache],
+    undo_stack: Optional[UndoStack],
+) -> dict[str, Any]:
+    """Execute an operation targeting a schematic file."""
+    root = op.root
+
+    # Capture pre-mutation content for undo stack
+    pre_content: Optional[str] = None
+    if undo_stack is not None:
+        pre_content = file_path.read_text(encoding="utf-8")
+
+    cached_entry = cache.get(file_path) if cache else None
+    if cached_entry is not None:
+        parse_result = cached_entry.parse_result
+    else:
+        parse_result = parse_schematic(file_path)
+        if cache:
+            cache.put(file_path, CacheEntry(parse_result=parse_result))
+
+    ir = SchematicIR(_parse_result=parse_result)
+
+    # Pre-analysis gate: check before mutating
+    gate = get_pre_analysis_gate()
+    pre_result = gate.analyze(root, ir, file_path)
+    if pre_result.blocked:
+        blocker_msgs = [f.message for f in pre_result.blockers]
+        return {
+            "success": False,
+            "operation": root.op_type,
+            "target_file": root.target_file,
+            "pre_analysis": pre_result.to_dict(),
+            "error": f"Pre-analysis blocked: {'; '.join(blocker_msgs)}",
+        }
+    if pre_result.warnings:
+        for w in pre_result.warnings:
+            logger.warning("Pre-analysis warning [%s]: %s", w.category, w.message)
+
+    with Transaction(file_path) as txn:
+        details = dispatch_schematic(root.op_type, root, ir, file_path)
+
+        # Skip serialization for operations that manage their own file I/O
+        # (e.g. erc_auto_fix_hierarchical writes sub-sheets directly).
+        if root.op_type not in SELF_SERIALIZING_OPS:
+            serialize_schematic(parse_result, file_path)
+            content = file_path.read_text(encoding="utf-8")
+            normalized = normalize_kicad_output(content)
+            file_path.write_text(normalized, encoding="utf-8")
+
+        txn.commit()
+
+        # Capture post-mutation content for undo stack
+        if undo_stack is not None and pre_content is not None:
+            post_content = file_path.read_text(encoding="utf-8")
+            post_mtime = file_path.stat().st_mtime_ns
+            undo_stack.push(file_path, pre_content, post_content, root.op_type, post_mtime)
+
+    # Invalidate old cache entry and store fresh one after write
+    if cache:
+        cache.invalidate(file_path)
+        cache.put(file_path, CacheEntry(parse_result=parse_result))
+
+    # Clear registry so ParseResult id is released for subsequent operations
+    _clear_registry()
+
+    return {
+        "success": True,
+        "operation": root.op_type,
+        "target_file": root.target_file,
+        "details": details,
+        "pre_analysis": pre_result.to_dict(),
+    }
+
+
+def dispatch_schematic(
+    op_type: str,
+    op: Any,
+    ir: SchematicIR,
+    file_path: Path,
+) -> dict[str, Any]:
+    """Dispatch to the appropriate schematic handler via registry.
+
+    T-04-06: Exact string matching. Unknown op_type raises ValueError.
+
+    Args:
+        op_type: The operation type string.
+        op: The operation's root model (e.g. AddComponentOp).
+        ir: SchematicIR for the target file.
+        file_path: Resolved path to the target file.
+
+    Returns:
+        Handler result dict.
+
+    Raises:
+        ValueError: For unknown op_type.
+    """
+    handler = _SCHEMATIC_HANDLERS.get(op_type)
+    if handler is not None:
+        return handler(op, ir, file_path)
+    raise ValueError(f"Unknown op_type: {op_type!r}")
+
+
+# ---------------------------------------------------------------------------
+# PCB execution (parse, dispatch, serialize, transaction)
+# ---------------------------------------------------------------------------
+
+
+def execute_pcb(
+    op: Operation,
+    file_path: Path,
+    cache: Optional[IRCache],
+    undo_stack: Optional[UndoStack],
+) -> dict[str, Any]:
+    """Execute an operation targeting a PCB file."""
+    root = op.root
+
+    # Capture pre-mutation content for undo stack
+    pre_content: Optional[str] = None
+    if undo_stack is not None:
+        pre_content = file_path.read_text(encoding="utf-8")
+
+    cached_entry = cache.get(file_path) if cache else None
+    if cached_entry is not None:
+        parse_result = cached_entry.parse_result
+        uuid_map = cached_entry.uuid_map
+        if cached_entry.native_board is not None:
+            ir = PcbIR.from_native(cached_entry.native_board)
+        else:
+            ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
+    else:
+        # Try native parser first (kiutils corrupts some PCB files)
+        native_board = try_native_parse(file_path)
+        parse_result = None
+        uuid_map = None
+
+        if native_board is not None:
+            ir = PcbIR.from_native(native_board)
+        else:
+            # Fall back to kiutils for serialization support
+            parse_result = parse_pcb(file_path)
+            uuid_map = extract_uuids(parse_result.raw_content, "pcb")
+            ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
+
+        if cache:
+            cache.put(file_path, CacheEntry(parse_result=parse_result, uuid_map=uuid_map, native_board=native_board))
+
+    with Transaction(file_path) as txn:
+        details = dispatch_pcb(root.op_type, root, ir, file_path)
+
+        # Skip kiutils serialization if the IR method already wrote directly
+        # via raw S-expression manipulation, or if native parser was used
+        # (no kiutils parse_result available).
+        if ir.needs_serialization() and parse_result is not None:
+            serialize_pcb(parse_result, file_path, uuid_map=uuid_map)
+
+        txn.commit()
+
+        # Capture post-mutation content for undo stack
+        if undo_stack is not None and pre_content is not None:
+            post_content = file_path.read_text(encoding="utf-8")
+            post_mtime = file_path.stat().st_mtime_ns
+            undo_stack.push(file_path, pre_content, post_content, root.op_type, post_mtime)
+
+    # Invalidate old cache entry and store fresh one after write
+    if cache:
+        cache.invalidate(file_path)
+        cache.put(file_path, CacheEntry(parse_result=parse_result, uuid_map=uuid_map))
+
+    return {
+        "success": True,
+        "operation": root.op_type,
+        "target_file": root.target_file,
+        "details": details,
+    }
+
+
+def dispatch_pcb(
+    op_type: str,
+    op: Any,
+    ir: PcbIR,
+    file_path: Path,
+) -> dict[str, Any]:
+    """Dispatch PCB-specific operations via registry.
+
+    Args:
+        op_type: The operation type string.
+        op: The operation's root model.
+        ir: PcbIR for the target PCB file.
+        file_path: Resolved path to the target PCB file.
+
+    Returns:
+        Handler result dict.
+
+    Raises:
+        ValueError: For unknown op_type.
+    """
+    handler = _PCB_HANDLERS.get(op_type)
+    if handler is not None:
+        return handler(op, ir, file_path)
+    raise ValueError(f"Unknown PCB op_type: {op_type!r}")
+
+
+# ---------------------------------------------------------------------------
+# Project execution
+# ---------------------------------------------------------------------------
+
+
+def execute_project(
+    op: Operation,
+    file_path: Path,
+    undo_stack: Optional[UndoStack],
+) -> dict[str, Any]:
+    """Execute an operation targeting a project-level file.
+
+    Handles sym-lib-table, fp-lib-table, .kicad_dru, and .kicad_pro files
+    using the project module parsers and editors.
+
+    Args:
+        op: Validated Operation from the schema.
+        file_path: Resolved path to the target file.
+        undo_stack: Optional undo stack for tracking mutations.
+
+    Returns:
+        Dict with: success, operation, target_file, details.
+    """
+    root = op.root
+    pre_content: Optional[str] = None
+    if undo_stack is not None and file_path.exists():
+        pre_content = file_path.read_text(encoding="utf-8")
+    details = dispatch_project(root.op_type, root, file_path)
+    if undo_stack is not None and pre_content is not None:
+        post_content = file_path.read_text(encoding="utf-8")
+        post_mtime = file_path.stat().st_mtime_ns
+        undo_stack.push(file_path, pre_content, post_content, root.op_type, post_mtime)
+    return {
+        "success": True,
+        "operation": root.op_type,
+        "target_file": root.target_file,
+        "details": details,
+    }
+
+
+def dispatch_project(
+    op_type: str,
+    op: Any,
+    file_path: Path,
+) -> dict[str, Any]:
+    """Dispatch project-file operations via registry.
+
+    Args:
+        op_type: The operation type string.
+        op: The operation's root model.
+        file_path: Resolved path to the target file.
+
+    Returns:
+        Handler result dict.
+
+    Raises:
+        ValueError: For unknown op_type.
+    """
+    handler = _PROJECT_HANDLERS.get(op_type)
+    if handler is not None:
+        return handler(op, file_path)
+    raise ValueError(f"Unknown project op_type: {op_type!r}")
+
+
+# ---------------------------------------------------------------------------
+# Cross-file execution
+# ---------------------------------------------------------------------------
+
+
+def resolve_cross_file_paths(op: Any, base_dir: Path) -> list[Path]:
+    """Resolve file paths from a cross-file operation schema."""
+    if hasattr(op, "target_files"):
+        return [base_dir / tf for tf in op.target_files]
+    return []
+
+
+def execute_cross_file(
+    op: Operation,
+    file_path: Path,
+    base_dir: Path,
+    cache: Optional[IRCache],
+    undo_stack: Optional[UndoStack],
+) -> dict[str, Any]:
+    """Execute a cross-file operation targeting multiple files atomically."""
+    root = op.root
+
+    # Resolve all target file paths relative to base_dir
+    file_paths = resolve_cross_file_paths(root, base_dir)
+    if not file_paths:
+        raise ValueError(f"Cross-file operation {root.op_type!r} requires at least one target file")
+
+    # Security (T-24-01): path confinement for ALL files in cross-file operation
+    base_resolved = base_dir.resolve()
+    for fp in file_paths:
+        if not fp.resolve().is_relative_to(base_resolved):
+            raise ValueError(
+                f"Security: path escapes project directory in cross-file op: {fp}"
+            )
+        if not fp.exists():
+            raise FileNotFoundError(f"Cross-file target not found: {fp}")
+
+    # Clear IR registry to avoid stale registrations
+    _clear_registry()
+
+    # Phase 1: Parse all files and build IR map (XFILE-07: validate before Transaction)
+    ir_map: dict[Path, Any] = {}
+    for fp in file_paths:
+        if fp.suffix == ".kicad_pcb":
+            parse_result = parse_pcb(fp)
+            uuid_map = extract_uuids(parse_result.raw_content, "pcb")
+            ir_map[fp] = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
+        elif fp.suffix == ".kicad_sch":
+            parse_result = parse_schematic(fp)
+            ir_map[fp] = SchematicIR(_parse_result=parse_result)
+        else:
+            raise ValueError(f"Cross-file operation unsupported file type: {fp.suffix}")
+
+    # Phase 2: Capture pre-mutation content for undo stack
+    pre_contents: dict[Path, str] = {}
+    if undo_stack is not None:
+        for fp in file_paths:
+            if fp.exists():
+                pre_contents[fp] = fp.read_text(encoding="utf-8")
+
+    # Phase 3: Open AtomicOperation and execute handler
+    with AtomicOperation(file_paths) as atomic:
+        handler = _CROSSFILE_HANDLERS.get(root.op_type)
+        if handler is None:
+            raise ValueError(f"Unknown cross-file op_type: {root.op_type!r}")
+
+        details = handler(root, ir_map, base_dir)
+
+        # Phase 4: Serialize all dirty IRs
+        for fp, ir in ir_map.items():
+            if ir.dirty:
+                if isinstance(ir, PcbIR):
+                    parse_result = ir._parse_result
+                    uuid_map = ir.uuid_map
+                    if ir.needs_serialization():
+                        serialize_pcb(parse_result, fp, uuid_map=uuid_map)
+                elif isinstance(ir, SchematicIR):
+                    serialize_schematic(ir._parse_result, fp)
+                    content = fp.read_text(encoding="utf-8")
+                    normalized = normalize_kicad_output(content)
+                    fp.write_text(normalized, encoding="utf-8")
+
+        # Phase 5: Commit atomic operation
+        atomic_result = atomic.commit()
+        if not atomic_result.success:
+            return {
+                "success": False,
+                "operation": root.op_type,
+                "details": details,
+                "error": atomic_result.error,
+            }
+
+    # Push undo entries for all dirty files after successful commit
+    if undo_stack is not None:
+        for fp, ir in ir_map.items():
+            if ir.dirty and fp in pre_contents:
+                post_content = fp.read_text(encoding="utf-8")
+                post_mtime = fp.stat().st_mtime_ns
+                undo_stack.push(fp, pre_contents[fp], post_content, root.op_type, post_mtime)
+
+    return {
+        "success": True,
+        "operation": root.op_type,
+        "details": details,
+    }

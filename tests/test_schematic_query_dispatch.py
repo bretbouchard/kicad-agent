@@ -43,16 +43,18 @@ class TestSchematicQueryDispatchPath:
     """Verify read-only schematic ops skip Transaction and serialization."""
 
     def test_all_schematic_query_ops_use_query_path(self, project_dir):
-        """Every op in _SCHEMATIC_QUERY_HANDLERS must go through _execute_schematic_query."""
+        """Every op in _SCHEMATIC_QUERY_HANDLERS must go through execute_schematic_query."""
+        import kicad_agent.ops.executor as executor_mod
+
         executor = OperationExecutor(base_dir=project_dir)
 
-        # Track which method was called
-        original_query = executor._execute_schematic_query
-        original_schematic = executor._execute_schematic
+        # Track which function was called
+        original_query = executor_mod.execute_schematic_query
+        original_schematic = executor_mod.execute_schematic
         query_path_called = set()
         schematic_path_called = set()
 
-        def track_query(op, file_path):
+        def track_query(op, file_path, cache):
             query_path_called.add(op.root.op_type)
             return {
                 "success": True,
@@ -61,30 +63,35 @@ class TestSchematicQueryDispatchPath:
                 "details": {},
             }
 
-        def track_schematic(op, file_path):
+        def track_schematic(op, file_path, cache, undo_stack):
             schematic_path_called.add(op.root.op_type)
             raise AssertionError(f"Mutation path should not be called for query op: {op.root.op_type}")
 
-        executor._execute_schematic_query = track_query
-        executor._execute_schematic = track_schematic
+        executor_mod.execute_schematic_query = track_query
+        executor_mod.execute_schematic = track_schematic
 
         from kicad_agent.ops.schema import Operation
 
-        for op_type in _SCHEMATIC_QUERY_HANDLERS:
-            # Skip ops that need specific schema fields not easily constructible
-            try:
-                op = Operation.model_validate({
-                    "root": {
-                        "op_type": op_type,
-                        "target_file": "test.kicad_sch",
-                    }
-                })
-                executor.execute(op)
-            except Exception as e:
-                # Some ops have required fields; we just need to ensure
-                # the dispatch went through _execute_schematic_query
-                if "Mutation path should not be called" in str(e):
-                    raise
+        try:
+            for op_type in _SCHEMATIC_QUERY_HANDLERS:
+                # Skip ops that need specific schema fields not easily constructible
+                try:
+                    op = Operation.model_validate({
+                        "root": {
+                            "op_type": op_type,
+                            "target_file": "test.kicad_sch",
+                        }
+                    })
+                    executor.execute(op)
+                except Exception as e:
+                    # Some ops have required fields; we just need to ensure
+                    # the dispatch went through execute_schematic_query
+                    if "Mutation path should not be called" in str(e):
+                        raise
+        finally:
+            # Restore original functions
+            executor_mod.execute_schematic_query = original_query
+            executor_mod.execute_schematic = original_schematic
 
         # Verify no ops went through the mutation path
         assert schematic_path_called == set(), f"These ops incorrectly hit mutation path: {schematic_path_called}"
@@ -114,7 +121,7 @@ class TestSchematicQueryDispatchPath:
 
         executor = OperationExecutor(base_dir=project_dir)
 
-        with patch("kicad_agent.ops.executor.Transaction") as mock_txn:
+        with patch("kicad_agent.ops.execution.Transaction") as mock_txn:
             op = Operation.model_validate({
                 "root": {
                     "op_type": "validate_refs",

@@ -257,7 +257,7 @@ class TestExecutorCache:
         }
         op = Operation.model_validate(op_data)
 
-        with patch("kicad_agent.ops.executor.parse_schematic", wraps=None) as mock_parse:
+        with patch("kicad_agent.ops.execution.parse_schematic", wraps=None) as mock_parse:
             # Set up the mock to return a real parse result
             from kicad_agent.parser import parse_schematic
 
@@ -297,7 +297,7 @@ class TestExecutorCache:
         }
         op = Operation.model_validate(op_data)
 
-        with patch("kicad_agent.ops.executor.parse_schematic", wraps=None) as mock_parse:
+        with patch("kicad_agent.ops.execution.parse_schematic", wraps=None) as mock_parse:
             from kicad_agent.parser import parse_schematic
 
             mock_parse.side_effect = lambda p: parse_schematic(p)

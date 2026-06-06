@@ -251,15 +251,13 @@ class TestOperationExecutorAdd:
     def test_executor_raises_on_unknown_op_type(self) -> None:
         """OperationExecutor raises ValueError for unknown op_type."""
         # This test validates the dispatch guard without needing a file
-        from kicad_agent.ops.executor import OperationExecutor
-
-        executor = OperationExecutor(base_dir=Path("/tmp"))
+        from kicad_agent.ops.executor import dispatch_schematic
 
         # Create an Operation with unknown op_type via model_construct to bypass validation
         # Since Pydantic validates op_type, we test the dispatch guard differently
         # by checking that the executor handles all known types and raises on unknown
         with pytest.raises(ValueError, match="Unknown op_type"):
-            executor._dispatch("unknown_type", None, None, None)
+            dispatch_schematic("unknown_type", None, None, None)
 
     def test_full_pipeline_add_component(
         self, setup_schematic: dict
