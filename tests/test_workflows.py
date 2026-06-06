@@ -2,7 +2,7 @@
 
 import pytest
 
-from kicad_agent.ops.registry import OPERATION_REGISTRY, validate_dependencies
+from kicad_agent.ops.registry import OPERATION_REGISTRY, validate_dependencies, validate_conflicts
 from kicad_agent.ops.workflows import (
     WORKFLOW_TEMPLATES,
     WorkflowStep,
@@ -120,3 +120,16 @@ class TestValidateDependencies:
 
         result = validate_dependencies(["parse_erc", "fix_shorted_nets"])
         assert result == []
+
+
+class TestWorkflowConflictFree:
+    """Verify each workflow's steps are conflict-free."""
+
+    @pytest.mark.parametrize("wf_name", list(WORKFLOW_TEMPLATES.keys()))
+    def test_workflow_has_no_conflicts(self, wf_name: str) -> None:
+        wf = WORKFLOW_TEMPLATES[wf_name]
+        step_types = [s.op_type for s in wf.steps]
+        conflicts = validate_conflicts(step_types)
+        assert conflicts == [], (
+            f"Workflow {wf_name!r} has conflicting steps: {conflicts}"
+        )

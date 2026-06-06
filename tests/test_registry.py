@@ -11,6 +11,7 @@ from kicad_agent.ops.registry import (
     get_operations_for_file_type,
     get_readonly_operations,
     validate_dependencies,
+    validate_conflicts,
     validate_registry_completeness,
     OpMeta,
 )
@@ -122,6 +123,7 @@ class TestQueryFunctions:
             "list_net_classes",
             "list_design_rules",
             "review_schematic",
+            "analyze_split_plane",
         }
         assert readonly_types == expected_readonly
         assert len(readonly) == len(expected_readonly)
@@ -132,7 +134,12 @@ class TestQueryFunctions:
 
     def test_batch_connect_dependencies(self) -> None:
         deps = get_operation_dependencies("batch_connect")
-        assert deps == ["resolve_pin_positions"]
+        assert "resolve_pin_positions" in deps
+        assert "detect_routing_collisions" in deps
+
+    def test_repair_schematic_dependencies(self) -> None:
+        deps = get_operation_dependencies("repair_schematic")
+        assert deps == ["parse_erc"]
 
     def test_regenerate_wiring_dependencies(self) -> None:
         deps = get_operation_dependencies("regenerate_wiring")
@@ -220,3 +227,50 @@ class TestValidateDependencies:
     def test_unknown_op_skipped(self) -> None:
         result = validate_dependencies(["nonexistent_op", "connect_pins"])
         assert result == ["resolve_pin_positions"]
+
+    def test_repair_schematic_dependencies(self) -> None:
+        deps = get_operation_dependencies("repair_schematic")
+        assert deps == ["parse_erc"]
+
+    def test_repair_schematic_no_deps_fails(self) -> None:
+        assert validate_dependencies(["repair_schematic"]) == ["parse_erc"]
+
+    def test_repair_schematic_with_parse_erc_passes(self) -> None:
+        assert validate_dependencies(["parse_erc", "repair_schematic"]) == []
+
+
+class TestValidateConflicts:
+    """Test the validate_conflicts function."""
+
+    def test_empty_list_returns_empty(self) -> None:
+        assert validate_conflicts([]) == []
+
+    def test_no_conflicts(self) -> None:
+        assert validate_conflicts(["add_component", "add_wire"]) == []
+
+    def test_repair_schematic_after_remove_component(self) -> None:
+        result = validate_conflicts(["remove_component", "repair_schematic"])
+        assert len(result) == 1
+        assert "repair_schematic" in result[0]
+        assert "remove_component" in result[0]
+
+    def test_repair_schematic_before_remove_component_ok(self) -> None:
+        """Conflict only detected when repair runs after remove, not before."""
+        result = validate_conflicts(["repair_schematic", "remove_component"])
+        assert result == []
+
+    def test_batch_connect_needs_collision_detection(self) -> None:
+        """batch_connect requires detect_routing_collisions in sequence."""
+        result = validate_dependencies(["batch_connect"])
+        assert "resolve_pin_positions" in result
+        assert "detect_routing_collisions" in result
+
+    def test_multi_file_ops_have_scope(self) -> None:
+        """Verify ops with multi_file scope exist."""
+        multi_file = [
+            meta for meta in OPERATION_REGISTRY.values()
+            if meta.scope == "multi_file"
+        ]
+        types = {m.op_type for m in multi_file}
+        assert "array_replicate" in types
+        assert "propagate_symbol_change" in types

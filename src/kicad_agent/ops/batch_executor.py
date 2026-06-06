@@ -79,13 +79,57 @@ def execute_batch(executor: OperationExecutor, ops: list[Operation]) -> dict[str
     if not ops:
         return {"success": True, "results": []}
 
+    # Validate operation dependency ordering before execution
+    from kicad_agent.ops.registry import validate_dependencies
+    op_types_in_order = [op.root.op_type for op in ops]
+    missing_prereqs = validate_dependencies(op_types_in_order)
+    if missing_prereqs:
+        missing_set = sorted(set(missing_prereqs))
+        return {
+            "success": False,
+            "results": [],
+            "error": (
+                f"Batch rejected: missing prerequisite operation(s): "
+                f"{missing_set}. "
+                f"Run these prerequisite operations before retrying."
+            ),
+            "missing_prerequisites": missing_set,
+        }
+
+    # Validate conflict pairs: detect op_types that conflict with each other
+    from kicad_agent.ops.registry import OPERATION_REGISTRY
+    op_type_set: set[str] = set()
+    conflict_errors: list[str] = []
+    for op in ops:
+        root = op.root
+        meta = OPERATION_REGISTRY.get(root.op_type)
+        if meta is not None:
+            for conflict in meta.conflicts:
+                if conflict in op_type_set:
+                    conflict_errors.append(
+                        f"Conflict: {root.op_type!r} conflicts with {conflict!r}"
+                    )
+        op_type_set.add(root.op_type)
+    if conflict_errors:
+        return {
+            "success": False,
+            "results": [],
+            "error": (
+                f"Batch rejected: {len(conflict_errors)} conflict(s) detected"
+            ),
+            "validation_errors": conflict_errors,
+        }
+
     # Reject unsupported op types
     unsupported: list[str] = []
+    from kicad_agent.ops.registry import OPERATION_REGISTRY as _REG
     for op in ops:
         root = op.root
         if root.op_type in _CROSS_FILE_OP_TYPES:
             unsupported.append(root.op_type)
         elif root.op_type in _CREATE_OP_TYPES:
+            unsupported.append(root.op_type)
+        elif root.op_type in _REG and _REG[root.op_type].scope == "multi_file":
             unsupported.append(root.op_type)
     if unsupported:
         return {

@@ -309,3 +309,145 @@ class TestBatchPerformance:
         assert result["success"] is True
         assert len(result["results"]) == 100
         assert elapsed < 10.0, f"Batch took {elapsed:.2f}s, expected <10s"
+
+
+# ---------------------------------------------------------------------------
+# TestBatchDependencyValidation
+# ---------------------------------------------------------------------------
+
+
+class TestBatchDependencyValidation:
+    """Tests for dependency validation in execute_batch()."""
+
+    def test_batch_rejects_missing_prerequisite(self, tmp_path: Path) -> None:
+        """Batch with connect_pins but no resolve_pin_positions is rejected."""
+        _copy_arduino_fixture(tmp_path)
+
+        connect_op = Operation.model_validate({
+            "root": {
+                "op_type": "connect_pins",
+                "target_file": "test.kicad_sch",
+                "net_name": "GND",
+                "pins": [{"ref": "J1", "pin": "1"}],
+            }
+        })
+
+        executor = OperationExecutor(base_dir=tmp_path)
+        result = executor.execute_batch([connect_op])
+
+        assert result["success"] is False
+        assert "missing_prerequisites" in result
+        assert "resolve_pin_positions" in result["missing_prerequisites"]
+
+    def test_batch_accepts_satisfied_prerequisite(self, tmp_path: Path) -> None:
+        """Batch with prerequisite before dependent op succeeds."""
+        _copy_arduino_fixture(tmp_path)
+
+        resolve_op = Operation.model_validate({
+            "root": {
+                "op_type": "resolve_pin_positions",
+                "target_file": "test.kicad_sch",
+            }
+        })
+        connect_op = Operation.model_validate({
+            "root": {
+                "op_type": "connect_pins",
+                "target_file": "test.kicad_sch",
+                "net_name": "GND",
+                "pins": [{"ref": "J1", "pin": "1"}],
+            }
+        })
+
+        executor = OperationExecutor(base_dir=tmp_path)
+        result = executor.execute_batch([resolve_op, connect_op])
+
+        # Should not be rejected for dependency reasons
+        # (may fail for other reasons like missing connections, but not deps)
+        assert "missing_prerequisites" not in result
+
+    def test_batch_rejects_conflict_pair(self, tmp_path: Path) -> None:
+        """Batch with repair_schematic after remove_component is rejected."""
+        _copy_arduino_fixture(tmp_path)
+
+        # repair_schematic requires parse_erc, so include it first
+        parse_op = Operation.model_validate({
+            "root": {
+                "op_type": "parse_erc",
+                "target_file": "test.kicad_sch",
+            }
+        })
+        remove_op = Operation.model_validate({
+            "root": {
+                "op_type": "remove_component",
+                "target_file": "test.kicad_sch",
+                "reference": "J1",
+            }
+        })
+        repair_op = Operation.model_validate({
+            "root": {
+                "op_type": "repair_schematic",
+                "target_file": "test.kicad_sch",
+            }
+        })
+
+        executor = OperationExecutor(base_dir=tmp_path)
+        result = executor.execute_batch([parse_op, remove_op, repair_op])
+
+        assert result["success"] is False
+        # Conflict detected because repair_schematic conflicts with remove_component
+        assert "conflict" in str(result.get("validation_errors", result.get("error", ""))).lower() or "conflict" in result.get("error", "").lower()
+
+    def test_batch_rejects_multi_file_scope_ops(self, tmp_path: Path) -> None:
+        """Batch rejects ops with multi_file scope."""
+        # array_replicate has multi_file scope
+        array_op = Operation.model_validate({
+            "root": {
+                "op_type": "array_replicate",
+                "target_file": "test.kicad_sch",
+                "source_reference": "J1",
+                "pattern": "linear",
+                "count": 2,
+                "spacing": {"x": 5.0, "y": 0.0},
+            }
+        })
+
+        executor = OperationExecutor(base_dir=tmp_path)
+        result = executor.execute_batch([array_op])
+
+        assert result["success"] is False
+        assert "array_replicate" in result["error"]
+
+    def test_batch_rejects_erc_auto_fix_without_parse_erc(self, tmp_path: Path) -> None:
+        """Batch with erc_auto_fix but no parse_erc is rejected."""
+        _copy_arduino_fixture(tmp_path)
+
+        erc_fix_op = Operation.model_validate({
+            "root": {
+                "op_type": "erc_auto_fix",
+                "target_file": "test.kicad_sch",
+            }
+        })
+
+        executor = OperationExecutor(base_dir=tmp_path)
+        result = executor.execute_batch([erc_fix_op])
+
+        assert result["success"] is False
+        assert "parse_erc" in result["missing_prerequisites"]
+
+    def test_dependency_error_includes_prerequisite_names(self, tmp_path: Path) -> None:
+        """Dependency error message names the specific missing prerequisites."""
+        _copy_arduino_fixture(tmp_path)
+
+        connect_op = Operation.model_validate({
+            "root": {
+                "op_type": "connect_pins",
+                "target_file": "test.kicad_sch",
+                "net_name": "GND",
+                "pins": [{"ref": "J1", "pin": "1"}],
+            }
+        })
+
+        executor = OperationExecutor(base_dir=tmp_path)
+        result = executor.execute_batch([connect_op])
+
+        assert "resolve_pin_positions" in str(result["error"])

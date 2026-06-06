@@ -616,8 +616,8 @@ _RAW_CATALOG: dict[str, dict] = {
         "file_types": [".kicad_sch"],
         "is_readonly": False,
         "scope": "single_file",
-        "requires": [],
-        "conflicts": [],
+        "requires": ["parse_erc"],
+        "conflicts": ["remove_component"],
     },
     "convert_kicad6_to_10": {
         "category": "repair",
@@ -832,7 +832,7 @@ _RAW_CATALOG: dict[str, dict] = {
         "file_types": [".kicad_sch"],
         "is_readonly": False,
         "scope": "single_file",
-        "requires": ["resolve_pin_positions"],
+        "requires": ["resolve_pin_positions", "detect_routing_collisions"],
         "conflicts": [],
     },
     "regenerate_wiring": {
@@ -1088,3 +1088,30 @@ def get_destructive_operations() -> list[OpMeta]:
         meta for meta in OPERATION_REGISTRY.values()
         if meta.op_type.startswith("remove_") or meta.op_type == "propagate_symbol_change"
     ]
+
+
+def validate_conflicts(op_types: list[str]) -> list[str]:
+    """Validate that no conflicting operations appear in the same sequence.
+
+    Walks the op_types in execution order, tracking which ops have been "seen".
+    For each op, checks that none of its declared ``conflicts`` are in the seen set.
+    Returns a list of conflict descriptions.
+
+    Args:
+        op_types: List of op_type strings in planned execution order.
+
+    Returns:
+        List of conflict description strings. Empty if no conflicts detected.
+    """
+    seen: set[str] = set()
+    conflict_list: list[str] = []
+    for op_type in op_types:
+        meta = OPERATION_REGISTRY.get(op_type)
+        if meta is not None:
+            for conflict in meta.conflicts:
+                if conflict in seen:
+                    conflict_list.append(
+                        f"{op_type!r} conflicts with {conflict!r}"
+                    )
+        seen.add(op_type)
+    return conflict_list
