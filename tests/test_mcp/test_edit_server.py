@@ -36,7 +36,9 @@ class TestToolGeneration:
     """Dynamic tool generation from Operation discriminated union."""
 
     def test_generates_operation_tools(self) -> None:
-        assert len(_OPERATION_TOOLS) > 0  # Dynamic: count derives from schema Op classes
+        from tests.helpers.counts import count_operation_tools
+        expected = count_operation_tools()
+        assert len(_OPERATION_TOOLS) == expected
 
     def test_generates_7_meta_tools(self) -> None:
         assert len(_META_TOOLS) == 7

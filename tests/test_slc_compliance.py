@@ -30,23 +30,7 @@ README_PATH = REPO_ROOT / "README.md"
 # Helpers
 # ---------------------------------------------------------------------------
 
-
-def _count_op_classes() -> int:
-    """Count the number of Op classes in schema.py and its sub-modules."""
-    return len(_get_op_class_names())
-
-
-def _get_op_class_names() -> list[str]:
-    """Get all Op class names from schema.py and its _schema_*.py sub-modules."""
-    names: list[str] = []
-    # Scan hub file
-    content = SCHEMA_PATH.read_text(encoding="utf-8")
-    names.extend(re.findall(r"^class (\w+Op)\(BaseModel\)", content, re.MULTILINE))
-    # Scan sub-modules
-    for submod in sorted(SCHEMA_SUBMODULES_DIR.glob("_schema_*.py")):
-        sub_content = submod.read_text(encoding="utf-8")
-        names.extend(re.findall(r"^class (\w+Op)\(BaseModel\)", sub_content, re.MULTILINE))
-    return names
+from tests.helpers.counts import count_op_classes as _count_op_classes
 
 
 # ---------------------------------------------------------------------------

@@ -82,11 +82,10 @@ class TestSchemaSplit:
 
     def test_submodules_exist(self) -> None:
         """_schema_*.py sub-modules exist (dynamic count, never stale)."""
-        submods = sorted(SCHEMA_DIR.glob("_schema_*.py"))
-        assert len(submods) > 0, (
-            f"Expected schema sub-modules, found {len(submods)}: "
-            f"{[p.name for p in submods]}"
-        )
+        from tests.helpers.counts import count_schema_files
+
+        expected = count_schema_files()
+        assert expected > 0, "Expected schema sub-modules but found none"
 
     def test_submodule_classes(self) -> None:
         """Each sub-module has the expected classes."""
