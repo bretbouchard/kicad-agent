@@ -1,0 +1,485 @@
+"""Tests for the pre-analysis gate.
+
+Tests cover:
+- Overlap detection for add_component and move_component
+- Pin resolution for connect_pins and batch_connect
+- Reference validation for remove_component
+- Collision zone detection for add_wire
+- Wiring and dangling wire warnings for remove_component
+- No false positives on clean schematics
+- Enriched context generation
+- Integration with real fixtures
+"""
+
+import shutil
+import tempfile
+from pathlib import Path
+
+import pytest
+from kiutils.items.common import Position
+from kiutils.schematic import Schematic
+
+from kicad_agent.ir.schematic_ir import SchematicIR
+from kicad_agent.ops.pre_analysis import (
+    PreAnalysisGate,
+    PreAnalysisResult,
+    PreAnalysisFinding,
+    _detect_collision_zones,
+    _estimated_bbox,
+    _point_near_segment,
+)
+from kicad_agent.ops.schema import PositionSpec
+from kicad_agent.parser import parse_schematic
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _save_and_parse(sch_path: Path, sch: Schematic) -> SchematicIR:
+    """Save a kiutils Schematic to disk and parse it back into SchematicIR."""
+    sch.to_file(str(sch_path))
+    result = parse_schematic(sch_path)
+    return SchematicIR(_parse_result=result)
+
+
+def _fixture_ir(name: str = "RaspberryPi-uHAT/RaspberryPi-uHAT.kicad_sch") -> tuple[Path, SchematicIR]:
+    """Load a fixture schematic. Returns (path, ir). Skips if not found."""
+    path = Path("tests/fixtures") / name
+    if not path.exists():
+        pytest.skip(f"Fixture not found: {name}")
+    sch = Schematic.from_file(str(path))
+    ir = SchematicIR(_parse_result=parse_schematic(path))
+    return path, ir
+
+
+# ---------------------------------------------------------------------------
+# PreAnalysisResult serialization
+# ---------------------------------------------------------------------------
+
+
+class TestPreAnalysisResult:
+    """Tests for PreAnalysisResult dataclass."""
+
+    def test_empty_result(self):
+        result = PreAnalysisResult()
+        assert not result.blocked
+        assert len(result.blockers) == 0
+        assert len(result.warnings) == 0
+
+    def test_blocked_when_blockers_present(self):
+        result = PreAnalysisResult(
+            blockers=[PreAnalysisFinding(
+                severity="blocker", category="test", message="blocked"
+            )]
+        )
+        assert result.blocked
+
+    def test_to_dict_serializable(self):
+        result = PreAnalysisResult(
+            blockers=[PreAnalysisFinding(
+                severity="blocker", category="overlap", message="test",
+                details={"key": "value"},
+            )],
+            warnings=[PreAnalysisFinding(
+                severity="warning", category="style", message="test warn",
+            )],
+            suggestions=["try this"],
+            enriched_context={"pin_count": 8},
+        )
+        d = result.to_dict()
+        assert d["blocked"] is True
+        assert len(d["blockers"]) == 1
+        assert d["blockers"][0]["category"] == "overlap"
+        assert len(d["warnings"]) == 1
+        assert d["suggestions"] == ["try this"]
+        assert d["enriched_context"]["pin_count"] == 8
+
+
+# ---------------------------------------------------------------------------
+# Collision zone detection
+# ---------------------------------------------------------------------------
+
+
+class TestCollisionZones:
+    """Tests for collision zone detection."""
+
+    def test_no_collision_single_component(self):
+        path, ir = _fixture_ir()
+        pin_positions = ir.get_pin_positions()
+        # Filter to a single component's pins
+        r1_pins = [p for p in pin_positions if p["reference"] == "R1"]
+        if not r1_pins:
+            pytest.skip("No R1 in fixture")
+
+        zones = _detect_collision_zones(r1_pins, tolerance=2.54)
+        assert len(zones) == 0
+
+    def test_collision_zone_detected(self):
+        pins = [
+            {"reference": "R1", "pin_number": "1", "pin_name": "1",
+             "x": 50.0, "y": 30.0, "electrical_type": "passive"},
+            {"reference": "R2", "pin_number": "1", "pin_name": "1",
+             "x": 50.0, "y": 30.0, "electrical_type": "passive"},
+        ]
+        zones = _detect_collision_zones(pins, tolerance=2.54)
+        assert len(zones) == 1
+        assert zones[0]["x"] == 50.0
+        assert zones[0]["y"] == 30.0
+        assert len(zones[0]["pins"]) == 2
+
+    def test_no_collision_same_ref(self):
+        pins = [
+            {"reference": "R1", "pin_number": "1", "pin_name": "1",
+             "x": 47.46, "y": 30.0, "electrical_type": "passive"},
+            {"reference": "R1", "pin_number": "2", "pin_name": "2",
+             "x": 52.54, "y": 30.0, "electrical_type": "passive"},
+        ]
+        zones = _detect_collision_zones(pins, tolerance=2.54)
+        assert len(zones) == 0
+
+    def test_no_collision_different_positions(self):
+        pins = [
+            {"reference": "R1", "pin_number": "1", "pin_name": "1",
+             "x": 50.0, "y": 30.0, "electrical_type": "passive"},
+            {"reference": "R2", "pin_number": "1", "pin_name": "1",
+             "x": 100.0, "y": 80.0, "electrical_type": "passive"},
+        ]
+        zones = _detect_collision_zones(pins, tolerance=2.54)
+        assert len(zones) == 0
+
+    def test_collision_tolerance(self):
+        """Pins at same rounded position should be grouped together."""
+        pins = [
+            {"reference": "R1", "pin_number": "1", "pin_name": "1",
+             "x": 50.01, "y": 30.01, "electrical_type": "passive"},
+            {"reference": "R2", "pin_number": "1", "pin_name": "1",
+             "x": 50.04, "y": 30.04, "electrical_type": "passive"},
+        ]
+        zones = _detect_collision_zones(pins, tolerance=2.54)
+        # Both round to (50.0, 30.0) at 1 decimal place
+        assert len(zones) == 1
+
+
+# ---------------------------------------------------------------------------
+# Wire collision check
+# ---------------------------------------------------------------------------
+
+
+class TestWireCollisionCheck:
+    """Tests for wire collision zone proximity check."""
+
+    def test_wire_passes_through_point(self):
+        assert _point_near_segment(50.0, 50.0, 40.0, 50.0, 60.0, 50.0, tolerance=2.54) is True
+
+    def test_wire_far_from_point(self):
+        assert _point_near_segment(50.0, 50.0, 10.0, 10.0, 20.0, 20.0, tolerance=2.54) is False
+
+    def test_wire_near_endpoint(self):
+        assert _point_near_segment(39.5, 50.0, 40.0, 50.0, 60.0, 50.0, tolerance=2.54) is True
+
+    def test_zero_length_wire(self):
+        assert _point_near_segment(40.0, 50.0, 40.0, 50.0, 40.0, 50.0, tolerance=2.54) is True
+        assert _point_near_segment(100.0, 100.0, 40.0, 50.0, 40.0, 50.0, tolerance=2.54) is False
+
+    def test_perpendicular_distance(self):
+        """Point 2mm above the wire mid-point should be within 2.54mm tolerance."""
+        # Wire from (40,50) to (60,50), point at (50,52)
+        assert _point_near_segment(50.0, 52.0, 40.0, 50.0, 60.0, 50.0, tolerance=2.54) is True
+
+    def test_perpendicular_just_outside(self):
+        """Point 3mm above the wire should be outside 2.54mm tolerance."""
+        assert _point_near_segment(50.0, 53.0, 40.0, 50.0, 60.0, 50.0, tolerance=2.54) is False
+
+
+# ---------------------------------------------------------------------------
+# Bounding box estimation
+# ---------------------------------------------------------------------------
+
+
+class TestEstimatedBbox:
+    """Tests for component bounding box estimation."""
+
+    def test_resistor_bbox(self):
+        bbox = _estimated_bbox(50.0, 30.0, "Device:R_Small_US", 0.0)
+        assert bbox["width"] <= 5.0
+        assert bbox["height"] <= 3.0
+
+    def test_capacitor_bbox(self):
+        bbox = _estimated_bbox(50.0, 30.0, "Device:C_Small", 0.0)
+        assert bbox["width"] <= 5.0
+
+    def test_opamp_bbox(self):
+        bbox = _estimated_bbox(50.0, 30.0, "Amplifier_Operational:TL072", 0.0)
+        assert bbox["width"] >= 8.0
+
+    def test_unknown_ic_bbox(self):
+        bbox = _estimated_bbox(50.0, 30.0, "Custom:Unknown_IC", 0.0)
+        assert bbox["width"] >= 10.0
+        assert bbox["height"] >= 8.0
+
+    def test_rotation_90_swaps(self):
+        bbox_0 = _estimated_bbox(50.0, 30.0, "Device:R_Small_US", 0.0)
+        bbox_90 = _estimated_bbox(50.0, 30.0, "Device:R_Small_US", 90.0)
+        assert abs(bbox_0["width"] - bbox_90["height"]) < 0.01
+        assert abs(bbox_0["height"] - bbox_90["width"]) < 0.01
+
+    def test_rotation_270_same_as_90(self):
+        bbox_90 = _estimated_bbox(50.0, 30.0, "Device:R_Small_US", 90.0)
+        bbox_270 = _estimated_bbox(50.0, 30.0, "Device:R_Small_US", 270.0)
+        assert abs(bbox_90["width"] - bbox_270["width"]) < 0.01
+        assert abs(bbox_90["height"] - bbox_270["height"]) < 0.01
+
+
+# ---------------------------------------------------------------------------
+# PreAnalysisGate: basic routing
+# ---------------------------------------------------------------------------
+
+
+class TestPreAnalysisGateRouting:
+    """Test that the gate routes to the correct analyzer."""
+
+    def test_no_analysis_for_query_ops(self):
+        gate = PreAnalysisGate()
+
+        class MockOp:
+            op_type = "query_connectivity"
+            target_file = "test.kicad_sch"
+
+        class MockIR:
+            pass
+
+        result = gate.analyze(MockOp(), MockIR(), Path("test.kicad_sch"))
+        assert not result.blocked
+        assert len(result.blockers) == 0
+        assert len(result.warnings) == 0
+
+    def test_no_analysis_for_validation_ops(self):
+        gate = PreAnalysisGate()
+
+        class MockOp:
+            op_type = "validate_power_nets"
+            target_file = "test.kicad_sch"
+
+        class MockIR:
+            pass
+
+        result = gate.analyze(MockOp(), MockIR(), Path("test.kicad_sch"))
+        assert not result.blocked
+
+
+# ---------------------------------------------------------------------------
+# PreAnalysisGate: with real fixtures
+# ---------------------------------------------------------------------------
+
+
+class TestPreAnalysisGateWithFixtures:
+    """Integration tests using real schematic fixtures."""
+
+    def _setup(self, name: str = "RaspberryPi-uHAT/RaspberryPi-uHAT.kicad_sch"):
+        return _fixture_ir(name)
+
+    def test_add_component_no_overlap(self):
+        """Adding component far from existing should pass."""
+        gate = PreAnalysisGate()
+        path, ir = self._setup()
+
+        class AddOp:
+            op_type = "add_component"
+            target_file = "test.kicad_sch"
+            library_id = "Device:R_Small_US"
+            reference = "R?"
+            position = PositionSpec(x=300.0, y=300.0)
+
+        result = gate.analyze(AddOp(), ir, path)
+        assert not result.blocked
+
+    def test_add_component_overlap_blocked(self):
+        """Adding component on top of existing should block."""
+        gate = PreAnalysisGate()
+        path, ir = self._setup()
+
+        # Find an existing component's position
+        if not ir.components:
+            pytest.skip("No components in fixture")
+
+        sym = ir.components[0]
+        ref = ""
+        for prop in sym.properties:
+            if prop.key == "Reference":
+                ref = prop.value
+                break
+        if not ref:
+            pytest.skip("No referenced components in fixture")
+
+        sx = sym.position.X
+        sy = sym.position.Y
+
+        class AddOp:
+            op_type = "add_component"
+            target_file = "test.kicad_sch"
+            library_id = "Device:R_Small_US"
+            reference = "R?"
+            position = PositionSpec(x=sx, y=sy)
+
+        result = gate.analyze(AddOp(), ir, path)
+        assert result.blocked
+        categories = [b.category for b in result.blockers]
+        assert "component_overlap" in categories
+        assert ref in result.blockers[0].message
+
+    def test_move_component_unknown_ref_blocked(self):
+        """Moving a non-existent component should block."""
+        gate = PreAnalysisGate()
+        path, ir = self._setup()
+
+        class MoveOp:
+            op_type = "move_component"
+            target_file = "test.kicad_sch"
+            reference = "R999"
+            position = PositionSpec(x=100.0, y=100.0)
+
+        result = gate.analyze(MoveOp(), ir, path)
+        assert result.blocked
+        assert any(b.category == "unknown_ref" for b in result.blockers)
+
+    def test_move_component_no_overlap(self):
+        """Moving component to free space should pass."""
+        gate = PreAnalysisGate()
+        path, ir = self._setup()
+
+        # Find a real component and move it far away
+        if not ir.components:
+            pytest.skip("No components in fixture")
+
+        sym = ir.components[0]
+        ref = ""
+        for prop in sym.properties:
+            if prop.key == "Reference":
+                ref = prop.value
+                break
+
+        class MoveOp:
+            op_type = "move_component"
+            target_file = "test.kicad_sch"
+            reference = ref
+            position = PositionSpec(x=500.0, y=500.0)
+
+        result = gate.analyze(MoveOp(), ir, path)
+        assert not result.blocked
+
+    def test_remove_component_unknown_ref_blocked(self):
+        """Removing a non-existent component should block."""
+        gate = PreAnalysisGate()
+        path, ir = self._setup()
+
+        class RemoveOp:
+            op_type = "remove_component"
+            target_file = "test.kicad_sch"
+            reference = "X999"
+
+        result = gate.analyze(RemoveOp(), ir, path)
+        assert result.blocked
+        assert any(b.category == "unknown_ref" for b in result.blockers)
+
+    def test_remove_component_existing(self):
+        """Removing an existing component should not block."""
+        gate = PreAnalysisGate()
+        path, ir = self._setup()
+
+        if not ir.components:
+            pytest.skip("No components in fixture")
+
+        sym = ir.components[0]
+        ref = ""
+        for prop in sym.properties:
+            if prop.key == "Reference":
+                ref = prop.value
+                break
+
+        class RemoveOp:
+            op_type = "remove_component"
+            target_file = "test.kicad_sch"
+            reference = ref
+
+        result = gate.analyze(RemoveOp(), ir, path)
+        assert not result.blocked
+
+    def test_add_wire_enriches_connectivity(self):
+        """Wiring operations should enrich context with connectivity data."""
+        gate = PreAnalysisGate()
+        path, ir = self._setup()
+
+        class WireOp:
+            op_type = "add_wire"
+            target_file = "test.kicad_sch"
+            start_x = 200.0
+            start_y = 200.0
+            end_x = 210.0
+            end_y = 200.0
+
+        result = gate.analyze(WireOp(), ir, path)
+        assert "connectivity" in result.enriched_context
+        assert "total_pins" in result.enriched_context["connectivity"]
+        assert "component_pin_map" in result.enriched_context
+
+    def test_add_wire_no_blockers_on_clean_path(self):
+        """Wire in empty area should not produce blockers."""
+        gate = PreAnalysisGate()
+        path, ir = self._setup()
+
+        class WireOp:
+            op_type = "add_wire"
+            target_file = "test.kicad_sch"
+            start_x = 500.0
+            start_y = 500.0
+            end_x = 510.0
+            end_y = 500.0
+
+        result = gate.analyze(WireOp(), ir, path)
+        assert not result.blocked
+
+    def test_connectivity_context_has_pin_map(self):
+        """Enriched context should include per-component pin maps."""
+        gate = PreAnalysisGate()
+        path, ir = self._setup()
+
+        class WireOp:
+            op_type = "add_wire"
+            target_file = "test.kicad_sch"
+            start_x = 0.0
+            start_y = 0.0
+            end_x = 10.0
+            end_y = 10.0
+
+        result = gate.analyze(WireOp(), ir, path)
+        pin_map = result.enriched_context.get("component_pin_map", {})
+        # Should have entries for components in the fixture
+        if ir.components:
+            assert len(pin_map) > 0
+            # Each entry should be a list of pin dicts
+            for ref, pins in pin_map.items():
+                assert isinstance(pins, list)
+                for pin in pins:
+                    assert "pin" in pin
+                    assert "name" in pin
+                    assert "type" in pin
+                    assert "connected" in pin
+
+    def test_power_nets_in_context(self):
+        """Enriched context should list power nets."""
+        gate = PreAnalysisGate()
+        path, ir = self._setup()
+
+        class WireOp:
+            op_type = "add_wire"
+            target_file = "test.kicad_sch"
+            start_x = 0.0
+            start_y = 0.0
+            end_x = 10.0
+            end_y = 10.0
+
+        result = gate.analyze(WireOp(), ir, path)
+        power_nets = result.enriched_context.get("power_nets", [])
+        assert isinstance(power_nets, list)

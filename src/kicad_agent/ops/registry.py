@@ -1,6 +1,6 @@
 """Unified operation registry with metadata and query functions.
 
-Provides a central catalog of all 93 KiCad operations with rich metadata
+Provides a central catalog of all 97 KiCad operations with rich metadata
 including category, file types, read-only status, scope, and dependencies.
 Used by MCP server, LLM tool selection, and validation gates.
 
@@ -388,6 +388,42 @@ _RAW_CATALOG: dict[str, dict] = {
     "auto_route": {
         "category": "pcb",
         "description": "Auto-route nets on a PCB using A* pathfinding",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
+    "route_diff_pair": {
+        "category": "pcb",
+        "description": "Route a differential pair with impedance-controlled spacing and length matching",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
+    "match_lengths": {
+        "category": "pcb",
+        "description": "Match route lengths between net pairs via serpentine tuning",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
+    "analyze_split_plane": {
+        "category": "pcb",
+        "description": "Analyze split power/ground planes for boundary crossings",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": True,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
+    "fix_silkscreen_over_copper": {
+        "category": "pcb",
+        "description": "Detect and optionally relocate silkscreen text overlapping copper",
         "file_types": [".kicad_pcb"],
         "is_readonly": False,
         "scope": "single_file",

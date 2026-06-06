@@ -379,6 +379,153 @@ class RemoveCopperZoneOp(BaseModel):
         return self
 
 
+class RouteDiffPairOp(BaseModel):
+    """Route a differential pair with impedance-controlled spacing.
+
+    Routes both nets of a differential pair (e.g. USB D+/D-) using the A*
+    pathfinder with coupled spacing, then equalizes lengths via accordion
+    serpentining. Optionally computes trace width from IPC-2141 impedance
+    target.
+
+    Attributes:
+        op_type: Discriminator literal ``"route_diff_pair"``.
+        target_file: Relative path to the target KiCad PCB file.
+        net_positive: Positive net name (e.g. ``"USB_D+"``).
+        net_negative: Negative net name (e.g. ``"USB_D-"``).
+        spacing_mm: Coupled pair edge-to-edge spacing in mm.
+        impedance_target: Target characteristic impedance in ohms (optional).
+        layer: Primary copper layer for routing.
+        via_layers: Layer pair for via transitions (e.g. ``["F.Cu", "B.Cu"]``).
+        max_length_mismatch_mm: Acceptable length mismatch after tuning.
+        dielectric_height_mm: Substrate dielectric height for impedance calc.
+        dielectric_er: Relative permittivity for impedance calc.
+        copper_thickness_mm: Copper foil thickness for impedance calc.
+        trace_width_mm: Override trace width (skip impedance calc if set).
+    """
+
+    op_type: Literal["route_diff_pair"] = "route_diff_pair"
+    target_file: TargetFile
+    net_positive: str = Field(min_length=1, max_length=64, description="Positive net name")
+    net_negative: str = Field(min_length=1, max_length=64, description="Negative net name")
+    spacing_mm: float = Field(default=0.15, gt=0.05, le=2.0, description="Pair spacing in mm")
+    impedance_target: Optional[float] = Field(
+        default=None, gt=10, le=200,
+        description="Target impedance in ohms (IPC-2141 calc). None = skip.",
+    )
+    layer: str = Field(
+        default="F.Cu", pattern=r"^(?:[FB]\.Cu|In[1-9]\d*\.Cu)$",
+        description="Primary copper layer",
+    )
+    via_layers: Optional[list[str]] = Field(
+        default=None, description="Layer pair for via transitions",
+    )
+    max_length_mismatch_mm: float = Field(
+        default=0.5, ge=0.0, description="Max acceptable length mismatch in mm",
+    )
+    dielectric_height_mm: float = Field(default=0.2, gt=0.01, description="Dielectric height mm")
+    dielectric_er: float = Field(default=4.5, gt=1.0, le=12.0, description="Relative permittivity")
+    copper_thickness_mm: float = Field(default=0.035, gt=0.001, description="Copper thickness mm")
+    trace_width_mm: Optional[float] = Field(
+        default=None, gt=0.05, le=5.0, description="Override trace width mm",
+    )
+
+    @field_validator("via_layers")
+    @classmethod
+    def _validate_via_layers(cls, v: Optional[list[str]]) -> Optional[list[str]]:
+        if v is not None:
+            pattern = r"^(?:[FB]\.Cu|In[1-9]\d*\.Cu)$"
+            for layer_name in v:
+                if not re.match(pattern, layer_name):
+                    raise ValueError(f"Invalid layer name: {layer_name}")
+        return v
+
+
+class MatchLengthsOp(BaseModel):
+    """Match route lengths between net pairs via serpentine tuning.
+
+    Reads existing routes from the PCB and adds sawtooth or accordion bumps
+    to the shorter net until both nets are within tolerance.
+
+    Attributes:
+        op_type: Discriminator literal ``"match_lengths"``.
+        target_file: Relative path to the target KiCad PCB file.
+        net_pairs: Net pairs with tolerance in mm.
+        max_detour_ratio: Maximum detour amplitude as ratio of half-pitch.
+        pattern: Serpentine pattern type.
+        half_pitch_mm: Spacing between bumps in mm.
+    """
+
+    op_type: Literal["match_lengths"] = "match_lengths"
+    target_file: TargetFile
+    net_pairs: list["NetLengthPair"] = Field(
+        min_length=1, description="Net pairs to length-match",
+    )
+    max_detour_ratio: float = Field(
+        default=3.0, ge=1.0, le=10.0,
+        description="Max detour amplitude as ratio of half-pitch",
+    )
+    pattern: Literal["sawtooth", "accordion"] = Field(
+        default="sawtooth", description="Serpentine pattern type",
+    )
+    half_pitch_mm: float = Field(default=1.0, gt=0.1, description="Bump spacing in mm")
+
+
+class NetLengthPair(BaseModel):
+    """A pair of nets to length-match with tolerance."""
+
+    net_a: str = Field(min_length=1, max_length=64, description="First net name")
+    net_b: str = Field(min_length=1, max_length=64, description="Second net name")
+    tolerance_mm: float = Field(default=0.25, ge=0.0, description="Max allowed mismatch mm")
+
+
+class AnalyzeSplitPlaneOp(BaseModel):
+    """Analyze split power/ground planes for boundary crossings.
+
+    Detects gaps between zones on the same layer/net and flags signals
+    on adjacent layers that cross those gaps. Read-only operation.
+
+    Attributes:
+        op_type: Discriminator literal ``"analyze_split_plane"``.
+        target_file: Relative path to the target KiCad PCB file.
+        layer: Net name to analyze (e.g. ``"GND"``).
+        min_gap_mm: Minimum gap width to consider a split.
+    """
+
+    op_type: Literal["analyze_split_plane"] = "analyze_split_plane"
+    target_file: TargetFile
+    layer: str = Field(default="GND", min_length=1, max_length=64, description="Net name to analyze")
+    min_gap_mm: float = Field(default=0.0, ge=0.0, description="Min gap mm to flag")
+
+
+class FixSilkscreenOverCopperOp(BaseModel):
+    """Detect and optionally relocate silkscreen text overlapping copper.
+
+    Checks reference designators and values on silkscreen layers for
+    clearance violations against copper features (pads, traces, zones).
+
+    Attributes:
+        op_type: Discriminator literal ``"fix_silkscreen_over_copper"``.
+        target_file: Relative path to the target KiCad PCB file.
+        clearance_mm: Required clearance between silkscreen and copper.
+        action: ``"report"`` for detection only, ``"relocate"`` to fix.
+        copper_layers: Copper layers to check against.
+        silk_layers: Silkscreen layers to check.
+    """
+
+    op_type: Literal["fix_silkscreen_over_copper"] = "fix_silkscreen_over_copper"
+    target_file: TargetFile
+    clearance_mm: float = Field(default=0.15, gt=0.0, description="Required clearance mm")
+    action: Literal["report", "relocate"] = Field(
+        default="report", description="report = detection only, relocate = fix positions",
+    )
+    copper_layers: list[str] = Field(
+        default=["F.Cu"], description="Copper layers to check against",
+    )
+    silk_layers: list[str] = Field(
+        default=["F.SilkS", "B.SilkS"], description="Silkscreen layers to check",
+    )
+
+
 class MoveFootprintOp(BaseModel):
     """Move a footprint to a new position on the PCB.
 

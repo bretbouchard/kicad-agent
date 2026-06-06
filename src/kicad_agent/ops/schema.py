@@ -239,6 +239,10 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
     ModifyCopperZoneOp,
     RemoveCopperZoneOp,
     MoveFootprintOp,
+    RouteDiffPairOp,
+    MatchLengthsOp,
+    AnalyzeSplitPlaneOp,
+    FixSilkscreenOverCopperOp,
 )
 from kicad_agent.ops._schema_validation import (  # noqa: E402
     ValidatePowerNetsOp,
@@ -415,7 +419,11 @@ class Operation(BaseModel):
         | ClassifyViolationsOp
         | DiagnoseViolationsOp
         | ReviewSchematicOp
-        | UpdatePcbFromSchematicOp,
+        | UpdatePcbFromSchematicOp
+        | RouteDiffPairOp
+        | MatchLengthsOp
+        | AnalyzeSplitPlaneOp
+        | FixSilkscreenOverCopperOp,
         Field(discriminator="op_type"),
     ]
 
@@ -497,6 +505,11 @@ __all__ = [
     "ModifyCopperZoneOp",
     "RemoveCopperZoneOp",
     "MoveFootprintOp",
+    "RouteDiffPairOp",
+    "MatchLengthsOp",
+    "NetLengthPair",
+    "AnalyzeSplitPlaneOp",
+    "FixSilkscreenOverCopperOp",
     # Validation ops
     "ValidatePowerNetsOp",
     "ValidateSchematicOp",

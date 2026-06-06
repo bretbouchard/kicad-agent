@@ -49,6 +49,17 @@ from kicad_agent.validation.pcb_design_rules import (
     ThermalProximityRule,
     get_pcb_design_rules,
 )
+from kicad_agent.validation.split_plane import (
+    analyze_split_plane,
+    SplitPlaneAnalysis,
+    SplitGap,
+    SplitCrossing,
+)
+from kicad_agent.validation.silkscreen_clearance import (
+    check_silkscreen_clearance,
+    SilkscreenViolation,
+    SilkscreenClearanceResult,
+)
 
 __all__ = [
     "round_trip_stable",
@@ -85,4 +96,11 @@ __all__ = [
     "ImpedanceCheckRule",
     "ThermalProximityRule",
     "get_pcb_design_rules",
+    "analyze_split_plane",
+    "SplitPlaneAnalysis",
+    "SplitGap",
+    "SplitCrossing",
+    "check_silkscreen_clearance",
+    "SilkscreenViolation",
+    "SilkscreenClearanceResult",
 ]

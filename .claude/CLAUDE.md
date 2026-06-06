@@ -133,6 +133,26 @@ kicad-cli pcb render <project.kicad_pcb> -o review.png --quality high
 kicad-cli sch export pdf <project.kicad_sch> -o schematic.pdf
 ```
 
+## Known Bugs & Workarounds (Phase 26)
+
+These bugs have workarounds that MUST be applied in any build script using kicad-agent. See KNOWN_LIMITATIONS.md P26-1 through P26-5 for full details.
+
+| Bug | Issue | Workaround |
+|-----|-------|-----------|
+| `add_power` creates 0-pin symbols | #49 | Don't use. Change pin types to `passive` in embedded lib_symbol. |
+| `add_component` missing rotation | #48 | Post-process regex: append ` 0` to `(at X Y)` |
+| kiutils `Board.to_file()` drops nets | Unfiled | Use raw S-expression for PCBs, not kiutils serialization |
+| Device:R/C 3.81mm off-grid | #48 | Accept false-positive `wire_dangling`, use no-connects for optional parts |
+
+## KiCad Coordinate System (Critical for Agents)
+
+When building schematics programmatically, these rules prevent the most common agent failures:
+
+1. **Pin (at X Y) = wire connection point**, not pin graphic tip. Wires terminate at the `(at)` coordinate.
+2. **Schematic Y is INVERTED:** `abs_Y = comp_Y - pin_rel_Y` (subtract, not add).
+3. **Multi-pin connectors have non-sequential layouts.** Card_Edge_64P pins 33-64 ALL on right side, reuse Y positions from pins 1-32. Use lookup tables, never calculate.
+4. **Device:R/C have 3.81mm pin offsets** (not 2.54mm), placing connection points off-grid.
+
 ## Agent Rules
 
 - **Automate first.** Before asking a human to run something manually, check the tool inventory above. If a CLI command exists, use it. kicad-cli runs ERC, DRC, exports, renders, and upgrades without opening the GUI.

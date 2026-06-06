@@ -434,3 +434,312 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
         ),
         "length_matching": matched_pairs if matched_pairs else None,
     }
+
+
+@register_pcb("route_diff_pair")
+def _handle_route_diff_pair(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Route a differential pair with impedance control and length matching."""
+    from kicad_agent.routing.bridge import (
+        TrackSegment,
+        ViaSegment,
+        route_to_segments,
+        segments_to_sexpr,
+    )
+    from kicad_agent.routing.constraints import RoutingConstraints
+    from kicad_agent.routing.diff_pair import route_differential_pair
+    from kicad_agent.routing.graph import RoutingGraph
+    from kicad_agent.routing.pathfinder import build_routing_graph
+
+    # Resolve pad positions for both nets.
+    netlist = ir.extract_netlist()
+    if op.net_positive not in netlist:
+        raise ValueError(f"Net '{op.net_positive}' not found in PCB")
+    if op.net_negative not in netlist:
+        raise ValueError(f"Net '{op.net_negative}' not found in PCB")
+
+    pos_pins = netlist[op.net_positive]
+    neg_pins = netlist[op.net_negative]
+    if not pos_pins or not neg_pins:
+        raise ValueError(
+            f"Both nets must have at least one pin: "
+            f"{op.net_positive}={len(pos_pins)}, {op.net_negative}={len(neg_pins)}"
+        )
+
+    # Impedance-controlled trace width.
+    trace_width = op.trace_width_mm
+    impedance_achieved = None
+    if op.impedance_target is not None and trace_width is None:
+        from kicad_agent.routing.impedance import solve_trace_width
+
+        model = "microstrip" if op.layer in ("F.Cu", "B.Cu") else "stripline"
+        imp_result = solve_trace_width(
+            target_z0=op.impedance_target,
+            h=op.dielectric_height_mm,
+            t=op.copper_thickness_mm,
+            er=op.dielectric_er,
+            model=model,
+        )
+        trace_width = imp_result.trace_width_mm
+        impedance_achieved = {
+            "target_z0": imp_result.target_z0,
+            "achieved_z0": imp_result.achieved_z0,
+            "trace_width_mm": imp_result.trace_width_mm,
+            "model": imp_result.model,
+        }
+
+    if trace_width is None:
+        trace_width = 0.25  # Default 10mil
+
+    # Build routing graph.
+    is_multilayer = op.via_layers is not None and len(op.via_layers) > 1
+    constraints = RoutingConstraints(
+        dielectric_constant=op.dielectric_er,
+        dielectric_height_mm=op.dielectric_height_mm,
+        copper_thickness_mm=op.copper_thickness_mm,
+        trace_width_mm=trace_width,
+        clearance_mm=op.spacing_mm * 0.5,
+    )
+
+    obstacles = ir.extract_obstacles(clearance_mm=constraints.clearance_mm)
+    active_layers = op.via_layers if is_multilayer else [op.layer]
+
+    _all_pads: set[tuple[float, float]] = set()
+    for pins in [pos_pins, neg_pins]:
+        for p in pins:
+            _all_pads.add(p)
+
+    all_xs: list[float] = [p[0] for p in _all_pads]
+    all_ys: list[float] = [p[1] for p in _all_pads]
+    for o in obstacles:
+        all_xs.extend([o.x1, o.x2])
+        all_ys.extend([o.y1, o.y2])
+    margin = constraints.clearance_mm + trace_width + 1.0
+    bounds = (min(all_xs) - margin, min(all_ys) - margin,
+              max(all_xs) + margin, max(all_ys) + margin)
+
+    graph = build_routing_graph(
+        bounds, obstacles=obstacles, constraints=constraints,
+        layers=active_layers if is_multilayer else None,
+        required_nodes=_all_pads,
+    )
+
+    # Route the differential pair.
+    dp_result = route_differential_pair(
+        graph,
+        src_p=pos_pins[0], src_n=neg_pins[0],
+        tgt_p=pos_pins[-1], tgt_n=neg_pins[-1],
+        target_spacing_mm=op.spacing_mm,
+        max_length_mismatch_mm=op.max_length_mismatch_mm,
+    )
+
+    if not dp_result.valid:
+        return {
+            "routed": False,
+            "reason": "Differential pair routing failed",
+            "net_positive": op.net_positive,
+            "net_negative": op.net_negative,
+        }
+
+    # Convert to KiCad segments.
+    results = {
+        op.net_positive: type("R", (), {
+            "path": dp_result.net_positive, "length_mm": dp_result.length_positive_mm,
+        })(),
+        op.net_negative: type("R", (), {
+            "path": dp_result.net_negative, "length_mm": dp_result.length_negative_mm,
+        })(),
+    }
+    net_id_map = ir.extract_net_id_map()
+    segments = route_to_segments(results, constraints, layer=op.layer, net_id_map=net_id_map)
+    segment_count = len(segments)
+    via_count = sum(1 for s in segments if isinstance(s, ViaSegment))
+
+    if segments:
+        track_segs = [s for s in segments if isinstance(s, TrackSegment)]
+        if track_segs:
+            sexpr_block = segments_to_sexpr(track_segs)
+            ir.insert_track_segments(sexpr_block)
+        via_segs = [s for s in segments if isinstance(s, ViaSegment)]
+        if via_segs:
+            via_block = "\n".join(s.to_sexpr() for s in via_segs)
+            ir.insert_track_segments(via_block)
+
+    return {
+        "routed": True,
+        "net_positive": op.net_positive,
+        "net_negative": op.net_negative,
+        "segments": segment_count,
+        "vias": via_count,
+        "length_positive_mm": dp_result.length_positive_mm,
+        "length_negative_mm": dp_result.length_negative_mm,
+        "mismatch_mm": dp_result.mismatch_mm,
+        "spacing_mm": dp_result.spacing_mm,
+        "impedance": impedance_achieved,
+    }
+
+
+@register_pcb("match_lengths")
+def _handle_match_lengths(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Match route lengths between net pairs via serpentine tuning."""
+    from kicad_agent.routing.geometry import _path_length
+
+    pairs_matched: list[dict[str, Any]] = []
+    total_bumps = 0
+
+    for pair in op.net_pairs:
+        # Extract routes for both nets from PCB segments.
+        path_a = ir.extract_net_path(pair.net_a)
+        path_b = ir.extract_net_path(pair.net_b)
+
+        if not path_a:
+            pairs_matched.append({
+                "net_a": pair.net_a, "net_b": pair.net_b,
+                "status": "skipped", "reason": f"No route found for {pair.net_a}",
+            })
+            continue
+        if not path_b:
+            pairs_matched.append({
+                "net_a": pair.net_a, "net_b": pair.net_b,
+                "status": "skipped", "reason": f"No route found for {pair.net_b}",
+            })
+            continue
+
+        len_a = _path_length(list(path_a))
+        len_b = _path_length(list(path_b))
+        mismatch = abs(len_a - len_b)
+
+        if mismatch <= pair.tolerance_mm:
+            pairs_matched.append({
+                "net_a": pair.net_a, "net_b": pair.net_b,
+                "status": "already_within_tolerance",
+                "before_mm": {"net_a": round(len_a, 4), "net_b": round(len_b, 4)},
+                "mismatch_mm": round(mismatch, 4),
+            })
+            continue
+
+        delta = mismatch - pair.tolerance_mm
+        shorter = path_a if len_a < len_b else path_b
+        shorter_name = pair.net_a if len_a < len_b else pair.net_b
+
+        if op.pattern == "sawtooth":
+            from kicad_agent.routing.length_matching import add_sawtooth_matching
+            match_result = add_sawtooth_matching(
+                shorter, delta, spacing_mm=op.half_pitch_mm,
+            )
+        else:
+            from kicad_agent.routing.diff_pair import route_differential_pair
+            # Accordion pattern: use diff_pair's internal accordion logic
+            match_result = type("MR", (), {
+                "path": shorter, "achieved_delta_mm": 0.0,
+                "num_bumps": 0, "valid": False,
+            })()
+            pairs_matched.append({
+                "net_a": pair.net_a, "net_b": pair.net_b,
+                "status": "error", "reason": "Accordion pattern not yet implemented",
+            })
+            continue
+
+        if match_result.valid:
+            total_bumps += match_result.num_bumps
+            pairs_matched.append({
+                "net_a": pair.net_a, "net_b": pair.net_b,
+                "status": "matched",
+                "before_mm": {"net_a": round(len_a, 4), "net_b": round(len_b, 4)},
+                "mismatch_mm": round(mismatch, 4),
+                "bumps_added": match_result.num_bumps,
+                "shortened_net": shorter_name,
+            })
+        else:
+            pairs_matched.append({
+                "net_a": pair.net_a, "net_b": pair.net_b,
+                "status": "failed", "reason": "Could not achieve length match",
+            })
+
+    return {
+        "pairs_checked": len(op.net_pairs),
+        "pairs_matched": sum(1 for p in pairs_matched if p["status"] == "matched"),
+        "total_bumps_added": total_bumps,
+        "per_pair": pairs_matched,
+    }
+
+
+@register_pcb("analyze_split_plane")
+def _handle_analyze_split_plane(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Analyze split planes and flag boundary crossings (read-only)."""
+    from kicad_agent.validation.split_plane import analyze_split_plane
+
+    analysis = analyze_split_plane(
+        pcb_ir=ir,
+        layer=op.layer,
+        min_gap_mm=op.min_gap_mm,
+    )
+    return {
+        "layer": op.layer,
+        "num_zones": analysis.num_zones,
+        "num_splits": analysis.num_splits,
+        "num_crossings": analysis.num_crossings,
+        "splits": [
+            {"zone_a": s.zone_a_id, "zone_b": s.zone_b_id, "gap_mm": s.gap_mm}
+            for s in analysis.splits
+        ],
+        "crossings": [
+            {"net": c.trace_net, "point": c.crossing_point,
+             "zone_a": c.zone_a, "zone_b": c.zone_b}
+            for c in analysis.crossings
+        ],
+    }
+
+
+@register_pcb("fix_silkscreen_over_copper")
+def _handle_fix_silkscreen_over_copper(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Detect and optionally relocate silkscreen text overlapping copper."""
+    from kicad_agent.validation.silkscreen_clearance import check_silkscreen_clearance
+
+    result = check_silkscreen_clearance(
+        pcb_ir=ir,
+        clearance_mm=op.clearance_mm,
+        copper_layers=op.copper_layers,
+        silk_layers=op.silk_layers,
+    )
+
+    relocations_applied = 0
+    if op.action == "relocate" and result.violations:
+        for violation in result.violations:
+            if violation.suggested_position is not None:
+                try:
+                    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+                    new_content = PcbRawWriter.modify_footprint_position(
+                        ir.raw_content,
+                        violation.footprint_ref,
+                        violation.suggested_position[0],
+                        violation.suggested_position[1],
+                        0.0,
+                    )
+                    if new_content != ir.raw_content:
+                        from kicad_agent.ops.executor import OperationExecutor
+                        from dataclasses import replace
+                        OperationExecutor._raw_write_atomic(file_path, new_content)
+                        ir._raw_written = True
+                        ir._parse_result = replace(
+                            ir._parse_result, raw_content=new_content,
+                        )
+                        relocations_applied += 1
+                except (ValueError, RuntimeError):
+                    pass
+
+    return {
+        "total_checked": result.total_checked,
+        "violations_found": len(result.violations),
+        "relocations_applied": relocations_applied,
+        "action": op.action,
+        "violations": [
+            {
+                "text": v.text_content,
+                "footprint_ref": v.footprint_ref,
+                "position": v.text_position,
+                "overlapping_items": v.overlapping_items,
+                "suggested_position": v.suggested_position,
+            }
+            for v in result.violations
+        ],
+    }

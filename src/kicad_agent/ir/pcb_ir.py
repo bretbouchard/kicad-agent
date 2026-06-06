@@ -826,6 +826,68 @@ class PcbIR(BaseIR):
                 net_map[net.name] = net.number
         return net_map
 
+    def extract_net_path(self, net_name: str) -> tuple[tuple[float, float], ...]:
+        """Extract ordered waypoints for a net's route from board segments.
+
+        Walks the segment list, groups segments by net, and builds an
+        ordered path by connecting adjacent endpoints.
+
+        Args:
+            net_name: Net name to extract route for.
+
+        Returns:
+            Tuple of (x, y) waypoints, or empty tuple if net has no segments.
+        """
+        board = self.board
+        segments = board.segments if hasattr(board, "segments") else []
+        if not segments:
+            return ()
+
+        # Collect segments matching the net.
+        net_segs: list[tuple[tuple[float, float], tuple[float, float]]] = []
+        for seg in segments:
+            seg_net = getattr(seg, "net", "")
+            if str(seg_net) != net_name:
+                continue
+            start = getattr(seg, "start", None)
+            end = getattr(seg, "end", None)
+            if start is None or end is None:
+                continue
+            sx = float(getattr(start, "x", getattr(start, "X", 0)))
+            sy = float(getattr(start, "y", getattr(start, "Y", 0)))
+            ex = float(getattr(end, "x", getattr(end, "X", 0)))
+            ey = float(getattr(end, "y", getattr(end, "Y", 0)))
+            net_segs.append(((sx, sy), (ex, ey)))
+
+        if not net_segs:
+            return ()
+
+        # Build ordered path by chaining segments endpoint-to-endpoint.
+        path: list[tuple[float, float]] = [net_segs[0][0], net_segs[0][1]]
+        used: set[int] = {0}
+        max_iters = len(net_segs)
+
+        for _ in range(max_iters):
+            last = path[-1]
+            found = False
+            for i, (s, e) in enumerate(net_segs):
+                if i in used:
+                    continue
+                if abs(s[0] - last[0]) < 0.01 and abs(s[1] - last[1]) < 0.01:
+                    path.append(e)
+                    used.add(i)
+                    found = True
+                    break
+                if abs(e[0] - last[0]) < 0.01 and abs(e[1] - last[1]) < 0.01:
+                    path.append(s)
+                    used.add(i)
+                    found = True
+                    break
+            if not found:
+                break
+
+        return tuple(path)
+
     def insert_track_segments(self, sexpr_block: str) -> None:
         """Insert track segment S-expressions into the PCB file.
 
