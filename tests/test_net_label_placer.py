@@ -302,16 +302,107 @@ class TestPinMapLoading:
         assert "IC1" in mapping
 
 
+class TestPlaceNetLabelsReferenceFilter:
+
+    def test_reference_filter_only_processes_specified(self):
+        """Only specified references are processed."""
+        ir, path = _make_schematic_ir(
+            wires=[(50.0, 50.0, 60.0, 50.0), (70.0, 70.0, 80.0, 70.0)],
+            symbols=[
+                ("Audio_Codec", "AK4619VN", "U1", 0, 0),
+                ("Audio_Codec", "AK4619VN", "U2", 0, 0),
+            ],
+        )
+        ir.get_pin_positions = lambda: [
+            {"reference": "U1", "pin_name": "TVDD", "x": 50.0, "y": 50.0},
+            {"reference": "U2", "pin_name": "TVDD", "x": 70.0, "y": 70.0},
+        ]
+
+        result = place_net_labels(
+            ir, path, pin_map="backplane", references=["U1"],
+        )
+
+        assert result["labels_placed"] == 1
+        assert result["details"][0]["reference"] == "U1"
+
+    def test_reference_filter_skips_others(self):
+        """Pins from unlisted references are not processed."""
+        ir, path = _make_schematic_ir(
+            wires=[(50.0, 50.0, 60.0, 50.0)],
+            symbols=[("Audio_Codec", "AK4619VN", "U1", 0, 0)],
+        )
+        ir.get_pin_positions = lambda: [
+            {"reference": "U1", "pin_name": "TVDD", "x": 50.0, "y": 50.0},
+        ]
+
+        result = place_net_labels(
+            ir, path, pin_map="backplane", references=["U99"],
+        )
+
+        assert result["labels_placed"] == 0
+        assert result["skipped_no_mapping"] == 0
+
+
+class TestPlaceNetLabelsMultipleComponents:
+
+    def test_multiple_components_same_ic(self):
+        """Two instances of the same IC both get labels."""
+        ir, path = _make_schematic_ir(
+            wires=[
+                (50.0, 50.0, 60.0, 50.0),
+                (70.0, 70.0, 80.0, 70.0),
+            ],
+            symbols=[
+                ("Audio_Codec", "AK4619VN", "U1", 0, 0),
+                ("Audio_Codec", "AK4619VN", "U2", 20, 20),
+            ],
+        )
+        ir.get_pin_positions = lambda: [
+            {"reference": "U1", "pin_name": "TVDD", "x": 50.0, "y": 50.0},
+            {"reference": "U2", "pin_name": "TVDD", "x": 70.0, "y": 70.0},
+        ]
+
+        result = place_net_labels(ir, path, pin_map="backplane")
+
+        assert result["labels_placed"] == 2
+        refs = {d["reference"] for d in result["details"]}
+        assert refs == {"U1", "U2"}
+
+
+class TestPlaceNetLabelsLabelType:
+
+    def test_label_type_is_local(self):
+        """Labels placed by place_net_labels are local labels, not global."""
+        ir, path = _make_schematic_ir(
+            wires=[(50.0, 50.0, 60.0, 50.0)],
+            symbols=[("Audio_Codec", "AK4619VN", "U1", 0, 0)],
+        )
+        ir.get_pin_positions = lambda: [
+            {"reference": "U1", "pin_name": "TVDD", "x": 50.0, "y": 50.0},
+        ]
+
+        labels_before = len(ir.schematic.labels)
+        globals_before = len(ir.schematic.globalLabels)
+
+        place_net_labels(ir, path, pin_map="backplane")
+
+        # New label should be a local label, not global
+        assert len(ir.schematic.labels) == labels_before + 1
+        assert len(ir.schematic.globalLabels) == globals_before
+        assert ir.schematic.labels[-1].text == "VCC_3V3"
+
+
 class TestBuiltinProfiles:
 
     def test_backplane_has_expected_ics(self):
         """Backplane profile contains all expected ICs."""
         profile = _BUILTIN_PROFILES["backplane"]
-        assert "AK4619VN" in profile
-        assert "MT8816" in profile
-        assert "W5500" in profile
-        assert "MCP4728" in profile
-        assert "P82B96DP" in profile
+        expected_ics = [
+            "AK4619VN", "MT8816", "W5500", "MCP4728", "P82B96DP",
+            "RP2350B", "NE5532", "CD4066", "CD4060", "LM358",
+        ]
+        for ic in expected_ics:
+            assert ic in profile, f"Missing IC '{ic}' in backplane profile"
 
     def test_power_pins_always_mapped(self):
         """Power pins (VDD, VSS, GND) have non-None net names."""
@@ -320,3 +411,34 @@ class TestBuiltinProfiles:
                 if pin_name in ("VDD", "VCC", "VEE", "GND", "VSS",
                                 "TVDD", "AVDD", "DVDD", "DVDDH", "AVDRV"):
                     assert net is not None, f"{ic_name}.{pin_name} mapped to None"
+
+    def test_backplane_profile_has_complete_pin_lists(self):
+        """Extended IC profiles have expected pin counts."""
+        profile = _BUILTIN_PROFILES["backplane"]
+
+        # RP2350B should have QSPI, USB, SWD, ADC, and GPIO pins
+        rp = profile["RP2350B"]
+        assert "QSPI_SCLK" in rp
+        assert "USB_DP" in rp
+        assert "SWCLK" in rp
+        assert "GPIO0" in rp
+
+        # NE5532 should have dual op-amp pins
+        ne = profile["NE5532"]
+        assert "1OUT" in ne
+        assert "2IN+" in ne
+
+        # CD4066 should have quad switch pins
+        cd4066 = profile["CD4066"]
+        assert "1A" in cd4066
+        assert "4C" in cd4066
+
+        # CD4060 should have counter output pins
+        cd4060 = profile["CD4060"]
+        assert "Q14" in cd4060
+        assert "RESET" in cd4060
+
+        # LM358 should have dual op-amp pins
+        lm = profile["LM358"]
+        assert "1OUT" in lm
+        assert "2IN+" in lm
