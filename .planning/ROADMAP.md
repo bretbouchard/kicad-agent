@@ -1114,13 +1114,13 @@ Plans:
   3. train_step uses deterministic seed (global + step counter)
   4. Best-of-N scoring uses independent metrics, not self-evaluation
   5. Reproducibility: same seed produces identical output across 2 runs
-**Plans**: 4 plans
+**Plans**: 4 plans (4/4 complete)
 
 Plans:
-- [ ] 63-01-PLAN.md — Fix GitHub token handling with format validation + env var (H-11)
-- [ ] 63-02-PLAN.md — Fix parallel seed offset race condition (H-12)
-- [ ] 63-03-PLAN.md — Fix unseeded random in train_step (H-13)
-- [ ] 63-04-PLAN.md — Fix self-referential best-of-N scoring (H-14)
+- [x] 63-01-PLAN.md -- Fix GitHub token handling with format validation + env var (H-11)
+- [x] 63-02-PLAN.md -- Fix parallel seed offset race condition (H-12)
+- [x] 63-03-PLAN.md -- Fix unseeded random in train_step (H-13)
+- [x] 63-04-PLAN.md -- Fix self-referential best-of-N scoring (H-14)
 
 ### Phase 64: CLI/UX Polish
 **Goal**: Fix 3 HIGH CLI/UX bugs: route crash on paths outside CWD (H-15), no top-level help (H-16), component-search --help starts server (H-17)

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Council Remediation
 status: execute
-stopped_at: Completed Phase 62 - Routing Correctness (all plans)
-last_updated: "2026-06-06T19:11:21Z"
+stopped_at: Completed Phase 63 - Training Integrity (all plans)
+last_updated: "2026-06-06T19:14:00Z"
 last_activity: 2026-06-06
 progress:
   total_phases: 76
-  completed_phases: 58
+  completed_phases: 59
   total_plans: 233
-  completed_plans: 160
-  percent: 69
+  completed_plans: 164
+  percent: 70
 ---
 
 # Project State
@@ -59,6 +59,31 @@ Last activity: 2026-06-01
   - _mark_clearance_corridor() uses STRtree for O(W * log N) edge proximity scan
   - _point_to_segment_distance() helper for edge distance checks
   - 7 new tests in TestClearanceCorridor + TestPointToSegmentDistance
+
+### Phase 63: Training Integrity (v3.1)
+
+- Plan 63-01: Fix GitHub Token Handling (H-11) (COMPLETE)
+  - _resolve_github_token() with regex validation for all 5 GitHub token prefixes
+  - Environment variable fallback (GITHUB_TOKEN), explicit param takes precedence
+  - SEC-1: error messages hide actual token content
+  - 15 new tests in TestResolveGitHubToken
+
+- Plan 63-02: Fix Parallel Seed Offset (H-12) (COMPLETE)
+  - Per-worker seed offsets with 1M spacing: seed_base + worker_id * _SEED_SPACING
+  - Overlap assertion raises ValueError for misconfiguration
+  - 4 new tests in TestParallelSeedOffset
+
+- Plan 63-03: Fix Unseeded Random in train_step (H-13) (COMPLETE)
+  - GRPOTrainer._step_counter initialized to 0, incremented per step
+  - RNG seeded with config.seed + _step_counter for deterministic training
+  - GRPOConfig.seed defaults to 42
+  - 6 new tests in TestGRPOSeededRandom
+
+- Plan 63-04: Fix Self-Referential Best-of-N (H-14) (COMPLETE)
+  - _independent_score() uses format + step count heuristics (no model self-ref)
+  - generate() accepts optional reference_model for external neural scoring
+  - 50/50 heuristic/neural blend when reference model provided
+  - 12 new tests in TestIndependentScore + TestRewardModelGenerate
 
 ### Phase 61: Security Hardening (v3.1)
 
@@ -292,5 +317,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 76 Plan 02 - Wire NativeParser into PcbIR and Executor (41 tests, zero regression).
+Stopped at: Completed Phase 63 - Training Integrity (all 4 plans, 37 tests).
 Resume with: Next phase planning or `/gsd-execute-phase`.
