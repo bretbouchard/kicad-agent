@@ -40,10 +40,14 @@ class TestToolGeneration:
         expected = count_operation_tools()
         assert len(_OPERATION_TOOLS) == expected
 
-    def test_generates_7_meta_tools(self) -> None:
-        assert len(_META_TOOLS) == 7
+    def test_generates_9_meta_tools(self) -> None:
+        assert len(_META_TOOLS) == 9
         meta_names = {t.name for t in _META_TOOLS}
-        assert meta_names == {"health_check", "get_operation_schema", "get_project_context", "erc_check", "drc_check", "undo", "redo"}
+        assert meta_names == {
+            "health_check", "get_operation_schema", "get_project_context",
+            "erc_check", "drc_check", "undo", "redo",
+            "list_workflows", "get_workflow",
+        }
 
     def test_total_tool_count(self) -> None:
         assert len(_ALL_TOOLS) == len(_OPERATION_TOOLS) + len(_META_TOOLS)  # Dynamic sum
@@ -543,3 +547,80 @@ class TestLifespanUndoStack:
             async with server_lifespan(app) as ctx:
                 executor = ctx["executor"]
                 assert executor._undo_stack._max_size == 50
+
+
+class TestWorkflowDispatch:
+    """Test list_workflows and get_workflow MCP dispatch."""
+
+    @pytest.mark.asyncio
+    async def test_list_workflows_returns_8_templates(self, tmp_path: Path) -> None:
+        executor = MagicMock(spec=OperationExecutor)
+        result = await dispatch_tool("list_workflows", {}, executor, tmp_path)
+        assert result.isError is not True
+        body = json.loads(result.content[0].text)
+        assert len(body) == 8
+        names = {w["name"] for w in body}
+        assert "fix_erc_errors" in names
+        assert "wire_schematic" in names
+        assert "full_pcb_layout" in names
+        assert "convert_legacy_schematic" in names
+
+    @pytest.mark.asyncio
+    async def test_list_workflows_each_has_required_keys(self, tmp_path: Path) -> None:
+        executor = MagicMock(spec=OperationExecutor)
+        result = await dispatch_tool("list_workflows", {}, executor, tmp_path)
+        assert result.isError is not True
+        body = json.loads(result.content[0].text)
+        for entry in body:
+            assert "name" in entry
+            assert "description" in entry
+            assert "steps" in entry
+
+    @pytest.mark.asyncio
+    async def test_get_workflow_returns_detailed_steps(self, tmp_path: Path) -> None:
+        executor = MagicMock(spec=OperationExecutor)
+        result = await dispatch_tool(
+            "get_workflow", {"name": "fix_erc_errors"}, executor, tmp_path,
+        )
+        assert result.isError is not True
+        body = json.loads(result.content[0].text)
+        assert body["name"] == "fix_erc_errors"
+        assert body["file_types"] == [".kicad_sch"]
+        assert len(body["steps"]) == 5
+        assert body["steps"][0]["op_type"] == "parse_erc"
+        assert body["steps"][0]["required"] is True
+
+    @pytest.mark.asyncio
+    async def test_get_workflow_includes_required_flag(self, tmp_path: Path) -> None:
+        executor = MagicMock(spec=OperationExecutor)
+        result = await dispatch_tool(
+            "get_workflow", {"name": "add_component_full"}, executor, tmp_path,
+        )
+        assert result.isError is not True
+        body = json.loads(result.content[0].text)
+        # create_symbol is optional (required=False)
+        optional_steps = [s for s in body["steps"] if not s["required"]]
+        assert any(s["op_type"] == "create_symbol" for s in optional_steps)
+
+    @pytest.mark.asyncio
+    async def test_get_workflow_unknown_returns_error(self, tmp_path: Path) -> None:
+        executor = MagicMock(spec=OperationExecutor)
+        result = await dispatch_tool(
+            "get_workflow", {"name": "nonexistent"}, executor, tmp_path,
+        )
+        assert result.isError is True
+        body = json.loads(result.content[0].text)
+        assert body["error_type"] == "workflow_not_found"
+
+    @pytest.mark.asyncio
+    async def test_get_workflow_full_pcb_layout(self, tmp_path: Path) -> None:
+        executor = MagicMock(spec=OperationExecutor)
+        result = await dispatch_tool(
+            "get_workflow", {"name": "full_pcb_layout"}, executor, tmp_path,
+        )
+        assert result.isError is not True
+        body = json.loads(result.content[0].text)
+        assert body["file_types"] == [".kicad_pcb"]
+        step_types = [s["op_type"] for s in body["steps"]]
+        assert "move_footprint" in step_types
+        assert "auto_route" in step_types

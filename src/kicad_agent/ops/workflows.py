@@ -90,6 +90,31 @@ WORKFLOW_TEMPLATES: dict[str, WorkflowTemplate] = {
         ],
         file_types=[".kicad_sch"],
     ),
+    "full_pcb_layout": WorkflowTemplate(
+        name="full_pcb_layout",
+        description="Complete PCB layout pipeline from schematic sync through routing",
+        steps=[
+            WorkflowStep(op_type="move_footprint", description="Place footprints in layout"),
+            WorkflowStep(op_type="add_net_class", description="Set up net classes with design rules", required=False),
+            WorkflowStep(op_type="add_copper_zone", description="Add copper zones and ground pours", required=False),
+            WorkflowStep(op_type="auto_route", description="Auto-route nets"),
+            WorkflowStep(op_type="analyze_split_plane", description="Analyze split plane boundaries", required=False),
+        ],
+        file_types=[".kicad_pcb"],
+    ),
+    "convert_legacy_schematic": WorkflowTemplate(
+        name="convert_legacy_schematic",
+        description="Convert and repair a legacy KiCad 5/6 schematic to KiCad 10",
+        steps=[
+            WorkflowStep(op_type="convert_kicad6_to_10", description="Convert file format to KiCad 10"),
+            WorkflowStep(op_type="snap_to_grid", description="Fix off-grid elements"),
+            WorkflowStep(op_type="update_symbols_from_library", description="Re-embed mismatched symbols"),
+            WorkflowStep(op_type="parse_erc", description="Parse ERC to find conversion issues"),
+            WorkflowStep(op_type="repair_schematic", description="Auto-repair common issues"),
+            WorkflowStep(op_type="validate_schematic", description="Verify converted schematic"),
+        ],
+        file_types=[".kicad_sch"],
+    ),
 }
 
 

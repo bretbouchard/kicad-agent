@@ -279,6 +279,37 @@ _META_TOOLS = [
         },
         annotations=types.ToolAnnotations(destructiveHint=True),
     ),
+    types.Tool(
+        name="list_workflows",
+        description=(
+            "List all available workflow templates. Workflows are pre-defined multi-step "
+            "operation sequences for common KiCad tasks like fixing ERC errors, wiring "
+            "schematics, or setting up PCBs. Each workflow lists the required operation "
+            "steps in order."
+        ),
+        inputSchema={"type": "object", "properties": {}},
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
+    types.Tool(
+        name="get_workflow",
+        description=(
+            "Get the detailed steps of a specific workflow template. Returns the "
+            "operation sequence, file types, and step descriptions. Use list_workflows "
+            "first to discover available workflow names."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Workflow name (e.g. 'fix_erc_errors', 'wire_schematic')",
+                    "minLength": 1,
+                },
+            },
+            "required": ["name"],
+        },
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
 ]
 
 
@@ -496,6 +527,49 @@ async def dispatch_tool(
             return _error_result("redo_error", result.get("error", "No operations to redo"))
         except Exception as e:
             return _error_result("redo_error", str(e), "No operations to redo.")
+
+    # --- Workflow meta-tools ---
+    if name == "list_workflows":
+        try:
+            from kicad_agent.ops.workflows import list_workflows as _list_wfs
+            workflows = _list_wfs()
+            text = _cap_response(json.dumps(workflows, indent=2))
+            return types.CallToolResult(
+                content=[types.TextContent(type="text", text=text)],
+            )
+        except Exception as e:
+            return _error_result("workflow_error", str(e))
+
+    if name == "get_workflow":
+        try:
+            wf_name = arguments.get("name", "")
+            from kicad_agent.ops.workflows import get_workflow as _get_wf
+            wf = _get_wf(wf_name)
+            if wf is None:
+                return _error_result(
+                    "workflow_not_found",
+                    f"Unknown workflow: {wf_name!r}",
+                    "Use list_workflows to discover available workflow names.",
+                )
+            wf_dict = {
+                "name": wf.name,
+                "description": wf.description,
+                "file_types": wf.file_types,
+                "steps": [
+                    {
+                        "op_type": s.op_type,
+                        "description": s.description,
+                        "required": s.required,
+                    }
+                    for s in wf.steps
+                ],
+            }
+            text = _cap_response(json.dumps(wf_dict, indent=2))
+            return types.CallToolResult(
+                content=[types.TextContent(type="text", text=text)],
+            )
+        except Exception as e:
+            return _error_result("workflow_error", str(e))
 
     # --- Operation tools ---
     if name not in _OP_NAMES:
