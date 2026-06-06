@@ -83,25 +83,40 @@ class TestToolAnnotations:
     """ToolAnnotations assigned per operation category."""
 
     def test_read_only_ops_have_hint(self) -> None:
-        read_only = {
-            "query_connectivity", "navigate_hierarchy", "validate_power_nets",
-            "validate_schematic", "parse_erc", "extract_violation_positions",
-            "validate_hlabels", "cross_ref_check", "validate_refs",
-            "validate_footprint", "verify_pin_map",
-        }
+        """Every registry-declared readonly op gets readOnlyHint=True."""
+        from kicad_agent.ops.registry import get_readonly_operations
+        readonly_names = {meta.op_type for meta in get_readonly_operations()}
         for tool in _OPERATION_TOOLS:
-            if tool.name in read_only:
+            if tool.name in readonly_names:
                 assert tool.annotations is not None, f"{tool.name} missing annotations"
                 assert tool.annotations.readOnlyHint is True, f"{tool.name} should be readOnly"
 
-    def test_destructive_ops_have_hint(self) -> None:
-        destructive = {
-            "remove_component", "remove_net", "remove_wire", "remove_label",
-            "remove_junction", "remove_no_connect", "remove_lib_entry",
-            "propagate_symbol_change",
-        }
+    def test_readonly_annotations_match_registry(self) -> None:
+        """MCP readOnlyHint annotations exactly match registry is_readonly metadata."""
+        from kicad_agent.ops.registry import get_readonly_operations
+        registry_readonly = {meta.op_type for meta in get_readonly_operations()}
+
+        mcp_readonly = set()
         for tool in _OPERATION_TOOLS:
-            if tool.name in destructive:
+            if tool.annotations and tool.annotations.readOnlyHint is True:
+                mcp_readonly.add(tool.name)
+
+        missing_from_mcp = registry_readonly - mcp_readonly
+        extra_in_mcp = mcp_readonly - registry_readonly
+
+        assert missing_from_mcp == set(), (
+            f"Registry readonly ops missing MCP annotation: {sorted(missing_from_mcp)}"
+        )
+        assert extra_in_mcp == set(), (
+            f"MCP readOnlyHint ops not in registry readonly: {sorted(extra_in_mcp)}"
+        )
+
+    def test_destructive_ops_have_hint(self) -> None:
+        """Every registry-declared destructive op gets destructiveHint=True."""
+        from kicad_agent.ops.registry import get_destructive_operations
+        destructive_names = {meta.op_type for meta in get_destructive_operations()}
+        for tool in _OPERATION_TOOLS:
+            if tool.name in destructive_names:
                 assert tool.annotations is not None, f"{tool.name} missing annotations"
                 assert tool.annotations.destructiveHint is True, f"{tool.name} should be destructive"
 

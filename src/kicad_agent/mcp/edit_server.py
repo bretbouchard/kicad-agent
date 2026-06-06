@@ -31,6 +31,7 @@ from mcp.server.stdio import stdio_server
 
 from kicad_agent.context import render_project_context
 from kicad_agent.ops.executor import OperationExecutor
+from kicad_agent.ops.registry import get_readonly_operations, get_destructive_operations
 from kicad_agent.ops.schema import Operation
 from kicad_agent.ops.undo_stack import UndoStack
 from kicad_agent.validation.erc_drc import run_erc, run_drc
@@ -57,25 +58,16 @@ _MAX_RESPONSE_BYTES = 50 * 1024  # 50KB
 # ToolAnnotations by category
 # ---------------------------------------------------------------------------
 
-_READ_ONLY_OPS = frozenset({
-    # PCB query ops (from _QUERY_HANDLERS)
-    "query_connectivity", "review_schematic",
-    # Schematic query ops (from _SCHEMATIC_QUERY_HANDLERS)
-    "parse_erc", "validate_schematic", "resolve_pin_positions",
-    "classify_violations", "diagnose_violations",
-    "extract_nets", "detect_net_conflicts", "suggest_net_names",
-    "cross_ref_check", "validate_refs",
-    "validate_power_nets", "validate_hlabels",
-    "extract_violation_positions", "verify_pin_map",
-    "navigate_hierarchy", "validate_footprint",
-    "detect_routing_collisions", "detect_pin_overlaps",
-})
+# Auto-derive read-only and destructive operation sets from registry metadata.
+# This ensures MCP annotations stay in sync with the operation registry
+# without manual maintenance.
+_READ_ONLY_OPS: frozenset[str] = frozenset(
+    meta.op_type for meta in get_readonly_operations()
+)
 
-_DESTRUCTIVE_OPS = frozenset({
-    "remove_component", "remove_net", "remove_wire", "remove_label",
-    "remove_junction", "remove_no_connect", "remove_lib_entry",
-    "propagate_symbol_change",
-})
+_DESTRUCTIVE_OPS: frozenset[str] = frozenset(
+    meta.op_type for meta in get_destructive_operations()
+)
 
 _IDEMPOTENT_OPS = frozenset({
     "create_schematic", "create_pcb", "create_project", "create_symbol",
