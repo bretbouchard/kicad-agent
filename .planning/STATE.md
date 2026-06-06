@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Council Remediation
 status: execute
-stopped_at: Completed Phase 63 - Training Integrity (all plans)
-last_updated: "2026-06-06T19:14:00Z"
+stopped_at: Completed Phase 64 - CLI/UX Polish (all plans)
+last_updated: "2026-06-06T19:20:00Z"
 last_activity: 2026-06-06
 progress:
   total_phases: 76
-  completed_phases: 59
+  completed_phases: 60
   total_plans: 233
-  completed_plans: 164
-  percent: 70
+  completed_plans: 167
+  percent: 71
 ---
 
 # Project State
@@ -59,6 +59,24 @@ Last activity: 2026-06-01
   - _mark_clearance_corridor() uses STRtree for O(W * log N) edge proximity scan
   - _point_to_segment_distance() helper for edge distance checks
   - 7 new tests in TestClearanceCorridor + TestPointToSegmentDistance
+
+### Phase 64: CLI/UX Polish (v3.1)
+
+- Plan 64-01: Fix Route Crash on Paths Outside CWD (H-15) (COMPLETE)
+  - try/except ValueError wrapping relative_to(Path.cwd()) in _handle_route
+  - Falls back to absolute path when PCB file is outside CWD
+  - 3 new tests in TestRoutePathOutsideCwd
+
+- Plan 64-02: Add Top-Level Help with Subcommand Listing (H-16) (COMPLETE)
+  - _SUBCOMMAND_DESCRIPTIONS dict with all 16 subcommands
+  - _print_help() function with formatted subcommand table
+  - main() routes --help/-h/no-args to help before subcommand dispatch
+  - 5 new tests in TestTopLevelHelp
+
+- Plan 64-03: Fix Component-Search Help (H-17) (COMPLETE)
+  - argparse.parse_args() intercepts --help/-h before MCP import
+  - MCP server never starts when --help is requested
+  - 3 new tests in TestComponentSearchHelp
 
 ### Phase 63: Training Integrity (v3.1)
 
@@ -317,5 +335,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 63 - Training Integrity (all 4 plans, 37 tests).
+Stopped at: Completed Phase 64 - CLI/UX Polish (all 3 plans, 11 tests).
 Resume with: Next phase planning or `/gsd-execute-phase`.

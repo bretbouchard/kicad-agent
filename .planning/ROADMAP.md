@@ -1133,9 +1133,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 64-01-PLAN.md — Fix route crash on paths outside CWD (H-15)
-- [ ] 64-02-PLAN.md — Add top-level --help with subcommand listing (H-16)
-- [ ] 64-03-PLAN.md — Fix component-search --help starting MCP server (H-17)
+- [x] 64-01-PLAN.md -- Fix route crash on paths outside CWD (H-15)
+- [x] 64-02-PLAN.md -- Add top-level --help with subcommand listing (H-16)
+- [x] 64-03-PLAN.md -- Fix component-search --help starting MCP server (H-17)
 
 ### Phase 65: Architecture Refactor (PARTIALLY COMPLETE)
 **Goal**: Split 3 oversized files below 800-line limit (H-18, H-19, H-20) and fix 12 MEDIUM-severity findings (M-1 through M-12)
