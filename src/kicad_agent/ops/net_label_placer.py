@@ -30,7 +30,12 @@ logger = logging.getLogger(__name__)
 # Built-in pin mapping profiles
 # ---------------------------------------------------------------------------
 
-_BUILTIN_PROFILES: dict[str, dict[str, dict[str, str | None]]] = {
+# Type aliases for readability (L-02).
+PinMap = dict[str, str | None]
+ComponentMap = dict[str, PinMap]
+ProfileMap = dict[str, ComponentMap]
+
+_BUILTIN_PROFILES: ProfileMap = {
     "backplane": {
         # AK4619VN audio codec (32 pins)
         "AK4619VN": {

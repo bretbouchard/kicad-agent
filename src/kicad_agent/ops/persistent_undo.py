@@ -86,16 +86,19 @@ class PersistentUndoStack(UndoStack):
                     gitignore.write_text(content.rstrip() + "\n" + entry + "\n", encoding="utf-8")
             else:
                 gitignore.write_text(entry + "\n", encoding="utf-8")
-        except OSError:
-            pass  # Not critical — best effort
+        except OSError as exc:
+            logger.debug("Could not update .gitignore: %s", exc)
 
     def _validate_entry_path(self, entry_file: str) -> Optional[Path]:
         """Validate an entry file path from the manifest, preventing path traversal.
 
         Returns the resolved path if safe, or None if the path is invalid.
         """
-        if ".." in entry_file or "/" in entry_file or "\\" in entry_file:
-            logger.warning("Rejecting manifest entry with unsafe path: %s", entry_file)
+        if "\x00" in entry_file:
+            logger.warning("Rejecting manifest entry with null byte: %s", entry_file)
+            return None
+        if "/" in entry_file or "\\" in entry_file:
+            logger.warning("Rejecting manifest entry with path separator: %s", entry_file)
             return None
         entry_path = (self._undo_dir / entry_file).resolve()
         if not entry_path.is_relative_to(self._undo_dir.resolve()):
@@ -205,10 +208,14 @@ class PersistentUndoStack(UndoStack):
         except OSError as exc:
             logger.warning("Failed to save undo manifest: %s", exc)
 
+    def _sanitize_filename(self, entry: UndoEntry) -> str:
+        """Sanitize a file path into a safe filename (no separators, length-limited)."""
+        safe_name = str(entry.file_path).replace("/", "_").replace(".", "-")
+        return safe_name[:_MAX_SAFE_NAME]
+
     def _make_entry_filename(self, entry: UndoEntry) -> str:
         """Generate a safe filename for an undo entry (no path separators)."""
-        safe_name = str(entry.file_path).replace("/", "_").replace(".", "-")
-        safe_name = safe_name[:_MAX_SAFE_NAME]
+        safe_name = self._sanitize_filename(entry)
         return f"{self._next_seq:06d}_{safe_name}.json"
 
     def _write_entry(self, entry: UndoEntry) -> None:
@@ -221,8 +228,7 @@ class PersistentUndoStack(UndoStack):
             seq = self._next_seq
             self._next_seq += 1
 
-            safe_name = str(entry.file_path).replace("/", "_").replace(".", "-")
-            safe_name = safe_name[:_MAX_SAFE_NAME]
+            safe_name = self._sanitize_filename(entry)
             entry_file = f"{seq:06d}_{safe_name}.json"
 
             # Store filename for precise deletion later

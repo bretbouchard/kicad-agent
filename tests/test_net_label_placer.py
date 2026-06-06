@@ -247,7 +247,10 @@ class TestPlaceNetLabelsEdgeCases:
         assert result["no_connects_placed"] == 0
 
     def test_position_rounding_safe(self):
-        """Wire at 50.005 and pin at 50.01 match within 0.01mm rounding."""
+        """Wire at 50.005 and pin at 50.01 do NOT match due to rounding divergence.
+
+        round(50.005, 2) == 50.0, round(50.01, 2) == 50.01 -- different positions.
+        """
         ir, path = _make_schematic_ir(wires=[(50.005, 50.0, 60.0, 50.0)])
 
         ir.get_pin_positions = lambda: [
@@ -256,10 +259,8 @@ class TestPlaceNetLabelsEdgeCases:
 
         result = place_net_labels(ir, path, pin_map="backplane")
 
-        # Both round to (50.01, 50.0) → should match
-        # Actually 50.005 rounds to 50.0 and 50.01 rounds to 50.01 — no match
-        # This documents the rounding behavior
-        assert result["labels_placed"] == 0 or result["skipped_no_wire"] >= 1
+        # Rounding divergence: wire at 50.0, pin at 50.01 — no match
+        assert result["labels_placed"] == 0
 
 
 class TestPinMapLoading:
