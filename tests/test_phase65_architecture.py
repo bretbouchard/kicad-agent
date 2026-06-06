@@ -187,27 +187,29 @@ class TestM6SolderMaskCaching:
         from kicad_agent.dfm.checks import SolderMaskCheck
 
         check = SolderMaskCheck()
-        # Create mock pads with tracked to_shapely calls
+        # Create pads with tracked to_shapely calls using real Shapely geometries
+        # (STRtree requires real geometries, not MagicMock objects).
         call_count = {"count": 0}
 
-        class MockPad:
-            def __init__(self, eid, ref):
+        from shapely.geometry import box
+
+        class TrackedPad:
+            """Pad that tracks to_shapely() calls and returns real geometry."""
+
+            def __init__(self, eid, ref, x_offset=0.0):
                 self.entity_type = "pad"
                 self.layer = "F.Mask"
                 self.entity_id = eid
                 self.reference = ref
-                self.x1, self.y1 = 0, 0
-                self.x2, self.y2 = 10, 10
-                self._geom = MagicMock()
-                self._geom.distance.return_value = 0.5
+                self._geom = box(x_offset, 0, x_offset + 2.0, 2.0)
 
             def to_shapely(self):
                 call_count["count"] += 1
                 return self._geom
 
-        pads = [MockPad(f"pad_{i}", f"R{i}") for i in range(5)]
+        # Place pads close enough to trigger sliver detection proximity
+        pads = [TrackedPad(f"pad_{i}", f"R{i}", x_offset=float(i * 2.5)) for i in range(5)]
 
-        # Pads are close enough that they should be compared
         model = MagicMock()
         model.all_primitives = pads
 
