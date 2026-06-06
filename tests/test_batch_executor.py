@@ -87,7 +87,7 @@ class TestBatchExecutor:
         executor = OperationExecutor(base_dir=tmp_path)
 
         with patch(
-            "kicad_agent.ops.executor.parse_schematic",
+            "kicad_agent.ops.batch_executor.parse_schematic",
             side_effect=lambda p: __import__(
                 "kicad_agent.parser", fromlist=["parse_schematic"]
             ).parse_schematic(p),
@@ -111,7 +111,7 @@ class TestBatchExecutor:
         executor = OperationExecutor(base_dir=tmp_path)
 
         with patch(
-            "kicad_agent.ops.executor.serialize_schematic",
+            "kicad_agent.ops.batch_executor.serialize_schematic",
             side_effect=lambda pr, fp, **kwargs: __import__(
                 "kicad_agent.serializer", fromlist=["serialize_schematic"]
             ).serialize_schematic(pr, fp, **kwargs),
@@ -234,7 +234,7 @@ class TestBatchExecutor:
         ]
 
         with patch(
-            "kicad_agent.ops.executor.parse_schematic",
+            "kicad_agent.ops.batch_executor.parse_schematic",
             side_effect=lambda p: __import__(
                 "kicad_agent.parser", fromlist=["parse_schematic"]
             ).parse_schematic(p),
@@ -262,7 +262,7 @@ class TestBatchExecutor:
         executor = OperationExecutor(base_dir=tmp_path)
 
         with patch(
-            "kicad_agent.ops.executor.serialize_schematic",
+            "kicad_agent.ops.batch_executor.serialize_schematic",
             side_effect=RuntimeError("serialization failed"),
         ):
             with pytest.raises(RuntimeError, match="serialization failed"):
