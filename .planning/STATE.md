@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: Complete-Ops
-status: execute
-stopped_at: Completed Phase 74 - Executor Refactor & Schema Organization: executor.py reduced to 287 lines, execution.py extraction, registry categories fixed (2 plans)
-last_updated: "2026-06-06T20:42:00Z"
-last_activity: 2026-06-01
+milestone: v3.1
+milestone_name: Council Remediation
+status: complete
+stopped_at: All phases complete — v3.1 Council Remediation shipped.
+last_updated: "2026-06-06T21:30:00Z"
+last_activity: 2026-06-06
 progress:
   total_phases: 86
-  completed_phases: 39
-  total_plans: 214
-  completed_plans: 175
-  percent: 82
+  completed_phases: 86
+  total_plans: 228
+  completed_plans: 228
+  percent: 100
 ---
 
 # Project State
@@ -21,8 +21,8 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** All milestones shipped. Ready for next milestone planning.
-Last activity: 2026-06-01
+**Current focus:** All milestones shipped (v1.0 through v3.1). 86 phases, 228 plans, 4008+ tests.
+Last activity: 2026-06-06
 
 ## Current Position
 

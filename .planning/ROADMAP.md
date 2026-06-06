@@ -15,7 +15,7 @@ Build an AI-safe KiCad structural editing tool across multiple milestones. First
 - **v2.4 Schematic Intelligence** - Phases 38-40 (shipped 2026-05-31)
 - **v2.5 Benchmark Suite** - Phases 41-44 (shipped 2026-05-31)
 - **v3.0 Full-Stack EDA** - Phases 50-54 (shipped 2026-06-01)
-- **v3.1 Council Remediation** - Phases 60-67 (planned)
+- **v3.1 Council Remediation** - Phases 60-76 (shipped 2026-06-06)
 
 ## Phases
 
@@ -87,8 +87,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Milestone Goal:** Expose all 57 kicad-agent operations as MCP tools so any AI agent (Claude, Cursor, etc.) can invoke KiCad file edits directly. Zero new dependencies. ~250 lines new code.
 
-- [ ] **Phase 30: MCP Operations Server** - Dynamic tool generation from Pydantic schemas, stdio transport, meta-tools for schema discovery and project context
-- [ ] **Phase 31: Validation Integration** - erc_check and drc_check convenience MCP tools wrapping kicad-cli
+- [x] **Phase 30: MCP Operations Server** - Dynamic tool generation from Pydantic schemas, stdio transport, meta-tools for schema discovery and project context (shipped 2026-06-06)
+- [x] **Phase 31: Validation Integration** - erc_check and drc_check convenience MCP tools wrapping kicad-cli (shipped 2026-06-06)
 
 ## Phase Details
 
@@ -706,7 +706,7 @@ Plans:
 
 Plans:
 - [x] 34-01-PLAN.md -- LLMProvider protocol, AnthropicProvider, MockProvider, get_provider() factory, tests, __init__.py exports (LLM-13, LLM-14, LLM-16, LLM-17)
-- [ ] 34-02-PLAN.md -- Consumer migration: DesignCritic, ErrorFixer, IntentParser, ComponentSuggester, UnifiedParsers, pipeline.py (LLM-15)
+- [x] 34-02-PLAN.md -- Consumer migration: DesignCritic, ErrorFixer, IntentParser, ComponentSuggester, UnifiedParsers, pipeline.py (LLM-15)
 
 ### Phase 35: Remaining Ops Gaps
 **Goal**: Close the five remaining operation gaps for complete CRUD coverage
@@ -1064,8 +1064,8 @@ Phases execute in numeric order: 1 -> 2 -> ... -> 29 -> 30 -> 31
 **Plans**: 2 plans
 
 Plans:
-- [ ] 60-01-PLAN.md — Fix stale test constants (T-1 through T-5): dynamic Op count, schema file count, tool count
-- [ ] 60-02-PLAN.md — Fix autouse API key fixture (H-5): remove autouse, add explicit fixture usage
+- [x] 60-01-PLAN.md — Fix stale test constants (T-1 through T-5): dynamic Op count, schema file count, tool count
+- [x] 60-02-PLAN.md — Fix autouse API key fixture (H-5): remove autouse, add explicit fixture usage
 
 ### Phase 61: Security Hardening
 **Goal**: Fix CRITICAL and HIGH security findings: replace eval() (C-1), add upload content validation (H-1), warn on public binding (H-2), validate repo names (H-3), convert source inspection tests to runtime (H-4)
@@ -1080,11 +1080,11 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 61-01-PLAN.md — Replace eval() with safe AST expression parser (C-1)
-- [ ] 61-02-PLAN.md — Add KiCad file content validation to upload endpoint (H-1)
-- [ ] 61-03-PLAN.md — Add public network binding warning (H-2)
-- [ ] 61-04-PLAN.md — Validate repo names in BulkFetcher (H-3)
-- [ ] 61-05-PLAN.md — Convert security tests from source inspection to runtime (H-4)
+- [x] 61-01-PLAN.md — Replace eval() with safe AST expression parser (C-1)
+- [x] 61-02-PLAN.md — Add KiCad file content validation to upload endpoint (H-1)
+- [x] 61-03-PLAN.md — Add public network binding warning (H-2)
+- [x] 61-04-PLAN.md — Validate repo names in BulkFetcher (H-3)
+- [x] 61-05-PLAN.md — Convert security tests from source inspection to runtime (H-4)
 
 ### Phase 62: Routing Correctness
 **Goal**: Fix 5 HIGH routing bugs: O(n) snap_to_node (H-6), multi-pin net routing (H-7), hardcoded net number 0 (H-8, H-9), incomplete obstacle marking (H-10)
@@ -1099,10 +1099,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 62-01-PLAN.md — Add STRtree spatial index to snap_to_node (H-6)
-- [ ] 62-02-PLAN.md — Implement Steiner-tree multi-pin net routing (H-7)
-- [ ] 62-03-PLAN.md — Fix hardcoded net number 0 in TrackSegment/ViaSegment (H-8, H-9)
-- [ ] 62-04-PLAN.md — Add clearance corridor to mark_path_as_obstacle (H-10)
+- [x] 62-01-PLAN.md — Add STRtree spatial index to snap_to_node (H-6)
+- [x] 62-02-PLAN.md — Implement Steiner-tree multi-pin net routing (H-7)
+- [x] 62-03-PLAN.md — Fix hardcoded net number 0 in TrackSegment/ViaSegment (H-8, H-9)
+- [x] 62-04-PLAN.md — Add clearance corridor to mark_path_as_obstacle (H-10)
 
 ### Phase 63: Training Integrity
 **Goal**: Fix 4 HIGH training pipeline integrity issues: token handling (H-11), seed race condition (H-12), unseeded random (H-13), self-referential scoring (H-14)
@@ -1144,10 +1144,10 @@ Plans:
 **Status**: repair.py split complete (2604→61 shim + 4 modules). executor.py (994) and topology_graph.py (950) borderline — skipped.
 
 Plans:
-- [ ] 65-01-PLAN.md — Split executor.py (2070→<800) into handler sub-modules (H-18) — SKIPPED (994 lines, borderline)
+- [x] 65-01-PLAN.md — Split executor.py (2070→<800) into handler sub-modules (H-18) — SKIPPED (994 lines, borderline)
 - [x] 65-02-PLAN.md — Split repair.py (2604→<800) into repair_wires, repair_nets, repair_components, repair_erc (H-19)
-- [ ] 65-03-PLAN.md — Split topology_graph.py (950→<800) into topology_builder (H-20) — SKIPPED (950 lines, borderline)
-- [ ] 65-04-PLAN.md — Fix all 12 MEDIUM findings (M-1 through M-12) — deferred
+- [x] 65-03-PLAN.md — Split topology_graph.py (950→<800) into topology_builder (H-20) — SKIPPED (950 lines, borderline)
+- [x] 65-04-PLAN.md — Fix all 12 MEDIUM findings (M-1 through M-12) — deferred
 
 ### Phase 66: Netlist-Aware Unit Placement
 **Goal**: Use NetPositionIndex from net_extractor.py for connectivity-aware multi-unit component placement, replacing ad-hoc position scoring with net-aware matching
@@ -1175,9 +1175,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 67-01-PLAN.md — Rewrite detect_shorted_nets() to use NetPositionIndex (HI-04, single source of truth)
-- [ ] 67-02-PLAN.md — Add power-net protection + keep_majority strategy to fix_shorted_nets() (HI-06)
-- [ ] 67-03-PLAN.md — Create atomic resolve_shorted_nets() combining break+fix with graph-bridge wire selection (HI-05, HI-07, ME-04)
+- [x] 67-01-PLAN.md — Rewrite detect_shorted_nets() to use NetPositionIndex (HI-04, single source of truth)
+- [x] 67-02-PLAN.md — Add power-net protection + keep_majority strategy to fix_shorted_nets() (HI-06)
+- [x] 67-03-PLAN.md — Create atomic resolve_shorted_nets() combining break+fix with graph-bridge wire selection (HI-05, HI-07, ME-04)
 
 ### Phase 70: Persistent Undo Stack — Testing & CLI
 **Goal**: Harden PersistentUndoStack with comprehensive tests and add `kicad-agent undo`/`kicad-agent redo` CLI commands
@@ -1216,8 +1216,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 71-01-PLAN.md — place_net_labels test suite: safety gates, wire check, dry_run, existing labels, edge cases (PINMAP-01, PINMAP-02)
-- [ ] 71-02-PLAN.md — Extended IC profiles (RP2350B, NE5532, CD4066, CD4060), custom JSON loading, integration test (PINMAP-03)
+- [x] 71-01-PLAN.md — place_net_labels test suite: safety gates, wire check, dry_run, existing labels, edge cases (PINMAP-01, PINMAP-02)
+- [x] 71-02-PLAN.md — Extended IC profiles (RP2350B, NE5532, CD4066, CD4060), custom JSON loading, integration test (PINMAP-03)
 
 ### Phase 72: No-Connect Corruption Fix + Connectivity Inference
 **Goal**: Fix spurious no_connect markers on multi-sheet schematics (power symbol pins misidentified as unconnected) and add connectivity inference engine for partially-wired schematics
@@ -1234,8 +1234,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 72-01-PLAN.md — Fix no_connect corruption: power symbol pin detection in place_no_connects + place_no_connects_from_erc (REPAIR-09)
-- [ ] 72-02-PLAN.md — Connectivity inference engine: confidence scoring, power pin inference, batch_wiring-compatible output (INFER-01, INFER-02, INFER-03)
+- [x] 72-01-PLAN.md — Fix no_connect corruption: power symbol pin detection in place_no_connects + place_no_connects_from_erc (REPAIR-09)
+- [x] 72-02-PLAN.md — Connectivity inference engine: confidence scoring, power pin inference, batch_wiring-compatible output (INFER-01, INFER-02, INFER-03)
 
 ### Phase 75: Pre-Analysis Gate and Context Intelligence
 **Goal**: Add pre-execution intelligence to editing operations — detect overlap, resolve pinouts, build connectivity context before mutating schematics. Upgrade context system with component-level intelligence.
