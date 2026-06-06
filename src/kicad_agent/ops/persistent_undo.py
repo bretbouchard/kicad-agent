@@ -25,7 +25,7 @@ import tempfile
 import threading
 from collections import deque
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from kicad_agent.ops.undo_stack import UndoEntry, UndoStack
 
