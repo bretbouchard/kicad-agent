@@ -180,9 +180,10 @@ class TestQueryFunctions:
             "duplicate_component",
             "array_replicate",
             "snap_components_to_grid",
+            "swap_symbol",
         ]
         assert op_types == expected
-        assert len(ops) == 7
+        assert len(ops) == 8
 
     def test_destructive_operations(self) -> None:
         ops = get_destructive_operations()

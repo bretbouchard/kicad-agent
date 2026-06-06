@@ -307,10 +307,10 @@ class TestPcbIRKiutilsFallback:
 
     def test_executor_fallback_on_native_failure(self):
         """Executor falls back to kiutils when NativeParser raises."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from kicad_agent.ops.execution import try_native_parse
 
         with patch.object(NativeParser, 'parse_pcb', side_effect=Exception("mock failure")):
-            native_board = OperationExecutor._try_native_parse(ARDUINO_MEGA)
+            native_board = try_native_parse(ARDUINO_MEGA)
             # Should return None on failure
             assert native_board is None
 

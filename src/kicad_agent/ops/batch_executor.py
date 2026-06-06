@@ -312,7 +312,7 @@ def execute_batch(executor: OperationExecutor, ops: list[Operation]) -> dict[str
             # Serialize once per file
             if file_path.suffix == ".kicad_pcb":
                 uuid_map = uuid_map_store.get(file_path)
-                if ir.needs_serialization():
+                if not ir.raw_written:
                     serialize_pcb(parse_result, file_path, uuid_map=uuid_map)
             elif not is_project_file(file_path):
                 serialize_schematic(parse_result, file_path)

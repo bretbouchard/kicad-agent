@@ -419,7 +419,7 @@ def execute_pcb(
         # Skip kiutils serialization if the IR method already wrote directly
         # via raw S-expression manipulation, or if native parser was used
         # (no kiutils parse_result available).
-        if ir.needs_serialization() and parse_result is not None:
+        if not ir.raw_written and parse_result is not None:
             serialize_pcb(parse_result, file_path, uuid_map=uuid_map)
 
         txn.commit()
@@ -607,7 +607,7 @@ def execute_cross_file(
                 if isinstance(ir, PcbIR):
                     parse_result = ir._parse_result
                     uuid_map = ir.uuid_map
-                    if ir.needs_serialization():
+                    if not ir.raw_written:
                         serialize_pcb(parse_result, fp, uuid_map=uuid_map)
                 elif isinstance(ir, SchematicIR):
                     serialize_schematic(ir._parse_result, fp)
