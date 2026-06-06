@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Council Remediation
 status: execute
-stopped_at: Completed Phase 71 - Tool Awareness Registry: Pin-to-net mapping test suite and extended IC profiles (2 plans)
-last_updated: "2026-06-06T20:01:00Z"
+stopped_at: Completed Phase 72 - Read-Only Dispatch & MCP Annotations: Verified schematic query dispatch path, auto-derived MCP annotations from registry (2 plans)
+last_updated: "2026-06-06T20:11:12Z"
 last_activity: 2026-06-06
 progress:
   total_phases: 76
   completed_phases: 62
   total_plans: 236
-  completed_plans: 174
+  completed_plans: 176
   percent: 74
 ---
 
@@ -107,6 +107,20 @@ Last activity: 2026-06-01
   - Validated RP2350B, NE5532, CD4066, CD4060, LM358 profiles correct
   - Confirmed NE5532 +/-12V (backplane) vs +/-15V (channel-strip) power domains
   - All 20 tests pass (0.23s combined)
+
+### Phase 72: Read-Only Dispatch & MCP Annotations (v3.1)
+
+- Plan 72-01: Verify Schematic Query Dispatch Path (COMPLETE)
+  - 9 tests confirming _execute_schematic_query parse-only path works correctly
+  - Verified 19 schematic query handlers skip Transaction/serialize
+  - Verified all 25 registry readonly ops have proper dispatch handlers
+  - No code changes needed (path already implemented in prior phases)
+
+- Plan 72-02: Auto-Derive MCP Read-Only Annotations (COMPLETE)
+  - Replaced manual _READ_ONLY_OPS frozenset (20 ops) with auto-derived set from registry (25 ops)
+  - Replaced manual _DESTRUCTIVE_OPS frozenset (8 ops) with auto-derived set from registry (13 ops)
+  - 5 previously missing readonly ops now annotated: analyze_split_plane, infer_connectivity, list_design_rules, list_lib_entries, list_net_classes
+  - Bidirectional consistency test ensures registry and MCP annotations stay in sync
 
 ### Phase 64: CLI/UX Polish (v3.1)
 
