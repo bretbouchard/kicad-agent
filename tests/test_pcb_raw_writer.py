@@ -101,11 +101,18 @@ class TestBuildZoneSexpr:
             layer="F.Cu",
             polygon=[(0, 0), (100, 0), (100, 100), (0, 100)],
         )
-        assert '(net 1)' in result
-        assert '(net_name "GND")' in result
+        # KiCad format: (net N "name")
+        assert '(net 1 "GND")' in result
         assert '(layer "F.Cu")' in result
         assert "(xy 0.000000 0.000000)" in result
         assert "(xy 100.000000 100.000000)" in result
+        # UUID must be quoted (fixes #65)
+        assert '(uuid "00000000-0000-0000-0000-000000000000")' in result
+        # No stub filled_polygon (fixes #65)
+        assert "filled_polygon" not in result
+        # No invalid fields
+        assert "zone_locks" not in result
+        assert "net_name" not in result
 
     def test_custom_clearance_and_thickness(self):
         """Custom clearance and min_thickness appear in output."""
@@ -121,7 +128,7 @@ class TestBuildZoneSexpr:
         assert '(layer "B.Cu")' in result
 
     def test_custom_uuid(self):
-        """Custom UUID is used in zone."""
+        """Custom UUID is used in zone (quoted, fixes #65)."""
         test_uuid = "12345678-1234-1234-1234-123456789abc"
         result = PcbRawWriter.build_zone_sexp(
             net_number=1,
@@ -130,18 +137,18 @@ class TestBuildZoneSexpr:
             polygon=[(0, 0), (100, 100)],
             uuid=test_uuid,
         )
-        assert f"(tstamp {test_uuid})" in result
+        assert f'(uuid "{test_uuid}")' in result
 
-    def test_priority_appears(self):
-        """Priority value appears in zone."""
+    def test_name_only_net_format(self):
+        """When net_number is 0 and name is provided, uses (net "name") format."""
         result = PcbRawWriter.build_zone_sexp(
-            net_number=1,
+            net_number=0,
             net_name="GND",
             layer="F.Cu",
             polygon=[(0, 0), (100, 100)],
-            priority=5,
         )
-        assert "(priority 5)" in result
+        assert '(net "GND")' in result
+        assert "net_name" not in result
 
 
 class TestInsertZone:
@@ -149,9 +156,9 @@ class TestInsertZone:
 
     def test_inserts_zone_before_closing_paren(self):
         """Zone is inserted before the last closing paren."""
-        zone = '  (zone (net 1) (net_name "GND")\n  )\n'
+        zone = '  (zone (net 1 "GND")\n  )\n'
         result = PcbRawWriter.insert_zone(_MINIMAL_PCB, zone)
-        assert '(zone (net 1)' in result
+        assert '(zone' in result
         assert result.rstrip().endswith(")")
 
     def test_empty_content_returns_unchanged(self):
@@ -357,9 +364,11 @@ class TestIntegrationWithRealPcb:
         )
         result = PcbRawWriter.insert_zone(content, zone_sexp)
 
-        assert '(zone (net 0)' in result
-        assert '(net_name "GND")' in result
+        assert '(zone' in result
+        assert '(net "GND")' in result
         assert '(layer "F.Cu")' in result
+        # UUID quoted (fixes #65)
+        assert '(uuid "' in result
 
     def test_modify_footprint_position_round_trip(
         self, arduino_mega_pcb: Path

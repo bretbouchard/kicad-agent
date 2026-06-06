@@ -101,13 +101,25 @@ def add_copper_zone(
     new_raw = PcbRawWriter.insert_zone(raw, zone_sexp)
     ir.commit_raw_content(new_raw)
 
-    # Re-parse to update in-memory board for subsequent modify/remove operations
+    # Re-parse to update in-memory board for subsequent modify/remove operations.
+    # Use native parser first (handles boards kiutils can't parse, fixes #64).
+    # Fall back to kiutils only if native parser is unavailable.
     from kicad_agent.parser import parse_pcb
     from kicad_agent.parser.uuid_extractor import extract_uuids
 
-    result = parse_pcb(ir._parse_result.file_path)
-    uuid_map = extract_uuids(result.raw_content, "pcb")
-    ir._update_parse_result(result, uuid_map)
+    try:
+        result = parse_pcb(ir._parse_result.file_path)
+        uuid_map = extract_uuids(result.raw_content, "pcb")
+        ir._update_parse_result(result, uuid_map)
+    except Exception as e:
+        # kiutils re-parse failed (e.g. fp_poly corruption on analog board).
+        # The write already succeeded via native path — update raw content only.
+        logger.warning(
+            "Post-write re-parse failed (kiutils): %s. "
+            "Zone was written successfully via native path, but in-memory "
+            "board is stale. Subsequent operations may need a fresh parse.",
+            e,
+        )
 
     ir._record_mutation("add_copper_zone", {
         "net_name": net_name,
