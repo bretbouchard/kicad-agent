@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Council Remediation
 status: execute
-stopped_at: Completed Phase 76 - Native KiCad 10 PCB Parser (all plans + code review fixes)
-last_updated: "2026-06-05T07:30:00Z"
-last_activity: 2026-06-05
+stopped_at: Completed Phase 61 - Security Hardening (all plans)
+last_updated: "2026-06-06T19:05:25Z"
+last_activity: 2026-06-06
 progress:
   total_phases: 76
   completed_phases: 57
-  total_plans: 228
-  completed_plans: 149
-  percent: 84
+  total_plans: 233
+  completed_plans: 156
+  percent: 67
 ---
 
 # Project State
@@ -37,6 +37,43 @@ Last milestone: v3.0 Full-Stack EDA (Phases 50-54)
 Council review: 4 findings fixed, all passing.
 
 Last activity: 2026-06-01
+
+### Phase 61: Security Hardening (v3.1)
+
+- Plan 61-01: Replace eval() with safe AST parser (C-1) (COMPLETE)
+  - Replaced eval() in circuit_templates.py with AST-walking predicate evaluator
+  - Supports comparison, arithmetic, boolean operators; rejects imports/calls/attribute access
+  - 12 new tests in TestSafePredicateEvaluator
+
+- Plan 61-02: Upload content validation (H-1) (COMPLETE)
+  - Added _validate_content() checking file bytes against KiCad S-expression signatures
+  - Rejects non-KiCad content declared as KiCad types; allows empty templates
+  - 6 new tests in TestUploadContentValidation
+
+- Plan 61-03: Public network binding warning (H-2) (COMPLETE)
+  - Added stderr warning when playground binds to 0.0.0.0 or ::
+  - 2 new tests in TestPublicBindingWarning
+
+- Plan 61-04: Repo name validation (H-3) (COMPLETE)
+  - Added _REPO_NAME_RE regex and validation in BulkFetcher._repo_dir()
+  - Rejects path traversal, Unicode separators, oversized names
+  - 7 new tests in TestRepoNameValidation
+
+- Plan 61-05: Runtime security tests (H-4) (COMPLETE)
+  - Converted inspect.getsource() tests to runtime OperationExecutor.execute() tests
+  - All 19 security hardening tests + 27 Phase 61 tests passing
+
+### Phase 60: Test Infrastructure (v3.1)
+
+- Plan 60-01: Fix stale test constants T-1 through T-5 (COMPLETE)
+  - Created tests/helpers/counts.py with dynamic count_op_classes(), count_schema_files(), count_operation_tools()
+  - Refactored test_slc_compliance.py, test_code_quality.py, test_edit_server.py to use shared helpers
+  - All 5 hardcoded constants eliminated; counts derive from source
+
+- Plan 60-02: Fix autouse API key fixture H-5 (COMPLETE)
+  - Verified autouse=True already removed from conftest_llm.py
+  - Created test_fixture_isolation.py with regression tests (positive/negative verification)
+  - 2 new tests, 114 total Phase 60 tests passing
 
 ### Phase 76: Native KiCad 10 PCB Parser (v3.1)
 
