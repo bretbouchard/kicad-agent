@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.1
-milestone_name: Council Remediation
+milestone: v2.2
+milestone_name: Complete-Ops
 status: execute
-stopped_at: Completed Phase 73 - Workflow Templates & Dependency Graph: Operation dependency and conflict validation in batch executor, 8 workflow templates as MCP meta-tools (2 plans)
-last_updated: "2026-06-06T20:17:00Z"
-last_activity: 2026-06-06
+stopped_at: Completed Phase 74 - Executor Refactor & Schema Organization: executor.py reduced to 287 lines, execution.py extraction, registry categories fixed (2 plans)
+last_updated: "2026-06-06T20:42:00Z"
+last_activity: 2026-06-01
 progress:
-  total_phases: 76
-  completed_phases: 62
-  total_plans: 236
-  completed_plans: 178
-  percent: 75
+  total_phases: 86
+  completed_phases: 39
+  total_plans: 214
+  completed_plans: 175
+  percent: 82
 ---
 
 # Project State
@@ -121,6 +121,21 @@ Last activity: 2026-06-01
   - Replaced manual _DESTRUCTIVE_OPS frozenset (8 ops) with auto-derived set from registry (13 ops)
   - 5 previously missing readonly ops now annotated: analyze_split_plane, infer_connectivity, list_design_rules, list_lib_entries, list_net_classes
   - Bidirectional consistency test ensures registry and MCP annotations stay in sync
+
+### Phase 74: Executor Refactor & Schema Organization (v3.1)
+
+- Plan 74-01: Split executor handlers into modules (COMPLETE)
+  - executor.py reduced from 800 to 287 lines (coordinator only)
+  - New execution.py (640 lines) with all file-type execution functions as standalone functions
+  - batch_executor.py updated to use standalone functions from execution.py
+  - Backward-compatible re-exports preserved (handler registries, constants, dispatch functions)
+  - All 55 directly affected tests pass with updated patches
+
+- Plan 74-02: Reorganize miscategorized schema operations (COMPLETE)
+  - Schema classes already moved in prior phase (verified in _schema_repair.py docstring)
+  - Updated 6 OPERATION_REGISTRY entries from stale "repair" category to correct categories
+  - swap_symbol -> component, update_symbols_from_library -> library, convert_kicad6_to_10 -> create
+  - add_power_flag -> wire, rebuild_root_sheet -> sheet, place_net_labels -> routing
 
 ### Phase 73: Workflow Templates & Dependency Graph (v3.1)
 
@@ -414,5 +429,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 73 - Workflow Templates & Dependency Graph (2 plans).
+Stopped at: Completed Phase 74 - Executor Refactor & Schema Organization (2 plans).
 Resume with: Next phase planning or `/gsd-execute-phase`.
