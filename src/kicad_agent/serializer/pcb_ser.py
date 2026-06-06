@@ -45,8 +45,10 @@ def serialize_pcb(
     parse_result.kiutils_obj.to_file(str(output_path))
 
     if uuid_map is not None and uuid_map.entries:
+        from kicad_agent.io.atomic_write import atomic_write
+
         serialized = output_path.read_text(encoding="utf-8")
         restored = reinject_uuids(serialized, uuid_map)
-        output_path.write_text(restored, encoding="utf-8")
+        atomic_write(output_path, restored)
 
     return output_path

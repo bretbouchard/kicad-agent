@@ -3,7 +3,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/kicad-agent.svg)](https://pypi.org/project/kicad-agent/)
 [![Python versions](https://img.shields.io/pypi/pyversions/kicad-agent.svg)](https://pypi.org/project/kicad-agent/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-1382+-green.svg)]()
+[![Tests](https://img.shields.io/badge/tests-3857+-green.svg)]()
 
 Structural editing of KiCad schematic, PCB, symbol library, and footprint files. The LLM never directly edits KiCad files — it emits structured JSON intents, and the Python backend mutates the AST, serializes valid output, and validates via ERC/DRC gates.
 
@@ -211,7 +211,7 @@ The skill routes natural language requests through the Python backend — Claude
 
 ## Operations Reference
 
-98 operations across 8 categories:
+98 operations across 18 categories:
 
 ### Component Operations
 

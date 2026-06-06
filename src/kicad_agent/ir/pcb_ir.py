@@ -535,13 +535,8 @@ class PcbIR(BaseIR):
         new_fp_indented = "\t" + new_fp_sexpr.replace("\n", "\n\t")
         new_raw = raw_content[:old_fp_start] + new_fp_indented + raw_content[old_fp_end:]
 
-        # Write atomically via executor helper (Council C-02)
-        from kicad_agent.ops.executor import OperationExecutor
-
-        file_path = self._parse_result.file_path
-        OperationExecutor._raw_write_atomic(file_path, new_raw)
-        self._parse_result = replace(self._parse_result, raw_content=new_raw)
-        self._raw_written = True
+        # Write atomically via shared utility (Council C-02)
+        self.commit_raw_content(new_raw)
 
         self._record_mutation("update_footprint_from_library", {
             "reference": reference,
@@ -615,12 +610,7 @@ class PcbIR(BaseIR):
                     start = getattr(graphic, 'start', None)
                     end = getattr(graphic, 'end', None)
                     if start is not None and end is not None:
-                        fp_pos = fp.position
-                        if hasattr(fp_pos, 'X'):
-                            fp_x, fp_y = fp_pos.X, fp_pos.Y
-                        else:
-                            fp_x = fp_pos[0] if len(fp_pos) > 0 else 0.0
-                            fp_y = fp_pos[1] if len(fp_pos) > 1 else 0.0
+                        fp_x, fp_y, _ = self._unpack_position(fp.position)
                         segments.append((start.X + fp_x, start.Y + fp_y))
                         segments.append((end.X + fp_x, end.Y + fp_y))
 
@@ -639,12 +629,7 @@ class PcbIR(BaseIR):
         """
         netlist: dict[str, list[tuple[float, float]]] = {}
         for fp in self.footprints:
-            fp_pos = fp.position
-            if hasattr(fp_pos, 'X'):
-                fp_x, fp_y = fp_pos.X, fp_pos.Y
-            else:
-                fp_x = fp_pos[0] if len(fp_pos) > 0 else 0.0
-                fp_y = fp_pos[1] if len(fp_pos) > 1 else 0.0
+            fp_x, fp_y, _ = self._unpack_position(fp.position)
 
             for pad in fp.pads:
                 if self._is_native:
@@ -688,16 +673,7 @@ class PcbIR(BaseIR):
         obstacles: list[SpatialBox] = []
 
         for fp in self.footprints:
-            fp_pos = fp.position
-            if hasattr(fp_pos, "__len__") and len(fp_pos) >= 2:
-                fp_x = fp_pos[0] if len(fp_pos) > 0 else 0.0
-                fp_y = fp_pos[1] if len(fp_pos) > 1 else 0.0
-                fp_angle = fp_pos[2] if len(fp_pos) > 2 else 0.0
-            elif hasattr(fp_pos, "X"):
-                fp_x, fp_y = fp_pos.X, fp_pos.Y
-                fp_angle = getattr(fp_pos, "angle", None) or 0.0
-            else:
-                continue
+            fp_x, fp_y, fp_angle = self._unpack_position(fp.position)
 
             ref = fp.properties.get("Reference", fp.reference if hasattr(fp, "reference") else "?")
 
@@ -894,17 +870,42 @@ class PcbIR(BaseIR):
         Appends the segments before the closing ) of the .kicad_pcb file.
         Delegates to PcbRawWriter for content manipulation (Council C-02).
         """
-        from kicad_agent.ops.executor import OperationExecutor
         from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
 
         raw = self._parse_result.raw_content
         new_raw = PcbRawWriter.insert_segments(raw, sexpr_block)
         if new_raw == raw:
             return
-        self._parse_result = replace(self._parse_result, raw_content=new_raw)
-        OperationExecutor._raw_write_atomic(self._parse_result.file_path, new_raw)
-        self._raw_written = True
+        self.commit_raw_content(new_raw)
         self.mark_dirty("insert_track_segments")
+
+    @staticmethod
+    def _unpack_position(pos) -> tuple[float, float, float]:
+        """Extract (x, y, angle) from a footprint position across both backends.
+
+        Handles kiutils Position objects (with .X, .Y, .angle) and
+        NativeBoard tuple positions (list/tuple with index access).
+        """
+        if hasattr(pos, "X"):
+            return (pos.X, pos.Y, getattr(pos, "angle", None) or 0.0)
+        elif isinstance(pos, (list, tuple)):
+            return (
+                pos[0] if len(pos) > 0 else 0.0,
+                pos[1] if len(pos) > 1 else 0.0,
+                pos[2] if len(pos) > 2 else 0.0,
+            )
+        return (0.0, 0.0, 0.0)
+
+    def commit_raw_content(self, new_raw: str) -> None:
+        """Write raw S-expression content atomically and update IR state.
+
+        Consolidates the 3-line pattern (atomic write + replace raw_content +
+        set _raw_written) used across 7 call sites into a single method.
+        """
+        from kicad_agent.io.atomic_write import atomic_write
+        atomic_write(self._parse_result.file_path, new_raw)
+        self._parse_result = replace(self._parse_result, raw_content=new_raw)
+        self._raw_written = True
 
     def _update_parse_result(self, new_result: ParseResult, new_uuid_map: UUIDMap) -> None:
         """Update parse result after raw content write.

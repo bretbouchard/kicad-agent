@@ -91,12 +91,7 @@ def _handle_update_pcb_from_schematic(
 
     # Write modified content if changes were made
     if sync_result.has_changes:
-        from kicad_agent.ops.executor import OperationExecutor
-
-        pcb_file_path = pcb_ir._parse_result.file_path
-        OperationExecutor._raw_write_atomic(pcb_file_path, new_raw)
-        pcb_ir._parse_result = replace(pcb_ir._parse_result, raw_content=new_raw)
-        pcb_ir._raw_written = True
+        pcb_ir.commit_raw_content(new_raw)
         pcb_ir.mark_dirty("update_pcb_from_schematic")
 
     return {

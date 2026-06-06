@@ -372,16 +372,14 @@ class OperationExecutor:
 
     @staticmethod
     def _raw_write_atomic(file_path: Path, content: str) -> None:
-        """Write content to file atomically via temp + rename (Council C-01).
+        """Write content to file atomically via fsync + rename.
 
-        Args:
-            file_path: Target file path.
-            content: Content to write.
+        Delegates to shared atomic_write (io.atomic_write) to break
+        circular dependency from IR -> executor and to add fsync
+        durability and proper cleanup.
         """
-        import os
-        tmp = file_path.with_suffix(".tmp")
-        tmp.write_text(content, encoding="utf-8")
-        os.replace(str(tmp), str(file_path))
+        from kicad_agent.io.atomic_write import atomic_write
+        atomic_write(file_path, content)
 
     def _execute_pcb(self, op: Operation, file_path: Path) -> dict[str, Any]:
         """Execute an operation targeting a PCB file."""

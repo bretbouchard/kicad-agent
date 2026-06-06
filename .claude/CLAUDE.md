@@ -58,7 +58,7 @@ result = execute(operation_json)
 "
 ```
 
-92 operation types. Operation metadata (category, file types, read-only, dependencies) available via `kicad_agent.ops.registry`.
+98 operation types. Operation metadata (category, file types, read-only, dependencies) available via `kicad_agent.ops.registry`.
 
 ### Analysis & Inference
 ```bash
@@ -169,7 +169,7 @@ src/kicad_agent/
   cli.py           — CLI entry point
   context.py       — Project context loading
   handler.py       — Operation dispatch
-  ops/             — 92 operation implementations
+  ops/             — 98 operation implementations
     executor.py    — Core operation executor
     schema*.py     — Pydantic operation schemas
     validation_gates.py — Pre/post validation

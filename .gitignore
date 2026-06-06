@@ -19,3 +19,13 @@ venv/
 .planning/
 .benchmarks/
 site/
+# ERC/DRC reports and staging
+*-erc.rpt
+*-drc.rpt
+.DS_Store
+.easyeda_cache/
+discovered_repos.json
+schema.json
+kicad_staging/
+training_data/
+training_output/

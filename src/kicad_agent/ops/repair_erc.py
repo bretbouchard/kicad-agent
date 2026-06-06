@@ -501,15 +501,13 @@ def add_junctions_at_labels(
 # ---------------------------------------------------------------------------
 
 
-def _checkpoint_ir(ir: SchematicIR) -> bytes:
+def _checkpoint_ir(ir: SchematicIR) -> object:
     """Deep-copy the IR's kiutils object for rollback on verification failure."""
-    import pickle
-    return pickle.dumps(ir._parse_result.kiutils_obj)
+    from copy import deepcopy
+    return deepcopy(ir._parse_result.kiutils_obj)
 
 
-def _restore_ir(ir: SchematicIR, checkpoint: bytes) -> None:
+def _restore_ir(ir: SchematicIR, checkpoint: object) -> None:
     """Restore IR from checkpoint on verification failure."""
-    import pickle
-    restored = pickle.loads(checkpoint)
     # ParseResult is a frozen dataclass; use object.__setattr__ to bypass
-    object.__setattr__(ir._parse_result, "kiutils_obj", restored)
+    object.__setattr__(ir._parse_result, "kiutils_obj", checkpoint)

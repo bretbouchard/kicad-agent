@@ -62,7 +62,6 @@ def add_copper_zone(
     """
     from dataclasses import replace
 
-    from kicad_agent.ops.executor import OperationExecutor
     from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
 
     board = ir.board
@@ -100,9 +99,7 @@ def add_copper_zone(
     # Insert into raw content and write atomically
     raw = ir._parse_result.raw_content
     new_raw = PcbRawWriter.insert_zone(raw, zone_sexp)
-    OperationExecutor._raw_write_atomic(ir._parse_result.file_path, new_raw)
-    ir._parse_result = replace(ir._parse_result, raw_content=new_raw)
-    ir._raw_written = True
+    ir.commit_raw_content(new_raw)
 
     # Re-parse to update in-memory board for subsequent modify/remove operations
     from kicad_agent.parser import parse_pcb
@@ -317,7 +314,6 @@ def assign_net_class(
 
     Delegates to PcbRawWriter for raw S-expression manipulation (Council C-02).
     """
-    from kicad_agent.ops.executor import OperationExecutor
     from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
 
     # Check if net exists in the board
@@ -329,11 +325,7 @@ def assign_net_class(
     new_content = PcbRawWriter.assign_net_class(raw_content, net_name, net_class_name)
 
     # Write atomically and update IR cache
-    from dataclasses import replace
-
-    OperationExecutor._raw_write_atomic(ir._parse_result.file_path, new_content)
-    ir._parse_result = replace(ir._parse_result, raw_content=new_content)
-    ir._raw_written = True
+    ir.commit_raw_content(new_content)
 
     ir._record_mutation("assign_net_class", {
         "net_name": net_name,

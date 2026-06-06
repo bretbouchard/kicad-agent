@@ -19,8 +19,8 @@ from kicad_agent.ops.registry import (
 class TestRegistryCompleteness:
     """Verify the registry has the expected number of operations."""
 
-    def test_registry_has_92_operations(self) -> None:
-        assert len(OPERATION_REGISTRY) == 94
+    def test_registry_has_98_operations(self) -> None:
+        assert len(OPERATION_REGISTRY) == 98
 
     def test_validate_registry_completeness_passes(self) -> None:
         result = validate_registry_completeness()

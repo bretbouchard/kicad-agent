@@ -159,12 +159,7 @@ def _handle_move_footprint(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any
         raise ValueError(f"Footprint '{op.reference}' not found in PCB")
 
     # Write atomically and update IR state (Council C-01/C-02)
-    from kicad_agent.ops.executor import OperationExecutor
-    OperationExecutor._raw_write_atomic(file_path, new_content)
-    ir._raw_written = True
-    ir._parse_result = replace(
-        ir._parse_result, raw_content=new_content
-    )
+    ir.commit_raw_content(new_content)
 
     return {
         "reference": op.reference,
@@ -716,16 +711,13 @@ def _handle_fix_silkscreen_over_copper(op: Any, ir: PcbIR, file_path: Path) -> d
                         0.0,
                     )
                     if new_content != ir.raw_content:
-                        from kicad_agent.ops.executor import OperationExecutor
-                        from dataclasses import replace
-                        OperationExecutor._raw_write_atomic(file_path, new_content)
-                        ir._raw_written = True
-                        ir._parse_result = replace(
-                            ir._parse_result, raw_content=new_content,
-                        )
+                        ir.commit_raw_content(new_content)
                         relocations_applied += 1
-                except (ValueError, RuntimeError):
-                    pass
+                except (ValueError, RuntimeError) as e:
+                    import logging
+                    logging.getLogger(__name__).warning(
+                        "Silkscreen relocation failed for footprint: %s", e
+                    )
 
     return {
         "total_checked": result.total_checked,

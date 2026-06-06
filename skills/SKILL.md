@@ -91,7 +91,7 @@ import json, sys
 from kicad_agent.ops.schema import Operation
 from kicad_agent.ops.executor import OperationExecutor
 op = Operation.model_validate_json(sys.stdin.read())
-executor = OperationExecutor(project_dir='.')
+executor = OperationExecutor(base_dir=Path('.'))
 result = executor.execute(op)
 print(json.dumps(result, indent=2))
 " <<< '$OPERATION_JSON'

@@ -1,6 +1,6 @@
 """Unified operation registry with metadata and query functions.
 
-Provides a central catalog of all 97 KiCad operations with rich metadata
+Provides a central catalog of all 98 KiCad operations with rich metadata
 including category, file types, read-only status, scope, and dependencies.
 Used by MCP server, LLM tool selection, and validation gates.
 

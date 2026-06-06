@@ -1582,8 +1582,8 @@ class TestIRCheckpoint:
         ir = SchematicIR(_parse_result=result)
 
         checkpoint = _checkpoint_ir(ir)
-        assert isinstance(checkpoint, bytes)
-        assert len(checkpoint) > 0
+        assert checkpoint is not None
+        assert isinstance(checkpoint, type(ir._parse_result.kiutils_obj))
 
         # Mutate the IR
         ir._parse_result.kiutils_obj.labels.clear()

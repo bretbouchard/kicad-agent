@@ -1291,5 +1291,5 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 76-01-PLAN.md -- Native PCB types (10 dataclasses) and sexpdata tree-walking parser with 25+ tests
-- [ ] 76-02-PLAN.md -- PcbIR adapter pattern, executor wiring, kiutils fallback, 15+ integration tests
+- [x] 76-01-PLAN.md -- Native PCB types (10 dataclasses) and sexpdata tree-walking parser with 25+ tests
+- [x] 76-02-PLAN.md -- PcbIR adapter pattern, executor wiring, kiutils fallback, 15+ integration tests
