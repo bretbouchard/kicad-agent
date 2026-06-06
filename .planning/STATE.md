@@ -414,5 +414,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 65 - Architecture Refactor (3 plans).
+Stopped at: Completed Phase 73 - Workflow Templates & Dependency Graph (2 plans).
 Resume with: Next phase planning or `/gsd-execute-phase`.
