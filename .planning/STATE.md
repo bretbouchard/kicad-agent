@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Council Remediation
 status: execute
-stopped_at: Completed Phase 70 - Post-Repair Verification: Persistent Undo Stack testing and CLI (2 plans)
-last_updated: "2026-06-06T20:00:00Z"
+stopped_at: Completed Phase 71 - Tool Awareness Registry: Pin-to-net mapping test suite and extended IC profiles (2 plans)
+last_updated: "2026-06-06T20:01:00Z"
 last_activity: 2026-06-06
 progress:
   total_phases: 76
-  completed_phases: 61
+  completed_phases: 62
   total_plans: 236
-  completed_plans: 172
-  percent: 73
+  completed_plans: 174
+  percent: 74
 ---
 
 # Project State
@@ -94,6 +94,19 @@ Last activity: 2026-06-01
   - Automatic .gitignore entry for `.kicad-agent/` via _ensure_gitignore() in PersistentUndoStack.__init__()
   - 8 tests: undo no history, undo with history, redo after undo, undo specific file, gitignore created/no-duplicate/append, subprocess undo
   - All 8 tests pass
+
+### Phase 71: Tool Awareness Registry (v3.1)
+
+- Plan 71-01: Pin-to-Net Mapping Test Suite (PINMAP-01, PINMAP-02) (COMPLETE)
+  - 24 tests (5 new) covering all safety gates: wire connectivity, existing labels, dry_run, no_connect, reference filter, multi-instance, label type
+  - Extended backplane profile completeness to validate all 10 ICs
+  - All 24 tests pass (0.22s)
+
+- Plan 71-02: Extended IC Profiles & Integration Test (PINMAP-03) (COMPLETE)
+  - 20 integration tests: backplane completeness, channel-strip validation, power domain differences, auto-merge, JSON override, power pin enforcement
+  - Validated RP2350B, NE5532, CD4066, CD4060, LM358 profiles correct
+  - Confirmed NE5532 +/-12V (backplane) vs +/-15V (channel-strip) power domains
+  - All 20 tests pass (0.23s combined)
 
 ### Phase 64: CLI/UX Polish (v3.1)
 
