@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Council Remediation
 status: execute
-stopped_at: Completed Phase 61 - Security Hardening (all plans)
-last_updated: "2026-06-06T19:05:25Z"
+stopped_at: Completed Phase 62 - Routing Correctness (all plans)
+last_updated: "2026-06-06T19:11:21Z"
 last_activity: 2026-06-06
 progress:
   total_phases: 76
-  completed_phases: 57
+  completed_phases: 58
   total_plans: 233
-  completed_plans: 156
-  percent: 67
+  completed_plans: 160
+  percent: 69
 ---
 
 # Project State
@@ -37,6 +37,28 @@ Last milestone: v3.0 Full-Stack EDA (Phases 50-54)
 Council review: 4 findings fixed, all passing.
 
 Last activity: 2026-06-01
+
+### Phase 62: Routing Correctness (v3.1)
+
+- Plan 62-01: STRtree spatial index for snap_to_node (H-6) (COMPLETE)
+  - Per-layer STRtree indexes with lazy rebuild via _node_index_dirty flag
+  - O(log n) nearest-neighbor lookup replacing O(n) linear scan
+  - 5 new tests in TestSpatialIndexSnap
+
+- Plan 62-02: Multi-pin Steiner tree routing (H-7) (COMPLETE)
+  - Sequential nearest-neighbor heuristic for 3+ pin nets
+  - route_all_nets dispatches 2-pin and multi-pin nets separately
+  - 4 new tests in TestMultiPinRouting
+
+- Plan 62-03: Fix hardcoded net number 0 (H-8, H-9) (COMPLETE)
+  - net_id field on TrackSegment/ViaSegment with net_id_map propagation
+  - S-expression format: (net {id} "{name}") with proper KiCad net IDs
+  - 5 new tests in TestNetIds
+
+- Plan 62-04: Clearance corridor in mark_path_as_obstacle (H-10) (COMPLETE)
+  - _mark_clearance_corridor() uses STRtree for O(W * log N) edge proximity scan
+  - _point_to_segment_distance() helper for edge distance checks
+  - 7 new tests in TestClearanceCorridor + TestPointToSegmentDistance
 
 ### Phase 61: Security Hardening (v3.1)
 
