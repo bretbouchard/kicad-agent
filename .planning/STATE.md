@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Council Remediation
 status: execute
-stopped_at: Completed Phase 64 - CLI/UX Polish (all plans)
-last_updated: "2026-06-06T19:20:00Z"
+stopped_at: Completed Phase 70 - Post-Repair Verification: Persistent Undo Stack testing and CLI (2 plans)
+last_updated: "2026-06-06T20:00:00Z"
 last_activity: 2026-06-06
 progress:
   total_phases: 76
-  completed_phases: 60
-  total_plans: 233
-  completed_plans: 167
-  percent: 71
+  completed_phases: 61
+  total_plans: 236
+  completed_plans: 172
+  percent: 73
 ---
 
 # Project State
@@ -29,11 +29,13 @@ Last activity: 2026-06-01
 **All milestones complete (v1.0 through v3.0). 54 phases, 143 plans, 3171+ tests.**
 
 Last milestone: v3.0 Full-Stack EDA (Phases 50-54)
+
 - Phase 50: Constraint Propagation (81 tests)
 - Phase 51: PCB Spatial Intelligence (51 tests)
 - Phase 52: Layout-Aware Placement (41 tests)
 - Phase 53: PCB DRC Intelligence (56 tests)
 - Phase 54: Design for Manufacturing (62 tests)
+
 Council review: 4 findings fixed, all passing.
 
 Last activity: 2026-06-01
@@ -59,6 +61,39 @@ Last activity: 2026-06-01
   - _mark_clearance_corridor() uses STRtree for O(W * log N) edge proximity scan
   - _point_to_segment_distance() helper for edge distance checks
   - 7 new tests in TestClearanceCorridor + TestPointToSegmentDistance
+
+### Phase 65: Architecture Refactor (v3.1)
+
+- Plan 65-01: Split executor.py (H-18) (COMPLETE)
+  - executor.py reduced from 1032 to 800 lines via batch_executor.py extraction
+  - execute_batch method extracted to ops/batch_executor.py (297 lines)
+  - OperationExecutor.execute_batch delegates to batch_executor.execute_batch()
+  - Test patches updated from ops.executor to ops.batch_executor
+  - 12/12 batch executor tests pass
+
+- Plan 65-03: Split topology_graph.py (H-20) (COMPLETE)
+  - topology_graph.py reduced from 950 to 197 lines (data types + constants)
+  - TopologyBuilder class extracted to analysis/topology_builder.py (788 lines)
+  - TopologyBuilder re-exported from topology_graph.py for backward compat
+  - 116/116 topology tests pass
+
+- Plan 65-04: Fix Medium Findings M-1 through M-12 (COMPLETE)
+  - All 12 MEDIUM findings already fixed in prior phases (verified by existing tests)
+  - M-6 test bug fixed: replaced MagicMock with real Shapely geometry for STRtree
+  - 22/22 Phase 65 architecture tests pass
+
+### Phase 70: Post-Repair Verification (v3.1)
+
+- Plan 70-01: PersistentUndoStack Test Suite (UNDO-06) (COMPLETE)
+  - 15 comprehensive tests: persistence, LIFO order, multi-file isolation, max_size pruning, manifest corruption, missing entry files, atomic writes, prune, clear, path traversal, concurrent access, redo not persisted, post_mtime preserved, empty project dir, fallback to in-memory
+  - All 15 tests pass (0.57s total)
+  - Rule 1 fix: added missing `Any` import in persistent_undo.py
+
+- Plan 70-02: CLI Undo/Redo Commands + Gitignore (UNDO-07, UNDO-08) (COMPLETE)
+  - `kicad-agent undo [file] [-p project-dir]` and `kicad-agent redo [file] [-p project-dir]` subcommands
+  - Automatic .gitignore entry for `.kicad-agent/` via _ensure_gitignore() in PersistentUndoStack.__init__()
+  - 8 tests: undo no history, undo with history, redo after undo, undo specific file, gitignore created/no-duplicate/append, subprocess undo
+  - All 8 tests pass
 
 ### Phase 64: CLI/UX Polish (v3.1)
 
@@ -335,5 +370,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 64 - CLI/UX Polish (all 3 plans, 11 tests).
+Stopped at: Completed Phase 65 - Architecture Refactor (3 plans).
 Resume with: Next phase planning or `/gsd-execute-phase`.

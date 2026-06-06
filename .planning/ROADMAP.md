@@ -1196,8 +1196,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 70-01-PLAN.md — PersistentUndoStack test suite: persistence, crash recovery, prune, concurrent access (UNDO-06)
-- [ ] 70-02-PLAN.md — CLI undo/redo commands + .gitignore integration (UNDO-07, UNDO-08)
+- [x] 70-01-PLAN.md — PersistentUndoStack test suite: persistence, crash recovery, prune, concurrent access (UNDO-06)
+- [x] 70-02-PLAN.md — CLI undo/redo commands + .gitignore integration (UNDO-07, UNDO-08)
 
 ### Phase 71: Pin-to-Net Mapping — Testing & Extended Profiles
 **Goal**: Harden place_net_labels with comprehensive tests, add RP2350B + more IC profiles, and validate against real schematics
