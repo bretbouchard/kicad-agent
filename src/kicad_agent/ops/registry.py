@@ -620,7 +620,7 @@ _RAW_CATALOG: dict[str, dict] = {
         "conflicts": ["remove_component"],
     },
     "convert_kicad6_to_10": {
-        "category": "repair",
+        "category": "create",
         "description": "Convert a KiCad 5/6 format schematic to KiCad 10 format",
         "file_types": [".kicad_sch"],
         "is_readonly": False,
@@ -647,7 +647,7 @@ _RAW_CATALOG: dict[str, dict] = {
         "conflicts": [],
     },
     "add_power_flag": {
-        "category": "repair",
+        "category": "wire",
         "description": "Place PWR_FLAG symbols at power_pin_not_driven ERC violation positions",
         "file_types": [".kicad_sch"],
         "is_readonly": False,
@@ -656,7 +656,7 @@ _RAW_CATALOG: dict[str, dict] = {
         "conflicts": [],
     },
     "rebuild_root_sheet": {
-        "category": "repair",
+        "category": "sheet",
         "description": "Rebuild root schematic sheet pins from sub-sheet hierarchical labels",
         "file_types": [".kicad_sch"],
         "is_readonly": False,
@@ -665,7 +665,7 @@ _RAW_CATALOG: dict[str, dict] = {
         "conflicts": [],
     },
     "swap_symbol": {
-        "category": "repair",
+        "category": "component",
         "description": "Swap a component's symbol (lib_id) in-place, preserving position and properties",
         "file_types": [".kicad_sch"],
         "is_readonly": False,
@@ -674,7 +674,7 @@ _RAW_CATALOG: dict[str, dict] = {
         "conflicts": [],
     },
     "update_symbols_from_library": {
-        "category": "repair",
+        "category": "library",
         "description": "Re-embed all mismatched symbols from their libraries",
         "file_types": [".kicad_sch"],
         "is_readonly": False,
@@ -737,7 +737,7 @@ _RAW_CATALOG: dict[str, dict] = {
         "conflicts": [],
     },
     "place_net_labels": {
-        "category": "repair",
+        "category": "routing",
         "description": "Place net labels on IC pins based on a pin-to-net mapping",
         "file_types": [".kicad_sch"],
         "is_readonly": False,
