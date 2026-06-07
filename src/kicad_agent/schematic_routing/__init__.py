@@ -95,18 +95,45 @@ def run_router(
 
 
 def _parse_erc_violations(erc_data: dict) -> list[dict]:
-    """Extract unconnected_wire_endpoint violations from ERC JSON."""
+    """Extract unconnected_wire_endpoint violations from ERC JSON.
+
+    R-BUG-006 fix: Auto-detect coordinate scale instead of hardcoded mm/100.
+    KiCad ERC JSON position values vary by version:
+      - Some versions report in mm/100 (values ~50-300 for typical boards)
+      - Some versions report in mm directly (values ~0.5-3.0 for typical boards)
+    We detect by checking if the first violation position exceeds a threshold.
+    Positions > 500 are assumed to be mm/100 and need no scaling.
+    Positions < 500 are assumed to be mm and need x100 to match schematic coords.
+    """
     violations = []
+    scale_factor = 100  # default: mm/100 -> schematic mm
+
+    # Auto-detect scale from first violation position
     for sheet in erc_data.get("sheets", []):
         for violation in sheet.get("violations", []):
             if violation.get("type") == "unconnected_wire_endpoint":
                 for item in violation.get("items", []):
                     pos = item.get("pos", {})
-                    # ERC JSON says "mm" but values are actually mm/100
-                    # Multiply by 100 to match schematic file coordinates
+                    x_val = pos.get("x", 0)
+                    y_val = pos.get("y", 0)
+                    # If values are already in schematic scale (> 500 for typical boards),
+                    # don't multiply
+                    if x_val > 500 or y_val > 500:
+                        scale_factor = 1
+                    break
+            if scale_factor == 1:
+                break
+        if scale_factor == 1:
+            break
+
+    for sheet in erc_data.get("sheets", []):
+        for violation in sheet.get("violations", []):
+            if violation.get("type") == "unconnected_wire_endpoint":
+                for item in violation.get("items", []):
+                    pos = item.get("pos", {})
                     violations.append({
-                        "x": pos.get("x", 0) * 100,
-                        "y": pos.get("y", 0) * 100,
+                        "x": pos.get("x", 0) * scale_factor,
+                        "y": pos.get("y", 0) * scale_factor,
                         "sheet": sheet.get("path", "/"),
                         "description": item.get("description", ""),
                         "uuid": item.get("uuid", ""),
