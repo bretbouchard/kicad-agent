@@ -112,42 +112,4 @@ def _load_sub_sheets(sch_dir: Path) -> dict[str, SchematicGraph]:
     return sheets
 
 
-def _find_sheet_graph(
-    sheet_path: str,
-    sheets: dict[str, SchematicGraph],
-    sch_dir: Path,
-) -> Optional[SchematicGraph]:
-    """Find the SchematicGraph for a sheet path.
 
-    Sheet paths from ERC JSON look like: "/", "/EQ Stage/", "/Preamp Stage/"
-    Sub-sheet files are named like: eq-stage.kicad_sch, preamp-stage.kicad_sch
-    """
-    # Normalize: strip slashes, lowercase, replace spaces with hyphens
-    normalized = sheet_path.strip("/").lower().replace(" ", "-")
-
-    if not normalized:
-        # Root sheet — try to find it
-        for name in ("analog-board", "digital-board"):
-            if name in sheets:
-                return sheets[name]
-        return None
-
-    # Direct match
-    if normalized in sheets:
-        return sheets[normalized]
-
-    # Partial match
-    for name, graph in sheets.items():
-        if normalized in name or name in normalized:
-            return graph
-
-    # Try with common suffixes
-    for suffix in ("-stage", "-dac", "-audio", "-analog", "-digital"):
-        candidate = normalized + suffix
-        if candidate in sheets:
-            return sheets[candidate]
-        candidate = normalized.replace("-stage", suffix)
-        if candidate in sheets:
-            return sheets[candidate]
-
-    return None

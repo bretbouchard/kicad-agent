@@ -44,10 +44,17 @@ def parse_netlist(filepath: str | Path) -> tuple[dict[str, list[tuple[str, str]]
     if nets_start < 0:
         return net_index, pin_index
 
-    # Find individual net blocks: (net (code "N") (name "...") ... )
-    # KiCad 10 uses quoted values: (code "1"), (name "+3V3")
+    # CAVEAT (R-BUG-003): This regex-based parser assumes the net block starts
+    # with "(net (code ...) (name ...))". The regex matches the opening pattern
+    # and then counts parens to find the block end. This is fragile -- any
+    # net block that doesn't match this exact format (e.g., unquoted values)
+    # will be silently skipped. A full S-expression parser would be more robust
+    # but would add significant complexity for a read-only parse operation.
     for net_match in re.finditer(r'\(net\s+\(code\s+"?\d+"?\)\s+\(name\s+"([^"]+)"\)', content[nets_start:]):
         net_name = net_match.group(1)
+        # R-BUG-003: Verify regex matched at a "(net" boundary, not mid-string
+        assert net_match.start() == 0 or content[nets_start + net_match.start() - 1] in ('\n', '\r', '\t', ' '), \
+            f"Net regex matched mid-string at offset {net_match.start()}"
         net_block_start = net_match.start() + nets_start
 
         # Find the end of this net block
