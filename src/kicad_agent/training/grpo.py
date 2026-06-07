@@ -1,20 +1,18 @@
-"""GRPO (Group Relative Policy Optimization) training loop.
+"""Advantage-weighted REINFORCE training loop with group-relative advantages.
 
-GRPO-04: Policy generates chains, reward model scores them, policy updates
-via group-relative optimization. Uses PPO-style clipping with KL divergence
-penalty against a frozen reference model.
-
-GRPO-05: Smooth penalty functions and multi-stage reward architecture
-prevent reward hacking.
+Generates chains per sample (correct + corrupted for contrast), scores them
+with a neural reward model blended with rule-based ground truth, computes
+group-relative advantages, and updates the reward model via supervised +
+advantage-weighted loss.
 
 GRPO-07: Deterministic seeding and configurable hyperparameters for
 reproducible training.
 
 Usage:
-    from kicad_agent.training.grpo import GRPOConfig, GRPOTrainer
+    from kicad_agent.training.grpo import AdvantageWeightedConfig, AdvantageWeightedTrainer
 
-    config = GRPOConfig(seed=42)
-    trainer = GRPOTrainer(policy_model, reward_model, ref_model, config)
+    config = AdvantageWeightedConfig(seed=42)
+    trainer = AdvantageWeightedTrainer(policy_model, reward_model, ref_model, config)
     history = trainer.train(dataset, n_epochs=1)
 """
 
@@ -31,14 +29,12 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class GRPOConfig:
-    """Configuration for GRPO training.
+class AdvantageWeightedConfig:
+    """Configuration for advantage-weighted REINFORCE training.
 
     Attributes:
         learning_rate: AdamW learning rate.
         group_size: Chains generated per prompt for group comparison.
-        kl_coefficient: KL divergence penalty strength.
-        clip_range: PPO-style clipping range.
         max_generation_length: Max tokens per generated chain.
         temperature: Sampling temperature for generation.
         seed: Deterministic random seed.
@@ -51,8 +47,6 @@ class GRPOConfig:
 
     learning_rate: float = 1e-5
     group_size: int = 8
-    kl_coefficient: float = 0.1
-    clip_range: float = 0.2
     max_generation_length: int = 512
     temperature: float = 0.7
     seed: int = 42
@@ -63,14 +57,14 @@ class GRPOConfig:
     total_steps: int = 0
 
 
-class GRPOTrainer:
-    """GRPO training loop with group-relative policy optimization.
+class AdvantageWeightedTrainer:
+    """Advantage-weighted REINFORCE training with group-relative advantages.
 
     The training cycle:
       1. Generate group_size chains per sample using the policy model
       2. Score chains with the reward model
       3. Compute group-relative advantages: (reward - group_mean) / group_std
-      4. Update policy with clipped objective + KL penalty
+      4. Update reward model via supervised + advantage-weighted loss
       5. Log metrics (loss, reward_mean, kl_divergence)
     """
 
@@ -79,20 +73,20 @@ class GRPOTrainer:
         policy_model: Any,
         reward_model: Any,
         ref_model: Any,
-        config: GRPOConfig | None = None,
+        config: AdvantageWeightedConfig | None = None,
     ):
-        """Initialize GRPO trainer.
+        """Initialize advantage-weighted trainer.
 
         Args:
-            policy_model: The model being trained.
-            reward_model: The reward scoring model.
-            ref_model: Frozen reference model for KL penalty.
+            policy_model: Used for chain generation (not trained).
+            reward_model: The reward model being trained.
+            ref_model: Accepted for API compat; not used.
             config: Training configuration.
         """
         self.policy_model = policy_model
         self.reward_model = reward_model
         self.ref_model = ref_model
-        self.config = config or GRPOConfig()
+        self.config = config or AdvantageWeightedConfig()
         self._step_counter: int = 0
 
     def compute_group_rewards(
@@ -524,6 +518,10 @@ class GRPOTrainer:
             json.dump({"step": step, "metrics": metrics, "config": {
                 "learning_rate": self.config.learning_rate,
                 "group_size": self.config.group_size,
-                "kl_coefficient": self.config.kl_coefficient,
                 "seed": self.config.seed,
             }}, f, indent=2)
+
+
+# Backward-compatible aliases (deprecated, use new names)
+GRPOConfig = AdvantageWeightedConfig
+GRPOTrainer = AdvantageWeightedTrainer
