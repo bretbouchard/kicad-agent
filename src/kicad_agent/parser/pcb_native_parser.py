@@ -46,6 +46,21 @@ _MAX_SIZE = 50 * 1024 * 1024
 # Maximum S-expression nesting depth (CRITICAL-1)
 _MAX_SEXP_DEPTH = 200
 
+# PCB elements not yet parsed into typed fields.
+# Data is preserved in raw_content but not accessible via NativeBoard attributes.
+# Logged as warnings during parsing to inform users what is not structurally available.
+_UNSUPPORTED_ELEMENTS: frozenset[str] = frozenset({
+    "thermal_relief_pads",
+    "keepout_areas",
+    "soldermask_expansion",
+    "paste_expansion",
+    "courtyard",
+    "fp_text",
+    "3d_model_refs",
+    "page_info",
+    "title_block",
+})
+
 # P-BUG-003: Thread lock for recursion limit manipulation.
 # sys.setrecursionlimit() is process-global. Without a lock, concurrent
 # parsing threads can restore limits while another thread is still
@@ -127,6 +142,28 @@ def _find_property(fp_block: list, prop_name: str, default: str = "") -> str:
             if isinstance(item[1], str) and item[1] == prop_name:
                 return item[2] if isinstance(item[2], str) else default
     return default
+
+
+# ---------------------------------------------------------------------------
+# Unsupported element warning
+# ---------------------------------------------------------------------------
+
+
+def _check_unsupported(block_name: str, element_context: str = "") -> None:
+    """Log a warning if block_name is an unsupported PCB element.
+
+    Args:
+        block_name: Name of the S-expression block being processed.
+        element_context: Additional context (e.g., parent element name).
+    """
+    if block_name in _UNSUPPORTED_ELEMENTS:
+        logger.warning(
+            "Unsupported element '%s' encountered%s. "
+            "Data preserved in raw_content but not available via NativeBoard attributes. "
+            "See pcb_native_parser._UNSUPPORTED_ELEMENTS for full list of unsupported elements.",
+            block_name,
+            f" in {element_context}" if element_context else "",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -304,6 +341,19 @@ class NativeParser:
         board.graphic_items = cls._extract_graphic_items(root)
         board.general = cls._extract_general(root)
         board.setup = cls._extract_setup(root)
+
+        # Warn about unsupported top-level elements.
+        _KNOWN_TOP_LEVEL = {
+            "version", "generator", "general", "layers", "setup",
+            "net", "net_class", "footprint", "segment", "via",
+            "zone", "gr_line", "gr_arc", "gr_circle", "gr_rect",
+            "gr_poly", "gr_curve", "kicad_pcb",
+        }
+        for item in root:
+            if isinstance(item, list) and len(item) > 0:
+                block_name = _sym(item[0])
+                if block_name and block_name not in _KNOWN_TOP_LEVEL:
+                    _check_unsupported(block_name)
 
         # Build board outline from Edge.Cuts graphic items
         edge_items = [gi for gi in board.graphic_items if gi.layer == "Edge.Cuts"]
