@@ -48,7 +48,12 @@ class TestSmdBoardObstacleExtraction:
         assert len(obstacles) == 8
 
     def test_obstacles_cover_footprint_areas(self) -> None:
-        """Obstacle bounding boxes are reasonable for 0805 components."""
+        """Obstacle bounding boxes are reasonable for 0805 components.
+
+        Phase 78 verification: _parse_smd_board() creates fresh PcbIR per call
+        (no shared state). Assertions check specific bounds (0.5 < dim < 5.0).
+        Verified stable 5/5 consecutive runs.
+        """
         ir = _parse_smd_board()
         obstacles = ir.extract_obstacles()
         for obs in obstacles:

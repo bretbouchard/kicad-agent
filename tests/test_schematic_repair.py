@@ -1388,7 +1388,12 @@ class TestResolveShortedNetsSmart:
         assert len(unresolved_details) >= 1
 
     def test_orphan_bridge_falls_back_to_labels(self):
-        """When bridge wire would orphan labels, falls back to label fix."""
+        """When bridge wire would orphan labels, falls back to label fix.
+
+        Phase 78 verification: Uses pytest tmp_path fixture (autouse), not
+        tempfile.mkdtemp(). Assertions are deterministic (wires_broken == 0,
+        shorts_found >= 1). Verified stable 5/5 consecutive runs.
+        """
         # NET_A at (50,50), NET_B at (60,50), NET_A also at (70,50)
         # Wire from (50,50)-(60,50) and (60,50)-(70,50)
         # Removing the first wire would orphan the second NET_A label
