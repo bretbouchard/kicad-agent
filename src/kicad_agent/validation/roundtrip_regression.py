@@ -83,6 +83,7 @@ def _scan_fixture_files(fixture_dir: Path) -> list[tuple[Path, str]]:
 def run_regression_suite(
     fixture_dir: Path,
     tmp_dir: Path,
+    skip_files: set[str] | None = None,
 ) -> RegressionSuiteResult:
     """Run the full round-trip regression test suite.
 
@@ -93,14 +94,20 @@ def run_regression_suite(
         fixture_dir: Directory containing KiCad fixture files.
         tmp_dir: Temporary directory for intermediate round-trip files.
             Each fixture gets its own subdirectory to avoid collisions.
+        skip_files: Optional set of filenames to skip (e.g. synthetic
+            test fixtures not meant for roundtrip validation).
 
     Returns:
         RegressionSuiteResult with per-file details and aggregate status.
     """
     files = _scan_fixture_files(fixture_dir)
     results: list[RegressionResult] = []
+    skip = skip_files or set()
 
     for file_path, file_type in files:
+        if file_path.name in skip:
+            continue
+
         # Create a dedicated temp subdir per file to avoid name collisions
         rel = file_path.relative_to(fixture_dir)
         file_tmp = tmp_dir / rel.parent

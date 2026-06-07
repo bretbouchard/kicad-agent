@@ -1293,6 +1293,11 @@ class TestResolveShortedNetsSmart:
     with clean-break verification, power-net protection, and proper ordering.
     """
 
+    @pytest.fixture(autouse=True)
+    def _tmpdir(self, tmp_path: Path) -> None:
+        """Provide a pytest-managed temp directory for all tests in this class."""
+        self._tmp_path = tmp_path
+
     def _make_schematic_with_wire_short(
         self,
         labels: list[tuple[str, float, float]],
@@ -1317,8 +1322,7 @@ class TestResolveShortedNetsSmart:
             conn.points = [Position(X=sx, Y=sy), Position(X=ex, Y=ey)]
             sch.graphicalItems.append(conn)
 
-        tmpdir = tempfile.mkdtemp()
-        sch_path = Path(tmpdir) / "test_short.kicad_sch"
+        sch_path = self._tmp_path / "test_short.kicad_sch"
         sch.to_file(str(sch_path))
         result = parse_schematic(sch_path)
         ir = SchematicIR(_parse_result=result)
@@ -1403,9 +1407,9 @@ class TestResolveShortedNetsSmart:
         result = resolve_shorted_nets(ir, path, strategy="smart")
 
         assert result["shorts_found"] >= 1
-        # Should either fix labels or report unresolved (no clean break)
-        total_resolved = result["wires_broken"] + result["labels_fixed"]
-        assert total_resolved >= 0  # may or may not find a clean break
+        # Bridge wire removal would orphan a label, so smart strategy
+        # should NOT break wires. It may fix labels or leave unresolved.
+        assert result["wires_broken"] == 0
 
     def test_dry_run_reports_without_modifying(self):
         """dry_run=True reports shorts without modifying the schematic."""
