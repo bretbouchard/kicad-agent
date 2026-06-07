@@ -35,9 +35,37 @@ def extract_pcb_netlist(
         Dict mapping net name to list of (x, y) pad positions.
         Unconnected pads have net_name="".
     """
+    # P-BUG-006: Depth pre-scan protection (matching raw_parser.py pattern)
     preprocessed = _preprocess_nets(content)
+
+    # Size check: reject files over 50MB before parsing
+    if len(content.encode("utf-8")) > 50 * 1024 * 1024:
+        logger.error("PCB content exceeds 50MB size limit")
+        raise ValueError("PCB content exceeds 50MB size limit (P-BUG-006)")
+
+    # Depth pre-scan: check maximum nesting depth before sexpdata.loads()
+    max_depth = 0
+    current_depth = 0
+    for ch in preprocessed:
+        if ch == '(':
+            current_depth += 1
+            if current_depth > max_depth:
+                max_depth = current_depth
+            if max_depth > 200:
+                raise ValueError(
+                    f"S-expression nesting depth exceeds 200 (got {max_depth}). "
+                    f"File may be corrupted or use unsupported features. (P-BUG-006)"
+                )
+        elif ch == ')':
+            current_depth = max(0, current_depth - 1)
+
     try:
         tree = sexpdata.loads(preprocessed)
+    except RecursionError:
+        raise ValueError(
+            "RecursionError during sexpdata parsing despite depth pre-scan. "
+            "File may contain deeply nested data that exceeds Python recursion limit. (P-BUG-006)"
+        )
     except Exception:
         logger.exception("Failed to parse PCB content with sexpdata")
         return {}
