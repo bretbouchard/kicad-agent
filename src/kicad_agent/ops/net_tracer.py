@@ -31,6 +31,147 @@ from kicad_agent.schematic_routing.schematic_graph import (
 
 logger = __import__("logging").getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Empty result helper
+# ---------------------------------------------------------------------------
+
+def _empty_trace_result(label_name: str) -> dict[str, Any]:
+    """Return the canonical empty trace result."""
+    return {
+        "label": label_name,
+        "reachable_pins": [],
+        "pin_count": 0,
+        "refs": [],
+        "sheets": [],
+        "domain": "unknown",
+        "blocked_by": [],
+        "far_pins": [],
+        "far_pin_count": 0,
+    }
+
+
+def _merge_trace_results(results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Merge trace results from multiple sheets into one.
+
+    Deduplicates pins by (ref, pin_number). Unions refs, far_pins,
+    blocked_by, and sheets. Re-classifies domain on merged pin set.
+    """
+    if not results:
+        return _empty_trace_result("")
+    if len(results) == 1:
+        return results[0]
+
+    merged = _empty_trace_result(results[0]["label"])
+    seen_pins: set[tuple[str, str]] = set()
+
+    for r in results:
+        for p in r.get("reachable_pins", []):
+            key = (p["ref"], p["pin_number"])
+            if key not in seen_pins:
+                seen_pins.add(key)
+                merged["reachable_pins"].append(p)
+        for p in r.get("far_pins", []):
+            key = (p["ref"], p["pin_number"])
+            if key not in seen_pins:
+                seen_pins.add(key)
+                merged["far_pins"].append(p)
+        for name in r.get("blocked_by", []):
+            if name not in merged["blocked_by"]:
+                merged["blocked_by"].append(name)
+        merged["sheets"].extend(r.get("sheets", []))
+
+    merged["pin_count"] = len(merged["reachable_pins"])
+    merged["refs"] = sorted({p["ref"] for p in merged["reachable_pins"]})
+
+    pin_set = {(p["ref"], p["pin_number"]) for p in merged["reachable_pins"]}
+    if pin_set:
+        from kicad_agent.ops.ground_topology import _classify_ground_domain
+        merged["domain"] = _classify_ground_domain(merged["label"], pin_set)
+
+    merged["far_pin_count"] = len(merged["far_pins"])
+    return merged
+
+
+def _trace_single_graph(
+    graph: SchematicGraph,
+    *,
+    label_name: str,
+    label_type: str = "all",
+    stop_at_labels: bool = True,
+    sheet_name: str = "",
+) -> dict[str, Any]:
+    """Trace pins reachable from a label within a single SchematicGraph.
+
+    This is the core tracing logic, extracted so it can be called per-sheet
+    in hierarchical designs and results merged.
+    """
+    uf, all_positions, pin_pos_map, label_pos_map = _build_union_find_components(graph)
+
+    # Find all positions in the component containing our target label
+    target_positions: set[tuple[float, float]] = set()
+    for pos, label in label_pos_map.items():
+        if label.name == label_name:
+            if label_type != "all" and label.label_type != label_type:
+                continue
+            root = uf.find(pos)
+            for p in all_positions:
+                if uf.find(p) == root:
+                    target_positions.add(p)
+
+    if not target_positions:
+        return _empty_trace_result(label_name)
+
+    # Find all label names in this component
+    blocked_labels: list[str] = []
+    for pos, label in label_pos_map.items():
+        if pos in target_positions and label.name != label_name:
+            if label.name not in blocked_labels:
+                blocked_labels.append(label.name)
+
+    if stop_at_labels and len(blocked_labels) > 0:
+        label_pins, assign_far_pins = _assign_pins_to_labels(
+            pin_pos_map, label_pos_map, target_positions,
+            target_label=label_name,
+            label_type_filter=label_type,
+        )
+        pins = label_pins.get(label_name, [])
+        far_pins = list(assign_far_pins)
+        for other_label, other_pins in label_pins.items():
+            if other_label != label_name:
+                far_pins.extend(other_pins)
+    else:
+        pins = []
+        for pos, pin_list in pin_pos_map.items():
+            if pos in target_positions:
+                for pin in pin_list:
+                    pins.append({
+                        "ref": pin.ref,
+                        "pin_number": pin.pin_number,
+                        "pin_name": pin.pin_name,
+                        "position": [pin.position[0], pin.position[1]],
+                        "electrical_type": pin.electrical_type,
+                    })
+        far_pins = []
+
+    refs = sorted({p["ref"] for p in pins})
+
+    from kicad_agent.ops.ground_topology import _classify_ground_domain
+    pin_set = {(p["ref"], p["pin_number"]) for p in pins}
+    domain = _classify_ground_domain(label_name, pin_set) if pins else "unknown"
+
+    return {
+        "label": label_name,
+        "reachable_pins": pins,
+        "pin_count": len(pins),
+        "refs": refs,
+        "sheets": [sheet_name] if sheet_name else [],
+        "domain": domain,
+        "blocked_by": blocked_labels,
+        "far_pins": far_pins,
+        "far_pin_count": len(far_pins),
+    }
+
 # Maximum distance (mm) from a pin to the nearest label before we consider
 # it "far" and don't assign it. 25.4mm = 1 inch. In a well-designed schematic,
 # pins are physically close to the label that names their net.
@@ -135,6 +276,10 @@ def trace_net_from_label(
     each pin is assigned to its nearest label, enabling independent
     per-label analysis.
 
+    For hierarchical schematics, traces the label in each sub-sheet
+    independently and merges results. Global labels with the same name
+    across sheets are electrically connected.
+
     Args:
         sch_path: Path to a .kicad_sch file.
         label_name: Label text to trace.
@@ -145,85 +290,34 @@ def trace_net_from_label(
     Returns:
         Dict with reachable pins, pin count, refs, domain, and blocked labels.
     """
-    graph = SchematicGraph.from_file(str(sch_path))
-
-    # Build union-find components
-    uf, all_positions, pin_pos_map, label_pos_map = _build_union_find_components(graph)
-
-    # Find all positions in the component containing our target label
-    target_positions: set[tuple[float, float]] = set()
-    for pos, label in label_pos_map.items():
-        if label.name == label_name:
-            if label_type != "all" and label.label_type != label_type:
-                continue
-            # Find the union-find root for this label position
-            root = uf.find(pos)
-            # Collect all positions in this component
-            for p in all_positions:
-                if uf.find(p) == root:
-                    target_positions.add(p)
-
-    if not target_positions:
-        return {
-            "label": label_name,
-            "reachable_pins": [],
-            "pin_count": 0,
-            "refs": [],
-            "sheets": [],
-            "domain": "unknown",
-            "blocked_by": [],
-            "far_pins": [],
-            "far_pin_count": 0,
-        }
-
-    # Find all label names in this component
-    blocked_labels: list[str] = []
-    for pos, label in label_pos_map.items():
-        if pos in target_positions and label.name != label_name:
-            if label.name not in blocked_labels:
-                blocked_labels.append(label.name)
-
-    if stop_at_labels and len(blocked_labels) > 0:
-        # Assign pins to nearest label
-        label_pins, assign_far_pins = _assign_pins_to_labels(
-            pin_pos_map, label_pos_map, target_positions,
-            target_label=label_name,
-            label_type_filter=label_type,
+    # Try hierarchical parsing
+    try:
+        from kicad_agent.schematic_routing.schematic_graph import (
+            HierarchicalSchematic,
         )
-        pins = label_pins.get(label_name, [])
-        far_pins = list(assign_far_pins)
-        for other_label, other_pins in label_pins.items():
-            if other_label != label_name:
-                far_pins.extend(other_pins)
-    else:
-        # Return ALL pins in the component (no label boundary)
-        pins = []
-        for pos, pin_list in pin_pos_map.items():
-            if pos in target_positions:
-                for pin in pin_list:
-                    pins.append({
-                        "ref": pin.ref,
-                        "pin_number": pin.pin_number,
-                        "pin_name": pin.pin_name,
-                        "position": [pin.position[0], pin.position[1]],
-                        "electrical_type": pin.electrical_type,
-                    })
-        far_pins = []
+        hier = SchematicGraph.from_hierarchy(sch_path)
+    except Exception:
+        hier = None
 
-    # Extract refs and classify domain
-    refs = sorted({p["ref"] for p in pins})
+    if hier and hier.sheet_refs:
+        # Multi-sheet: trace in root + each child, merge results
+        results: list[dict[str, Any]] = []
+        results.append(_trace_single_graph(
+            hier.graph, label_name=label_name, label_type=label_type,
+            stop_at_labels=stop_at_labels, sheet_name="root",
+        ))
+        for child in hier.children:
+            sheet_name = Path(child.filepath).stem
+            results.append(_trace_single_graph(
+                child.graph, label_name=label_name, label_type=label_type,
+                stop_at_labels=stop_at_labels, sheet_name=sheet_name,
+            ))
+        return _merge_trace_results(results)
 
-    from kicad_agent.ops.ground_topology import _classify_ground_domain
-    pin_set = {(p["ref"], p["pin_number"]) for p in pins}
-    domain = _classify_ground_domain(label_name, pin_set) if pins else "unknown"
-
-    return {
-        "label": label_name,
-        "reachable_pins": pins,
-        "pin_count": len(pins),
-        "refs": refs,
-        "domain": domain,
-        "blocked_by": blocked_labels,
-        "far_pins": far_pins,
-        "far_pin_count": len(far_pins),
-    }
+    # Single-sheet fallback (unchanged behavior)
+    return _trace_single_graph(
+        SchematicGraph.from_file(str(sch_path)),
+        label_name=label_name,
+        label_type=label_type,
+        stop_at_labels=stop_at_labels,
+    )

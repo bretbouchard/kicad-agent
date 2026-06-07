@@ -61,6 +61,48 @@ class Label:
 
 
 @dataclass
+class SheetPin:
+    """A pin on a hierarchical sheet symbol (in the root sheet).
+
+    Matches a hierarchical_label in the child sub-sheet by name.
+    """
+    name: str
+    direction: str  # "input", "output", "bidirectional", "passive"
+    position: Pos
+    angle: float
+    uuid: str = ""
+
+
+@dataclass
+class SheetRef:
+    """Reference to a sub-sheet from a root schematic.
+
+    Parsed from (sheet ...) blocks in the root .kicad_sch body.
+    """
+    name: str           # Sheetname property (e.g., "EQ Stage")
+    filepath: str       # Sheetfile property (e.g., "eq-stage.kicad_sch")
+    uuid: str
+    position: Pos
+    size: Pos  # (width, height)
+    pins: list[SheetPin] = field(default_factory=list)
+
+
+@dataclass
+class HierarchicalSchematic:
+    """A hierarchical schematic tree: root + sub-sheets (recursive).
+
+    Each node holds its own SchematicGraph and list of SheetRefs.
+    Leaf nodes have empty children.
+    """
+    filepath: str
+    graph: SchematicGraph
+    sheet_refs: list[SheetRef] = field(default_factory=list)
+    children: list[HierarchicalSchematic] = field(default_factory=list)
+    depth: int = 0
+    warnings: list[str] = field(default_factory=list)
+
+
+@dataclass
 class SchematicGraph:
     """Parsed connectivity elements from a .kicad_sch file."""
 
@@ -118,6 +160,60 @@ class SchematicGraph:
         graph.no_connects = _parse_no_connects(body)
 
         return graph
+
+    @classmethod
+    def from_hierarchy(
+        cls,
+        filepath: str | Path,
+        *,
+        max_depth: int = 10,
+        _visited: set[str] | None = None,
+        _depth: int = 0,
+    ) -> HierarchicalSchematic:
+        """Parse a .kicad_sch and recursively parse sub-sheets.
+
+        Returns a HierarchicalSchematic tree. If the file has no (sheet ...)
+        blocks, children will be empty and this is equivalent to a flat parse.
+        """
+        filepath = str(Path(filepath).resolve())
+        visited = _visited or set()
+        if filepath not in visited:
+            visited.add(filepath)
+        root_graph = cls.from_file(filepath)
+        content = Path(filepath).read_text()
+
+        _, lib_end = _find_lib_symbols_range(content)
+        body = content[lib_end:] if lib_end > 0 else content
+
+        sheet_refs = _parse_sheet_refs(body)
+        root_dir = Path(filepath).parent
+        children: list[HierarchicalSchematic] = []
+
+        for ref in sheet_refs:
+            child_path = root_dir / ref.filepath
+            if not child_path.exists():
+                continue
+            resolved = str(child_path.resolve())
+            if resolved in visited:
+                continue
+            if _depth >= max_depth:
+                continue
+            visited.add(resolved)
+            child = cls.from_hierarchy(
+                child_path,
+                max_depth=max_depth,
+                _visited=visited,
+                _depth=_depth + 1,
+            )
+            children.append(child)
+
+        return HierarchicalSchematic(
+            filepath=filepath,
+            graph=root_graph,
+            sheet_refs=sheet_refs,
+            children=children,
+            depth=_depth,
+        )
 
     def _build_wire_endpoint_index(self) -> None:
         """Index wire endpoints for fast lookup."""
@@ -580,3 +676,101 @@ def _parse_no_connects(body: str) -> set[Pos]:
     for m in re.finditer(r'\(no_connect\s+\(at\s+([\d.]+)\s+([\d.]+)\)', body):
         no_connects.add((round(float(m.group(1)), 2), round(float(m.group(2)), 2)))
     return no_connects
+
+
+def _extract_sexp_block(body: str, start_pattern: str) -> list[tuple[int, int]]:
+    """Extract balanced S-expression blocks from body using paren-depth counting.
+
+    Finds all occurrences of start_pattern, then counts parentheses to
+    extract the complete enclosing block.
+
+    Returns list of (start_offset, end_offset) byte ranges.
+    """
+    blocks: list[tuple[int, int]] = []
+    for m in re.finditer(start_pattern, body):
+        start = m.start()
+        depth = 0
+        i = start
+        while i < len(body):
+            ch = body[i]
+            if ch == '(':
+                depth += 1
+            elif ch == ')':
+                depth -= 1
+                if depth == 0:
+                    blocks.append((start, i + 1))
+                    break
+            i += 1
+    return blocks
+
+
+def _parse_sheet_refs(body: str) -> list[SheetRef]:
+    """Parse (sheet ...) blocks from root schematic body.
+
+    Each (sheet ...) block contains:
+      - (at X Y) — position
+      - (size W H) — dimensions
+      - (uuid "...") — unique id
+      - (property "Sheetname" "..." ...) — human name
+      - (property "Sheetfile" "..." ...) — child file path
+      - (pin "NAME" direction (at X Y ANGLE) ...) — boundary pins
+    """
+    refs: list[SheetRef] = []
+
+    sheet_blocks = _extract_sexp_block(body, r'\(sheet\s')
+    for block_start, block_end in sheet_blocks:
+        block = body[block_start:block_end]
+
+        # Extract position
+        pos_m = re.search(r'\(at\s+([\d.]+)\s+([\d.]+)\)', block)
+        position = (0.0, 0.0)
+        if pos_m:
+            position = (float(pos_m.group(1)), float(pos_m.group(2)))
+
+        # Extract size
+        size_m = re.search(r'\(size\s+([\d.]+)\s+([\d.]+)\)', block)
+        size = (0.0, 0.0)
+        if size_m:
+            size = (float(size_m.group(1)), float(size_m.group(2)))
+
+        # Extract uuid
+        uuid_m = re.search(r'\(uuid\s+"([^"]+)"', block)
+        uuid = uuid_m.group(1) if uuid_m else ""
+
+        # Extract Sheetname
+        name_m = re.search(
+            r'\(property\s+"Sheetname"\s+"([^"]+)"', block
+        )
+        name = name_m.group(1) if name_m else ""
+
+        # Extract Sheetfile
+        file_m = re.search(
+            r'\(property\s+"Sheetfile"\s+"([^"]+)"', block
+        )
+        filepath = file_m.group(1) if file_m else ""
+
+        # Extract pins
+        pins: list[SheetPin] = []
+        _PIN_RE = re.compile(
+            r'\(pin\s+"([^"]+)"\s+'
+            r'(\w+)\s+'
+            r'\(at\s+([\d.]+)\s+([\d.]+)\s+([\d.-]+)\)'
+        )
+        for pm in _PIN_RE.finditer(block):
+            pins.append(SheetPin(
+                name=pm.group(1),
+                direction=pm.group(2),
+                position=(float(pm.group(3)), float(pm.group(4))),
+                angle=float(pm.group(5)),
+            ))
+
+        refs.append(SheetRef(
+            name=name,
+            filepath=filepath,
+            uuid=uuid,
+            position=position,
+            size=size,
+            pins=pins,
+        ))
+
+    return refs
