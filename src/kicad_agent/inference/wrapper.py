@@ -320,10 +320,24 @@ class InferenceWrapper:
         # 4. Load models if not already loaded (needed for reward model)
         self._load_models()
 
-        # 5. Score and select best
+        # 5. Score all chains and compute confidence
+        from kicad_agent.inference.confidence_scorer import compute_confidence
+
+        all_composite_scores: list[float] = []
+        if self._reward_model is not None:
+            from kicad_agent.training.reward_model import predict_reward
+
+            for chain_text in chains:
+                pred = predict_reward(self._reward_model, chain_text)
+                composite = (pred.format_score + pred.quality_score + pred.accuracy_score) / 3.0
+                all_composite_scores.append(composite)
+
+        confidence = compute_confidence(all_composite_scores) if all_composite_scores else None
+
+        # 6. Score and select best
         best = best_of_n_select(chains, self._reward_model)
 
-        # Attach generation time of the winning chain
+        # Attach generation time and confidence of the winning chain
         winning_idx = chains.index(best.chain_text)
         result = ScoredChain(
             chain_text=best.chain_text,
@@ -332,13 +346,15 @@ class InferenceWrapper:
             accuracy_score=best.accuracy_score,
             composite_score=best.composite_score,
             generation_time_s=gen_times[winning_idx],
+            confidence=confidence,
         )
 
         logger.info(
-            "Analysis complete: %d chains in %.1fs, best score=%.3f",
+            "Analysis complete: %d chains in %.1fs, best score=%.3f, confidence=%.2f",
             self._n_best,
             total_elapsed,
             result.composite_score,
+            result.confidence.overall if result.confidence else 0.0,
         )
 
         return result

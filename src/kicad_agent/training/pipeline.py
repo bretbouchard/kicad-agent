@@ -50,6 +50,9 @@ class TrainingPipelineConfig:
         hard_board_ratio: Fraction of hard/adversarial boards (0..1).
         lr_schedule: "cosine" (default), "linear", or "constant".
         warmup_steps: Number of warmup steps for LR schedule.
+        real_data_dir: Optional directory containing real-world PCB data
+            (train.jsonl from Phase 13 GitHub crawler output). Real-world samples
+            supplement synthetic maze data in training.
     """
 
     n_samples: int = 100_000
@@ -63,6 +66,7 @@ class TrainingPipelineConfig:
     hard_board_ratio: float = 0.4
     lr_schedule: str = "cosine"
     warmup_steps: int = 100
+    real_data_dir: str | Path | None = None
 
     def __post_init__(self):
         """Auto-detect GPU if device is 'cpu' and a GPU is available."""
@@ -135,6 +139,7 @@ def run_pipeline(config: TrainingPipelineConfig) -> dict:
             "device": config.device,
             "n_epochs": config.n_epochs,
             "hard_board_ratio": config.hard_board_ratio,
+            "real_data_dir": str(config.real_data_dir) if config.real_data_dir else None,
         },
         "steps": {},
     }
@@ -151,6 +156,39 @@ def run_pipeline(config: TrainingPipelineConfig) -> dict:
     report["steps"]["dataset"] = {
         "n_generated": len(dataset),
         "difficulty_counts": dataset.difficulty_counts,
+    }
+
+    # Step 1b: Load real-world data if real_data_dir provided
+    real_dataset = None
+    n_real_loaded = 0
+    real_difficulty_counts: dict[str, int] = {}
+    if config.real_data_dir is not None:
+        real_dir = Path(config.real_data_dir)
+        train_jsonl = real_dir / "train.jsonl"
+        if train_jsonl.exists():
+            try:
+                from kicad_agent.training.real_dataset import RealBoardDataset
+
+                real_dataset = RealBoardDataset.from_jsonl(train_jsonl)
+                n_real_loaded = len(real_dataset)
+                real_difficulty_counts = real_dataset.difficulty_counts
+                logger.info(
+                    "Step 1b: Loaded %d real-world samples from %s",
+                    n_real_loaded,
+                    train_jsonl,
+                )
+            except Exception as exc:
+                logger.warning("Failed to load real-world data from %s: %s", train_jsonl, exc)
+        else:
+            logger.warning(
+                "real_data_dir specified but train.jsonl not found at %s",
+                train_jsonl,
+            )
+
+    report["steps"]["real_world"] = {
+        "n_loaded": n_real_loaded,
+        "n_synthetic": len(dataset),
+        "difficulty_counts": real_difficulty_counts,
     }
 
     # Step 2: Split

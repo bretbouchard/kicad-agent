@@ -81,7 +81,8 @@ def test_parallel_completion_faster_than_sequential(tmp_path: Path) -> None:
         return PredictedReward(format_score=0.8, quality_score=0.7, accuracy_score=0.9)
 
     with patch("kicad_agent.parser.pcb_parser.parse_pcb", return_value=mock_result), \
-         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict):
+         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict), \
+         patch("kicad_agent.training.reward_model.predict_reward", side_effect=mock_predict):
         start = time.monotonic()
         result = wrapper.analyze(pcb_file)
         elapsed = time.monotonic() - start
@@ -122,7 +123,8 @@ def test_all_n_chains_generated(tmp_path: Path) -> None:
         return MagicMock(format_score=0.7, quality_score=0.7, accuracy_score=0.7)
 
     with patch("kicad_agent.parser.pcb_parser.parse_pcb", return_value=mock_result), \
-         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict):
+         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict), \
+         patch("kicad_agent.training.reward_model.predict_reward", side_effect=mock_predict):
         wrapper.analyze(pcb_file)
 
     assert len(generated_chains) == 4, f"Expected 4 chains, got {len(generated_chains)}"
@@ -160,15 +162,18 @@ def test_best_of_n_returns_highest_score(tmp_path: Path) -> None:
     mock_result.raw_content = "(kicad_pcb)"
 
     scores = [0.5, 0.95, 0.7]
+    # predict_reward is called per chain in both confidence scoring and best-of-N
+    # (2 calls per chain). Cycle through scores to ensure consistent per-chain scoring.
     score_idx = [0]
 
     def mock_predict(model, text):
-        s = scores[score_idx[0]]
+        s = scores[score_idx[0] % len(scores)]
         score_idx[0] += 1
         return MagicMock(format_score=s, quality_score=s, accuracy_score=s)
 
     with patch("kicad_agent.parser.pcb_parser.parse_pcb", return_value=mock_result), \
-         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict):
+         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict), \
+         patch("kicad_agent.training.reward_model.predict_reward", side_effect=mock_predict):
         result = wrapper.analyze(pcb_file)
 
     assert "high-score-chain" in result.chain_text
@@ -204,7 +209,8 @@ def test_n_best_1_single_chain(tmp_path: Path) -> None:
         return MagicMock(format_score=0.8, quality_score=0.8, accuracy_score=0.8)
 
     with patch("kicad_agent.parser.pcb_parser.parse_pcb", return_value=mock_result), \
-         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict):
+         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict), \
+         patch("kicad_agent.training.reward_model.predict_reward", side_effect=mock_predict):
         result = wrapper.analyze(pcb_file)
 
     assert call_count[0] == 1
@@ -244,7 +250,8 @@ def test_thread_safety_shared_model(tmp_path: Path) -> None:
         return MagicMock(format_score=0.8, quality_score=0.8, accuracy_score=0.8)
 
     with patch("kicad_agent.parser.pcb_parser.parse_pcb", return_value=mock_result), \
-         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict):
+         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict), \
+         patch("kicad_agent.training.reward_model.predict_reward", side_effect=mock_predict):
         result = wrapper.analyze(pcb_file)
 
     # With 4 max_workers and 4 chains, multiple threads should have been used

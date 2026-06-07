@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from kicad_agent.inference.confidence_scorer import InferenceConfidence
 
 from kicad_agent.training.reward_model import PredictedReward, predict_reward
 
@@ -18,6 +22,7 @@ class ScoredChain:
         accuracy_score: Predicted coordinate accuracy (0..1).
         composite_score: Mean of format/quality/accuracy scores.
         generation_time_s: Wall-clock time for this chain's generation.
+        confidence: Optional InferenceConfidence from best-of-N chain agreement.
     """
 
     chain_text: str
@@ -26,6 +31,7 @@ class ScoredChain:
     accuracy_score: float
     composite_score: float
     generation_time_s: float = 0.0
+    confidence: "InferenceConfidence | None" = None
 
 
 def best_of_n_select(
