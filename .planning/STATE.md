@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v3.1
-milestone_name: Council Remediation
-status: complete
-stopped_at: All phases complete — v3.1 Council Remediation shipped. ROADMAP and STATE updated to reflect Phase 78 completion.
-last_updated: "2026-06-07T12:00:00Z"
+milestone: v2.2
+milestone_name: Complete-Ops
+status: in-progress
+stopped_at: Completed Phase 74 - Executor Refactor & Schema Organization (2 plans).
+last_updated: "2026-06-07T22:35:52.179Z"
 last_activity: 2026-06-07
 progress:
-  total_phases: 91
-  completed_phases: 91
-  total_plans: 211
-  completed_plans: 211
-  percent: 100
+  total_phases: 89
+  completed_phases: 41
+  total_plans: 229
+  completed_plans: 185
+  percent: 81
 ---
 
 # Project State

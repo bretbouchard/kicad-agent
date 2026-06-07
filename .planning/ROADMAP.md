@@ -1356,7 +1356,7 @@ Plans:
 
 Plans:
 - [ ] 79-01-PLAN.md — MCP full integration: expose all 98 operations + validation + export + routing as MCP tools
-- [ ] 79-02-PLAN.md — kicad-cli completeness: render, SVG exports, symbol/footprint SVG, position format options
+- [x] 79-02-PLAN.md — kicad-cli completeness: render, SVG exports, symbol/footprint SVG, position format options
 - [ ] 79-03-PLAN.md — Zone CRUD lifecycle and net class modification operations
 - [ ] 79-04-PLAN.md — DFM engine expansion: 50+ manufacturing checks with fab profiles
 - [ ] 79-05-PLAN.md — AI pipeline smarter: real-world training data, parallel inference, confidence scoring
