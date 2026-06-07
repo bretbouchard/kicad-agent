@@ -1293,3 +1293,23 @@ Plans:
 Plans:
 - [x] 76-01-PLAN.md -- Native PCB types (10 dataclasses) and sexpdata tree-walking parser with 25+ tests
 - [x] 76-02-PLAN.md -- PcbIR adapter pattern, executor wiring, kiutils fallback, 15+ integration tests
+
+### Phase 77: Source Review Remediation
+**Goal**: Fix 38 bugs found in comprehensive source review (2026-06-06) across parser, serializer, ops/execution, schematic_routing, validation, and PCB subsystems. Organized in 3 waves: Critical/High fixes (Wave 1-2), Medium/Low cleanup (Wave 3).
+**Source**: `hardware/dumb-cartridges/aether-drive/BUGS.md` section "kicad-agent Source Review (2026-06-06)"
+**Depends on**: 76 (native parser, on which several fixes build)
+**Success Criteria** (what must be TRUE):
+  1. 8 Critical bugs fixed: cache corruption (3), serializer kiutils corruption (1), power unit placement (1), convert_kicad6_to_10 overwrite (1), RecursionError (1), temp dir leak (1)
+  2. 12 High bugs fixed: UUID misassignment, in_bom destruction, multi-unit pin resolution, thread safety, Transaction gaps, etc.
+  3. 12 Medium bugs fixed: scope limitations, routing issues, format mismatches
+  4. 6+ Low bugs fixed: dead code, performance, minor inconsistencies
+ 5. 20+ new regression tests covering all fixes
+  6. Full test suite passes with zero regressions
+**Plans**: 5 plans
+
+Plans:
+- [ ] 77-01-PLAN.md — Wave 1: Critical parser & validation fixes (P-BUG-001, P-BUG-002, P-BUG-003, P-BUG-004, V-BUG-001)
+- [ ] 77-02-PLAN.md — Wave 1: Critical serializer fixes (S-BUG-001, S-BUG-002, S-BUG-003, S-BUG-004, S-BUG-005)
+- [ ] 77-03-PLAN.md — Wave 2: Ops/execution pipeline fixes (O-BUG-001 through O-BUG-007)
+- [ ] 77-04-PLAN.md — Wave 2: Schematic routing fixes (R-BUG-001 through R-BUG-008)
+- [ ] 77-05-PLAN.md — Wave 3: Medium/Low cleanup (P-BUG-005, P-BUG-006, V-BUG-002, V-BUG-003, O-BUG-008/009, dead code)
