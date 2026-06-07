@@ -122,6 +122,15 @@ class LocalLLMClient:
         else:
             self._model, self._tokenizer = load(self._model_name)
 
+    def unload_model(self) -> None:
+        """Release model and tokenizer references for memory management.
+
+        Idempotent -- safe to call multiple times. After unloading, the next
+        chat() call will trigger lazy reload via _ensure_loaded().
+        """
+        self._model = None
+        self._tokenizer = None
+
     @property
     def model(self) -> str:
         """The model identifier."""

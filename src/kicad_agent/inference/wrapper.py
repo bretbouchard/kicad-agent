@@ -3,6 +3,10 @@
 Loads the fine-tuned model via LocalLLMClient and the reward model via
 RewardModel.load_trained(). Generates N chains per request and returns
 the best-scoring one via best_of_n_select.
+
+Chain generation uses ThreadPoolExecutor for concurrent execution (T-22-04:
+MPS memory safety -- threads share read-only model weights with per-thread
+activations).
 """
 
 from __future__ import annotations
@@ -10,6 +14,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -68,6 +73,7 @@ class InferenceWrapper:
         max_tokens: int = 1024,
         temperature: float = 0.7,
         device: str = "auto",
+        max_workers: int | None = None,
     ) -> None:
         if n_best < 1 or n_best > _MAX_N_BEST:
             raise ValueError(f"n_best must be between 1 and {_MAX_N_BEST}, got {n_best}")
@@ -84,6 +90,7 @@ class InferenceWrapper:
         self._max_tokens = max_tokens
         self._temperature = temperature
         self._device = device
+        self._max_workers = max_workers if max_workers is not None else min(n_best, 4)
 
         # Lazy-loaded on first use
         self._llm_client: Any = None
@@ -290,16 +297,23 @@ class InferenceWrapper:
         # 2. Build prompt
         messages = self._build_prompt(stats)
 
-        # 3. Generate N chains sequentially (T-22-04: memory safety on MPS)
-        chains: list[str] = []
-        gen_times: list[float] = []
+        # 3. Generate N chains concurrently via ThreadPoolExecutor
+        #    (T-22-04: MPS memory safety -- threads share read-only model weights
+        #    with per-thread activations)
+        chains: list[str] = [None] * self._n_best  # type: ignore[list-item]
+        gen_times: list[float] = [0.0] * self._n_best
         total_start = time.monotonic()
 
-        for i in range(self._n_best):
-            logger.debug("Generating chain %d/%d", i + 1, self._n_best)
-            chain_text, gen_time = self._generate_chain(messages)
-            chains.append(chain_text)
-            gen_times.append(gen_time)
+        with ThreadPoolExecutor(max_workers=self._max_workers) as executor:
+            futures = {
+                executor.submit(self._generate_chain, messages): i
+                for i in range(self._n_best)
+            }
+            for future in as_completed(futures):
+                idx = futures[future]
+                chain_text, gen_time = future.result()
+                chains[idx] = chain_text
+                gen_times[idx] = gen_time
 
         total_elapsed = time.monotonic() - total_start
 
