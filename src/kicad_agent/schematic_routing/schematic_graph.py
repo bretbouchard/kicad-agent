@@ -329,9 +329,94 @@ def _parse_wires(body: str) -> list[Wire]:
     return wires
 
 
+def _build_unit_index(lib_symbols: dict[str, list[tuple]]) -> dict[tuple[str, int], list[tuple]]:
+    """Build a (base_name, unit_number) -> pins lookup from parsed lib_symbols.
+
+    KiCad sub-symbols use naming convention: ``"ParentName_U_B"``
+    where U is the unit number and B is the body style.
+
+    Returns:
+        {(base_name_or_short_name, unit_number): [pin_tuple, ...]}
+    """
+    index: dict[tuple[str, int], list[tuple]] = {}
+    for sub_name, pins in lib_symbols.items():
+        parts = sub_name.rsplit("_", 2)
+        if len(parts) >= 3 and parts[-1].isdigit() and parts[-2].isdigit():
+            base = parts[0]
+            unit = int(parts[-2])
+        elif len(parts) == 2 and parts[-1].isdigit():
+            base = parts[0]
+            unit = 1
+        else:
+            # No unit suffix -- single-unit symbol
+            base = sub_name
+            unit = 1
+
+        # Handle colon-qualified names
+        if ":" in base:
+            short_base = base.split(":")[-1]
+        else:
+            short_base = base
+
+        index[(base, unit)] = pins
+        if short_base != base:
+            index[(short_base, unit)] = pins
+
+        # Also store as unit 0 (all units) for single-unit symbols
+        if unit == 1 and len(pins) <= 20:
+            index.setdefault((base, 0), pins)
+            if short_base != base:
+                index.setdefault((short_base, 0), pins)
+
+    return index
+
+
+def _resolve_unit_pins(
+    lib_id: str,
+    unit: int,
+    lib_symbols: dict[str, list[tuple]],
+    unit_index: dict[tuple[str, int], list[tuple]],
+) -> list[tuple] | None:
+    """Resolve pins for a (lib_id, unit) combination.
+
+    Tries: exact match, short-name match, unit-0 fallback, legacy lookup.
+    """
+    short_name = lib_id.split(":")[-1] if ":" in lib_id else lib_id
+
+    # Strategy 1: Exact (lib_id, unit)
+    key = (lib_id, unit)
+    if key in unit_index:
+        return unit_index[key]
+
+    # Strategy 2: Short name match
+    key = (short_name, unit)
+    if key in unit_index:
+        return unit_index[key]
+
+    # Strategy 3: Unit-0 catch-all
+    key = (lib_id, 0)
+    if key in unit_index:
+        return unit_index[key]
+    key = (short_name, 0)
+    if key in unit_index:
+        return unit_index[key]
+
+    # Strategy 4: Legacy -- direct key lookup
+    lib_pins = lib_symbols.get(lib_id)
+    if lib_pins:
+        return lib_pins
+    for k in lib_symbols:
+        if k.split(":")[-1] == short_name or k == short_name:
+            return lib_symbols[k]
+
+    return None
+
+
 def _parse_symbol_pins(body: str, lib_symbols: dict[str, list[tuple]]) -> list[PinPosition]:
     """Parse placed symbols and compute absolute pin wire-end positions."""
     pins = []
+    unit_index = _build_unit_index(lib_symbols)
+
     for sym_match in re.finditer(
         r'\(symbol\s+\(lib_id\s+"([^"]+)"\)\s+\(at\s+([\d.]+)\s+([\d.]+)\s+([\d.-]+)\)',
         body,
@@ -364,15 +449,12 @@ def _parse_symbol_pins(body: str, lib_symbols: dict[str, list[tuple]]) -> list[P
         if ref.startswith("#"):
             continue
 
-        # Find matching lib symbol definition
-        lib_pins = lib_symbols.get(lib_id)
-        if not lib_pins:
-            # Try matching by short name (after colon)
-            short_name = lib_id.split(":")[-1] if ":" in lib_id else lib_id
-            for k in lib_symbols:
-                if k.split(":")[-1] == short_name or k == short_name:
-                    lib_pins = lib_symbols[k]
-                    break
+        # Extract unit number (default 1 for single-unit symbols)
+        unit_match = re.search(r'\(unit\s+(\d+)\)', sym_block)
+        unit = int(unit_match.group(1)) if unit_match else 1
+
+        # Resolve pins for this specific unit (R-BUG-002 fix)
+        lib_pins = _resolve_unit_pins(lib_id, unit, lib_symbols, unit_index)
         if not lib_pins:
             continue
 

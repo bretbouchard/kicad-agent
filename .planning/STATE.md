@@ -4,13 +4,13 @@ milestone: v3.1
 milestone_name: Council Remediation
 status: complete
 stopped_at: All phases complete — v3.1 Council Remediation shipped.
-last_updated: "2026-06-06T21:30:00Z"
-last_activity: 2026-06-06
+last_updated: "2026-06-07T05:12:17Z"
+last_activity: 2026-06-07
 progress:
   total_phases: 86
   completed_phases: 86
-  total_plans: 228
-  completed_plans: 228
+  total_plans: 229
+  completed_plans: 229
   percent: 100
 ---
 

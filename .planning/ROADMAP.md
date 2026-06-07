@@ -1332,7 +1332,7 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 78-01-PLAN.md — Reward model held-out evaluation with Kendall tau (M-14)
+- [x] 78-01-PLAN.md — Reward model held-out evaluation with Kendall tau (M-14)
 - [ ] 78-02-PLAN.md — GRPO rename to AdvantageWeightedTrainer (M-15)
 - [ ] 78-03-PLAN.md — Test isolation verification and hardening (TI-01, RT-01)
 - [ ] 78-04-PLAN.md — Parser unsupported elements docs + via optimization docs (DOC-01, DOC-02)
