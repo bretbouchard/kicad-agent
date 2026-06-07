@@ -205,6 +205,7 @@ from kicad_agent.ops._schema_wire import (  # noqa: E402
     AddNoConnectOp,
     AddJunctionOp,
     AddPowerFlagOp,
+    RenameNetLabelOp,
 )
 from kicad_agent.ops._schema_remove import (  # noqa: E402
     RemoveWireOp,
@@ -381,6 +382,7 @@ class Operation(BaseModel):
         | RemoveLabelsOp
         | RemoveJunctionOp
         | RemoveNoConnectOp
+        | RenameNetLabelOp
         | AddSheetOp
         | AddSheetPinOp
         | NavigateSheetsOp
@@ -488,6 +490,7 @@ __all__ = [
     "RemoveLabelsOp",
     "RemoveJunctionOp",
     "RemoveNoConnectOp",
+    "RenameNetLabelOp",
     # Library ops
     "AddLibEntryOp",
     "RemoveLibEntryOp",

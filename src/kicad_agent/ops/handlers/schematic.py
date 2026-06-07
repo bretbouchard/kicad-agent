@@ -443,6 +443,18 @@ def _handle_fix_net_short(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
     )
 
 
+@register_schematic("rename_net_label")
+def _handle_rename_net_label(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.label_renamer import rename_net_label
+    return rename_net_label(
+        ir, file_path,
+        old_name=op.old_name,
+        new_name=op.new_name,
+        label_type=op.label_type,
+        dry_run=op.dry_run,
+    )
+
+
 @register_schematic("place_net_labels")
 def _handle_place_net_labels(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.net_label_placer import place_net_labels

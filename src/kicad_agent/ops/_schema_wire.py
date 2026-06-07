@@ -131,6 +131,50 @@ class AddJunctionOp(BaseModel):
     position: PositionSpec
 
 
+class RenameNetLabelOp(BaseModel):
+    """Rename all labels matching a given name to a new name.
+
+    Finds and renames all labels (local, global, hierarchical, or a subset)
+    matching ``old_name`` to ``new_name``. Warns if ``new_name`` already
+    exists as a different label.
+
+    Attributes:
+        op_type: Discriminator literal ``"rename_net_label"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        old_name: Current label text to find and rename.
+        new_name: Replacement label text.
+        label_type: Which label types to rename: ``"label"``, ``"global"``,
+            ``"hierarchical"``, or ``"all"`` (default).
+        dry_run: If True, report what would change without modifying.
+    """
+
+    op_type: Literal["rename_net_label"] = "rename_net_label"
+    target_file: TargetFile
+    old_name: str = Field(
+        min_length=1,
+        max_length=128,
+        description="Current label text to find and rename",
+    )
+    new_name: str = Field(
+        min_length=1,
+        max_length=128,
+        description="Replacement label text",
+    )
+    label_type: Literal["label", "global", "hierarchical", "all"] = Field(
+        default="all",
+        description="Which label types to rename",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Report what would change without modifying",
+    )
+
+    @field_validator("old_name", "new_name")
+    @classmethod
+    def _validate_name_sexpr(cls, v: str) -> str:
+        return _validate_sexpr_safe_string(v)
+
+
 class AddPowerFlagOp(BaseModel):
     """Place PWR_FLAG symbols at power_pin_not_driven ERC violation positions.
 
