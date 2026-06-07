@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 # Op-type classification sets
 CROSS_FILE_OP_TYPES = {"propagate_symbol_change", "update_pcb_from_schematic"}
 CREATE_OP_TYPES = {"create_schematic", "create_pcb", "create_project", "create_symbol", "create_footprint"}
-SELF_SERIALIZING_OPS = frozenset({"erc_auto_fix_hierarchical"})
+SELF_SERIALIZING_OPS = frozenset({"erc_auto_fix_hierarchical", "convert_kicad6_to_10"})
 
 # Pre-analysis gate: shared instance (stateless, safe to reuse)
 _PRE_ANALYSIS_GATE = None
@@ -324,10 +324,12 @@ def execute_schematic(
             post_mtime = file_path.stat().st_mtime_ns
             undo_stack.push(file_path, pre_content, post_content, root.op_type, post_mtime)
 
-    # Invalidate old cache entry and store fresh one after write
+    # Invalidate old cache entry and re-parse from disk to get fresh content
+    # (O-BUG-001: avoid caching stale parse_result with old raw_content)
     if cache:
         cache.invalidate(file_path)
-        cache.put(file_path, CacheEntry(parse_result=parse_result))
+        fresh_parse_result = parse_schematic(file_path)
+        cache.put(file_path, CacheEntry(parse_result=fresh_parse_result))
 
     # Clear registry so ParseResult id is released for subsequent operations
     _clear_registry()
@@ -430,10 +432,15 @@ def execute_pcb(
             post_mtime = file_path.stat().st_mtime_ns
             undo_stack.push(file_path, pre_content, post_content, root.op_type, post_mtime)
 
-    # Invalidate old cache entry and store fresh one after write
+    # Invalidate old cache entry; for raw-written PCBs, do NOT re-cache
+    # stale data -- the next operation will trigger a fresh parse.
+    # (O-BUG-002: raw writes may change UUIDs, so uuid_map is also stale)
     if cache:
         cache.invalidate(file_path)
-        cache.put(file_path, CacheEntry(parse_result=parse_result, uuid_map=uuid_map))
+        if not ir.raw_written:
+            fresh_parse_result = parse_pcb(file_path)
+            fresh_uuid_map = extract_uuids(fresh_parse_result.raw_content, "pcb")
+            cache.put(file_path, CacheEntry(parse_result=fresh_parse_result, uuid_map=fresh_uuid_map))
 
     return {
         "success": True,
@@ -496,11 +503,16 @@ def execute_project(
     pre_content: Optional[str] = None
     if undo_stack is not None and file_path.exists():
         pre_content = file_path.read_text(encoding="utf-8")
-    details = dispatch_project(root.op_type, root, file_path)
-    if undo_stack is not None and pre_content is not None:
-        post_content = file_path.read_text(encoding="utf-8")
-        post_mtime = file_path.stat().st_mtime_ns
-        undo_stack.push(file_path, pre_content, post_content, root.op_type, post_mtime)
+
+    with Transaction(file_path) as txn:
+        details = dispatch_project(root.op_type, root, file_path)
+        txn.commit()
+
+        if undo_stack is not None and pre_content is not None:
+            post_content = file_path.read_text(encoding="utf-8")
+            post_mtime = file_path.stat().st_mtime_ns
+            undo_stack.push(file_path, pre_content, post_content, root.op_type, post_mtime)
+
     return {
         "success": True,
         "operation": root.op_type,
