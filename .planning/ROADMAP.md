@@ -16,6 +16,7 @@ Build an AI-safe KiCad structural editing tool across multiple milestones. First
 - **v2.5 Benchmark Suite** - Phases 41-44 (shipped 2026-05-31)
 - **v3.0 Full-Stack EDA** - Phases 50-54 (shipped 2026-06-01)
 - **v3.1 Council Remediation** - Phases 60-76 (shipped 2026-06-06)
+- **v3.2 Gap Analysis** - Phases 79 (in progress)
 
 ## Phases
 
@@ -1336,3 +1337,27 @@ Plans:
 - [x] 78-02-PLAN.md — GRPO rename to AdvantageWeightedTrainer (M-15)
 - [x] 78-03-PLAN.md — Test isolation verification and hardening (TI-01, RT-01)
 - [x] 78-04-PLAN.md — Parser unsupported elements docs + via optimization docs (DOC-01, DOC-02)
+
+### Phase 79: Gap Analysis — Missing Capabilities & Full Tool Integrations
+**Goal**: Fill integration gaps across kicad-cli (render, SVG, sym/fp exports), MCP server (expose all 98 operations), zone CRUD lifecycle, DFM engine expansion (5→50+ checks), AI pipeline improvements (real-world training data, parallel inference, confidence scoring), and performance optimization (O(n) parsing, memory, test coverage 69%→85%).
+**Depends on**: 78 (known limitations remediation)
+**Success Criteria** (what must be TRUE):
+  1. All 98 operations exposed as MCP tools (currently only component search)
+  2. kicad-cli pcb render wrapped with rotation/side/distance options
+  3. kicad-cli sch/sym/fp export svg wrapped
+  4. Full zone CRUD (add, modify, delete, refill) operations
+  5. 50+ DFM manufacturing checks (up from 5)
+  6. Net class modification and design rule editing operations
+  7. Parallel chain generation in inference (sequential→concurrent)
+  8. Confidence scoring on all AI outputs
+  9. Training pipeline accepts real-world PCB data (not just synthetic)
+  10. Test coverage ratio improves from 69% to 85%+
+**Plans**: 6 plans
+
+Plans:
+- [ ] 79-01-PLAN.md — MCP full integration: expose all 98 operations + validation + export + routing as MCP tools
+- [ ] 79-02-PLAN.md — kicad-cli completeness: render, SVG exports, symbol/footprint SVG, position format options
+- [ ] 79-03-PLAN.md — Zone CRUD lifecycle and net class modification operations
+- [ ] 79-04-PLAN.md — DFM engine expansion: 50+ manufacturing checks with fab profiles
+- [ ] 79-05-PLAN.md — AI pipeline smarter: real-world training data, parallel inference, confidence scoring
+- [ ] 79-06-PLAN.md — Performance optimization: O(n) parsing, memory management, test coverage 85%+
