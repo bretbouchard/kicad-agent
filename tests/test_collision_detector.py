@@ -544,3 +544,42 @@ class TestCollisionDetector:
                 assert "ref" in pin
                 assert "pin" in pin
                 assert "net" in pin
+
+    def test_kicad10_quoted_code_netlist_parses(self):
+        """R-BUG-005: KiCad 10 netlist with (code \"1\") quoted values parses correctly.
+
+        KiCad 10 uses quoted code values like (code \"1\") instead of (code 1).
+        The netlist parser must handle both formats.
+        """
+        from kicad_agent.schematic_routing.collision_detector import CollisionDetector
+
+        path = _r55_r56_overlap_fixture()
+
+        # KiCad 10 format: code values are quoted strings
+        netlist_content = """(export (version "E")
+  (design (source "test.sch"))
+  (nets
+    (net (code "1") (name "net_A")
+      (node (ref "R55") (pin "1"))
+    )
+    (net (code "2") (name "net_B")
+      (node (ref "R56") (pin "2"))
+    )
+  )
+)
+"""
+        netlist_path = path.parent / "test_kicad10.net"
+        netlist_path.write_text(netlist_content, encoding="utf-8")
+
+        detector = CollisionDetector(path, netlist_path=netlist_path)
+        overlaps = detector.detect_pin_overlaps()
+
+        wire_overlap = next(
+            (o for o in overlaps
+             if abs(o["position"][0] - 59.69) < 0.1 and abs(o["position"][1] - 80.01) < 0.1),
+            None,
+        )
+        assert wire_overlap is not None, "KiCad 10 quoted code netlist should parse and detect overlap"
+
+        # With netlist showing different nets, severity should be "error"
+        assert wire_overlap["severity"] == "error"

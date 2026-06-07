@@ -73,8 +73,9 @@ class CollisionDetector:
         pin_index: dict[tuple[str, str], str] = {}
 
         # Parse net blocks: (net (code N) (name "NET_NAME") ... (node (ref "R") (pin "1")) ...)
+        # R-BUG-005 fix: match both KiCad 8 (code 1) and KiCad 10 (code "1") formats
         for net_match in re.finditer(
-            r'\(\s*net\s+\(code\s+\d+\)\s+\(name\s+"([^"]+)"\)',
+            r'\(\s*net\s+\(code\s+"?\d+"?\)\s+\(name\s+"([^"]+)"\)',
             content,
         ):
             net_name = net_match.group(1)
