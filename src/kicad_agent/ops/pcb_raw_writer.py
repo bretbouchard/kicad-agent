@@ -19,7 +19,7 @@ Usage:
 """
 
 import re
-from typing import Optional
+from typing import Any, Optional
 
 
 class PcbRawWriter:
@@ -151,6 +151,202 @@ class PcbRawWriter:
         ]
 
         return "\n".join(parts) + "\n"
+
+    # ------------------------------------------------------------------
+    # Zone lifecycle (find, modify, remove) -- Plan 79-03
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def find_zone_block(
+        content: str, zone_uuid: str,
+    ) -> tuple[Optional[int], Optional[int]]:
+        """Find a zone block by UUID in raw PCB content.
+
+        Scans for ``(zone`` blocks and checks if the block contains the
+        target UUID. Uses ``_find_matching_close()`` for correct handling
+        of nested parens (T-79-01).
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            zone_uuid: UUID string to search for.
+
+        Returns:
+            (start, end) byte offsets, or (None, None) if not found.
+        """
+        uuid_pat = re.compile(
+            r'\(uuid\s+"' + re.escape(zone_uuid) + r'"'
+        )
+        for match in re.finditer(r"^\s*\(zone\b", content, re.MULTILINE):
+            start = match.start()
+            end = PcbRawWriter._find_matching_close(content, start + 1)
+            if end is None:
+                continue
+            block = content[start : end + 1]
+            if uuid_pat.search(block):
+                return start, end + 1
+        return None, None
+
+    @staticmethod
+    def find_zone_block_by_index(
+        content: str, index: int,
+    ) -> tuple[Optional[int], Optional[int]]:
+        """Find the Nth zone block (0-indexed) in raw PCB content.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            index: 0-based zone index.
+
+        Returns:
+            (start, end) byte offsets, or (None, None) if not found.
+        """
+        count = 0
+        for match in re.finditer(r"^\s*\(zone\b", content, re.MULTILINE):
+            start = match.start()
+            end = PcbRawWriter._find_matching_close(content, start + 1)
+            if end is None:
+                continue
+            if count == index:
+                return start, end + 1
+            count += 1
+        return None, None
+
+    @staticmethod
+    def modify_zone_field(
+        content: str, zone_uuid: str, field: str, value: Any,
+    ) -> str:
+        """Modify a single field within a zone block.
+
+        Supported fields: ``net_name``, ``layer``, ``clearance``,
+        ``priority``, ``min_width``.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            zone_uuid: UUID of the zone to modify.
+            field: Field name to change.
+            value: New value for the field.
+
+        Returns:
+            Modified content, or original if zone not found.
+        """
+        start, end = PcbRawWriter.find_zone_block(content, zone_uuid)
+        if start is None or end is None:
+            return content
+
+        block = content[start:end]
+
+        if field == "net_name":
+            # Replace (net N "old_name") with (net N "new_name")
+            block = re.sub(
+                r'\(net\s+\d+\s+"[^"]*"\)',
+                f'(net 1 "{value}")',
+                block,
+                count=1,
+            )
+        elif field == "layer":
+            block = re.sub(
+                r'\(layer\s+"[^"]*"\)',
+                f'(layer "{value}")',
+                block,
+                count=1,
+            )
+        elif field == "clearance":
+            # Replace clearance inside (connect_pads ... (clearance X))
+            block = re.sub(
+                r'\(clearance\s+[-\d.]+\)',
+                f'(clearance {value:g})',
+                block,
+                count=1,
+            )
+        elif field == "priority":
+            if "(priority " in block:
+                block = re.sub(
+                    r'\(priority\s+\d+\)',
+                    f'(priority {value})',
+                    block,
+                    count=1,
+                )
+            else:
+                # Insert priority after min_thickness line
+                block = re.sub(
+                    r'(\(min_thickness\s+[-\d.]+\))',
+                    f'\\1\n    (priority {value})',
+                    block,
+                    count=1,
+                )
+        elif field == "min_width":
+            block = re.sub(
+                r'\(min_thickness\s+[-\d.]+\)',
+                f'(min_thickness {value:g})',
+                block,
+                count=1,
+            )
+
+        return content[:start] + block + content[end:]
+
+    @staticmethod
+    def modify_zone_polygon(
+        content: str,
+        zone_uuid: str,
+        polygon: list[tuple[float, float]],
+    ) -> str:
+        """Replace the polygon outline of a zone block.
+
+        Finds the ``(polygon (pts ...))`` sub-block within the zone and
+        replaces the xy entries with new polygon points.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            zone_uuid: UUID of the zone to modify.
+            polygon: New polygon outline as [(x, y), ...].
+
+        Returns:
+            Modified content, or original if zone not found.
+        """
+        start, end = PcbRawWriter.find_zone_block(content, zone_uuid)
+        if start is None or end is None:
+            return content
+
+        block = content[start:end]
+
+        xy_entries = " ".join(
+            f"(xy {x:g} {y:g})" for x, y in polygon
+        )
+        new_pts_block = f"        {xy_entries}"
+
+        # Replace content between (pts and closing ))
+        block = re.sub(
+            r'(\(pts\s*\n).*?(\n\s*\))',
+            lambda m: f'(pts\n{new_pts_block}\n      )',
+            block,
+            count=1,
+            flags=re.DOTALL,
+        )
+
+        return content[:start] + block + content[end:]
+
+    @staticmethod
+    def remove_zone_block(content: str, zone_uuid: str) -> str:
+        """Remove a zone block entirely from raw PCB content.
+
+        Removes the zone block including its surrounding whitespace.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            zone_uuid: UUID of the zone to remove.
+
+        Returns:
+            Modified content with zone removed, or original if not found.
+        """
+        start, end = PcbRawWriter.find_zone_block(content, zone_uuid)
+        if start is None or end is None:
+            return content
+
+        # Include leading newline if present
+        trim_start = start
+        if trim_start > 0 and content[trim_start - 1] == "\n":
+            trim_start -= 1
+
+        return content[:trim_start] + content[end:]
 
     # ------------------------------------------------------------------
     # Net class (#40 migration)
