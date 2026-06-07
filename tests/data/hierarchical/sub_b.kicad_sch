@@ -1,0 +1,91 @@
+(kicad_sch
+  (version 20231120)
+  (generator "kicad-js")
+
+  (lib_symbols
+    (symbol "R"
+      (pin_names (pin "1" passive))
+      (exclude_from_sim no)
+      (in_bom yes)
+      (on_board yes)
+      (property "Reference" "R" (at 0 1.27) bottom)
+      (pin passive line
+        (at 0 0 0)
+        (length 2.54)
+        (name "1"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "1"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+    )
+  )
+
+  (symbol
+    (lib_id "R")
+    (at 120 80 0)
+    (uuid "bbbb0001-bbbb-bbbb-bbbb-bbbb00000001")
+    (property "Reference" "R3" (at 120 77.46 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Value" "10k" (at 120 82.54 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin passive line
+      (at 120 80 0)
+      (length 2.54)
+      (name "1"
+        (effects (font (size 1.27 1.27)))
+      )
+      (number "1"
+        (effects (font (size 1.27 1.27)))
+      )
+    )
+  )
+
+  (symbol
+    (lib_id "R")
+    (at 150 80 0)
+    (uuid "bbbb0002-bbbb-bbbb-bbbb-bbbb00000002")
+    (property "Reference" "R4" (at 150 77.46 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Value" "10k" (at 150 82.54 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (pin passive line
+      (at 150 80 0)
+      (length 2.54)
+      (name "1"
+        (effects (font (size 1.27 1.27)))
+      )
+      (number "1"
+        (effects (font (size 1.27 1.27)))
+      )
+    )
+  )
+
+  (wire
+    (pts (xy 122.54 80) (xy 135 80))
+  )
+
+  (wire
+    (pts (xy 135 80) (xy 152.54 80))
+  )
+
+  (junction (at 135 80))
+
+  (global_label "GNDA" (shape input) (at 135 85 90)
+    (effects (font (size 1.27 1.27)) (justify left))
+    (uuid "bbbb0003-bbbb-bbbb-bbbb-bbbb00000003")
+  )
+
+  (wire
+    (pts (xy 135 80) (xy 135 85))
+  )
+
+  (sheet_instances
+    (path "/" (page "1"))
+  )
+)
