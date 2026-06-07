@@ -1272,6 +1272,8 @@ Plans:
 | 75. Pre-Analysis Gate & Context Intelligence | 1/1 | Complete | 2026-06-03 |
 | 72. No-Connect Fix + Connectivity Inference | 0/2 | Planned | — |
 | 76. Native KiCad 10 PCB Parser | 2/2 | Complete | 76-02-SUMMARY |
+| 77. Source Review Remediation | 2/5 | In Progress | 2026-06-06 |
+| 78. Known Limitations Remediation | 0/4 | Planned | -- |
 
 ### Phase 76: Native KiCad 10 PCB Parser
 **Goal:** Replace kiutils Board.from_file() with a native sexpdata-based PCB parser that preserves all data (nets, zones, tracks, vias, footprints) and provides structured typed access to board elements. Zero data loss, zero kiutils dependency for PCB reads.
@@ -1313,3 +1315,24 @@ Plans:
 - [ ] 77-03-PLAN.md — Wave 2: Ops/execution pipeline fixes (O-BUG-001 through O-BUG-007)
 - [ ] 77-04-PLAN.md — Wave 2: Schematic routing fixes (R-BUG-001 through R-BUG-008)
 - [ ] 77-05-PLAN.md — Wave 3: Medium/Low cleanup (P-BUG-005, P-BUG-006, V-BUG-002, V-BUG-003, O-BUG-008/009, dead code)
+
+### Phase 78: Known Limitations Remediation
+**Goal:** Fix 6 known limitations identified in post-ship review: reward model held-out evaluation (M-14), GRPO naming accuracy (M-15), roundtrip regression on smd_test_board (RT-01), test isolation flakes (TI-01), native parser edge case documentation (DOC-01), via optimization documentation (DOC-02).
+**Depends on**: 76 (native parser, on which DOC-01 builds)
+**Success Criteria** (what must be TRUE):
+  1. eval_reward_quality() computes Kendall tau correlation between model scores and ground-truth quality labels
+  2. Held-out evaluation uses rule-based ground truth, not model self-scoring
+  3. GRPOTrainer/GRPOConfig renamed to AdvantageWeightedTrainer/AdvantageWeightedConfig with backward-compatible aliases
+  4. Unused kl_coefficient removed from config
+  5. grpo_trainer.py GRPOLoopTrainer unchanged
+  6. smd_test_board roundtrip regression confirmed already resolved (_SKIP_FILES)
+  7. Flaky tests verified stable with deterministic assertions
+  8. _UNSUPPORTED_ELEMENTS constant in native parser with warning logging
+  9. RoutingConstraints via_cost_mm documented with optimization gaps
+**Plans**: 4 plans
+
+Plans:
+- [ ] 78-01-PLAN.md — Reward model held-out evaluation with Kendall tau (M-14)
+- [ ] 78-02-PLAN.md — GRPO rename to AdvantageWeightedTrainer (M-15)
+- [ ] 78-03-PLAN.md — Test isolation verification and hardening (TI-01, RT-01)
+- [ ] 78-04-PLAN.md — Parser unsupported elements docs + via optimization docs (DOC-01, DOC-02)
