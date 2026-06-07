@@ -15,6 +15,7 @@ No kiutils dependency. Only sexpdata and the native types module.
 
 import logging
 import sys
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -44,6 +45,12 @@ _MAX_SIZE = 50 * 1024 * 1024
 
 # Maximum S-expression nesting depth (CRITICAL-1)
 _MAX_SEXP_DEPTH = 200
+
+# P-BUG-003: Thread lock for recursion limit manipulation.
+# sys.setrecursionlimit() is process-global. Without a lock, concurrent
+# parsing threads can restore limits while another thread is still
+# recursing with the elevated limit.
+_RECURSION_LIMIT_LOCK = threading.Lock()
 
 
 # ---------------------------------------------------------------------------
@@ -244,20 +251,24 @@ class NativeParser:
             logger.warning("Depth pre-scan rejected PCB content: %s", e)
             return NativeBoard(raw_content=content, file_path=file_path)
 
-        # Parse with defense-in-depth recursion limit
+        # Parse with defense-in-depth recursion limit.
+        # P-BUG-003: Use thread lock to prevent concurrent parsing from
+        # restoring the recursion limit while another thread is still
+        # recursing with the elevated limit.
         tree: Any = None
-        old_limit = sys.getrecursionlimit()
-        try:
-            sys.setrecursionlimit(max(old_limit, _MAX_SEXP_DEPTH * 3))
-            tree = sexpdata.loads(content)
-        except Exception:
-            logger.exception(
-                "Failed to parse PCB content with sexpdata (file: %s)",
-                file_path or "<string>",
-            )
-            return NativeBoard(raw_content=content, file_path=file_path)
-        finally:
-            sys.setrecursionlimit(old_limit)
+        with _RECURSION_LIMIT_LOCK:
+            old_limit = sys.getrecursionlimit()
+            try:
+                sys.setrecursionlimit(max(old_limit, _MAX_SEXP_DEPTH * 3))
+                tree = sexpdata.loads(content)
+            except Exception:
+                logger.exception(
+                    "Failed to parse PCB content with sexpdata (file: %s)",
+                    file_path or "<string>",
+                )
+                return NativeBoard(raw_content=content, file_path=file_path)
+            finally:
+                sys.setrecursionlimit(old_limit)
 
         return cls._build_board(tree, content, file_path)
 
