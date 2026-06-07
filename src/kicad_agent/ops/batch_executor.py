@@ -44,10 +44,15 @@ logger = logging.getLogger(__name__)
 
 
 def _get_pre_analysis_gate():
-    """Lazy-load the pre-analysis gate to avoid import overhead."""
-    from kicad_agent.ops.pre_analysis import PreAnalysisGate
+    """Return the shared PreAnalysisGate singleton from execution.py.
 
-    return PreAnalysisGate()
+    O-BUG-011: Uses the module-level singleton instead of creating a new
+    instance, ensuring consistent pre-analysis behavior across all execution
+    paths (execute, execute_batch, execute_query, etc.).
+    """
+    from kicad_agent.ops.execution import get_pre_analysis_gate
+
+    return get_pre_analysis_gate()
 
 
 def execute_batch(executor: OperationExecutor, ops: list[Operation]) -> dict[str, Any]:
