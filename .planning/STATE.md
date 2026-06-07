@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.1
 milestone_name: Council Remediation
 status: complete
-stopped_at: All phases complete — v3.1 Council Remediation shipped.
-last_updated: "2026-06-07T05:12:17Z"
+stopped_at: All phases complete — v3.1 Council Remediation shipped. ROADMAP and STATE updated to reflect Phase 78 completion.
+last_updated: "2026-06-07T12:00:00Z"
 last_activity: 2026-06-07
 progress:
-  total_phases: 86
-  completed_phases: 86
-  total_plans: 229
-  completed_plans: 229
+  total_phases: 91
+  completed_phases: 91
+  total_plans: 211
+  completed_plans: 211
   percent: 100
 ---
 
@@ -21,8 +21,8 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** All milestones shipped (v1.0 through v3.1). 86 phases, 228 plans, 4008+ tests.
-Last activity: 2026-06-06
+**Current focus:** All milestones shipped (v1.0 through v3.1). 91 phases, 211 plans, 4352 tests (2882 passing, 1 pre-existing failure).
+Last activity: 2026-06-07
 
 ## Current Position
 
