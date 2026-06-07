@@ -267,7 +267,7 @@ def register_dfm_parser(subparsers: argparse._SubParsersAction) -> None:
         "--manufacturer", "-m",
         type=str,
         default=None,
-        choices=["jlcpcb", "pcbway", "osh_park", "generic"],
+        choices=["jlcpcb", "jlcpcb-4layer", "pcbway", "osh_park", "generic"],
         help="Built-in manufacturer profile (default: generic)",
     )
     parser.add_argument(

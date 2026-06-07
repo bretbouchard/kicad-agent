@@ -119,6 +119,26 @@ _JLCPCB_STANDARD = ManufacturerProfile(
     supports_castellated=True,
 )
 
+_JLCPCB_4LAYER = ManufacturerProfile(
+    name="JLCPCB Standard 4-Layer",
+    min_trace_width_mm=0.1,
+    min_drill_mm=0.2,
+    min_annular_ring_mm=0.1,
+    min_solder_mask_sliver_mm=0.1,
+    min_clearance_mm=0.1,
+    min_via_diameter_mm=0.4,
+    max_board_dim_mm=300.0,
+    supports_blind_vias=False,
+    supports_castellated=True,
+    extra={
+        "layer_count": 4,
+        "impedance_control": "optional_add_on",
+        "default_solder_mask": "green",
+        "default_silkscreen": "white",
+        "copper_weight": "1oz",
+    },
+)
+
 _PCBWAY_STANDARD = ManufacturerProfile(
     name="PCBWay Standard 2-Layer",
     min_trace_width_mm=0.1,
@@ -160,6 +180,7 @@ _GENERIC_CONSERVATIVE = ManufacturerProfile(
 
 _PROFILES: dict[str, ManufacturerProfile] = {
     "jlcpcb": _JLCPCB_STANDARD,
+    "jlcpcb-4layer": _JLCPCB_4LAYER,
     "pcbway": _PCBWAY_STANDARD,
     "osh_park": _OSH_PARK,
     "generic": _GENERIC_CONSERVATIVE,
