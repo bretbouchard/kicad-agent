@@ -37,6 +37,20 @@ class WireFix:
     wire_endpoints: Optional[tuple[tuple[float, float], tuple[float, float]]] = None  # Actual wire coords from file
 
 
+def _snap_to_grid(value: float, grid: float) -> float:
+    """Snap a coordinate value to the nearest grid point.
+
+    Args:
+        value: Coordinate value in mm.
+        grid: Grid spacing in mm (typically 2.54 for KiCad default).
+
+    Returns:
+        Value snapped to the nearest grid point, rounded to 2 decimal places.
+    """
+    snapped = round(round(value / grid) * grid, 2)
+    return snapped
+
+
 def generate_fixes(
     targets: list[RoutingTarget],
     grid: float = 2.54,
@@ -53,9 +67,10 @@ def generate_fixes(
     fixes = []
 
     for target in targets:
-        # Use exact target pin coordinates (already at correct position)
-        target_pos = (round(target.target_x, 2), round(target.target_y, 2))
-        violation_pos = (round(target.violation_x, 2), round(target.violation_y, 2))
+        # Snap coordinates to grid to avoid endpoint_off_grid ERC violations
+        # R-BUG-004 fix: use grid snapping instead of just rounding to 2 decimals
+        target_pos = (_snap_to_grid(target.target_x, grid), _snap_to_grid(target.target_y, grid))
+        violation_pos = (_snap_to_grid(target.violation_x, grid), _snap_to_grid(target.violation_y, grid))
 
         # Pass actual wire endpoints from the file for safe replacement
         wire_eps = None
