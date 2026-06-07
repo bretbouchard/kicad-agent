@@ -172,13 +172,6 @@ def _fix_kiutils_output(path: Path) -> None:
         after = new_after
         modified = True
 
-    # Fix 6: Change (in_bom yes) (on_board yes) to (in_bom no) (on_board no)
-    # for component symbols referencing lib_symbols.
-    new_after = after.replace('(in_bom yes) (on_board yes)', '(in_bom no) (on_board no)')
-    if new_after != after:
-        after = new_after
-        modified = True
-
     if modified:
         if lib_idx < 0:
             content = after
