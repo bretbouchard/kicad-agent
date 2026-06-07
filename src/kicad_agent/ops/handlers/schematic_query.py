@@ -202,3 +202,25 @@ def _handle_analyze_ground_topology(op: Any, ir: SchematicIR, file_path: Path) -
         file_path,
         ground_nets=op.ground_nets,
     )
+
+
+@register_schematic_query("review_schematic")
+def _handle_review_schematic(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    """Handle review_schematic operation -- readability review (read-only).
+
+    O-BUG-007: Moved from _QUERY_HANDLERS (PCB query) to _SCHEMATIC_QUERY_HANDLERS
+    so it routes through execute_schematic_query with SchematicIR instead of PcbIR.
+    """
+    from kicad_agent.analysis.schematic_reviewer import SchematicReviewer
+
+    reviewer = SchematicReviewer(ir)
+    vision = getattr(op, "vision", False)
+    report = reviewer.review(vision=vision)
+
+    return {
+        "srs": report.srs,
+        "violations": len(report.rule_report.violations),
+        "vision_findings": len(report.vision_findings),
+        "factors": report.readability.factors,
+        "suggestions": list(report.readability.suggestions),
+    }

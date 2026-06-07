@@ -26,21 +26,3 @@ def register_query(op_type: str) -> Callable:
 def _handle_query_connectivity(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.connectivity_query import handle_connectivity_query
     return handle_connectivity_query(op, ir, file_path)
-
-
-@register_query("review_schematic")
-def _handle_review_schematic(op: Any, ir: Any, file_path: Path) -> dict[str, Any]:
-    """Handle review_schematic operation -- readability review (read-only)."""
-    from kicad_agent.analysis.schematic_reviewer import SchematicReviewer
-
-    reviewer = SchematicReviewer(ir)
-    vision = getattr(op, "vision", False)
-    report = reviewer.review(vision=vision)
-
-    return {
-        "srs": report.srs,
-        "violations": len(report.rule_report.violations),
-        "vision_findings": len(report.vision_findings),
-        "factors": report.readability.factors,
-        "suggestions": list(report.readability.suggestions),
-    }
