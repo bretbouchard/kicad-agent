@@ -98,8 +98,16 @@ def _determine_parent_type(
 ) -> tuple[str, int]:
     """Determine the parent S-expression type for a UUID match.
 
-    Scans backwards from the UUID match to find the enclosing S-expression.
-    Returns (parent_type, parent_start_position).
+    P-BUG-002 fix: Scans backwards from the UUID match tracking parenthesis
+    depth to find the nearest *enclosing* parent. Previously, this function
+    picked the latest (rightmost) match of ANY parent type pattern within
+    a 2000-char window, which could attribute a UUID to a wrong parent
+    (e.g., a UUID inside a pad inside a footprint attributed to a via
+    whose opening paren happened to be closer).
+
+    Now uses paren-depth tracking: scan backwards counting open/close parens
+    (skipping strings and comments). When depth reaches 1, the current token
+    is the nearest enclosing parent.
 
     Args:
         content: The full file content.
@@ -108,24 +116,45 @@ def _determine_parent_type(
     Returns:
         Tuple of (parent_type_str, start_position_of_parent).
     """
-    # Search backwards for the nearest opening paren that starts an S-expression
-    # We look for known parent types, checking from closest to furthest
-    best_type = "unknown"
-    best_pos = 0
-
-    # Get the text before the UUID match (limit search range)
     search_start = max(0, match_start - 2000)
-    prefix = content[search_start:match_start]
+    depth = 0
+    in_string = False
+    escape_next = False
 
-    for type_name, pattern in _PARENT_TYPE_PATTERNS:
-        # Find all occurrences of this parent type in the prefix
-        for parent_match in pattern.finditer(prefix):
-            pos = search_start + parent_match.start()
-            if pos > best_pos:
-                best_pos = pos
-                best_type = type_name
+    # Scan backwards from the character before the UUID match
+    for i in range(match_start - 1, search_start - 1, -1):
+        char = content[i]
 
-    return best_type, best_pos
+        if escape_next:
+            escape_next = False
+            continue
+        if char == "\\":
+            escape_next = True
+            continue
+
+        if char == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+
+        if char == ")":
+            depth += 1
+        elif char == "(":
+            if depth == 0:
+                # This opening paren starts the nearest enclosing S-expression.
+                # Extract the type name token immediately after "(".
+                type_start = i + 1
+                type_end = type_start
+                while type_end < len(content) and not content[type_end].isspace() and content[type_end] not in (")", "("):
+                    type_end += 1
+                type_name = content[type_start:type_end]
+                return type_name, i
+            else:
+                depth -= 1
+
+    # Fallback: no enclosing paren found in range
+    return "unknown", 0
 
 
 _MAX_PARENT_COUNT_ENTRIES = 100_000  # Safety cap to prevent memory exhaustion
