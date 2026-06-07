@@ -325,6 +325,9 @@ class PersistentUndoStack(UndoStack):
                 f.unlink(missing_ok=True)
         self._next_seq = 0
         self._entry_filenames.clear()
+        # Persist cleared state to manifest (O-BUG-005)
+        with self._manifest_lock:
+            self._save_manifest()
 
     def prune_old_entries(self) -> int:
         """Remove entry files that are no longer in any in-memory stack.
