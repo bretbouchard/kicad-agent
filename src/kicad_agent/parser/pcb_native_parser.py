@@ -103,6 +103,33 @@ def _find_all_symbols(tree: Any, name: str) -> list[Any]:
     return results
 
 
+def _build_symbol_index(tree: Any) -> dict[str, list[Any]]:
+    """Build a single-pass index mapping symbol names to all matching subtrees.
+
+    Walks the entire tree once and indexes every list whose first element
+    is a symbol name. Lookups are then O(1) instead of O(n) per call.
+
+    This is used to optimize parse_pcb_content where _find_all_symbols was
+    called repeatedly for each element type (footprint, segment, via, zone,
+    etc.), each call walking the entire tree -- O(types * N) total.
+    With the index, building costs O(N) once, then all lookups are O(1).
+    """
+    index: dict[str, list[Any]] = {}
+
+    def _walk(node: Any) -> None:
+        if isinstance(node, list):
+            if len(node) > 0 and _sym(node[0]):
+                name = _sym(node[0])
+                if name not in index:
+                    index[name] = []
+                index[name].append(node)
+            for item in node:
+                _walk(item)
+
+    _walk(tree)
+    return index
+
+
 def _find_at(block: list) -> list[float] | None:
     """Find (at X Y ...) values in a block."""
     for item in block:

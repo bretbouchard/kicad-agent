@@ -37,6 +37,94 @@ class LocalLLMClient:
 
     _HF_REPO = "bretbouchard/kicad-agent-pcb-adapter"
 
+    @classmethod
+    def pre_download_adapter(cls) -> Path:
+        """Download adapter from HuggingFace Hub to local cache without loading model.
+
+        Triggers the download pipeline (same as _resolve_adapter's HF path)
+        but does not instantiate a client or load any model into memory.
+        Useful for pre-caching adapters before inference sessions.
+
+        Returns:
+            Path to the downloaded adapter directory.
+
+        Raises:
+            RuntimeError: If download fails.
+        """
+        cache_dir = Path.home() / ".cache" / "kicad-agent" / "adapters"
+        grpo_dir = cache_dir / "grpo"
+        sft_dir = cache_dir / "sft"
+
+        # Already cached -- return immediately
+        for target_dir in [grpo_dir, sft_dir]:
+            if (target_dir / "adapters.safetensors").exists():
+                return target_dir
+
+        # Download from HF Hub
+        try:
+            import shutil
+            from huggingface_hub import snapshot_download
+
+            downloaded = snapshot_download(
+                cls._HF_REPO,
+                allow_patterns=["grpo/*", "sft/*"],
+                cache_dir=str(cache_dir),
+            )
+            for adapter_type in ["grpo", "sft"]:
+                src = Path(downloaded) / adapter_type
+                dst = cache_dir / adapter_type
+                if src.exists() and (src / "adapters.safetensors").exists():
+                    dst.mkdir(parents=True, exist_ok=True)
+                    for f in src.iterdir():
+                        shutil.copy2(f, dst / f.name)
+
+            if (grpo_dir / "adapters.safetensors").exists():
+                return grpo_dir
+            if (sft_dir / "adapters.safetensors").exists():
+                return sft_dir
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to download adapter from HuggingFace Hub: {e}"
+            ) from e
+
+        raise RuntimeError(
+            "Downloaded adapter archive contained no valid adapters.safetensors"
+        )
+
+    @classmethod
+    def get_cache_info(cls) -> dict[str, str | bool | None]:
+        """Return information about the local adapter cache.
+
+        Cache directory: Path.home()/.cache/kicad-agent/adapters/
+
+        Returns:
+            Dict with keys:
+            - cache_dir: Absolute path to cache directory.
+            - grpo_cached: True if GRPO adapter is cached.
+            - sft_cached: True if SFT adapter is cached.
+            - adapter_path: Path to preferred adapter (GRPO > SFT > None).
+        """
+        cache_dir = Path.home() / ".cache" / "kicad-agent" / "adapters"
+        grpo_dir = cache_dir / "grpo"
+        sft_dir = cache_dir / "sft"
+
+        grpo_cached = (grpo_dir / "adapters.safetensors").exists()
+        sft_cached = (sft_dir / "adapters.safetensors").exists()
+
+        if grpo_cached:
+            adapter_path = str(grpo_dir)
+        elif sft_cached:
+            adapter_path = str(sft_dir)
+        else:
+            adapter_path = None
+
+        return {
+            "cache_dir": str(cache_dir),
+            "grpo_cached": grpo_cached,
+            "sft_cached": sft_cached,
+            "adapter_path": adapter_path,
+        }
+
     def __init__(
         self,
         model: str | None = None,
