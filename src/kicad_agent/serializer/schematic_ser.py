@@ -6,6 +6,9 @@ Schematics do NOT need UUID re-injection -- kiutils preserves schematic UUIDs.
 Issue #2: When possible, uses targeted patch serialization to preserve original
 file formatting. Falls back to full kiutils re-serialization for complex mutations.
 
+Uses the shared normalizer module for kiutils output fixes (S-BUG-004).
+Only schematic-specific fixes (lib_name, property id removal) remain here.
+
 Usage:
     from kicad_agent.serializer.schematic_ser import serialize_schematic
 
@@ -13,10 +16,13 @@ Usage:
 """
 
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
+from kicad_agent.io.atomic_write import atomic_write
 from kicad_agent.parser.types import ParseResult
+from kicad_agent.serializer.normalizer import normalize_kicad_output
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +38,11 @@ def serialize_schematic(
     Issue #2: Tries targeted patch serialization first to preserve original
     formatting. Falls back to full kiutils re-serialization when mutations
     are too complex for patching (symbol additions, removals, etc.).
+
+    Post-processing uses the shared normalizer module (S-BUG-004) for
+    generator quoting, generator_version removal, scientific notation,
+    at-angle fixes, and whitespace normalization. Schematic-specific
+    fixes (lib_name removal, property id removal) are applied separately.
 
     Args:
         parse_result: ParseResult from parse_schematic().
@@ -70,111 +81,95 @@ def serialize_schematic(
                     len(mutation_log), output_path.name,
                 )
                 return output_path
-            # patch_serialize returned None — fall through to full serialization
+            # patch_serialize returned None -- fall through to full serialization
             logger.info(
                 "Falling back to full serialization for %s (complex mutations)",
                 output_path.name,
             )
 
-    # Full kiutils re-serialization (original behavior)
+    # Full kiutils re-serialization
     parse_result.kiutils_obj.to_file(str(output_path))
 
-    # Issue #12: kiutils 1.4.8 drops generator_version and unquotes generator.
-    # Post-process to restore these fields so kicad-cli accepts the file.
-    _fix_kiutils_output(output_path)
+    # S-BUG-004: Use shared normalizer for kiutils output fixes
+    # (generator quoting, generator_version, sci notation, at-angle, whitespace)
+    content = output_path.read_text(encoding="utf-8")
+    content = normalize_kicad_output(content)
+
+    # Schematic-specific fixes not covered by the normalizer:
+    # Fix A: Remove (lib_name "...") from placed component symbols.
+    # kiutils places it inline: (symbol (lib_name "Lib:Sym") (lib_id ...))
+    # Only apply outside the lib_symbols section.
+    content = _remove_lib_name_from_components(content)
+
+    # Fix B: Remove (id N) from property lines in placed components.
+    # kiutils adds (id N) to every property: (property "Key" (id 0) ...)
+    # Only apply outside the lib_symbols section.
+    content = _remove_property_ids_from_components(content)
+
+    # Write via atomic_write for crash safety
+    atomic_write(output_path, content)
 
     return output_path
 
 
-def _fix_kiutils_output(path: Path) -> None:
-    """Fix kiutils 1.4.8 serialization defects so kicad-cli can load the file.
+def _find_lib_symbols_end(content: str) -> int:
+    """Find the end position of the (lib_symbols ...) section.
 
-    kiutils 1.4.8 re-serialization issues that break KiCad 10:
-    1. Quotes the generator token: (generator "eeschema") — KiCad expects unquoted
-    2. Adds (generator_version "10.0") — not present in native KiCad files
-    3. Adds (lib_name "...") inline in component symbols — KiCad doesn't expect this
-    4. Adds (id N) to property lines — KiCad native format omits these
-    5. Omits rotation angle from property (at X Y) — KiCad requires (at X Y 0)
-    6. Sets (in_bom yes) (on_board yes) — KiCad uses (in_bom no) for lib refs
-
-    Fixes 1-2 are applied globally. Fixes 3-6 are applied only to
-    component symbols (outside the lib_symbols section).
+    Returns the index after the closing paren of lib_symbols,
+    or 0 if the section doesn't exist (meaning the entire file
+    is placed components).
     """
-    import re
-
-    content = path.read_text(encoding="utf-8")
-    modified = False
-
-    # --- Global fixes (header) ---
-
-    if '(generator "eeschema")' in content:
-        content = content.replace('(generator "eeschema")', '(generator eeschema)')
-        modified = True
-    if '(generator "kiutils")' in content:
-        content = content.replace('(generator "kiutils")', '(generator eeschema)')
-        modified = True
-
-    if re.search(r'\(generator_version\b', content):
-        content = re.sub(r'^\s*\(generator_version\s+"[^"]*"\)\n', '', content, flags=re.MULTILINE)
-        modified = True
-
-    # --- Component symbol fixes (outside lib_symbols section) ---
-
-    # Find the end of the lib_symbols section
     lib_idx = content.find('(lib_symbols')
     if lib_idx < 0:
-        before = ""
-        after = content
-    else:
-        depth = 0
-        lib_end = lib_idx
-        for i in range(lib_idx, len(content)):
-            if content[i] == '(':
-                depth += 1
-            elif content[i] == ')':
-                depth -= 1
-                if depth == 0:
-                    lib_end = i + 1
-                    if lib_end < len(content) and content[lib_end] == '\n':
-                        lib_end += 1
-                    break
+        return 0
 
-        before = content[:lib_idx]
-        lib_section = content[lib_idx:lib_end]
-        after = content[lib_end:]
+    depth = 0
+    for i in range(lib_idx, len(content)):
+        if content[i] == '(':
+            depth += 1
+        elif content[i] == ')':
+            depth -= 1
+            if depth == 0:
+                end = i + 1
+                if end < len(content) and content[end] == '\n':
+                    end += 1
+                return end
+    return 0
 
-    # Fix 3: Remove (lib_name "...") from component symbol lines.
-    # kiutils places it inline: (symbol (lib_name "Lib:Sym") (lib_id ...))
-    after = re.sub(r'\(lib_name "[^"]*"\) ', '', after)
-    if after != content[lib_end:]:
-        modified = True
 
-    # Fix 4: Remove (id N) from property lines in component section.
-    # kiutils adds (id N) to every property: (property "Key" (id 0) ...)
-    new_after = re.sub(r' \(id \d+\)', '', after)
-    if new_after != after:
-        after = new_after
-        modified = True
+def _remove_lib_name_from_components(content: str) -> str:
+    """Remove (lib_name "...") tokens from placed component symbols.
 
-    # Fix 5: Add missing rotation angle to property (at X Y) lines.
-    # KiCad requires (at X Y ANGLE) with 3 values on property position.
-    # kiutils omits the angle when 0, producing (at X Y).
-    # Must NOT touch (no_connect (at X Y)) or (symbol (at X Y 0)) lines.
-    def _fix_property_angle(m: re.Match) -> str:
-        return m.group(0)[:-1] + ' 0)'
+    kiutils adds (lib_name "Lib:Sym") inline in component symbol blocks,
+    which KiCad native format doesn't include. Only applies to placed
+    components (outside the lib_symbols section).
+    """
+    lib_end = _find_lib_symbols_end(content)
+    if lib_end == 0:
+        return content
 
-    new_after = re.sub(
-        r'\(property "[^"]*"[^)]*\(at (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)\)',
-        _fix_property_angle,
-        after,
-    )
-    if new_after != after:
-        after = new_after
-        modified = True
+    before = content[:lib_end]
+    after = content[lib_end:]
+    cleaned = re.sub(r'\(lib_name "[^"]*"\) ', '', after)
+    if cleaned == after:
+        return content
+    return before + cleaned
 
-    if modified:
-        if lib_idx < 0:
-            content = after
-        else:
-            content = before + lib_section + after
-        path.write_text(content, encoding="utf-8")
+
+def _remove_property_ids_from_components(content: str) -> str:
+    """Remove (id N) tokens from property lines in placed components.
+
+    kiutils adds (id N) to every property line, which KiCad native
+    format omits. Only applies to placed components (outside the
+    lib_symbols section).
+    """
+    lib_end = _find_lib_symbols_end(content)
+    if lib_end == 0:
+        return content
+
+    before = content[:lib_end]
+    after = content[lib_end:]
+    cleaned = re.sub(r' \(id \d+\)', '', after)
+    if cleaned == after:
+        return content
+    return before + cleaned
