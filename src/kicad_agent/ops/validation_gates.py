@@ -203,26 +203,59 @@ def pre_pcb_gate(project_dir: Path) -> dict[str, Any]:
             "recommendations": ["No schematic files found in project directory"],
         }
 
-    # Run ERC on first (root) schematic
-    root_sch = sch_files[0]
-    erc_result = check_erc_clean(root_sch)
+    # Run ERC on ALL schematic files, not just the root (O-BUG-006)
+    all_erc_clean = True
+    all_erc_results: list[dict[str, Any]] = []
+    all_erc_errors: list[dict[str, Any]] = []
+    total_erc_errors = 0
+    total_erc_warnings = 0
+    for sch_file in sch_files:
+        erc_result = check_erc_clean(sch_file)
+        all_erc_results.append({"file": str(sch_file), **erc_result})
+        if not erc_result["clean"]:
+            all_erc_clean = False
+            total_erc_errors += erc_result["error_count"]
+            total_erc_warnings += erc_result["warning_count"]
+            for err in erc_result["errors"]:
+                all_erc_errors.append({**err, "source_file": str(sch_file)})
+    erc_result = {
+        "clean": all_erc_clean,
+        "error_count": total_erc_errors,
+        "warning_count": total_erc_warnings,
+        "errors": all_erc_errors,
+    }
 
-    # Run power net validation
+    # Run power net and annotation validation on ALL schematics (O-BUG-006)
     from kicad_agent.parser import parse_schematic
-    result = parse_schematic(root_sch)
-    ir = SchematicIR(_parse_result=result)
-    power_result = validate_power_nets(ir)
+    all_power_valid = True
+    all_power_pins: list[dict[str, Any]] = []
+    all_missing_symbols: list[str] = []
+    all_power_nets: list[str] = []
+    all_unannotated: list[str] = []
+    for sch_file in sch_files:
+        result = parse_schematic(sch_file)
+        ir = SchematicIR(_parse_result=result)
+        power_result = validate_power_nets(ir)
+        if not power_result["valid"]:
+            all_power_valid = False
+            all_power_pins.extend(power_result["unconnected_power_pins"])
+            all_missing_symbols.extend(power_result["missing_power_symbols"])
+        all_power_nets.extend(power_result["power_nets"])
+        ref_pattern = re.compile(r"^[A-Za-z]+\?$")
+        for ref, _lib_id in ir.get_all_references():
+            if ref_pattern.match(ref):
+                all_unannotated.append(ref)
 
-    # Check annotation completeness (no R? or C? references)
-    unannotated: list[str] = []
-    ref_pattern = re.compile(r"^[A-Za-z]+\?$")
-    for ref, _lib_id in ir.get_all_references():
-        if ref_pattern.match(ref):
-            unannotated.append(ref)
+    power_result = {
+        "valid": all_power_valid,
+        "unconnected_power_pins": all_power_pins,
+        "power_nets": sorted(set(all_power_nets)),
+        "missing_power_symbols": sorted(set(all_missing_symbols)),
+    }
 
     annotation_result = {
-        "complete": len(unannotated) == 0,
-        "unannotated": unannotated,
+        "complete": len(all_unannotated) == 0,
+        "unannotated": all_unannotated,
     }
 
     # Generate recommendations
