@@ -275,7 +275,10 @@ def execute_batch(executor: OperationExecutor, ops: list[Operation]) -> dict[str
                 pre_contents[file_path] = file_path.read_text(encoding="utf-8")
 
     # Phase 3 -- Apply mutations and serialize (once per file)
+    # O-BUG-009: Individual op failures captured as structured errors,
+    # remaining ops continue. Entire batch succeeds if any ops succeed.
     all_results: list[dict[str, Any]] = []
+    any_success = False
 
     for file_path in file_order:
         ops_for_file = file_ops[file_path]
@@ -285,29 +288,43 @@ def execute_batch(executor: OperationExecutor, ops: list[Operation]) -> dict[str
         with Transaction(file_path) as txn:
             for op in ops_for_file:
                 root = op.root
-                if file_path.suffix == ".kicad_pcb":
-                    details = dispatch_pcb(root.op_type, root, ir, file_path)
-                elif is_project_file(file_path):
-                    details = dispatch_project(
-                        root.op_type, root, file_path
-                    )
-                else:
-                    handler = _SCHEMATIC_HANDLERS.get(root.op_type)
-                    if handler is not None:
-                        details = handler(root, ir, file_path)
+                try:
+                    if file_path.suffix == ".kicad_pcb":
+                        details = dispatch_pcb(root.op_type, root, ir, file_path)
+                    elif is_project_file(file_path):
+                        details = dispatch_project(
+                            root.op_type, root, file_path
+                        )
                     else:
-                        sq_handler = _SCHEMATIC_QUERY_HANDLERS.get(root.op_type)
-                        if sq_handler is not None:
-                            details = sq_handler(root, ir, file_path)
+                        handler = _SCHEMATIC_HANDLERS.get(root.op_type)
+                        if handler is not None:
+                            details = handler(root, ir, file_path)
                         else:
-                            raise ValueError(f"Unknown op_type: {root.op_type!r}")
+                            sq_handler = _SCHEMATIC_QUERY_HANDLERS.get(root.op_type)
+                            if sq_handler is not None:
+                                details = sq_handler(root, ir, file_path)
+                            else:
+                                raise ValueError(f"Unknown op_type: {root.op_type!r}")
 
-                all_results.append({
-                    "success": True,
-                    "operation": root.op_type,
-                    "target_file": root.target_file,
-                    "details": details,
-                })
+                    all_results.append({
+                        "success": True,
+                        "operation": root.op_type,
+                        "target_file": root.target_file,
+                        "details": details,
+                    })
+                    any_success = True
+                except Exception as e:
+                    logger.error(
+                        "Batch op failed: %s on %s: %s",
+                        root.op_type, root.target_file, e,
+                    )
+                    all_results.append({
+                        "success": False,
+                        "operation": root.op_type,
+                        "target_file": root.target_file,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                    })
 
             # Serialize once per file
             if file_path.suffix == ".kicad_pcb":
@@ -345,4 +362,4 @@ def execute_batch(executor: OperationExecutor, ops: list[Operation]) -> dict[str
                     file_path, CacheEntry(parse_result=parse_result)
                 )
 
-    return {"success": True, "results": all_results}
+    return {"success": any_success, "results": all_results, "partial": not any_success or any([not r["success"] for r in all_results])}

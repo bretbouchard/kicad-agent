@@ -451,3 +451,82 @@ class TestBatchDependencyValidation:
         result = executor.execute_batch([connect_op])
 
         assert "resolve_pin_positions" in str(result["error"])
+
+# ---------------------------------------------------------------------------
+# TestOBUG009PartialFailure
+# ---------------------------------------------------------------------------
+
+
+class TestOBUG009PartialFailure:
+    """O-BUG-009: Individual op failures don't abort entire batch."""
+
+    def test_partial_failure_returns_structured_errors(self, tmp_path: Path) -> None:
+        """Batch with middle op failing returns partial results with error details."""
+        _copy_arduino_fixture(tmp_path)
+
+        ops = [
+            _make_modify_property_op("test.kicad_sch", "J1", "Value", "val1"),
+            _make_modify_property_op("test.kicad_sch", "J1", "Value", "val2"),
+            _make_modify_property_op("test.kicad_sch", "J2", "Value", "val3"),
+        ]
+
+        executor = OperationExecutor(base_dir=tmp_path)
+
+        # Mock the schematic handler to fail on the second call
+        from kicad_agent.ops import handlers as _handlers_mod
+        orig_handler = _handlers_mod._SCHEMATIC_HANDLERS.get("modify_property")
+        call_count = [0]
+
+        def _mock_handler(root, ir, file_path):
+            call_count[0] += 1
+            if call_count[0] == 2:
+                raise RuntimeError("Simulated op failure")
+            return orig_handler(root, ir, file_path)
+
+        _handlers_mod._SCHEMATIC_HANDLERS["modify_property"] = _mock_handler
+        try:
+            result = executor.execute_batch(ops)
+        finally:
+            _handlers_mod._SCHEMATIC_HANDLERS["modify_property"] = orig_handler
+
+        # Batch should succeed (at least one op succeeded)
+        assert result["success"] is True
+        assert result["partial"] is True
+        assert len(result["results"]) == 3
+
+        # First and third should succeed
+        assert result["results"][0]["success"] is True
+        assert result["results"][2]["success"] is True
+
+        # Middle should fail with structured error
+        assert result["results"][1]["success"] is False
+        assert "error" in result["results"][1]
+        assert "error_type" in result["results"][1]
+        assert result["results"][1]["error_type"] == "RuntimeError"
+
+    def test_all_ops_fail_returns_not_success(self, tmp_path: Path) -> None:
+        """Batch where all ops fail returns success=False."""
+        _copy_arduino_fixture(tmp_path)
+
+        ops = [
+            _make_modify_property_op("test.kicad_sch", "J1", "Value", "val1"),
+            _make_modify_property_op("test.kicad_sch", "J2", "Value", "val2"),
+        ]
+
+        executor = OperationExecutor(base_dir=tmp_path)
+
+        from kicad_agent.ops import handlers as _handlers_mod
+        orig_handler = _handlers_mod._SCHEMATIC_HANDLERS.get("modify_property")
+
+        def _failing_handler(root, ir, file_path):
+            raise RuntimeError("Total failure")
+
+        _handlers_mod._SCHEMATIC_HANDLERS["modify_property"] = _failing_handler
+        try:
+            result = executor.execute_batch(ops)
+        finally:
+            _handlers_mod._SCHEMATIC_HANDLERS["modify_property"] = orig_handler
+
+        assert result["success"] is False
+        assert result["partial"] is True
+        assert all(not r["success"] for r in result["results"])
