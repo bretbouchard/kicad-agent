@@ -4,8 +4,11 @@ GRPO-06: Measures improvement on held-out maze-routing tasks vs baseline.
 Computes reward metrics, coordinate coverage, chain length statistics,
 and pass rates.
 
+eval_reward_quality() provides ground-truth-correlated held-out evaluation.
+
 Usage:
     from kicad_agent.training.evaluation import EvaluationHarness, EvalResult
+    from kicad_agent.training.evaluation import eval_reward_quality
 
     harness = EvaluationHarness(test_dataset, reward_model)
     result = harness.evaluate(model)
@@ -28,6 +31,7 @@ from kicad_agent.training.regression import (
     detect_regression,
 )
 from kicad_agent.training.reward import score_chain
+from kicad_agent.training.reward_model import eval_reward_quality  # noqa: F401
 
 
 @dataclass(frozen=True)
