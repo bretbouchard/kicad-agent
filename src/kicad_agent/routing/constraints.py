@@ -10,6 +10,14 @@ Usage:
     constraints = RoutingConstraints(clearance_mm=0.3, grid_resolution_mm=0.25)
 """
 
+# Via Optimization Status:
+# The via_cost_mm field provides a static penalty for layer transitions
+# in the 3D routing graph. This is sufficient for simple-to-moderate boards.
+# For complex boards with high via counts, the Freerouting integration
+# (run_freeroute operation) handles via optimization as part of global
+# routing. Built-in via minimization, via sharing, and dynamic cost
+# adjustment are not implemented and deferred to Freerouting.
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -32,6 +40,20 @@ class RoutingConstraints:
         via_drill_mm: Via drill hole diameter.
         max_nodes: Maximum number of grid nodes allowed. Prevents
             excessive memory usage on large boards.
+        via_cost_mm: Penalty cost (in mm-equivalent) added to each via
+            transition between layers during pathfinding. Higher values
+            discourage layer changes, producing fewer vias in routing
+            results. Used as edge weight for via edges in the 3D
+            routing graph (graph.py).
+
+            Current optimization level: Static per-via cost. Does not implement:
+            - Via minimization algorithms (e.g., Steiner via assignment)
+            - Via sharing (multiple nets using the same via)
+            - Dynamic cost adjustment based on layer congestion
+
+            Complex boards with high via counts benefit from Freerouting
+            integration (run_freeroute operation) which handles via placement
+            as part of its global optimization.
     """
 
     clearance_mm: float = 0.2
