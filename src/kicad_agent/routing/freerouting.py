@@ -1,8 +1,8 @@
 """Freerouting integration for production-quality auto-routing (FEAT-001).
 
-Provides DSN (Specctra) export/import for Freerouting integration,
-plus a complete auto-routing pipeline that uses Freerouting when available
-and falls back to the built-in A* pathfinder.
+Provides DSN (Specctra) export and SES import for Freerouting integration.
+kicad-cli does NOT support Specctra/DSN import, so SES files are parsed
+directly and converted to KiCad segment/via S-expressions.
 
 Freerouting is an open-source Java auto-router that produces significantly
 better routing results than the built-in A* pathfinder for real-world
@@ -17,17 +17,18 @@ Usage:
     # Route using Freerouting (requires Java runtime + Freerouting JAR)
     result = route_with_freerouting(pcb_path, output_dir=Path("./routed"))
 
-    # Or use the auto-router with automatic Freerouting/A* fallback
-    result = auto_route(pcb_path)
+    # Import SES result back into PCB raw content
+    new_content = import_ses_into_pcb(ses_path, pcb_raw_content)
 """
 
 from __future__ import annotations
 
 import logging
+import re
 import shutil
 import subprocess
-import tempfile
-from dataclasses import dataclass
+import uuid
+from dataclasses import dataclass, field
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -89,52 +90,41 @@ def _find_java() -> str | None:
 def export_dsn(
     pcb_path: Path,
     output_dir: Path | None = None,
+    *,
+    layers: list[str] | None = None,
 ) -> Path:
-    """Export PCB in Specctra DSN format via kicad-cli.
+    """Export PCB in Specctra DSN format.
 
-    Freerouting reads DSN files as input for auto-routing.
+    KiCad 10 removed ``kicad-cli pcb export dsn``, so this generates
+    DSN directly from PCB content using ``dsn_generator``.
 
     Args:
         pcb_path: Path to .kicad_pcb file.
         output_dir: Output directory. Defaults to pcb_path parent.
+        layers: Copper layers to include. Default ["F.Cu", "B.Cu"].
 
     Returns:
         Path to the generated .dsn file.
 
     Raises:
-        FileNotFoundError: If pcb_path or kicad-cli not found.
-        subprocess.CalledProcessError: If kicad-cli export fails.
+        FileNotFoundError: If pcb_path does not exist.
     """
-    from kicad_agent.cli_resolver import find_kicad_cli
+    from kicad_agent.routing.dsn_generator import generate_dsn
+
+    if not pcb_path.exists():
+        raise FileNotFoundError(f"PCB file not found: {pcb_path}")
 
     if output_dir is None:
         output_dir = pcb_path.parent
     output_dir.mkdir(parents=True, exist_ok=True)
 
     dsn_path = output_dir / f"{pcb_path.stem}{_DSN_EXTENSION}"
-    cli = find_kicad_cli()
 
-    cmd = [
-        cli.path,
-        "pcb",
-        "export",
-        "dsn",
-        "--output", str(dsn_path),
-        str(pcb_path),
-    ]
+    pcb_content = pcb_path.read_text(encoding="utf-8")
+    dsn_text = generate_dsn(pcb_content, pcb_path, layers=layers)
 
-    logger.info("Exporting DSN: %s", " ".join(cmd))
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=120,
-    )
-
-    if result.returncode != 0:
-        raise subprocess.CalledProcessError(
-            result.returncode, cmd, result.stdout, result.stderr,
-        )
+    dsn_path.write_text(dsn_text, encoding="utf-8")
+    logger.info("Generated DSN: %s (%d bytes)", dsn_path, len(dsn_text))
 
     return dsn_path
 
@@ -168,7 +158,8 @@ def route_with_freerouting(
     """Auto-route a PCB using Freerouting.
 
     Exports the PCB to DSN format, runs Freerouting, and produces
-    a .ses session file that can be imported back into KiCad.
+    a .ses session file. Use ``import_ses_into_pcb()`` to merge results
+    back into the PCB content.
 
     Args:
         pcb_path: Path to .kicad_pcb file.
@@ -217,10 +208,12 @@ def route_with_freerouting(
             used_freerouting=True,
         )
 
-    # Run Freerouting
+    # Run Freerouting with headless mode (no GUI needed)
     ses_path = output_dir / f"{pcb_path.stem}{_SES_EXTENSION}"
     cmd = [
-        java, "-jar", jar,
+        java,
+        "-Djava.awt.headless=true",
+        "-jar", jar,
         "-de", str(dsn_path),  # Input DSN file
         "-do", str(ses_path),  # Output SES file
         "-mp", str(max_passes),  # Max passes
@@ -261,58 +254,246 @@ def route_with_freerouting(
     )
 
 
-def import_ses(
-    ses_path: Path,
-    pcb_path: Path,
-    output_pcb_path: Path | None = None,
-) -> Path:
-    """Import Freerouting SES result back into KiCad PCB format.
+@dataclass(frozen=True)
+class SesWire:
+    """A wire path extracted from an SES file."""
+    net: str
+    layer: str
+    width_mm: float
+    points: list[tuple[float, float]]
 
-    Uses kicad-cli to import the Specctra session file.
+
+@dataclass(frozen=True)
+class SesVia:
+    """A via extracted from an SES file."""
+    net: str
+    x_mm: float
+    y_mm: float
+    size_mm: float
+    drill_mm: float
+
+
+@dataclass
+class SesParseResult:
+    """Result of parsing an SES file."""
+    wires: list[SesWire] = field(default_factory=list)
+    vias: list[SesVia] = field(default_factory=list)
+    resolution_factor: float = 100000.0
+
+
+def parse_ses(ses_text: str) -> SesParseResult:
+    """Parse a Freerouting SES file into structured wire/via data.
+
+    SES wire format: (wire (path LAYER WIDTH x1 y1 x2 y2 ...))
+    SES via format: (via LAYER X Y SIZE DRILL)
+    Coordinates are in 0.01um units when resolution is (resolution um 10).
 
     Args:
-        ses_path: Path to .ses file from Freerouting.
-        pcb_path: Original .kicad_pcb file.
-        output_pcb_path: Output PCB file. Defaults to pcb_path with
-            _routed suffix.
+        ses_text: Raw SES file content.
 
     Returns:
-        Path to the routed PCB file.
-
-    Raises:
-        FileNotFoundError: If ses_path or kicad-cli not found.
-        subprocess.CalledProcessError: If import fails.
+        SesParseResult with wires, vias, and resolution factor.
     """
-    from kicad_agent.cli_resolver import find_kicad_cli
+    # Detect resolution factor
+    res_match = re.search(r'\(resolution\s+(\w+)\s+(\d+)\)', ses_text)
+    if res_match:
+        res_unit = res_match.group(1)
+        res_factor = int(res_match.group(2))
+        # (resolution um 10) → values in 0.01um, divide by 100000 for mm
+        if res_unit == "um":
+            resolution = res_factor * 10000.0
+        else:
+            resolution = res_factor * 1000000.0  # mm-based, unlikely
+    else:
+        resolution = 100000.0
 
-    if output_pcb_path is None:
-        output_pcb_path = pcb_path.parent / f"{pcb_path.stem}_routed.kicad_pcb"
+    result = SesParseResult(resolution_factor=resolution)
 
-    cli = find_kicad_cli()
+    # Extract wires by scanning (net "name" ...) or (net name ...) blocks
+    # Freerouting SES may use quoted or unquoted net names with spaces
+    net_pattern = re.compile(r'\(net\s+"([^"]+)"|\(net\s+(\S+)')
+    i = 0
+    n = len(ses_text)
 
-    cmd = [
-        cli.path,
-        "pcb",
-        "import",
-        "dsn",
-        "--output", str(output_pcb_path),
-        str(ses_path),
-    ]
+    while i < n:
+        m = net_pattern.search(ses_text, i)
+        if not m:
+            break
 
-    logger.info("Importing SES: %s", " ".join(cmd))
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=120,
-    )
+        net_name = m.group(1) or m.group(2)
+        net_start = m.end()
 
-    if result.returncode != 0:
-        raise subprocess.CalledProcessError(
-            result.returncode, cmd, result.stdout, result.stderr,
+        # Find end of (net ...) block by paren tracking
+        depth = 1
+        j = net_start
+        while j < n and depth > 0:
+            if ses_text[j] == '(':
+                depth += 1
+            elif ses_text[j] == ')':
+                depth -= 1
+            j += 1
+        net_end = j - 1
+
+        net_text = ses_text[net_start:net_end]
+
+        # Find all (wire (path LAYER WIDTH ...)) within this net
+        path_pattern = re.compile(r'\(path\s+(\S+)\s+(\S+)\s')
+        for pm in path_pattern.finditer(net_text):
+            layer_name = pm.group(1)
+            try:
+                width_um = float(pm.group(2))
+            except ValueError:
+                continue
+            width_mm = width_um / resolution
+
+            # Collect coordinate pairs until closing paren of (path ...)
+            coords_start = pm.end()
+            path_depth = 0
+            coords_text = ""
+            k = coords_start
+            while k < len(net_text):
+                ch = net_text[k]
+                if ch == '(':
+                    path_depth += 1
+                elif ch == ')':
+                    if path_depth == 0:
+                        coords_text = net_text[coords_start:k]
+                        break
+                    path_depth -= 1
+                k += 1
+
+            coord_matches = re.findall(r'[-]?\d+\.?\d*', coords_text)
+            points = []
+            for ci in range(0, len(coord_matches) - 1, 2):
+                try:
+                    x = float(coord_matches[ci]) / resolution
+                    y = -float(coord_matches[ci + 1]) / resolution  # Y negated
+                    points.append((x, y))
+                except (ValueError, IndexError):
+                    continue
+
+            if len(points) >= 2:
+                result.wires.append(SesWire(
+                    net=net_name,
+                    layer=layer_name,
+                    width_mm=width_mm,
+                    points=points,
+                ))
+
+        i = net_end + 1
+
+    return result
+
+
+def ses_to_kicad_sexpr(
+    ses_result: SesParseResult,
+    pcb_net_names: set[str] | None = None,
+) -> str:
+    """Convert parsed SES data to KiCad segment/via S-expressions.
+
+    Args:
+        ses_result: Parsed SES data.
+        pcb_net_names: Set of valid net names in the PCB. Wires with
+            unmatched nets are skipped. If None, all wires are included.
+
+    Returns:
+        String of KiCad (segment ...) and (via ...) S-expressions.
+    """
+    lines = []
+
+    for wire in ses_result.wires:
+        if pcb_net_names is not None and wire.net not in pcb_net_names:
+            continue
+
+        for i in range(len(wire.points) - 1):
+            x1, y1 = wire.points[i]
+            x2, y2 = wire.points[i + 1]
+            u = str(uuid.uuid4())
+            lines.append(
+                f'  (segment (start {x1:.6f} {y1:.6f}) '
+                f'(end {x2:.6f} {y2:.6f}) '
+                f'(width {wire.width_mm:.6f}) '
+                f'(layer "{wire.layer}") '
+                f'(net "{wire.net}") '
+                f'(uuid "{u}"))'
+            )
+
+    for via in ses_result.vias:
+        if pcb_net_names is not None and via.net not in pcb_net_names:
+            continue
+        u = str(uuid.uuid4())
+        lines.append(
+            f'  (via (at {via.x_mm:.6f} {via.y_mm:.6f}) '
+            f'(size {via.size_mm:.6f}) '
+            f'(drill {via.drill_mm:.6f}) '
+            f'(layers "F.Cu" "B.Cu") '
+            f'(net "{via.net}") '
+            f'(uuid "{u}"))'
         )
 
-    return output_pcb_path
+    return "\n".join(lines) + "\n"
+
+
+def extract_pcb_net_names(pcb_content: str) -> set[str]:
+    """Extract all unique net names from PCB content.
+
+    Args:
+        pcb_content: Raw .kicad_pcb S-expression text.
+
+    Returns:
+        Set of net name strings.
+    """
+    nets: set[str] = set()
+    for m in re.finditer(r'\(net\s+"([^"]+)"', pcb_content):
+        nets.add(m.group(1))
+    return nets
+
+
+def import_ses_into_pcb(
+    ses_path: Path,
+    pcb_content: str,
+) -> tuple[str, dict[str, int]]:
+    """Import Freerouting SES result into PCB raw content.
+
+    Parses the SES file, converts wire/via data to KiCad S-expressions,
+    and inserts them into the PCB content before the closing paren.
+
+    Args:
+        ses_path: Path to the .ses file from Freerouting.
+        pcb_content: Raw .kicad_pcb S-expression text.
+
+    Returns:
+        Tuple of (modified PCB content, stats dict with keys:
+            segments, vias, skipped, nets_routed).
+    """
+    ses_text = ses_path.read_text(encoding="utf-8")
+    ses_result = parse_ses(ses_text)
+
+    pcb_nets = extract_pcb_net_names(pcb_content)
+    sexpr = ses_to_kicad_sexpr(ses_result, pcb_nets)
+
+    # Count stats
+    total_wires = len(ses_result.wires)
+    matched_wires = sum(1 for w in ses_result.wires if w.net in pcb_nets)
+    total_segments = sum(len(w.points) - 1 for w in ses_result.wires)
+    matched_segments = sum(
+        len(w.points) - 1 for w in ses_result.wires if w.net in pcb_nets
+    )
+
+    # Insert before the last closing paren of the PCB
+    if sexpr.strip():
+        last_close = pcb_content.rfind(")")
+        if last_close > 0:
+            insertion = "\n" + sexpr
+            pcb_content = pcb_content[:last_close] + insertion + pcb_content[last_close:]
+
+    stats = {
+        "segments": matched_segments,
+        "vias": len(ses_result.vias),
+        "skipped": total_wires - matched_wires,
+        "nets_routed": matched_wires,
+    }
+    return pcb_content, stats
 
 
 def is_freerouting_available() -> bool:
