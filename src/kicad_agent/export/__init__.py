@@ -16,6 +16,12 @@ Usage:
         export_step,
         export_schematic_pdf,
         get_board_statistics,
+        render_pcb_3d,
+        export_schematic_svg,
+        export_symbol_svg,
+        export_footprint_svg,
+        export_pcb_svg,
+        export_pcb_pdf,
     )
 """
 
@@ -27,6 +33,14 @@ from kicad_agent.export.general import (
     export_schematic_pdf,
     export_step,
     get_board_statistics,
+)
+from kicad_agent.export.cli_wrappers import (
+    export_footprint_svg,
+    export_pcb_pdf,
+    export_pcb_svg,
+    export_schematic_svg,
+    export_symbol_svg,
+    render_pcb_3d,
 )
 
 __all__ = [
@@ -41,4 +55,10 @@ __all__ = [
     "export_step",
     "export_schematic_pdf",
     "get_board_statistics",
+    "render_pcb_3d",
+    "export_schematic_svg",
+    "export_symbol_svg",
+    "export_footprint_svg",
+    "export_pcb_svg",
+    "export_pcb_pdf",
 ]
