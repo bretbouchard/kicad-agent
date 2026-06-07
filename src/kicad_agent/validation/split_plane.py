@@ -174,11 +174,16 @@ def _estimate_gap(a: tuple[float, float, float, float], b: tuple[float, float, f
 def _detect_trace_crossings(
     pcb_ir: PcbIR,
     splits: list[SplitGap],
+    zones_by_id: dict[str, dict] | None = None,
 ) -> list[SplitCrossing]:
     """Detect traces that cross split boundaries.
 
-    Walks board segments and checks if any trace line intersects
+    Walks board segments and checks if any trace segment intersects
     the bounding box gap between split zones.
+
+    V-BUG-002 fix: computes actual bounding boxes for split regions
+    from the zone polygons in the analysis, instead of using placeholder
+    (0,0,0,0) boxes that never matched any segments.
     """
     crossings: list[SplitCrossing] = []
     board = pcb_ir.board
@@ -186,13 +191,36 @@ def _detect_trace_crossings(
     if not hasattr(board, "segments"):
         return crossings
 
-    # Build split region boxes.
+    # Build split region boxes from zone bounding boxes.
+    # V-BUG-002: compute the gap bounding box between zone pairs.
     split_boxes: list[tuple[SplitGap, tuple[float, float, float, float]]] = []
     for s in splits:
-        # Use the midpoint between zone centers as the crossing zone.
-        # In a full implementation this would use polygon subtraction,
-        # but bounding-box gap detection covers the common case.
-        split_boxes.append((s, (0.0, 0.0, 0.0, 0.0)))
+        if zones_by_id:
+            za = zones_by_id.get(s.zone_a_id, {})
+            zb = zones_by_id.get(s.zone_b_id, {})
+            poly_a = za.get("polygon_points", ())
+            poly_b = zb.get("polygon_points", ())
+            if poly_a and poly_b:
+                bounds_a = _compute_zone_bounds(poly_a)
+                bounds_b = _compute_zone_bounds(poly_b)
+                # The gap region is the area between the two zone bounding boxes.
+                # Compute as the union minus the intersection: use the min/max of
+                # each axis separately to capture the gap strip.
+                gap_box = (
+                    min(bounds_a[0], bounds_b[0]),
+                    min(bounds_a[1], bounds_b[1]),
+                    max(bounds_a[2], bounds_b[2]),
+                    max(bounds_a[3], bounds_b[3]),
+                )
+                split_boxes.append((s, gap_box))
+                continue
+        # Fallback: use boundary_points from the split gap itself
+        if s.boundary_points:
+            bx, by = s.boundary_points[0]
+            margin = max(s.gap_mm, 1.0)
+            split_boxes.append((s, (bx - margin, by - margin, bx + margin, by + margin)))
+        else:
+            split_boxes.append((s, (0.0, 0.0, 0.0, 0.0)))
 
     # Walk segments and check for crossings.
     segments = board.segments if hasattr(board, "segments") else []
@@ -285,7 +313,9 @@ def analyze_split_plane(
                 ))
 
     # Detect trace crossings.
-    crossings = _detect_trace_crossings(pcb_ir, splits) if splits else []
+    # Build zone lookup for crossing detection (V-BUG-002)
+    zones_by_id = {z["id"]: z for z in zones}
+    crossings = _detect_trace_crossings(pcb_ir, splits, zones_by_id) if splits else []
 
     return SplitPlaneAnalysis(
         num_zones=len(zones),
