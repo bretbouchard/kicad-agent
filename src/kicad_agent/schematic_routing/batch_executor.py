@@ -244,11 +244,10 @@ def _apply_new_segment(body: str, fix: WireFix) -> tuple[str, bool]:
         f"  )\n"
     )
 
-    # Insert before the closing paren of the schematic
-    # Find the last ")" that closes the (schematic ...) form
-    insert_pos = body.rfind("\n)")
-    if insert_pos < 0:
-        insert_pos = body.rfind(")")
+    # Insert before the closing paren of the (schematic ...) form
+    # R-BUG-003 fix: use depth tracking instead of rfind which finds
+    # the (kicad_sch ...) closing paren instead of (schematic ...)
+    insert_pos = _find_schematic_insertion_point(body)
     if insert_pos < 0:
         return body, False
 
@@ -259,3 +258,30 @@ def _apply_new_segment(body: str, fix: WireFix) -> tuple[str, bool]:
 def _coords_match(actual_x: float, actual_y: float, target_x: float, target_y: float) -> bool:
     """Check if two coordinates match (within 0.1mm tolerance)."""
     return abs(actual_x - target_x) < 0.1 and abs(actual_y - target_y) < 0.1
+
+
+def _find_schematic_insertion_point(body: str) -> int:
+    """Find the insertion point before the closing ')' of the (schematic ...) block.
+
+    Returns the byte offset of the newline before the ')' that closes the
+    (schematic ...) form, or -1 if not found. This avoids the rfind(')')
+    bug that finds the (kicad_sch ...) closing paren instead.
+
+    Used by _apply_new_segment to correctly place new wire segments.
+    """
+    match = re.search(r'\(schematic\s', body)
+    if not match:
+        return -1
+    depth = 0
+    for i in range(match.start(), len(body)):
+        if body[i] == '(':
+            depth += 1
+        elif body[i] == ')':
+            depth -= 1
+            if depth == 0:
+                # Insert before the closing paren, at the last newline before it
+                newline_pos = body.rfind('\n', match.start(), i)
+                if newline_pos >= 0:
+                    return newline_pos
+                return -1
+    return -1
