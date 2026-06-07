@@ -1308,8 +1308,8 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 77-01-PLAN.md — Wave 1: Critical parser & validation fixes (P-BUG-001, P-BUG-002, P-BUG-003, P-BUG-004, V-BUG-001)
-- [ ] 77-02-PLAN.md — Wave 1: Critical serializer fixes (S-BUG-001, S-BUG-002, S-BUG-003, S-BUG-004, S-BUG-005)
+- [x] 77-01-PLAN.md -- Wave 1: Critical parser & validation fixes (depth pre-scan, UUID parent types, thread-safe recursion, shutil import)
+- [x] 77-02-PLAN.md -- Wave 1: Critical serializer fixes (kiutils bypass, BOM preservation, UUID count validation, normalizer unification, atomic writes)
 - [ ] 77-03-PLAN.md — Wave 2: Ops/execution pipeline fixes (O-BUG-001 through O-BUG-007)
 - [ ] 77-04-PLAN.md — Wave 2: Schematic routing fixes (R-BUG-001 through R-BUG-008)
 - [ ] 77-05-PLAN.md — Wave 3: Medium/Low cleanup (P-BUG-005, P-BUG-006, V-BUG-002, V-BUG-003, O-BUG-008/009, dead code)
