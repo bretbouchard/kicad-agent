@@ -14,7 +14,7 @@ Submodules:
 - `reward`: RewardSignal, ChainReward, score_chain()
 - `reward_hacking`: anomaly detection, smooth penalties
 - `reward_model`: neural reward model (PyTorch)
-- `grpo`: GRPOTrainer, GRPOConfig
+- `grpo`: AdvantageWeightedTrainer, AdvantageWeightedConfig (aliases: GRPOTrainer, GRPOConfig)
 - `evaluation`: EvalResult, EvaluationHarness
 - `pipeline`: TrainingPipelineConfig, run_pipeline()
 """

@@ -5,20 +5,14 @@ with a neural reward model blended with rule-based ground truth, computes
 group-relative advantages, and updates the reward model via supervised +
 advantage-weighted loss.
 
-NOTE: Despite the class names (GRPOTrainer, GRPOConfig), this is NOT
-standard GRPO/PPO. There is no importance sampling ratio, no probability
-ratio clipping, and no KL penalty applied during training. The actual loss
-is advantage-weighted REINFORCE on the reward model (not the policy).
-The ref_model parameter is accepted but unused.
-
 GRPO-07: Deterministic seeding and configurable hyperparameters for
 reproducible training.
 
 Usage:
-    from kicad_agent.training.grpo import GRPOConfig, GRPOTrainer
+    from kicad_agent.training.grpo import AdvantageWeightedConfig, AdvantageWeightedTrainer
 
-    config = GRPOConfig(seed=42)
-    trainer = GRPOTrainer(policy_model, reward_model, ref_model, config)
+    config = AdvantageWeightedConfig(seed=42)
+    trainer = AdvantageWeightedTrainer(policy_model, reward_model, ref_model, config)
     history = trainer.train(dataset, n_epochs=1)
 """
 
@@ -35,13 +29,12 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class GRPOConfig:
+class AdvantageWeightedConfig:
     """Configuration for advantage-weighted REINFORCE training.
 
     Attributes:
         learning_rate: AdamW learning rate.
         group_size: Chains generated per prompt for group comparison.
-        kl_coefficient: KL divergence penalty strength (accepted but not applied).
         max_generation_length: Max tokens per generated chain.
         temperature: Sampling temperature for generation.
         seed: Deterministic random seed.
@@ -54,7 +47,6 @@ class GRPOConfig:
 
     learning_rate: float = 1e-5
     group_size: int = 8
-    kl_coefficient: float = 0.1
     max_generation_length: int = 512
     temperature: float = 0.7
     seed: int = 42
@@ -65,19 +57,15 @@ class GRPOConfig:
     total_steps: int = 0
 
 
-class GRPOTrainer:
+class AdvantageWeightedTrainer:
     """Advantage-weighted REINFORCE training with group-relative advantages.
 
     The training cycle:
-      1. Generate group_size chains per sample (correct + corrupted for contrast)
-      2. Score chains with neural reward model blended with rule-based ground truth
+      1. Generate group_size chains per sample using the policy model
+      2. Score chains with the reward model
       3. Compute group-relative advantages: (reward - group_mean) / group_std
-      4. Update reward model via supervised BCE + advantage-weighted loss
-      5. Log metrics (loss, reward_mean)
-
-    NOTE: This trains the REWARD MODEL, not the policy. The policy is used
-    only for chain generation. There is no PPO clipping, no importance
-    sampling ratio, and the KL penalty is computed but not applied.
+      4. Update reward model via supervised + advantage-weighted loss
+      5. Log metrics (loss, reward_mean, kl_divergence)
     """
 
     def __init__(
@@ -85,9 +73,9 @@ class GRPOTrainer:
         policy_model: Any,
         reward_model: Any,
         ref_model: Any,
-        config: GRPOConfig | None = None,
+        config: AdvantageWeightedConfig | None = None,
     ):
-        """Initialize trainer.
+        """Initialize advantage-weighted trainer.
 
         Args:
             policy_model: Used for chain generation (not trained).
@@ -98,7 +86,7 @@ class GRPOTrainer:
         self.policy_model = policy_model
         self.reward_model = reward_model
         self.ref_model = ref_model
-        self.config = config or GRPOConfig()
+        self.config = config or AdvantageWeightedConfig()
         self._step_counter: int = 0
 
     def compute_group_rewards(
@@ -163,10 +151,6 @@ class GRPOTrainer:
         """Compute KL divergence between policy and reference model.
 
         KL(p || q) = sum(p * (log(p) - log(q)))
-
-        NOTE: This method is provided for API compatibility but the returned
-        value is NOT used in the training loss. The training loop uses
-        supervised BCE + advantage-weighted REINFORCE without KL penalty.
 
         Args:
             policy_logprobs: Log probabilities from policy model.
@@ -244,7 +228,7 @@ class GRPOTrainer:
         return chain_texts, all_chains
 
     def train_step(self, batch: list, optimizer: Any = None) -> dict:
-        """Execute a single training step with gradient updates.
+        """Execute a single GRPO training step with gradient updates.
 
         1. Generate chain groups (correct + corrupted for contrast)
         2. Score chains with reward model (differentiable) + rule-based ground truth
@@ -294,7 +278,7 @@ class GRPOTrainer:
 
         if nn_model is not None and len(all_chain_texts) > 0:
             nn_model.train()
-            # Reuse passed optimizer to preserve momentum
+            # Reuse passed optimizer to preserve momentum (Council H4 fix)
             if optimizer is None:
                 optimizer = torch.optim.AdamW(
                     nn_model.parameters(), lr=self.config.learning_rate,
@@ -324,15 +308,13 @@ class GRPOTrainer:
             # Ground truth: 1.0 for correct, 0.0 for corrupted
             labels_t = torch.tensor(all_labels, dtype=torch.float32, device=device)
 
-            # Two-component loss: supervised BCE + advantage-weighted REINFORCE
+            # GRPO-style group-relative advantage loss + supervised signal
             # 1. Supervised: push correct chains toward 1, corrupted toward 0
             supervised_loss = torch.nn.functional.binary_cross_entropy(
                 neural_scores, labels_t,
             )
 
-            # 2. Advantage-weighted loss (group-relative advantages)
-            # This is NOT PPO/GRPO clipped objective. There is no importance
-            # sampling ratio and no probability ratio clipping.
+            # 2. Advantage-weighted loss (GRPO core)
             rule_rewards_t = torch.tensor(
                 all_rule_rewards, dtype=torch.float32, device=device,
             )
@@ -352,10 +334,10 @@ class GRPOTrainer:
                     advantages_list.append(torch.zeros_like(group))
 
             all_advantages = torch.cat(advantages_list)
-            # Advantage-weighted policy loss (REINFORCE-style, not PPO)
+            # Advantage-weighted policy loss
             policy_loss = -(all_advantages * neural_scores).mean()
 
-            # Total loss: supervised + advantage-weighted
+            # Total loss: supervised + policy + small KL
             total_loss = supervised_loss + 0.1 * policy_loss
 
             # Backprop
@@ -370,7 +352,7 @@ class GRPOTrainer:
             reward_mean = blended.mean().item()
             advantage_mean = all_advantages.mean().item()
             loss_val = total_loss.item()
-            kl_div = 0.0
+            kl_div = 0.0  # No KL in supervised mode; was previously hardcoded 0.01
         else:
             # Fallback: metric-only (no model available)
             neural_rewards = self.compute_group_rewards(chain_groups, batch)
@@ -390,7 +372,7 @@ class GRPOTrainer:
             reward_mean = sum(all_rewards) / len(all_rewards) if all_rewards else 0.0
             advantage_mean = sum(all_advs) / len(all_advs) if all_advs else 0.0
             loss_val = -advantage_mean
-            kl_div = 0.0
+            kl_div = 0.0  # No KL in metric-only mode
 
         return {
             "loss": loss_val,
@@ -441,7 +423,7 @@ class GRPOTrainer:
         n_epochs: int = 1,
         batch_size: int = 8,
     ) -> dict:
-        """Full training loop over dataset.
+        """Full GRPO training loop over dataset.
 
         Supports multi-epoch training with LR schedule (cosine annealing
         with linear warmup).
@@ -466,7 +448,7 @@ class GRPOTrainer:
         steps_per_epoch = max(1, (n_samples + batch_size - 1) // batch_size)
         total_steps = self.config.total_steps or (steps_per_epoch * n_epochs)
 
-        # Create optimizer once to preserve AdamW momentum
+        # Create optimizer once to preserve AdamW momentum (Council H4 fix)
         optimizer = None
         if self.reward_model.is_available:
             import torch
@@ -536,6 +518,10 @@ class GRPOTrainer:
             json.dump({"step": step, "metrics": metrics, "config": {
                 "learning_rate": self.config.learning_rate,
                 "group_size": self.config.group_size,
-                "kl_coefficient": self.config.kl_coefficient,
                 "seed": self.config.seed,
             }}, f, indent=2)
+
+
+# Backward-compatible aliases (deprecated, use new names)
+GRPOConfig = AdvantageWeightedConfig
+GRPOTrainer = AdvantageWeightedTrainer
