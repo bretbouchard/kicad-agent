@@ -23,7 +23,6 @@ from __future__ import annotations
 import logging
 import math
 import os
-import shutil
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
@@ -32,6 +31,7 @@ from typing import Any, Optional
 
 from PIL import Image, ImageDraw, ImageFont
 
+from kicad_agent.cli_resolver import find_kicad_cli
 from kicad_agent.ir.base import _clear_registry
 from kicad_agent.ir.pcb_ir import PcbIR
 from kicad_agent.parser import parse_pcb
@@ -56,14 +56,7 @@ def _find_kicad_cli() -> str:
     Raises:
         FileNotFoundError: If kicad-cli is not found on PATH.
     """
-    cli_path = shutil.which("kicad-cli")
-    if cli_path is None:
-        raise FileNotFoundError(
-            "kicad-cli not found on PATH. "
-            "Install KiCad 10+ to get kicad-cli. "
-            "On macOS: brew install --cask kicad"
-        )
-    return cli_path
+    return find_kicad_cli().path
 
 
 def _validate_pcb_path(pcb_path: Path) -> None:

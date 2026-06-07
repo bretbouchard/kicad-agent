@@ -181,6 +181,27 @@ def reinject_uuids(serialized_content: str, uuid_map: UUIDMap) -> str:
     # Each match gives us (position, indent, match_end)
     matches = list(_ELEMENT_PATTERN.finditer(serialized_content))
 
+    # S-BUG-003: Validate element counts match before injection.
+    # If UUID map has more entries than structural elements, injection will
+    # silently misassign UUIDs to wrong positions. Fail loudly instead.
+    if len(uuid_queue) > len(matches):
+        # Count element types in the serialized output for a helpful error
+        output_type_counts: dict[str, int] = {}
+        for m in matches:
+            t = m.group("type")
+            output_type_counts[t] = output_type_counts.get(t, 0) + 1
+
+        map_type_counts: dict[str, int] = {}
+        for _, ptype in uuid_queue:
+            map_type_counts[ptype] = map_type_counts.get(ptype, 0) + 1
+
+        raise ValueError(
+            f"UUID reinjection count mismatch: UUID map has {len(uuid_queue)} entries "
+            f"but serialized output has {len(matches)} structural elements. "
+            f"Injection would misassign UUIDs. "
+            f"Map types: {map_type_counts}. Output types: {output_type_counts}."
+        )
+
     # Apply UUIDs sequentially to structural elements
     insertions: list[tuple[int, str]] = []
     uuid_idx = 0
@@ -217,15 +238,6 @@ def reinject_uuids(serialized_content: str, uuid_map: UUIDMap) -> str:
 
         insertions.append((line_end, uuid_line))
         uuid_idx += 1
-
-    # Warn if UUIDs were silently dropped (element count < UUID count).
-    # This indicates a structural mismatch between extractor and reinjector.
-    if uuid_idx < len(uuid_queue):
-        logger.warning(
-            "UUID count mismatch: %d UUIDs in queue but only %d injected "
-            "(%d dropped). Element matches ran out before UUID queue was exhausted.",
-            len(uuid_queue), uuid_idx, len(uuid_queue) - uuid_idx,
-        )
 
     # Apply insertions in reverse order to preserve positions
     result = serialized_content

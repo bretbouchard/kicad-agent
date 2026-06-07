@@ -23,13 +23,14 @@ Usage:
 import json
 import logging
 import os
-import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
+
+from kicad_agent.cli_resolver import find_kicad_cli
 
 logger = logging.getLogger(__name__)
 
@@ -129,14 +130,7 @@ def _find_kicad_cli() -> str:
     Raises:
         FileNotFoundError: If kicad-cli is not found on PATH.
     """
-    cli_path = shutil.which("kicad-cli")
-    if cli_path is None:
-        raise FileNotFoundError(
-            "kicad-cli not found on PATH. "
-            "Install KiCad 10+ to get kicad-cli. "
-            "On macOS: brew install --cask kicad"
-        )
-    return cli_path
+    return find_kicad_cli().path
 
 
 def _parse_violations(
@@ -204,7 +198,7 @@ def run_erc(schematic_path: Path, *, timeout: int = 120) -> ErcResult:
 
     # Find kicad-cli
     try:
-        cli_path = _find_kicad_cli()
+        cli_info = find_kicad_cli()
     except FileNotFoundError as e:
         return ErcResult(
             passed=False,
@@ -227,7 +221,7 @@ def run_erc(schematic_path: Path, *, timeout: int = 120) -> ErcResult:
             logger.debug("Temporarily renamed %s to avoid kicad-cli conflict", pro_file.name)
 
         cmd = [
-            cli_path,
+            cli_info.path,
             "sch",
             "erc",
             "--format",
@@ -362,7 +356,7 @@ def run_drc(
 
     # Find kicad-cli
     try:
-        cli_path = _find_kicad_cli()
+        cli_info = find_kicad_cli()
     except FileNotFoundError as e:
         return DrcResult(
             passed=False,
@@ -376,7 +370,7 @@ def run_drc(
         output_file = Path(tempdir) / "drc_report.json"
 
         cmd = [
-            cli_path,
+            cli_info.path,
             "pcb",
             "drc",
             "--format",

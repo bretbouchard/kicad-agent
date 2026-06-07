@@ -174,43 +174,68 @@ def route_all_nets(
     return results
 
 
+def _nearest_routed_position(
+    pin: tuple[float, float],
+    routed_positions: set[tuple[float, float]],
+) -> tuple[float, float]:
+    """Find the nearest already-routed position to a target pin.
+
+    Uses brute-force Euclidean distance for small sets (typical pin counts)
+    avoiding Shapely overhead. Falls back to first routed position for
+    degenerate single-element sets.
+    """
+    nearest = min(routed_positions, key=lambda r: _euclidean_heuristic(r, pin))
+    return nearest
+
+
 def _route_multi_pin_net(
     graph: RoutingGraph,
     net_name: str,
     pins: list[tuple[float, float]],
 ) -> RouteResult | None:
-    """Route a multi-pin net using sequential nearest-neighbor heuristic (H-7).
+    """Route a multi-pin net using nearest-neighbor heuristic (H-7).
 
-    Starting from the first pin, greedily connects the nearest unrouted pin.
-    Produces a Steiner-tree approximation. All sub-paths are combined into a
-    single RouteResult.
+    For each unrouted pin, finds the single nearest already-routed position
+    using Euclidean distance (O(k) per pin) and attempts one A* route.
+    This reduces from O(k^2) A* calls to O(k) A* calls, preventing OOM
+    on boards with many pins per net (BUG-004).
     """
     routed_positions = {pins[0]}
     unrouted = set(pins[1:])
     all_paths: list[tuple] = []
 
     while unrouted:
-        best_result = None
-        best_dist = float("inf")
-        best_pin = None
+        # Find the unrouted pin closest to any routed position
+        best_pin = min(
+            unrouted,
+            key=lambda p: min(
+                _euclidean_heuristic(p, r) for r in routed_positions
+            ),
+        )
+        # Route from only the nearest routed position (1 A* call, not k)
+        nearest = _nearest_routed_position(best_pin, routed_positions)
+        result = route_net(graph, nearest, best_pin, net_name)
 
-        for pin in unrouted:
-            for routed in routed_positions:
-                result = route_net(graph, routed, pin, net_name)
+        if result is None or not result.success:
+            # Fallback: try all routed positions (rare, for blocked paths)
+            found = False
+            for alt_routed in sorted(
+                routed_positions,
+                key=lambda r: _euclidean_heuristic(r, best_pin),
+            ):
+                if alt_routed == nearest:
+                    continue
+                result = route_net(graph, alt_routed, best_pin, net_name)
                 if result is not None and result.success:
-                    d = _path_length(result.path)
-                    if d < best_dist:
-                        best_dist = d
-                        best_result = result
-                        best_pin = pin
+                    found = True
+                    break
+            if not found:
+                break  # Cannot reach this pin
 
-        if best_pin is None:
-            break  # Cannot reach remaining pins
-
-        all_paths.append(best_result.path)
+        all_paths.append(result.path)
         routed_positions.add(best_pin)
         unrouted.discard(best_pin)
-        graph.mark_path_as_obstacle(best_result.path)
+        graph.mark_path_as_obstacle(result.path)
 
     if not all_paths:
         return None

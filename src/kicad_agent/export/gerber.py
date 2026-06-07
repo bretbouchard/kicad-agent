@@ -1,23 +1,28 @@
 """Gerber and drill file export via kicad-cli.
 
 GEN-02: Gerber/drill export wrappers with layer selection and format options.
+FEAT-003: Complete manufacturing Gerber export with all required layers.
 
 Wraps ``kicad-cli pcb export gerbers`` and ``kicad-cli pcb export drill``
 with path validation, structured results, and timeout protection.
 
 Usage:
-    from kicad_agent.export.gerber import export_gerber, export_drill
+    from kicad_agent.export.gerber import export_gerber, export_drill, export_manufacturing_package
 
     result = export_gerber(Path("board.kicad_pcb"))
     for f in result.files:
         print(f.name)
+
+    # Complete manufacturing package with all required layers
+    pkg = export_manufacturing_package(Path("board.kicad_pcb"))
 """
 
 import logging
-import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+
+from kicad_agent.cli_resolver import find_kicad_cli
 
 logger = logging.getLogger(__name__)
 
@@ -50,14 +55,7 @@ def _find_kicad_cli() -> str:
     Raises:
         FileNotFoundError: If kicad-cli is not found on PATH.
     """
-    cli_path = shutil.which("kicad-cli")
-    if cli_path is None:
-        raise FileNotFoundError(
-            "kicad-cli not found on PATH. "
-            "Install KiCad 10+ to get kicad-cli. "
-            "On macOS: brew install --cask kicad"
-        )
-    return cli_path
+    return find_kicad_cli().path
 
 
 def _validate_pcb_path(pcb_path: Path) -> None:
@@ -269,4 +267,114 @@ def export_drill(
         files=all_files,
         command=cli_result["command"],
         stderr=cli_result["stderr"],
+    )
+
+
+# Manufacturing layer presets (FEAT-003)
+COPPER_LAYERS_2 = ["F.Cu", "B.Cu"]
+COPPER_LAYERS_4 = ["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"]
+EDGE_CUTS = ["Edge.Cuts"]
+SILKSCREEN_LAYERS = ["F.SilkS", "B.SilkS"]
+SOLDERMASK_LAYERS = ["F.Mask", "B.Mask"]
+SOLDERPASTE_LAYERS = ["F.Paste", "B.Paste"]
+FAB_LAYERS = ["F.Fab", "B.Fab"]
+COURTYARD_LAYERS = ["F.CrtYd", "B.CrtYd"]
+USER_LAYERS = ["F.Adhes", "B.Adhes", "Dwgs.User", "Cmts.User", "Eco1.User", "Eco2.User"]
+
+# Complete manufacturing set: copper + Edge.Cuts + silk + paste + mask
+ALL_MANUFACTURING_LAYERS = (
+    COPPER_LAYERS_2 + EDGE_CUTS + SILKSCREEN_LAYERS
+    + SOLDERMASK_LAYERS + SOLDERPASTE_LAYERS
+)
+
+
+@dataclass(frozen=True)
+class ManufacturingPackage:
+    """Complete manufacturing export package with all required files.
+
+    Attributes:
+        gerber_result: Gerber export result.
+        drill_result: Drill export result.
+        all_files: Combined list of all generated files.
+        output_dir: Root output directory.
+    """
+
+    gerber_result: ExportResult
+    drill_result: ExportResult
+    all_files: tuple[Path, ...]
+    output_dir: Path
+
+    @property
+    def success(self) -> bool:
+        return self.gerber_result.success and self.drill_result.success
+
+
+def export_manufacturing_package(
+    pcb_path: Path,
+    output_dir: Path | None = None,
+    *,
+    layers: list[str] | None = None,
+    include_drill: bool = True,
+    no_dnp: bool = True,
+) -> ManufacturingPackage:
+    """Export complete manufacturing Gerber package (FEAT-003).
+
+    Generates all layers required for PCB manufacturing:
+    - Copper layers (F.Cu, B.Cu, and inner layers)
+    - Edge.Cuts (board outline)
+    - Silkscreen (F.SilkS, B.SilkS) with component references
+    - Solder mask (F.Mask, B.Mask)
+    - Solder paste (F.Paste, B.Paste) for SMD assembly
+    - Drill files (Excellon format with Gerber map)
+
+    Args:
+        pcb_path: Path to the .kicad_pcb file.
+        output_dir: Output directory. Defaults to pcb_path parent / "manufacturing".
+        layers: Layers to include. Defaults to all manufacturing layers.
+        include_drill: Whether to include drill file export (default True).
+        no_dnp: Exclude DNP components from paste layers (default True).
+
+    Returns:
+        ManufacturingPackage with gerber/drill results and combined file list.
+    """
+    _validate_pcb_path(pcb_path)
+
+    if output_dir is None:
+        output_dir = pcb_path.parent / "manufacturing"
+    _validate_output_dir(output_dir)
+
+    gerber_dir = output_dir / "gerber"
+    drill_dir = output_dir / "drill"
+
+    # Export Gerber files with all manufacturing layers
+    gerber_result = export_gerber(
+        pcb_path,
+        output_dir=gerber_dir,
+        layers=layers or ALL_MANUFACTURING_LAYERS,
+        subtract_soldermask=True,
+    )
+
+    # Export drill files
+    drill_result = ExportResult(
+        success=True,
+        output_dir=drill_dir,
+        files=(),
+        command="",
+    )
+    if include_drill:
+        drill_result = export_drill(
+            pcb_path,
+            output_dir=drill_dir,
+            generate_map=True,
+            map_format="gerberx2",
+        )
+
+    # Combine all files
+    all_files = tuple(sorted(set(gerber_result.files + drill_result.files)))
+
+    return ManufacturingPackage(
+        gerber_result=gerber_result,
+        drill_result=drill_result,
+        all_files=all_files,
+        output_dir=output_dir,
     )

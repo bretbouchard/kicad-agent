@@ -254,6 +254,48 @@ class ResolveShortedNetsOp(BaseModel):
     )
 
 
+class FixNetShortOp(BaseModel):
+    """Fix a specific shorted net pair by removing bridging wire(s).
+
+    Combines netlist-based pin tracing from detect_net_shorts (#67) with
+    positional bridge detection to safely remove the wire(s) causing a short.
+
+    Safety constraints:
+    - NEVER fixes critical shorts (power-to-power, power-to-ground)
+    - NEVER fixes medium shorts (ground-to-ground)
+    - Only fixes signal-to-signal shorts
+
+    Attributes:
+        op_type: Discriminator literal ``"fix_net_short"``.
+        target_file: Relative path to the target .kicad_sch file.
+        net_a: First shorted net name (from detect_net_shorts output).
+        net_b: Second shorted net name (from detect_net_shorts output).
+        dry_run: Report what would be fixed without modifying.
+        remove_strategy: ``"remove_wire"`` finds bridging wire(s) via BFS,
+            ``"disconnect_a"`` removes all wires touching net_a labels,
+            ``"disconnect_b"`` removes all wires touching net_b labels.
+    """
+
+    op_type: Literal["fix_net_short"] = "fix_net_short"
+    target_file: TargetFile
+    net_a: str = Field(
+        min_length=1, max_length=128,
+        description="First shorted net name",
+    )
+    net_b: str = Field(
+        min_length=1, max_length=128,
+        description="Second shorted net name",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Report what would be fixed without modifying",
+    )
+    remove_strategy: Literal["remove_wire", "disconnect_a", "disconnect_b"] = Field(
+        default="remove_wire",
+        description="Strategy for fixing the short",
+    )
+
+
 # ErcAutoFixOp has been migrated to _schema_erc_smart.py (Council H-02:
 # two classes with the same op_type discriminator cannot coexist in the
 # Operation union). Import from there if needed directly.

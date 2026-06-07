@@ -301,6 +301,9 @@ class TestFindKicadCli:
 
     def test_find_kicad_cli_not_found(self) -> None:
         """_find_kicad_cli raises FileNotFoundError when kicad-cli is missing."""
-        with patch("kicad_agent.validation.erc_drc.shutil.which", return_value=None):
+        with patch("kicad_agent.cli_resolver.shutil.which", return_value=None):
+            # Invalidate the cache so it doesn't return a cached result
+            from kicad_agent.cli_resolver import invalidate_cache
+            invalidate_cache()
             with pytest.raises(FileNotFoundError, match="kicad-cli not found"):
                 _find_kicad_cli()

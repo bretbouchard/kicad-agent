@@ -288,6 +288,28 @@ def generate_design(
             errors.append(f"Statistics collection error: {e}")
             logger.debug("Statistics error: %s", e)
 
+    # --- Step 7: Post-generation validation (BUG-005 / FEAT-005) ---
+    if sch_path.exists():
+        try:
+            from kicad_agent.validation.post_gen import validate_generated
+
+            pg_result = validate_generated(
+                schematic_path=sch_path,
+                pcb_path=pcb_path if pcb_path.exists() else None,
+                run_erc=False,  # Already ran ERC in Step 4
+                run_drc=False,  # Already ran DRC in Step 4
+            )
+            if not pg_result.passed:
+                for issue in pg_result.errors:
+                    errors.append(f"Post-gen: [{issue.check}] {issue.message}")
+                logger.warning(
+                    "Post-generation validation found %d issues",
+                    len(pg_result.errors),
+                )
+        except Exception as e:
+            errors.append(f"Post-generation validation error: {e}")
+            logger.debug("Post-gen validation error: %s", e)
+
     # --- Build result ---
     # Success if both template files were generated (even if validation/export had issues)
     success = sch_path.exists() and pcb_path.exists()
