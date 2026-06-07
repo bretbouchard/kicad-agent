@@ -489,6 +489,31 @@ def _inject_missing_lib_symbols(
     return new_content
 
 
+def _find_schematic_block_end(content: str) -> int:
+    """Find the position of the closing ')' of the (schematic ...) block.
+
+    Uses depth-tracking from the (schematic opening paren, avoiding the
+    incorrect behavior of rfind(')') which finds the (kicad_sch ...) closing
+    paren instead.
+
+    Returns:
+        Byte offset of the ')' character closing the (schematic ...) block,
+        or -1 if not found.
+    """
+    match = re.search(r'\(schematic\s', content)
+    if not match:
+        return -1
+    depth = 0
+    for i in range(match.start(), len(content)):
+        if content[i] == '(':
+            depth += 1
+        elif content[i] == ')':
+            depth -= 1
+            if depth == 0:
+                return i
+    return -1
+
+
 def place_power_units(sch_dir: str, refs: Optional[list[str]] = None) -> dict:
     """Place missing power units for specified ICs (or all missing ones).
 
@@ -637,10 +662,14 @@ def place_power_units(sch_dir: str, refs: Optional[list[str]] = None) -> dict:
         if needed:
             content = _inject_missing_lib_symbols(content, needed, sch_path)
 
-        # Insert placements before the closing ')'
+        # Insert placements before the closing ')' of the (schematic ...) block
         insert_text = "\n".join(blocks)
-        # Find the last closing paren (end of schematic)
-        last_close = content.rfind(")")
+        # R-BUG-001 fix: find the (schematic ...) closing paren by depth tracking,
+        # NOT the (kicad_sch ...) closing paren via rfind(")")
+        last_close = _find_schematic_block_end(content)
+        if last_close < 0:
+            print(f"  WARNING: Could not find (schematic ...) block in {sheet}.kicad_sch, skipping")
+            continue
         new_content = content[:last_close] + insert_text + "\n)"
 
         sch_file.write_text(new_content)
