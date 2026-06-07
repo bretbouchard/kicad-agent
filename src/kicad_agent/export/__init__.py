@@ -1,8 +1,8 @@
 """Manufacturing export wrappers for kicad-agent.
 
-Provides Python wrappers for all kicad-cli export commands and board
-statistics extraction. Each function validates inputs, invokes kicad-cli
-(or parses directly for statistics), and returns structured results.
+Provides Python wrappers for all kicad-cli export commands, 3D rendering,
+and board statistics extraction. Each function validates inputs, invokes
+kicad-cli (or parses directly for statistics), and returns structured results.
 
 GEN-02: Manufacturing export via kicad-cli wrappers.
 
@@ -15,13 +15,14 @@ Usage:
         export_netlist,
         export_step,
         export_schematic_pdf,
-        get_board_statistics,
-        render_pcb_3d,
         export_schematic_svg,
         export_symbol_svg,
         export_footprint_svg,
         export_pcb_svg,
         export_pcb_pdf,
+        render_pcb,
+        render_pcb_3d,
+        get_board_statistics,
     )
 """
 
@@ -42,6 +43,10 @@ from kicad_agent.export.cli_wrappers import (
     export_symbol_svg,
     render_pcb_3d,
 )
+from kicad_agent.export.render import (
+    RenderResult,
+    render_pcb,
+)
 
 __all__ = [
     "ExportResult",
@@ -54,11 +59,13 @@ __all__ = [
     "export_netlist",
     "export_step",
     "export_schematic_pdf",
-    "get_board_statistics",
-    "render_pcb_3d",
     "export_schematic_svg",
     "export_symbol_svg",
     "export_footprint_svg",
     "export_pcb_svg",
     "export_pcb_pdf",
+    "RenderResult",
+    "render_pcb",
+    "render_pcb_3d",
+    "get_board_statistics",
 ]

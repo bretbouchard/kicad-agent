@@ -40,13 +40,17 @@ class TestToolGeneration:
         expected = count_operation_tools()
         assert len(_OPERATION_TOOLS) == expected
 
-    def test_generates_9_meta_tools(self) -> None:
-        assert len(_META_TOOLS) == 9
+    def test_generates_18_meta_tools(self) -> None:
+        assert len(_META_TOOLS) == 18
         meta_names = {t.name for t in _META_TOOLS}
         assert meta_names == {
             "health_check", "get_operation_schema", "get_project_context",
             "erc_check", "drc_check", "undo", "redo",
             "list_workflows", "get_workflow",
+            # Export/Render convenience tools
+            "render_pcb", "export_schematic_svg", "export_pcb_svg",
+            "export_pcb_pdf", "export_schematic_bom", "export_pcb_step",
+            "export_pcb_gerbers", "export_pcb_drill", "export_pcb_position",
         }
 
     def test_total_tool_count(self) -> None:

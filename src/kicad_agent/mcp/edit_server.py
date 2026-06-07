@@ -310,6 +310,316 @@ _META_TOOLS = [
         },
         annotations=types.ToolAnnotations(readOnlyHint=True),
     ),
+    # --- Export/Render convenience tools ---
+    types.Tool(
+        name="render_pcb",
+        description=(
+            "Render a 3D view of a KiCad PCB as a PNG/JPEG image. Supports rotation, "
+            "zoom, board side selection, and background color. Useful for visual "
+            "inspection of PCB layouts without opening KiCad. Equivalent to "
+            "kicad-cli pcb render."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "pcb_file": {
+                    "type": "string",
+                    "description": "Relative path to .kicad_pcb file",
+                    "minLength": 1,
+                },
+                "output_file": {
+                    "type": "string",
+                    "description": "Output image path (default: {stem}-render.png)",
+                },
+                "width": {
+                    "type": "integer",
+                    "description": "Render width in pixels (default: 1600)",
+                    "default": 1600,
+                },
+                "height": {
+                    "type": "integer",
+                    "description": "Render height in pixels (default: 1200)",
+                    "default": 1200,
+                },
+                "side": {
+                    "type": "string",
+                    "description": "Board side: 'front' or 'back'",
+                    "enum": ["front", "back"],
+                },
+                "rotate": {
+                    "type": "string",
+                    "description": "Rotation string e.g. '-45,0,45' for isometric view",
+                },
+                "zoom": {
+                    "type": "number",
+                    "description": "Zoom factor (default: 1.0)",
+                },
+            },
+            "required": ["pcb_file"],
+        },
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
+    types.Tool(
+        name="export_schematic_svg",
+        description=(
+            "Export a KiCad schematic as SVG. Supports theme and page selection "
+            "for multi-sheet schematics. Equivalent to kicad-cli sch export svg."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "schematic_file": {
+                    "type": "string",
+                    "description": "Relative path to .kicad_sch file",
+                    "minLength": 1,
+                },
+                "output_file": {
+                    "type": "string",
+                    "description": "Output SVG path (default: {stem}.svg)",
+                },
+                "theme": {
+                    "type": "string",
+                    "description": "Color theme name",
+                },
+                "page": {
+                    "type": "string",
+                    "description": "Page identifier for multi-sheet schematics",
+                },
+            },
+            "required": ["schematic_file"],
+        },
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
+    types.Tool(
+        name="export_pcb_svg",
+        description=(
+            "Export a KiCad PCB as SVG. Supports theme, layer, and page selection. "
+            "Equivalent to kicad-cli pcb export svg."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "pcb_file": {
+                    "type": "string",
+                    "description": "Relative path to .kicad_pcb file",
+                    "minLength": 1,
+                },
+                "output_file": {
+                    "type": "string",
+                    "description": "Output SVG path (default: {stem}.svg)",
+                },
+                "theme": {
+                    "type": "string",
+                    "description": "Color theme name",
+                },
+                "layers": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Layer names to export (default: all layers)",
+                },
+            },
+            "required": ["pcb_file"],
+        },
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
+    types.Tool(
+        name="export_pcb_pdf",
+        description=(
+            "Export a KiCad PCB as PDF. Supports theme selection. Equivalent to "
+            "kicad-cli pcb export pdf."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "pcb_file": {
+                    "type": "string",
+                    "description": "Relative path to .kicad_pcb file",
+                    "minLength": 1,
+                },
+                "output_file": {
+                    "type": "string",
+                    "description": "Output PDF path (default: {stem}.pdf)",
+                },
+                "theme": {
+                    "type": "string",
+                    "description": "Color theme name",
+                },
+            },
+            "required": ["pcb_file"],
+        },
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
+    types.Tool(
+        name="export_schematic_bom",
+        description=(
+            "Export a Bill of Materials from a KiCad schematic as CSV. Supports "
+            "field selection, grouping, and DNP exclusion. Returns component counts "
+            "and the CSV file path. Equivalent to kicad-cli sch export bom."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "schematic_file": {
+                    "type": "string",
+                    "description": "Relative path to .kicad_sch file",
+                    "minLength": 1,
+                },
+                "output_file": {
+                    "type": "string",
+                    "description": "Output CSV path (default: {stem}-BOM.csv)",
+                },
+                "fields": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Ordered list of fields to export",
+                },
+                "exclude_dnp": {
+                    "type": "boolean",
+                    "description": "Exclude Do Not Populate components (default: false)",
+                    "default": False,
+                },
+            },
+            "required": ["schematic_file"],
+        },
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
+    types.Tool(
+        name="export_pcb_step",
+        description=(
+            "Export a KiCad PCB as a STEP 3D model. Supports origin selection "
+            "and DNP exclusion. Useful for mechanical integration. Equivalent to "
+            "kicad-cli pcb export step."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "pcb_file": {
+                    "type": "string",
+                    "description": "Relative path to .kicad_pcb file",
+                    "minLength": 1,
+                },
+                "output_file": {
+                    "type": "string",
+                    "description": "Output STEP path (default: {stem}.step)",
+                },
+                "no_dnp": {
+                    "type": "boolean",
+                    "description": "Exclude DNP components (default: true)",
+                    "default": True,
+                },
+                "origin": {
+                    "type": "string",
+                    "description": "Origin mode: 'grid' or 'drill'",
+                    "enum": ["grid", "drill"],
+                    "default": "grid",
+                },
+            },
+            "required": ["pcb_file"],
+        },
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
+    types.Tool(
+        name="export_pcb_gerbers",
+        description=(
+            "Export Gerber files from a KiCad PCB for manufacturing. Supports "
+            "layer selection, drill origin, and soldermask subtraction. Returns "
+            "the output directory and list of generated files. Equivalent to "
+            "kicad-cli pcb export gerbers."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "pcb_file": {
+                    "type": "string",
+                    "description": "Relative path to .kicad_pcb file",
+                    "minLength": 1,
+                },
+                "output_dir": {
+                    "type": "string",
+                    "description": "Output directory (default: gerber/)",
+                },
+                "layers": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Layer names to export (default: all layers)",
+                },
+            },
+            "required": ["pcb_file"],
+        },
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
+    types.Tool(
+        name="export_pcb_drill",
+        description=(
+            "Export drill files from a KiCad PCB. Supports format selection "
+            "(Excellon or Gerber) and drill map generation. Equivalent to "
+            "kicad-cli pcb export drill."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "pcb_file": {
+                    "type": "string",
+                    "description": "Relative path to .kicad_pcb file",
+                    "minLength": 1,
+                },
+                "output_dir": {
+                    "type": "string",
+                    "description": "Output directory (default: gerber/)",
+                },
+                "format": {
+                    "type": "string",
+                    "description": "Drill format: 'excellon' or 'gerber'",
+                    "enum": ["excellon", "gerber"],
+                    "default": "excellon",
+                },
+            },
+            "required": ["pcb_file"],
+        },
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
+    types.Tool(
+        name="export_pcb_position",
+        description=(
+            "Export component position files from a KiCad PCB for pick-and-place "
+            "machines. Supports format, units, and side selection. Equivalent to "
+            "kicad-cli pcb export pos."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "pcb_file": {
+                    "type": "string",
+                    "description": "Relative path to .kicad_pcb file",
+                    "minLength": 1,
+                },
+                "output_dir": {
+                    "type": "string",
+                    "description": "Output directory (default: PCB parent dir)",
+                },
+                "format": {
+                    "type": "string",
+                    "description": "Output format: 'ascii', 'csv', or 'gerber'",
+                    "enum": ["ascii", "csv", "gerber"],
+                    "default": "ascii",
+                },
+                "units": {
+                    "type": "string",
+                    "description": "Output units: 'mm' or 'in'",
+                    "enum": ["mm", "in"],
+                    "default": "mm",
+                },
+                "side": {
+                    "type": "string",
+                    "description": "Which side to export: 'front', 'back', or 'both'",
+                    "enum": ["front", "back", "both"],
+                    "default": "both",
+                },
+            },
+            "required": ["pcb_file"],
+        },
+        annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
 ]
 
 
@@ -385,8 +695,275 @@ app = Server("kicad-agent-edit", version="0.1.0", lifespan=server_lifespan)
 
 @app.list_tools()
 async def list_tools() -> list[types.Tool]:
-    """Return all available MCP tools (operation tools + 6 meta-tools)."""
+    """Return all available MCP tools (operation tools + 18 meta-tools)."""
     return _ALL_TOOLS
+
+
+# Names of export/render convenience tools
+_EXPORT_TOOL_NAMES = frozenset({
+    "render_pcb",
+    "export_schematic_svg",
+    "export_pcb_svg",
+    "export_pcb_pdf",
+    "export_schematic_bom",
+    "export_pcb_step",
+    "export_pcb_gerbers",
+    "export_pcb_drill",
+    "export_pcb_position",
+})
+
+
+async def _dispatch_export_tool(
+    name: str,
+    arguments: dict[str, Any],
+    base_dir: Path,
+) -> types.CallToolResult | None:
+    """Dispatch export/render convenience tools.
+
+    Returns None if the tool name is not an export tool (caller should continue
+    dispatching to other handlers). Returns a CallToolResult for recognized tools.
+    """
+    if name not in _EXPORT_TOOL_NAMES:
+        return None
+
+    try:
+        if name == "render_pcb":
+            result = await asyncio.to_thread(
+                _export_render_pcb, arguments, base_dir,
+            )
+            return _render_result_to_mcp(result)
+
+        if name == "export_schematic_svg":
+            result = await asyncio.to_thread(
+                _export_schematic_svg_handler, arguments, base_dir,
+            )
+            return _export_result_to_mcp(result)
+
+        if name == "export_pcb_svg":
+            result = await asyncio.to_thread(
+                _export_pcb_svg_handler, arguments, base_dir,
+            )
+            return _export_result_to_mcp(result)
+
+        if name == "export_pcb_pdf":
+            result = await asyncio.to_thread(
+                _export_pcb_pdf_handler, arguments, base_dir,
+            )
+            return _export_result_to_mcp(result)
+
+        if name == "export_schematic_bom":
+            result = await asyncio.to_thread(
+                _export_schematic_bom_handler, arguments, base_dir,
+            )
+            return _bom_result_to_mcp(result)
+
+        if name == "export_pcb_step":
+            result = await asyncio.to_thread(
+                _export_pcb_step_handler, arguments, base_dir,
+            )
+            return _export_result_to_mcp(result)
+
+        if name == "export_pcb_gerbers":
+            result = await asyncio.to_thread(
+                _export_pcb_gerbers_handler, arguments, base_dir,
+            )
+            return _export_result_to_mcp(result)
+
+        if name == "export_pcb_drill":
+            result = await asyncio.to_thread(
+                _export_pcb_drill_handler, arguments, base_dir,
+            )
+            return _export_result_to_mcp(result)
+
+        if name == "export_pcb_position":
+            result = await asyncio.to_thread(
+                _export_pcb_position_handler, arguments, base_dir,
+            )
+            return _export_result_to_mcp(result)
+
+    except FileNotFoundError as e:
+        return _error_result("file_not_found", str(e), "Verify the file path is correct.")
+    except ValueError as e:
+        return _error_result("validation_error", str(e))
+    except Exception as e:
+        return _error_result("export_error", str(e))
+
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Export tool handler implementations (sync, called via asyncio.to_thread)
+# ---------------------------------------------------------------------------
+
+
+def _export_render_pcb(arguments: dict[str, Any], base_dir: Path) -> object:
+    """Handle render_pcb MCP tool call."""
+    from kicad_agent.export.render import render_pcb
+    pcb_path = base_dir / arguments["pcb_file"]
+    output_path = base_dir / arguments["output_file"] if "output_file" in arguments else None
+    return render_pcb(
+        pcb_path,
+        output_path=output_path,
+        width=arguments.get("width", 1600),
+        height=arguments.get("height", 1200),
+        background_color=arguments.get("background_color"),
+        side=arguments.get("side"),
+        rotate=arguments.get("rotate"),
+        zoom=arguments.get("zoom"),
+    )
+
+
+def _export_schematic_svg_handler(arguments: dict[str, Any], base_dir: Path) -> object:
+    """Handle export_schematic_svg MCP tool call."""
+    from kicad_agent.export.render import export_schematic_svg
+    sch_path = base_dir / arguments["schematic_file"]
+    output_path = base_dir / arguments["output_file"] if "output_file" in arguments else None
+    return export_schematic_svg(
+        sch_path,
+        output_path=output_path,
+        theme=arguments.get("theme"),
+        page=arguments.get("page"),
+    )
+
+
+def _export_pcb_svg_handler(arguments: dict[str, Any], base_dir: Path) -> object:
+    """Handle export_pcb_svg MCP tool call."""
+    from kicad_agent.export.render import export_pcb_svg
+    pcb_path = base_dir / arguments["pcb_file"]
+    output_path = base_dir / arguments["output_file"] if "output_file" in arguments else None
+    return export_pcb_svg(
+        pcb_path,
+        output_path=output_path,
+        theme=arguments.get("theme"),
+        layers=arguments.get("layers"),
+        page=arguments.get("page"),
+    )
+
+
+def _export_pcb_pdf_handler(arguments: dict[str, Any], base_dir: Path) -> object:
+    """Handle export_pcb_pdf MCP tool call."""
+    from kicad_agent.export.render import export_pcb_pdf
+    pcb_path = base_dir / arguments["pcb_file"]
+    output_path = base_dir / arguments["output_file"] if "output_file" in arguments else None
+    return export_pcb_pdf(
+        pcb_path,
+        output_path=output_path,
+        theme=arguments.get("theme"),
+    )
+
+
+def _export_schematic_bom_handler(arguments: dict[str, Any], base_dir: Path) -> object:
+    """Handle export_schematic_bom MCP tool call."""
+    from kicad_agent.export.bom import export_bom
+    sch_path = base_dir / arguments["schematic_file"]
+    output_path = base_dir / arguments["output_file"] if "output_file" in arguments else None
+    return export_bom(
+        sch_path,
+        output_path=output_path,
+        fields=arguments.get("fields"),
+        exclude_dnp=arguments.get("exclude_dnp", False),
+    )
+
+
+def _export_pcb_step_handler(arguments: dict[str, Any], base_dir: Path) -> object:
+    """Handle export_pcb_step MCP tool call."""
+    from kicad_agent.export.general import export_step
+    pcb_path = base_dir / arguments["pcb_file"]
+    output_path = base_dir / arguments["output_file"] if "output_file" in arguments else None
+    return export_step(
+        pcb_path,
+        output_path=output_path,
+        no_dnp=arguments.get("no_dnp", True),
+        origin=arguments.get("origin", "grid"),
+    )
+
+
+def _export_pcb_gerbers_handler(arguments: dict[str, Any], base_dir: Path) -> object:
+    """Handle export_pcb_gerbers MCP tool call."""
+    from kicad_agent.export.gerber import export_gerber
+    pcb_path = base_dir / arguments["pcb_file"]
+    output_dir = base_dir / arguments["output_dir"] if "output_dir" in arguments else None
+    return export_gerber(
+        pcb_path,
+        output_dir=output_dir,
+        layers=arguments.get("layers"),
+    )
+
+
+def _export_pcb_drill_handler(arguments: dict[str, Any], base_dir: Path) -> object:
+    """Handle export_pcb_drill MCP tool call."""
+    from kicad_agent.export.gerber import export_drill
+    pcb_path = base_dir / arguments["pcb_file"]
+    output_dir = base_dir / arguments["output_dir"] if "output_dir" in arguments else None
+    return export_drill(
+        pcb_path,
+        output_dir=output_dir,
+        format=arguments.get("format", "excellon"),
+    )
+
+
+def _export_pcb_position_handler(arguments: dict[str, Any], base_dir: Path) -> object:
+    """Handle export_pcb_position MCP tool call."""
+    from kicad_agent.export.general import export_position
+    pcb_path = base_dir / arguments["pcb_file"]
+    output_dir = base_dir / arguments["output_dir"] if "output_dir" in arguments else None
+    return export_position(
+        pcb_path,
+        output_dir=output_dir,
+        format=arguments.get("format", "ascii"),
+        units=arguments.get("units", "mm"),
+        side=arguments.get("side", "both"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Result-to-MCP converters
+# ---------------------------------------------------------------------------
+
+
+def _render_result_to_mcp(result: Any) -> types.CallToolResult:
+    """Convert a RenderResult to an MCP CallToolResult."""
+    data = {
+        "success": result.success,
+        "output_path": str(result.output_path),
+        "width_px": result.width_px,
+        "height_px": result.height_px,
+        "command": result.command,
+    }
+    if result.stderr:
+        data["stderr"] = result.stderr
+    text = _cap_response(json.dumps(data, indent=2))
+    return types.CallToolResult(content=[types.TextContent(type="text", text=text)])
+
+
+def _export_result_to_mcp(result: Any) -> types.CallToolResult:
+    """Convert an ExportResult to an MCP CallToolResult."""
+    data = {
+        "success": result.success,
+        "output_dir": str(result.output_dir),
+        "files": [str(f) for f in result.files],
+        "file_count": len(result.files),
+        "command": result.command,
+    }
+    if result.stderr:
+        data["stderr"] = result.stderr
+    text = _cap_response(json.dumps(data, indent=2))
+    return types.CallToolResult(content=[types.TextContent(type="text", text=text)])
+
+
+def _bom_result_to_mcp(result: Any) -> types.CallToolResult:
+    """Convert a BomResult to an MCP CallToolResult."""
+    data = {
+        "success": result.success,
+        "output_path": str(result.output_path),
+        "component_count": result.component_count,
+        "unique_components": result.unique_components,
+        "command": result.command,
+    }
+    if result.stderr:
+        data["stderr"] = result.stderr
+    text = _cap_response(json.dumps(data, indent=2))
+    return types.CallToolResult(content=[types.TextContent(type="text", text=text)])
 
 
 async def dispatch_tool(
@@ -570,6 +1147,11 @@ async def dispatch_tool(
             )
         except Exception as e:
             return _error_result("workflow_error", str(e))
+
+    # --- Export/Render convenience tools ---
+    _export_tool_result = await _dispatch_export_tool(name, arguments, base_dir)
+    if _export_tool_result is not None:
+        return _export_tool_result
 
     # --- Operation tools ---
     if name not in _OP_NAMES:
