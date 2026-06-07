@@ -196,11 +196,50 @@ def _collect_sheets(
                 "file_name": item.fileName.value,
                 "uuid": item.uuid,
                 "pin_count": len(item.pins),
+                "stale_pin_count": _detect_stale_pins(item, child_path),
                 "pins": pin_info,
                 "children": child_sheets,
             })
 
     return sheets
+
+def _detect_stale_pins(sheet_item: HierarchicalSheet, child_path: Path) -> bool:
+    """Detect if parent sheet pins are out of sync with child hierarchical labels.
+
+    Compares the parent HierarchicalSheet's pins against the hierarchical
+    labels defined in the child .kicad_sch file. Returns True if they differ.
+
+    Args:
+        sheet_item: kiutils HierarchicalSheet from the parent schematic.
+        child_path: Path to the child schematic file.
+
+    Returns:
+        True if pin count or names differ, False if in sync.
+    """
+    if not child_path.exists():
+        return False
+
+    try:
+        # Parse hierarchical labels from child schematic
+        with open(child_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Extract hierarchical label names from child
+        import re
+        child_labels: set[str] = set()
+        for m in re.finditer(
+            r'\(hierarchical_label\s+"([^"]+)"',
+            content,
+        ):
+            child_labels.add(m.group(1))
+
+        # Compare with parent pins
+        parent_pins: set[str] = {p.name for p in sheet_item.pins}
+        return parent_pins != child_labels
+    except Exception:
+        return False  # Can't determine staleness
+
+
 
 
 def _create_empty_schematic(path: Path) -> None:

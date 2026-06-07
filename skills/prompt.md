@@ -1455,7 +1455,7 @@ Net names reject whitespace-only strings. If a name is `"   "` (spaces only), th
 
 ## Operation Quick Reference
 
-89 operations across 18 categories. RO = read-only, RW = modifies files.
+94 operations across 18 categories. RO = read-only, RW = modifies files.
 
 ### Component (6)
 
@@ -1541,7 +1541,7 @@ Net names reject whitespace-only strings. If a name is `"   "` (spaces only), th
 | `erc_auto_fix` | sch | Meta-operation: run ERC, dispatch repairs by violation type, iterate | RW |
 | `erc_auto_fix_hierarchical` | sch | Run ERC auto-fix across all sheets in a hierarchical schematic | RW |
 
-### Repair (14)
+### Repair (16)
 
 | Operation | File Types | Description | Mode |
 |-----------|-----------|-------------|------|
@@ -1559,6 +1559,8 @@ Net names reject whitespace-only strings. If a name is `"   "` (spaces only), th
 | `break_wire_shorts` | sch | Break wire segments that short different nets together | RW |
 | `resolve_shorted_nets` | sch | Atomically resolve shorted nets with wire breaking and label fixing | RW |
 | `place_net_labels` | sch | Place net labels on IC pins based on a pin-to-net mapping | RW |
+| `fix_net_short` | sch | Fix a shorted net by breaking wires and re-labeling affected segments | RW |
+| `rename_net_label` | sch | Rename a net label across a schematic with cross-sheet consistency | RW |
 
 ### Routing (6)
 
@@ -1571,13 +1573,16 @@ Net names reject whitespace-only strings. If a name is `"   "` (spaces only), th
 | `batch_connect` | sch | Batch-connect multiple nets in a single call | RW |
 | `regenerate_wiring` | sch | Strip all wires/labels/no_connects and regenerate from netlist definition | RW |
 
-### Schematic Intel (3)
+### Schematic Intel (6)
 
 | Operation | File Types | Description | Mode |
 |-----------|-----------|-------------|------|
 | `extract_nets` | sch | Extract complete net topology from a schematic file | RO |
 | `detect_net_conflicts` | sch | Detect net naming conflicts in a schematic file | RO |
 | `suggest_net_names` | sch | Suggest canonical net names based on labels and topology | RO |
+| `detect_net_shorts` | sch | Detect shorted nets via union-find connectivity analysis | RO |
+| `analyze_ground_topology` | sch | Analyze ground net merging/splitting for mixed-signal designs | RO |
+| `trace_net_from_label` | sch | Trace all pins reachable from a label through schematic graph | RO |
 
 ### Sheet (3)
 

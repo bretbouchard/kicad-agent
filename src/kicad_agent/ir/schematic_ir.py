@@ -456,6 +456,19 @@ class SchematicIR(BaseIR):
             stroke=Stroke(width=0.0),
             uuid=str(uuid.uuid4()),
         )
+        # Duplicate detection: skip if wire already exists at same position
+        _tol = 0.01
+        for existing in self.get_wire_endpoints():
+            if (abs(existing["start_x"] - start_x) <= _tol
+                    and abs(existing["start_y"] - start_y) <= _tol
+                    and abs(existing["end_x"] - end_x) <= _tol
+                    and abs(existing["end_y"] - end_y) <= _tol):
+                return {
+                    "start": [start_x, start_y],
+                    "end": [end_x, end_y],
+                    "duplicate": True,
+                }
+        
         self._parse_result.kiutils_obj.graphicalItems.append(wire)
         self._record_mutation("add_wire", {
             "start": [start_x, start_y],
@@ -565,6 +578,46 @@ class SchematicIR(BaseIR):
                     return {"name": name, "label_type": label_type, "position": [lbl_x, lbl_y]}
         return None
 
+    def _ensure_power_lib_symbol(self, name: str) -> None:
+        """Ensure a power symbol lib_symbol with pin definition is embedded.
+
+        Power symbols (PWR_FLAG, GND, +5V, etc.) need an embedded lib_symbol
+        entry with a pin definition so that SchematicGraph can resolve pin
+        positions for connectivity analysis.
+
+        Args:
+            name: Power symbol name (e.g. "PWR_FLAG", "GND", "+3V3").
+        """
+        lib_id = f"power:{name}"
+        lib_symbols = self._parse_result.kiutils_obj.libSymbols
+        if lib_symbols is None:
+            lib_symbols = []
+            self._parse_result.kiutils_obj.libSymbols = lib_symbols
+
+        # Check if already embedded
+        for sym in lib_symbols:
+            sym_lib_id = getattr(sym, 'libId', '')
+            if sym_lib_id == lib_id:
+                return  # Already embedded
+
+        from kiutils.symbol import Symbol, SymbolPin
+        from kiutils.items.common import Position
+
+        pin = SymbolPin(
+            name="1",
+            number="1",
+            electricalType="power_in",
+            position=Position(0, 0),
+            length=0,
+        )
+        stub = Symbol(
+            libraryNickname="power",
+            entryName=name,
+            isPower=True,
+        )
+        stub.pins.append(pin)
+        lib_symbols.append(stub)
+
     def add_power_symbol(
         self,
         name: str,
@@ -624,6 +677,10 @@ class SchematicIR(BaseIR):
                 ),
             ],
         )
+        # Ensure the power symbol's lib_symbol definition is embedded
+        # with a pin so SchematicGraph can resolve pin positions.
+        self._ensure_power_lib_symbol(name)
+
         self._parse_result.kiutils_obj.schematicSymbols.append(sym)
         self._record_mutation("add_power_symbol", {
             "name": name,
