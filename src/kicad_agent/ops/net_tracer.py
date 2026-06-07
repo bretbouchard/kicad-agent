@@ -122,6 +122,23 @@ def _trace_single_graph(
     if not target_positions:
         return _empty_trace_result(label_name)
 
+    # Supplement: labels placed at pin body positions (not wire-ends) are
+    # orphaned in the tight union-find. Scan pin body positions within
+    # KiCad grid tolerance and add matching pins to the result.
+    _KICAD_GRID_MM = 2.54
+    has_pins = any(pos in pin_pos_map for pos in target_positions)
+    if not has_pins:
+        # Snapshot positions to avoid mutation during iteration
+        label_positions_snapshot = list(target_positions)
+        for label_pos in label_positions_snapshot:
+            for pin in graph.pins:
+                bp = pin.body_position
+                dist = ((label_pos[0] - bp[0]) ** 2 + (label_pos[1] - bp[1]) ** 2) ** 0.5
+                if dist <= _KICAD_GRID_MM:
+                    # Add this pin's wire-end position to the target set
+                    wp = _round_pos(pin.position)
+                    target_positions.add(wp)
+
     # Find all label names in this component
     blocked_labels: list[str] = []
     for pos, label in label_pos_map.items():
