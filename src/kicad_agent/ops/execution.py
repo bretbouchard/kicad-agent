@@ -6,6 +6,12 @@ OperationExecutor routes to based on file extension and op_type.
 Each function is a standalone extraction from OperationExecutor methods,
 taking explicit parameters instead of self to keep executor.py small.
 
+Concurrency safety (O-BUG-008):
+    kicad-agent is NOT safe for concurrent access to the same file. Two
+    processes (or threads) editing the same .kicad_sch or .kicad_pcb file
+    simultaneously will corrupt it. A ``.kicad_agent.lock`` file mechanism
+    warns (does not block) when concurrent editors are detected.
+
 Security (threat model):
 - T-04-06: Dispatch uses exact op_type matching; unknown raises ValueError
 - T-24-01: Path confinement checks for cross-file and create operations
@@ -14,6 +20,7 @@ Security (threat model):
 """
 
 import logging
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -27,6 +34,8 @@ from kicad_agent.parser import parse_pcb, parse_schematic
 from kicad_agent.parser.uuid_extractor import extract_uuids
 from kicad_agent.ops.ir_cache import CacheEntry, IRCache
 from kicad_agent.ops.undo_stack import UndoStack
+import time
+
 from kicad_agent.serializer import normalize_kicad_output, serialize_pcb, serialize_schematic
 
 # Import handler registries from sub-modules
@@ -39,6 +48,46 @@ from kicad_agent.ops.handlers import (
     _QUERY_HANDLERS,
     _CROSSFILE_HANDLERS,
 )
+
+# O-BUG-008: Lock file for concurrent access warning
+_LOCK_FILE_NAME = ".kicad_agent.lock"
+_LOCK_WARN_INTERVAL_S = 30.0  # Don't warn more often than this
+_last_lock_warn: float = 0.0
+
+
+def _check_concurrent_access(file_path: Path) -> None:
+    """Check for and warn about concurrent access to the same file.
+
+    Creates a ``.kicad_agent.lock`` file in the parent directory of the
+    target file. If the lock already exists (another process is editing),
+    emits a warning. Does NOT block execution -- this is advisory only.
+
+    The lock file contains the target filename and PID for debugging.
+    """
+    global _last_lock_warn
+    lock_path = file_path.parent / _LOCK_FILE_NAME
+
+    now = time.monotonic()
+    if lock_path.exists():
+        # Only warn once per interval to avoid log spam
+        if now - _last_lock_warn > _LOCK_WARN_INTERVAL_S:
+            try:
+                lock_content = lock_path.read_text(encoding="utf-8").strip()
+            except OSError:
+                lock_content = "<unreadable>"
+            logger.warning(
+                "Concurrent access detected: %s is being edited by another process. "
+                "Lock file: %s (content: %s). File corruption may occur. (O-BUG-008)",
+                file_path.name, lock_path, lock_content,
+            )
+            _last_lock_warn = now
+
+    # Create/update lock file for this process
+    try:
+        lock_content = f"{file_path.name}:pid={os.getpid()}"
+        lock_path.write_text(lock_content, encoding="utf-8")
+    except OSError:
+        pass  # Best-effort lock creation
 
 logger = logging.getLogger(__name__)
 
@@ -272,6 +321,8 @@ def execute_schematic(
     undo_stack: Optional[UndoStack],
 ) -> dict[str, Any]:
     """Execute an operation targeting a schematic file."""
+    # O-BUG-008: Check for concurrent access
+    _check_concurrent_access(file_path)
     root = op.root
 
     # Capture pre-mutation content for undo stack
@@ -383,6 +434,8 @@ def execute_pcb(
     undo_stack: Optional[UndoStack],
 ) -> dict[str, Any]:
     """Execute an operation targeting a PCB file."""
+    # O-BUG-008: Check for concurrent access
+    _check_concurrent_access(file_path)
     root = op.root
 
     # Capture pre-mutation content for undo stack
