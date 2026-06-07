@@ -193,3 +193,12 @@ def _handle_infer_connectivity(op: Any, ir: SchematicIR, file_path: Path) -> dic
         confidence_threshold=op.confidence_threshold,
         ir=ir,
     )
+
+
+@register_schematic_query("analyze_ground_topology")
+def _handle_analyze_ground_topology(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.ground_topology import analyze_ground_topology
+    return analyze_ground_topology(
+        file_path,
+        ground_nets=op.ground_nets,
+    )

@@ -125,3 +125,25 @@ class InferConnectivityOp(BaseModel):
         default="medium",
         description="Minimum confidence level to include in results",
     )
+
+
+class AnalyzeGroundTopologyOp(BaseModel):
+    """Analyze ground net topology for mixed-signal designs.
+
+    Identifies ground net variants (GND, AGND, GNDA, DGND, etc.), classifies
+    their domains (digital/analog/passive), finds interconnections via ERC
+    violations, and recommends merge/split/star_point for each connection.
+
+    Attributes:
+        op_type: Discriminator literal ``"analyze_ground_topology"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        ground_nets: Specific ground nets to analyze. None = auto-detect all.
+    """
+
+    op_type: Literal["analyze_ground_topology"] = "analyze_ground_topology"
+    target_file: TargetFile
+    ground_nets: Optional[list[str]] = Field(
+        default=None,
+        max_length=20,
+        description="Specific ground nets to analyze. None = auto-detect all.",
+    )

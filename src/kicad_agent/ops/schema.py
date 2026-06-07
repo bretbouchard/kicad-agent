@@ -303,6 +303,7 @@ from kicad_agent.ops._schema_schematic_intel import (  # noqa: E402
     DetectNetShortsOp,
     SuggestNetNamesOp,
     InferConnectivityOp,
+    AnalyzeGroundTopologyOp,
 )
 from kicad_agent.ops._schema_erc_smart import (  # noqa: E402
     ClassifyViolationsOp,
@@ -422,6 +423,7 @@ class Operation(BaseModel):
         | DetectNetShortsOp
         | SuggestNetNamesOp
         | InferConnectivityOp
+        | AnalyzeGroundTopologyOp
         | ClassifyViolationsOp
         | DiagnoseViolationsOp
         | ReviewSchematicOp
@@ -575,6 +577,7 @@ __all__ = [
     "DetectNetShortsOp",
     "SuggestNetNamesOp",
     "InferConnectivityOp",
+    "AnalyzeGroundTopologyOp",
     # ERC smart ops
     "ClassifyViolationsOp",
     "DiagnoseViolationsOp",
