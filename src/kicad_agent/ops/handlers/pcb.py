@@ -130,6 +130,47 @@ def _handle_remove_copper_zone(op: Any, ir: PcbIR, file_path: Path) -> dict[str,
     )
 
 
+@register_pcb("refill_copper_zone")
+def _handle_refill_copper_zone(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.pcb_ops import refill_copper_zone
+    return refill_copper_zone(
+        ir, file_path,
+        zone_uuid=op.zone_uuid,
+        zone_index=op.zone_index,
+    )
+
+
+@register_pcb("modify_zone_polygon")
+def _handle_modify_zone_polygon(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.pcb_ops import modify_zone_polygon
+    return modify_zone_polygon(
+        ir, file_path,
+        zone_uuid=op.zone_uuid,
+        polygon=op.polygon,
+    )
+
+
+@register_pcb("add_keepout_area")
+def _handle_add_keepout_area(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.pcb_ops import add_keepout_area
+    return add_keepout_area(
+        ir, file_path,
+        layer=op.layer,
+        keepout_type=op.keepout_type,
+        polygon=op.polygon,
+    )
+
+
+@register_pcb("remove_keepout_area")
+def _handle_remove_keepout_area(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.pcb_ops import remove_keepout_area
+    return remove_keepout_area(
+        ir, file_path,
+        zone_uuid=op.zone_uuid,
+        zone_index=op.zone_index,
+    )
+
+
 @register_pcb("set_board_outline")
 def _handle_set_board_outline(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.pcb_ops import set_board_outline

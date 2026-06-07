@@ -389,3 +389,243 @@ def _get_board_bbox_points(board: Board, margin: float = 1.0) -> list[tuple[floa
         (min_x - margin, max_y + margin),
     ]
 
+
+def modify_zone_polygon(
+    ir: PcbIR,
+    file_path: object,
+    zone_uuid: str,
+    polygon: list[tuple[float, float]],
+) -> dict[str, Any]:
+    """Replace the polygon outline of an existing copper zone.
+
+    Delegates to PcbRawWriter.modify_zone_polygon() for raw S-expression
+    manipulation.
+
+    Args:
+        ir: PcbIR for the target PCB.
+        file_path: Path to the PCB file (Path or str).
+        zone_uuid: UUID (tstamp) of the zone to modify.
+        polygon: New polygon outline points as [(x, y), ...].
+
+    Returns:
+        Dict with modified, zone_uuid.
+
+    Raises:
+        ValueError: If zone with given UUID is not found.
+    """
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    raw = ir.raw_content
+    new_content = PcbRawWriter.modify_zone_polygon(raw, zone_uuid, polygon)
+
+    if new_content == raw:
+        raise ValueError(f"Zone with UUID '{zone_uuid}' not found")
+
+    ir.commit_raw_content(new_content)
+
+    ir._record_mutation("modify_zone_polygon", {
+        "zone_uuid": zone_uuid,
+        "polygon_points": len(polygon),
+    })
+
+    return {
+        "modified": True,
+        "zone_uuid": zone_uuid,
+    }
+
+
+def refill_copper_zone(
+    ir: PcbIR,
+    file_path: object,
+    zone_uuid: str | None = None,
+    zone_index: int | None = None,
+) -> dict[str, Any]:
+    """Strip filled polygon data from a zone so KiCad refills on next save.
+
+    Removes (filled_polygon ...) and (filled_areas ...) blocks from the
+    zone. KiCad automatically refills zones when the file is opened or saved.
+
+    Args:
+        ir: PcbIR for the target PCB.
+        file_path: Path to the PCB file (Path or str).
+        zone_uuid: UUID (tstamp) of the zone (preferred).
+        zone_index: Index of the zone as fallback.
+
+    Returns:
+        Dict with refilled and zone_uuid.
+    """
+    import re
+
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    raw = ir.raw_content
+
+    # Find zone block
+    if zone_uuid is not None:
+        start, end = PcbRawWriter.find_zone_block(raw, zone_uuid)
+    elif zone_index is not None:
+        start, end = PcbRawWriter.find_zone_block_by_index(raw, zone_index)
+    else:
+        raise ValueError("Must specify zone_uuid or zone_index")
+
+    if start is None or end is None:
+        raise ValueError("Zone not found")
+
+    new_block = raw[start:end]
+
+    # Strip filled_polygon and filled_areas blocks using _find_matching_close
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter as _PRW
+    for marker in ["filled_polygon", "filled_areas"]:
+        while True:
+            match = re.search(r'\(' + marker + r'\b', new_block)
+            if match is None:
+                break
+            block_start = match.start()
+            close = _PRW._find_matching_close(new_block, block_start + 1)
+            if close is not None:
+                # Include trailing newline if present
+                trim_end = close + 1
+                if trim_end < len(new_block) and new_block[trim_end] == "\n":
+                    trim_end += 1
+                trim_start = block_start
+                if trim_start > 0 and new_block[trim_start - 1] == "\n":
+                    trim_start -= 1
+                new_block = new_block[:trim_start] + new_block[trim_end:]
+            else:
+                break
+
+    new_content = raw[:start] + new_block + raw[end:]
+
+    if new_content == raw:
+        logger.warning("No filled data found to strip from zone (may already be unfilled)")
+
+    ir.commit_raw_content(new_content)
+
+    ir._record_mutation("refill_copper_zone", {"zone_uuid": zone_uuid})
+
+    return {
+        "refilled": True,
+        "zone_uuid": zone_uuid or f"index:{zone_index}",
+    }
+
+
+def add_keepout_area(
+    ir: PcbIR,
+    file_path: object,
+    layer: str = "*",
+    keepout_type: str = "through_hole",
+    polygon: list[tuple[float, float]] | None = None,
+) -> dict[str, Any]:
+    """Add a keepout area to the PCB.
+
+    Builds a (zone (net 0 "") (layer ...) (keepout ...) (polygon ...))
+    S-expression and inserts it via PcbRawWriter.insert_zone().
+
+    Args:
+        ir: PcbIR for the target PCB.
+        file_path: Path to the PCB file (Path or str).
+        layer: Layer restriction ("*" = all layers).
+        keepout_type: Type of keepout (through_hole, via, tracks, pads).
+        polygon: Keepout outline points. Uses board bbox if None.
+
+    Returns:
+        Dict with keepout_added, layer, keepout_type.
+    """
+    import uuid as _uuid
+
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    if polygon is None:
+        polygon = _get_board_bbox_points(ir.board, margin=1.0)
+
+    keepout_uuid = str(_uuid.uuid4())
+
+    xy_entries = " ".join(
+        f"(xy {x:g} {y:g})" for x, y in polygon
+    )
+
+    zone_sexp = f"""  (zone
+    (net 0 "")
+    (layer "{layer}")
+    (uuid "{keepout_uuid}")
+    (hatch edge 0.5)
+    (connect_pads
+      (clearance 0)
+    )
+    (min_thickness 0.25)
+    (keepout {keepout_type})
+    (polygon
+      (pts
+        {xy_entries}
+      )
+    )
+  )
+"""
+
+    raw = ir.raw_content
+    new_raw = PcbRawWriter.insert_zone(raw, zone_sexp)
+    ir.commit_raw_content(new_raw)
+
+    ir._record_mutation("add_keepout_area", {
+        "layer": layer,
+        "keepout_type": keepout_type,
+    })
+
+    return {
+        "keepout_added": True,
+        "layer": layer,
+        "keepout_type": keepout_type,
+    }
+
+
+def remove_keepout_area(
+    ir: PcbIR,
+    file_path: object,
+    zone_uuid: str | None = None,
+    zone_index: int | None = None,
+) -> dict[str, Any]:
+    """Remove a keepout area from the PCB.
+
+    Same mechanism as remove_copper_zone but with keepout-specific messaging.
+
+    Args:
+        ir: PcbIR for the target PCB.
+        file_path: Path to the PCB file (Path or str).
+        zone_uuid: UUID (tstamp) of the keepout (preferred).
+        zone_index: Index as fallback.
+
+    Returns:
+        Dict with removed and zone_uuid.
+    """
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    if zone_uuid is not None:
+        start, end = PcbRawWriter.find_zone_block(ir.raw_content, zone_uuid)
+        if start is None or end is None:
+            raise ValueError(f"Keepout zone with UUID '{zone_uuid}' not found")
+        identifier = zone_uuid
+    elif zone_index is not None:
+        start, end = PcbRawWriter.find_zone_block_by_index(ir.raw_content, zone_index)
+        if start is None or end is None:
+            raise IndexError(
+                f"Zone index {zone_index} out of range"
+            )
+        identifier = f"index:{zone_index}"
+    else:
+        raise ValueError("Must specify zone_uuid or zone_index")
+
+    raw = ir.raw_content
+    trim_start = start
+    if trim_start > 0 and raw[trim_start - 1] == "\n":
+        trim_start -= 1
+    new_content = raw[:trim_start] + raw[end:]
+
+    ir.commit_raw_content(new_content)
+
+    ir._record_mutation("remove_keepout_area", {"zone_uuid": identifier})
+
+    return {
+        "removed": True,
+        "zone_uuid": identifier,
+    }
+

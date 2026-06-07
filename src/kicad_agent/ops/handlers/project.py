@@ -4,6 +4,7 @@ Handlers receive (op, file_path) and return a result dict.
 """
 
 import logging
+import re
 from pathlib import Path
 from typing import Any, Callable
 
@@ -111,6 +112,7 @@ def _handle_list_lib_entries(op: Any, file_path: Path) -> dict[str, Any]:
 @register_project("modify_net_class")
 def _handle_modify_net_class(op: Any, file_path: Path) -> dict[str, Any]:
     from kicad_agent.project.design_rules import (
+        detect_net_class_conflicts,
         parse_design_rules,
         serialize_design_rules,
     )
@@ -127,12 +129,21 @@ def _handle_modify_net_class(op: Any, file_path: Path) -> dict[str, Any]:
             "diff_pair_gap": op.diff_pair_gap,
         }.items() if v is not None
     }
+
+    # Advisory conflict detection (T-79-02): log but do not block
+    conflicts = detect_net_class_conflicts(dru, op.name, **updates)
+    for conflict in conflicts:
+        logger.warning(
+            "Net class conflict: %s", conflict["detail"],
+        )
+
     dru.modify_net_class(op.name, **updates)
     serialize_design_rules(dru, file_path)
     return {
         "net_class": op.name,
         "action": "modified",
         "updated_fields": list(updates.keys()),
+        "conflicts": conflicts if conflicts else None,
     }
 
 
@@ -142,10 +153,46 @@ def _handle_remove_net_class(op: Any, file_path: Path) -> dict[str, Any]:
         parse_design_rules,
         serialize_design_rules,
     )
+
+    # Read raw file before parsing to capture add_net entries for the class
+    raw_content = file_path.read_text(encoding="utf-8")
+
     dru = parse_design_rules(file_path)
+
+    # Capture nets assigned to this class from raw content before removal.
+    # NetClassDef doesn't store add_net entries, so we extract from the
+    # raw S-expression by finding the net_class block and scanning for add_net.
+    _add_net_pattern = re.compile(r'\(add_net\s+"([^"]+)"\)')
+    reassigned_nets: list[str] = []
+
+    # Find the net_class block for the target class in raw content
+    _class_pattern = re.compile(
+        r'\(net_class\s+"' + re.escape(op.name) + r'"',
+    )
+    class_match = _class_pattern.search(raw_content)
+    if class_match is not None:
+        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        close = PcbRawWriter._find_matching_close(raw_content, class_match.start())
+        if close is not None:
+            class_block = raw_content[class_match.start() : close + 1]
+            reassigned_nets = _add_net_pattern.findall(class_block)
+
     removed = dru.remove_net_class(op.name)
+
+    if reassigned_nets:
+        logger.warning(
+            "Net class '%s' removed. %d nets will revert to 'Default': %s",
+            op.name,
+            len(reassigned_nets),
+            ", ".join(reassigned_nets[:8]),
+        )
+
     serialize_design_rules(dru, file_path)
-    return {"net_class": removed.name, "action": "removed"}
+    return {
+        "net_class": removed.name,
+        "action": "removed",
+        "reassigned_nets": reassigned_nets,
+    }
 
 
 @register_project("list_net_classes")

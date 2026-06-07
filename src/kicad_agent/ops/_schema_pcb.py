@@ -379,6 +379,95 @@ class RemoveCopperZoneOp(BaseModel):
         return self
 
 
+class RefillCopperZoneOp(BaseModel):
+    """Strip filled polygon data from a zone so KiCad refills on next save.
+
+    Attributes:
+        op_type: Discriminator literal ``"refill_copper_zone"``.
+        target_file: Relative path to the target KiCad PCB file.
+        zone_uuid: Zone UUID (tstamp) to identify the zone (preferred).
+        zone_index: Zone index as fallback.
+    """
+
+    op_type: Literal["refill_copper_zone"] = "refill_copper_zone"
+    target_file: TargetFile
+    zone_uuid: Optional[str] = Field(default=None, max_length=64, description="Zone UUID (tstamp)")
+    zone_index: Optional[int] = Field(default=None, ge=0, description="Zone index fallback")
+
+    @model_validator(mode="after")
+    def _check_identifier_provided(self) -> "RefillCopperZoneOp":
+        if self.zone_uuid is None and self.zone_index is None:
+            raise ValueError("Must specify at least one of zone_uuid or zone_index")
+        return self
+
+
+class ModifyZonePolygonOp(BaseModel):
+    """Replace the outline polygon of an existing copper zone.
+
+    Attributes:
+        op_type: Discriminator literal ``"modify_zone_polygon"``.
+        target_file: Relative path to the target KiCad PCB file.
+        zone_uuid: Zone UUID (tstamp) to identify the zone.
+        polygon: New polygon outline points (minimum 3).
+    """
+
+    op_type: Literal["modify_zone_polygon"] = "modify_zone_polygon"
+    target_file: TargetFile
+    zone_uuid: str = Field(min_length=1, max_length=64, description="Zone UUID (tstamp)")
+    polygon: list[tuple[float, float]] = Field(
+        min_length=3, description="New polygon outline points",
+    )
+
+
+class AddKeepoutAreaOp(BaseModel):
+    """Add a keepout area to a PCB.
+
+    Keepout areas prevent copper, vias, pads, or tracks from being placed
+    in the defined polygon region.
+
+    Attributes:
+        op_type: Discriminator literal ``"add_keepout_area"``.
+        target_file: Relative path to the target KiCad PCB file.
+        layer: Layer restriction (``"*"`` = all layers).
+        keepout_type: Type of keepout restriction.
+        polygon: Keepout area outline points (minimum 3).
+    """
+
+    op_type: Literal["add_keepout_area"] = "add_keepout_area"
+    target_file: TargetFile
+    layer: str = Field(default="*", max_length=32, description="Layer restriction (* = all)")
+    keepout_type: str = Field(
+        default="through_hole",
+        pattern=r"^(?:through_hole|via|tracks|pads)$",
+        description="Type of keepout restriction",
+    )
+    polygon: list[tuple[float, float]] = Field(
+        min_length=3, description="Keepout area outline points",
+    )
+
+
+class RemoveKeepoutAreaOp(BaseModel):
+    """Remove a keepout area from a PCB.
+
+    Attributes:
+        op_type: Discriminator literal ``"remove_keepout_area"``.
+        target_file: Relative path to the target KiCad PCB file.
+        zone_uuid: Zone UUID (tstamp) to identify the keepout (preferred).
+        zone_index: Zone index as fallback.
+    """
+
+    op_type: Literal["remove_keepout_area"] = "remove_keepout_area"
+    target_file: TargetFile
+    zone_uuid: Optional[str] = Field(default=None, max_length=64, description="Zone UUID (tstamp)")
+    zone_index: Optional[int] = Field(default=None, ge=0, description="Zone index fallback")
+
+    @model_validator(mode="after")
+    def _check_identifier_provided(self) -> "RemoveKeepoutAreaOp":
+        if self.zone_uuid is None and self.zone_index is None:
+            raise ValueError("Must specify at least one of zone_uuid or zone_index")
+        return self
+
+
 class RouteDiffPairOp(BaseModel):
     """Route a differential pair with impedance-controlled spacing.
 

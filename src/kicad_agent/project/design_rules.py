@@ -19,6 +19,7 @@ Usage:
 import logging
 import re
 from dataclasses import dataclass, field
+from typing import Any
 from pathlib import Path
 
 import sexpdata
@@ -541,6 +542,59 @@ def serialize_design_rules(dru: DesignRulesFile, path: Path) -> None:
         path: File path to write.
     """
     dru.to_file(path)
+
+
+def detect_net_class_conflicts(
+    dru: DesignRulesFile,
+    class_name: str,
+    **proposed_updates: float,
+) -> list[dict[str, Any]]:
+    """Detect clearance conflicts between a modified net class and all others.
+
+    When modifying a net class's clearance, check whether the proposed value
+    would be lower than any other net class's clearance. This is advisory
+    only (T-79-02) -- logged as warnings, never blocking.
+
+    Args:
+        dru: The DesignRulesFile containing all net classes.
+        class_name: Name of the net class being modified.
+        **proposed_updates: Proposed field updates (e.g. clearance=0.15).
+
+    Returns:
+        List of conflict dicts: [{"other_class": str, "type": str, "detail": str}].
+        Empty list if no conflicts detected.
+    """
+    conflicts: list[dict[str, Any]] = []
+
+    # Find the target class and its current clearance
+    target_nc = None
+    for nc in dru.net_classes:
+        if nc.name == class_name:
+            target_nc = nc
+            break
+
+    if target_nc is None:
+        return conflicts
+
+    proposed_clearance = proposed_updates.get("clearance")
+    if proposed_clearance is None:
+        return conflicts
+
+    for nc in dru.net_classes:
+        if nc.name == class_name:
+            continue
+        if nc.clearance > 0 and proposed_clearance < nc.clearance:
+            conflicts.append({
+                "other_class": nc.name,
+                "type": "clearance_violation",
+                "detail": (
+                    f"Proposed clearance {proposed_clearance}mm for '{class_name}' "
+                    f"is less than '{nc.name}' clearance {nc.clearance}mm. "
+                    f"Nets in '{nc.name}' may have insufficient clearance."
+                ),
+            })
+
+    return conflicts
 
 
 def extract_net_classes(path: Path) -> list[NetClassDef]:
