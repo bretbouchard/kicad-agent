@@ -99,10 +99,59 @@ def generate_fixes(
             ))
 
         elif target.routing_type == "l_shape":
-            # L-shaped routing disabled for safety — same_axis only for now.
-            # L-shaped routing creates new wire segments that can introduce
-            # wire_dangling and endpoint_off_grid violations.
-            pass
+            # R-BUG-008 fix: implement L-shaped routing with grid-snapped corners.
+            # Route from dangling endpoint to corner, then corner to target pin.
+            # Two fix entries: extend existing wire to corner + new wire segment.
+            dangling_ep = _find_dangling_endpoint(
+                violation_pos, target.wire_start, target.wire_end,
+            )
+
+            # Choose L-shape direction: prefer the axis with shorter total travel
+            # Option A: horizontal-first (dangling_x, target_y) -> target
+            corner_a = (_snap_to_grid(dangling_ep[0], grid), _snap_to_grid(target_pos[1], grid))
+            dist_a = abs(corner_a[0] - dangling_ep[0]) + abs(corner_a[1] - dangling_ep[1]) + \
+                     abs(target_pos[0] - corner_a[0]) + abs(target_pos[1] - corner_a[1])
+
+            # Option B: vertical-first (target_x, dangling_y) -> target
+            corner_b = (_snap_to_grid(target_pos[0], grid), _snap_to_grid(dangling_ep[1], grid))
+            dist_b = abs(corner_b[0] - dangling_ep[0]) + abs(corner_b[1] - dangling_ep[1]) + \
+                     abs(target_pos[0] - corner_b[0]) + abs(target_pos[1] - corner_b[1])
+
+            # Use shorter path, fall back to option A if equal
+            corner = corner_a if dist_a <= dist_b else corner_b
+
+            # Skip degenerate L-shapes that are actually same-axis
+            if corner == dangling_ep or corner == target_pos:
+                continue
+
+            # Fix 1: extend existing wire endpoint to the corner
+            fixes.append(WireFix(
+                file=target.file,
+                fix_type="extend",
+                old_endpoint=dangling_ep,
+                new_endpoint=corner,
+                net_name=target.net_name,
+                target_ref=target.target_ref,
+                target_pin=target.target_pin,
+                distance=target.distance,
+                sheet=target.sheet,
+                wire_endpoints=wire_eps,
+            ))
+
+            # Fix 2: add new wire segment from corner to target pin
+            fixes.append(WireFix(
+                file=target.file,
+                fix_type="new_segment",
+                old_endpoint=(0, 0),  # unused for new_segment
+                new_endpoint=(0, 0),  # unused for new_segment
+                new_wire_points=[corner, target_pos],
+                net_name=target.net_name,
+                target_ref=target.target_ref,
+                target_pin=target.target_pin,
+                distance=target.distance,
+                sheet=target.sheet,
+                wire_endpoints=None,
+            ))
 
     return fixes
 
@@ -127,19 +176,6 @@ def _find_dangling_endpoint(
             return ws
     # Fallback: return violation position (shouldn't happen with valid data)
     return violation_pos
-
-
-def _snap_to_grid(pos: tuple[float, float], grid: float) -> tuple[float, float]:
-    """Snap coordinates to nearest grid point.
-
-    Uses floor(x/grid + 0.5) instead of round() to avoid banker's rounding
-    which incorrectly snaps already-on-grid values (e.g., 59.69/2.54=23.5 → 24).
-    """
-    def snap(v: float) -> float:
-        nearest = int(v / grid + 0.5)
-        return round(nearest * grid, 2)
-
-    return (snap(pos[0]), snap(pos[1]))
 
 
 def _round_pos(pos: tuple[float, float]) -> tuple[float, float]:
