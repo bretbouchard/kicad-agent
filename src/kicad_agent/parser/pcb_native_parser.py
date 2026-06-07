@@ -781,9 +781,11 @@ class NativeParser:
 
     @classmethod
     def _extract_graphic_items(cls, root: list) -> list[NativeGraphicItem]:
-        """Extract board-level graphic items: gr_line, gr_arc, gr_circle, gr_rect, gr_poly, gr_curve.
+        """Extract board-level graphic items: gr_line, gr_arc, gr_circle, gr_rect, gr_poly, gr_curve,
+        gr_text, gr_text_box, dimension, target.
 
-        Council HIGH-2: supports 6 types.
+        Council HIGH-2: supports 6 geometric types.
+        P-BUG-005: adds 4 annotation types.
         """
         items: list[NativeGraphicItem] = []
 
@@ -794,6 +796,10 @@ class NativeParser:
             "gr_rect": "rect",
             "gr_poly": "poly",
             "gr_curve": "curve",
+            "gr_text": "text",
+            "gr_text_box": "text_box",
+            "dimension": "dimension",
+            "target": "target",
         }
 
         for sexp_name, item_type in type_map.items():
@@ -888,6 +894,45 @@ class NativeParser:
 
         # UUID
         gi.uuid = _find_string_child(block, "uuid")
+
+        # P-BUG-005: Text content (gr_text, gr_text_box)
+        if item_type in ("text", "text_box"):
+            # gr_text: (gr_text "text content" ...)
+            # gr_text_box: (gr_text_box "text content" ...)
+            if len(block) > 1 and isinstance(block[1], str):
+                gi.text = block[1]
+            # Also check for (effects ...) font size
+            effects_block = _find_symbol(block, "effects")
+            if effects_block:
+                font_block = _find_symbol(effects_block, "font")
+                if font_block:
+                    size_block = _find_symbol(font_block, "size")
+                    if size_block and len(size_block) >= 3:
+                        try:
+                            gi.font_size = float(size_block[1])
+                        except (ValueError, TypeError):
+                            pass
+                # Check rotation in effects
+                justify_block = _find_symbol(effects_block, "justify")
+                if justify_block:
+                    for j in justify_block[1:]:
+                        if isinstance(j, str) and "mirror" in j.lower():
+                            break
+
+        # P-BUG-005: Dimension text
+        if item_type == "dimension":
+            dim_text = _find_symbol(block, "property")
+            if dim_text and len(dim_text) >= 3 and isinstance(dim_text[2], str):
+                gi.text = dim_text[2]
+
+        # P-BUG-005: Target size
+        if item_type == "target":
+            size_val = _find_first_value(block, "size")
+            if size_val is not None:
+                try:
+                    gi.target_size = float(size_val)
+                except (ValueError, TypeError):
+                    pass
 
         return gi
 

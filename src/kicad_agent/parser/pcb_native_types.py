@@ -144,9 +144,11 @@ class NativeVia:
 
 @dataclass
 class NativeGraphicItem:
-    """Board-level graphic element: gr_line, gr_arc, gr_circle, gr_rect, gr_poly, gr_curve.
+    """Board-level graphic element: gr_line, gr_arc, gr_circle, gr_rect, gr_poly, gr_curve,
+    gr_text, gr_text_box, dimension, target.
 
-    Council HIGH-2: supports 6 types (line, arc, circle, rect, poly, curve).
+    Council HIGH-2: supports 6 geometric types (line, arc, circle, rect, poly, curve).
+    P-BUG-005: adds 4 annotation types (gr_text, gr_text_box, dimension, target).
 
     start/end/mid/center use _NativePosition (NamedTuple) for both tuple
     indexing and attribute access (pos.X, pos.Y).
@@ -162,6 +164,12 @@ class NativeGraphicItem:
     width: float = 0.0
     filled: str | None = None
     uuid: str = ""
+    # P-BUG-005: text annotation fields
+    text: str = ""
+    font_size: float = 0.0
+    rotation: float = 0.0
+    # P-BUG-005: dimension/target fields
+    target_size: float = 0.0
 
 
 @dataclass
