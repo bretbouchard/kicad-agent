@@ -554,6 +554,15 @@ def _parse_labels(body: str) -> list[Label]:
             label_type="hierarchical",
         ))
 
+    # R-BUG-007: Hierarchical sheet pins: (sheet_pin "NAME" ... (at X Y ANGLE) ...)
+    # These provide cross-sheet connectivity between parent and child sheets
+    for m in re.finditer(r'\(sheet_pin\s+"([^"]+)"[\s\S]*?\(at\s+([\d.]+)\s+([\d.]+)', body):
+        labels.append(Label(
+            name=m.group(1),
+            position=(float(m.group(2)), float(m.group(3))),
+            label_type="hierarchical",
+        ))
+
     return labels
 
 

@@ -25,6 +25,7 @@ from kicad_agent.schematic_routing.schematic_graph import (
     Wire,
     _find_lib_symbols_range,
     _parse_junctions,
+    _parse_labels,
     _parse_no_connects,
     _parse_wires,
     _round_pos,
@@ -293,3 +294,55 @@ class TestSchematicGraphJunctionBFS:
 
         net = graph.trace_endpoint_to_net((0.0, 0.0), {})
         assert net == "OUT"
+
+
+class TestSheetPinParsing:
+    """Tests for R-BUG-007: hierarchical sheet pin support."""
+
+    def test_sheet_pins_parsed_as_hierarchical_labels(self) -> None:
+        """Sheet pins are parsed and appear in labels list as hierarchical type."""
+        body = """
+        (wire (pts (xy 50 100) (xy 100 100)))
+        (sheet_pin "AUDIO_IN" (at 100 100 0)
+          (effects (font (size 1.27 1.27)))
+        )
+        """
+        labels = _parse_labels(body)
+        sheet_pin_labels = [l for l in labels if l.name == "AUDIO_IN" and l.label_type == "hierarchical"]
+        assert len(sheet_pin_labels) == 1, f"Expected 1 sheet_pin label, got {len(sheet_pin_labels)}"
+        assert sheet_pin_labels[0].position == (100.0, 100.0)
+
+    def test_sheet_pin_in_connection_targets(self) -> None:
+        """Sheet pin positions appear as connection targets for wire routing."""
+        graph = SchematicGraph()
+        graph.wires = [Wire(start=(50.0, 100.0), end=(100.0, 100.0))]
+        graph._build_wire_endpoint_index()
+        graph.labels = [
+            Label(name="AUDIO_IN", position=(100.0, 100.0), label_type="hierarchical"),
+        ]
+        for label in graph.labels:
+            graph._label_pos_index[_round_pos(label.position)] = label
+
+        targets = graph.get_connection_targets()
+        assert (100.0, 100.0) in targets
+
+    def test_wire_connects_to_sheet_pin(self) -> None:
+        """A wire endpoint at a sheet pin position is traced to the sheet pin name."""
+        graph = SchematicGraph()
+        graph.wires = [Wire(start=(50.0, 100.0), end=(100.0, 100.0))]
+        graph._build_wire_endpoint_index()
+        graph.labels = [
+            Label(name="AUDIO_IN", position=(100.0, 100.0), label_type="hierarchical"),
+        ]
+        for label in graph.labels:
+            graph._label_pos_index[_round_pos(label.position)] = label
+
+        # Trace from the wire start to the sheet pin
+        net = graph.trace_endpoint_to_net((50.0, 100.0), {})
+        assert net == "AUDIO_IN"
+
+    def test_no_sheet_pins_when_none_present(self) -> None:
+        """_parse_labels returns empty when no sheet pins exist."""
+        labels = _parse_labels("(wire (pts (xy 10 20) (xy 30 40)))")
+        sheet_pin_labels = [l for l in labels if l.label_type == "hierarchical"]
+        assert len(sheet_pin_labels) == 0
