@@ -160,15 +160,20 @@ class TestPersistentUndoStack:
         assert not orphan.exists()
 
     def test_clear_removes_all_files(self, stack):
-        """clear() removes all entry files and manifest."""
+        """clear() removes all entry files; manifest persists with empty state."""
         stack.push(Path("a.kicad_sch"), "pre", "post", "op")
         stack.push(Path("b.kicad_sch"), "pre", "post", "op")
 
         stack.clear()
 
         undo_dir = stack._undo_dir
-        json_files = list(undo_dir.glob("*.json"))
-        assert len(json_files) == 0
+        json_files = [f for f in undo_dir.glob("*.json") if f.name != "manifest.json"]
+        assert len(json_files) == 0, "All entry files should be removed"
+        # Manifest should exist with empty entries (O-BUG-005 fix)
+        manifest = undo_dir / "manifest.json"
+        assert manifest.exists()
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        assert len(data["entries"]) == 0
 
     def test_path_traversal_rejected(self, stack):
         """Entries with .. in filename are rejected."""
