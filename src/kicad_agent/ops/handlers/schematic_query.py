@@ -135,6 +135,16 @@ def _handle_detect_net_conflicts(op: Any, ir: SchematicIR, file_path: Path) -> d
     )
 
 
+@register_schematic_query("detect_net_shorts")
+def _handle_detect_net_shorts(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.net_short_detector import detect_net_shorts
+    return detect_net_shorts(
+        file_path,
+        include=op.include,
+        severity=op.severity,
+    )
+
+
 @register_schematic_query("suggest_net_names")
 def _handle_suggest_net_names(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.schematic_routing.net_namer import suggest_net_names

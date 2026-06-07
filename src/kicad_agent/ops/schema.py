@@ -298,6 +298,7 @@ from kicad_agent.ops._schema_schematic_routing import (  # noqa: E402
 from kicad_agent.ops._schema_schematic_intel import (  # noqa: E402
     ExtractNetsOp,
     DetectNetConflictsOp,
+    DetectNetShortsOp,
     SuggestNetNamesOp,
     InferConnectivityOp,
 )
@@ -414,6 +415,7 @@ class Operation(BaseModel):
         | RegenerateWiringOp
         | ExtractNetsOp
         | DetectNetConflictsOp
+        | DetectNetShortsOp
         | SuggestNetNamesOp
         | InferConnectivityOp
         | ClassifyViolationsOp
@@ -564,6 +566,7 @@ __all__ = [
     # Schematic intelligence ops
     "ExtractNetsOp",
     "DetectNetConflictsOp",
+    "DetectNetShortsOp",
     "SuggestNetNamesOp",
     "InferConnectivityOp",
     # ERC smart ops

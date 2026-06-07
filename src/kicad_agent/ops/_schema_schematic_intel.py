@@ -75,6 +75,34 @@ class SuggestNetNamesOp(BaseModel):
     )
 
 
+class DetectNetShortsOp(BaseModel):
+    """Detect shorted nets with pin-level tracing and severity classification.
+
+    Combines ERC multiple_net_names violations with netlist pin membership
+    to identify shared pins between shorted nets. Classifies severity:
+    critical (power-to-power or power-to-ground), high (power-to-signal or
+    signal-to-signal), medium (ground variant to ground variant).
+
+    Attributes:
+        op_type: Discriminator literal ``"detect_net_shorts"``.
+        target_file: Relative path to the target .kicad_sch file.
+        include: Only check these specific net names. None = all.
+        severity: Filter results by severity level.
+    """
+
+    op_type: Literal["detect_net_shorts"] = "detect_net_shorts"
+    target_file: TargetFile
+    include: Optional[list[str]] = Field(
+        default=None,
+        max_length=10,
+        description="Only check these net names. None = all.",
+    )
+    severity: Literal["all", "critical", "high", "medium"] = Field(
+        default="all",
+        description="Filter by severity: all, critical, high, or medium.",
+    )
+
+
 class InferConnectivityOp(BaseModel):
     """Infer net connectivity from partial wiring with confidence scoring.
 
