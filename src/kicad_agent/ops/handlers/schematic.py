@@ -431,6 +431,18 @@ def _handle_resolve_shorted_nets(op: Any, ir: SchematicIR, file_path: Path) -> d
     )
 
 
+@register_schematic("fix_net_short")
+def _handle_fix_net_short(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.net_short_fixer import fix_net_short
+    return fix_net_short(
+        ir, file_path,
+        net_a=op.net_a,
+        net_b=op.net_b,
+        dry_run=op.dry_run,
+        remove_strategy=op.remove_strategy,
+    )
+
+
 @register_schematic("place_net_labels")
 def _handle_place_net_labels(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.net_label_placer import place_net_labels

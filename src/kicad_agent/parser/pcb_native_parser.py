@@ -322,15 +322,12 @@ class NativeParser:
 
         Per D-08: Parse BEFORE normalization to preserve net numbers.
         Raw sexpdata tree has (net N "NAME") as [Symbol("net"), N, "NAME"].
+
+        P-BUG-004: Only scans root's direct children to avoid O(n) waste
+        from _find_all_symbols traversing the entire tree (including nested
+        net declarations inside footprints/zones that we skip anyway).
         """
         nets: list[NativeNet] = []
-        for net_block in _find_all_symbols(root, "net"):
-            if len(net_block) < 3:
-                continue
-            # Skip nets that are children of footprints (pad nets, zone nets)
-            # Top-level nets are direct children of kicad_pcb root
-            # This is handled by only searching root-level children below
-            pass
 
         # Only extract top-level net declarations (direct children of root)
         for item in root:
