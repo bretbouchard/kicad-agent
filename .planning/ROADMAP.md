@@ -1312,9 +1312,9 @@ Plans:
 Plans:
 - [x] 77-01-PLAN.md -- Wave 1: Critical parser & validation fixes (depth pre-scan, UUID parent types, thread-safe recursion, shutil import)
 - [x] 77-02-PLAN.md -- Wave 1: Critical serializer fixes (kiutils bypass, BOM preservation, UUID count validation, normalizer unification, atomic writes)
-- [ ] 77-03-PLAN.md — Wave 2: Ops/execution pipeline fixes (O-BUG-001 through O-BUG-007)
-- [ ] 77-04-PLAN.md — Wave 2: Schematic routing fixes (R-BUG-001 through R-BUG-008)
-- [ ] 77-05-PLAN.md — Wave 3: Medium/Low cleanup (P-BUG-005, P-BUG-006, V-BUG-002, V-BUG-003, O-BUG-008/009, dead code)
+- [x] 77-03-PLAN.md -- Wave 2: Ops/execution pipeline fixes (cache invalidation, Transaction wrapping, manifest drift, multi-sheet gate)
+- [x] 77-04-PLAN.md -- Wave 2: Schematic routing fixes (power unit placement, multi-unit pins, grid snap, L-shaped routing)
+- [x] 77-05-PLAN.md -- Wave 3: Medium/Low cleanup (graphic types, DFM profile, split plane, batch errors, dead code)
 
 ### Phase 78: Known Limitations Remediation
 **Goal:** Fix 6 known limitations identified in post-ship review: reward model held-out evaluation (M-14), GRPO naming accuracy (M-15), roundtrip regression on smd_test_board (RT-01), test isolation flakes (TI-01), native parser edge case documentation (DOC-01), via optimization documentation (DOC-02).
