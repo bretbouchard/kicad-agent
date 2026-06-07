@@ -425,6 +425,121 @@ def _independent_score(chain_text: str) -> float:
     return (format_score + depth_score) / 2.0
 
 
+# ---------------------------------------------------------------------------
+# Held-out evaluation: rank correlation against ground-truth quality scores
+# ---------------------------------------------------------------------------
+
+def eval_reward_quality(
+    model_predictions: list[PredictedReward],
+    ground_truth_labels: list[tuple[float, float, float]],
+) -> dict[str, float]:
+    """Evaluate reward model quality against ground-truth scores.
+
+    Computes rank correlation metrics between model predictions and
+    ground-truth quality labels. Uses rule-based ground truth (from
+    score_chain()) to avoid circular evaluation where the model scores
+    its own outputs.
+
+    Args:
+        model_predictions: List of PredictedReward from the model.
+        ground_truth_labels: List of (format, quality, accuracy) tuples
+            from rule-based scoring. Same length as model_predictions.
+
+    Returns:
+        Dict with keys:
+            kendall_tau: Kendall rank correlation coefficient.
+            spearman_rho: Spearman rank correlation coefficient.
+            top_1_accuracy: Fraction where model's #1 matches truth's #1.
+            top_3_accuracy: Fraction where truth's #1 is in model's top-3.
+            n_samples: Number of samples evaluated.
+
+    Raises:
+        ValueError: If input lists have different lengths or are empty.
+    """
+    if len(model_predictions) != len(ground_truth_labels):
+        raise ValueError(
+            f"model_predictions and ground_truth_labels must have the same length: "
+            f"got {len(model_predictions)} and {len(ground_truth_labels)}"
+        )
+    if len(model_predictions) == 0:
+        raise ValueError("model_predictions and ground_truth_labels must not be empty")
+
+    # Compute composite average scores
+    model_avgs = [
+        (p.format_score + p.quality_score + p.accuracy_score) / 3.0
+        for p in model_predictions
+    ]
+    truth_avgs = [
+        (gt[0] + gt[1] + gt[2]) / 3.0
+        for gt in ground_truth_labels
+    ]
+
+    n = len(model_avgs)
+
+    # Kendall tau and Spearman rho via scipy (with numpy fallback)
+    try:
+        from scipy.stats import kendalltau, spearmanr
+
+        tau_result = kendalltau(model_avgs, truth_avgs)
+        kendall_tau = tau_result.statistic if hasattr(tau_result, 'statistic') else tau_result[0]
+
+        rho_result = spearmanr(model_avgs, truth_avgs)
+        spearman_rho = rho_result.statistic if hasattr(rho_result, 'statistic') else rho_result[0]
+    except ImportError:
+        # Numpy-only fallback: compute rank correlation manually
+        import numpy as np
+
+        def _rank(x: list[float]) -> list[float]:
+            arr = np.array(x)
+            order = np.argsort(arr)[::-1]  # descending rank
+            ranks = np.empty_like(order, dtype=float)
+            ranks[order] = np.arange(1, len(arr) + 1, dtype=float)
+            return list(ranks)
+
+        model_ranks = _rank(model_avgs)
+        truth_ranks = _rank(truth_avgs)
+
+        # Pearson correlation of ranks = Spearman rho
+        mr = np.array(model_ranks)
+        tr = np.array(truth_ranks)
+        mr_centered = mr - mr.mean()
+        tr_centered = tr - tr.mean()
+        denom = np.sqrt(np.sum(mr_centered**2) * np.sum(tr_centered**2))
+        spearman_rho = float(np.sum(mr_centered * tr_centered) / denom) if denom > 0 else 0.0
+
+        # Kendall tau approximation from rank data
+        concordant = 0
+        discordant = 0
+        for i in range(n):
+            for j in range(i + 1, n):
+                diff_model = model_ranks[i] - model_ranks[j]
+                diff_truth = truth_ranks[i] - truth_ranks[j]
+                if diff_model * diff_truth > 0:
+                    concordant += 1
+                elif diff_model * diff_truth < 0:
+                    discordant += 1
+        total_pairs = concordant + discordant
+        kendall_tau = (concordant - discordant) / total_pairs if total_pairs > 0 else 0.0
+
+    # Top-k accuracy: check if the ground-truth best is in the model's top-k
+    # Sort model indices by score descending
+    ranked_model_indices = sorted(range(n), key=lambda i: model_avgs[i], reverse=True)
+    # Index of the ground-truth best chain
+    truth_best_idx = int(max(range(n), key=lambda i: truth_avgs[i]))
+
+    top_1_accuracy = 1.0 if ranked_model_indices[0] == truth_best_idx else 0.0
+    top_k = min(3, n)
+    top_3_accuracy = 1.0 if truth_best_idx in ranked_model_indices[:top_k] else 0.0
+
+    return {
+        "kendall_tau": float(kendall_tau),
+        "spearman_rho": float(spearman_rho),
+        "top_1_accuracy": float(top_1_accuracy),
+        "top_3_accuracy": float(top_3_accuracy),
+        "n_samples": float(n),
+    }
+
+
 def train_reward_model(
     model: RewardModel,
     train_texts: list[str],
