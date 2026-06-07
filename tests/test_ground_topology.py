@@ -395,3 +395,97 @@ class TestHandlerDispatch:
         ir = MagicMock()
         result = handler(op, ir, Path("test.kicad_sch"))
         assert result["ground_net_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# ERC supplement (ground net discovery from ERC violations)
+# ---------------------------------------------------------------------------
+
+class TestErcSupplement:
+    """Tests for ERC supplement discovering ground nets not in netlist."""
+
+    @patch("kicad_agent.ops.net_tracer.trace_net_from_label")
+    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
+    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    def test_erc_discovers_missing_ground_net(
+        self, mock_netlist: MagicMock, mock_erc: MagicMock,
+        mock_trace: MagicMock,
+    ) -> None:
+        """Ground net in ERC but not netlist gets discovered."""
+        mock_netlist.return_value = {"GND": {("R1", "1")}}
+        mock_erc.return_value = [_make_erc_short("GNDA", "AGND")]
+        mock_trace.return_value = {
+            "label": "GNDA",
+            "reachable_pins": [{"ref": "U1", "pin_number": "4"}],
+            "pin_count": 1,
+            "far_pins": [],
+            "far_pin_count": 0,
+        }
+
+        result = analyze_ground_topology(Path("test.kicad_sch"))
+
+        # GNDA and AGND should be discovered via ERC
+        assert "GNDA" in result["ground_nets"]
+        assert "AGND" in result["ground_nets"]
+        assert "GND" in result["ground_nets"]
+        assert result["ground_net_count"] == 3
+
+    @patch("kicad_agent.ops.net_tracer.trace_net_from_label")
+    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
+    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    def test_erc_non_ground_shorts_ignored(
+        self, mock_netlist: MagicMock, mock_erc: MagicMock,
+        mock_trace: MagicMock,
+    ) -> None:
+        """ERC shorts between non-ground nets don't create ground entries."""
+        mock_netlist.return_value = {"GND": {("R1", "1")}}
+        mock_erc.return_value = [_make_erc_short("SDA", "SCL")]
+
+        result = analyze_ground_topology(Path("test.kicad_sch"))
+        assert result["ground_net_count"] == 1
+        assert "SDA" not in result["ground_nets"]
+
+    @patch("kicad_agent.ops.net_tracer.trace_net_from_label")
+    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
+    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    def test_trace_fills_zero_pin_ground_nets(
+        self, mock_netlist: MagicMock, mock_erc: MagicMock,
+        mock_trace: MagicMock,
+    ) -> None:
+        """trace_net_from_label populates pins for ERC-discovered ground nets."""
+        mock_netlist.return_value = {"GND": {("R1", "1")}}
+        mock_erc.return_value = [_make_erc_short("GNDA", "AGND")]
+        mock_trace.return_value = {
+            "label": "GNDA",
+            "reachable_pins": [
+                {"ref": "U1", "pin_number": "4"},
+                {"ref": "R5", "pin_number": "2"},
+            ],
+            "pin_count": 2,
+            "far_pins": [
+                {"ref": "U2", "pin_number": "1"},
+            ],
+            "far_pin_count": 1,
+        }
+
+        result = analyze_ground_topology(Path("test.kicad_sch"))
+        # GNDA should have 2 traced pins + 1 far pin = 3 total
+        assert result["ground_nets"]["GNDA"]["pin_count"] == 3
+        assert "U1" in result["ground_nets"]["GNDA"]["refs"]
+        assert "U2" in result["ground_nets"]["GNDA"]["refs"]
+
+    @patch("kicad_agent.ops.net_tracer.trace_net_from_label")
+    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
+    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    def test_trace_failure_falls_back_to_empty(
+        self, mock_netlist: MagicMock, mock_erc: MagicMock,
+        mock_trace: MagicMock,
+    ) -> None:
+        """If trace_net_from_label raises, ground net stays with 0 pins."""
+        mock_netlist.return_value = {"GND": {("R1", "1")}}
+        mock_erc.return_value = [_make_erc_short("GNDA", "AGND")]
+        mock_trace.side_effect = Exception("graph parse failed")
+
+        result = analyze_ground_topology(Path("test.kicad_sch"))
+        assert result["ground_nets"]["GNDA"]["pin_count"] == 0
+        assert result["ground_nets"]["GNDA"]["domain"] == "passive_only"

@@ -260,6 +260,16 @@ def analyze_ground_topology(
     net_pins = _export_and_parse_netlist(sch_path)
     ground = _find_ground_nets(net_pins, explicit_list=ground_nets)
 
+    # 1b. ERC supplement: discover ground net names from ERC violations
+    # that aren't in the netlist (shorted nets get merged by KiCad's netlister).
+    if not ground_nets:
+        from kicad_agent.ops.net_short_detector import _is_ground_net
+        erc_shorts = _extract_erc_shorts(sch_path)
+        for short in erc_shorts:
+            for net_name in (short["net_a"], short["net_b"]):
+                if _is_ground_net(net_name) and net_name not in ground:
+                    ground[net_name] = set()
+
     if not ground:
         return {
             "ground_nets": {},
@@ -277,8 +287,32 @@ def analyze_ground_topology(
     connections = _find_ground_connections(ground_names, erc_shorts)
 
     # 4. Classify domains for each ground net
+    # For ground nets with 0 pins (ERC-only, shorted by wire), use
+    # trace_net_from_label to get per-label pin assignments from the
+    # schematic graph (bypasses netlist merging).
     ground_info: dict[str, dict[str, Any]] = {}
     for name, pins in ground.items():
+        if not pins:
+            # Try schematic graph tracing for shorted/merged ground nets
+            try:
+                from kicad_agent.ops.net_tracer import trace_net_from_label
+                trace = trace_net_from_label(
+                    sch_path, label_name=name, stop_at_labels=True,
+                )
+                traced_pins = {
+                    (p["ref"], p["pin_number"]) for p in trace["reachable_pins"]
+                }
+                if traced_pins:
+                    pins = traced_pins
+                    # Also collect any pins assigned to other labels in the same
+                    # shorted component
+                    for fp in trace.get("far_pins", []):
+                        far_key = (fp["ref"], fp["pin_number"])
+                        if far_key not in pins:
+                            pins = pins | {far_key}
+            except Exception:
+                logger.debug("trace_net_from_label failed for %s, using netlist data", name)
+
         domain = _classify_ground_domain(name, pins)
         refs = sorted({ref for ref, _ in pins})
         ground_info[name] = {
