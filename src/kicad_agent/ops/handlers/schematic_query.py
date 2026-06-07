@@ -204,6 +204,17 @@ def _handle_analyze_ground_topology(op: Any, ir: SchematicIR, file_path: Path) -
     )
 
 
+@register_schematic_query("trace_net_from_label")
+def _handle_trace_net_from_label(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.net_tracer import trace_net_from_label
+    return trace_net_from_label(
+        file_path,
+        label_name=op.label_name,
+        label_type=op.label_type,
+        stop_at_labels=op.stop_at_labels,
+    )
+
+
 @register_schematic_query("review_schematic")
 def _handle_review_schematic(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     """Handle review_schematic operation -- readability review (read-only).

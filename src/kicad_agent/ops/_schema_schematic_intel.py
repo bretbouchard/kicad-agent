@@ -147,3 +147,36 @@ class AnalyzeGroundTopologyOp(BaseModel):
         max_length=20,
         description="Specific ground nets to analyze. None = auto-detect all.",
     )
+
+
+class TraceNetFromLabelOp(BaseModel):
+    """Trace all pins reachable from a label through the schematic graph.
+
+    Uses union-find over wire/pin/label positions to build connectivity,
+    then assigns pins to labels by proximity. Enables per-label analysis
+    even when labels are shorted together.
+
+    Attributes:
+        op_type: Discriminator literal ``"trace_net_from_label"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        label_name: Label text to trace.
+        label_type: Filter by label type: ``"label"``, ``"global"``,
+            ``"hierarchical"``, or ``"all"``.
+        stop_at_labels: If True, assign pins to nearest label (per-label tracing).
+    """
+
+    op_type: Literal["trace_net_from_label"] = "trace_net_from_label"
+    target_file: TargetFile
+    label_name: str = Field(
+        min_length=1,
+        max_length=128,
+        description="Label text to trace",
+    )
+    label_type: Literal["label", "global", "hierarchical", "all"] = Field(
+        default="all",
+        description="Filter by label type",
+    )
+    stop_at_labels: bool = Field(
+        default=True,
+        description="Assign pins to nearest label for per-label tracing",
+    )
