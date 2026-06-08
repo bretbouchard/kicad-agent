@@ -59,7 +59,8 @@ def resolve_footprint_path(lib_id: str, pcb_path: Path) -> Path:
     for table_path in search_paths:
         if not table_path.exists():
             continue
-        result = _search_table(table_path, nickname, footprint_name, pcb_path)
+        table_base = table_path.resolve().parent
+        result = _search_table(table_path, nickname, footprint_name, table_base)
         if result is not None:
             return result
 
@@ -73,9 +74,13 @@ def _get_lib_table_search_paths(pcb_path: Path) -> list[Path]:
     """Get fp-lib-table search paths in priority order."""
     paths = []
 
-    # 1. Project-local fp-lib-table (same dir as PCB)
-    pcb_dir = pcb_path.resolve().parent
-    paths.append(pcb_dir / "fp-lib-table")
+    # 1. PCB directory and up to 3 parent directories
+    current = pcb_path.resolve().parent
+    for _ in range(4):
+        paths.append(current / "fp-lib-table")
+        if current.parent == current:
+            break
+        current = current.parent
 
     # 2. Global KiCad fp-lib-table
     if _KICAD_GLOBAL_TABLE.exists():
@@ -97,8 +102,8 @@ def _search_table(
     lib_pattern = re.compile(
         r'\(\s*lib\s+'
         r'\(\s*name\s+"([^"]+)"\s*\)'
-        r'\s+\(\s*type\s+"([^"]+)"\s*\)'
-        r'\s+\(\s*uri\s+"([^"]+)"\s*\)',
+        r'\s*\(\s*type\s+"([^"]+)"\s*\)'
+        r'\s*\(\s*uri\s+"([^"]+)"\s*\)',
         re.DOTALL,
     )
 
@@ -129,12 +134,17 @@ def _search_table(
     return None
 
 
-def _expand_env_vars(uri: str, pcb_path: Path) -> str:
-    """Expand KiCad environment variables in a URI string."""
-    project_dir = pcb_path.resolve().parent
+def _expand_env_vars(uri: str, project_dir: Path) -> str:
+    """Expand KiCad environment variables in a URI string.
 
-    # ${KIPRJMOD} -> directory containing the PCB file
-    uri = uri.replace("${KIPRJMOD}", str(project_dir))
+    Args:
+        uri: URI string potentially containing ${KIPRJMOD} etc.
+        project_dir: The project root directory for ${KIPRJMOD} expansion.
+    """
+    project_root = project_dir.resolve()
+
+    # ${KIPRJMOD} -> project root directory
+    uri = uri.replace("${KIPRJMOD}", str(project_root))
 
     # ${KICAD10_FOOTPRINT_DIR} / ${KICAD7_FOOTPRINT_DIR} / ${KISYSMOD}
     kicad_fp_dir = os.environ.get(

@@ -1,0 +1,52 @@
+"""Tests for spatial reasoning and DRC modules."""
+
+import pytest
+
+
+class TestSpatialDRC:
+    """Tests for spatial DRC module."""
+
+    def test_import(self):
+        """Spatial DRC is importable."""
+        from kicad_agent.validation.spatial_drc import SpatialDRC
+        assert SpatialDRC is not None
+
+
+class TestStructuralValidation:
+    """Tests for structural validation."""
+
+    def test_import(self):
+        """Structural validation is importable."""
+        from kicad_agent.validation.structural import StructuralValidator
+        assert StructuralValidator is not None
+
+
+class TestFormatCheck:
+    """Tests for format check module."""
+
+    def test_import(self):
+        """Format check is importable."""
+        from kicad_agent.validation.format_check import FormatChecker
+        assert FormatChecker is not None
+
+
+class TestValidatorBase:
+    """Tests for validator base module."""
+
+    def test_import(self):
+        """Validator base is importable."""
+        from kicad_agent.validation.base import Validator
+        assert Validator is not None
+
+
+class TestTopologyUtils:
+    """Tests for topology utility module."""
+
+    def test_import(self):
+        """Topology utils is importable."""
+        from kicad_agent.analysis.topology_utils import (
+            build_net_to_nodes,
+            build_node_to_nets,
+        )
+        assert callable(build_net_to_nodes)
+        assert callable(build_node_to_nets)

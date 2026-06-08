@@ -210,8 +210,70 @@ def _handle_move_footprint(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any
     }
 
 
+@register_pcb("batch_expand_footprints")
+def _handle_batch_expand_footprints(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    raw = ir.raw_content
+    new_content, result = PcbRawWriter.batch_expand_footprints(
+        raw, file_path, dry_run=op.dry_run,
+    )
+    if not op.dry_run and new_content != raw:
+        ir.commit_raw_content(new_content)
+    return result
+
+
 @register_pcb("auto_route")
 def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.routing.freerouting import (
+        is_freerouting_available,
+        route_with_freerouting,
+        import_ses_into_pcb,
+    )
+
+    # --- Freerouting strategy branch ---
+    strategy = getattr(op, "strategy", "auto")
+    use_freerouting = strategy == "freerouting" or (
+        strategy == "auto" and is_freerouting_available()
+    )
+
+    if use_freerouting:
+        logger.info("Auto-route: using Freerouting (strategy=%s)", strategy)
+        fr_result = route_with_freerouting(file_path, max_passes=10)
+
+        if not fr_result.success:
+            if strategy == "freerouting":
+                return {
+                    "routed_nets": 0,
+                    "segments": 0,
+                    "vias": 0,
+                    "failed_nets": [],
+                    "strategy": "freerouting",
+                    "message": f"Freerouting failed: {fr_result.stderr}",
+                }
+            # auto mode: fall through to A*
+            logger.warning(
+                "Freerouting failed (%s), falling back to A*", fr_result.stderr
+            )
+            use_freerouting = False
+        else:
+            # Import SES into PCB content
+            new_content, stats = import_ses_into_pcb(
+                fr_result.ses_path, ir.raw_content
+            )
+            ir.commit_raw_content(new_content)
+            return {
+                "routed_nets": stats["nets_routed"],
+                "segments": stats["segments"],
+                "vias": stats["vias"],
+                "skipped": stats["skipped"],
+                "failed_nets": [],
+                "strategy": "freerouting",
+                "ses_path": str(fr_result.ses_path),
+                "dsn_path": str(fr_result.dsn_path),
+            }
+
+    # --- A* pathfinder strategy ---
     from kicad_agent.routing.bridge import (
         TrackSegment,
         ViaSegment,
@@ -462,6 +524,7 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
         "failed_nets": failed_nets,
         "skipped_power_nets": sorted(_power_nets),
         "obstacles": len(obstacles),
+        "strategy": "astar",
         "impedance": (
             {"target_z0": impedance_result.target_z0,
              "achieved_z0": impedance_result.achieved_z0,

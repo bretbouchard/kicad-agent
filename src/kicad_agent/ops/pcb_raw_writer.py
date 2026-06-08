@@ -19,6 +19,7 @@ Usage:
 """
 
 import re
+from pathlib import Path
 from typing import Any, Optional
 
 
@@ -550,3 +551,262 @@ class PcbRawWriter:
                 return start, end + 1
 
         return None, None
+
+    @staticmethod
+    def batch_expand_footprints(
+        content: str,
+        pcb_path: Path,
+        dry_run: bool = False,
+    ) -> tuple[str, dict]:
+        """Expand all synthetic (geometry-less) footprints from libraries.
+
+        Scans all footprint blocks, identifies those without ``(pad ...)``
+        lines, resolves their lib_id to .kicad_mod files, and replaces them
+        with full geometry while preserving position, rotation, net assignments.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            pcb_path: Path to the .kicad_pcb file (for lib resolution).
+            dry_run: If True, report counts without modifying content.
+
+        Returns:
+            (modified_content, result_dict) with expansion statistics.
+        """
+        from kicad_agent.lib_resolver import resolve_footprint_path
+
+        expanded = 0
+        failed = 0
+        skipped = 0
+        errors = []
+
+        # Collect all footprint blocks and their positions
+        blocks = []
+        for match in re.finditer(r"^[ \t]+\(footprint ", content, re.MULTILINE):
+            start = match.start()
+            end = PcbRawWriter._find_matching_close(content, start + 1)
+            if end is None:
+                continue
+            blocks.append((start, end + 1, content[start : end + 1]))
+
+        # Identify synthetic footprints (no pad lines)
+        synthetic_blocks = []
+        for start, end, block in blocks:
+            if "(pad " not in block:
+                synthetic_blocks.append((start, end, block))
+
+        if not synthetic_blocks:
+            return content, {
+                "expanded": 0,
+                "failed": 0,
+                "skipped": len(blocks),
+                "total_footprints": len(blocks),
+                "errors": [],
+            }
+
+        if dry_run:
+            return content, {
+                "expanded": 0,
+                "failed": 0,
+                "skipped": len(blocks) - len(synthetic_blocks),
+                "total_footprints": len(blocks),
+                "synthetic_found": len(synthetic_blocks),
+                "errors": [],
+            }
+
+        # Process blocks from bottom to top to preserve offsets
+        synthetic_blocks.sort(key=lambda b: b[0], reverse=True)
+        new_content = content
+
+        for start, end, block in synthetic_blocks:
+            # Extract lib_id — try (lib_id "...") field first,
+            # then fall back to (footprint "LIB:FP" ...) KiCad 10 format
+            lib_id_match = re.search(r'\(lib_id "([^"]+)"', block)
+            if not lib_id_match:
+                lib_id_match = re.search(
+                    r'\(footprint "([^"]+)"', block
+                )
+            if not lib_id_match:
+                failed += 1
+                errors.append(f"No lib_id found in block at offset {start}")
+                continue
+
+            lib_id = lib_id_match.group(1)
+
+            # Extract reference for error reporting
+            ref_match = re.search(r'\(property "Reference" "([^"]+)"', block)
+            ref = ref_match.group(1) if ref_match else "unknown"
+
+            # Extract preserved placement fields
+            at_match = re.search(r'\(at ([\d.\-]+) ([\d.\-]+)(?: ([\d.\-]+))?\)', block)
+            layer_match = re.search(r'\(layer "([^"]+)"', block)
+            tstamp_match = re.search(r'\(tstamp "([^"]+)"', block)
+            uuid_match = re.search(r'\(uuid "([^"]+)"', block)
+
+            # Resolve library path
+            try:
+                mod_path = resolve_footprint_path(lib_id, pcb_path)
+            except (ValueError, FileNotFoundError) as e:
+                failed += 1
+                errors.append(f"{ref}: cannot resolve '{lib_id}': {e}")
+                continue
+
+            # Read library footprint
+            try:
+                lib_content = mod_path.read_text(encoding="utf-8")
+            except Exception as e:
+                failed += 1
+                errors.append(f"{ref}: cannot read '{mod_path}': {e}")
+                continue
+
+            # Strip library-only metadata
+            lib_content = _strip_library_metadata(lib_content)
+
+            # Extract pad net assignments from synthetic block (if any)
+            pad_nets = {}
+            for pm in re.finditer(
+                r'\(pad "(\d+)"[^)]*\(net (\d+) "([^"]+)"', block
+            ):
+                pad_nets[pm.group(1)] = (pm.group(2), pm.group(3))
+
+            # Inject preserved placement data into library content.
+            # The .kicad_mod file uses \t indentation — preserve it.
+            # Note: library footprints may not have a top-level (at ...) line,
+            # so we insert after (layer ...) if no existing (at ...) is found.
+            if at_match:
+                at_sexpr = f"\t(at {at_match.group(1)} {at_match.group(2)}"
+                if at_match.group(3):
+                    at_sexpr += f" {at_match.group(3)}"
+                at_sexpr += ")"
+                existing_at = re.search(r"^\t\(at [^\)]*\)", lib_content, flags=re.MULTILINE)
+                if existing_at:
+                    lib_content = (
+                        lib_content[: existing_at.start()]
+                        + at_sexpr
+                        + lib_content[existing_at.end() :]
+                    )
+                else:
+                    # Insert after (layer ...) line
+                    lib_content = _insert_after_field(
+                        lib_content,
+                        r'^\t\(layer "[^"]*"\)',
+                        "\n" + at_sexpr,
+                    )
+
+            # Preserve layer
+            if layer_match:
+                lib_content = re.sub(
+                    r'^\t\(layer "[^"]*"\)',
+                    f'\t(layer "{layer_match.group(1)}")',
+                    lib_content,
+                    count=1,
+                    flags=re.MULTILINE,
+                )
+
+            # Add tstamp/uuid (KiCad 10 format)
+            if tstamp_match:
+                lib_content = _insert_after_field(
+                    lib_content,
+                    r'^\t\(layer "[^"]*"\)',
+                    f'\n\t(tstamp "{tstamp_match.group(1)}")',
+                )
+            elif uuid_match:
+                lib_content = _insert_after_field(
+                    lib_content,
+                    r'^\t\(layer "[^"]*"\)',
+                    f'\n\t(uuid "{uuid_match.group(1)}")',
+                )
+
+            # Preserve reference and value properties
+            ref_prop = re.search(r'\(property "Reference" "([^"]+)"', block)
+            val_prop = re.search(r'\(property "Value" "([^"]+)"', block)
+            if ref_prop:
+                lib_content = re.sub(
+                    r'\t\(property "Reference" "[^"]*"',
+                    f'\t(property "Reference" "{ref_prop.group(1)}"',
+                    lib_content,
+                    count=1,
+                )
+            if val_prop:
+                lib_content = re.sub(
+                    r'\t\(property "Value" "[^"]*"',
+                    f'\t(property "Value" "{val_prop.group(1)}"',
+                    lib_content,
+                    count=1,
+                )
+
+            # Re-inject pad net assignments using balanced-paren matching
+            for pad_num, (net_id, net_name) in pad_nets.items():
+                pad_start = _find_pad_block(lib_content, pad_num)
+                if pad_start is not None:
+                    pad_end = PcbRawWriter._find_matching_close(lib_content, pad_start)
+                    if pad_end is not None:
+                        pad_block = lib_content[pad_start:pad_end + 1]
+                        lib_content = (
+                            lib_content[:pad_start]
+                            + _inject_pad_net(pad_block, net_id, net_name)
+                            + lib_content[pad_end + 1:]
+                        )
+
+            # Preserve original indentation
+            line_start = content.rfind("\n", 0, start) + 1
+            fp_open = content.index("(", line_start)
+            indent = content[line_start:fp_open]
+            indented_lib = indent + lib_content.replace("\n", "\n" + indent)
+
+            new_content = new_content[:start] + indented_lib + new_content[end:]
+            expanded += 1
+
+        return new_content, {
+            "expanded": expanded,
+            "failed": failed,
+            "skipped": len(blocks) - len(synthetic_blocks),
+            "total_footprints": len(blocks),
+            "errors": errors,
+        }
+
+
+def _strip_library_metadata(sexp: str) -> str:
+    """Remove library-only fields from a .kicad_mod file for PCB embedding."""
+    for pattern in [
+        r"^\t?\(version [^\)]*\)\s*\n",
+        r'^\t?\(generator "[^"]*"\)\s*\n',
+        r'^\t?\(generator_version "[^"]*"\)\s*\n',
+        r'^\t?\(compatibility "[^"]*"\s*\([^)]*\)\)\s*\n',
+        r'^\t\(descr ".*"\)\s*\n',
+        r'^\t\(tags ".*"\)\s*\n',
+    ]:
+        sexp = re.sub(pattern, "", sexp, flags=re.MULTILINE)
+    return sexp
+
+
+def _insert_after_field(sexp: str, field_pattern: str, insertion: str) -> str:
+    """Insert text after the line matching field_pattern."""
+    match = re.search(field_pattern, sexp, re.MULTILINE)
+    if match:
+        end = match.end()
+        sexp = sexp[:end] + insertion + sexp[end:]
+    return sexp
+
+
+def _find_pad_block(content: str, pad_num: str) -> int | None:
+    """Find the start offset of a pad block by pad number."""
+    m = re.search(r'\(pad "' + re.escape(pad_num) + r'"', content)
+    return m.start() if m else None
+
+
+def _inject_pad_net(pad_sexpr: str, net_id: str, net_name: str) -> str:
+    """Inject or replace net assignment in a pad S-expression.
+
+    The pad_sexpr is the full balanced-paren pad block including
+    the opening (pad ... and closing ).
+    """
+    if "(net " in pad_sexpr:
+        return re.sub(
+            r'\(net \d+ "[^"]*"\)',
+            f'(net {net_id} "{net_name}")',
+            pad_sexpr,
+            count=1,
+        )
+    else:
+        # Insert net before the final closing paren
+        return pad_sexpr.rstrip().rstrip(")") + f' (net {net_id} "{net_name}")\n\t)'

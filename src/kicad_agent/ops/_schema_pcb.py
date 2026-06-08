@@ -3,6 +3,8 @@
 import re
 from typing import Any, Literal, Optional
 
+from pydantic import BaseModel, Field
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from kicad_agent.ops.schema import (
@@ -169,11 +171,13 @@ class AutoRouteOp(BaseModel):
                     "Sawtooth pattern applied to shorter net. None = no matching.",
     )
     strategy: str = Field(
-        default="single_pass",
-        pattern=r"^(?:single_pass|multi_pass)$",
-        description="Routing strategy: 'single_pass' (existing A*) or "
-                    "'multi_pass' (3-pass with rip-up and aggressive). "
-                    "Council C-03: max 3 passes, diff pairs deferred.",
+        default="auto",
+        pattern=r"^(?:auto|freerouting|single_pass|multi_pass)$",
+        description="Routing strategy: 'auto' (use Freerouting if available, else A*), "
+                    "'freerouting' (Freerouting Java router for dense boards), "
+                    "'single_pass' (A* single pass), "
+                    "'multi_pass' (A* 3-pass with rip-up). "
+                    "Council C-03: max 3 passes for A*, Freerouting has its own pass control.",
     )
 
     @field_validator("layers")
@@ -637,3 +641,24 @@ class MoveFootprintOp(BaseModel):
     x: float = Field(description="New X position in mm")
     y: float = Field(description="New Y position in mm")
     angle: float = Field(default=0.0, description="New rotation angle in degrees")
+
+
+class BatchExpandFootprintsOp(BaseModel):
+    """Expand all synthetic (geometry-less) footprints from their libraries.
+
+    Scans all footprint blocks in the PCB, identifies those without pad geometry
+    (synthetic footprints), resolves their lib_id to .kicad_mod files, and
+    replaces them with full geometry from the library.
+
+    Attributes:
+        op_type: Discriminator literal ``"batch_expand_footprints"``.
+        target_file: Relative path to the target KiCad PCB file.
+        dry_run: If True, report counts without modifying the file.
+    """
+
+    op_type: Literal["batch_expand_footprints"] = "batch_expand_footprints"
+    target_file: TargetFile
+    dry_run: bool = Field(
+        default=False,
+        description="Report counts without modifying the file",
+    )

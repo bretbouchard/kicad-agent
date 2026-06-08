@@ -385,6 +385,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "batch_expand_footprints": {
+        "category": "pcb",
+        "description": "Expand all synthetic (geometry-less) footprints from their libraries, loading full pad/courtyard/silkscreen data",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
     "auto_route": {
         "category": "pcb",
         "description": "Auto-route nets on a PCB using A* pathfinding",

@@ -244,6 +244,7 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
     AddKeepoutAreaOp,
     RemoveKeepoutAreaOp,
     MoveFootprintOp,
+    BatchExpandFootprintsOp,
     RouteDiffPairOp,
     MatchLengthsOp,
     AnalyzeSplitPlaneOp,
@@ -441,7 +442,8 @@ class Operation(BaseModel):
         | RouteDiffPairOp
         | MatchLengthsOp
         | AnalyzeSplitPlaneOp
-        | FixSilkscreenOverCopperOp,
+        | FixSilkscreenOverCopperOp
+        | BatchExpandFootprintsOp,
         Field(discriminator="op_type"),
     ]
 
