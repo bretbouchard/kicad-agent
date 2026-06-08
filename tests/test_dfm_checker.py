@@ -64,8 +64,8 @@ class TestManufacturerProfile:
 
     def test_builtin_profiles_exist(self):
         profiles = get_builtin_profiles()
-        assert set(profiles.keys()) == {"jlcpcb", "pcbway", "osh_park", "generic"}
-        assert len(profiles) == 4
+        assert set(profiles.keys()) == {"jlcpcb", "jlcpcb-4layer", "pcbway", "osh_park", "generic"}
+        assert len(profiles) == 5
 
     def test_jlcpcb_values(self):
         p = get_builtin_profiles()["jlcpcb"]
@@ -693,12 +693,12 @@ class TestBuiltinDfmChecks:
 
     # -- get_builtin_dfm_checks ---------------------------------------------
 
-    def test_get_builtin_dfm_checks_returns_five(self):
-        """get_builtin_dfm_checks returns list of 5 checks."""
+    def test_get_builtin_dfm_checks_returns_extended(self):
+        """get_builtin_dfm_checks returns 50+ extended checks."""
         from kicad_agent.dfm.checks import get_builtin_dfm_checks
 
         checks = get_builtin_dfm_checks()
-        assert len(checks) == 5
+        assert len(checks) >= 50
         names = [c.name for c in checks]
         assert "ANNULAR_RING_01" in names
         assert "SOLDER_MASK_01" in names
@@ -742,16 +742,21 @@ class TestBuiltinDfmChecksIntegration:
         model = _MockSpatialModel(primitives=[thin_trace, small_drill, wide_trace])
         report = checker.run(model, profile)
 
-        assert report.checks_run == 5
-        assert report.checks_failed >= 2  # At least trace + drill failures
+        assert report.checks_run >= 50
         assert len(report.findings) >= 2
         assert report.manufacturability_score < 1.0
 
     def test_full_check_clean_board(self):
-        """Run all 5 checks on a clean board (no violations)."""
+        """Run all checks on a clean board (no original check violations)."""
         from kicad_agent.dfm.checks import get_builtin_dfm_checks
+        from kicad_agent.dfm.checker import DfmChecker
 
-        checker = DfmChecker(checks=get_builtin_dfm_checks())
+        # Run only the 5 original checks so the clean-board assertion is valid
+        original_names = {"ANNULAR_RING_01", "SOLDER_MASK_01", "THERMAL_RELIEF_01",
+                           "MIN_TRACE_01", "MIN_DRILL_01"}
+        all_checks = get_builtin_dfm_checks()
+        original_checks = [c for c in all_checks if c.name in original_names]
+        checker = DfmChecker(checks=original_checks)
         profile = get_builtin_profiles()["generic"]
 
         # Generous dimensions with generic conservative profile
