@@ -462,14 +462,55 @@ def get_builtin_dfm_checks() -> list[DfmCheck]:
     """Return all built-in DFM check instances.
 
     Returns:
-        List of 5 DfmCheck instances:
-        AnnularRingCheck, SolderMaskCheck, ThermalReliefCheck,
-        MinTraceWidthCheck, MinDrillCheck.
+        List of 50+ DfmCheck instances covering annular ring, solder mask,
+        thermal relief, trace width, drill size, acid traps, copper pour
+        spacing, via-in-pad, solder paste, silkscreen clearance, edge
+        clearance, via tenting, impedance control, layer stackup, min
+        feature size, trace angles, courtyard overlap, pin 1 markers, via
+        stubs, power plane voids, fiducials, component placement, spacing,
+        via pads, teardrops, blind vias, board dimensions, castellated
+        holes, NPTH drills, slots, via count, mask openings, trace length,
+        pad/mask clearance, via annular ring, hole-to-hole spacing,
+        pad-to-pad clearance, zone fill, and copper pour width.
     """
+    from kicad_agent.dfm.extended_checks import (
+        AcidTrapCheck, BlindViaCheck, BoardDimensionCheck, BoardEdgeClearanceCheck,
+        BoardOutlineClosedCheck, CastellatedHoleCheck, ComponentPlacementCheck,
+        ComponentTooCloseCheck, CopperPourSpacingCheck, CourtyardOverlapCheck,
+        DifferentialPairSpacingCheck, FiducialMarkerCheck, HoleToHoleCheck,
+        ImpedanceControlCheck, KeepoutZoneViolationCheck, LayerStackupCheck,
+        MinCopperPourWidthCheck, MinCopperThicknessCheck, MinFeatureSizeCheck,
+        MinPadDiameterCheck, MinSpacingCheck, MinViaPadCheck, NPTHDrillCheck,
+        PadAnnularRingCheck, PadSolderMaskClearanceCheck, PadToEdgeClearanceCheck,
+        PadToPadClearanceCheck, Pin1MarkerCheck, PowerPlaneVoidCheck,
+        SilkscreenClearanceCheck, SlotCheck, SolderMaskOpeningCheck,
+        SolderPasteCoverageCheck, TeardropCheck, ThermalPadCheck, TraceAngleCheck,
+        TraceLengthCheck, TraceToEdgeClearanceCheck, ViaAnnularCheck, ViaCountCheck,
+        ViaInPadCheck, ViaOnPadTypeCheck, ViaStubCheck, ViaTentingCheck,
+        ViaToPadSpacingCheck, ViaToTraceSpacingCheck, ZoneFillCheck,
+    )
+
     return [
-        AnnularRingCheck(),
-        SolderMaskCheck(),
-        ThermalReliefCheck(),
-        MinTraceWidthCheck(),
-        MinDrillCheck(),
+        # Original 5 checks
+        AnnularRingCheck(), SolderMaskCheck(), ThermalReliefCheck(),
+        MinTraceWidthCheck(), MinDrillCheck(),
+        # Extended checks (45 new = 50 total)
+        AcidTrapCheck(), BlindViaCheck(), BoardDimensionCheck(),
+        BoardEdgeClearanceCheck(), BoardOutlineClosedCheck(),
+        CastellatedHoleCheck(), ComponentPlacementCheck(),
+        ComponentTooCloseCheck(), CopperPourSpacingCheck(),
+        CourtyardOverlapCheck(), DifferentialPairSpacingCheck(),
+        FiducialMarkerCheck(), HoleToHoleCheck(), ImpedanceControlCheck(),
+        KeepoutZoneViolationCheck(), LayerStackupCheck(),
+        MinCopperPourWidthCheck(), MinCopperThicknessCheck(),
+        MinFeatureSizeCheck(), MinPadDiameterCheck(), MinSpacingCheck(),
+        MinViaPadCheck(), NPTHDrillCheck(), PadAnnularRingCheck(),
+        PadSolderMaskClearanceCheck(), PadToEdgeClearanceCheck(),
+        PadToPadClearanceCheck(), Pin1MarkerCheck(), PowerPlaneVoidCheck(),
+        SilkscreenClearanceCheck(), SlotCheck(), SolderMaskOpeningCheck(),
+        SolderPasteCoverageCheck(), TeardropCheck(), ThermalPadCheck(),
+        TraceAngleCheck(), TraceLengthCheck(), TraceToEdgeClearanceCheck(),
+        ViaAnnularCheck(), ViaCountCheck(), ViaInPadCheck(), ViaOnPadTypeCheck(),
+        ViaStubCheck(), ViaTentingCheck(), ViaToPadSpacingCheck(),
+        ViaToTraceSpacingCheck(), ZoneFillCheck(),
     ]
