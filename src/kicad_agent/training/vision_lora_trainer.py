@@ -98,7 +98,7 @@ def _build_lora_args(
         grad_clip=None,
         train_on_completions=False,
         gradient_accumulation_steps=1,
-        assistant_id=77091,
+        assistant_id=77091,  # Gemma chat template token ID for assistant turn
         lora_alpha=16,
         lora_rank=config.lora_layers,
         lora_dropout=0.0,
@@ -136,7 +136,7 @@ def run_kicad_vision_lora(config: KiCadVisionSFTConfig) -> dict[str, Any]:
     _original_load_dataset = getattr(lora_mod, "load_dataset", None)
 
     if _original_load_dataset:
-        from datasets import load_from_disk
+        from datasets import DatasetDict, load_from_disk
 
         def _local_aware_load(path, *args, **kwargs):
             local_path = Path(path)
@@ -144,7 +144,7 @@ def run_kicad_vision_lora(config: KiCadVisionSFTConfig) -> dict[str, Any]:
                 if (local_path / "dataset_info.json").exists() or (local_path / "features.json").exists():
                     logger.info("Using load_from_disk for local dataset: %s", local_path)
                     ds = load_from_disk(local_path)
-                    if hasattr(ds, "get"):
+                    if isinstance(ds, DatasetDict):
                         return ds.get("train", ds)
                     return ds
             return _original_load_dataset(path, *args, **kwargs)
@@ -231,3 +231,8 @@ def _consolidate_checkpoint(chunk_dir: Path, output_dir: Path) -> None:
         logger.info("Consolidated adapter to %s", output_dir)
     else:
         logger.warning("No adapters.safetensors found in %s", chunk_dir)
+
+    raise FileNotFoundError(
+        f"Training produced no adapter in {chunk_dir}. "
+        "Check that training completed successfully."
+    )

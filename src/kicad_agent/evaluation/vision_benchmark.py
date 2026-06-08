@@ -30,7 +30,7 @@ class VisionBenchmarkResult:
     qwen_total_time: float
     gemma_accuracy: float
     qwen_accuracy: float
-    regression: float  # percentage difference (negative = regression)
+    accuracy_delta: float  # percentage difference (negative = regression)
     per_task_results: list[dict[str, Any]]
 
 
@@ -63,7 +63,7 @@ def run_vision_benchmark(
         return VisionBenchmarkResult(
             total_tasks=0, gemma_correct=0, gemma_total_time=0.0,
             qwen_correct=0, qwen_total_time=0.0,
-            gemma_accuracy=0.0, qwen_accuracy=0.0, regression=0.0,
+            gemma_accuracy=0.0, qwen_accuracy=0.0, accuracy_delta=0.0,
             per_task_results=[],
         )
 
@@ -94,7 +94,7 @@ def run_vision_benchmark(
     total = len(pcb_files)
     gemma_acc = gemma_correct / total if total > 0 else 0.0
     qwen_acc = qwen_correct / total if total > 0 else 0.0
-    regression = ((gemma_acc - qwen_acc) / qwen_acc * 100) if qwen_acc > 0 else 0.0
+    accuracy_delta = ((gemma_acc - qwen_acc) / qwen_acc * 100) if qwen_acc > 0 else 0.0
 
     result = VisionBenchmarkResult(
         total_tasks=total,
@@ -104,7 +104,7 @@ def run_vision_benchmark(
         qwen_total_time=qwen_time,
         gemma_accuracy=gemma_acc,
         qwen_accuracy=qwen_acc,
-        regression=regression,
+        accuracy_delta=accuracy_delta,
         per_task_results=per_task,
     )
 
@@ -114,7 +114,7 @@ def run_vision_benchmark(
         gemma_time,
         qwen_acc * 100,
         qwen_time,
-        regression,
+        accuracy_delta,
     )
 
     return result
@@ -151,18 +151,12 @@ def _benchmark_single_pcb(
 
     # Qwen text baseline (skip if not configured)
     if qwen_config is not None:
-        try:
-            start = time.time()
-            # Qwen uses text-only prompt with board metadata
-            prompt = f"Analyze PCB: {pcb_path.name}. List components and routing issues."
-            # TODO: integrate with existing qwen inference pipeline
-            elapsed = time.time() - start
-            result["qwen_time"] = elapsed
-            result["qwen_valid"] = True
-        except Exception as exc:
-            result["qwen_valid"] = False
-            result["qwen_error"] = str(exc)
-            result["qwen_time"] = 0.0
+        result["qwen_valid"] = False
+        result["qwen_time"] = 0.0
+        result["qwen_error"] = (
+            "Qwen text baseline not yet integrated. "
+            "Tracked as out-of-scope for Phase 80 benchmark."
+        )
     else:
         result["qwen_valid"] = False
         result["qwen_time"] = 0.0

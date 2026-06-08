@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+import pydantic
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 from typing import Any
@@ -30,11 +31,11 @@ class TestKiCadVisionConfig:
 
     def test_frozen(self):
         config = KiCadVisionConfig()
-        with pytest.raises(Exception):  # Pydantic ValidationError
+        with pytest.raises(pydantic.ValidationError):
             config.model_name = "other"
 
     def test_extra_forbid(self):
-        with pytest.raises(Exception):
+        with pytest.raises(pydantic.ValidationError):
             KiCadVisionConfig(nonexistent_field="bad")
 
     def test_adapter_path_validation_none(self):

@@ -20,19 +20,19 @@ class TestVisionBenchmarkResult:
             qwen_total_time=15.0,
             gemma_accuracy=0.8,
             qwen_accuracy=0.7,
-            regression=14.285714,
+            accuracy_delta=14.285714,
             per_task_results=[],
         )
         assert result.total_tasks == 10
         assert result.gemma_accuracy == 0.8
         assert result.qwen_accuracy == 0.7
-        assert result.regression > 0  # Gemma is better
+        assert result.accuracy_delta > 0  # Gemma is better
 
     def test_frozen(self):
         result = VisionBenchmarkResult(
             total_tasks=0, gemma_correct=0, gemma_total_time=0.0,
             qwen_correct=0, qwen_total_time=0.0,
-            gemma_accuracy=0.0, qwen_accuracy=0.0, regression=0.0,
+            gemma_accuracy=0.0, qwen_accuracy=0.0, accuracy_delta=0.0,
             per_task_results=[],
         )
         with pytest.raises(AttributeError):
@@ -42,8 +42,8 @@ class TestVisionBenchmarkResult:
         result = VisionBenchmarkResult(
             total_tasks=0, gemma_correct=0, gemma_total_time=0.0,
             qwen_correct=0, qwen_total_time=0.0,
-            gemma_accuracy=0.0, qwen_accuracy=0.0, regression=0.0,
+            gemma_accuracy=0.0, qwen_accuracy=0.0, accuracy_delta=0.0,
             per_task_results=[],
         )
         assert result.gemma_accuracy == 0.0
-        assert result.regression == 0.0
+        assert result.accuracy_delta == 0.0

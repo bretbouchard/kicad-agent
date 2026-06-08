@@ -11,7 +11,6 @@ Provides:
 
 from __future__ import annotations
 
-import io
 import json
 import logging
 from dataclasses import dataclass
@@ -39,7 +38,7 @@ ROUTING_VISION_PROMPT = (
 )
 
 
-@dataclass
+@dataclass(frozen=True)
 class VisionDataRow:
     """A single vision training data row in mlx-vlm format."""
     image_path: Path

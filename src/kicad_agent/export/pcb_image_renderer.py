@@ -11,6 +11,7 @@ Provides:
 from __future__ import annotations
 
 import logging
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -73,7 +74,9 @@ def render_pcb_layer_png(
             png_path = Path(tmpdir) / "render.png"
             _svg_to_png(svg_path, png_path, width, height)
             if png_path.exists():
-                return Image.open(png_path)
+                img = Image.open(png_path)
+                img.load()  # Force full read into memory before tmpdir cleanup
+                return img
 
     # Fallback to 3D render
     return render_pcb_3d_png(pcb_path, width, height)
@@ -91,11 +94,21 @@ def render_pcb_3d_png(
         pcb_path: Path to .kicad_pcb file.
         width: Render width in pixels.
         height: Render height in pixels.
-        rotate: Rotation string.
+        rotate: Rotation string (format: "X,Y,Z" with numeric values).
 
     Returns:
         PIL.Image of the 3D PCB render.
+
+    Raises:
+        ValueError: If rotate format is invalid.
     """
+    _ROTATION_RE = re.compile(r'^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$')
+    if not _ROTATION_RE.match(rotate):
+        raise ValueError(
+            f"Invalid rotation format: {rotate!r}. "
+            "Expected 'X,Y,Z' with numeric values (e.g. '-45,0,45')."
+        )
+
     from PIL import Image
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -125,6 +138,7 @@ def render_pcb_3d_png(
 
         if png_path.exists():
             img = Image.open(png_path)
+            img.load()  # Force full read into memory before tmpdir cleanup
             # Cap dimensions to prevent memory exhaustion
             max_dim = 4096
             if img.width > max_dim or img.height > max_dim:
@@ -182,7 +196,9 @@ def render_schematic_png(
             png_path = Path(tmpdir) / "render.png"
             _svg_to_png(svg_path, png_path, width, height)
             if png_path.exists():
-                return Image.open(png_path)
+                img = Image.open(png_path)
+                img.load()  # Force full read into memory before tmpdir cleanup
+                return img
 
     raise RuntimeError(f"Failed to render schematic: {sch_path}")
 

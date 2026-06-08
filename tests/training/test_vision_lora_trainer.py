@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import pytest
+import pydantic
 from pathlib import Path
 
 from kicad_agent.training.vision_lora_trainer import (
@@ -37,11 +38,11 @@ class TestKiCadVisionSFTConfig:
 
     def test_frozen(self):
         config = KiCadVisionSFTConfig()
-        with pytest.raises(Exception):  # Pydantic ValidationError
+        with pytest.raises(pydantic.ValidationError):
             config.model = "other"
 
     def test_extra_forbid(self):
-        with pytest.raises(Exception):
+        with pytest.raises(pydantic.ValidationError):
             KiCadVisionSFTConfig(nonexistent="bad")
 
 
