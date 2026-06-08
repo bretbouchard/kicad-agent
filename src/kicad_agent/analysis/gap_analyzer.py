@@ -144,7 +144,7 @@ class GapReport:
     routing_stats: RoutingStats
     unrouted_nets: tuple[UnroutedNet, ...]
     incomplete_nets: tuple[IncompleteNet, ...]
-    drc_violations: tuple  # tuple[EnrichedViolation, ...]
+    drc_violations: tuple[EnrichedViolation, ...]
     net_naming_issues: tuple[NetNamingIssue, ...]
 
     def to_json(self) -> dict:
@@ -235,13 +235,12 @@ class GapReport:
 
 
 # ---------------------------------------------------------------------------
-# Net classification types
+# Net classification constants
 # ---------------------------------------------------------------------------
 
-class _NetClass(str):
-    ROUTED = "routed"
-    UNROUTED = "unrouted"
-    INCOMPLETE = "incomplete"
+_NET_ROUTED = "routed"
+_NET_UNROUTED = "unrouted"
+_NET_INCOMPLETE = "incomplete"
 
 
 # ---------------------------------------------------------------------------
@@ -298,7 +297,7 @@ class GapAnalyzer:
         net_classifications = self._classify_nets(board, netlist)
 
         # 5. Analyze unrouted nets
-        unrouted = self._analyze_unrouted_nets_with_netlist(
+        unrouted = self._analyze_unrouted_nets(
             net_classifications, netlist, obstacles
         )
 
@@ -321,9 +320,9 @@ class GapAnalyzer:
         )
 
         # 10. Routing stats
-        routed_count = sum(1 for v in net_classifications.values() if v == _NetClass.ROUTED)
-        unrouted_count = sum(1 for v in net_classifications.values() if v == _NetClass.UNROUTED)
-        incomplete_count = sum(1 for v in net_classifications.values() if v == _NetClass.INCOMPLETE)
+        routed_count = sum(1 for v in net_classifications.values() if v == _NET_ROUTED)
+        unrouted_count = sum(1 for v in net_classifications.values() if v == _NET_UNROUTED)
+        incomplete_count = sum(1 for v in net_classifications.values() if v == _NET_INCOMPLETE)
         total = routed_count + unrouted_count + incomplete_count
         route_pct = (routed_count / total * 100) if total > 0 else 0.0
 
@@ -392,7 +391,7 @@ class GapAnalyzer:
             segs = net_segments.get(net_name, [])
 
             if not segs:
-                classifications[net_name] = _NetClass.UNROUTED
+                classifications[net_name] = _NET_UNROUTED
                 continue
 
             # Build connectivity from segments: union-find of endpoints
@@ -410,7 +409,7 @@ class GapAnalyzer:
                     break
 
             classifications[net_name] = (
-                _NetClass.ROUTED if all_connected else _NetClass.INCOMPLETE
+                _NET_ROUTED if all_connected else _NET_INCOMPLETE
             )
 
         return classifications
@@ -444,16 +443,14 @@ class GapAnalyzer:
                 parent[ra] = rb
 
         for start, end in segs:
-            # Connect start to nearest existing point
+            # Connect start to all nearby points (no break — union-find handles redundancy)
             for pt in all_points:
                 if pt != start and abs(pt[0] - start[0]) < _ENDPOINT_TOLERANCE and abs(pt[1] - start[1]) < _ENDPOINT_TOLERANCE:
                     union(pt, start)
-                    break
-            # Connect end to nearest existing point
+            # Connect end to all nearby points
             for pt in all_points:
                 if pt != end and abs(pt[0] - end[0]) < _ENDPOINT_TOLERANCE and abs(pt[1] - end[1]) < _ENDPOINT_TOLERANCE:
                     union(pt, end)
-                    break
 
         # Group by root
         groups: dict[tuple[float, float], list[tuple[float, float]]] = {}
@@ -498,50 +495,6 @@ class GapAnalyzer:
     def _analyze_unrouted_nets(
         self,
         classifications: dict[str, str],
-        obstacles: list,
-    ) -> list[UnroutedNet]:
-        """Build UnroutedNet entries for all unclassified nets.
-
-        Args:
-            classifications: Net name -> classification.
-            obstacles: List of SpatialBox obstacles from PcbIR.
-
-        Returns:
-            List of UnroutedNet data objects.
-        """
-        from shapely.geometry import Point as ShapelyPoint
-
-        # Pre-build obstacle geometries for distance queries
-        obs_geoms = []
-        for obs in obstacles:
-            try:
-                obs_geoms.append(obs.to_shapely())
-            except (AttributeError, Exception):
-                pass
-
-        result: list[UnroutedNet] = []
-
-        for net_name, cls in classifications.items():
-            if cls != _NetClass.UNROUTED:
-                continue
-
-            # We need pad positions — extract from the netlist later via caller
-            # For now, build from what we have
-            pin_positions: tuple[tuple[float, float], ...] = ()
-            nearest_dist = -1.0
-
-            result.append(UnroutedNet(
-                net_name=net_name,
-                pad_count=0,
-                pin_positions=pin_positions,
-                nearest_obstacle_distance=nearest_dist,
-            ))
-
-        return result
-
-    def _analyze_unrouted_nets_with_netlist(
-        self,
-        classifications: dict[str, str],
         netlist: dict[str, list[tuple[float, float]]],
         obstacles: list,
     ) -> list[UnroutedNet]:
@@ -560,7 +513,7 @@ class GapAnalyzer:
         result: list[UnroutedNet] = []
 
         for net_name, cls in classifications.items():
-            if cls != _NetClass.UNROUTED:
+            if cls != _NET_UNROUTED:
                 continue
 
             pads = netlist.get(net_name, [])
@@ -611,7 +564,7 @@ class GapAnalyzer:
         result: list[IncompleteNet] = []
 
         for net_name, cls in classifications.items():
-            if cls != _NetClass.INCOMPLETE:
+            if cls != _NET_INCOMPLETE:
                 continue
 
             pads = netlist.get(net_name, [])

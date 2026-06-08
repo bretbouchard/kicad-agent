@@ -27,6 +27,32 @@ from kicad_agent.analysis.design_rule_engine import DesignRuleEngine
 from kicad_agent.analysis.builtin_rules import get_builtin_rules
 from kicad_agent.analysis.rule_config import RuleConfig, RuleConfigLoader
 from kicad_agent.analysis.rule_report import generate_json_report, generate_markdown_report
+from kicad_agent.analysis.spatial_benchmark import (
+    BoardContext,
+    Difficulty,
+    SpatialReasoningTask,
+    TaskCategory,
+    TaskGenerator,
+)
+from kicad_agent.analysis.benchmark_runner import (
+    BenchmarkReport,
+    BenchmarkRunner,
+    CategoryScore,
+    GemmaVisionAdapter,
+    ModelAdapter,
+    QwenTextAdapter,
+    TaskResult,
+    score_task,
+)
+from kicad_agent.analysis.gap_analyzer import (
+    BoardInfo,
+    GapAnalyzer,
+    GapReport,
+    IncompleteNet,
+    NetNamingIssue,
+    RoutingStats,
+    UnroutedNet,
+)
 
 __all__ = [
     "NetGraph",
@@ -68,6 +94,19 @@ __all__ = [
     "RuleConfigLoader",
     "generate_json_report",
     "generate_markdown_report",
+    "BoardContext",
+    "Difficulty",
+    "SpatialReasoningTask",
+    "TaskCategory",
+    "TaskGenerator",
+    "BenchmarkReport",
+    "BenchmarkRunner",
+    "CategoryScore",
+    "GemmaVisionAdapter",
+    "ModelAdapter",
+    "QwenTextAdapter",
+    "TaskResult",
+    "score_task",
     "GapAnalyzer",
     "GapReport",
     "UnroutedNet",
@@ -76,31 +115,3 @@ __all__ = [
     "BoardInfo",
     "RoutingStats",
 ]
-
-from kicad_agent.analysis.spatial_benchmark import (
-    BoardContext,
-    Difficulty,
-    SpatialReasoningTask,
-    TaskCategory,
-    TaskGenerator,
-)
-from kicad_agent.analysis.benchmark_runner import (
-    BenchmarkReport,
-    BenchmarkRunner,
-    CategoryScore,
-    GemmaVisionAdapter,
-    ModelAdapter,
-    QwenTextAdapter,
-    TaskResult,
-    score_task,
-)
-from kicad_agent.analysis.gap_analyzer import (
-    BoardInfo,
-    GapAnalyzer,
-    GapReport,
-    IncompleteNet,
-    NetNamingIssue,
-    RoutingStats,
-    UnroutedNet,
-)
-
