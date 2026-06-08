@@ -68,4 +68,39 @@ __all__ = [
     "RuleConfigLoader",
     "generate_json_report",
     "generate_markdown_report",
+    "GapAnalyzer",
+    "GapReport",
+    "UnroutedNet",
+    "IncompleteNet",
+    "NetNamingIssue",
+    "BoardInfo",
+    "RoutingStats",
 ]
+
+from kicad_agent.analysis.spatial_benchmark import (
+    BoardContext,
+    Difficulty,
+    SpatialReasoningTask,
+    TaskCategory,
+    TaskGenerator,
+)
+from kicad_agent.analysis.benchmark_runner import (
+    BenchmarkReport,
+    BenchmarkRunner,
+    CategoryScore,
+    GemmaVisionAdapter,
+    ModelAdapter,
+    QwenTextAdapter,
+    TaskResult,
+    score_task,
+)
+from kicad_agent.analysis.gap_analyzer import (
+    BoardInfo,
+    GapAnalyzer,
+    GapReport,
+    IncompleteNet,
+    NetNamingIssue,
+    RoutingStats,
+    UnroutedNet,
+)
+
