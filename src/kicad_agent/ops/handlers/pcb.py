@@ -839,3 +839,28 @@ def _handle_fix_silkscreen_over_copper(op: Any, ir: PcbIR, file_path: Path) -> d
             for v in result.violations
         ],
     }
+
+
+@register_pcb("analyze_gaps")
+def _handle_analyze_gaps(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Analyze a PCB for routing gaps, DRC violations, and naming issues."""
+    from kicad_agent.analysis.gap_analyzer import GapAnalyzer
+
+    analyzer = GapAnalyzer()
+    report = analyzer.analyze(str(file_path), run_drc=getattr(op, "run_drc", True))
+    return report.to_json()
+
+
+@register_pcb("fill_gaps")
+def _handle_fill_gaps(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Run the AI-powered gap-filling engine on a PCB."""
+    from kicad_agent.analysis.gap_fill_engine import GapFillEngine
+
+    engine = GapFillEngine(
+        max_iterations=getattr(op, "max_iterations", 3),
+        target_route_pct=getattr(op, "target_route_pct", 95.0),
+        run_drc=getattr(op, "run_drc", True),
+        use_ai=getattr(op, "use_ai", True),
+    )
+    result = engine.fill_gaps(str(file_path))
+    return result.to_json()

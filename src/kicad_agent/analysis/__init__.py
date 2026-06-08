@@ -53,6 +53,14 @@ from kicad_agent.analysis.gap_analyzer import (
     RoutingStats,
     UnroutedNet,
 )
+from kicad_agent.analysis.gap_fill_engine import (
+    GapFillEngine,
+    GapFillIteration,
+    GapFillResult,
+)
+from kicad_agent.analysis.net_completion_filler import NetCompletionFiller
+from kicad_agent.analysis.drc_auto_fixer import DrcAutoFixer
+from kicad_agent.analysis.net_naming_validator import NetNamingValidator
 
 __all__ = [
     "NetGraph",
@@ -114,4 +122,10 @@ __all__ = [
     "NetNamingIssue",
     "BoardInfo",
     "RoutingStats",
+    "GapFillEngine",
+    "GapFillIteration",
+    "GapFillResult",
+    "NetCompletionFiller",
+    "DrcAutoFixer",
+    "NetNamingValidator",
 ]

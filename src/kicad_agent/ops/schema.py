@@ -320,6 +320,10 @@ from kicad_agent.ops._schema_erc_smart import (  # noqa: E402
 from kicad_agent.ops._schema_readability import (  # noqa: E402
     ReviewSchematicOp,
 )
+from kicad_agent.ops._schema_gap import (  # noqa: E402
+    AnalyzeGapsOp,
+    FillGapsOp,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -443,7 +447,9 @@ class Operation(BaseModel):
         | MatchLengthsOp
         | AnalyzeSplitPlaneOp
         | FixSilkscreenOverCopperOp
-        | BatchExpandFootprintsOp,
+        | BatchExpandFootprintsOp
+        | AnalyzeGapsOp
+        | FillGapsOp,
         Field(discriminator="op_type"),
     ]
 
@@ -600,6 +606,9 @@ __all__ = [
     "DiagnoseViolationsOp",
     # Readability ops
     "ReviewSchematicOp",
+    # Gap analysis ops
+    "AnalyzeGapsOp",
+    "FillGapsOp",
     # Union and helpers
     "Operation",
     "get_operation_schema",
