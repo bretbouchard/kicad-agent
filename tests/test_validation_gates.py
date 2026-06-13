@@ -9,13 +9,15 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from kiutils.items.common import Position
+from kiutils.items.common import Position, Property
 from kiutils.items.schitems import Connection, LocalLabel
-from kiutils.schematic import Schematic
+from kiutils.schematic import Schematic, SchematicSymbol
 
 from kicad_agent.ir.schematic_ir import SchematicIR
 from kicad_agent.ops.validation_gates import (
+    check_footprint_assignments,
     check_erc_clean,
+    pre_pcb_schematic_gate,
     pre_pcb_gate,
     validate_power_nets,
 )
@@ -221,3 +223,82 @@ class TestPrePcbGate:
             assert "annotation" in result
             assert isinstance(result["annotation"]["complete"], bool)
             assert isinstance(result["annotation"]["unannotated"], list)
+
+
+class TestPrePcbSchematicGate:
+    """Test hard schematic readiness gate before PCB layout."""
+
+    def test_footprint_assignment_detects_missing_board_component(self):
+        """Non-power schematic symbols must have footprints before PCB transfer."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sch_path = Path(tmpdir) / "test.kicad_sch"
+            sch = Schematic.create_new()
+            sym = SchematicSymbol(libraryNickname="Device", entryName="R")
+            sym.properties.append(Property(key="Reference", value="R1"))
+            sym.properties.append(Property(key="Value", value="10k"))
+            sch.schematicSymbols.append(sym)
+            ir = _save_and_parse(sch_path, sch)
+
+            result = check_footprint_assignments(ir)
+
+            assert result["pass"] is False
+            assert result["missing_count"] == 1
+            assert result["missing"][0]["reference"] == "R1"
+
+    def test_footprint_assignment_ignores_power_symbols(self):
+        """Power symbols are not PCB components and do not require footprints."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sch_path = Path(tmpdir) / "test.kicad_sch"
+            sch = Schematic.create_new()
+            sym = SchematicSymbol(libraryNickname="power", entryName="GND")
+            sym.properties.append(Property(key="Reference", value="#PWR01"))
+            sym.properties.append(Property(key="Value", value="GND"))
+            sch.schematicSymbols.append(sym)
+            ir = _save_and_parse(sch_path, sch)
+
+            result = check_footprint_assignments(ir)
+
+            assert result["pass"] is True
+            assert result["missing_count"] == 0
+
+    def test_pre_pcb_gate_fails_closed_on_missing_erc(self, monkeypatch):
+        """Default pre-PCB gate requires ERC and fails if kicad-cli cannot run."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sch_path = Path(tmpdir) / "test.kicad_sch"
+            sch = Schematic.create_new()
+            _save_and_parse(sch_path, sch)
+
+            def _fake_erc(_path):
+                return {
+                    "clean": False,
+                    "error_count": 0,
+                    "warning_count": 0,
+                    "errors": [],
+                    "error_message": "kicad-cli not found",
+                }
+
+            monkeypatch.setattr(
+                "kicad_agent.ops.validation_gates.check_erc_clean",
+                _fake_erc,
+            )
+            result = pre_pcb_schematic_gate(sch_path)
+
+            assert result["gate"] == "pre_pcb_schematic"
+            assert result["ready_for_pcb"] is False
+            assert "erc" in result
+
+    def test_pre_pcb_gate_can_skip_erc_for_unit_scope(self):
+        """Tests can disable ERC while still exercising the structural gate."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sch_path = Path(tmpdir) / "test.kicad_sch"
+            sch = Schematic.create_new()
+            sch.to_file(str(sch_path))
+
+            result = pre_pcb_schematic_gate(
+                sch_path,
+                require_erc_clean=False,
+                require_footprints=True,
+            )
+
+            assert result["ready_for_pcb"] is True
+            assert result["requirements"]["erc_clean"] is False
