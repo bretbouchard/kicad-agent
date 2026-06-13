@@ -310,46 +310,6 @@ _META_TOOLS = [
         },
         annotations=types.ToolAnnotations(readOnlyHint=True),
     ),
-    types.Tool(
-        name="run_workflow",
-        description=(
-            "Execute a named workflow on a PCB file. The 'route_and_fill' workflow "
-            "analyzes routing gaps and fills them via an iterative AI-driven loop. "
-            "Other workflow names are looked up from the workflow template registry. "
-            "Use list_workflows to discover available workflows."
-        ),
-        inputSchema={
-            "type": "object",
-            "properties": {
-                "workflow_name": {
-                    "type": "string",
-                    "description": "Workflow name (e.g. 'route_and_fill', 'fix_erc_errors')",
-                    "minLength": 1,
-                },
-                "pcb_path": {
-                    "type": "string",
-                    "description": "Path to the PCB file (.kicad_pcb)",
-                },
-                "use_ai": {
-                    "type": "boolean",
-                    "description": "Use AI for gap filling (default: from config)",
-                    "default": True,
-                },
-                "max_iterations": {
-                    "type": "integer",
-                    "description": "Max fill iterations 1-3 (default: 3)",
-                    "default": 3,
-                },
-                "target_route_pct": {
-                    "type": "number",
-                    "description": "Target route percentage 0-100 (default: 95)",
-                    "default": 95.0,
-                },
-            },
-            "required": ["workflow_name", "pcb_path"],
-        },
-        annotations=types.ToolAnnotations(destructiveHint=True),
-    ),
     # --- Export/Render convenience tools ---
     types.Tool(
         name="render_pcb",
