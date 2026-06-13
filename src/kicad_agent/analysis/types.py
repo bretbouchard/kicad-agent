@@ -19,6 +19,11 @@ class NetClassification(str, Enum):
     CONTROL = "CONTROL"
     FEEDBACK = "FEEDBACK"
     CLOCK = "CLOCK"
+    # Gate-specific additions for schematic intent completeness (Phase 86-02)
+    HIGH_CURRENT = "HIGH_CURRENT"
+    DIFFERENTIAL_PAIR = "DIFFERENTIAL_PAIR"
+    ANALOG = "ANALOG"
+    DIGITAL = "DIGITAL"
     UNKNOWN = "UNKNOWN"
 
 

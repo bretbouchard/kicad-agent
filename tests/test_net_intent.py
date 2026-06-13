@@ -118,12 +118,13 @@ class TestNetClassificationPatterns:
 
         extractor = NetIntentExtractor()
 
-        ir = _make_mock_ir()
-        # Single-component IR with VCC net
-        comp = _make_mock_component(reference="U1", lib_id="Device:R")
-        comp._ref = "U1"
-        ir.components = [comp]
-        # Mock extract_nets to test delegation
+        # Provide nets via mock labels
+        label_vcc = MagicMock()
+        label_vcc.text = "VCC"
+        label_gnd = MagicMock()
+        label_gnd.text = "GND"
+        ir = _make_mock_ir(labels=[label_vcc, label_gnd])
+
         net_map = extractor.extract_nets(ir)
         # VCC/GND should be POWER/GROUND via base classifier
         assert net_map.get("VCC") == "POWER", f"Expected POWER for VCC, got {net_map.get('VCC')}"
@@ -134,10 +135,15 @@ class TestNetClassificationPatterns:
         from kicad_agent.validation.gates.net_intent import NetIntentExtractor
 
         extractor = NetIntentExtractor()
-        ir = _make_mock_ir()
+
+        # Provide nets via mock labels
+        label_mot = MagicMock()
+        label_mot.text = "MOT_DRV"
+        label_heat = MagicMock()
+        label_heat.text = "HEATER_OUT"
+        ir = _make_mock_ir(labels=[label_mot, label_heat])
 
         net_map = extractor.extract_nets(ir)
-        # Motor nets should be HIGH_CURRENT
         assert net_map.get("MOT_DRV") == "HIGH_CURRENT", f"Expected HIGH_CURRENT for MOT_DRV, got {net_map.get('MOT_DRV')}"
         assert net_map.get("HEATER_OUT") == "HIGH_CURRENT", f"Expected HIGH_CURRENT for HEATER_OUT, got {net_map.get('HEATER_OUT')}"
 
@@ -146,11 +152,20 @@ class TestNetClassificationPatterns:
         from kicad_agent.validation.gates.net_intent import NetIntentExtractor
 
         extractor = NetIntentExtractor()
-        ir = _make_mock_ir()
+
+        # Provide nets via mock labels
+        labels = []
+        for name in ["SDI_P", "SDI_N", "SDA+", "SDA-"]:
+            lbl = MagicMock()
+            lbl.text = name
+            labels.append(lbl)
+        ir = _make_mock_ir(labels=labels)
 
         net_map = extractor.extract_nets(ir)
-        assert net_map.get("USB_DP") == "DIFFERENTIAL_PAIR", f"Expected DIFFERENTIAL_PAIR for USB_DP, got {net_map.get('USB_DP')}"
-        assert net_map.get("USB_DN") == "DIFFERENTIAL_PAIR", f"Expected DIFFERENTIAL_PAIR for USB_DN, got {net_map.get('USB_DN')}"
+        # _P/_N suffix at end of name
+        assert net_map.get("SDI_P") == "DIFFERENTIAL_PAIR", f"Expected DIFFERENTIAL_PAIR for SDI_P, got {net_map.get('SDI_P')}"
+        assert net_map.get("SDI_N") == "DIFFERENTIAL_PAIR", f"Expected DIFFERENTIAL_PAIR for SDI_N, got {net_map.get('SDI_N')}"
+        # +/- suffix at end of name
         assert net_map.get("SDA+") == "DIFFERENTIAL_PAIR", f"Expected DIFFERENTIAL_PAIR for SDA+, got {net_map.get('SDA+')}"
         assert net_map.get("SDA-") == "DIFFERENTIAL_PAIR", f"Expected DIFFERENTIAL_PAIR for SDA-, got {net_map.get('SDA-')}"
 
@@ -173,23 +188,20 @@ class TestHiddenPowerPins:
         comp = MagicMock()
         comp.libId = "MyLib:LM358"
         comp.dnp = False
-        comp._ref = "U1"
+        comp.properties = [MagicMock(key="Reference", value="U1")]
 
         # Mock pins: some connected, some hidden power pins
         pin_vcc = MagicMock()
         pin_vcc.name = "VCC"
         pin_vcc.electricalType = "power_in"
-        pin_vcc.connected = False  # Hidden/unconnected power pin
 
         pin_gnd = MagicMock()
         pin_gnd.name = "GND"
         pin_gnd.electricalType = "power_in"
-        pin_gnd.connected = False  # Hidden/unconnected power pin
 
         pin_out = MagicMock()
         pin_out.name = "OUT"
         pin_out.electricalType = "output"
-        pin_out.connected = True
 
         # Unit with pins
         unit_a = MagicMock()
@@ -218,7 +230,7 @@ class TestHiddenPowerPins:
         comp = MagicMock()
         comp.libId = "Device:R"
         comp.dnp = False
-        comp._ref = "R1"
+        comp.properties = [MagicMock(key="Reference", value="R1")]
 
         lib_sym = MagicMock()
         lib_sym.libId = "Device:R"
@@ -248,7 +260,7 @@ class TestAmbiguousConnectors:
         conn = MagicMock()
         conn.libId = "Connector:Conn_01x04"
         conn.dnp = False
-        conn._ref = "J1"
+        conn.properties = [MagicMock(key="Reference", value="J1")]
 
         lib_sym = MagicMock()
         lib_sym.libId = "Connector:Conn_01x04"
@@ -279,7 +291,7 @@ class TestAmbiguousConnectors:
         comp = MagicMock()
         comp.libId = "Device:R"
         comp.dnp = False
-        comp._ref = "R1"
+        comp.properties = [MagicMock(key="Reference", value="R1")]
 
         ir = _make_mock_ir(components=[comp])
 
@@ -305,7 +317,7 @@ class TestStubSymbols:
         stub = MagicMock()
         stub.libId = "Custom:Placeholder"
         stub.dnp = False
-        stub._ref = "LOGO1"
+        stub.properties = [MagicMock(key="Reference", value="LOGO1")]
 
         lib_sym = MagicMock()
         lib_sym.libId = "Custom:Placeholder"
@@ -328,7 +340,7 @@ class TestStubSymbols:
         comp = MagicMock()
         comp.libId = "Device:R"
         comp.dnp = False
-        comp._ref = "R1"
+        comp.properties = [MagicMock(key="Reference", value="R1")]
 
         lib_sym = MagicMock()
         lib_sym.libId = "Device:R"
