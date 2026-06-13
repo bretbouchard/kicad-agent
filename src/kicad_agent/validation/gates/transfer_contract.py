@@ -297,11 +297,11 @@ class TransferContractValidator:
             if not intent_result.pass_bool:
                 return intent_result
 
-        # --- Build the transfer contract ---
+        # --- Build the transfer contract (single pass) ---
         symbol_footprint_map: dict[str, str] = {}
         pin_pad_map: dict[str, dict[str, str]] = {}
-        # Track which base refs we've processed (for multi-unit merging)
-        processed_base_refs: set[str] = set()
+        blockers: list[str] = []
+        warnings: list[str] = []
 
         for component in schematic_ir.components:
             reference = schematic_ir.get_component_property(component, "Reference") or ""
@@ -322,7 +322,10 @@ class TransferContractValidator:
             footprint = schematic_ir.get_component_footprint(reference)
 
             if not footprint or not footprint.strip():
-                continue  # Will be caught as blocker below
+                blockers.append(
+                    f"Component {reference} ({lib_id}) has no footprint assigned"
+                )
+                continue
 
             base_ref = self._base_reference(reference)
             symbol_footprint_map[base_ref] = footprint
@@ -334,64 +337,19 @@ class TransferContractValidator:
             if base_ref not in pin_pad_map:
                 pin_pad_map[base_ref] = {}
 
-            # Map pin numbers to pad numbers (pin_number -> pin_number
-            # since we use string keys and pad numbers match pin numbers
-            # for standard symbols)
+            # TODO(P88): Replace identity mapping with actual pin-to-pad lookup
+            # from the footprint library. For BGA/connector symbols, pin
+            # numbers != pad numbers.
             for pin_num in pin_map_result.get("symbol_pins", set()):
-                pin_pad_map[base_ref][str(pin_num)] = str(pin_num)
+                pin_key = str(pin_num)
+                if pin_key in pin_pad_map[base_ref]:
+                    logger.warning(
+                        "Pin %s from %s already mapped in %s pin_pad_map (multi-unit overlap)",
+                        pin_num, reference, base_ref,
+                    )
+                pin_pad_map[base_ref][pin_key] = pin_key
 
             if pin_map_result.get("match") is False:
-                # Already captured in pin_pad_map, blocker generated below
-                pass
-
-            processed_base_refs.add(base_ref)
-
-        # --- Detect missing footprints ---
-        blockers: list[str] = []
-        warnings: list[str] = []
-
-        for component in schematic_ir.components:
-            reference = schematic_ir.get_component_property(component, "Reference") or ""
-            lib_id = getattr(component, "libId", "") or ""
-
-            if not reference:
-                continue
-
-            if self._is_power_symbol(lib_id):
-                continue
-
-            if getattr(component, "dnp", False) is True:
-                continue
-
-            footprint = schematic_ir.get_component_footprint(reference)
-
-            if not footprint or not footprint.strip():
-                blockers.append(
-                    f"Component {reference} ({lib_id}) has no footprint assigned"
-                )
-
-        # --- Detect pin count mismatches ---
-        for component in schematic_ir.components:
-            reference = schematic_ir.get_component_property(component, "Reference") or ""
-            lib_id = getattr(component, "libId", "") or ""
-
-            if not reference:
-                continue
-
-            if self._is_power_symbol(lib_id):
-                continue
-
-            if getattr(component, "dnp", False) is True:
-                continue
-
-            footprint = schematic_ir.get_component_footprint(reference)
-            if not footprint or not footprint.strip():
-                continue  # Already reported above
-
-            pin_map_result = schematic_ir.verify_pin_map(reference, footprint)
-
-            if pin_map_result.get("match") is False:
-                symbol_pins = pin_map_result.get("symbol_pins", set())
                 missing = pin_map_result.get("missing_in_footprint", set())
                 extra = pin_map_result.get("extra_in_footprint", set())
 

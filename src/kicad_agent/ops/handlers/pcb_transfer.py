@@ -23,7 +23,7 @@ import logging
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +69,20 @@ class UpdateFromSchematicOp(BaseModel):
 
     # NOTE: NO force/bypass field. Gates fail closed. LLM agents cannot bypass.
     # The handler function accepts an optional force parameter for CLI-only human testing.
+
+    @field_validator("schematic_path", "pcb_path", mode="before")
+    @classmethod
+    def _validate_file_path(cls, v: str | None) -> str | None:
+        """Reject path traversal and unsafe characters (D-03 / H-01 alignment)."""
+        if v is not None:
+            if "\x00" in v:
+                raise ValueError("file path contains null bytes")
+            if v.startswith("/"):
+                raise ValueError("file path must be a relative path")
+            parts = Path(v).parts
+            if ".." in parts:
+                raise ValueError("file path must not contain '..' path traversal")
+        return v
 
 
 # ---------------------------------------------------------------------------
@@ -275,6 +289,11 @@ def handle_update_from_schematic(
                 all_blockers.append(ph)
 
     # --- Build result ---
+    # CR-01 fix: If blockers came from stub/placeholder detection (not the gate
+    # itself), use a generic retry action -- gate_result.next_actions from a
+    # passing gate would say "Proceed to pcb_setup stage" which is misleading.
+    has_gate_blockers = len(gate_result.blockers) > 0
+
     if all_blockers:
         result = {
             "pass": False,
@@ -282,7 +301,8 @@ def handle_update_from_schematic(
             "blockers": all_blockers,
             "warnings": all_warnings,
             "artifacts": all_artifacts,
-            "next_actions": gate_result.next_actions or ["Fix transfer contract blockers and retry"],
+            "next_actions": gate_result.next_actions if has_gate_blockers
+                              else ["Fix transfer contract blockers above and retry"],
         }
     else:
         result = {

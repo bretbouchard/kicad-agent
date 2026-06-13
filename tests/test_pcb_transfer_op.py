@@ -149,6 +149,46 @@ class TestGateEnforcement:
         assert "U1: missing footprint assignment" in result["blockers"]
         assert result.get("mutated") is not True
 
+    def test_stub_blockers_use_retry_action_not_gate_action(self):
+        """CR-01: When gate passes but stub detection adds blockers,
+        next_actions should say 'retry' not 'Proceed to pcb_setup stage'."""
+        from kicad_agent.validation.gate_types import GateResult
+
+        # Gate passes (no blockers, next_actions says "Proceed")
+        pass_result = GateResult(
+            pass_=True,
+            gate_name="transfer_contract",
+            artifacts=["1 component(s) in transfer contract"],
+            next_actions=["Proceed to pcb_setup stage"],
+        )
+
+        ir = _make_schematic_ir()
+
+        with patch(
+            "kicad_agent.validation.gates.transfer_contract.TransferContractValidator.validate",
+            return_value=pass_result,
+        ), patch(
+            "kicad_agent.ops.handlers.pcb_transfer.detect_stub_footprints",
+            return_value=["U1 has placeholder footprint '~' (assign a real footprint before transfer)"],
+        ):
+            from kicad_agent.ops.handlers.pcb_transfer import (
+                UpdateFromSchematicOp,
+                handle_update_from_schematic,
+            )
+
+            op = UpdateFromSchematicOp(
+                op_type="update_from_schematic",
+                schematic_path="test.kicad_sch",
+            )
+            ir_map = {Path("test.kicad_sch"): ir}
+            result = handle_update_from_schematic(op, ir_map, Path("."))
+
+        assert result["pass"] is False
+        assert any("placeholder" in b for b in result["blockers"])
+        # CR-01 fix: next_actions must NOT say "Proceed" when we added blockers
+        assert not any("Proceed" in a for a in result["next_actions"])
+        assert any("Fix" in a or "retry" in a.lower() for a in result["next_actions"])
+
     def test_no_force_field_in_schema(self):
         """The UpdateFromSchematicOp schema must NOT have a force field."""
         from kicad_agent.ops.handlers.pcb_transfer import UpdateFromSchematicOp
@@ -727,3 +767,75 @@ class TestHandlerErrorCases:
 
         assert result["pass"] is True
         assert result.get("contract_ready") is True
+
+
+# ---------------------------------------------------------------------------
+# Test: WR-02 path validation (D-03 alignment)
+# ---------------------------------------------------------------------------
+
+
+class TestPathValidation:
+    """Verify schematic_path and pcb_path reject unsafe values (WR-02 fix)."""
+
+    def test_reject_path_traversal(self):
+        """Paths with '..' must be rejected."""
+        from kicad_agent.ops.handlers.pcb_transfer import UpdateFromSchematicOp
+
+        with pytest.raises(Exception):
+            UpdateFromSchematicOp(
+                op_type="update_from_schematic",
+                schematic_path="../etc/passwd",
+            )
+
+    def test_reject_absolute_path(self):
+        """Absolute paths must be rejected."""
+        from kicad_agent.ops.handlers.pcb_transfer import UpdateFromSchematicOp
+
+        with pytest.raises(Exception):
+            UpdateFromSchematicOp(
+                op_type="update_from_schematic",
+                schematic_path="/etc/passwd",
+            )
+
+    def test_reject_null_bytes(self):
+        """Paths with null bytes must be rejected."""
+        from kicad_agent.ops.handlers.pcb_transfer import UpdateFromSchematicOp
+
+        with pytest.raises(Exception):
+            UpdateFromSchematicOp(
+                op_type="update_from_schematic",
+                schematic_path="test\x00.kicad_sch",
+            )
+
+    def test_reject_traversal_in_pcb_path(self):
+        """pcb_path with '..' must also be rejected."""
+        from kicad_agent.ops.handlers.pcb_transfer import UpdateFromSchematicOp
+
+        with pytest.raises(Exception):
+            UpdateFromSchematicOp(
+                op_type="update_from_schematic",
+                schematic_path="test.kicad_sch",
+                pcb_path="../evil.kicad_pcb",
+            )
+
+    def test_allow_relative_path(self):
+        """Normal relative paths must be accepted."""
+        from kicad_agent.ops.handlers.pcb_transfer import UpdateFromSchematicOp
+
+        op = UpdateFromSchematicOp(
+            op_type="update_from_schematic",
+            schematic_path="project.kicad_sch",
+            pcb_path="project.kicad_pcb",
+        )
+        assert op.schematic_path == "project.kicad_sch"
+        assert op.pcb_path == "project.kicad_pcb"
+
+    def test_allow_none_pcb_path(self):
+        """None pcb_path must be accepted (contract-only mode)."""
+        from kicad_agent.ops.handlers.pcb_transfer import UpdateFromSchematicOp
+
+        op = UpdateFromSchematicOp(
+            op_type="update_from_schematic",
+            schematic_path="project.kicad_sch",
+        )
+        assert op.pcb_path is None
