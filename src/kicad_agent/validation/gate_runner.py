@@ -74,6 +74,10 @@ class GateRunner:
         """Return all registered gates."""
         return list(self._gates.values())
 
+    def has_check_fn(self, name: str) -> bool:
+        """Check whether a gate has a registered check function."""
+        return name in self._check_fns
+
     def run_gate(self, name: str, context: dict[str, Any]) -> GateResult:
         """Execute a single gate by name.
 

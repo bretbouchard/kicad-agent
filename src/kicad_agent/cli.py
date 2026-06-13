@@ -825,7 +825,7 @@ def _handle_gate(argv: list[str]) -> None:
             print(f"Current design stage: {current_stage.value}")
             print(f"Registered gates: {len(gates)}")
             for g in gates:
-                check_fn_status = "has check_fn" if g.name in runner._check_fns else "no check_fn"
+                check_fn_status = "has check_fn" if runner.has_check_fn(g.name) else "no check_fn"
                 print(f"  {g.name}: {g.from_stage.value} -> {g.to_stage.value} ({check_fn_status})")
             print("Next actions:")
             for action in status_info["next_actions"]:
