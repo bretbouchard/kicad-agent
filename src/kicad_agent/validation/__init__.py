@@ -60,6 +60,16 @@ from kicad_agent.validation.silkscreen_clearance import (
     SilkscreenViolation,
     SilkscreenClearanceResult,
 )
+from kicad_agent.validation.gate_types import (
+    DesignStage,
+    GateResult,
+    GateDefinition,
+)
+from kicad_agent.validation.gate_runner import (
+    GateRunner,
+    get_gate_runner,
+    register_gate,
+)
 
 __all__ = [
     "round_trip_stable",
@@ -103,4 +113,10 @@ __all__ = [
     "check_silkscreen_clearance",
     "SilkscreenViolation",
     "SilkscreenClearanceResult",
+    "DesignStage",
+    "GateResult",
+    "GateDefinition",
+    "GateRunner",
+    "get_gate_runner",
+    "register_gate",
 ]

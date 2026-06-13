@@ -171,6 +171,7 @@ def check_erc_clean(sch_path: Path) -> dict[str, Any]:
         "error_count": result.error_count,
         "warning_count": result.warning_count,
         "errors": errors,
+        "error_message": result.error_message,
     }
 
 
@@ -276,7 +277,7 @@ def pre_pcb_gate(project_dir: Path) -> dict[str, Any]:
             )
     if not annotation_result["complete"]:
         recommendations.append(
-            f"Annotate {len(unannotated)} unannotated components"
+            f"Annotate {len(all_unannotated)} unannotated components"
         )
 
     gate_pass = (
@@ -459,10 +460,12 @@ def _check_hierarchical_power(ir: SchematicIR, file_path: Path) -> list[dict[str
 def validate_schematic_completeness(
     sch_path: Path,
     *,
+    check_erc: bool = False,
     check_symbol_resolution: bool = True,
     check_format: bool = True,
     check_power_nets: bool = True,
     check_annotation: bool = True,
+    check_footprints: bool = False,
     check_grid: bool = True,
     check_symbol_mismatch: bool = True,
     check_sheet_pins: bool = True,
@@ -486,10 +489,12 @@ def validate_schematic_completeness(
     Returns:
         Dict with:
         - pass: bool -- True if all enabled checks pass
+        - erc: dict -- ERC check result (if enabled)
         - format: dict -- Format check results (if enabled)
         - symbol_resolution: dict -- Symbol resolution results (if enabled)
         - power: dict -- Power net validation results (if enabled)
         - annotation: dict -- Annotation completeness results (if enabled)
+        - footprints: dict -- Footprint assignment readiness (if enabled)
         - grid: dict -- Grid alignment results (if enabled)
         - symbol_mismatch: dict -- Symbol copy mismatch results (if enabled)
         - sheet_pins: dict -- Sheet pin matching results (if enabled)
@@ -502,6 +507,22 @@ def validate_schematic_completeness(
         "pass": True,
         "recommendations": [],
     }
+
+    # 0. Official ERC check. Gate-grade validation should use KiCad's own
+    # electrical rule engine, not just structural/static checks.
+    if check_erc:
+        erc_result = check_erc_clean(sch_path)
+        results["erc"] = erc_result
+        if not erc_result["clean"]:
+            results["pass"] = False
+            if erc_result.get("error_message"):
+                results["recommendations"].append(
+                    f"Run ERC successfully before PCB transfer: {erc_result['error_message']}"
+                )
+            else:
+                results["recommendations"].append(
+                    f"Fix {erc_result['error_count']} ERC error(s) before PCB transfer"
+                )
 
     # 1. Format check (KiCad 10 S-expression rules)
     if check_format:
@@ -582,6 +603,17 @@ def validate_schematic_completeness(
                 f"Annotate {len(unannotated)} unannotated components"
             )
 
+    # 4b. Footprint readiness. The PCB transfer step cannot preserve electrical
+    # intent unless every board component has an explicit footprint assignment.
+    if check_footprints:
+        footprint_result = check_footprint_assignments(ir)
+        results["footprints"] = footprint_result
+        if not footprint_result["pass"]:
+            results["pass"] = False
+            results["recommendations"].append(
+                f"Assign footprints to {len(footprint_result['missing'])} board component(s)"
+            )
+
     # 5. Grid alignment (off-grid pins and wire endpoints)
     if check_grid:
         from kicad_agent.validation.grid_check import check_grid_alignment
@@ -640,3 +672,115 @@ def validate_schematic_completeness(
             )
 
     return results
+
+
+def check_footprint_assignments(ir: SchematicIR) -> dict[str, Any]:
+    """Require each board component to have a non-empty Footprint property.
+
+    Power symbols and reference designators beginning with ``#`` are excluded
+    because they do not become PCB footprints.
+    """
+    missing: list[dict[str, str]] = []
+    assigned: list[dict[str, str]] = []
+
+    for component in ir.components:
+        reference = ir.get_component_property(component, "Reference") or ""
+        lib_id = getattr(component, "libId", "") or ""
+
+        if reference.startswith("#") or lib_id.startswith("power:"):
+            continue
+
+        footprint = ir.get_component_property(component, "Footprint") or ""
+        if footprint.strip():
+            assigned.append({
+                "reference": reference,
+                "lib_id": lib_id,
+                "footprint": footprint,
+            })
+        else:
+            missing.append({
+                "reference": reference,
+                "lib_id": lib_id,
+            })
+
+    return {
+        "pass": len(missing) == 0,
+        "assigned_count": len(assigned),
+        "missing_count": len(missing),
+        "missing": missing,
+    }
+
+
+def pre_pcb_schematic_gate(
+    sch_path: Path,
+    *,
+    require_erc_clean: bool = True,
+    require_footprints: bool = True,
+    check_hierarchical: bool = True,
+) -> dict[str, Any]:
+    """Hard gate for schematic readiness before PCB layout.
+
+    This gate is intentionally stricter than a convenience validation report.
+    It fails closed when the schematic is not ready to transfer to PCB.
+
+    Returns a backward-compatible dict with the same shape as before.
+    """
+    from kicad_agent.validation.gate_types import GateResult
+    from kicad_agent.validation.gate_runner import register_gate, GateDefinition, DesignStage
+
+    result = validate_schematic_completeness(
+        sch_path,
+        check_erc=require_erc_clean,
+        check_symbol_resolution=True,
+        check_format=True,
+        check_power_nets=True,
+        check_annotation=True,
+        check_footprints=require_footprints,
+        check_grid=True,
+        check_symbol_mismatch=True,
+        check_sheet_pins=check_hierarchical,
+    )
+
+    gate_passed = bool(result["pass"])
+    recommendations = result.get("recommendations", [])
+
+    gate_result = GateResult(
+        pass_=gate_passed,
+        gate_name="pre_pcb_schematic",
+        stage=DesignStage.SCHEMATIC,
+        blockers=[] if gate_passed else recommendations,
+        warnings=recommendations if gate_passed else [],
+        artifacts=[
+            k for k, v in result.items()
+            if k not in ("pass", "recommendations", "gate", "ready_for_pcb", "requirements")
+            and isinstance(v, dict)
+        ],
+        next_actions=[],
+    )
+
+    # Register with gate runner on first call
+    if not hasattr(pre_pcb_schematic_gate, "_registered"):
+        register_gate(
+            GateDefinition(
+                name="pre_pcb_schematic",
+                from_stage=DesignStage.SCHEMATIC,
+                to_stage=DesignStage.PCB_SETUP,
+                check_fn_name="pre_pcb_schematic_gate",
+            ),
+            check_fn=lambda ctx: pre_pcb_schematic_gate(**ctx),
+        )
+        pre_pcb_schematic_gate._registered = True  # type: ignore[attr-defined]
+
+    # Build backward-compatible dict: GateResult shape + original sub-results
+    compat = gate_result.to_dict()
+    # Restore sub-check dicts that callers inspect (erc, power, annotation, etc.)
+    for k, v in result.items():
+        if k not in compat:
+            compat[k] = v
+    # Restore requirements dict
+    compat["requirements"] = {
+        "erc_clean": require_erc_clean,
+        "footprints_assigned": require_footprints,
+        "hierarchy_checked": check_hierarchical,
+    }
+    return compat
