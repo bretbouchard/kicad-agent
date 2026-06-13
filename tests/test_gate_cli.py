@@ -24,7 +24,7 @@ def _create_minimal_schematic(tmpdir: Path) -> Path:
 
 def _make_gate_runner_aware():
     """Ensure the default GateRunner has pre_pcb_schematic registered."""
-    from kicad_agent.ops.validation_gates import pre_pcb_schematic_gate
+    from kicad_agent.ops.validation_gates import pre_pcb_schematic_gate, _resolve_sch_path
     from kicad_agent.validation.gate_types import GateDefinition, DesignStage
     from kicad_agent.validation.gate_runner import get_gate_runner, register_gate
 
@@ -37,7 +37,9 @@ def _make_gate_runner_aware():
                 to_stage=DesignStage.PCB_SETUP,
                 check_fn_name="pre_pcb_schematic_gate",
             ),
-            check_fn=lambda ctx: pre_pcb_schematic_gate(**ctx),
+            check_fn=lambda ctx: pre_pcb_schematic_gate(
+                sch_path=_resolve_sch_path(ctx.get("project_dir") or ctx.get("sch_path")),
+            ),
         )
 
 

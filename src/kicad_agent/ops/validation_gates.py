@@ -18,6 +18,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+_PCB_GATE_REGISTERED = False
+
 from kicad_agent.ir.schematic_ir import SchematicIR
 
 logger = logging.getLogger(__name__)
@@ -711,6 +713,24 @@ def check_footprint_assignments(ir: SchematicIR) -> dict[str, Any]:
     }
 
 
+def _resolve_sch_path(path: Any) -> Path:
+    """Resolve a project dir or direct schematic path to a .kicad_sch file."""
+    p = Path(path) if not isinstance(path, Path) else path
+    if p.suffix == ".kicad_sch":
+        return p
+    # Search for schematic in project directory
+    sch = p / f"{p.name}.kicad_sch"
+    if sch.exists():
+        return sch
+    # Fallback: find any .kicad_sch
+    matches = list(p.glob("*.kicad_sch"))
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        raise FileNotFoundError(f"No .kicad_sch found in {p}")
+    raise ValueError(f"Multiple .kicad_sch files in {p}: {[m.name for m in matches]}")
+
+
 def pre_pcb_schematic_gate(
     sch_path: Path,
     *,
@@ -725,6 +745,7 @@ def pre_pcb_schematic_gate(
 
     Returns a backward-compatible dict with the same shape as before.
     """
+    global _PCB_GATE_REGISTERED
     from kicad_agent.validation.gate_types import GateResult
     from kicad_agent.validation.gate_runner import register_gate, GateDefinition, DesignStage
 
@@ -758,8 +779,8 @@ def pre_pcb_schematic_gate(
         next_actions=[],
     )
 
-    # Register with gate runner on first call
-    if not hasattr(pre_pcb_schematic_gate, "_registered"):
+    # Register with gate runner on first call (module-level flag, not function attribute)
+    if not _PCB_GATE_REGISTERED:
         register_gate(
             GateDefinition(
                 name="pre_pcb_schematic",
@@ -767,9 +788,11 @@ def pre_pcb_schematic_gate(
                 to_stage=DesignStage.PCB_SETUP,
                 check_fn_name="pre_pcb_schematic_gate",
             ),
-            check_fn=lambda ctx: pre_pcb_schematic_gate(**ctx),
+            check_fn=lambda ctx: pre_pcb_schematic_gate(
+                sch_path=_resolve_sch_path(ctx.get("project_dir") or ctx.get("sch_path")),
+            ),
         )
-        pre_pcb_schematic_gate._registered = True  # type: ignore[attr-defined]
+        _PCB_GATE_REGISTERED = True
 
     # Build backward-compatible dict: GateResult shape + original sub-results
     compat = gate_result.to_dict()

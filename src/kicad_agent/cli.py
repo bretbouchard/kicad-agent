@@ -763,33 +763,38 @@ def _handle_gate(argv: list[str]) -> None:
 
     if args.action == "run":
         from kicad_agent.validation.gate_runner import get_gate_runner
-        from kicad_agent.ops.validation_gates import pre_pcb_schematic_gate
+        from kicad_agent.validation.gate_types import GateResult, DesignStage
 
         runner = get_gate_runner()
         project_dir = args.project_dir or Path.cwd()
         gate_name = args.name
 
-        # For the pre_pcb_schematic gate, find the schematic and run directly
-        sch_files = list(project_dir.glob("*.kicad_sch"))
-        if not sch_files:
-            print(f"Error: No .kicad_sch files found in {project_dir}", file=sys.stderr)
-            sys.exit(1)
-
-        result = pre_pcb_schematic_gate(sch_files[0])
+        try:
+            result = runner.run_gate(gate_name, context={"project_dir": project_dir})
+        except (FileNotFoundError, ValueError) as exc:
+            result = GateResult(
+                pass_=False,
+                gate_name=gate_name,
+                stage=DesignStage.SCHEMATIC,
+                blockers=[str(exc)],
+                next_actions=["Fix the issue above and retry"],
+            )
+        result_dict = result.to_dict() if hasattr(result, "to_dict") else result
+        passed = result_dict.get("pass", False) if isinstance(result_dict, dict) else False
 
         if args.json:
-            print(json.dumps(result, indent=2, default=str))
+            print(json.dumps(result_dict, indent=2, default=str))
         else:
-            status = "PASS" if result.get("ready_for_pcb") else "FAIL"
+            status = "PASS" if passed else "FAIL"
             print(f"Gate '{gate_name}': {status}")
-            for b in result.get("blockers", []):
+            for b in result_dict.get("blockers", []):
                 print(f"  BLOCKER: {b}")
-            for w in result.get("warnings", []):
+            for w in result_dict.get("warnings", []):
                 print(f"  WARNING: {w}")
-            for r in result.get("recommendations", []):
-                print(f"  - {r}")
+            for r in result_dict.get("next_actions", []):
+                print(f" - {r}")
 
-        sys.exit(0 if result.get("ready_for_pcb") else 1)
+        sys.exit(0 if passed else 1)
 
     elif args.action == "status":
         from kicad_agent.validation.gate_runner import get_gate_runner
