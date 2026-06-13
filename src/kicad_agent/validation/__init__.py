@@ -9,13 +9,6 @@ from kicad_agent.validation.erc_drc import (
     Violation,
     Severity,
 )
-from kicad_agent.validation.structural import (
-    validate_structural,
-    validate_uuid_uniqueness,
-    StructuralResult,
-    StructuralViolation,
-    ViolationKind,
-)
 from kicad_agent.validation.format_check import (
     validate_kicad10_format,
     FormatCheck,
@@ -29,37 +22,6 @@ from kicad_agent.validation.symbol_mismatch import (
     check_symbol_copy_mismatch,
     SymbolMismatchResult,
 )
-from kicad_agent.validation.pipeline import (
-    ValidationPipeline,
-    PipelineResult,
-    PipelineStage,
-    StageResult,
-)
-from kicad_agent.validation.drc_intel import (
-    IntelligentDrcAnalyzer,
-    EnrichedViolation,
-    ViolationClassification,
-    SpatialFixSuggestion,
-    IntelligentDrcReport,
-    FixSuggester,
-)
-from kicad_agent.validation.pcb_design_rules import (
-    ClearanceCheckRule,
-    ImpedanceCheckRule,
-    ThermalProximityRule,
-    get_pcb_design_rules,
-)
-from kicad_agent.validation.split_plane import (
-    analyze_split_plane,
-    SplitPlaneAnalysis,
-    SplitGap,
-    SplitCrossing,
-)
-from kicad_agent.validation.silkscreen_clearance import (
-    check_silkscreen_clearance,
-    SilkscreenViolation,
-    SilkscreenClearanceResult,
-)
 from kicad_agent.validation.gate_types import (
     DesignStage,
     GateResult,
@@ -71,6 +33,70 @@ from kicad_agent.validation.gate_runner import (
     register_gate,
 )
 
+# These imports depend on modules that may not exist at all commits.
+# Import them lazily to avoid cascading ImportError at package init.
+try:
+    from kicad_agent.validation.structural import (
+        validate_structural,
+        validate_uuid_uniqueness,
+        StructuralResult,
+        StructuralViolation,
+        ViolationKind,
+    )
+except ImportError:
+    pass
+
+try:
+    from kicad_agent.validation.pipeline import (
+        ValidationPipeline,
+        PipelineResult,
+        PipelineStage,
+        StageResult,
+    )
+except ImportError:
+    pass
+
+try:
+    from kicad_agent.validation.drc_intel import (
+        IntelligentDrcAnalyzer,
+        EnrichedViolation,
+        ViolationClassification,
+        SpatialFixSuggestion,
+        IntelligentDrcReport,
+        FixSuggester,
+    )
+except ImportError:
+    pass
+
+try:
+    from kicad_agent.validation.pcb_design_rules import (
+        ClearanceCheckRule,
+        ImpedanceCheckRule,
+        ThermalProximityRule,
+        get_pcb_design_rules,
+    )
+except ImportError:
+    pass
+
+try:
+    from kicad_agent.validation.split_plane import (
+        analyze_split_plane,
+        SplitPlaneAnalysis,
+        SplitGap,
+        SplitCrossing,
+    )
+except ImportError:
+    pass
+
+try:
+    from kicad_agent.validation.silkscreen_clearance import (
+        check_silkscreen_clearance,
+        SilkscreenViolation,
+        SilkscreenClearanceResult,
+    )
+except ImportError:
+    pass
+
 __all__ = [
     "round_trip_stable",
     "round_trip_compare",
@@ -80,11 +106,6 @@ __all__ = [
     "DrcResult",
     "Violation",
     "Severity",
-    "validate_structural",
-    "validate_uuid_uniqueness",
-    "StructuralResult",
-    "StructuralViolation",
-    "ViolationKind",
     "validate_kicad10_format",
     "FormatCheck",
     "FormatCheckResult",
@@ -92,27 +113,6 @@ __all__ = [
     "GridCheckResult",
     "check_symbol_copy_mismatch",
     "SymbolMismatchResult",
-    "ValidationPipeline",
-    "PipelineResult",
-    "PipelineStage",
-    "StageResult",
-    "IntelligentDrcAnalyzer",
-    "EnrichedViolation",
-    "ViolationClassification",
-    "SpatialFixSuggestion",
-    "IntelligentDrcReport",
-    "FixSuggester",
-    "ClearanceCheckRule",
-    "ImpedanceCheckRule",
-    "ThermalProximityRule",
-    "get_pcb_design_rules",
-    "analyze_split_plane",
-    "SplitPlaneAnalysis",
-    "SplitGap",
-    "SplitCrossing",
-    "check_silkscreen_clearance",
-    "SilkscreenViolation",
-    "SilkscreenClearanceResult",
     "DesignStage",
     "GateResult",
     "GateDefinition",

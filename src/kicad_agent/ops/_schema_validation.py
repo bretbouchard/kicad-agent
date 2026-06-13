@@ -49,6 +49,30 @@ class ValidateSchematicOp(BaseModel):
     check_format: bool = Field(default=True, description="Validate KiCad 10 format rules")
     check_power_nets: bool = Field(default=True, description="Check power pin connectivity")
     check_annotation: bool = Field(default=True, description="Check for unannotated components")
+    check_erc: bool = Field(default=False, description="Run kicad-cli ERC and require zero ERC errors")
+    check_footprints: bool = Field(default=False, description="Require all board components to have footprints assigned")
+
+
+class PrePcbSchematicGateOp(BaseModel):
+    """Hard gate for deciding whether a schematic is ready for PCB layout.
+
+    This is stricter than general schematic validation. It should pass before
+    any operation transfers a schematic to PCB, places footprints, routes nets,
+    or exports manufacturing files.
+
+    Attributes:
+        op_type: Discriminator literal ``"pre_pcb_schematic_gate"``.
+        target_file: Relative path to the root KiCad schematic file.
+        require_erc_clean: Run ERC and require zero ERC errors.
+        require_footprints: Require all non-power board components to have footprints.
+        check_hierarchical: Check hierarchical power and sheet-pin consistency.
+    """
+
+    op_type: Literal["pre_pcb_schematic_gate"] = "pre_pcb_schematic_gate"
+    target_file: TargetFile
+    require_erc_clean: bool = Field(default=True, description="Require kicad-cli ERC to pass")
+    require_footprints: bool = Field(default=True, description="Require footprint assignment for board components")
+    check_hierarchical: bool = Field(default=True, description="Check hierarchy boundary consistency")
 
 
 class ParseErcOp(BaseModel):
@@ -82,6 +106,36 @@ class ExtractViolationPositionsOp(BaseModel):
         min_length=1,
         max_length=128,
         description="Violation type to filter for (e.g. 'pin_not_connected')",
+    )
+
+
+class PrePcbSchematicGateOp(BaseModel):
+    """Hard gate for schematic readiness before PCB layout.
+
+    Runs ERC, power net validation, and annotation completeness checks.
+    This gate fails closed when the schematic is not ready for PCB transfer.
+
+    Attributes:
+        op_type: Discriminator literal ``"pre_pcb_schematic_gate"``.
+        target_file: Relative path to the target KiCad schematic file (H-01 validated).
+        require_erc_clean: Require ERC to pass with zero errors (default True).
+        require_footprints: Require all components to have footprint assignments (default True).
+        check_hierarchical: Check hierarchical sheet connectivity (default True).
+    """
+
+    op_type: Literal["pre_pcb_schematic_gate"] = "pre_pcb_schematic_gate"
+    target_file: TargetFile
+    require_erc_clean: bool = Field(
+        default=True,
+        description="Require ERC clean with zero errors",
+    )
+    require_footprints: bool = Field(
+        default=True,
+        description="Require all board components to have footprint assignments",
+    )
+    check_hierarchical: bool = Field(
+        default=True,
+        description="Check hierarchical sheet connectivity",
     )
 
 
