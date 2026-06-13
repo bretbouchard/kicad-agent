@@ -294,6 +294,49 @@ def check_component_metadata(
     return blockers, warnings
 
 
+def check_net_intent(
+    schematic_ir: SchematicIR,
+) -> tuple[list[str], list[str], list[str]]:
+    """Run net intent extraction and quality checks.
+
+    Returns (blockers, warnings, artifacts).
+    Blockers: hidden power pins, stub symbols.
+    Warnings: unclassified nets, ambiguous connectors.
+    Artifacts: net classification summary.
+    """
+    from kicad_agent.validation.gates.net_intent import NetIntentExtractor
+    from kicad_agent.analysis.types import NetClassification
+
+    extractor = NetIntentExtractor()
+
+    # Net classification -- added to artifacts, not blockers
+    net_classes = extractor.extract_nets(schematic_ir)
+    artifacts: list[str] = [f"{name}: {cls.value}" for name, cls in net_classes.items()]
+
+    # Warn about unknown nets (Thermal Rick suggestion from council review)
+    warnings: list[str] = []
+    for name, cls in net_classes.items():
+        if cls == NetClassification.UNKNOWN:
+            warnings.append(
+                f"Net '{name}' could not be classified -- "
+                "consider adding a naming convention"
+            )
+
+    # Quality checks
+    blockers: list[str] = []
+
+    hidden_pins = extractor.detect_hidden_power_pins(schematic_ir)
+    blockers.extend(f"Hidden power pin: {pin}" for pin in hidden_pins)
+
+    connectors = extractor.detect_ambiguous_connectors(schematic_ir)
+    warnings.extend(f"Ambiguous connector: {ref}" for ref in connectors)
+
+    stubs = extractor.detect_stub_symbols(schematic_ir)
+    blockers.extend(f"Stub symbol with no pins: {ref}" for ref in stubs)
+
+    return blockers, warnings, artifacts
+
+
 class SchematicIntentGate:
     """Schematic intent completeness gate.
 
@@ -349,9 +392,10 @@ class SchematicIntentGate:
         fp_blockers, fp_warnings = check_footprint_completeness(ir)
         pc_blockers, pc_warnings = check_symbol_pin_count(ir)
         md_blockers, md_warnings = check_component_metadata(ir)
+        ni_blockers, ni_warnings, ni_artifacts = check_net_intent(ir)
 
-        all_blockers = fp_blockers + pc_blockers + md_blockers
-        all_warnings = fp_warnings + pc_warnings + md_warnings
+        all_blockers = fp_blockers + pc_blockers + md_blockers + ni_blockers
+        all_warnings = fp_warnings + pc_warnings + md_warnings + ni_warnings
 
         # Collect artifacts
         artifacts: list[str] = []
@@ -359,6 +403,9 @@ class SchematicIntentGate:
             artifacts.append(f"{len(all_blockers)} blocker(s) found")
         if all_warnings:
             artifacts.append(f"{len(all_warnings)} warning(s) found")
+        # Include net classification in artifacts
+        if ni_artifacts:
+            artifacts.append(f"{len(ni_artifacts)} net(s) classified")
 
         # Build next actions
         next_actions: list[str] = []
@@ -369,6 +416,10 @@ class SchematicIntentGate:
         if pc_blockers:
             next_actions.append(
                 f"Resolve {len(pc_blockers)} pin count mismatch(es)"
+            )
+        if ni_blockers:
+            next_actions.append(
+                f"Fix {len(ni_blockers)} net intent issue(s)"
             )
 
         if all_blockers:

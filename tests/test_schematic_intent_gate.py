@@ -282,10 +282,13 @@ class TestCombinedGate:
             "kicad_agent.validation.gates.schematic_intent_gate.check_symbol_pin_count"
         ) as mock_pc, patch(
             "kicad_agent.validation.gates.schematic_intent_gate.check_component_metadata"
-        ) as mock_md:
+        ) as mock_md, patch(
+            "kicad_agent.validation.gates.schematic_intent_gate.check_net_intent"
+        ) as mock_ni:
             mock_fp.return_value = ([], [])
             mock_pc.return_value = ([], [])
             mock_md.return_value = ([], [])
+            mock_ni.return_value = ([], [], [])
 
             gate.run({
                 "schematic_ir": ir,
@@ -296,6 +299,7 @@ class TestCombinedGate:
             mock_fp.assert_called_once_with(ir)
             mock_pc.assert_called_once_with(ir)
             mock_md.assert_called_once_with(ir)
+            mock_ni.assert_called_once_with(ir)
 
 
 # ---------------------------------------------------------------------------

@@ -372,3 +372,118 @@ class TestPatternConstants:
         assert hasattr(module, "_ANALOG_PATTERNS")
         assert hasattr(module, "_DIGITAL_PATTERNS")
         assert hasattr(module, "_CONNECTOR_PREFIXES")
+
+
+# ---------------------------------------------------------------------------
+# Integration tests with SchematicIntentGate (2)
+# ---------------------------------------------------------------------------
+
+
+class TestGateIntegration:
+    """Integration tests for net intent within SchematicIntentGate."""
+
+    def test_full_gate_result_with_net_intent(self):
+        """Full gate run produces correct combined result with net intent issues."""
+        from kicad_agent.validation.gates.schematic_intent_gate import (
+            check_net_intent,
+        )
+
+        # Build a mock IR that has a stub symbol (blocker) and a connector (warning)
+        stub_comp = MagicMock()
+        stub_comp.libId = "Custom:Placeholder"
+        stub_comp.dnp = False
+        stub_comp.properties = [MagicMock(key="Reference", value="LOGO1")]
+
+        conn_comp = MagicMock()
+        conn_comp.libId = "Connector:Conn_01x02"
+        conn_comp.dnp = False
+        conn_comp.properties = [MagicMock(key="Reference", value="J1")]
+
+        stub_lib = MagicMock()
+        stub_lib.libId = "Custom:Placeholder"
+        stub_lib.units = []
+
+        conn_lib = MagicMock()
+        conn_lib.libId = "Connector:Conn_01x02"
+        conn_unit = MagicMock()
+        conn_pin = MagicMock()
+        conn_pin.electricalType = "passive"
+        conn_unit.pins = [conn_pin]
+        conn_lib.units = [conn_unit]
+
+        # Add a label so there is at least one net to classify
+        label_vcc = MagicMock()
+        label_vcc.text = "VCC"
+
+        ir = _make_mock_ir(
+            components=[stub_comp, conn_comp],
+            labels=[label_vcc],
+            lib_symbols=[stub_lib, conn_lib],
+        )
+
+        blockers, warnings, artifacts = check_net_intent(ir)
+
+        # Stub symbol should produce a blocker
+        assert any("LOGO1" in b for b in blockers), (
+            f"Expected LOGO1 stub blocker, got: {blockers}"
+        )
+        # Ambiguous connector should produce a warning
+        assert any("J1" in w for w in warnings), (
+            f"Expected J1 connector warning, got: {warnings}"
+        )
+        # Artifacts should contain net classification entries
+        assert len(artifacts) > 0, "Expected net classification artifacts"
+        assert any("VCC" in a for a in artifacts), (
+            f"Expected VCC in artifacts, got: {artifacts}"
+        )
+
+    def test_net_artifacts_in_gate_result(self):
+        """Net classification results appear in GateResult.artifacts."""
+        from kicad_agent.validation.gates.schematic_intent_gate import (
+            SchematicIntentGate,
+        )
+
+        # Build a clean IR (no blockers from other checks)
+        comp = MagicMock()
+        comp.libId = "Device:R"
+        comp.dnp = False
+        comp.properties = [
+            MagicMock(key="Reference", value="R1"),
+            MagicMock(key="Footprint", value="Resistor_SMD:R_0805"),
+            MagicMock(key="Value", value="10k"),
+            MagicMock(key="MPN", value="RC0805JR-0710KL"),
+        ]
+
+        lib_sym = MagicMock()
+        lib_sym.libId = "Device:R"
+        lib_unit = MagicMock()
+        lib_pin = MagicMock()
+        lib_unit.pins = [lib_pin]
+        lib_sym.units = [lib_unit]
+
+        ir = _make_mock_ir(components=[comp], lib_symbols=[lib_sym])
+
+        gate = SchematicIntentGate()
+        with patch(
+            "kicad_agent.validation.gates.schematic_intent_gate.check_footprint_completeness"
+        ) as mock_fp, patch(
+            "kicad_agent.validation.gates.schematic_intent_gate.check_symbol_pin_count"
+        ) as mock_pc, patch(
+            "kicad_agent.validation.gates.schematic_intent_gate.check_component_metadata"
+        ) as mock_md:
+            mock_fp.return_value = ([], [])
+            mock_pc.return_value = ([], [])
+            mock_md.return_value = ([], [])
+
+            result = gate.run({"schematic_ir": ir})
+
+        # Gate should pass (no blockers)
+        assert result.pass_ is True, f"Expected pass, got blockers: {result.blockers}"
+
+        # Artifacts should contain net classification info
+        artifact_str = " ".join(result.artifacts)
+        assert "net(s) classified" in artifact_str or any(
+            a.startswith("R1:") or a.startswith("10k:") or a.startswith("Resistor")
+            for a in result.artifacts
+        ), f"Expected net classification in artifacts, got: {result.artifacts}"
+
