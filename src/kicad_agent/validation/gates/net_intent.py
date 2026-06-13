@@ -39,8 +39,9 @@ _HIGH_CURRENT_PATTERNS = re.compile(
     r"(MOT|DRIVE|MOTOR|HEATER|SOLENOID)", re.IGNORECASE
 )
 
-# Differential pair naming: name_P / name_N at end, or name+ / name- at end
-_DIFF_PAIR_PATTERN = re.compile(r"(.+)[_](P|N)$|(.+)[+\-]$")
+# Differential pair naming: name_P / name_N suffix or name+ / name- suffix.
+# Requires at least 2 chars before the suffix to avoid false positives like "PIN".
+_DIFF_PAIR_PATTERN = re.compile(r"(.{2,})[_](P|N)$|(.{2,})[+-]$")
 
 # Analog signal patterns (ADC, DAC, op-amp related)
 _ANALOG_PATTERNS = re.compile(
@@ -135,13 +136,6 @@ class NetIntentExtractor:
             name = getattr(net_label, "text", "") or getattr(net_label, "name", "")
             if name:
                 net_names.add(name)
-
-        # From component properties (value properties often carry net names)
-        for comp in getattr(schematic_ir, "components", []):
-            for prop in getattr(comp, "properties", []):
-                name = getattr(prop, "value", "")
-                if name and getattr(prop, "key", "") != "Reference":
-                    net_names.add(name)
 
         # Classify using base classifier first
         net_map: dict[str, NetClassification] = {}

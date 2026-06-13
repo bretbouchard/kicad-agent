@@ -36,8 +36,9 @@ logger = logging.getLogger(__name__)
 # Regex to extract pin count hints from symbol names.
 # Matches patterns like "SOT-23-5" (5 pins), "SOT-223-4" (4 pins),
 # "TSSOP-16", "QFN-48", "DIP-8", "SOIC-14", etc.
+# Captures the LAST number after the package prefix, which is the pin count.
 _PIN_COUNT_PATTERN = re.compile(
-    r"(?:SOT|TSSOP|QFN|DIP|SOIC|SSOP|VQFN|LQFP|BGA|QFP|DFN|SON|WLCSP)[-_](\d+)",
+    r"(?:SOT|TSSOP|QFN|DIP|SOIC|SSOP|VQFN|LQFP|BGA|QFP|DFN|SON|WLCSP)[-_]\d+(?:[-_](\d+))?",
     re.IGNORECASE,
 )
 
@@ -140,7 +141,7 @@ def _parse_expected_pin_count(symbol_name: str) -> int | None:
 
     # Check package pattern
     match = _PIN_COUNT_PATTERN.search(symbol_name)
-    if match:
+    if match and match.group(1) is not None:
         return int(match.group(1))
 
     # Check known component table

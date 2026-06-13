@@ -461,7 +461,10 @@ class TestGateIntegration:
         lib_unit.pins = [lib_pin]
         lib_sym.units = [lib_unit]
 
-        ir = _make_mock_ir(components=[comp], lib_symbols=[lib_sym])
+        net_label = MagicMock()
+        net_label.text = "Net_R1"
+        net_label.name = "Net_R1"
+        ir = _make_mock_ir(components=[comp], lib_symbols=[lib_sym], net_labels=[net_label])
 
         gate = SchematicIntentGate()
         with patch(

@@ -53,28 +53,6 @@ class ValidateSchematicOp(BaseModel):
     check_footprints: bool = Field(default=False, description="Require all board components to have footprints assigned")
 
 
-class PrePcbSchematicGateOp(BaseModel):
-    """Hard gate for deciding whether a schematic is ready for PCB layout.
-
-    This is stricter than general schematic validation. It should pass before
-    any operation transfers a schematic to PCB, places footprints, routes nets,
-    or exports manufacturing files.
-
-    Attributes:
-        op_type: Discriminator literal ``"pre_pcb_schematic_gate"``.
-        target_file: Relative path to the root KiCad schematic file.
-        require_erc_clean: Run ERC and require zero ERC errors.
-        require_footprints: Require all non-power board components to have footprints.
-        check_hierarchical: Check hierarchical power and sheet-pin consistency.
-    """
-
-    op_type: Literal["pre_pcb_schematic_gate"] = "pre_pcb_schematic_gate"
-    target_file: TargetFile
-    require_erc_clean: bool = Field(default=True, description="Require kicad-cli ERC to pass")
-    require_footprints: bool = Field(default=True, description="Require footprint assignment for board components")
-    check_hierarchical: bool = Field(default=True, description="Check hierarchy boundary consistency")
-
-
 class ParseErcOp(BaseModel):
     """Parse ERC results for a schematic file.
 
