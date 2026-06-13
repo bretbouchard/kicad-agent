@@ -1061,6 +1061,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "update_from_schematic": {
+        "category": "pcb",
+        "description": "Transfer schematic intent to PCB: validate contract, assign pad nets",
+        "file_types": [".kicad_sch", ".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "multi_file",
+        "requires": ["parse_schematic"],
+        "conflicts": [],
+    },
 }
 
 OPERATION_REGISTRY: dict[str, OpMeta] = {

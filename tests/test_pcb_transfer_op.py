@@ -1,6 +1,7 @@
 """Tests for UpdateFromSchematicOp handler -- gate enforcement, stub detection, and MCU golden test.
 
-TDD RED phase: All tests written first. They should fail until the handler is implemented.
+TDD RED+GREEN: Tests validate the handler enforces gates, detects stubs, and
+processes real schematic fixtures correctly.
 """
 
 from __future__ import annotations
@@ -22,14 +23,20 @@ def _make_schematic_ir(
     pin_map_result: dict | None = None,
     footprint: str = "Package_DFN:DFN-8-1EP_3x3mm_P0.65mm_EP1.7x2.05mm",
 ) -> MagicMock:
-    """Create a mock SchematicIR with configurable components.
+    """Create a mock that passes isinstance checks for SchematicIR.
+
+    Configures __class__ so isinstance(ir, SchematicIR) returns True.
+    This is needed because the handler uses isinstance to locate schematic IRs.
 
     Args:
         components: List of dicts with keys: ref, lib_id, dnp. Default: one IC.
         pin_map_result: Return value for verify_pin_map. Default: match=True.
         footprint: Default footprint for all components.
     """
+    from kicad_agent.ir.schematic_ir import SchematicIR
+
     ir = MagicMock()
+    ir.__class__ = SchematicIR
 
     if components is None:
         components = [
@@ -46,18 +53,21 @@ def _make_schematic_ir(
 
     ir.components = mock_components
 
+    # Build a lookup dict for get_component_property
+    _comp_prop_map: dict[int, dict[str, str]] = {}
+    for i, comp in enumerate(components):
+        _comp_prop_map[id(mock_components[i])] = {"Reference": comp.get("ref", "")}
+
     def _get_prop(comp: Any, key: str) -> str:
-        for c in components:
-            mock_c = mock_components[components.index(c)]
-            if comp is mock_c:
-                if key == "Reference":
-                    return c.get("ref", "")
-        return ""
+        return _comp_prop_map.get(id(comp), {}).get(key, "")
 
     ir.get_component_property = _get_prop
     ir.get_component_footprint = MagicMock(return_value=footprint)
 
-    default_pin_map = pin_map_result or {"match": True, "symbol_pins": {"1", "2", "3", "4", "5", "6", "7", "8"}}
+    default_pin_map = pin_map_result or {
+        "match": True,
+        "symbol_pins": {"1", "2", "3", "4", "5", "6", "7", "8"},
+    }
     ir.verify_pin_map = MagicMock(return_value=default_pin_map)
 
     return ir
@@ -67,17 +77,19 @@ def _make_pcb_ir(
     footprint_pads: dict[str, list[tuple[str, str]]] | None = None,
     nets: list[MagicMock] | None = None,
 ) -> MagicMock:
-    """Create a mock PcbIR with configurable pads and nets.
+    """Create a mock that passes isinstance checks for PcbIR.
 
     Args:
         footprint_pads: Dict of ref -> [(pad_num, net_name), ...].
         nets: List of mock net objects with .name attribute.
     """
+    from kicad_agent.ir.pcb_ir import PcbIR
+
     pcb = MagicMock()
+    pcb.__class__ = PcbIR
 
     def _get_footprint_pads(ref: str) -> list[tuple[str, str]]:
         if footprint_pads is None:
-            # Default: 8 pads matching NE5532
             return [(str(i), f"Net-{i}") for i in range(1, 9)]
         return footprint_pads.get(ref, [])
 
@@ -104,7 +116,6 @@ class TestGateEnforcement:
 
     def test_gate_failure_blocks_transfer(self):
         """When the transfer contract validator fails, no PCB mutation occurs."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
         from kicad_agent.validation.gate_types import GateResult
 
         # Create a failing gate result
@@ -114,8 +125,12 @@ class TestGateEnforcement:
             blockers=["U1: missing footprint assignment"],
         )
 
-        with patch.object(
-            TransferContractValidator, "validate", return_value=fail_result
+        ir = _make_schematic_ir()
+
+        # Patch at source module because handler imports inside function body
+        with patch(
+            "kicad_agent.validation.gates.transfer_contract.TransferContractValidator.validate",
+            return_value=fail_result,
         ):
             from kicad_agent.ops.handlers.pcb_transfer import (
                 UpdateFromSchematicOp,
@@ -127,7 +142,7 @@ class TestGateEnforcement:
                 schematic_path="test.kicad_sch",
                 pcb_path="test.kicad_pcb",
             )
-            ir_map = {}
+            ir_map = {Path("test.kicad_sch"): ir}
             result = handle_update_from_schematic(op, ir_map, Path("."))
 
         assert result["pass"] is False
@@ -145,7 +160,6 @@ class TestGateEnforcement:
 
     def test_gate_pass_allows_transfer(self):
         """When the gate passes, the operation returns a contract."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
         from kicad_agent.validation.gate_types import GateResult
 
         pass_result = GateResult(
@@ -158,8 +172,9 @@ class TestGateEnforcement:
         ir = _make_schematic_ir()
         pcb_ir = _make_pcb_ir()
 
-        with patch.object(
-            TransferContractValidator, "validate", return_value=pass_result
+        with patch(
+            "kicad_agent.validation.gates.transfer_contract.TransferContractValidator.validate",
+            return_value=pass_result,
         ):
             from kicad_agent.ops.handlers.pcb_transfer import (
                 UpdateFromSchematicOp,
@@ -187,7 +202,6 @@ class TestDryRun:
 
     def test_dry_run_returns_contract_without_mutation(self):
         """dry_run=True should not mutate any IRs."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
         from kicad_agent.validation.gate_types import GateResult
 
         pass_result = GateResult(
@@ -199,8 +213,9 @@ class TestDryRun:
         ir = _make_schematic_ir()
         pcb_ir = _make_pcb_ir()
 
-        with patch.object(
-            TransferContractValidator, "validate", return_value=pass_result
+        with patch(
+            "kicad_agent.validation.gates.transfer_contract.TransferContractValidator.validate",
+            return_value=pass_result,
         ):
             from kicad_agent.ops.handlers.pcb_transfer import (
                 UpdateFromSchematicOp,
@@ -321,7 +336,6 @@ class TestPlaceholderPadDetection:
         """Footprint with 1 pad but symbol with >1 pin should be flagged."""
         from kicad_agent.ops.handlers.pcb_transfer import detect_placeholder_pads
 
-        # Component with 8 pins
         components = [
             {"ref": "U1", "lib_id": "IC:NE5532", "dnp": False},
         ]
@@ -398,7 +412,6 @@ class TestPartialNetAssignment:
 
     def test_partial_assignment_produces_warnings(self):
         """When some pads get nets and some don't, produce warnings not blockers."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
         from kicad_agent.validation.gate_types import GateResult
 
         # Gate passes but with warnings
@@ -414,8 +427,9 @@ class TestPartialNetAssignment:
             footprint_pads={"U1": [(str(i), f"Net-{i}" if i <= 5 else "") for i in range(1, 9)]}
         )
 
-        with patch.object(
-            TransferContractValidator, "validate", return_value=pass_result
+        with patch(
+            "kicad_agent.validation.gates.transfer_contract.TransferContractValidator.validate",
+            return_value=pass_result,
         ):
             from kicad_agent.ops.handlers.pcb_transfer import (
                 UpdateFromSchematicOp,
@@ -444,7 +458,6 @@ class TestDuplicateNetNames:
 
     def test_duplicate_net_names_deduplicated(self):
         """Multiple labels for the same net should produce warnings, not blockers."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
         from kicad_agent.validation.gate_types import GateResult
 
         pass_result = GateResult(
@@ -457,8 +470,9 @@ class TestDuplicateNetNames:
         ir = _make_schematic_ir()
         pcb_ir = _make_pcb_ir()
 
-        with patch.object(
-            TransferContractValidator, "validate", return_value=pass_result
+        with patch(
+            "kicad_agent.validation.gates.transfer_contract.TransferContractValidator.validate",
+            return_value=pass_result,
         ):
             from kicad_agent.ops.handlers.pcb_transfer import (
                 UpdateFromSchematicOp,
@@ -475,7 +489,10 @@ class TestDuplicateNetNames:
 
         assert result["pass"] is True
         # Warnings about deduplication should be present
-        assert any("dedup" in w.lower() or "duplicate" in w.lower() for w in result.get("warnings", []))
+        assert any(
+            "dedup" in w.lower() or "duplicate" in w.lower()
+            for w in result.get("warnings", [])
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -484,7 +501,7 @@ class TestDuplicateNetNames:
 
 
 class TestCliForceFlag:
-    """Verify that the handler's _force_bypass parameter bypasses gates (CLI-only)."""
+    """Verify that the handler's force parameter bypasses gates (CLI-only)."""
 
     def test_force_bypass_skips_gate(self):
         """When force=True passed to the handler function (not the schema), gates are skipped."""
@@ -528,7 +545,9 @@ class TestRegistryMetadata:
         assert "update_from_schematic" in OPERATION_REGISTRY
 
     def test_registry_category_is_pcb(self):
-        meta = pytest.importorskip("kicad_agent.ops.registry").OPERATION_REGISTRY["update_from_schematic"]
+        from kicad_agent.ops.registry import OPERATION_REGISTRY
+
+        meta = OPERATION_REGISTRY["update_from_schematic"]
         assert meta.category == "pcb"
 
     def test_registry_file_types(self):
@@ -561,9 +580,21 @@ class TestRegistryMetadata:
         from kicad_agent.ops.schema import Operation
 
         schema = Operation.model_json_schema()
+        # Schema uses $ref to $defs -- extract op_type from refs
         one_of_types = schema.get("properties", {}).get("root", {}).get("oneOf", [])
-        type_names = [t.get("properties", {}).get("op_type", {}).get("const", "") for t in one_of_types]
-        assert "update_from_schematic" in type_names
+        ref_names = []
+        for t in one_of_types:
+            ref = t.get("$ref", "")
+            # $ref format: "#/$defs/OpName"
+            if ref.startswith("#/$defs/"):
+                ref_names.append(ref.split("/")[-1])
+
+        # Check either inline or $ref format
+        type_names = [
+            t.get("properties", {}).get("op_type", {}).get("const", "")
+            for t in one_of_types
+        ]
+        assert "update_from_schematic" in type_names or "UpdateFromSchematicOp" in ref_names
 
     def test_registry_no_conflicts(self):
         from kicad_agent.ops.registry import OPERATION_REGISTRY
@@ -584,26 +615,31 @@ class TestArduinoMegaGolden:
     def arduino_sch_path(self) -> Path:
         return Path("tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_sch")
 
+    def _parse_schematic(self, path: Path):
+        """Helper to parse a schematic file into SchematicIR."""
+        from kicad_agent.ir.schematic_ir import SchematicIR
+        from kicad_agent.parser import parse_schematic
+
+        result = parse_schematic(path)
+        return SchematicIR(_parse_result=result)
+
     def test_arduino_mega_parse_produces_components(self, arduino_sch_path: Path):
         """The Arduino Mega schematic should parse into a SchematicIR with many components."""
-        from kicad_agent.ir.schematic_ir import SchematicIR
-
         if not arduino_sch_path.exists():
             pytest.skip("Arduino Mega fixture not available")
 
-        ir = SchematicIR.from_file(str(arduino_sch_path))
+        ir = self._parse_schematic(arduino_sch_path)
         # Arduino Mega has many components
         assert len(ir.components) > 50
 
     def test_arduino_mega_contract_has_components(self, arduino_sch_path: Path):
         """TransferContractValidator should produce a contract with components from Arduino Mega."""
-        from kicad_agent.ir.schematic_ir import SchematicIR
         from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
 
         if not arduino_sch_path.exists():
             pytest.skip("Arduino Mega fixture not available")
 
-        ir = SchematicIR.from_file(str(arduino_sch_path))
+        ir = self._parse_schematic(arduino_sch_path)
         validator = TransferContractValidator()
         result = validator.validate(ir)
 
@@ -612,7 +648,6 @@ class TestArduinoMegaGolden:
 
     def test_arduino_mega_transfer_op_integration(self, arduino_sch_path: Path):
         """Full integration: parse Arduino Mega and run through the handler."""
-        from kicad_agent.ir.schematic_ir import SchematicIR
         from kicad_agent.ops.handlers.pcb_transfer import (
             UpdateFromSchematicOp,
             handle_update_from_schematic,
@@ -621,7 +656,7 @@ class TestArduinoMegaGolden:
         if not arduino_sch_path.exists():
             pytest.skip("Arduino Mega fixture not available")
 
-        ir = SchematicIR.from_file(str(arduino_sch_path))
+        ir = self._parse_schematic(arduino_sch_path)
 
         op = UpdateFromSchematicOp(
             op_type="update_from_schematic",
@@ -663,7 +698,6 @@ class TestHandlerErrorCases:
 
     def test_no_pcb_returns_contract_ready(self):
         """When no PCB IR exists, handler should report contract is ready (not a blocker)."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
         from kicad_agent.validation.gate_types import GateResult
 
         pass_result = GateResult(
@@ -675,8 +709,9 @@ class TestHandlerErrorCases:
 
         ir = _make_schematic_ir()
 
-        with patch.object(
-            TransferContractValidator, "validate", return_value=pass_result
+        with patch(
+            "kicad_agent.validation.gates.transfer_contract.TransferContractValidator.validate",
+            return_value=pass_result,
         ):
             from kicad_agent.ops.handlers.pcb_transfer import (
                 UpdateFromSchematicOp,

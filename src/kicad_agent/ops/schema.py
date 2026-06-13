@@ -329,6 +329,9 @@ from kicad_agent.ops._schema_gap import (  # noqa: E402
     AnalyzeGapsOp,
     FillGapsOp,
 )
+from kicad_agent.ops.handlers.pcb_transfer import (  # noqa: E402
+    UpdateFromSchematicOp,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -457,7 +460,8 @@ class Operation(BaseModel):
         | AnalyzeGapsOp
         | FillGapsOp
         | RunGateCheckOp
-        | GateStatusOp,
+        | GateStatusOp
+        | UpdateFromSchematicOp,
         Field(discriminator="op_type"),
     ]
 
@@ -620,6 +624,8 @@ __all__ = [
     # Gap analysis ops
     "AnalyzeGapsOp",
     "FillGapsOp",
+    # PCB transfer ops
+    "UpdateFromSchematicOp",
     # Union and helpers
     "Operation",
     "get_operation_schema",
