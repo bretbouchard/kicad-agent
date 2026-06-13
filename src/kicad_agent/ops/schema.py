@@ -253,9 +253,14 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
 from kicad_agent.ops._schema_validation import (  # noqa: E402
     ValidatePowerNetsOp,
     ValidateSchematicOp,
+    PrePcbSchematicGateOp,
     ParseErcOp,
     ExtractViolationPositionsOp,
     ValidateHlabelsOp,
+)
+from kicad_agent.ops._schema_gate import (  # noqa: E402
+    RunGateCheckOp,
+    GateStatusOp,
 )
 from kicad_agent.ops._schema_create import (  # noqa: E402
     CreateSchematicOp,
@@ -371,6 +376,7 @@ class Operation(BaseModel):
         | RepairSchematicOp
         | ValidatePowerNetsOp
         | ValidateSchematicOp
+        | PrePcbSchematicGateOp
         | ParseErcOp
         | ExtractViolationPositionsOp
         | ValidateHlabelsOp
@@ -449,7 +455,9 @@ class Operation(BaseModel):
         | FixSilkscreenOverCopperOp
         | BatchExpandFootprintsOp
         | AnalyzeGapsOp
-        | FillGapsOp,
+        | FillGapsOp
+        | RunGateCheckOp
+        | GateStatusOp,
         Field(discriminator="op_type"),
     ]
 
@@ -544,6 +552,9 @@ __all__ = [
     # Validation ops
     "ValidatePowerNetsOp",
     "ValidateSchematicOp",
+    "PrePcbSchematicGateOp",
+    "RunGateCheckOp",
+    "GateStatusOp",
     "ParseErcOp",
     "ExtractViolationPositionsOp",
     "ValidateHlabelsOp",

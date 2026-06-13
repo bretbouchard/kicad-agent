@@ -310,6 +310,46 @@ _META_TOOLS = [
         },
         annotations=types.ToolAnnotations(readOnlyHint=True),
     ),
+    types.Tool(
+        name="run_workflow",
+        description=(
+            "Execute a named workflow on a PCB file. The 'route_and_fill' workflow "
+            "analyzes routing gaps and fills them via an iterative AI-driven loop. "
+            "Other workflow names are looked up from the workflow template registry. "
+            "Use list_workflows to discover available workflows."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "workflow_name": {
+                    "type": "string",
+                    "description": "Workflow name (e.g. 'route_and_fill', 'fix_erc_errors')",
+                    "minLength": 1,
+                },
+                "pcb_path": {
+                    "type": "string",
+                    "description": "Path to the PCB file (.kicad_pcb)",
+                },
+                "use_ai": {
+                    "type": "boolean",
+                    "description": "Use AI for gap filling (default: from config)",
+                    "default": True,
+                },
+                "max_iterations": {
+                    "type": "integer",
+                    "description": "Max fill iterations 1-3 (default: 3)",
+                    "default": 3,
+                },
+                "target_route_pct": {
+                    "type": "number",
+                    "description": "Target route percentage 0-100 (default: 95)",
+                    "default": 95.0,
+                },
+            },
+            "required": ["workflow_name", "pcb_path"],
+        },
+        annotations=types.ToolAnnotations(destructiveHint=True),
+    ),
     # --- Export/Render convenience tools ---
     types.Tool(
         name="render_pcb",
@@ -619,6 +659,47 @@ _META_TOOLS = [
             "required": ["pcb_file"],
         },
         annotations=types.ToolAnnotations(readOnlyHint=True),
+    ),
+    types.Tool(
+        name="run_workflow",
+        description=(
+            "Run a predefined workflow on a PCB file. The 'route_and_fill' workflow "
+            "analyzes routing gaps and fills them iteratively. Other workflow names run "
+            "their registered template steps via batch execution."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "workflow_name": {
+                    "type": "string",
+                    "description": "Workflow name: 'route_and_fill' or a registered template name",
+                    "minLength": 1,
+                },
+                "pcb_file": {
+                    "type": "string",
+                    "description": "Relative path to .kicad_pcb file",
+                    "minLength": 1,
+                },
+                "use_ai": {
+                    "type": "boolean",
+                    "description": "Use AI for gap filling (default: true)",
+                    "default": True,
+                },
+                "max_iterations": {
+                    "type": "integer",
+                    "description": "Max gap-fill iterations 1-3 (default: 3)",
+                    "minimum": 1,
+                    "maximum": 3,
+                },
+                "target_route_pct": {
+                    "type": "number",
+                    "description": "Target route percentage 0-100 (default: 95)",
+                    "minimum": 0,
+                    "maximum": 100,
+                },
+            },
+            "required": ["workflow_name", "pcb_file"],
+        },
     ),
 ]
 
@@ -1142,6 +1223,32 @@ async def dispatch_tool(
                 ],
             }
             text = _cap_response(json.dumps(wf_dict, indent=2))
+            return types.CallToolResult(
+                content=[types.TextContent(type="text", text=text)],
+            )
+        except Exception as e:
+            return _error_result("workflow_error", str(e))
+
+    if name == "run_workflow":
+        try:
+            wf_name = arguments.get("workflow_name", "")
+            pcb_path = arguments.get("pcb_file", "")
+            if not pcb_path:
+                return _error_result("workflow_error", "pcb_file is required")
+
+            from kicad_agent.ops.workflow_runner import WorkflowRunner
+
+            overrides: dict[str, Any] = {}
+            if "use_ai" in arguments:
+                overrides["use_ai"] = arguments["use_ai"]
+            if "max_iterations" in arguments:
+                overrides["max_iterations"] = arguments["max_iterations"]
+            if "target_route_pct" in arguments:
+                overrides["target_route_pct"] = arguments["target_route_pct"]
+
+            runner = WorkflowRunner()
+            result = await asyncio.to_thread(runner.run, wf_name, pcb_path, **overrides)
+            text = _cap_response(json.dumps(result.to_json(), indent=2, default=str))
             return types.CallToolResult(
                 content=[types.TextContent(type="text", text=text)],
             )

@@ -35,7 +35,7 @@ from kicad_agent.handler import format_result, handle_operation, validate_operat
 from kicad_agent.logging_config import configure_logging
 from kicad_agent.ops.schema import get_operation_schema
 
-_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "demo", "playground", "dfm", "undo", "redo"}
+_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "pre-pcb-gate", "gate", "demo", "playground", "dfm", "undo", "redo", "workflow"}
 
 _SUBCOMMAND_DESCRIPTIONS = {
     "collect": "Collect real-world KiCad training data from GitHub.",
@@ -49,11 +49,14 @@ _SUBCOMMAND_DESCRIPTIONS = {
     "ai-stats": "Show local-first AI intervention metrics and training gaps.",
     "design-rules": "Run domain-specific design rules against a KiCad schematic.",
     "review-schematic": "Review a schematic for readability and spatial quality.",
+    "pre-pcb-gate": "Run the hard schematic readiness gate before PCB layout.",
+    "gate": "Run design stage gates (gate run <name> | gate status).",
     "demo": "Generate, validate, and render a schematic in one command.",
     "playground": "Start interactive web playground.",
     "dfm": "Run DFM (Design for Manufacturing) analysis on a KiCad PCB.",
     "undo": "Undo the last kicad-agent operation on a file.",
     "redo": "Redo the most recently undone operation.",
+    "workflow": "Run a named workflow (e.g. route-and-fill) on a KiCad file.",
 }
 
 
@@ -679,6 +682,157 @@ def _handle_review_schematic(argv: list[str]) -> None:
     sys.exit(exit_code)
 
 
+def _handle_pre_pcb_gate(argv: list[str]) -> None:
+    """Handle the 'pre-pcb-gate' subcommand -- hard schematic readiness gate."""
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent pre-pcb-gate",
+        description="Run the hard schematic readiness gate before PCB layout.",
+    )
+    parser.add_argument("schematic", type=Path, help="Path to root .kicad_sch file")
+    parser.add_argument("--no-erc", action="store_true", help="Skip kicad-cli ERC")
+    parser.add_argument("--allow-missing-footprints", action="store_true", help="Do not require footprint assignments")
+    parser.add_argument("--no-hierarchy", action="store_true", help="Skip hierarchical sheet-pin checks")
+    parser.add_argument("--json", action="store_true", help="Output full JSON result")
+    args = parser.parse_args(argv)
+
+    if not args.schematic.exists():
+        print(f"Error: schematic not found: {args.schematic}", file=sys.stderr)
+        sys.exit(1)
+    if args.schematic.suffix != ".kicad_sch":
+        print(f"Error: expected .kicad_sch file, got {args.schematic.suffix}", file=sys.stderr)
+        sys.exit(1)
+
+    from kicad_agent.ops.validation_gates import pre_pcb_schematic_gate
+
+    result = pre_pcb_schematic_gate(
+        args.schematic,
+        require_erc_clean=not args.no_erc,
+        require_footprints=not args.allow_missing_footprints,
+        check_hierarchical=not args.no_hierarchy,
+    )
+
+    if args.json:
+        print(json.dumps(result, indent=2, default=str))
+    else:
+        status = "PASS" if result["ready_for_pcb"] else "FAIL"
+        print(f"Pre-PCB schematic gate: {status}")
+        for rec in result.get("recommendations", []):
+            print(f"- {rec}")
+
+    sys.exit(0 if result["ready_for_pcb"] else 1)
+
+
+def _handle_gate(argv: list[str]) -> None:
+    """Handle the 'gate' subcommand -- run gate checks and show status."""
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent gate",
+        description="Run design stage gates or show gate status.",
+    )
+    subparsers = parser.add_subparsers(dest="action", help="Gate action")
+
+    # gate run <name>
+    run_parser = subparsers.add_parser("run", help="Run a named gate check")
+    run_parser.add_argument("name", help="Gate name (e.g. 'pre_pcb_schematic')")
+    run_parser.add_argument(
+        "-p", "--project-dir",
+        type=Path,
+        default=None,
+        help="Project directory (default: current directory)",
+    )
+    run_parser.add_argument(
+        "--json", action="store_true",
+        help="Output result as JSON",
+    )
+
+    # gate status
+    status_parser = subparsers.add_parser("status", help="Show current gate status")
+    status_parser.add_argument(
+        "-p", "--project-dir",
+        type=Path,
+        default=None,
+        help="Project directory (default: current directory)",
+    )
+    status_parser.add_argument(
+        "--json", action="store_true",
+        help="Output result as JSON",
+    )
+
+    args = parser.parse_args(argv)
+
+    if args.action == "run":
+        from kicad_agent.validation.gate_runner import get_gate_runner
+        from kicad_agent.ops.validation_gates import pre_pcb_schematic_gate
+
+        runner = get_gate_runner()
+        project_dir = args.project_dir or Path.cwd()
+        gate_name = args.name
+
+        # For the pre_pcb_schematic gate, find the schematic and run directly
+        sch_files = list(project_dir.glob("*.kicad_sch"))
+        if not sch_files:
+            print(f"Error: No .kicad_sch files found in {project_dir}", file=sys.stderr)
+            sys.exit(1)
+
+        result = pre_pcb_schematic_gate(sch_files[0])
+
+        if args.json:
+            print(json.dumps(result, indent=2, default=str))
+        else:
+            status = "PASS" if result.get("ready_for_pcb") else "FAIL"
+            print(f"Gate '{gate_name}': {status}")
+            for b in result.get("blockers", []):
+                print(f"  BLOCKER: {b}")
+            for w in result.get("warnings", []):
+                print(f"  WARNING: {w}")
+            for r in result.get("recommendations", []):
+                print(f"  - {r}")
+
+        sys.exit(0 if result.get("ready_for_pcb") else 1)
+
+    elif args.action == "status":
+        from kicad_agent.validation.gate_runner import get_gate_runner
+        from kicad_agent.ops.handlers.gate_handlers import _detect_design_stage, _suggest_next_actions
+
+        runner = get_gate_runner()
+        project_dir = args.project_dir or Path.cwd()
+        current_stage = _detect_design_stage(project_dir)
+        gates = runner.list_gates()
+
+        status_info = {
+            "current_stage": current_stage.value,
+            "registered_gates": [
+                {
+                    "name": g.name,
+                    "from_stage": g.from_stage.value,
+                    "to_stage": g.to_stage.value,
+                    "block_on_fail": g.block_on_fail,
+                }
+                for g in gates
+            ],
+            "next_actions": _suggest_next_actions(current_stage, gates),
+        }
+
+        if args.json:
+            print(json.dumps(status_info, indent=2))
+        else:
+            print(f"Current design stage: {current_stage.value}")
+            print(f"Registered gates: {len(gates)}")
+            for g in gates:
+                check_fn_status = "has check_fn" if g.name in runner._check_fns else "no check_fn"
+                print(f"  {g.name}: {g.from_stage.value} -> {g.to_stage.value} ({check_fn_status})")
+            print("Next actions:")
+            for action in status_info["next_actions"]:
+                print(f"  - {action}")
+
+        sys.exit(0)
+
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+
 def _handle_demo(argv: list[str]) -> None:
     """Handle the 'demo' subcommand -- one-command schematic demo."""
     import argparse
@@ -812,6 +966,97 @@ def _handle_playground(argv: list[str]) -> None:
     uvicorn.run(app, host=args.host, port=args.port)
 
 
+def _handle_workflow(argv: list[str]) -> None:
+    """Handle 'kicad-agent workflow <subcommand> [options]'."""
+    if not argv or argv[0] in ("--help", "-h", "list"):
+        if argv and argv[0] == "list":
+            from kicad_agent.ops.workflows import list_workflows
+            workflows = list_workflows()
+            for wf in workflows:
+                print(f"  {wf['name']:<25} {wf['description']} ({wf['steps']} steps)")
+            sys.exit(0)
+        print("usage: kicad-agent workflow <command> [options]")
+        print()
+        print("Commands:")
+        print("  route-and-fill <pcb>  Analyze and fill routing gaps")
+        print("  run <template> <pcb>  Run a workflow template")
+        print("  list                  List available workflows")
+        print()
+        print("Options (for route-and-fill):")
+        print("  --use-ai              Use AI for gap filling (default: true)")
+        print("  --no-ai               Disable AI (deterministic fallback)")
+        print("  --target-pct PCT      Target route percentage (default: 95)")
+        print("  --max-iter N          Max fill iterations 1-3 (default: 3)")
+        print("  --config PATH         Path to kicad-agent.yaml")
+        print("  -p, --project-dir     Project directory")
+        sys.exit(0)
+
+    subcmd = argv[0]
+    subcmd_argv = argv[1:]
+
+    if subcmd == "route-and-fill":
+        parser = argparse.ArgumentParser(
+            prog="kicad-agent workflow route-and-fill",
+            description="Analyze and fill routing gaps on a PCB.",
+        )
+        parser.add_argument("pcb", help="Path to .kicad_pcb file")
+        parser.add_argument("--use-ai", action="store_true", default=None, help="Use AI (default: from config)")
+        parser.add_argument("--no-ai", action="store_true", default=False, help="Disable AI")
+        parser.add_argument("--target-pct", type=float, default=None, help="Target route %% (default: 95)")
+        parser.add_argument("--max-iter", type=int, default=None, help="Max iterations 1-3 (default: 3)")
+        parser.add_argument("--config", type=Path, default=None, help="Path to kicad-agent.yaml")
+        parser.add_argument("-p", "--project-dir", type=Path, default=None, help="Project directory")
+        args = parser.parse_args(subcmd_argv)
+
+        from kicad_agent.config import load_config
+        from kicad_agent.ops.workflow_runner import WorkflowRunner
+
+        project_dir = args.project_dir or Path(args.pcb).parent
+        config = load_config(project_dir, config_path=args.config)
+
+        overrides: dict = {}
+        if args.no_ai:
+            overrides["use_ai"] = False
+        elif args.use_ai:
+            overrides["use_ai"] = True
+        if args.target_pct is not None:
+            overrides["target_route_pct"] = args.target_pct
+        if args.max_iter is not None:
+            overrides["max_iterations"] = args.max_iter
+
+        runner = WorkflowRunner(config=config)
+        result = runner.run("route_and_fill", args.pcb, **overrides)
+        print(result.to_markdown())
+        sys.exit(0 if result.success else 1)
+
+    elif subcmd == "run":
+        parser = argparse.ArgumentParser(
+            prog="kicad-agent workflow run",
+            description="Run a named workflow template.",
+        )
+        parser.add_argument("template", help="Workflow template name")
+        parser.add_argument("pcb", help="Path to target file")
+        parser.add_argument("--config", type=Path, default=None, help="Path to kicad-agent.yaml")
+        parser.add_argument("-p", "--project-dir", type=Path, default=None, help="Project directory")
+        args = parser.parse_args(subcmd_argv)
+
+        from kicad_agent.config import load_config
+        from kicad_agent.ops.workflow_runner import WorkflowRunner
+
+        project_dir = args.project_dir or Path(args.pcb).parent
+        config = load_config(project_dir, config_path=args.config)
+
+        runner = WorkflowRunner(config=config)
+        result = runner.run(args.template, args.pcb)
+        print(result.to_markdown())
+        sys.exit(0 if result.success else 1)
+
+    else:
+        print(f"Unknown workflow command: {subcmd}", file=sys.stderr)
+        print("Use 'kicad-agent workflow list' to see available workflows.", file=sys.stderr)
+        sys.exit(1)
+
+
 def main(argv: list[str] | None = None) -> None:
     """Entry point for the kicad-agent CLI."""
     if argv is None:
@@ -852,6 +1097,10 @@ def main(argv: list[str] | None = None) -> None:
             _handle_dfm(subcmd_argv)
         elif subcmd == "review-schematic":
             _handle_review_schematic(subcmd_argv)
+        elif subcmd == "pre-pcb-gate":
+            _handle_pre_pcb_gate(subcmd_argv)
+        elif subcmd == "gate":
+            _handle_gate(subcmd_argv)
         elif subcmd == "demo":
             _handle_demo(subcmd_argv)
         elif subcmd == "playground":
@@ -860,6 +1109,8 @@ def main(argv: list[str] | None = None) -> None:
             _handle_undo(subcmd_argv)
         elif subcmd == "redo":
             _handle_redo(subcmd_argv)
+        elif subcmd == "workflow":
+            _handle_workflow(subcmd_argv)
         return
 
     # Legacy operation mode
