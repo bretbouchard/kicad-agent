@@ -50,18 +50,23 @@ If the AI can't produce structurally valid KiCad files through the tool layer, n
 - Existing tools: kiutils (Python), sexpdata (Python), kicad-cli for validation, difftastic for diffs
 - The tool lives at ~/apps/kicad-agent/ (Python backend) with a skill definition at ~/.claude/skills/kicad-agent/
 
-## Current Milestone: None (all shipped)
+## Current Milestone: v4.1 Stage-Safe PCB Flow
 
-**v3.0 Full-Stack EDA shipped 2026-06-01.** All 54 phases across 10 milestones complete. 143 plans, 3171+ tests, ~3400 lines in v3.0 alone.
+**Goal:** Enforce a credible schematic-to-manufacturing PCB workflow where each stage has deterministic readiness gates, explicit constraints, and verified artifacts. 10 phases (85-94), 14 plans.
 
-**What shipped in v3.0:**
-- Constraint propagation: Schematic intent → PCB design rules (81 tests)
-- PCB spatial model: STRtree spatial indexing, layer classification, board outline extraction (51 tests)
-- Layout-aware placement: Thermal-aware, signal flow-driven, constraint-aware SA refinement (41 tests)
-- PCB DRC intelligence: Spatial violation enrichment, fix suggestions, PCB-specific design rules (56 tests)
-- Design for Manufacturing: DFM checks, manufacturer profiles, panelization scoring, CLI subcommand (62 tests)
+**What this adds:**
+- Unified gate architecture: DesignStage enum, GateResult model, GateRunner orchestrator
+- Schematic intent completeness gate: footprint, pin-map, metadata, net intent checks
+- Verified schematic-to-PCB transfer contract: symbols → footprints → pads → nets
+- Constraint capture and propagation: electrical, mechanical, fab constraints → .kicad_dru
+- Placement readiness gate: bounds, clearance, decoupling, thermal, routability
+- Routing readiness and quality gate: prerequisites, post-route DRC, diff pair rules
+- Manufacturing readiness gate: DRC/DFM pass, artifact validation, manifest with hashes
+- AI boundary and repair loop: proposals validated before application, audit trail
+- 6 golden end-to-end boards proving full flow
+- Documentation: stage-gate getting started, repair examples, guarantees vs suggestions
 
-**Next:** Run `/gsd-new-milestone` to plan the next milestone.
+**Previous:** v3.0 Full-Stack EDA shipped 2026-06-01. All 54 phases across 10 milestones complete.
 
 ## Previous Milestone: v2.3 mcp-server
 
@@ -113,4 +118,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-01 — Milestone v3.0 full-stack-eda shipped, all 54 phases complete*
+*Last updated: 2026-06-11 — Milestone v4.1 stage-safe-pcb-flow planned (10 phases, 14 plans)*

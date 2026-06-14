@@ -16,7 +16,7 @@ class TestKiCadVisionConfig:
 
     def test_default_config(self):
         config = KiCadVisionConfig()
-        assert config.model_name == "ggml-org/gemma-4-12B-it-Q4_K_M"
+        assert config.model_name == "mlx-community/gemma-4-12B-it-8bit"
         assert config.adapter_path is None
         assert config.max_tokens == 2048
         assert config.temperature == 0.0

@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-_DEFAULT_MODEL = "ggml-org/gemma-4-12B-it-Q4_K_M"
+_DEFAULT_MODEL = "mlx-community/gemma-4-12B-it-8bit"
 
 
 def main() -> int:

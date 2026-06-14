@@ -52,8 +52,9 @@ def render_pcb_layer_png(
         args = ["pcb", "export", "svg", "--output", str(svg_path)]
         if theme:
             args.extend(["--theme", theme])
-        if layers:
-            args.extend(["--layers", ",".join(layers)])
+        # KiCad 9+ requires at least one layer
+        layer_list = layers if layers else ["F.Cu", "B.Cu", "Edge.Cuts"]
+        args.extend(["--layers", ",".join(layer_list)])
         args.append(str(pcb_path))
 
         try:

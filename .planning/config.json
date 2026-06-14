@@ -19,5 +19,8 @@
     "skill_path": "~/.claude/skills/kicad-agent",
     "language": "python",
     "runtime": "claude"
+  },
+  "graphify": {
+    "enabled": true
   }
 }

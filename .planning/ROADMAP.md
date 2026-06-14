@@ -2,7 +2,7 @@
 
 ## Overview
 
-Build an AI-safe KiCad structural editing tool across multiple milestones. First achieve zero-diff round-trip parsing for all file types, define the operation schema that insulates the LLM from raw S-expressions, install validation gates, build editing operations from simple to complex, add visual primitives and GRPO training for spatial reasoning, AI-driven generative capabilities, LTspice integration, ADI footprint library access, real-world training data, bidirectional LTspice bridge, AI generation wiring, component placement AI, package/distribution, CI/CD, interactive routing, SFT/GRPO fine-tuning, agent integration, schematic repair, council audit remediation, and finally fill the remaining operation gaps for complete CRUD coverage.
+Build an AI-safe KiCad structural editing tool across multiple milestones. First achieve zero-diff round-trip parsing for all file types, define the operation schema that insulates the LLM from raw S-expressions, install validation gates, build editing operations from simple to complex, add visual primitives and GRPO training for spatial reasoning, AI-driven generative capabilities, LTspice integration, ADI footprint library access, real-world training data, bidirectional LTspice bridge, AI generation wiring, component placement AI, package/distribution, CI/CD, interactive routing, SFT/GRPO fine-tuning, agent integration, schematic repair, council audit remediation, fill the remaining operation gaps for complete CRUD coverage, and finally hybrid routing intelligence with Gemma 4 12B encoder-free vision for post-routing gap filling.
 
 ## Milestones
 
@@ -17,6 +17,8 @@ Build an AI-safe KiCad structural editing tool across multiple milestones. First
 - **v3.0 Full-Stack EDA** - Phases 50-54 (shipped 2026-06-01)
 - **v3.1 Council Remediation** - Phases 60-76 (shipped 2026-06-06)
 - **v3.2 Gap Analysis** - Phases 79 (in progress)
+- **v4.0 Hybrid Routing Intelligence** - Phases 80-84 (planned, Gemma 4 12B vision + Qwen2.5-0.5B text, all local)
+- **v4.1 Stage-Safe PCB Flow** - Phases 85-94 (planned, deterministic gates for schematic-to-manufacturing)
 
 ## Phases
 
@@ -1361,3 +1363,272 @@ Plans:
 - [ ] 79-04-PLAN.md — DFM engine expansion: 50+ manufacturing checks with fab profiles
 - [ ] 79-05-PLAN.md — AI pipeline smarter: real-world training data, parallel inference, confidence scoring
 - [x] 79-06-PLAN.md — Performance optimization: O(n) parsing, memory management, test coverage 85%+
+
+### v4.0 Hybrid Routing Intelligence (Phases 80-84)
+
+### Phase 80: Spatial Reasoning Model Benchmark
+**Goal:** Establish quantitative baseline for Qwen2.5-0.5B (text-only) vs Gemma 4 12B (encoder-free vision) on coordinate-grounded spatial reasoning. Answer "which model for which task?" with data. All inference local, no cloud.
+**Depends on:** Phase 79 (stable codebase)
+**Requirements:** BENCH-06, BENCH-07, BENCH-08
+**Success Criteria** (what must be TRUE):
+  1. 150+ benchmark tasks across 6 categories (coordinate proximity, routing feasibility, clearance diagnosis, net completion, DRC fix selection, unrouted cause)
+  2. Each task has verifiable ground-truth answer
+  3. Benchmark runs in <5 minutes on Apple Silicon
+  4. Decision matrix: Qwen2.5-0.5B vs Gemma 4 12B per task type (text-only vs vision)
+  5. Concrete model selection for each task type, all local via mlx-lm
+  6. Zero regression on existing tests
+**Plans**: 3 plans
+
+Plans:
+- [ ] 80-01-PLAN.md — Spatial benchmark dataset: 6 task categories, vision tasks include PCB renders, ground-truth from real PCB fixtures
+- [ ] 80-02-PLAN.md — Benchmark runner: Qwen2.5-0.5B + Gemma 4 12B multi-model support, per-category accuracy, failure modes
+- [ ] 80-03-PLAN.md — Run benchmark, produce MODEL-ASSESSMENT.md with model selection matrix (all local)
+
+### Phase 81: Post-Routing Gap Analyzer
+**Goal:** Build deterministic analysis pipeline that reads a partially-routed PCB, identifies all gaps (unrouted nets, DRC violations, incomplete nets, naming issues), and produces a structured GapReport with optional PCB renders for Gemma 4 12B vision consumption.
+**Depends on:** Phase 80 (model assessment informs model selection for Phase 82)
+**Requirements:** GAP-01, GAP-02, GAP-03, GAP-04
+**Success Criteria** (what must be TRUE):
+  1. GapAnalyzer reads .kicad_pcb and produces GapReport within 10 seconds
+  2. GapReport contains: unrouted nets with pin positions, DRC violations with spatial context, incomplete nets, net naming issues
+  3. Each gap entry includes nearby obstacles, clearance zones, routing corridors
+  4. Each gap optionally includes rendered PCB region for vision model (Gemma 4 12B)
+  5. GapReport serializable to JSON (AI) and markdown (human)
+  6. Works on PCBs from Freerouting, kicad-agent A*, or custom auto_route.py
+  7. CLI: `kicad-agent analyze-gaps <pcb_file> [--render-gaps]`, MCP tool: `analyze_gaps`
+**Plans**: 2 plans
+
+Plans:
+- [ ] 81-01-PLAN.md — GapAnalyzer core: GapReport schema, unrouted/incomplete/violation detection via NativeParser
+- [ ] 81-02-PLAN.md — Spatial context enrichment, CLI subcommand, MCP tool, integration test with real PCBs
+
+### Phase 82: AI-Powered Gap Filling Engine
+**Goal:** Build AI-driven gap-filling engine that takes GapReport and applies targeted fixes using existing 98 operations. Gemma 4 12B handles vision-based spatial reasoning (sees PCB renders), Qwen2.5-0.5B handles text tasks. All local, no cloud.
+**Depends on:** Phase 81 (GapAnalyzer), Phase 80 (model selection)
+**Requirements:** GAP-05, GAP-06, GAP-07, GAP-08
+**Success Criteria** (what must be TRUE):
+  1. GapFiller maps gap types to existing kicad-agent operations
+  2. Fixes validated via kicad-cli pcb drc after application
+  3. Gemma 4 12B used for vision-based routing decisions (sees gap renders, suggests paths)
+  4. Qwen2.5-0.5B used for text tasks (net naming, simple fixes)
+  5. Unrouted net completion improves >30% over deterministic routing alone
+  6. DRC violation fix rate >60% for common violations
+  7. Net renaming fixes >80% of N0xxx nets
+  8. Iterative loop: fix → validate → re-analyze (max 3 iterations)
+  9. Transaction safety: rollback on failure
+  10. All inference local via mlx-lm
+  11. CLI: `kicad-agent fill-gaps <pcb_file> [--dry-run] [--model gemma4|qwen]`
+**Plans**: 3 plans
+
+Plans:
+- [ ] 82-01-PLAN.md — GapFix schema and FixStrategyEngine: map gap types to existing operations
+- [ ] 82-02-PLAN.md — Iterative GapFillPipeline: analyze → fix → validate → re-analyze with model selection
+- [ ] 82-03-PLAN.md — Integration test suite with real analog-ecosystem PCBs
+
+### Phase 83: analog-ecosystem Integration
+**Goal:** Wire gap-filling pipeline into analog-ecosystem's PCB workflow, replacing per-board custom scripts with unified kicad-agent workflow. Model config (Gemma 4 12B vision + Qwen2.5-0.5B text) in kicad-agent.yaml.
+**Depends on:** Phase 82 (gap-filling pipeline)
+**Requirements:** WORKFLOW-01, WORKFLOW-02, WORKFLOW-03
+**Success Criteria** (what must be TRUE):
+  1. Single command: `kicad-agent workflow route-and-fill <pcb>`
+  2. Replaces custom auto_route.py, generate_dsn.py, build_pcb.py per-board
+  3. Uses existing Freerouting bridge and A* router (not analog-ecosystem's custom implementations)
+  4. Board config from .kicad_pro or kicad-agent.yaml (routing + model selection)
+  5. Model config: vision_model (gemma-4-12b), text_model (qwen2.5-0.5b), all local
+  6. Workflow templates as MCP meta-tools
+  7. Migration guide for existing boards
+**Plans**: 2 plans
+
+Plans:
+- [ ] 83-01-PLAN.md — Unified routing workflow: config, engine selection, gap-fill integration
+- [ ] 83-02-PLAN.md — analog-ecosystem migration: board configs, replace custom scripts, docs
+
+### Phase 84: Gemma 4 12B Fine-Tuning (Conditional)
+**Goal:** If Phase 80 shows <50% accuracy on routing/net_completion tasks, fine-tune Gemma 4 12B (encoder-free vision) on gap-filling-specific data with PCB renders. Skipped if models prove adequate. All local, no cloud.
+**Depends on:** Phase 80 (benchmark), Phase 82 (training data from fix strategy)
+**Trigger:** Phase 80 benchmark shows <50% accuracy on routing_feasibility or net_completion
+**Requirements:** MODEL-01, MODEL-02, MODEL-03
+**Success Criteria** (what must be TRUE):
+  1. Gemma 4 12B fine-tuned with LoRA on 5000+ gap-fix examples (with PCB renders as vision input)
+  2. Trained model shows >70% accuracy on Phase 80 benchmark
+  3. Inference latency <5s per gap on Apple Silicon (mlx-lm 8-bit)
+  4. LoRA adapter saved and loadable via InferenceWrapper
+  5. Zero regression on existing tests
+**Plans**: 2 plans
+
+Plans:
+- [ ] 84-01-PLAN.md — Gap-filling training data generation with PCB renders for multimodal training
+- [ ] 84-02-PLAN.md — Gemma 4 12B LoRA fine-tuning via mlx-lm, multimodal (image + text) SFT
+
+### v4.1 Stage-Safe PCB Flow (Phases 85-94)
+
+**Milestone Goal:** Make kicad-agent enforce a credible schematic-to-manufacturing PCB workflow where each stage has deterministic readiness gates, explicit constraints, and verified artifacts. Every major design transition (schematic→PCB, setup→placement, placement→routing, routing→manufacturing) has a gate that fails closed.
+
+- [x] **Phase 85: Gate Architecture** — DesignStage enum, GateResult model, GateRunner orchestrator, CLI/MCP exposure (completed 2026-06-13)
+- [ ] **Phase 86: Schematic Intent Completeness** — Footprint/pin-map/metadata checks, net intent classification, quality warnings
+- [ ] **Phase 87: Schematic-to-PCB Transfer Contract** — Verified symbol→footprint→pad→net mapping, stub detection, gate enforcement
+- [ ] **Phase 88: Constraint Capture & Propagation** — Electrical/mechanical/fab constraints, .kicad_dru propagation, completeness gate
+- [ ] **Phase 89: Placement Readiness Gate** — Footprint bounds, courtyard clearance, decoupling proximity, routability heuristics
+- [ ] **Phase 90: Routing Readiness & Quality Gate** — Pre-route prerequisites, post-route DRC, diff pair rules, quality metrics
+- [ ] **Phase 91: Manufacturing Readiness Gate** — DRC/DFM pass, artifact validation, BOM completeness, manifest with hashes
+- [ ] **Phase 92: AI Boundary & Repair Loop** — Proposal model, deterministic validation, repair loop, audit trail
+- [ ] **Phase 93: Golden End-to-End Boards** — 6 fixture boards proving full flow: LED, buck, MCU, op-amp, connectors, 4-layer
+- [ ] **Phase 94: Docs & UX** — Stage-gate getting started, status CLI, repair examples, guarantees vs suggestions docs
+
+### Phase 85: Gate Architecture
+**Goal:** Define unified gate model for design stage transitions — the foundation all subsequent gates build on
+**Depends on:** Phase 79
+**Requirements:** GATE-01, GATE-02, GATE-03, GATE-04, GATE-05
+**Success Criteria** (what must be TRUE):
+  1. DesignStage enum with 5 values: schematic, pcb_setup, placement, routing, manufacturing
+  2. GateResult model with pass, blockers, warnings, artifacts, next_actions
+  3. GateRunner orchestrates gates with stage-aware dispatch
+  4. pre_pcb_schematic_gate refactored to return GateResult
+  5. CLI `gate run` and `gate status` subcommands work
+  6. MCP tools exposed for gate operations
+  7. Gates fail closed: GateResult.pass=False blocks downstream
+**Plans**: 2 plans
+
+Plans:
+- [x] 85-01-PLAN.md — DesignStage enum, GateResult model, GateRunner, refactor pre_pcb gate
+- [x] 85-02-PLAN.md — CLI gate subcommands, MCP tools, RunGateOp/GateStatusOp schemas
+
+### Phase 86: Schematic Intent Completeness
+**Goal:** Ensure schematic has enough information to produce a meaningful PCB
+**Depends on:** Phase 85
+**Requirements:** SINTENT-01 through SINTENT-05
+**Success Criteria** (what must be TRUE):
+  1. Footprint completeness check (package variant merged into pin-count per council HIGH-3)
+  2. Symbol pin-count validation (footprint pad-count deferred to Phase 87 per council HIGH-4)
+  3. Component metadata checks: MPN, value, footprint, DNP/exclude
+  4. Net intent extraction: power, signal, high-current, diff pair, clock, analog, digital
+  5. Warnings for generic symbols, stubs, hidden power pins, ambiguous connectors
+**Plans**: 2 plans
+
+Plans:
+- [ ] 86-01-PLAN.md -- Footprint/symbol-pin-count/metadata checks, fixture schematics, gate registration (revised per council)
+- [ ] 86-02-PLAN.md -- Net intent classification (extending existing NetClassification), quality warnings (revised per council)
+
+### Phase 87: Schematic-to-PCB Transfer Contract
+**Goal:** Replace placeholder PCB generation with verified schematic-derived PCB state
+**Depends on:** Phase 86
+**Requirements:** TRANSFER-01 through TRANSFER-05
+**Success Criteria** (what must be TRUE):
+  1. TransferContract: symbols→footprints→pads→nets→net_classes mapping
+  2. PadNetAssigner assigns PCB pad nets from schematic netlist
+  3. NetIdVerifier confirms PCB net IDs match schematic net names
+  4. update_from_schematic runs pre-PCB gate first
+  5. Stub/placeholder footprints detected and blocked
+**Plans**: 2 plans
+
+Plans:
+- [ ] 87-01-PLAN.md — TransferContract, PadNetAssigner, NetIdVerifier, golden LED+resistor test
+- [ ] 87-02-PLAN.md — UpdateFromSchematicOp with gate enforcement, stub detection, MCU golden test
+
+### Phase 88: Constraint Capture & Propagation
+**Goal:** Capture design constraints before layout and propagate to .kicad_dru net classes
+**Depends on:** Phase 87
+**Requirements:** CONST-01 through CONST-05
+**Success Criteria** (what must be TRUE):
+  1. Electrical constraints: current, voltage, impedance, diff pair, length match
+  2. Mechanical constraints: board outline, mounting holes, keepouts, connector zones
+  3. Fab profile constraints: min trace, min drill, clearance, layer count, copper weight
+  4. Constraint propagator writes to .kicad_dru
+  5. Gate blocks routing when critical nets lack constraints
+**Plans**: 2 plans
+
+Plans:
+- [ ] 88-01-PLAN.md — Constraint schemas, propagator, completeness gate
+- [ ] 88-02-PLAN.md — SetConstraintsOp/GetConstraintsOp, wiring into gate chain
+
+### Phase 89: Placement Readiness Gate
+**Goal:** Ensure placement is electrically and mechanically plausible before routing
+**Depends on:** Phase 88
+**Requirements:** PLACE-01 through PLACE-05
+**Success Criteria** (what must be TRUE):
+  1. Footprint bounds inside board outline
+  2. Courtyard and keepout clearance
+  3. Connector/mechanical positions
+  4. Decoupling proximity, thermal spacing, analog/digital grouping
+  5. Routability heuristics: density, ratsnest, blocked channels
+**Plans**: 1 plan
+
+Plans:
+- [ ] 89-01-PLAN.md — PlacementReadinessGate with 6 sub-checks, fixture boards
+
+### Phase 90: Routing Readiness & Quality Gate
+**Goal:** Prevent pathfinding from pretending to be production routing
+**Depends on:** Phase 89
+**Requirements:** ROUTE-GATE-01 through ROUTE-GATE-05
+**Success Criteria** (what must be TRUE):
+  1. Pre-route: board outline, stackup, net classes, constraints, placement gate pass
+  2. Route quality metrics: completion, vias, clearance, length mismatch, return path
+  3. Post-route DRC and unconnected-item check
+  4. Differential pair and impedance rule checks
+  5. A* router marked as prototype unless quality gate passes
+**Plans**: 1 plan
+
+Plans:
+- [ ] 90-01-PLAN.md — RoutingReadinessGate + PostRouteQualityGate + RouteQualityMetrics
+
+### Phase 91: Manufacturing Readiness Gate
+**Goal:** Treat manufacturing as a package, not a Gerber export
+**Depends on:** Phase 90
+**Requirements:** MFG-01 through MFG-05
+**Success Criteria** (what must be TRUE):
+  1. Clean DRC and DFM profile pass required
+  2. Export artifacts: Gerbers, drill, BOM, CPL/position, STEP
+  3. Required layers validated for fab profile
+  4. BOM rows have MPN/vendor unless DNP/excluded
+  5. Manufacturing manifest with SHA256 hashes and provenance
+**Plans**: 1 plan
+
+Plans:
+- [ ] 91-01-PLAN.md — ManufacturingReadinessGate + ManufacturingManifest + artifact validation
+
+### Phase 92: AI Boundary & Repair Loop
+**Goal:** Make the LLM propose, not silently decide
+**Depends on:** Phase 91
+**Requirements:** AI-01 through AI-05
+**Success Criteria** (what must be TRUE):
+  1. Proposal model with source tracking (deterministic/local_ai/external_llm)
+  2. Failed proposals never mutate files
+  3. Repair loop: gate failure → classify → propose → validate → apply → rerun (max 3)
+  4. Audit trail with source tracking per fix
+  5. Loop terminates even if blockers remain
+**Plans**: 1 plan
+
+Plans:
+- [ ] 92-01-PLAN.md — Proposal model, ProposalValidator, RepairLoop, audit trail
+
+### Phase 93: Golden End-to-End Boards
+**Goal:** Prove the full flow on 6 representative designs
+**Depends on:** Phase 92 (must test repair loop as part of full pipeline)
+**Requirements:** E2E-01
+**Success Criteria** (what must be TRUE):
+  1. LED resistor board passes all gates
+  2. Buck regulator passes all gates
+  3. MCU breakout passes all gates
+  4. Op-amp analog front end passes all gates
+  5. Connector-heavy board passes all gates
+  6. 4-layer controlled impedance passes all gates
+  7. Each fixture has expected artifact list
+**Plans**: 1 plan
+
+Plans:
+- [ ] 93-01-PLAN.md — 6 golden fixture boards with end-to-end gate tests
+
+### Phase 94: Docs & UX
+**Goal:** Make the stage-safe workflow obvious
+**Depends on:** Phase 93
+**Requirements:** DOCS-01 through DOCS-05
+**Success Criteria** (what must be TRUE):
+  1. Getting-started rewritten around stage gates
+  2. `kicad-agent status` shows current stage and blockers
+  3. Examples for failing gates and repair workflow
+  4. Guarantees vs suggestions clearly documented
+  5. Not-manufacturable-until checklist
+**Plans**: 1 plan
+
+Plans:
+- [ ] 94-01-PLAN.md — Docs rewrite, status CLI enhancement, examples, guarantees doc

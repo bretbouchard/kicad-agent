@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: in-progress
-stopped_at: Completed 79-06 performance optimization and test coverage expansion (86.1%).
-last_updated: "2026-06-07T23:45:00Z"
-last_activity: 2026-06-07
+status: Executing Phase 88
+stopped_at: Completed Phase 74 - Executor Refactor & Schema Organization (2 plans).
+last_updated: "2026-06-14T06:56:04.308Z"
+last_activity: 2026-06-14
 progress:
-  total_phases: 89
-  completed_phases: 41
-  total_plans: 229
-  completed_plans: 186
-  percent: 81
+  total_phases: 122
+  completed_phases: 43
+  total_plans: 250
+  completed_plans: 192
+  percent: 77
 ---
 
 # Project State
@@ -21,11 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** All milestones shipped (v1.0 through v3.1). 91 phases, 211 plans, 4352 tests (2882 passing, 1 pre-existing failure).
-Last activity: 2026-06-07
+**Current focus:** Phase 88 — constraint-capture
+Last activity: 2026-06-14
 
 ## Current Position
 
+Phase: 88 (constraint-capture) — EXECUTING
+Plan: 1 of 2
 **All milestones complete (v1.0 through v3.0). 54 phases, 143 plans, 3171+ tests.**
 
 Last milestone: v3.0 Full-Stack EDA (Phases 50-54)
@@ -38,7 +40,7 @@ Last milestone: v3.0 Full-Stack EDA (Phases 50-54)
 
 Council review: 4 findings fixed, all passing.
 
-Last activity: 2026-06-01
+Last activity: 2026-06-14 -- Phase 88 execution started
 
 ### Phase 62: Routing Correctness (v3.1)
 
@@ -310,11 +312,43 @@ Last activity: 2026-06-01
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 80 added: Spatial Reasoning Model Benchmark — evaluate 0.5B/1.5B on 6 coordinate-grounded task categories
+- Phase 81 added: Post-Routing Gap Analyzer — deterministic gap identification on partially-routed PCBs
+- Phase 82 added: AI-Powered Gap Filling Engine — AI-assisted fixes using existing 98 operations
+- Phase 83 added: analog-ecosystem Integration — unified routing workflow replacing per-board custom scripts
+- Phase 84 added: Model Upgrade (Conditional) — train larger model if benchmark shows insufficiency
+
+### v4.1 Stage-Safe PCB Flow (Phases 85-94)
+
+**Goal:** Enforce a credible schematic-to-manufacturing PCB workflow where each stage has deterministic readiness gates.
+
+Planned phases:
+
+- Phase 85: Gate Architecture (2 plans) — DesignStage enum, GateResult, GateRunner
+- Phase 86: Schematic Intent Completeness (2 plans) — Footprint/pin-map/metadata/net intent
+- Phase 87: Schematic-to-PCB Transfer Contract (2 plans) — Verified symbol→footprint→pad→net
+- Phase 88: Constraint Capture & Propagation (2 plans) — Electrical/mechanical/fab constraints
+- Phase 89: Placement Readiness Gate (1 plan) — 6 sub-checks
+- Phase 90: Routing Readiness & Quality Gate (1 plan) — Pre/post-route gates
+- Phase 91: Manufacturing Readiness Gate (1 plan) — Full package validation
+- Phase 92: AI Boundary & Repair Loop (1 plan) — Proposal model, audit trail
+- Phase 93: Golden E2E Boards (1 plan) — 6 fixture boards proving full flow
+- Phase 94: Docs & UX (1 plan) — Stage-gate documentation
+
+Total: 14 plans across 10 phases.
+
+Priority: Start with Phases 85-87 (gate architecture + schematic intent + transfer contract) per document recommendation.
+
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [v4.1]: Stage-safe flow shifts from "file-safe editing" to "stage-safe design" — every design transition has a deterministic gate
+- [v4.1]: Phases 85-87 prioritized — biggest current weakness is gap between safe KiCad files and real schematic-to-PCB transfer
+- [v4.1]: LLM output is advisory; deterministic gates decide whether proposals can mutate files
 - [v2.4]: File content snapshots for undo (not Operation objects -- re-execution produces different UUIDs)
 - [v2.4]: collections.deque(maxlen=N) for bounded O(1) undo stack
 - [v2.4]: Per-executor undo stack keyed by resolved file path

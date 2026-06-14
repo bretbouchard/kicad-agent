@@ -153,18 +153,6 @@ When building schematics programmatically, these rules prevent the most common a
 3. **Multi-pin connectors have non-sequential layouts.** Card_Edge_64P pins 33-64 ALL on right side, reuse Y positions from pins 1-32. Use lookup tables, never calculate.
 4. **Device:R/C have 3.81mm pin offsets** (not 2.54mm), placing connection points off-grid.
 
-## Planning (MANDATORY)
-
-All implementation planning MUST go through GSD. Never use native plan mode for kicad-agent work.
-
-| I want to... | Command | Plans land at |
-|---|---|---|
-| Plan a phase | `/gsd-plan-phase N` | `.planning/phases/N/PLAN.md` |
-| Execute a phase | `/gsd-execute-phase N` | Source files + `.planning/phases/N/SUMMARY.md` |
-| Check progress | `/gsd-progress` | `.planning/STATE.md` |
-
-**Forbidden:** Writing plans to `~/.claude/plans/` for kicad-agent work.
-
 ## Agent Rules
 
 - **Automate first.** Before asking a human to run something manually, check the tool inventory above. If a CLI command exists, use it. kicad-cli runs ERC, DRC, exports, renders, and upgrades without opening the GUI.
@@ -205,7 +193,7 @@ src/kicad_agent/
   crossfile/       — Cross-file reference tracking
 
 scripts/           — Training, evaluation, data collection scripts
-skills/            — Claude Code skill definitions
+skills/            — Codex skill definitions
 ```
 
 ## Key Commands
@@ -222,22 +210,3 @@ skills/            — Claude Code skill definitions
 | Check project status | `/kicad-agent status` |
 | Get project context | `/kicad-agent context` |
 | View operations help | `/kicad-agent help` |
-
-## Memory / Confucius (MANDATORY)
-
-Before solving a problem, check if a solution already exists:
-- `mcp__confucius__memory_retrieve` — search for existing patterns
-- `mcp__confucius__memory_store` — store solutions worth remembering
-
-### What to store for kicad-agent:
-- PCB layout patterns and design rules
-- DRC error fixes and workarounds
-- Footprint creation decisions
-- Routing strategies (differential pairs, impedance matching)
-- Manufacturer part selection rationale
-
-### When to store:
-- After fixing a non-trivial bug → `type: "error_message"`
-- After making a design decision → `type: "design_decision"`
-- After finding a reusable pattern → `type: "pattern"`
-- After completing a phase → `type: "knowledge_state"`

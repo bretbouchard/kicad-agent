@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -91,11 +92,31 @@ def build_vision_dataset(
         if converted % 100 == 0 and converted > 0:
             logger.info("Converted %d/%d samples", converted, len(samples))
 
-    # Save metadata as JSONL (images column references paths)
-    meta_path = output_dir / "train.jsonl"
-    with open(meta_path, "w", encoding="utf-8") as f:
+    # Save as HuggingFace dataset (load_from_disk compatible)
+    try:
+        from datasets import Dataset, Features, Value, Sequence, Image as HFImage
+
+        hf_rows = []
         for row in metadata_rows:
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            # Load actual image for HF Image feature
+            img_path = output_dir / row["images"][0]
+            hf_rows.append({
+                "images": [str(img_path.resolve())],
+                "messages": row["messages"],
+                "task_type": row["task_type"],
+                "source_file": row["source_file"],
+            })
+
+        ds = Dataset.from_list(hf_rows)
+        ds = ds.cast_column("images", Sequence(HFImage()))
+        ds.save_to_disk(output_dir / "train")
+        logger.info("Saved HuggingFace dataset to %s/train", output_dir)
+    except ImportError:
+        # Fallback: save as JSONL if datasets not available
+        meta_path = output_dir / "train.jsonl"
+        with open(meta_path, "w", encoding="utf-8") as f:
+            for row in metadata_rows:
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     logger.info(
         "Vision dataset complete: %d samples in %s",
@@ -149,8 +170,16 @@ def _convert_sample(
     if not pcb_path.exists():
         return None
 
-    # Render PCB to PNG
+    # Render to PNG — fall back to PCB render if schematic fails
     image_path = _render_pcb_for_training(pcb_path, idx, images_dir)
+    if image_path is None and pcb_path.suffix == ".kicad_sch" and pcb_dir:
+        # Schematic failed (missing libs?) — try PCB from same project
+        sch_stem = pcb_path.stem
+        for pcb in sorted(pcb_dir.rglob(f"{sch_stem}.kicad_pcb")):
+            image_path = _render_pcb_for_training(pcb, idx, images_dir)
+            if image_path is not None:
+                pcb_path = pcb  # Update source_file to PCB
+                break
     if image_path is None:
         return None
 
@@ -186,19 +215,43 @@ def _convert_sample(
 
 
 def _find_pcb_for_sample(sample: dict, pcb_dir: Path) -> str:
-    """Find a PCB file matching the sample metadata."""
-    # Try to match by name pattern
+    """Find a PCB/schematic file matching the sample's task type.
+
+    Returns a path relative to pcb_dir (not cwd) so the caller can
+    resolve against pcb_dir without doubling.
+
+    Randomly distributes available files across samples so the model
+    sees diverse boards instead of always the same one.
+    """
+    task_type = sample.get("task_type", "board_analysis")
+    base = Path(pcb_dir)
+
+    # Try to match by name pattern first
     name = sample.get("board_name", sample.get("name", ""))
     if name:
         for ext in ("*.kicad_pcb", "*.kicad_sch"):
-            match = list(Path(pcb_dir).glob(f"{name}.{ext[2:]}"))
+            match = list(base.glob(f"{name}.{ext[2:]}"))
             if match:
-                return str(match[0])
-    # Fall back to first PCB found
-    pcbs = list(Path(pcb_dir).glob("*.kicad_pcb"))
-    if pcbs:
-        return str(pcbs[0])
-    return ""
+                return str(match[0].relative_to(base))
+
+    # Select file type by task
+    if "schematic" in task_type or "sch" in task_type:
+        candidates = sorted(base.rglob("*.kicad_sch"))
+    elif "rout" in task_type:
+        candidates = sorted(base.rglob("*.kicad_pcb"))
+    else:
+        # board_analysis, component_knowledge — prefer PCB
+        candidates = sorted(base.rglob("*.kicad_pcb"))
+        if not candidates:
+            candidates = sorted(base.rglob("*.kicad_sch"))
+
+    # Filter out boards that kicad-cli can't load (validated at import time)
+    candidates = [c for c in candidates if c.name != "smd_test_board.kicad_pcb"]
+
+    if not candidates:
+        return ""
+
+    return str(random.choice(candidates).relative_to(base))
 
 
 def _render_pcb_for_training(
@@ -206,15 +259,26 @@ def _render_pcb_for_training(
     idx: int,
     images_dir: Path,
 ) -> Path | None:
-    """Render PCB to PNG for training dataset."""
+    """Render PCB or schematic to PNG for training dataset."""
     try:
-        from kicad_agent.export.pcb_image_renderer import render_pcb_layer_png
-
-        image = render_pcb_layer_png(
-            pcb_path,
-            width=1024,
-            height=768,
+        from kicad_agent.export.pcb_image_renderer import (
+            render_pcb_layer_png,
+            render_schematic_png,
         )
+
+        if pcb_path.suffix == ".kicad_sch":
+            image = render_schematic_png(
+                pcb_path,
+                width=1024,
+                height=768,
+            )
+        else:
+            image = render_pcb_layer_png(
+                pcb_path,
+                width=1024,
+                height=768,
+            )
+
         out_path = images_dir / f"sample_{idx:06d}.png"
         image.save(out_path, "PNG")
         return out_path

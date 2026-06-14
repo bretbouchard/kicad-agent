@@ -18,7 +18,7 @@ class TestKiCadVisionSFTConfig:
 
     def test_default_config(self):
         config = KiCadVisionSFTConfig()
-        assert config.model == "ggml-org/gemma-4-12B-it-Q4_K_M"
+        assert config.model == "mlx-community/gemma-4-12B-it-8bit"
         assert config.lora_layers == 16
         assert config.batch_size == 1
         assert config.learning_rate == 1e-5

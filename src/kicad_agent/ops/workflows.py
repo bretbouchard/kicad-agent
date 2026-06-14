@@ -102,6 +102,14 @@ WORKFLOW_TEMPLATES: dict[str, WorkflowTemplate] = {
         ],
         file_types=[".kicad_pcb"],
     ),
+    "route_and_fill": WorkflowTemplate(
+        name="route_and_fill",
+        description="Analyze routing gaps and fill them via iterative fix loop",
+        steps=[
+            WorkflowStep(op_type="fill_gaps", description="Analyze and fill routing gaps"),
+        ],
+        file_types=[".kicad_pcb"],
+    ),
     "convert_legacy_schematic": WorkflowTemplate(
         name="convert_legacy_schematic",
         description="Convert and repair a legacy KiCad 5/6 schematic to KiCad 10",

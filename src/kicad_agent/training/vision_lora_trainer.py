@@ -37,7 +37,7 @@ class KiCadVisionSFTConfig(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     model: str = Field(
-        default="ggml-org/gemma-4-12B-it-Q4_K_M",
+        default="mlx-community/gemma-4-12B-it-8bit",
         description="HuggingFace model ID for quantized Gemma 4 12B (MLX format)",
     )
     data: Path = Field(
@@ -66,8 +66,16 @@ def _get_lora_main():
 
 
 def _resolve_dataset_arg(data_path: Path) -> str:
-    """Return absolute path for dataset argument."""
-    return str(data_path.resolve())
+    """Return absolute path for dataset argument.
+
+    Looks for save_to_disk output in data_path/train/ first, then
+    falls back to data_path itself.
+    """
+    resolved = data_path.resolve()
+    train_sub = resolved / "train"
+    if train_sub.exists() and (train_sub / "dataset_info.json").exists():
+        return str(train_sub)
+    return str(resolved)
 
 
 def _build_lora_args(

@@ -21,7 +21,7 @@ class TestRegistryCompleteness:
     """Verify the registry has the expected number of operations."""
 
     def test_registry_has_98_operations(self) -> None:
-        assert len(OPERATION_REGISTRY) == 103
+        assert len(OPERATION_REGISTRY) == 111
 
     def test_validate_registry_completeness_passes(self) -> None:
         result = validate_registry_completeness()
@@ -103,6 +103,7 @@ class TestQueryFunctions:
             "navigate_hierarchy",
             "validate_power_nets",
             "validate_schematic",
+            "pre_pcb_schematic_gate",
             "parse_erc",
             "extract_violation_positions",
             "validate_hlabels",
@@ -127,6 +128,7 @@ class TestQueryFunctions:
             "detect_net_shorts",
             "analyze_ground_topology",
             "trace_net_from_label",
+            "analyze_gaps",
         }
         assert readonly_types == expected_readonly
         assert len(readonly) == len(expected_readonly)
@@ -203,6 +205,7 @@ class TestQueryFunctions:
             "remove_net_class",
             "remove_design_rule",
             "remove_copper_zone",
+            "remove_keepout_area",
             "remove_dangling_wires",
             "propagate_symbol_change",
         }

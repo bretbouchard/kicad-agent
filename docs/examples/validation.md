@@ -24,13 +24,28 @@ Dry-run catches:
 
 ## ERC/DRC Validation
 
-ERC (Electrical Rule Check) and DRC (Design Rule Check) run automatically after every operation via kicad-cli. If validation fails, the operation is rolled back.
+ERC (Electrical Rule Check) and DRC (Design Rule Check) are available through
+explicit validation commands and gate operations. Run them before promoting work
+to the next PCB design stage.
 
 ### When validation runs
 
-1. After every component/net operation on a schematic (ERC)
-2. After every component/net operation on a PCB (DRC)
-3. Files that fail are restored to their pre-operation state
+1. Run `kicad-agent pre-pcb-gate <root.kicad_sch>` before transferring to PCB.
+2. Run `kicad-agent erc <root.kicad_sch>` after schematic edits.
+3. Run `kicad-agent drc <board.kicad_pcb>` after PCB/layout edits.
+4. Mutation operations use transaction rollback for execution failures.
+
+### Pre-PCB schematic gate
+
+The pre-PCB gate is stricter than basic schematic validation. By default it
+requires KiCad 10 format validity, clean ERC, resolved symbols, annotated
+references, connected power pins, footprint assignments, grid alignment, symbol
+copy consistency, and hierarchical sheet-pin consistency.
+
+```bash
+kicad-agent pre-pcb-gate path/to/root.kicad_sch
+kicad-agent pre-pcb-gate path/to/root.kicad_sch --json
+```
 
 ### What ERC checks
 

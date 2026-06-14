@@ -58,10 +58,23 @@ def _handle_validate_schematic(op: Any, ir: SchematicIR, file_path: Path) -> dic
     from kicad_agent.ops.validation_gates import validate_schematic_completeness
     return validate_schematic_completeness(
         file_path,
+        check_erc=op.check_erc,
         check_symbol_resolution=op.check_symbol_resolution,
         check_format=op.check_format,
         check_power_nets=op.check_power_nets,
         check_annotation=op.check_annotation,
+        check_footprints=op.check_footprints,
+    )
+
+
+@register_schematic_query("pre_pcb_schematic_gate")
+def _handle_pre_pcb_schematic_gate(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.validation_gates import pre_pcb_schematic_gate
+    return pre_pcb_schematic_gate(
+        file_path,
+        require_erc_clean=op.require_erc_clean,
+        require_footprints=op.require_footprints,
+        check_hierarchical=op.check_hierarchical,
     )
 
 

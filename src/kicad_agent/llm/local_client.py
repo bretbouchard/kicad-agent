@@ -150,12 +150,15 @@ class LocalLLMClient:
             if p.exists():
                 return p
 
-        # 2. Local training output (GRPO > SFT)
-        for local in [
+        # 2. Local training output (GRPO > SFT > Gemma SFT)
+        local_paths = [
             Path(os.environ.get("KICAD_LOCAL_ADAPTER", "training_output/grpo/iter_2")),
             Path("training_output/grpo/iter_2"),
             Path("training_output/sft"),
-        ]:
+        ]
+        if self._model_name and "gemma" in self._model_name.lower():
+            local_paths.insert(0, Path("training_output/gemma_sft"))
+        for local in local_paths:
             if local.exists() and (local / "adapters.safetensors").exists():
                 return local
 
@@ -244,14 +247,7 @@ class LocalLLMClient:
         max_tokens = kwargs.get("max_tokens", self._max_tokens)
         temperature = kwargs.get("temperature", self._temperature)
 
-        # Format messages as ChatML prompt
-        prompt_parts = []
-        for msg in messages:
-            role = msg["role"]
-            content = msg["content"]
-            prompt_parts.append(f"<|im_start|>{role}\n{content}<|im_end|>")
-        prompt_parts.append("<|im_start|>assistant\n")
-        prompt = "\n".join(prompt_parts)
+        prompt = self._format_messages(messages)
 
         from mlx_lm import generate
         import mlx.core as mx
@@ -272,13 +268,7 @@ class LocalLLMClient:
             verbose=False,
         )
 
-        # Extract just the assistant response (strip the prompt prefix)
-        assistant_marker = "<|im_start|>assistant\n"
-        if assistant_marker in response:
-            idx = response.index(assistant_marker) + len(assistant_marker)
-            return response[idx:].strip()
-
-        return response.strip()
+        return self._extract_response(response)
 
     def create_message(self, **kwargs: Any) -> Any:
         """API-compatible interface matching LLMClient.create_message().
@@ -319,6 +309,60 @@ class LocalLLMClient:
 
         self_model_name = self._model_name
         return _Message(response_text)
+
+    def _is_gemma_model(self) -> bool:
+        """Check if the current model uses Gemma ChatML format."""
+        return "gemma" in self._model_name.lower()
+
+    def _format_messages(self, messages: list[dict[str, str]]) -> str:
+        """Format messages as ChatML prompt for the current model.
+
+        Gemma models use <start_of_turn>role\\ncontent<end_of_turn> with 'model'.
+        Qwen models use <|im_start|>role\\ncontent<|im_end|> with 'assistant'.
+        """
+        if self._is_gemma_model():
+            return self._format_gemma_chatml(messages)
+        return self._format_qwen_chatml(messages)
+
+    @staticmethod
+    def _format_gemma_chatml(messages: list[dict[str, str]]) -> str:
+        """Format messages in Gemma ChatML format."""
+        prompt_parts = []
+        for msg in messages:
+            role = msg["role"]
+            # Gemma uses 'model' instead of 'assistant'.
+            if role == "assistant":
+                role = "model"
+            prompt_parts.append(f"<start_of_turn>{role}\n{msg['content']}<end_of_turn>")
+        prompt_parts.append("<start_of_turn>model\n")
+        return "\n".join(prompt_parts)
+
+    @staticmethod
+    def _format_qwen_chatml(messages: list[dict[str, str]]) -> str:
+        """Format messages in Qwen ChatML format."""
+        prompt_parts = []
+        for msg in messages:
+            prompt_parts.append(f"<|im_start|>{msg['role']}\n{msg['content']}<|im_end|>")
+        prompt_parts.append("<|im_start|>assistant\n")
+        return "\n".join(prompt_parts)
+
+    def _extract_response(self, response: str) -> str:
+        """Extract the assistant/model response from generation output."""
+        if self._is_gemma_model():
+            marker = "<start_of_turn>model\n"
+            end_marker = "<end_of_turn>"
+        else:
+            marker = "<|im_start|>assistant\n"
+            end_marker = "<|im_end|>"
+
+        if marker in response:
+            idx = response.index(marker) + len(marker)
+            text = response[idx:].strip()
+            if end_marker in text:
+                text = text[: text.index(end_marker)].strip()
+            return text
+
+        return response.strip()
 
     def analyze_board(
         self,

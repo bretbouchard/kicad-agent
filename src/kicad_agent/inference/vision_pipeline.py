@@ -31,7 +31,7 @@ class KiCadVisionConfig(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     model_name: str = Field(
-        default="ggml-org/gemma-4-12B-it-Q4_K_M",
+        default="mlx-community/gemma-4-12B-it-8bit",
         description="HuggingFace model ID for quantized Gemma 4 12B (MLX format)",
     )
     adapter_path: Path | None = Field(
