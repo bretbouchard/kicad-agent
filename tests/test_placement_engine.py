@@ -87,7 +87,7 @@ class TestHybridRuleFallback:
         request = _make_request(use_ml=False)
         output = engine.place(request)
 
-        assert output.source == "rule_based"
+        assert output.source == "rule_based_packed"
         assert len(output.positions) == 5
         assert output.score >= 0.0
         # Rule-based positions are (x, y, 0.0)
@@ -144,7 +144,7 @@ class TestHybridOutputValid:
         assert output.hpwl >= 0.0
 
         # Source is a valid string
-        assert output.source in ("ml_prediction", "ml_refined", "rule_based", "interactive")
+        assert output.source in ("ml_prediction", "ml_refined", "rule_based_packed", "interactive")
 
         # Violations is a list
         assert isinstance(output.violations, list)
@@ -176,7 +176,7 @@ class TestHybridSimpleAPI:
         output = engine.place_components_simple(components, 100.0, 80.0)
 
         assert isinstance(output, PlacementOutput)
-        assert output.source == "rule_based"  # Simple API disables ML
+        assert output.source == "rule_based_packed"  # Simple API disables ML
         assert len(output.positions) == 5
 
 

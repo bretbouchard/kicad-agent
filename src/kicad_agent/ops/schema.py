@@ -250,6 +250,9 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
     AnalyzeSplitPlaneOp,
     FixSilkscreenOverCopperOp,
 )
+from kicad_agent.ops._schema_placement import (  # noqa: E402
+    AutoPlaceOp,
+)
 from kicad_agent.ops._schema_validation import (  # noqa: E402
     ValidatePowerNetsOp,
     ValidateSchematicOp,
@@ -461,6 +464,7 @@ class Operation(BaseModel):
         | AnalyzeSplitPlaneOp
         | FixSilkscreenOverCopperOp
         | BatchExpandFootprintsOp
+        | AutoPlaceOp
         | AnalyzeGapsOp
         | FillGapsOp
         | RunGateCheckOp
@@ -559,6 +563,8 @@ __all__ = [
     "NetLengthPair",
     "AnalyzeSplitPlaneOp",
     "FixSilkscreenOverCopperOp",
+    # Placement ops
+    "AutoPlaceOp",
     # Validation ops
     "ValidatePowerNetsOp",
     "ValidateSchematicOp",

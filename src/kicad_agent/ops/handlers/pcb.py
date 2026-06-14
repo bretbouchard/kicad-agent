@@ -864,3 +864,70 @@ def _handle_fill_gaps(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     )
     result = engine.fill_gaps(str(file_path))
     return result.to_json()
+
+
+@register_pcb("auto_place")
+def _handle_auto_place(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Auto-place components on a PCB with overlap-free guarantee."""
+    from kicad_agent.generation.intent import ComponentSpec, NetSpec
+    from kicad_agent.placement.engine import HybridPlacementEngine, PlacementRequest
+    from kicad_agent.placement.validation import PlacementValidator
+
+    # Extract board bounds from PCB
+    board_bounds = ir.get_board_bounds()
+    board_w = op.board_width if op.board_width else (board_bounds[2] - board_bounds[0] if board_bounds else 100.0)
+    board_h = op.board_height if op.board_height else (board_bounds[3] - board_bounds[1] if board_bounds else 80.0)
+
+    # Build component specs from PCB footprints
+    components: list[ComponentSpec] = []
+    comp_widths: dict[str, tuple[float, float]] = {}
+    for fp in ir.footprints:
+        ref = getattr(fp, "reference", "")
+        if op.component_refs and ref not in op.component_refs:
+            continue
+        if op.fixed_refs and ref in op.fixed_refs:
+            continue
+        w = getattr(fp, "width", 2.0) or 2.0
+        h = getattr(fp, "height", 2.0) or 2.0
+        comp_widths[ref] = (w, h)
+        components.append(ComponentSpec(
+            reference=ref,
+            width=max(0.1, w),
+            height=max(0.1, h),
+        ))
+
+    # Build fixed positions from fixed_refs
+    fixed_positions: dict[str, tuple[float, float, float]] = {}
+    if op.fixed_refs:
+        for fp in ir.footprints:
+            ref = getattr(fp, "reference", "")
+            if ref in op.fixed_refs:
+                pos = getattr(fp, "position", None)
+                if pos is not None:
+                    x = getattr(pos, "X", 0.0)
+                    y = getattr(pos, "Y", 0.0)
+                    angle = getattr(pos, "angle", 0.0) or 0.0
+                    fixed_positions[ref] = (x, y, angle)
+
+    request = PlacementRequest(
+        components=components,
+        board_width=board_w,
+        board_height=board_h,
+        fixed_positions=fixed_positions,
+        keepout_zones=op.keepout_zones,
+        min_clearance=op.min_clearance,
+        use_ml=False,
+        refine_sa=True,
+    )
+
+    engine = HybridPlacementEngine()
+    output = engine.place(request)
+
+    return {
+        "placed_count": len(output.positions),
+        "score": output.score,
+        "hpwl": output.hpwl,
+        "valid": output.valid,
+        "violations": output.violations,
+        "source": output.source,
+    }

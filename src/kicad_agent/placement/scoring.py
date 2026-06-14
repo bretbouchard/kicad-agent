@@ -50,6 +50,7 @@ class PlacementScore:
         clearance_score: Fraction of pairs with adequate clearance [0, 1].
         edge_score: Penalty for components near board edges [0, 1].
         board_utilization: Total component area / board area.
+        overlap_count: Number of overlapping component pairs.
     """
 
     total_score: float
@@ -59,6 +60,7 @@ class PlacementScore:
     clearance_score: float
     edge_score: float
     board_utilization: float
+    overlap_count: int
 
 
 # ---------------------------------------------------------------------------
@@ -295,7 +297,10 @@ class PlacementScorer:
         component_area = sum((b.x2 - b.x1) * (b.y2 - b.y1) for b in boxes)
         board_utilization = component_area / board_area if board_area > 0 else 0.0
 
-        # 6. Weighted total
+        # 6. Overlap count
+        overlap_count = self._compute_overlap_count(positions, component_sizes)
+
+        # 7. Weighted total
         total_score = (
             0.3 * hpwl_normalized
             + 0.2 * (1.0 - congestion)
@@ -312,6 +317,7 @@ class PlacementScorer:
             clearance_score=round(clearance_score, 6),
             edge_score=round(edge_score, 6),
             board_utilization=round(board_utilization, 6),
+            overlap_count=overlap_count,
         )
 
     def _compute_clearance_score(
@@ -379,3 +385,38 @@ class PlacementScorer:
                 edge_penalty += 0.1
 
         return max(0.0, 1.0 - edge_penalty)
+
+    @staticmethod
+    def _compute_overlap_count(
+        positions: dict[str, tuple[float, float, float]],
+        component_sizes: dict[str, float],
+    ) -> int:
+        """Count the number of overlapping component pairs.
+
+        Two components overlap if the distance between their centers
+        is less than half the sum of their sizes.
+
+        Args:
+            positions: Mapping of ref to (x, y, rotation).
+            component_sizes: Mapping of ref to estimated size in mm.
+
+        Returns:
+            Number of overlapping pairs.
+        """
+        refs = list(positions.keys())
+        n = len(refs)
+        if n < 2:
+            return 0
+
+        overlap_count = 0
+        for i in range(n):
+            xi, yi, _ = positions[refs[i]]
+            si = component_sizes.get(refs[i], 2.0) / 2.0
+            for j in range(i + 1, n):
+                xj, yj, _ = positions[refs[j]]
+                sj = component_sizes.get(refs[j], 2.0) / 2.0
+                dist = math.hypot(xi - xj, yi - yj)
+                if dist < si + sj:
+                    overlap_count += 1
+
+        return overlap_count

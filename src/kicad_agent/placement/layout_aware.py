@@ -555,6 +555,13 @@ class LayoutAwarePlacer:
                             if dist < required_sep:
                                 constraint_penalty += (required_sep - dist) * _THERMAL_PENALTY_WEIGHT
 
-            return hpwl + clearance_penalty + keepout_penalty + constraint_penalty
+            # Overlap penalty (free-vs-free hard constraint)
+            from kicad_agent.placement.interactive import _compute_overlap_penalty
+
+            overlap_penalty = _compute_overlap_penalty(
+                current_free, component_sizes, constraints.min_clearance
+            )
+
+            return hpwl + clearance_penalty + keepout_penalty + constraint_penalty + overlap_penalty
 
         return objective

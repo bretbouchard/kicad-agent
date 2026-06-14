@@ -403,6 +403,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "auto_place": {
+        "category": "pcb",
+        "description": "Auto-place components on a PCB with overlap-free guarantee",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": ["move_component"],
+    },
     "route_diff_pair": {
         "category": "pcb",
         "description": "Route a differential pair with impedance-controlled spacing and length matching",

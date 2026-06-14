@@ -213,6 +213,20 @@ class HybridPlacementEngine:
         )
         is_valid, violations = validator.validate(positions, component_sizes)
 
+        # Safety net: resolve any residual overlaps
+        has_any, overlap_count = validator.has_overlaps(positions, component_sizes)
+        if has_any:
+            from kicad_agent.placement.packing import resolve_overlaps
+
+            positions = resolve_overlaps(
+                positions,
+                component_sizes,
+                request.board_width,
+                request.board_height,
+                request.min_clearance,
+            )
+            is_valid, violations = validator.validate(positions, component_sizes)
+
         # Score positions
         scorer = PlacementScorer(
             board_width=request.board_width,
@@ -337,22 +351,37 @@ class HybridPlacementEngine:
         self,
         request: PlacementRequest,
     ) -> tuple[dict[str, tuple[float, float, float]], str]:
-        """Rule-based grid fallback."""
-        if self._rule_engine is None:
-            self._rule_engine = PlacementEngine(
-                board_width=request.board_width,
-                board_height=request.board_height,
-                min_clearance=request.min_clearance,
-            )
+        """Shelf packing initialization with overlap-free guarantee."""
+        from kicad_agent.placement.packing import (
+            pack_components_no_overlap,
+            resolve_overlaps,
+        )
 
-        result = self._rule_engine.place_components(request.components)
+        # Build component_sizes as (width, height) from components
+        # ComponentSpec may not have width/height — use default 2.0mm footprint
+        comp_sizes_wh: dict[str, tuple[float, float]] = {}
+        for comp in request.components:
+            w = getattr(comp, "width", 0.0)
+            h = getattr(comp, "height", 0.0)
+            w = w if w > 0 else 2.0
+            h = h if h > 0 else 2.0
+            comp_sizes_wh[comp.reference] = (w, h)
+
+        result = pack_components_no_overlap(
+            component_sizes=comp_sizes_wh,
+            board_width=request.board_width,
+            board_height=request.board_height,
+            min_clearance=request.min_clearance,
+            fixed_positions=request.fixed_positions,
+            keepout_zones=request.keepout_zones,
+        )
 
         # Convert (x, y) to (x, y, 0.0) format
-        positions: dict[str, tuple[float, float, float]] = {}
-        for ref, (x, y) in result.positions.items():
-            positions[ref] = (x, y, 0.0)
+        positions: dict[str, tuple[float, float, float]] = {
+            ref: (x, y, rot) for ref, (x, y, rot) in result.positions.items()
+        }
 
-        return positions, "rule_based"
+        return positions, "rule_based_packed"
 
     @staticmethod
     def _extract_component_sizes(graph: PlacementGraph) -> dict[str, float]:

@@ -303,6 +303,43 @@ class PlacementValidator:
         is_valid = len(violations) == 0
         return is_valid, violations
 
+    def has_overlaps(
+        self,
+        positions: dict[str, tuple[float, float, float]],
+        component_sizes: dict[str, float],
+    ) -> tuple[bool, int]:
+        """Quick check for overlapping components.
+
+        Returns (True, count) if any overlaps exist, (False, 0) otherwise.
+        Uses O(n^2) pairwise distance check which is fast for n <= 500.
+
+        Args:
+            positions: Mapping of ref to (x, y, rotation).
+            component_sizes: Mapping of ref to estimated size in mm.
+
+        Returns:
+            Tuple of (has_any_overlaps, overlap_count).
+        """
+        refs = list(positions.keys())
+        n = len(refs)
+        if n < 2:
+            return False, 0
+
+        import math
+
+        overlap_count = 0
+        for i in range(n):
+            xi, yi, _ = positions[refs[i]]
+            si = component_sizes.get(refs[i], _DEFAULT_SIZE) / 2.0
+            for j in range(i + 1, n):
+                xj, yj, _ = positions[refs[j]]
+                sj = component_sizes.get(refs[j], _DEFAULT_SIZE) / 2.0
+                dist = math.hypot(xi - xj, yi - yj)
+                if dist < si + sj:
+                    overlap_count += 1
+
+        return overlap_count > 0, overlap_count
+
     def validate_with_spatial_engine(
         self,
         positions: dict[str, tuple[float, float, float]],

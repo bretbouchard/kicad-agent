@@ -131,7 +131,7 @@ def interactive_placement(
             graph, free_refs, predictor, board_w, board_h, margin
         )
     else:
-        initial_free = _get_grid_initial(
+        initial_free = _get_packing_initial(
             graph, fixed, free_refs, board_w, board_h, margin
         )
 
@@ -177,7 +177,12 @@ def interactive_placement(
             current_free, constraints.keepout_zones
         )
 
-        return hpwl + clearance_penalty + keepout_penalty
+        # Free-vs-free overlap penalty (hard constraint)
+        overlap_penalty = _compute_overlap_penalty(
+            current_free, component_sizes, constraints.min_clearance
+        )
+
+        return hpwl + clearance_penalty + keepout_penalty + overlap_penalty
 
     result = dual_annealing(
         objective,
@@ -245,6 +250,45 @@ def _get_predictor_initial(
             # Fallback for missing predictions
             initial[ref] = (board_w / 2.0, board_h / 2.0, 0.0)
     return initial
+
+
+def _get_packing_initial(
+    graph: PlacementGraph,
+    fixed: dict[str, tuple[float, float, float]],
+    free_refs: list[str],
+    board_w: float,
+    board_h: float,
+    margin: float,
+) -> dict[str, tuple[float, float, float]]:
+    """Get overlap-free initial positions using shelf bin packing."""
+    from kicad_agent.placement.packing import pack_components_no_overlap
+
+    # Build component_sizes as (width, height) pairs from graph data
+    comp_sizes_wh: dict[str, tuple[float, float]] = {}
+    for node_id in graph.component_nodes():
+        data = graph.graph.nodes[node_id]
+        ref = data.get("reference", "")
+        size = data.get("estimated_size", _DEFAULT_SIZE)
+        comp_sizes_wh[ref] = (size, size)
+
+    # Filter to free refs only
+    free_sizes = {ref: comp_sizes_wh.get(ref, (_DEFAULT_SIZE, _DEFAULT_SIZE)) for ref in free_refs}
+
+    result = pack_components_no_overlap(
+        component_sizes=free_sizes,
+        board_width=board_w,
+        board_height=board_h,
+        min_clearance=margin,
+        fixed_positions=fixed,
+    )
+
+    # Fall back to grid for any components that packing couldn't place
+    if result.unpacked_refs:
+        grid_fallback = _get_grid_initial(graph, fixed, list(result.unpacked_refs), board_w, board_h, margin)
+        for ref, pos in grid_fallback.items():
+            result.positions[ref] = pos
+
+    return result.positions
 
 
 def _get_grid_initial(
@@ -358,3 +402,41 @@ def _compute_keepout_penalty(
                 break  # One violation per component is enough
 
     return 20.0 * violation_count
+
+
+def _compute_overlap_penalty(
+    free_positions: dict[str, tuple[float, float, float]],
+    component_sizes: dict[str, float],
+    min_clearance: float,
+) -> float:
+    """Compute hard penalty for overlapping free components.
+
+    Weight of 1000.0 per overlapping pair makes overlaps thermodynamically
+    impossible to accept during SA (orders of magnitude above HPWL).
+
+    Args:
+        free_positions: Free component positions.
+        component_sizes: Component size lookup.
+        min_clearance: Minimum clearance in mm.
+
+    Returns:
+        Penalty value (0.0 if no overlaps).
+    """
+    _OVERLAP_WEIGHT = 1000.0
+    refs = list(free_positions.keys())
+    n = len(refs)
+    if n < 2:
+        return 0.0
+
+    overlap_count = 0
+    for i in range(n):
+        xi, yi, _ = free_positions[refs[i]]
+        si = component_sizes.get(refs[i], _DEFAULT_SIZE) / 2.0
+        for j in range(i + 1, n):
+            xj, yj, _ = free_positions[refs[j]]
+            sj = component_sizes.get(refs[j], _DEFAULT_SIZE) / 2.0
+            dist = math.hypot(xi - xj, yi - yj)
+            if dist < si + sj:
+                overlap_count += 1
+
+    return _OVERLAP_WEIGHT * overlap_count

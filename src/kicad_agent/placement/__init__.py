@@ -66,6 +66,11 @@ from kicad_agent.placement.validation import (
     positions_to_boxes,
     validate_placement,
 )
+from kicad_agent.placement.packing import (
+    PackResult,
+    pack_components_no_overlap,
+    resolve_overlaps,
+)
 
 __all__ = [
     # Engine (hybrid)
@@ -114,4 +119,8 @@ __all__ = [
     "interactive_placement",
     "suggest_placements",
     "ConstraintSet",
+    # Packing
+    "PackResult",
+    "pack_components_no_overlap",
+    "resolve_overlaps",
 ]
