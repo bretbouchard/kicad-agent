@@ -97,6 +97,18 @@ try:
 except ImportError:
     pass
 
+# Gate modules: importing triggers module-level register_gate() calls
+# that wire gates into the GateRunner singleton.
+try:
+    from kicad_agent.validation.gates import schematic_intent_gate  # noqa: F401
+except ImportError:
+    pass
+
+try:
+    from kicad_agent.validation.gates import constraint_gate  # noqa: F401
+except ImportError:
+    pass
+
 __all__ = [
     "round_trip_stable",
     "round_trip_compare",
