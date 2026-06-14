@@ -1070,6 +1070,24 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": ["parse_schematic"],
         "conflicts": [],
     },
+    "set_constraints": {
+        "category": "constraint",
+        "description": "Set design constraints and propagate to .kicad_dru and sidecar file",
+        "file_types": [".kicad_dru"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
+    "get_constraints": {
+        "category": "constraint",
+        "description": "Get current design constraints from sidecar file",
+        "file_types": [".kicad_dru"],
+        "is_readonly": True,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
 }
 
 OPERATION_REGISTRY: dict[str, OpMeta] = {
@@ -1098,6 +1116,7 @@ VALID_CATEGORIES: frozenset[str] = frozenset({
     "erc_smart",
     "readability",
     "gap",
+    "constraint",
 })
 
 
