@@ -805,6 +805,14 @@ def _handle_gate(argv: list[str]) -> None:
         current_stage = _detect_design_stage(project_dir)
         gates = runner.list_gates()
 
+        # Pull stored results from the runner (matches handler output shape)
+        last_results_raw = runner.get_last_results()
+        last_results = {
+            gate_name: gr.to_dict() for gate_name, gr in last_results_raw.items()
+        }
+        failed_gate_raw = runner.get_last_failed_gate()
+        failed_gate = failed_gate_raw.to_dict() if failed_gate_raw is not None else None
+
         status_info = {
             "current_stage": current_stage.value,
             "registered_gates": [
@@ -817,16 +825,28 @@ def _handle_gate(argv: list[str]) -> None:
                 for g in gates
             ],
             "next_actions": _suggest_next_actions(current_stage, gates),
+            "last_results": last_results,
+            "failed_gate": failed_gate,
         }
 
         if args.json:
-            print(json.dumps(status_info, indent=2))
+            print(json.dumps(status_info, indent=2, default=str))
         else:
             print(f"Current design stage: {current_stage.value}")
             print(f"Registered gates: {len(gates)}")
             for g in gates:
                 check_fn_status = "has check_fn" if runner.has_check_fn(g.name) else "no check_fn"
                 print(f"  {g.name}: {g.from_stage.value} -> {g.to_stage.value} ({check_fn_status})")
+            if last_results:
+                print("Gate Results:")
+                for gate_name, result_dict in last_results.items():
+                    status = "PASS" if result_dict.get("pass") else "FAIL"
+                    print(f"  {gate_name}: {status}")
+                    if not result_dict.get("pass"):
+                        for b in result_dict.get("blockers", []):
+                            print(f"    BLOCKER: {b}")
+            else:
+                print("Gate Results: (no gates have been run)")
             print("Next actions:")
             for action in status_info["next_actions"]:
                 print(f"  - {action}")

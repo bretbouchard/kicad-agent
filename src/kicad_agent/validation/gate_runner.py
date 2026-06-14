@@ -51,6 +51,7 @@ class GateRunner:
     def __init__(self) -> None:
         self._gates: dict[str, GateDefinition] = {}
         self._check_fns: dict[str, GateCheckFn] = {}
+        self._last_results: dict[str, GateResult] = {}
 
     def register_gate(
         self,
@@ -97,8 +98,27 @@ class GateRunner:
         result = check_fn(context)
 
         if isinstance(result, GateResult):
+            self._last_results[name] = result
             return result
-        return GateResult.from_dict(result)
+        wrapped = GateResult.from_dict(result)
+        self._last_results[name] = wrapped
+        return wrapped
+
+    def get_last_results(self) -> dict[str, GateResult]:
+        """Return the most recent GateResult for each gate that has run.
+
+        Returns a shallow copy so callers cannot mutate internal state.
+        """
+        return dict(self._last_results)
+
+    def get_last_failed_gate(self) -> GateResult | None:
+        """Return the most recently stored failed GateResult, or None.
+
+        Iteration order follows insertion (run order). The last-inserted
+        failed result is returned.
+        """
+        failed = [r for r in self._last_results.values() if not r.pass_bool]
+        return failed[-1] if failed else None
 
     def get_required_gates(
         self,

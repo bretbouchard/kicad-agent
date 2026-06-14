@@ -84,6 +84,15 @@ def handle_gate_status(op: Any, ir: Any, file_path: Path) -> dict[str, Any]:
     project_dir = Path(op.project_dir) if op.project_dir else file_path.parent
     current_stage = _detect_design_stage(project_dir)
 
+    # Pull stored results from the runner (may be empty if no gates have run)
+    last_results_raw = runner.get_last_results()
+    last_results = {
+        gate_name: gr.to_dict() for gate_name, gr in last_results_raw.items()
+    }
+
+    failed_gate_raw = runner.get_last_failed_gate()
+    failed_gate = failed_gate_raw.to_dict() if failed_gate_raw is not None else None
+
     return {
         "current_stage": current_stage.value,
         "registered_gates": [
@@ -96,6 +105,8 @@ def handle_gate_status(op: Any, ir: Any, file_path: Path) -> dict[str, Any]:
             for g in gates
         ],
         "next_actions": _suggest_next_actions(current_stage, gates),
+        "last_results": last_results,
+        "failed_gate": failed_gate,
     }
 
 

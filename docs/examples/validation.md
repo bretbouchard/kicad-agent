@@ -47,6 +47,38 @@ kicad-agent pre-pcb-gate path/to/root.kicad_sch
 kicad-agent pre-pcb-gate path/to/root.kicad_sch --json
 ```
 
+## Gate-based validation workflow
+
+Gates replace ad-hoc validation with a structured pipeline. Instead of
+remembering which checks to run, run the appropriate gate for your
+current stage.
+
+### Running gates via CLI
+
+```bash
+# Check what stage you're at and what gates are available
+kicad-agent gate status -p /path/to/project
+
+# Run the schematic intent gate before PCB layout
+kicad-agent gate run pre_pcb_schematic -p /path/to/project
+
+# Run manufacturing readiness before sending to fab
+kicad-agent gate run manufacturing_readiness -p /path/to/project
+```
+
+### Gate results
+
+Gates return structured results with blockers, warnings, and artifacts:
+
+```
+Gate 'placement_readiness': FAIL
+  BLOCKER: Component U5 outside board outline
+  WARNING: Ground plane coverage below 80% on F.Cu
+ - Fix blockers above and retry
+```
+
+Only blockers prevent advancement. Warnings are advisory.
+
 ### What ERC checks
 
 - Pin conflicts (output-to-output, power-to-ground)
