@@ -834,12 +834,14 @@ class KnowledgeManager:
     def get_context_for_op(self, op_type: str, file_type: str = "") -> str:
         """Get relevant knowledge context for an operation.
 
-        Returns core rules + mapped section text. Each section is
-        individually capped at SECTION_TOKEN_CAP tokens, and the
-        combined output is capped at the total token budget.
+        Returns core rules (trusted, unsanitized) + mapped section text
+        (doc-sourced, sanitized). Each section is individually capped at
+        SECTION_TOKEN_CAP tokens, and the combined output is capped at the
+        total token budget.
 
-        The result is sanitized via ContextBuilder.sanitize() to
-        strip injection patterns before injection into LLM prompts.
+        CORE_RULES are injected as authoritative system instructions (not
+        wrapped in DATA BOUNDARY markers). Only doc-sourced sections are
+        sanitized via ContextBuilder.sanitize() to strip injection patterns.
 
         Args:
             op_type: Operation type string (e.g. "add_wire").
@@ -855,7 +857,8 @@ class KnowledgeManager:
             logger.info("First knowledge lookup (lazy load)")
         self._ensure_loaded()
 
-        parts: list[str] = [CORE_RULES]
+        # Collect doc-sourced section text (to be sanitized)
+        doc_parts: list[str] = []
 
         # Look up mapped sections
         mappings = OP_SECTION_MAP.get(op_type, [])
@@ -871,16 +874,22 @@ class KnowledgeManager:
                 body = self._full_docs.get(doc_name, "")
                 if body:
                     body = _truncate_section(body)
-                    parts.append(f"\n## {doc_name}\n{body}")
+                    doc_parts.append(f"\n## {doc_name}\n{body}")
             elif doc_name in self._sections:
                 body = self._sections[doc_name].get(section_name, "")
                 if body:
                     body = _truncate_section(body)
-                    parts.append(f"\n## {section_name}\n{body}")
+                    doc_parts.append(f"\n## {section_name}\n{body}")
 
-        combined = "\n".join(parts)
+        # Sanitize doc-sourced sections (injection defense)
+        from kicad_agent.llm.context_builder import ContextBuilder
+        doc_combined = "\n".join(doc_parts) if doc_parts else ""
+        sanitized_docs = ContextBuilder.sanitize(doc_combined) if doc_combined else ""
+
+        # Combine: trusted CORE_RULES + sanitized doc sections
+        combined = CORE_RULES
+        if sanitized_docs:
+            combined += "\n" + sanitized_docs
         combined = _enforce_token_budget(combined, self._max_tokens)
 
-        # Sanitize before returning (strip injection patterns)
-        from kicad_agent.llm.context_builder import ContextBuilder
-        return ContextBuilder.sanitize(combined)
+        return combined
