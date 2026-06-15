@@ -506,6 +506,12 @@ def _build_analyze_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print per-chain scores and timing.",
     )
+    parser.add_argument(
+        "--no-knowledge",
+        action="store_true",
+        default=False,
+        help="Disable KiCad reference knowledge injection into LLM prompts.",
+    )
     return parser
 
 
@@ -544,7 +550,7 @@ def _handle_analyze(argv: list[str]) -> None:
     # Run inference via generate_analysis
     try:
         from kicad_agent.llm.knowledge import KnowledgeManager
-        km = KnowledgeManager()
+        km = KnowledgeManager(disabled=args.no_knowledge)
         result = generate_analysis(
             file_path=str(file_path),
             model=args.model,
