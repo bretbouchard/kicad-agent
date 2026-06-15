@@ -42,6 +42,8 @@ kicad-agent --dry-run operation.json
 - [CLI Reference](cli.md) -- Complete command-line documentation
 - [API Reference](api/index.md) -- Auto-generated API docs from source
 - [Examples](examples/basic-operations.md) -- Walkthroughs with complete JSON operations
+- [KiCad Schematic Editor Reference](kicad_docs.md) -- Full KiCad 10.99 docs from PDF
+- [KiCad Agent Reference](kicad_agent_reference.md) -- Agent-centric distilled reference for schematic editing
 
 ## Links
 
