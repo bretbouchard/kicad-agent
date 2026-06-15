@@ -661,6 +661,47 @@ def _truncate_section(text: str, max_tokens: int = SECTION_TOKEN_CAP) -> str:
         return text[:char_budget]
 
 
+def _enforce_token_budget(text: str, max_tokens: int) -> str:
+    """Truncate combined text to fit within total token budget using tiktoken.
+
+    Individual sections are already capped at SECTION_TOKEN_CAP by
+    _truncate_section(). This function handles the case where the sum
+    of capped sections still exceeds the total budget.
+
+    Falls back to character-based truncation if tiktoken is unavailable.
+
+    Args:
+        text: Knowledge context text to potentially truncate.
+        max_tokens: Maximum tokens allowed for the combined output.
+
+    Returns:
+        Text truncated to max_tokens, or original if under budget.
+    """
+    if not text:
+        return text
+    try:
+        import tiktoken
+        enc = tiktoken.encoding_for_model("gpt-4o-mini")
+        tokens = enc.encode(text)
+        if len(tokens) <= max_tokens:
+            return text
+        logger.warning(
+            "Knowledge context truncated from %d to %d tokens",
+            len(tokens), max_tokens,
+        )
+        return enc.decode(tokens[:max_tokens])
+    except Exception:
+        # Fallback: ~4 chars per token
+        char_budget = max_tokens * 4
+        if len(text) <= char_budget:
+            return text
+        logger.warning(
+            "Knowledge context truncated (char fallback) from %d to %d chars",
+            len(text), char_budget,
+        )
+        return text[:char_budget]
+
+
 # ---------------------------------------------------------------------------
 # Convenience function
 # ---------------------------------------------------------------------------
@@ -752,7 +793,11 @@ class KnowledgeManager:
         """Get relevant knowledge context for an operation.
 
         Returns core rules + mapped section text. Each section is
-        individually capped at SECTION_TOKEN_CAP tokens.
+        individually capped at SECTION_TOKEN_CAP tokens, and the
+        combined output is capped at the total token budget.
+
+        The result is sanitized via ContextBuilder.sanitize() to
+        strip injection patterns before injection into LLM prompts.
 
         Args:
             op_type: Operation type string (e.g. "add_wire").
@@ -764,6 +809,8 @@ class KnowledgeManager:
         if self._disabled:
             return ""
 
+        if not self._loaded:
+            logger.info("First knowledge lookup (lazy load)")
         self._ensure_loaded()
 
         parts: list[str] = [CORE_RULES]
@@ -789,4 +836,9 @@ class KnowledgeManager:
                     body = _truncate_section(body)
                     parts.append(f"\n## {section_name}\n{body}")
 
-        return "\n".join(parts)
+        combined = "\n".join(parts)
+        combined = _enforce_token_budget(combined, self._max_tokens)
+
+        # Sanitize before returning (strip injection patterns)
+        from kicad_agent.llm.context_builder import ContextBuilder
+        return ContextBuilder.sanitize(combined)

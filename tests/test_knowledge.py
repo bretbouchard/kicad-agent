@@ -6,6 +6,7 @@ _chunk_by_h2, _truncate_section, CORE_RULES, and OP_SECTION_MAP.
 
 from __future__ import annotations
 
+import logging
 import os
 import textwrap
 from pathlib import Path
