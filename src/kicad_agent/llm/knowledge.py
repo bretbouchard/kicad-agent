@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import threading
 from pathlib import Path
 
 from kicad_agent.ops.registry import OPERATION_REGISTRY
@@ -714,6 +715,7 @@ def _enforce_token_budget(text: str, max_tokens: int) -> str:
 # ---------------------------------------------------------------------------
 
 _default_manager: KnowledgeManager | None = None
+_singleton_lock = threading.Lock()
 
 
 def get_context_for_op(op_type: str, file_type: str = "") -> str:
@@ -731,7 +733,9 @@ def get_context_for_op(op_type: str, file_type: str = "") -> str:
     """
     global _default_manager
     if _default_manager is None:
-        _default_manager = KnowledgeManager()
+        with _singleton_lock:
+            if _default_manager is None:
+                _default_manager = KnowledgeManager()
     return _default_manager.get_context_for_op(op_type, file_type)
 
 
