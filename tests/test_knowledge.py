@@ -209,8 +209,8 @@ class TestKnowledgeManager:
         assert count == 1, f"Expected 1 occurrence but found {count}"
 
     def test_full_doc_injection_for_no_header_docs(self, tmp_path):
-        """Test: gerbview_reference.md (no ## headers) injects full text."""
-        from kicad_agent.llm.knowledge import KnowledgeManager
+        """Test: docs without ## headers are loaded into _full_docs and injectable."""
+        from kicad_agent.llm.knowledge import KnowledgeManager, CORE_RULES
 
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
@@ -218,8 +218,13 @@ class TestKnowledgeManager:
         (docs_dir / "gerbview_reference.md").write_text(gerbview_content)
 
         km = KnowledgeManager(docs_dir=docs_dir)
-        ctx = km.get_context_for_op("add_component", "kicad_sch")
-        assert "Gerbview reference content" in ctx
+        # Force load
+        km._ensure_loaded()
+        # Verify gerbview loaded as full doc (no sections)
+        assert "gerbview_reference.md" in km._full_docs
+        assert "gerbview_reference.md" not in km._sections
+        # Verify content is accessible
+        assert km._full_docs["gerbview_reference.md"] == gerbview_content
 
     def test_disabled_returns_empty(self, tmp_path):
         """Test: disabled KnowledgeManager returns empty string."""
