@@ -487,3 +487,114 @@ class TestTokenBudget:
             # Should NOT log "Loading knowledge docs" again (cached)
             reload_logs = [rec for rec in caplog.records if "Loading knowledge docs" in rec.message]
             assert len(reload_logs) == 0
+
+
+# ---------------------------------------------------------------------------
+# Tests for Task 2: Prompt builder integration and --no-knowledge flag
+# ---------------------------------------------------------------------------
+
+class TestPromptIntegration:
+    """Tests for knowledge_context injection into prompt builders and CLI flag."""
+
+    def test_build_text_prompt_injects_knowledge_context(self):
+        """Test 1: build_text_prompt with knowledge_context includes it between system and context."""
+        from kicad_agent.llm.text_prompts import build_text_prompt
+
+        result = build_text_prompt(
+            "intent_parse",
+            "Fix wire connection",
+            knowledge_context="Pin (at X Y) = wire connection point",
+        )
+        assert "Pin (at X Y) = wire connection point" in result
+        assert "KiCad Reference Knowledge" in result
+        # System prompt should come before knowledge
+        system_idx = result.index("INTENT_TEXT_SYSTEM") if "INTENT_TEXT_SYSTEM" in result else 0
+        knowledge_idx = result.index("KiCad Reference Knowledge")
+        context_idx = result.index("Fix wire connection")
+        assert system_idx < knowledge_idx < context_idx
+
+    def test_build_text_prompt_backward_compat(self):
+        """Test 2: build_text_prompt without knowledge_context produces same output as before."""
+        from kicad_agent.llm.text_prompts import build_text_prompt
+
+        result_new = build_text_prompt("intent_parse", "user context")
+        # Should not contain knowledge section header
+        assert "KiCad Reference Knowledge" not in result_new
+        # Should contain the user context
+        assert "user context" in result_new
+
+    def test_build_error_summary_prepends_knowledge_context(self, tmp_path):
+        """Test 3: build_error_summary with knowledge_context includes it at start of output."""
+        from kicad_agent.llm.context_builder import ContextBuilder
+        from types import SimpleNamespace
+
+        erc_result = SimpleNamespace(
+            passed=True,
+            error_count=0,
+            violations=[],
+        )
+        result = ContextBuilder.build_error_summary(
+            erc_result,
+            knowledge_context="Pin (at X Y) = wire connection point",
+        )
+        assert "Pin (at X Y) = wire connection point" in result
+        # Knowledge should appear before ERC status
+        knowledge_idx = result.index("Pin (at X Y)")
+        erc_idx = result.index("ERC:")
+        assert knowledge_idx < erc_idx
+
+    def test_build_error_summary_backward_compat(self, tmp_path):
+        """Test 4: build_error_summary without knowledge_context works unchanged."""
+        from kicad_agent.llm.context_builder import ContextBuilder
+        from types import SimpleNamespace
+
+        erc_result = SimpleNamespace(
+            passed=True,
+            error_count=0,
+            violations=[],
+        )
+        result = ContextBuilder.build_error_summary(erc_result)
+        assert "ERC: PASS" in result
+
+    def test_build_prompt_appends_knowledge_context(self):
+        """Test 5: _build_prompt with knowledge_context appends to system message."""
+        from kicad_agent.inference.wrapper import InferenceWrapper
+        from types import SimpleNamespace
+
+        stats = SimpleNamespace(
+            board_name="test",
+            n_components=10,
+            n_nets=20,
+            n_layers=4,
+            width_mm=100.0,
+            height_mm=80.0,
+            file_path="/tmp/test.kicad_pcb",
+        )
+        wrapper = InferenceWrapper.__new__(InferenceWrapper)
+        wrapper._SYSTEM_PROMPT = "You are a PCB analyzer."
+
+        messages = wrapper._build_prompt(stats, knowledge_context="Grid snap: 50 mil")
+        system_msg = messages[0]["content"]
+        assert "Grid snap: 50 mil" in system_msg
+        assert "KiCad Reference Knowledge" in system_msg
+
+    def test_no_knowledge_flag_exists(self):
+        """Test 6: --no-knowledge flag exists on operation parser."""
+        from kicad_agent.cli import _build_operation_parser
+
+        parser = _build_operation_parser()
+        # Should be able to parse --no-knowledge without error
+        args = parser.parse_args(["--no-knowledge", "{}"])
+        assert hasattr(args, "no_knowledge")
+
+    def test_no_knowledge_flag_parses_true(self):
+        """Test 7: parse_args(['--no-knowledge', '{}']) has no_knowledge=True."""
+        from kicad_agent.cli import _build_operation_parser
+
+        parser = _build_operation_parser()
+        args = parser.parse_args(["--no-knowledge", "{}"])
+        assert args.no_knowledge is True
+
+        # Without flag, should be False
+        args2 = parser.parse_args(["{}"])
+        assert args2.no_knowledge is False
