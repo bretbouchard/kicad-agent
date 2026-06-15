@@ -621,6 +621,8 @@ def _chunk_by_h2(text: str) -> dict[str, str]:
 
     Returns dict mapping section title (stripped of ## prefix) to section body.
     Text before the first ## header is ignored.
+    Sub-headers (###, ####, etc.) are stripped from section bodies to reduce
+    noise in injected knowledge context.
     NOTE: If a header appears twice, last-wins (second occurrence overwrites first).
     """
     sections: dict[str, str] = {}
@@ -630,7 +632,9 @@ def _chunk_by_h2(text: str) -> dict[str, str]:
             lines = part.split("\n", 1)
             title = lines[0][3:].strip()
             body = lines[1] if len(lines) > 1 else ""
-            sections[title] = body.strip()
+            # Strip ### and deeper sub-headers from body to reduce noise
+            body = re.sub(r'^#{3,}\s+.+$', '', body, flags=re.MULTILINE).strip()
+            sections[title] = body
     return sections
 
 
