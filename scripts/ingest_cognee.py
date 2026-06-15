@@ -151,7 +151,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Summary to stderr
     print(
-        f"Prepared {ready_count}/4 ingestion payloads + {len(verification)} verification queries",
+        f"Prepared {ready_count}/{len(DOC_FILES)} ingestion payloads + {len(verification)} verification queries",
         file=sys.stderr,
     )
 
