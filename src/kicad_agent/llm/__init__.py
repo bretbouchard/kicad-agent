@@ -84,6 +84,7 @@ def __getattr__(name: str):
         "AnthropicProvider": "kicad_agent.llm.provider",
         "MockProvider": "kicad_agent.llm.provider",
         "get_provider": "kicad_agent.llm.provider",
+        "KnowledgeManager": "kicad_agent.llm.knowledge",
     }
 
     if name not in _lazy:
@@ -97,6 +98,7 @@ def __getattr__(name: str):
         "TextIntentParser", "TextErrorFixer", "TextCritiqueParser",
         "UnifiedIntentParser", "UnifiedErrorFixer",
         "LLMProvider", "AnthropicProvider", "MockProvider", "get_provider",
+        "KnowledgeManager",
     }
 
     if name not in _no_anthropic_required:
@@ -131,6 +133,7 @@ __all__ = [
     "HybridLLMClient",
     "HybridResponse",
     "IntentParser",
+    "KnowledgeManager",
     "INTENT_TOOL",
     "LLMBackend",
     "LLMClient",
