@@ -87,6 +87,7 @@ class ContextBuilder:
         erc_result: Any,
         drc_result: Any | None = None,
         max_count: int = 10,
+        knowledge_context: str = "",
     ) -> str:
         """Build compact error text for LLM from ErcResult/DrcResult.
 
@@ -98,11 +99,16 @@ class ContextBuilder:
             erc_result: ErcResult with passed, error_count, and violations attributes.
             drc_result: Optional DrcResult with same attributes.
             max_count: Maximum violations per category (default 10).
+            knowledge_context: Optional KiCad reference knowledge text
+                               prepended to the error summary.
 
         Returns:
             Compact error summary string.
         """
         parts: list[str] = []
+
+        if knowledge_context:
+            parts.append(knowledge_context)
 
         erc_status = "PASS" if erc_result.passed else "FAIL"
         parts.append(f"ERC: {erc_status} ({erc_result.error_count} errors)")

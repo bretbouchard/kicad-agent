@@ -128,6 +128,13 @@ def _build_operation_parser() -> argparse.ArgumentParser:
         help="Print detailed output including operation details dict.",
     )
 
+    parser.add_argument(
+        "--no-knowledge",
+        action="store_true",
+        default=False,
+        help="Disable KiCad reference knowledge injection into LLM prompts.",
+    )
+
     return parser
 
 

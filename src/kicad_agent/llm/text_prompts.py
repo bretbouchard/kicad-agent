@@ -443,18 +443,27 @@ def extract_json_from_text(text: str) -> dict | list | None:
 _VALID_STAGES = frozenset({"intent_parse", "error_fix", "critique"})
 
 
-def build_text_prompt(stage: str, context: str, **_kwargs: object) -> str:
+def build_text_prompt(
+    stage: str,
+    context: str,
+    knowledge_context: str = "",
+    **_kwargs: object,
+) -> str:
     """Build a complete text prompt for a given pipeline stage.
 
     Selects the appropriate system prompt and appends the user context.
+    If knowledge_context is provided, it is injected between the system
+    prompt and the user context.
 
     Args:
         stage: One of "intent_parse", "error_fix", "critique".
         context: User-facing context string (description, violations, or
                  spatial data).
+        knowledge_context: Optional KiCad reference knowledge text
+                           injected between system and context.
 
     Returns:
-        Combined system + context prompt string.
+        Combined system + knowledge + context prompt string.
     """
     system_map = {
         "intent_parse": INTENT_TEXT_SYSTEM,
@@ -465,4 +474,8 @@ def build_text_prompt(stage: str, context: str, **_kwargs: object) -> str:
     if stage not in _VALID_STAGES:
         return context
 
-    return system_map[stage] + "\n\n" + context
+    parts = [system_map[stage]]
+    if knowledge_context:
+        parts.append(f"\n\n## KiCad Reference Knowledge\n{knowledge_context}")
+    parts.append(context)
+    return "\n\n".join(parts)

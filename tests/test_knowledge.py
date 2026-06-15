@@ -580,7 +580,11 @@ class TestPromptIntegration:
 
     def test_no_knowledge_flag_exists(self):
         """Test 6: --no-knowledge flag exists on operation parser."""
-        from kicad_agent.cli import _build_operation_parser
+        import kicad_agent.cli as cli_pkg
+        _build_operation_parser = cli_pkg.__dict__.get("_build_operation_parser")
+        if _build_operation_parser is None:
+            # cli/ package re-exports from cli.py via _cli_impl
+            _build_operation_parser = cli_pkg._cli_impl._build_operation_parser
 
         parser = _build_operation_parser()
         # Should be able to parse --no-knowledge without error
@@ -589,7 +593,10 @@ class TestPromptIntegration:
 
     def test_no_knowledge_flag_parses_true(self):
         """Test 7: parse_args(['--no-knowledge', '{}']) has no_knowledge=True."""
-        from kicad_agent.cli import _build_operation_parser
+        import kicad_agent.cli as cli_pkg
+        _build_operation_parser = cli_pkg.__dict__.get("_build_operation_parser")
+        if _build_operation_parser is None:
+            _build_operation_parser = cli_pkg._cli_impl._build_operation_parser
 
         parser = _build_operation_parser()
         args = parser.parse_args(["--no-knowledge", "{}"])

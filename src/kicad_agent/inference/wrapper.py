@@ -237,13 +237,19 @@ class InferenceWrapper:
             file_path=str(path),
         )
 
-    def _build_prompt(self, stats: BoardStats) -> list[dict[str, str]]:
+    def _build_prompt(
+        self, stats: BoardStats, knowledge_context: str = ""
+    ) -> list[dict[str, str]]:
         """Build chat messages for the fine-tuned model.
 
         Returns list of {"role": ..., "content": ...} dicts.
         """
+        system_content = self._SYSTEM_PROMPT
+        if knowledge_context:
+            system_content += f"\n\n## KiCad Reference Knowledge\n{knowledge_context}"
+
         messages: list[dict[str, str]] = [
-            {"role": "system", "content": self._SYSTEM_PROMPT},
+            {"role": "system", "content": system_content},
         ]
         user_content = (
             f"Analyze this PCB board:\n"
