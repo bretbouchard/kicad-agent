@@ -153,6 +153,13 @@ _CATEGORY_DEFAULTS: dict[str, list[tuple[str, str | None]]] = {
 # ---------------------------------------------------------------------------
 
 _PER_OP_OVERRIDES: dict[str, list[tuple[str, str | None]]] = {
+    # Special: InferenceWrapper.analyze() uses "analyze" as a general PCB
+    # analysis operation -- not in OPERATION_REGISTRY but used at inference time.
+    "analyze": [
+        ("kicad_docs.md", "Schematic Creation and Editing"),
+        ("kicad_docs.md", "Electrical rules checking"),
+        ("pcb_editor_reference.md", "Design rules overview"),
+    ],
     # Schematic wire/connection ops -> wire section from kicad_docs
     "add_wire": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
