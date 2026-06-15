@@ -768,6 +768,18 @@ Plans:
 - [x] 37-02-PLAN.md -- Training data versioning, regression detection, output cleanup (TRAIN-01, TRAIN-02, TRAIN-04)
 - [x] 37-03-PLAN.md -- MCP health check, graceful shutdown, training pipeline smoke tests (INFRA-02, INFRA-03, TRAIN-03)
 
+### Phase 95: Implement dual knowledge base integration: Cognee ingestion for Claude Code semantic search, section injection system for local model prompts
+
+**Goal:** Wire 4 KiCad reference documents into Cognee (semantic search) and local model (section injection) with token budget enforcement.
+**Requirements**: D-01 through D-05
+**Depends on:** Phase 94
+**Plans:** 3 plans
+
+Plans:
+- [ ] 95-01-PLAN.md -- Cognee ingestion script with dry-run mode and verification queries (D-01)
+- [ ] 95-02-PLAN.md -- KnowledgeManager with section chunking, op-to-section mapping, and lazy loading (D-02, D-03, D-05)
+- [ ] 95-03-PLAN.md -- Token budget enforcement, prompt builder integration, --no-knowledge CLI flag (D-02, D-03, D-04)
+
 ---
 
 <details>
