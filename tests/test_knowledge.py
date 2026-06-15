@@ -119,34 +119,29 @@ class TestCoreRules:
 class TestKnowledgeManager:
     """Tests for the KnowledgeManager class."""
 
-    def test_resolve_docs_dir_returns_docs_path(self, tmp_path):
+    def test_resolve_docs_dir_returns_docs_path(self, tmp_path, monkeypatch):
         """Test 5: _resolve_docs_dir returns Path pointing to docs/."""
-        # Create a fake docs directory structure
+        # Create a fake module directory structure:
         # knowledge.py -> llm/ -> kicad_agent/ -> src/ -> project root
-        fake_src = tmp_path / "src" / "kicad_agent" / "llm"
-        fake_src.mkdir(parents=True)
+        fake_llm = tmp_path / "src" / "kicad_agent" / "llm"
+        fake_llm.mkdir(parents=True)
         fake_docs = tmp_path / "docs"
         fake_docs.mkdir()
 
-        # Write a minimal module that will be loaded
-        (fake_src / "knowledge.py").write_text("pass")
+        # Write a fake __file__ path and monkeypatch Path(__file__) resolution
+        fake_module = fake_llm / "knowledge.py"
+        fake_module.write_text("# placeholder")
 
-        with mock.patch("kicad_agent.llm.knowledge.Path") as MockPath:
-            # Make __file__ resolve to our fake path
-            mock_file_path = fake_src / "knowledge.py"
-            MockPath.return_value.resolve.return_value = mock_file_path
-            # Mock is_dir to return True for docs
-            original_is_dir = Path.is_dir
-            def custom_is_dir(self):
-                if self == fake_docs:
-                    return True
-                return original_is_dir(self)
-            MockPath.is_dir = lambda self: self == fake_docs
+        import kicad_agent.llm.knowledge as _mod
+        original_file = _mod.__file__
+        monkeypatch.setattr(_mod, "__file__", str(fake_module))
 
-            from kicad_agent.llm.knowledge import KnowledgeManager
+        try:
             result = KnowledgeManager._resolve_docs_dir()
-            # Should return a Path-like pointing to docs
-            assert "docs" in str(result).lower() or "nonexistent" not in str(result).lower()
+            assert result == fake_docs
+            assert result.is_dir()
+        finally:
+            monkeypatch.setattr(_mod, "__file__", original_file)
 
     def test_get_context_always_includes_core_rules(self, tmp_path):
         """Test 7: get_context_for_op() always includes CORE_RULES."""
