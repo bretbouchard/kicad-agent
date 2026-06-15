@@ -543,6 +543,8 @@ def _handle_analyze(argv: list[str]) -> None:
 
     # Run inference via generate_analysis
     try:
+        from kicad_agent.llm.knowledge import KnowledgeManager
+        km = KnowledgeManager()
         result = generate_analysis(
             file_path=str(file_path),
             model=args.model,
@@ -550,6 +552,7 @@ def _handle_analyze(argv: list[str]) -> None:
             reward_model_dir=args.reward_model,
             n_best=args.n_best,
             max_tokens=args.max_tokens,
+            knowledge_manager=km,
         )
     except FileNotFoundError as exc:
         print(f"Error: {exc}", file=sys.stderr)

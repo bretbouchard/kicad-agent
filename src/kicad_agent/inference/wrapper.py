@@ -74,6 +74,7 @@ class InferenceWrapper:
         temperature: float = 0.7,
         device: str = "auto",
         max_workers: int | None = None,
+        knowledge_manager: Any = None,
     ) -> None:
         if n_best < 1 or n_best > _MAX_N_BEST:
             raise ValueError(f"n_best must be between 1 and {_MAX_N_BEST}, got {n_best}")
@@ -96,6 +97,7 @@ class InferenceWrapper:
         self._llm_client: Any = None
         self._reward_model: Any = None
         self._models_loaded = False
+        self._knowledge_manager = knowledge_manager
 
     def _load_models(self) -> None:
         """Lazy-load LLM client and reward model on first use."""
@@ -300,8 +302,11 @@ class InferenceWrapper:
         # 1. Extract board stats (validates file existence and extension)
         stats = self._extract_board_stats(file_path)
 
-        # 2. Build prompt
-        messages = self._build_prompt(stats)
+        # 2. Build prompt (with knowledge context if available)
+        knowledge_context = ""
+        if self._knowledge_manager is not None:
+            knowledge_context = self._knowledge_manager.get_context_for_op("analyze")
+        messages = self._build_prompt(stats, knowledge_context=knowledge_context)
 
         # 3. Generate N chains concurrently via ThreadPoolExecutor
         #    (T-22-04: MPS memory safety -- threads share read-only model weights
@@ -375,6 +380,7 @@ def generate_analysis(
     max_tokens: int = 1024,
     temperature: float = 0.7,
     device: str = "auto",
+    knowledge_manager: Any = None,
 ) -> ScoredChain:
     """One-shot API: analyze a PCB file and return best-scored reasoning chain.
 
@@ -389,6 +395,8 @@ def generate_analysis(
         max_tokens: Max tokens per chain (default: 1024).
         temperature: Sampling temperature (default: 0.7).
         device: Device for reward model.
+        knowledge_manager: Optional KnowledgeManager for injecting KiCad
+            reference knowledge into prompts.
 
     Returns:
         ScoredChain with highest reward score.
@@ -406,5 +414,6 @@ def generate_analysis(
         max_tokens=max_tokens,
         temperature=temperature,
         device=device,
+        knowledge_manager=knowledge_manager,
     )
     return wrapper.analyze(file_path)

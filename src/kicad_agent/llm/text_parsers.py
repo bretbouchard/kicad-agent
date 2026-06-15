@@ -38,12 +38,23 @@ class TextIntentParser:
 
     Args:
         client: Any object with a ``create_message(**kwargs)`` method.
+        knowledge_manager: Optional KnowledgeManager for injecting KiCad
+            reference knowledge into prompts.
     """
 
-    def __init__(self, client: Any) -> None:
+    def __init__(
+        self,
+        client: Any,
+        knowledge_manager: Any | None = None,
+    ) -> None:
         self._client = client
+        self._knowledge_manager = knowledge_manager
 
-    def parse(self, description: str) -> GenerationIntent:
+    def parse(
+        self,
+        description: str,
+        op_type: str = "add_component",
+    ) -> GenerationIntent:
         """Parse a natural language description into a GenerationIntent.
 
         Builds a text prompt, calls the LLM without tool_use, extracts JSON
@@ -51,6 +62,7 @@ class TextIntentParser:
 
         Args:
             description: Natural language circuit description.
+            op_type: Operation type for knowledge context lookup.
 
         Returns:
             Validated GenerationIntent object.
@@ -58,7 +70,13 @@ class TextIntentParser:
         Raises:
             ValueError: If JSON extraction fails or model validation fails.
         """
-        user_content = build_text_prompt("intent_parse", description)
+        knowledge_context = ""
+        if self._knowledge_manager is not None:
+            knowledge_context = self._knowledge_manager.get_context_for_op(op_type)
+
+        user_content = build_text_prompt(
+            "intent_parse", description, knowledge_context=knowledge_context,
+        )
 
         response = self._client.create_message(
             max_tokens=4096,
@@ -85,15 +103,23 @@ class TextErrorFixer:
 
     Args:
         client: Any object with a ``create_message(**kwargs)`` method.
+        knowledge_manager: Optional KnowledgeManager for injecting KiCad
+            reference knowledge into prompts.
     """
 
-    def __init__(self, client: Any) -> None:
+    def __init__(
+        self,
+        client: Any,
+        knowledge_manager: Any | None = None,
+    ) -> None:
         self._client = client
+        self._knowledge_manager = knowledge_manager
 
     def fix(
         self,
         violations: list[dict[str, str]],
         iteration_history: list[str] | None = None,
+        op_type: str = "repair_schematic",
     ) -> FixResult:
         """Generate fix operations from violations using text prompts.
 
@@ -127,7 +153,14 @@ class TextErrorFixer:
             history_text = "\n".join(iteration_history)
             user_content = f"Previous attempts:\n{history_text}\n\n{error_context}"
 
-        full_prompt = build_text_prompt("error_fix", user_content)
+        # Inject knowledge context if knowledge_manager is available
+        knowledge_context = ""
+        if self._knowledge_manager is not None:
+            knowledge_context = self._knowledge_manager.get_context_for_op(op_type)
+
+        full_prompt = build_text_prompt(
+            "error_fix", user_content, knowledge_context=knowledge_context,
+        )
 
         try:
             response = self._client.create_message(
