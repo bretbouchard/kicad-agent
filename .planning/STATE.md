@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: Executing Phase 88
-stopped_at: Completed Phase 74 - Executor Refactor & Schema Organization (2 plans).
-last_updated: "2026-06-14T06:56:04.308Z"
-last_activity: 2026-06-14
+status: Executing Phase 95
+stopped_at: Completed Phase 95 - Overlap-Free Auto-Placement.
+last_updated: "2026-06-15T04:38:10.484Z"
+last_activity: 2026-06-15
 progress:
-  total_phases: 122
-  completed_phases: 43
-  total_plans: 250
-  completed_plans: 192
+  total_phases: 123
+  completed_phases: 44
+  total_plans: 253
+  completed_plans: 194
   percent: 77
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 88 — constraint-capture
-Last activity: 2026-06-14
+**Current focus:** Phase 95 — implement-dual-knowledge-base-integration-cognee-ingestion-f
+Last activity: 2026-06-15
 
 ## Current Position
 
-Phase: 88 (constraint-capture) — EXECUTING
-Plan: 1 of 2
-**All milestones complete (v1.0 through v3.0). 54 phases, 143 plans, 3171+ tests.**
+Phase: 95 (implement-dual-knowledge-base-integration-cognee-ingestion-f) — EXECUTING
+Plan: 1 of 3
+**All milestones complete (v1.0 through v3.0). 55 phases, 145 plans, 3192+ tests.**
 
 Last milestone: v3.0 Full-Stack EDA (Phases 50-54)
 
@@ -40,7 +40,16 @@ Last milestone: v3.0 Full-Stack EDA (Phases 50-54)
 
 Council review: 4 findings fixed, all passing.
 
-Last activity: 2026-06-14 -- Phase 88 execution started
+Last activity: 2026-06-15 -- Phase 95 execution started
+
+### Phase 95: Overlap-Free Auto-Placement (v4.1)
+
+- Shelf-based bin packing (NFDH) with clearance expansion for provably overlap-free initial placement
+- Hard SA overlap penalty (1000.0 per pair) makes overlaps thermodynamically impossible during refinement
+- Push-apart resolver safety net for residual overlaps from SA or external modifications
+- `has_overlaps()` quick check on PlacementValidator, `overlap_count` on PlacementScore
+- `AutoPlaceOp` operation registered in schema, registry, and PCB handler
+- 21 new tests across 8 test classes; all 201 placement tests passing
 
 ### Phase 62: Routing Correctness (v3.1)
 
@@ -319,6 +328,7 @@ Last activity: 2026-06-14 -- Phase 88 execution started
 - Phase 82 added: AI-Powered Gap Filling Engine — AI-assisted fixes using existing 98 operations
 - Phase 83 added: analog-ecosystem Integration — unified routing workflow replacing per-board custom scripts
 - Phase 84 added: Model Upgrade (Conditional) — train larger model if benchmark shows insufficiency
+- Phase 95 added: Dual Knowledge Base Integration — Cognee ingestion + section injection for local model prompts
 
 ### v4.1 Stage-Safe PCB Flow (Phases 85-94)
 
@@ -463,5 +473,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 74 - Executor Refactor & Schema Organization (2 plans).
+Stopped at: Completed Phase 95 - Overlap-Free Auto-Placement.
 Resume with: Next phase planning or `/gsd-execute-phase`.
