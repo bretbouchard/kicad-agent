@@ -44,6 +44,8 @@ kicad-agent --dry-run operation.json
 - [Examples](examples/basic-operations.md) -- Walkthroughs with complete JSON operations
 - [KiCad Schematic Editor Reference](kicad_docs.md) -- Full KiCad 10.99 docs from PDF
 - [KiCad Agent Reference](kicad_agent_reference.md) -- Agent-centric distilled reference for schematic editing
+- [KiCad PCB Editor Agent Reference](pcb_editor_reference.md) -- Agent-centric distilled reference for PCB editing
+- [KiCad GerbView Agent Reference](gerbview_reference.md) -- Agent-centric distilled reference for Gerber viewing
 
 ## Links
 
