@@ -144,6 +144,7 @@ def main(argv: list[str] | None = None) -> int:
     output_text = "\n".join(json.dumps(p) for p in payloads) + "\n" if payloads else ""
 
     if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(output_text, encoding="utf-8")
     else:
         sys.stdout.write(output_text)
