@@ -835,7 +835,7 @@ class KnowledgeManager:
                 missing_pairs.add((doc, sec))
             for doc, sec in sorted(missing_pairs):
                 logger.warning(
-                    "Section %q not found in %s -- check override mappings",
+                    "Section %r not found in %s -- check override mappings",
                     sec, doc,
                 )
 

@@ -121,6 +121,8 @@ class TestKnowledgeManager:
 
     def test_resolve_docs_dir_returns_docs_path(self, tmp_path, monkeypatch):
         """Test 5: _resolve_docs_dir returns Path pointing to docs/."""
+        from kicad_agent.llm.knowledge import KnowledgeManager
+
         # Create a fake module directory structure:
         # knowledge.py -> llm/ -> kicad_agent/ -> src/ -> project root
         fake_llm = tmp_path / "src" / "kicad_agent" / "llm"
