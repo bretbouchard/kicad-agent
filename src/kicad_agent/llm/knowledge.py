@@ -163,26 +163,26 @@ _PER_OP_OVERRIDES: dict[str, list[tuple[str, str | None]]] = {
     # Schematic wire/connection ops -> wire section from kicad_docs
     "add_wire": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "Wires"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     "add_label": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "Labels"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     "add_power": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "Power symbols"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     "add_no_connect": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "No-connection flags"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     "add_junction": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
     ],
     "add_power_flag": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "Power symbols"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     # Component-specific overrides
     "add_component": [
@@ -191,11 +191,11 @@ _PER_OP_OVERRIDES: dict[str, list[tuple[str, str | None]]] = {
     ],
     "move_component": [
         ("kicad_agent_reference.md", "Editing object properties"),
-        ("kicad_docs.md", "Grids and snapping"),
+        ("kicad_docs.md", "Schematic Setup"),
     ],
     "snap_components_to_grid": [
         ("kicad_agent_reference.md", "Grids and snapping"),
-        ("kicad_docs.md", "Grids and snapping"),
+        ("kicad_docs.md", "Schematic Setup"),
     ],
     # Footprint-specific overrides
     "assign_footprint": [
@@ -278,14 +278,14 @@ _PER_OP_OVERRIDES: dict[str, list[tuple[str, str | None]]] = {
     # Sheet ops
     "add_sheet": [
         ("kicad_agent_reference.md", "Forward and back annotation"),
-        ("kicad_docs.md", "Adding hierarchical subsheets to a design"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     "add_sheet_pin": [
         ("kicad_agent_reference.md", "Forward and back annotation"),
     ],
     "navigate_hierarchy": [
         ("kicad_agent_reference.md", "Forward and back annotation"),
-        ("kicad_docs.md", "Navigating between sheets"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     "rebuild_root_sheet": [
         ("kicad_agent_reference.md", "Forward and back annotation"),
@@ -356,14 +356,14 @@ _PER_OP_OVERRIDES: dict[str, list[tuple[str, str | None]]] = {
     # Library ops
     "add_lib_entry": [
         ("kicad_docs.md", "Symbols and Symbol Libraries"),
-        ("kicad_docs.md", "Creating a new symbol library"),
+        ("kicad_docs.md", "Symbols and Symbol Libraries"),
     ],
     "remove_lib_entry": [
         ("kicad_docs.md", "Symbols and Symbol Libraries"),
     ],
     "list_lib_entries": [
         ("kicad_docs.md", "Symbols and Symbol Libraries"),
-        ("kicad_docs.md", "Browsing symbol libraries"),
+        ("kicad_docs.md", "Symbols and Symbol Libraries"),
     ],
     "update_symbols_from_library": [
         ("kicad_docs.md", "Symbols and Symbol Libraries"),
@@ -400,35 +400,35 @@ _PER_OP_OVERRIDES: dict[str, list[tuple[str, str | None]]] = {
     # Net ops
     "add_net": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "Net classes"),
+        ("kicad_docs.md", "Schematic Setup"),
     ],
     "remove_net": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "Net classes"),
+        ("kicad_docs.md", "Schematic Setup"),
     ],
     "rename_net": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "Net classes"),
+        ("kicad_docs.md", "Schematic Setup"),
     ],
     # Remove ops
     "remove_wire": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "Wires"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     "remove_label": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "Labels"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     "remove_labels": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "Labels"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     "remove_junction": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
     ],
     "remove_no_connect": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "No-connection flags"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     # Create ops
     "create_schematic": [
@@ -443,7 +443,7 @@ _PER_OP_OVERRIDES: dict[str, list[tuple[str, str | None]]] = {
     ],
     "create_symbol": [
         ("kicad_docs.md", "Symbols and Symbol Libraries"),
-        ("kicad_docs.md", "Creating and editing symbols"),
+        ("kicad_docs.md", "Symbols and Symbol Libraries"),
     ],
     "create_footprint": [
         ("pcb_editor_reference.md", "Working with footprints"),
@@ -453,7 +453,7 @@ _PER_OP_OVERRIDES: dict[str, list[tuple[str, str | None]]] = {
         ("kicad_docs.md", "Symbols and Symbol Libraries"),
     ],
     "convert_kicad6_to_10": [
-        ("kicad_docs.md", "Opening legacy schematics"),
+        ("kicad_docs.md", "Introduction to the KiCad Schematic Editor"),
     ],
     # Query ops
     "query_connectivity": [
@@ -462,7 +462,7 @@ _PER_OP_OVERRIDES: dict[str, list[tuple[str, str | None]]] = {
     # Readability ops
     "review_schematic": [
         ("kicad_agent_reference.md", "Reference designators and symbol annotation"),
-        ("kicad_docs.md", "Inspecting a schematic"),
+        ("kicad_docs.md", "The Schematic Editor User Interface"),
     ],
     # Gap ops
     "analyze_gaps": [
@@ -480,7 +480,7 @@ _PER_OP_OVERRIDES: dict[str, list[tuple[str, str | None]]] = {
     ],
     "snap_to_grid": [
         ("kicad_agent_reference.md", "Grids and snapping"),
-        ("kicad_docs.md", "Grids and snapping"),
+        ("kicad_docs.md", "Schematic Setup"),
     ],
     "fix_shorted_nets": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
@@ -496,18 +496,18 @@ _PER_OP_OVERRIDES: dict[str, list[tuple[str, str | None]]] = {
     ],
     "break_wire_shorts": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "Wires"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     "place_missing_units": [
         ("kicad_agent_reference.md", "Working with symbols"),
     ],
     "remove_dangling_wires": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "Wires"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     "rename_net_label": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "Labels"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     "resolve_shorted_nets": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
@@ -522,7 +522,7 @@ _PER_OP_OVERRIDES: dict[str, list[tuple[str, str | None]]] = {
     ],
     "place_net_labels": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
-        ("kicad_docs.md", "Labels"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     "resolve_pin_positions": [
         ("kicad_agent_reference.md", "Editing object properties"),
@@ -553,7 +553,7 @@ _PER_OP_OVERRIDES: dict[str, list[tuple[str, str | None]]] = {
     "erc_auto_fix_hierarchical": [
         ("kicad_agent_reference.md", "Generating a Netlist"),
         ("kicad_docs.md", "Electrical rules checking"),
-        ("kicad_docs.md", "Multiple sheets and hierarchical schematics"),
+        ("kicad_docs.md", "Schematic Creation and Editing"),
     ],
     # PCB ops that need more specific sections
     "auto_place": [
@@ -562,7 +562,7 @@ _PER_OP_OVERRIDES: dict[str, list[tuple[str, str | None]]] = {
     ],
     "move_footprint": [
         ("pcb_editor_reference.md", "Working with footprints"),
-        ("kicad_docs.md", "Grids and snapping"),
+        ("kicad_docs.md", "Schematic Setup"),
     ],
     "batch_expand_footprints": [
         ("pcb_editor_reference.md", "Working with footprints"),
@@ -795,6 +795,41 @@ class KnowledgeManager:
             except Exception:
                 logger.warning("Failed to load knowledge doc: %s", doc_name, exc_info=True)
         self._loaded = True
+
+        # Validate override section names against loaded docs (warn on mismatches)
+        self._validate_override_sections()
+
+    def _validate_override_sections(self) -> None:
+        """Log warnings for any section names in overrides that don't exist in loaded docs."""
+        all_section_names: set[str] = set()
+        for doc_name, sections in self._sections.items():
+            all_section_names.update(sections.keys())
+
+        missing: list[tuple[str, str, str]] = []
+        seen_pairs: set[tuple[str, str | None]] = set()
+        for op_type, mappings in OP_SECTION_MAP.items():
+            for doc_name, section_name in mappings:
+                key = (doc_name, section_name)
+                if key in seen_pairs:
+                    continue
+                seen_pairs.add(key)
+                if (
+                    section_name is not None
+                    and doc_name in self._sections
+                    and section_name not in self._sections[doc_name]
+                ):
+                    missing.append((op_type, doc_name, section_name))
+
+        if missing:
+            # Deduplicate by (doc_name, section_name) for the summary
+            missing_pairs: set[tuple[str, str]] = set()
+            for _op, doc, sec in missing:
+                missing_pairs.add((doc, sec))
+            for doc, sec in sorted(missing_pairs):
+                logger.warning(
+                    "Section %q not found in %s -- check override mappings",
+                    sec, doc,
+                )
 
     def get_context_for_op(self, op_type: str, file_type: str = "") -> str:
         """Get relevant knowledge context for an operation.
