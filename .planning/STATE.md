@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: Executing Phase 95
-stopped_at: Completed Phase 95 - Overlap-Free Auto-Placement.
-last_updated: "2026-06-15T04:38:10.484Z"
+status: Ready to plan
+stopped_at: Completed Phase 95 - Dual Knowledge Base Integration (Cognee + section injection).
+last_updated: "2026-06-15T05:18:54.380Z"
 last_activity: 2026-06-15
 progress:
   total_phases: 123
-  completed_phases: 44
+  completed_phases: 45
   total_plans: 253
-  completed_plans: 194
-  percent: 77
+  completed_plans: 197
+  percent: 78
 ---
 
 # Project State
@@ -26,8 +26,8 @@ Last activity: 2026-06-15
 
 ## Current Position
 
-Phase: 95 (implement-dual-knowledge-base-integration-cognee-ingestion-f) — EXECUTING
-Plan: 1 of 3
+Phase: 240
+Plan: Not started
 **All milestones complete (v1.0 through v3.0). 55 phases, 145 plans, 3192+ tests.**
 
 Last milestone: v3.0 Full-Stack EDA (Phases 50-54)
@@ -40,16 +40,19 @@ Last milestone: v3.0 Full-Stack EDA (Phases 50-54)
 
 Council review: 4 findings fixed, all passing.
 
-Last activity: 2026-06-15 -- Phase 95 execution started
+Last activity: 2026-06-15 -- Phase 95 complete (dual knowledge base)
 
-### Phase 95: Overlap-Free Auto-Placement (v4.1)
+### Phase 95: Dual Knowledge Base Integration (v2.2)
 
-- Shelf-based bin packing (NFDH) with clearance expansion for provably overlap-free initial placement
-- Hard SA overlap penalty (1000.0 per pair) makes overlaps thermodynamically impossible during refinement
-- Push-apart resolver safety net for residual overlaps from SA or external modifications
-- `has_overlaps()` quick check on PlacementValidator, `overlap_count` on PlacementScore
-- `AutoPlaceOp` operation registered in schema, registry, and PCB handler
-- 21 new tests across 8 test classes; all 201 placement tests passing
+- Cognee ingestion script (`ingest_cognee.py`) outputs JSON MCP command payloads for 4 KiCad reference docs
+- KnowledgeManager core (`knowledge.py`) with H2 section chunking, per-operation doc mapping (all 117 registry ops)
+- CORE_RULES injected as trusted system instructions (not sanitized), doc-sourced content sanitized
+- Token budget enforcement: per-section 800 + combined 2000 tokens via tiktoken
+- KnowledgeManager wired into TextIntentParser, TextErrorFixer, InferenceWrapper, CLI
+- `--no-knowledge` CLI flag disables knowledge injection
+- Thread-safe singleton with double-checked locking
+- 73 new tests (47 knowledge + 26 cognee ingestion), all passing
+- Council: APPROVE after 2 rounds (9 findings fixed: 3 HIGH, 4 MEDIUM, 2 LOW)
 
 ### Phase 62: Routing Correctness (v3.1)
 
@@ -310,7 +313,7 @@ Last activity: 2026-06-15 -- Phase 95 execution started
 
 **Velocity:**
 
-- Total plans completed: 149
+- Total plans completed: 152
 - Average duration: 5 min
 - Total execution time: 6.5 hours
 
@@ -473,5 +476,5 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 95 - Overlap-Free Auto-Placement.
+Stopped at: Completed Phase 95 - Dual Knowledge Base Integration (Cognee + section injection).
 Resume with: Next phase planning or `/gsd-execute-phase`.

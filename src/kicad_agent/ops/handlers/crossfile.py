@@ -103,3 +103,92 @@ def _handle_update_pcb_from_schematic(
         "pad_net_updates": sync_result.pad_net_updates,
         "has_changes": sync_result.has_changes,
     }
+
+
+@register_crossfile("repopulate_pcb_from_schematic")
+def _handle_repopulate_pcb(
+    op: Any, ir_map: dict[Path, Any], base_dir: Path
+) -> dict[str, Any]:
+    """Full PCB repopulation from schematic netlist."""
+    from kicad_agent.crossfile.schematic_sync import repopulate_pcb_from_schematic
+    from kicad_agent.ir.pcb_ir import PcbIR
+    from kicad_agent.ir.schematic_ir import SchematicIR
+
+    sch_ir: SchematicIR | None = None
+    pcb_ir: PcbIR | None = None
+    sch_path: Path | None = None
+
+    for file_path, ir in ir_map.items():
+        if isinstance(ir, SchematicIR):
+            sch_ir = ir
+            sch_path = file_path
+        elif isinstance(ir, PcbIR):
+            pcb_ir = ir
+
+    if sch_ir is None or pcb_ir is None:
+        raise ValueError("repopulate_pcb_from_schematic requires both schematic and PCB IRs")
+    if sch_path is None:
+        raise ValueError("Schematic file path not found in ir_map")
+
+    pcb_raw = pcb_ir._parse_result.raw_content
+
+    new_raw, result = repopulate_pcb_from_schematic(
+        pcb_raw=pcb_raw,
+        schematic_path=sch_path,
+        base_dir=base_dir,
+        strip_routing=op.strip_routing,
+        strip_zones=op.strip_zones,
+        remove_orphans=op.remove_orphans,
+        auto_place=op.auto_place,
+        assign_nets=op.assign_nets,
+        placement_clearance=op.placement_clearance,
+        board_width=op.board_width,
+        board_height=op.board_height,
+    )
+
+    pcb_ir.commit_raw_content(new_raw)
+    pcb_ir.mark_dirty("repopulate_pcb_from_schematic")
+
+    return result
+
+
+@register_crossfile("rebuild_pcb_nets")
+def _handle_rebuild_pcb_nets(
+    op: Any, ir_map: dict[Path, Any], base_dir: Path
+) -> dict[str, Any]:
+    """Rebuild PCB net table and pad assignments from schematic."""
+    from kicad_agent.crossfile.schematic_sync import rebuild_pcb_nets
+    from kicad_agent.ir.pcb_ir import PcbIR
+    from kicad_agent.ir.schematic_ir import SchematicIR
+
+    sch_ir: SchematicIR | None = None
+    pcb_ir: PcbIR | None = None
+    sch_path: Path | None = None
+
+    for file_path, ir in ir_map.items():
+        if isinstance(ir, SchematicIR):
+            sch_ir = ir
+            sch_path = file_path
+        elif isinstance(ir, PcbIR):
+            pcb_ir = ir
+
+    if sch_ir is None or pcb_ir is None:
+        raise ValueError("rebuild_pcb_nets requires both schematic and PCB IRs")
+    if sch_path is None:
+        raise ValueError("Schematic file path not found in ir_map")
+
+    pcb_raw = pcb_ir._parse_result.raw_content
+
+    new_raw, result = rebuild_pcb_nets(
+        pcb_raw=pcb_raw,
+        schematic_path=sch_path,
+        base_dir=base_dir,
+        strip_routing=op.strip_routing,
+        ghost_refs=op.ghost_refs,
+        remove_all_orphans=op.remove_all_orphans,
+    )
+
+    pcb_ir.commit_raw_content(new_raw)
+    pcb_ir.mark_dirty("rebuild_pcb_nets")
+
+    return result

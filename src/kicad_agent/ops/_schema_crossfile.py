@@ -114,3 +114,100 @@ class UpdatePcbFromSchematicOp(BaseModel):
         if extensions.count(".kicad_sch") > 1:
             raise ValueError("target_files must include exactly one .kicad_sch file")
         return v
+
+
+def _validate_pcb_sch_pair(v: list[str]) -> list[str]:
+    """Validator for target_files that must be [pcb, schematic] pair."""
+    extensions = [Path(f).suffix for f in v]
+    if ".kicad_pcb" not in extensions:
+        raise ValueError("target_files must include exactly one .kicad_pcb file")
+    if ".kicad_sch" not in extensions:
+        raise ValueError("target_files must include exactly one .kicad_sch file")
+    if extensions.count(".kicad_pcb") > 1:
+        raise ValueError("target_files must include exactly one .kicad_pcb file")
+    if extensions.count(".kicad_sch") > 1:
+        raise ValueError("target_files must include exactly one .kicad_sch file")
+    return v
+
+
+class RepopulatePcbFromSchematicOp(BaseModel):
+    """Re-populate a PCB with footprints from the schematic netlist.
+
+    Strips routing and optionally zones, removes orphan footprints, adds
+    missing footprints via template cloning, auto-places with clearance
+    awareness, assigns nets from schematic, and rebuilds net declarations.
+
+    Attributes:
+        op_type: Discriminator literal ``"repopulate_pcb_from_schematic"``.
+        target_file: Primary .kicad_pcb file for execute() routing.
+        target_files: List of files: [pcb_file, schematic_file].
+        strip_routing: Remove all segments and vias before re-population.
+        strip_zones: Remove all copper zones before re-population.
+        remove_orphans: Remove footprints not in schematic.
+        auto_place: Auto-place missing footprints with clearance awareness.
+        assign_nets: Assign pad nets from schematic netlist.
+        placement_clearance: Min clearance between footprints in mm.
+        board_width: Board width in mm (0 = auto-detect from Edge.Cuts).
+        board_height: Board height in mm (0 = auto-detect from Edge.Cuts).
+    """
+
+    op_type: Literal["repopulate_pcb_from_schematic"] = "repopulate_pcb_from_schematic"
+    target_file: TargetFile = Field(
+        description="Primary .kicad_pcb file for execute() routing",
+    )
+    target_files: list[TargetFile] = Field(
+        min_length=2,
+        max_length=2,
+        description="[pcb_file, schematic_file]",
+    )
+    strip_routing: bool = Field(default=True)
+    strip_zones: bool = Field(default=False)
+    remove_orphans: bool = Field(default=True)
+    auto_place: bool = Field(default=True)
+    assign_nets: bool = Field(default=True)
+    placement_clearance: float = Field(default=4.0, gt=0)
+    board_width: float = Field(default=0.0, ge=0, description="Board width mm (0=auto)")
+    board_height: float = Field(default=0.0, ge=0, description="Board height mm (0=auto)")
+
+    @field_validator("target_files")
+    @classmethod
+    def _validate_target_files(cls, v: list[str]) -> list[str]:
+        return _validate_pcb_sch_pair(v)
+
+
+class RebuildPcbNetsOp(BaseModel):
+    """Rebuild PCB net table and pad net assignments from schematic netlist.
+
+    More aggressive than update_pcb_from_schematic: strips all routing,
+    optionally removes ghost footprints, reassigns every pad net from
+    scratch, and rebuilds net declarations with sequential renumbering.
+
+    Attributes:
+        op_type: Discriminator literal ``"rebuild_pcb_nets"``.
+        target_file: Primary .kicad_pcb file for execute() routing.
+        target_files: List of files: [pcb_file, schematic_file].
+        strip_routing: Remove all segments and vias before net rebuild.
+        ghost_refs: Specific footprint refs to remove as ghosts.
+        remove_all_orphans: Remove ALL footprints not in schematic.
+    """
+
+    op_type: Literal["rebuild_pcb_nets"] = "rebuild_pcb_nets"
+    target_file: TargetFile = Field(
+        description="Primary .kicad_pcb file for execute() routing",
+    )
+    target_files: list[TargetFile] = Field(
+        min_length=2,
+        max_length=2,
+        description="[pcb_file, schematic_file]",
+    )
+    strip_routing: bool = Field(default=True)
+    ghost_refs: list[str] = Field(
+        default_factory=list,
+        description="Footprint refs to remove as ghosts",
+    )
+    remove_all_orphans: bool = Field(default=False)
+
+    @field_validator("target_files")
+    @classmethod
+    def _validate_target_files(cls, v: list[str]) -> list[str]:
+        return _validate_pcb_sch_pair(v)

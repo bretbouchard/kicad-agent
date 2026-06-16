@@ -931,3 +931,154 @@ def _handle_auto_place(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
         "violations": output.violations,
         "source": output.source,
     }
+
+
+@register_pcb("import_ses")
+def _handle_import_ses(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Import a Freerouting SES routing result into a KiCad PCB.
+
+    Parses the specified .ses file, converts wire/via data to KiCad
+    (segment ...) and (via ...) S-expressions, and inserts them into
+    the PCB content. Hierarchical {slash} encoding is decoded automatically.
+    """
+    from kicad_agent.routing.freerouting import import_ses_into_pcb
+
+    ses_path = file_path.parent / op.ses_file
+    if not ses_path.exists():
+        return {
+            "segments": 0,
+            "vias": 0,
+            "skipped": 0,
+            "nets_routed": 0,
+            "error": f"SES file not found: {ses_path}",
+        }
+
+    new_content, stats = import_ses_into_pcb(ses_path, ir.raw_content)
+    ir.commit_raw_content(new_content)
+
+    return {
+        "segments": stats["segments"],
+        "vias": stats["vias"],
+        "skipped": stats["skipped"],
+        "nets_routed": stats["nets_routed"],
+        "ses_file": str(ses_path),
+    }
+
+
+@register_pcb("auto_route_manhattan")
+def _handle_auto_route_manhattan(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Generate Manhattan-style L-shaped routing segments for a PCB.
+
+    Extracts netlist from PCB, generates L-segments between same-net pads,
+    and inserts them. Optionally strips existing routing first.
+    """
+    from kicad_agent.routing.manhattan import route_manhattan, segments_to_sexpr
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    content = ir.raw_content
+
+    # Optionally strip existing segments
+    if getattr(op, "strip_existing", True):
+        content = _strip_segments(content)
+
+    # Extract netlist: net name -> list of (x, y) pad positions
+    netlist = ir.extract_netlist()
+    if not netlist:
+        return {"segments": 0, "nets_routed": 0, "message": "No nets to route"}
+
+    # Filter to requested nets if specified
+    if getattr(op, "nets", None):
+        netlist = {n: pads for n, pads in netlist.items() if n in op.nets}
+
+    # Convert net_overrides from op dict to NetOverride objects
+    from kicad_agent.routing.manhattan import NetOverride
+    raw_overrides = getattr(op, "net_overrides", {}) or {}
+    overrides = {name: NetOverride(**val) for name, val in raw_overrides.items()}
+
+    # Generate Manhattan segments
+    segments = route_manhattan(
+        netlist,
+        default_layer=getattr(op, "layer", "F.Cu"),
+        default_width=getattr(op, "track_width", 0.15),
+        net_overrides=overrides,
+    )
+
+    if not segments:
+        return {"segments": 0, "nets_routed": 0, "message": "No multi-pad nets found"}
+
+    # Convert to S-expressions and insert
+    sexpr = segments_to_sexpr(segments)
+    content = PcbRawWriter.insert_segments(content, sexpr)
+    ir.commit_raw_content(content)
+
+    nets_routed = len({s.net for s in segments})
+    return {
+        "segments": len(segments),
+        "nets_routed": nets_routed,
+        "layer": getattr(op, "layer", "F.Cu"),
+        "track_width": getattr(op, "track_width", 0.15),
+    }
+
+
+def _strip_segments(content: str) -> str:
+    """Remove all (segment ...) blocks from PCB content.
+
+    Uses string-aware paren tracking to avoid corrupting nested blocks.
+    """
+    result_parts = []
+    i = 0
+    n = len(content)
+    in_quote = False
+
+    while i < n:
+        # Check for (segment at line start (tab-indented)
+        if (
+            not in_quote
+            and content[i] == '('
+            and i + 9 <= n
+            and content[i:i + 9] == "(segment"
+            and (i == 0 or content[i - 1] in '\n\t ')
+        ):
+            # Find matching close paren
+            depth = 0
+            j = i
+            while j < n:
+                c = content[j]
+                if in_quote:
+                    if c == '"':
+                        if j + 1 < n and content[j + 1] == '"':
+                            j += 2
+                            continue
+                        in_quote = False
+                else:
+                    if c == '"':
+                        in_quote = True
+                    elif c == '(':
+                        depth += 1
+                    elif c == ')':
+                        depth -= 1
+                        if depth == 0:
+                            # Skip this segment block (including trailing newline)
+                            j += 1
+                            if j < n and content[j] == '\n':
+                                j += 1
+                            i = j
+                            break
+                j += 1
+            else:
+                # No matching close found — keep the text
+                result_parts.append(content[i:j])
+                i = j
+        else:
+            if not in_quote and content[i] == '"':
+                in_quote = True
+            elif in_quote and content[i] == '"':
+                if i + 1 < n and content[i + 1] == '"':
+                    result_parts.append(content[i:i + 2])
+                    i += 2
+                    continue
+                in_quote = False
+            result_parts.append(content[i])
+            i += 1
+
+    return "".join(result_parts)

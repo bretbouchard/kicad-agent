@@ -65,6 +65,7 @@ If the AI can't produce structurally valid KiCad files through the tool layer, n
 - AI boundary and repair loop: proposals validated before application, audit trail
 - 6 golden end-to-end boards proving full flow
 - Documentation: stage-gate getting started, repair examples, guarantees vs suggestions
+- Phase 95: Dual Knowledge Base Integration — Cognee ingestion + section injection for local model prompts (73 tests)
 
 **Previous:** v3.0 Full-Stack EDA shipped 2026-06-01. All 54 phases across 10 milestones complete.
 
@@ -99,6 +100,11 @@ If the AI can't produce structurally valid KiCad files through the tool layer, n
 | kicad-cli for validation | Official KiCad validation, not reimplemented checks | — Pending |
 | difftastic for diffs | Syntax-aware, handles deeply nested parens well | — Pending |
 | Full stack in v1 | All file types, all ops, all validation layers | — Pending |
+| KnowledgeManager uses H2 section chunking | KiCad docs have natural header hierarchy; H2 = top-level sections | Valid |
+| CORE_RULES injected unsanitized | Project-authored rules are trusted; only external doc content sanitized | Valid |
+| Two-tier token budget (800 per-section + 2000 combined) | Prevents any single doc section from dominating the prompt while allowing multi-section coverage | Valid |
+| Cognee ingestion as standalone script | Separation of concerns: ingestion is infra, KnowledgeManager is runtime | Valid |
+| Thread-safe singleton for KnowledgeManager | InferenceWrapper uses ThreadPoolExecutor; concurrent access requires locking | Valid |
 
 ## Evolution
 
@@ -118,4 +124,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-11 — Milestone v4.1 stage-safe-pcb-flow planned (10 phases, 14 plans)*
+*Last updated: 2026-06-15 — Phase 95 dual knowledge base integration complete (Cognee ingestion + section injection)*

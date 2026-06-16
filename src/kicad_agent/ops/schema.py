@@ -249,6 +249,8 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
     MatchLengthsOp,
     AnalyzeSplitPlaneOp,
     FixSilkscreenOverCopperOp,
+    ImportSesOp,
+    AutoRouteManhattanOp,
 )
 from kicad_agent.ops._schema_placement import (  # noqa: E402
     AutoPlaceOp,
@@ -296,6 +298,8 @@ from kicad_agent.ops._schema_sheet import (  # noqa: E402
 from kicad_agent.ops._schema_crossfile import (  # noqa: E402
     PropagateSymbolChangeOp,
     UpdatePcbFromSchematicOp,
+    RepopulatePcbFromSchematicOp,
+    RebuildPcbNetsOp,
 )
 from kicad_agent.ops._schema_schematic_routing import (  # noqa: E402
     BatchConnectOp,
@@ -459,12 +463,16 @@ class Operation(BaseModel):
         | DiagnoseViolationsOp
         | ReviewSchematicOp
         | UpdatePcbFromSchematicOp
+        | RepopulatePcbFromSchematicOp
+        | RebuildPcbNetsOp
         | RouteDiffPairOp
         | MatchLengthsOp
         | AnalyzeSplitPlaneOp
         | FixSilkscreenOverCopperOp
         | BatchExpandFootprintsOp
         | AutoPlaceOp
+        | ImportSesOp
+        | AutoRouteManhattanOp
         | AnalyzeGapsOp
         | FillGapsOp
         | RunGateCheckOp
@@ -544,6 +552,8 @@ __all__ = [
     "SetBoardOutlineOp",
     "AssignNetClassOp",
     "AutoRouteOp",
+    "ImportSesOp",
+    "AutoRouteManhattanOp",
     "ModifyNetClassOp",
     "RemoveNetClassOp",
     "ListNetClassesOp",
@@ -609,6 +619,8 @@ __all__ = [
     # Cross-file ops
     "PropagateSymbolChangeOp",
     "UpdatePcbFromSchematicOp",
+    "RepopulatePcbFromSchematicOp",
+    "RebuildPcbNetsOp",
     # Schematic routing ops
     "ResolvePinPositionsOp",
     "DetectRoutingCollisionsOp",

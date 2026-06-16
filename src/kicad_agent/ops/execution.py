@@ -92,7 +92,7 @@ def _check_concurrent_access(file_path: Path) -> None:
 logger = logging.getLogger(__name__)
 
 # Op-type classification sets
-CROSS_FILE_OP_TYPES = {"propagate_symbol_change", "update_pcb_from_schematic"}
+CROSS_FILE_OP_TYPES = {"propagate_symbol_change", "update_pcb_from_schematic", "repopulate_pcb_from_schematic", "rebuild_pcb_nets"}
 CREATE_OP_TYPES = {"create_schematic", "create_pcb", "create_project", "create_symbol", "create_footprint"}
 SELF_SERIALIZING_OPS = frozenset({"erc_auto_fix_hierarchical", "convert_kicad6_to_10"})
 

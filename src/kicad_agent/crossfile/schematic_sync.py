@@ -514,3 +514,199 @@ def sync_pcb_from_netlist(
             logger.info("Added net definition: %s (code %d)", net_name, net_code)
 
     return pcb_raw, result
+
+
+# ---------------------------------------------------------------------------
+# Repopulate PCB from schematic (destructive full rebuild)
+# ---------------------------------------------------------------------------
+
+
+def repopulate_pcb_from_schematic(
+    pcb_raw: str,
+    schematic_path: Path,
+    base_dir: Path,
+    *,
+    strip_routing: bool = True,
+    strip_zones: bool = False,
+    remove_orphans: bool = True,
+    auto_place: bool = True,
+    assign_nets: bool = True,
+    placement_clearance: float = 4.0,
+    board_width: float = 0.0,
+    board_height: float = 0.0,
+) -> tuple[str, dict[str, Any]]:
+    """Full PCB repopulation from schematic netlist.
+
+    Strips routing, removes orphans, adds missing footprints via template
+    cloning, auto-places, assigns nets, and rebuilds net declarations.
+
+    Returns:
+        Tuple of (modified_content, result_dict).
+    """
+    from kicad_agent.crossfile.pcb_repopulate import (
+        auto_place_missing,
+        build_fp_template_library,
+        rebuild_root_declarations,
+        strip_routing as strip_routing_fn,
+        strip_zones as strip_zones_fn,
+    )
+
+    result: dict[str, Any] = {
+        "orphaned_removed": [],
+        "footprints_added": [],
+        "placements": {},
+        "nets_assigned": 0,
+        "net_defs_rebuilt": 0,
+    }
+
+    # Phase 1: Export and parse netlist
+    netlist_sexpr = export_netlist(schematic_path, base_dir)
+    components, nets = parse_netlist(netlist_sexpr)
+
+    # Build lookup maps
+    sch_components: dict[str, NetlistComponent] = {c.ref: c for c in components}
+    ref_pin_nets: dict[str, dict[str, str]] = {}
+    for net in nets:
+        for ref, pin in net.nodes:
+            ref_pin_nets.setdefault(ref, {})[pin] = net.name
+
+    # Get existing PCB state
+    pcb_refs = set(_extract_pcb_footprint_refs(pcb_raw))
+
+    # Phase 2: Strip routing and zones
+    if strip_routing:
+        pcb_raw = strip_routing_fn(pcb_raw)
+    if strip_zones:
+        pcb_raw = strip_zones_fn(pcb_raw)
+
+    # Phase 3: Remove orphan footprints
+    if remove_orphans:
+        orphans = sorted(pcb_refs - set(sch_components.keys()))
+        for ref in orphans:
+            pcb_raw = _remove_footprint_block(pcb_raw, ref)
+            result["orphaned_removed"].append(ref)
+
+    # Re-extract refs after orphan removal
+    pcb_refs = set(_extract_pcb_footprint_refs(pcb_raw))
+
+    # Phase 4: Build template library and add missing footprints
+    templates = build_fp_template_library(pcb_raw)
+    missing_refs = sorted(set(sch_components.keys()) - pcb_refs)
+
+    if missing_refs and auto_place:
+        comp_info = {ref: comp.footprint_lib_id for ref, comp in sch_components.items() if ref in missing_refs}
+        bw = board_width if board_width > 0 else 140.0
+        bh = board_height if board_height > 0 else 100.0
+        pcb_raw, placements = auto_place_missing(
+            pcb_raw, missing_refs, comp_info, templates,
+            board_w=bw, board_h=bh, margin=2.0, clearance=placement_clearance,
+        )
+        result["footprints_added"] = missing_refs
+        result["placements"] = placements
+
+    # Phase 5: Assign nets to pads
+    if assign_nets:
+        for ref, pin_nets in ref_pin_nets.items():
+            for pad_num, net_name in pin_nets.items():
+                fp_start, fp_end = _find_footprint_block(pcb_raw, ref)
+                if fp_start is None:
+                    continue
+                fp_block = pcb_raw[fp_start:fp_end]
+                new_block = _inject_pad_net(fp_block, pad_num, net_name)
+                if new_block != fp_block:
+                    pcb_raw = pcb_raw[:fp_start] + new_block + pcb_raw[fp_end:]
+                    result["nets_assigned"] += 1
+
+    # Phase 6: Rebuild net declarations
+    pcb_raw, name_to_num = rebuild_root_declarations(pcb_raw, ref_pin_nets)
+    result["net_defs_rebuilt"] = len(name_to_num)
+
+    return pcb_raw, result
+
+
+# ---------------------------------------------------------------------------
+# Rebuild PCB nets from schematic (aggressive net reset)
+# ---------------------------------------------------------------------------
+
+
+def rebuild_pcb_nets(
+    pcb_raw: str,
+    schematic_path: Path,
+    base_dir: Path,
+    *,
+    strip_routing: bool = True,
+    ghost_refs: list[str] | None = None,
+    remove_all_orphans: bool = False,
+) -> tuple[str, dict[str, Any]]:
+    """Rebuild PCB net table and pad assignments from schematic.
+
+    Strips routing, removes specified ghosts/orphans, reassigns all pad
+    nets from schematic, and rebuilds net declarations.
+
+    Returns:
+        Tuple of (modified_content, result_dict).
+    """
+    from kicad_agent.crossfile.pcb_repopulate import (
+        rebuild_root_declarations,
+        strip_routing as strip_routing_fn,
+    )
+
+    ghost_refs = ghost_refs or []
+    result: dict[str, Any] = {
+        "ghosts_removed": [],
+        "orphans_removed": [],
+        "nets_assigned": 0,
+        "net_defs_rebuilt": 0,
+    }
+
+    # Phase 1: Export and parse netlist
+    netlist_sexpr = export_netlist(schematic_path, base_dir)
+    components, nets = parse_netlist(netlist_sexpr)
+
+    # Build lookup maps
+    sch_components: dict[str, NetlistComponent] = {c.ref: c for c in components}
+    ref_pin_nets: dict[str, dict[str, str]] = {}
+    for net in nets:
+        for ref, pin in net.nodes:
+            ref_pin_nets.setdefault(ref, {})[pin] = net.name
+
+    # Get existing PCB state
+    pcb_refs = set(_extract_pcb_footprint_refs(pcb_raw))
+
+    # Phase 2: Strip routing
+    if strip_routing:
+        pcb_raw = strip_routing_fn(pcb_raw)
+
+    # Phase 3: Remove ghost footprints
+    for ref in ghost_refs:
+        new_raw = _remove_footprint_block(pcb_raw, ref)
+        if new_raw != pcb_raw:
+            result["ghosts_removed"].append(ref)
+            pcb_raw = new_raw
+
+    # Phase 4: Remove all orphans if requested
+    if remove_all_orphans:
+        orphans = sorted(pcb_refs - set(sch_components.keys()))
+        for ref in orphans:
+            new_raw = _remove_footprint_block(pcb_raw, ref)
+            if new_raw != pcb_raw:
+                result["orphans_removed"].append(ref)
+                pcb_raw = new_raw
+
+    # Phase 5: Assign nets to ALL pads from schematic
+    for ref, pin_nets in ref_pin_nets.items():
+        for pad_num, net_name in pin_nets.items():
+            fp_start, fp_end = _find_footprint_block(pcb_raw, ref)
+            if fp_start is None:
+                continue
+            fp_block = pcb_raw[fp_start:fp_end]
+            new_block = _inject_pad_net(fp_block, pad_num, net_name)
+            if new_block != fp_block:
+                pcb_raw = pcb_raw[:fp_start] + new_block + pcb_raw[fp_end:]
+                result["nets_assigned"] += 1
+
+    # Phase 6: Rebuild net declarations
+    pcb_raw, name_to_num = rebuild_root_declarations(pcb_raw, ref_pin_nets)
+    result["net_defs_rebuilt"] = len(name_to_num)
+
+    return pcb_raw, result

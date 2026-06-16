@@ -773,12 +773,12 @@ Plans:
 **Goal:** Wire 4 KiCad reference documents into Cognee (semantic search) and local model (section injection) with token budget enforcement.
 **Requirements**: D-01 through D-05
 **Depends on:** Phase 94
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 95-01-PLAN.md -- Cognee ingestion script with dry-run mode and verification queries (D-01)
-- [ ] 95-02-PLAN.md -- KnowledgeManager with section chunking, op-to-section mapping, and lazy loading (D-02, D-03, D-05)
-- [ ] 95-03-PLAN.md -- Token budget enforcement, prompt builder integration, --no-knowledge CLI flag (D-02, D-03, D-04)
+- [x] 95-01-PLAN.md -- Cognee ingestion script with dry-run mode and verification queries (D-01)
+- [x] 95-02-PLAN.md -- KnowledgeManager with section chunking, op-to-section mapping, and lazy loading (D-02, D-03, D-05)
+- [x] 95-03-PLAN.md -- Token budget enforcement, prompt builder integration, --no-knowledge CLI flag (D-02, D-03, D-04)
 
 ---
 

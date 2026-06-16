@@ -321,6 +321,8 @@ def parse_ses(ses_text: str) -> SesParseResult:
             break
 
         net_name = m.group(1) or m.group(2)
+        # Decode Freerouting {slash} encoding for hierarchical net paths
+        net_name = net_name.replace("{slash}", "/")
         net_start = m.end()
 
         # Find end of (net ...) block by paren tracking

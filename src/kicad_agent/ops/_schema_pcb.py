@@ -662,3 +662,77 @@ class BatchExpandFootprintsOp(BaseModel):
         default=False,
         description="Report counts without modifying the file",
     )
+
+
+class ImportSesOp(BaseModel):
+    """Import a Freerouting SES routing result into a KiCad PCB.
+
+    Parses an existing .ses file produced by Freerouting (or compatible
+    Specctra autorouter), converts wire/via data to KiCad (segment ...)
+    and (via ...) S-expressions, and inserts them into the PCB content.
+
+    Hierarchical net names encoded as ``{slash}`` in the SES file are
+    automatically decoded to ``/`` for PCB net matching.
+
+    Attributes:
+        op_type: Discriminator literal ``"import_ses"``.
+        target_file: Relative path to the target KiCad PCB file.
+        ses_file: Path to the .ses file (relative to the PCB directory).
+        clean_nets_with_shorts: If True, skip nets whose names match
+            generic patterns that may indicate DRC shorts.
+    """
+
+    op_type: Literal["import_ses"] = "import_ses"
+    target_file: TargetFile
+    ses_file: str = Field(
+        min_length=1, max_length=256,
+        description="Path to .ses file relative to PCB directory",
+    )
+    clean_nets_with_shorts: bool = Field(
+        default=False,
+        description="Skip nets with generic Nxxx names that may indicate shorts",
+    )
+
+
+class AutoRouteManhattanOp(BaseModel):
+    """Generate Manhattan-style L-shaped routing segments for a PCB.
+
+    For each net with 2+ pads, pads are sorted by (x, y) and consecutive
+    pads connected via horizontal-then-vertical L-segments. This is a
+    fallback router when Freerouting is unavailable or produces incomplete
+    results. Does NOT account for component obstacles or perform clearance
+    checking. Run DRC after use.
+
+    Attributes:
+        op_type: Discriminator literal ``"auto_route_manhattan"``.
+        target_file: Relative path to the target KiCad PCB file.
+        nets: Optional list of specific net names to route. Empty = all.
+        layer: Default copper layer for signal routing.
+        track_width: Default trace width in mm.
+        net_overrides: Per-net layer/width overrides as dict mapping net
+            name to ``{"layer": "...", "width": ...}``.
+        strip_existing: Remove all existing segments before routing.
+    """
+
+    op_type: Literal["auto_route_manhattan"] = "auto_route_manhattan"
+    target_file: TargetFile
+    nets: list[str] = Field(
+        default_factory=list,
+        description="Net names to route (empty = all)",
+    )
+    layer: str = Field(
+        default="F.Cu",
+        description="Default copper layer for signal routing",
+    )
+    track_width: float = Field(
+        default=0.15, gt=0.01,
+        description="Default trace width in mm",
+    )
+    net_overrides: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Per-net overrides: {net_name: {layer, width}}",
+    )
+    strip_existing: bool = Field(
+        default=True,
+        description="Remove all existing segments before routing",
+    )
