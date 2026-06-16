@@ -19,6 +19,7 @@ Build an AI-safe KiCad structural editing tool across multiple milestones. First
 - **v3.2 Gap Analysis** - Phases 79 (in progress)
 - **v4.0 Hybrid Routing Intelligence** - Phases 80-84 (planned, Gemma 4 12B vision + Qwen2.5-0.5B text, all local)
 - **v4.1 Stage-Safe PCB Flow** - Phases 85-94 (planned, deterministic gates for schematic-to-manufacturing)
+- **v5.0 Vast.ai Training & External Storage** - Phases 96-97 (PLANNED)
 
 ## Phases
 
@@ -1456,16 +1457,21 @@ Plans:
 - [ ] 83-02-PLAN.md — analog-ecosystem migration: board configs, replace custom scripts, docs
 
 ### Phase 84: Gemma 4 12B Fine-Tuning (Conditional)
-**Goal:** If Phase 80 shows <50% accuracy on routing/net_completion tasks, fine-tune Gemma 4 12B (encoder-free vision) on gap-filling-specific data with PCB renders. Skipped if models prove adequate. All local, no cloud.
+**Goal:** If Phase 80 shows <50% accuracy on routing/net_completion tasks, fine-tune Gemma 4 12B (encoder-free vision) on gap-filling-specific data with PCB renders. Skipped if models prove adequate.
 **Depends on:** Phase 80 (benchmark), Phase 82 (training data from fix strategy)
 **Trigger:** Phase 80 benchmark shows <50% accuracy on routing_feasibility or net_completion
 **Requirements:** MODEL-01, MODEL-02, MODEL-03
+**Training Platform Options:**
+  - **Vast.ai (recommended)** — RTX 3090, ~$0.22 for 400-step LoRA run. Use proven `vast_train_gemma4.py` pattern from spectral-primitives. Cross-platform PEFT adapter loads on Apple Silicon via mlx-vlm.
+  - **Local M2** — mlx-vlm LoRA, limited by 32GB VRAM and Metal GPU watchdog for 12B+ models. Only viable for <4B active param models.
+  - **Kaggle** — Free 30hr/week T4 x2, but random GPU allocation (P100 lottery). Fallback if Vast.ai unavailable.
 **Success Criteria** (what must be TRUE):
   1. Gemma 4 12B fine-tuned with LoRA on 5000+ gap-fix examples (with PCB renders as vision input)
   2. Trained model shows >70% accuracy on Phase 80 benchmark
-  3. Inference latency <5s per gap on Apple Silicon (mlx-lm 8-bit)
+  3. Inference latency <5s per gap on Apple Silicon (mlx-vlm 8-bit)
   4. LoRA adapter saved and loadable via InferenceWrapper
   5. Zero regression on existing tests
+  6. Adapter stored on `/Volumes/Storage/models/kicad-agent/adapters/` (not local SSD)
 **Plans**: 2 plans
 
 Plans:
@@ -1644,3 +1650,29 @@ Plans:
 
 Plans:
 - [ ] 94-01-PLAN.md — Docs rewrite, status CLI enhancement, examples, guarantees doc
+
+### v5.0 Vast.ai Training & External Storage (PLANNED)
+
+**Milestone Goal:** Adopt the proven Vast.ai GPU training flow (from spectral-primitives) for kicad-agent's LoRA training, and move all model artifacts to external storage.
+
+- [ ] **Phase 96: Vast.ai Training Pipeline** - Port the spectral-primitives Vast.ai training scripts (`vast_launch.sh` + `vast_train_gemma4.py`) for KiCad vision LoRA training. PCB spectrogram images as vision input, reasoning chains as output.
+- [ ] **Phase 97: External Model Storage** - Move all trained adapters and training datasets to `/Volumes/Storage/models/kicad-agent/`. Adapter metadata registry with versioning.
+
+### Phase 96: Vast.ai Training Pipeline
+**Goal:** Enable cheap (~$0.22/run) GPU LoRA training for KiCad vision models via Vast.ai, replicating the proven spectral-primitives workflow
+**Depends on**: Phase 84 (training data) or Phase 13 (real-world PCB data); spectral-primitives Vast.ai scripts as template
+**Success Criteria** (what must be TRUE):
+  1. `scripts/vast_train_kicad.py` — standalone CUDA training script adapted from spectral-primitives
+  2. `scripts/vast_launch_kicad.sh` — instance launch script with KiCad-specific config
+  3. KiCad PCB render dataset uploaded to Kaggle (public) for Vast.ai download
+  4. LoRA adapter trains on RTX 3090 with <5s/step
+  5. Adapter loads on Apple Silicon via mlx-vlm (cross-platform PEFT)
+
+### Phase 97: External Model Storage
+**Goal**: Store all model artifacts on external storage to preserve local SSD
+**Depends on**: Phase 96 (first Vast.ai adapter to store)
+**Success Criteria** (what must be TRUE):
+  1. Adapters at `/Volumes/Storage/models/kicad-agent/adapters/` with metadata registry
+  2. Training datasets at `/Volumes/Storage/models/kicad-agent/datasets/`
+  3. InferenceWrapper references adapters from external storage
+  4. No trained models stored on local SSD (symlinks or path config)
