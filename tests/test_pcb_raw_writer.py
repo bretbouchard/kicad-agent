@@ -398,3 +398,99 @@ class TestIntegrationWithRealPcb:
 
         result = PcbRawWriter.assign_net_class(content, "GND", "Default")
         assert '(add_net "GND")' in result
+
+
+# ===========================================================================
+# Plan 96-03: modify_zone_field net resolution (D-13, H-05)
+# ===========================================================================
+
+
+_ZONE_WITH_NET_2 = """\
+(kicad_pcb
+  (version 20240101)
+  (generator "eeschema")
+  (general (thickness 1.6))
+  (paper "A4")
+  (net 0 "")
+  (net 1 "GND")
+  (net 2 "VCC")
+  (zone (net 2 "VCC") (layer "F.Cu") (net_name "VCC")
+    (hatch full 0.508)
+    (connect_pads (clearance 0.2))
+    (min_thickness 0.25)
+    (filled_polygon
+      (layer "F.Cu")
+      (pts (xy 10 10) (xy 20 10) (xy 20 20) (xy 10 20))
+    )
+    (uuid "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
+  )
+)
+"""
+
+
+_ZONE_WITHOUT_NET = """\
+(kicad_pcb
+  (version 20240101)
+  (generator "eeschema")
+  (general (thickness 1.6))
+  (paper "A4")
+  (zone (layer "F.Cu") (priority 1)
+    (hatch full 0.508)
+    (connect_pads (clearance 0.2))
+    (min_thickness 0.25)
+    (filled_polygon
+      (layer "F.Cu")
+      (pts (xy 10 10) (xy 20 10) (xy 20 20) (xy 10 20))
+    )
+    (uuid "aaaaaaaa-bbbb-cccc-dddd-ffffffffffff")
+  )
+)
+"""
+
+
+class TestModifyZoneFieldNetResolution:
+    """D-13/H-05: Net substitution reuses existing net ID from content, not hardcoded 1."""
+
+    def test_modify_zone_field_preserves_staticmethod(self):
+        """H-05: modify_zone_field is still @staticmethod with 4 params."""
+        import ast
+
+        # Read from file directly to avoid inspect.getsource indent issues on staticmethod
+        source = Path(__file__).parent.parent.joinpath(
+            "src/kicad_agent/ops/pcb_raw_writer.py"
+        ).read_text()
+        tree = ast.parse(source)
+        found = False
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef) and node.name == "modify_zone_field":
+                param_names = [a.arg for a in node.args.args]
+                assert "self" not in param_names, "Should not have self"
+                assert len(param_names) == 4, f"Expected 4 params, got {len(param_names)}: {param_names}"
+                assert param_names == ["content", "zone_uuid", "field", "value"]
+                # Verify @staticmethod decorator
+                is_static = any(
+                    isinstance(d, ast.Name) and d.id == "staticmethod"
+                    for d in node.decorator_list
+                )
+                assert is_static, "modify_zone_field should have @staticmethod decorator"
+                found = True
+                break
+        assert found, "modify_zone_field function not found"
+
+    def test_modify_zone_field_reuses_existing_net_id(self):
+        """D-13: Net substitution reuses existing net ID from content, not hardcoded 1."""
+        # Zone has (net 2 "VCC") -- after modifying net_name, should still have net 2
+        result = PcbRawWriter.modify_zone_field(
+            _ZONE_WITH_NET_2, "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", "net_name", "NEW_VCC"
+        )
+        assert '(net 2 "NEW_VCC")' in result
+        # Should NOT have hardcoded net 1
+        assert '(net 1 "NEW_VCC")' not in result
+
+    def test_modify_zone_field_no_net_in_block_returns_unchanged(self):
+        """D-13: When no existing net pattern found in zone, re.sub has no effect (returns original)."""
+        result = PcbRawWriter.modify_zone_field(
+            _ZONE_WITHOUT_NET, "aaaaaaaa-bbbb-cccc-dddd-ffffffffffff", "net_name", "NEW_NET"
+        )
+        # No (net ...) line to substitute -- content stays as-is
+        assert result == _ZONE_WITHOUT_NET

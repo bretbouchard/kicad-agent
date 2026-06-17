@@ -99,6 +99,9 @@ SELF_SERIALIZING_OPS = frozenset({"erc_auto_fix_hierarchical", "convert_kicad6_t
 # Pre-analysis gate: shared instance (stateless, safe to reuse)
 _PRE_ANALYSIS_GATE = None
 
+# M-03: Single source of truth for valid KiCad extensions (imported from pre_analysis.py)
+from kicad_agent.ops.pre_analysis import _VALID_KICAD_EXTENSIONS
+
 
 def get_pre_analysis_gate():
     """Lazy-load the pre-analysis gate to avoid import overhead."""
@@ -634,6 +637,12 @@ def execute_cross_file(
             )
         if not fp.exists():
             raise FileNotFoundError(f"Cross-file target not found: {fp}")
+        # D-15: Validate KiCad file extension
+        if fp.suffix not in _VALID_KICAD_EXTENSIONS:
+            raise ValueError(
+                f"Cross-file operation target has invalid KiCad file extension: {fp.suffix}. "
+                f"Valid extensions: {sorted(_VALID_KICAD_EXTENSIONS)}"
+            )
 
     # Clear IR registry to avoid stale registrations
     _clear_registry()

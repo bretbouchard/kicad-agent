@@ -30,6 +30,11 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
+# M-03: Single source of truth for valid KiCad file extensions
+_VALID_KICAD_EXTENSIONS = frozenset({
+    ".kicad_sch", ".kicad_pcb", ".kicad_sym", ".kicad_mod", ".kicad_pro", ".kicad_dru",
+})
+
 # Operations that benefit from pre-analysis (schematic mutations only)
 _MUTATION_OP_TYPES = frozenset({
     "add_component",

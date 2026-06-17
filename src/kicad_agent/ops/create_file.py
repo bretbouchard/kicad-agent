@@ -38,6 +38,31 @@ from kiutils.items.common import ColorRGBA
 from kicad_agent.serializer import normalize_kicad_output
 from kicad_agent.ir.pcb_ir import _escape_sexpr_value
 
+# D-16: Valid KiCad S-expression headers for content validation
+_VALID_KICAD_HEADERS = frozenset({
+    "(kicad_sch",
+    "(kicad_pcb",
+    "(kicad_sym",
+    "(footprint",
+    "(module",
+    "(general",
+})
+
+
+def _validate_kicad_content(content: str, file_path: Path) -> None:
+    """Validate content starts with a valid KiCad S-expression header (D-16).
+
+    Raises ValueError if content does not start with a recognized KiCad header.
+    """
+    stripped = content.lstrip()
+    first_line = stripped.split("\n")[0] if stripped else ""
+    if not any(first_line.startswith(header) for header in _VALID_KICAD_HEADERS):
+        raise ValueError(
+            f"Generated content for {file_path.name} does not start with a valid "
+            f"KiCad S-expression header. First line: {first_line[:80]!r}. "
+            f"Expected one of: {sorted(_VALID_KICAD_HEADERS)}"
+        )
+
 
 def _atomic_write(file_path: Path, content: str) -> None:
     """Write content atomically via temp file + rename to prevent TOCTOU races."""
@@ -136,6 +161,7 @@ def create_schematic(op: Any, file_path: Path) -> dict[str, Any]:
     content = content.replace('(generator "kiutils")', '(generator eeschema)')
     content = re.sub(r'^\(generator_version\s+"[^"]*"\)\n', '', content, flags=re.MULTILINE)
     normalized = normalize_kicad_output(content)
+    _validate_kicad_content(normalized, file_path)
     _atomic_write(file_path, normalized)
 
     return {
@@ -452,6 +478,7 @@ def create_footprint(op: Any, file_path: Path) -> dict[str, Any]:
 
     content = "\n".join(lines) + "\n"
     normalized = normalize_kicad_output(content)
+    _validate_kicad_content(normalized, file_path)
     _atomic_write(file_path, normalized)
 
     return {
