@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 from kiutils.items.common import Position
-from kiutils.schematic import Schematic
+from kiutils.schematic import GlobalLabel, Schematic
 
 from kicad_agent.ir.schematic_ir import SchematicIR
 from kicad_agent.ops.pre_analysis import (
@@ -483,3 +483,303 @@ class TestPreAnalysisGateWithFixtures:
         result = gate.analyze(WireOp(), ir, path)
         power_nets = result.enriched_context.get("power_nets", [])
         assert isinstance(power_nets, list)
+
+
+# ---------------------------------------------------------------------------
+# Duplicate global label detection (TDD RED)
+# ---------------------------------------------------------------------------
+
+
+def _make_ir_with_global_labels(labels: list[dict]) -> SchematicIR:
+    """Build a minimal schematic with the given global labels.
+
+    Args:
+        labels: list of dicts with keys name, x, y.
+
+    Returns:
+        SchematicIR parsed from a temp file.
+    """
+    sch = Schematic()
+    sch.version = "20231120"
+    sch.generator = "kicad-agent-test"
+    sch.uuid = "00000000-0000-0000-0000-000000000001"
+    sch.sheet = sch  # self-reference
+
+    for label_def in labels:
+        gl = GlobalLabel()
+        gl.text = label_def["name"]
+        gl.position = Position(
+            X=label_def["x"],
+            Y=label_def["y"],
+            angle=0.0,
+        )
+        gl.shape = "bidirectional"
+        gl.uuid = "00000000-0000-0000-0000-" + f"{len(sch.globalLabels):08d}"
+        sch.globalLabels.append(gl)
+
+    with tempfile.NamedTemporaryFile(suffix=".kicad_sch", delete=False) as f:
+        sch.to_file(f.name)
+        fpath = Path(f.name)
+
+    try:
+        result = parse_schematic(fpath)
+        return SchematicIR(_parse_result=result)
+    except Exception:
+        fpath.unlink(missing_ok=True)
+        raise
+
+
+def _cleanup_ir(ir: SchematicIR) -> None:
+    """Remove the temp file backing an IR created by _make_ir_with_global_labels."""
+    try:
+        p = Path(ir.schematic.filename)
+        if p.exists() and "tmp" in str(p).lower():
+            p.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+class TestDuplicateGlobalLabelDetection:
+    """Tests for _analyze_label_operation duplicate global label detection."""
+
+    def test_add_label_global_duplicate_blocked(self):
+        """add_label with label_type='global' and existing name -> blocked."""
+        ir = _make_ir_with_global_labels([{"name": "SDA", "x": 10.0, "y": 20.0}])
+        try:
+            gate = PreAnalysisGate()
+
+            class AddLabelOp:
+                op_type = "add_label"
+                target_file = "test.kicad_sch"
+                name = "SDA"
+                label_type = "global"
+                position = PositionSpec(x=50.0, y=60.0)
+                shape = "bidirectional"
+
+            result = gate.analyze(AddLabelOp(), ir, Path("test.kicad_sch"))
+            assert result.blocked is True
+            assert any(
+                b.category == "duplicate_global_label" for b in result.blockers
+            ), f"Expected duplicate_global_label blocker, got: {[b.category for b in result.blockers]}"
+        finally:
+            _cleanup_ir(ir)
+
+    def test_add_label_global_no_duplicate(self):
+        """add_label with label_type='global' and new name -> not blocked."""
+        ir = _make_ir_with_global_labels([{"name": "SDA", "x": 10.0, "y": 20.0}])
+        try:
+            gate = PreAnalysisGate()
+
+            class AddLabelOp:
+                op_type = "add_label"
+                target_file = "test.kicad_sch"
+                name = "SCL"
+                label_type = "global"
+                position = PositionSpec(x=50.0, y=60.0)
+                shape = "bidirectional"
+
+            result = gate.analyze(AddLabelOp(), ir, Path("test.kicad_sch"))
+            assert result.blocked is False
+        finally:
+            _cleanup_ir(ir)
+
+    def test_add_label_local_no_check(self):
+        """add_label with label_type='local' -> no duplicate check."""
+        ir = _make_ir_with_global_labels([{"name": "SDA", "x": 10.0, "y": 20.0}])
+        try:
+            gate = PreAnalysisGate()
+
+            class AddLabelOp:
+                op_type = "add_label"
+                target_file = "test.kicad_sch"
+                name = "SDA"
+                label_type = "local"
+                position = PositionSpec(x=50.0, y=60.0)
+                shape = "input"
+
+            result = gate.analyze(AddLabelOp(), ir, Path("test.kicad_sch"))
+            assert result.blocked is False
+        finally:
+            _cleanup_ir(ir)
+
+    def test_add_label_hierarchical_no_check(self):
+        """add_label with label_type='hierarchical' -> no duplicate check."""
+        ir = _make_ir_with_global_labels([{"name": "SDA", "x": 10.0, "y": 20.0}])
+        try:
+            gate = PreAnalysisGate()
+
+            class AddLabelOp:
+                op_type = "add_label"
+                target_file = "test.kicad_sch"
+                name = "SDA"
+                label_type = "hierarchical"
+                position = PositionSpec(x=50.0, y=60.0)
+                shape = "output"
+
+            result = gate.analyze(AddLabelOp(), ir, Path("test.kicad_sch"))
+            assert result.blocked is False
+        finally:
+            _cleanup_ir(ir)
+
+    def test_add_label_global_duplicate_different_position(self):
+        """Global label with same name at different position -> still blocked."""
+        ir = _make_ir_with_global_labels([{"name": "SDA", "x": 10.0, "y": 20.0}])
+        try:
+            gate = PreAnalysisGate()
+
+            class AddLabelOp:
+                op_type = "add_label"
+                target_file = "test.kicad_sch"
+                name = "SDA"
+                label_type = "global"
+                position = PositionSpec(x=100.0, y=200.0)
+                shape = "bidirectional"
+
+            result = gate.analyze(AddLabelOp(), ir, Path("test.kicad_sch"))
+            assert result.blocked is True
+            assert any(
+                b.category == "duplicate_global_label" for b in result.blockers
+            )
+        finally:
+            _cleanup_ir(ir)
+
+    def test_batch_connect_global_label_duplicate(self):
+        """batch_connect with global_labels containing existing name -> blocked."""
+        ir = _make_ir_with_global_labels([{"name": "SDA", "x": 10.0, "y": 20.0}])
+        try:
+            gate = PreAnalysisGate()
+
+            class MockGlobalLabel:
+                name = "SDA"
+                position = PositionSpec(x=50.0, y=60.0)
+                shape = "bidirectional"
+
+            class BatchConnectOp:
+                op_type = "batch_connect"
+                target_file = "test.kicad_sch"
+                nets = []
+                global_labels = [MockGlobalLabel()]
+
+            result = gate.analyze(BatchConnectOp(), ir, Path("test.kicad_sch"))
+            assert result.blocked is True
+            assert any(
+                b.category == "duplicate_global_label" for b in result.blockers
+            )
+        finally:
+            _cleanup_ir(ir)
+
+    def test_batch_connect_global_labels_new_names(self):
+        """batch_connect with only new global label names -> not blocked."""
+        ir = _make_ir_with_global_labels([{"name": "SDA", "x": 10.0, "y": 20.0}])
+        try:
+            gate = PreAnalysisGate()
+
+            class MockGlobalLabel:
+                name = "SCL"
+                position = PositionSpec(x=50.0, y=60.0)
+                shape = "bidirectional"
+
+            class BatchConnectOp:
+                op_type = "batch_connect"
+                target_file = "test.kicad_sch"
+                nets = []
+                global_labels = [MockGlobalLabel()]
+
+            result = gate.analyze(BatchConnectOp(), ir, Path("test.kicad_sch"))
+            assert result.blocked is False
+        finally:
+            _cleanup_ir(ir)
+
+    def test_regenerate_wiring_no_existing_labels(self):
+        """regenerate_wiring with no existing global labels -> not blocked."""
+        ir = _make_ir_with_global_labels([])
+        try:
+            gate = PreAnalysisGate()
+
+            class MockGlobalLabel:
+                name = "SDA"
+                position = PositionSpec(x=50.0, y=60.0)
+                shape = "bidirectional"
+
+            class RegenerateWiringOp:
+                op_type = "regenerate_wiring"
+                target_file = "test.kicad_sch"
+                nets = []
+                global_labels = [MockGlobalLabel()]
+                no_connect_positions = []
+
+            result = gate.analyze(RegenerateWiringOp(), ir, Path("test.kicad_sch"))
+            assert result.blocked is False
+        finally:
+            _cleanup_ir(ir)
+
+    def test_place_net_labels_no_global_labels(self):
+        """place_net_labels with no global_labels field -> not blocked."""
+        ir = _make_ir_with_global_labels([{"name": "SDA", "x": 10.0, "y": 20.0}])
+        try:
+            gate = PreAnalysisGate()
+
+            class PlaceNetLabelsOp:
+                op_type = "place_net_labels"
+                target_file = "test.kicad_sch"
+                pin_map = "auto"
+                references = None
+                dry_run = False
+
+            result = gate.analyze(PlaceNetLabelsOp(), ir, Path("test.kicad_sch"))
+            assert result.blocked is False
+        finally:
+            _cleanup_ir(ir)
+
+    def test_add_label_global_empty_schematic(self):
+        """add_label with global on empty schematic -> not blocked."""
+        ir = _make_ir_with_global_labels([])
+        try:
+            gate = PreAnalysisGate()
+
+            class AddLabelOp:
+                op_type = "add_label"
+                target_file = "test.kicad_sch"
+                name = "VCC"
+                label_type = "global"
+                position = PositionSpec(x=50.0, y=60.0)
+                shape = "output"
+
+            result = gate.analyze(AddLabelOp(), ir, Path("test.kicad_sch"))
+            assert result.blocked is False
+        finally:
+            _cleanup_ir(ir)
+
+    def test_batch_connect_intra_operation_duplicate(self):
+        """batch_connect with duplicate name in its own global_labels list -> blocked."""
+        ir = _make_ir_with_global_labels([{"name": "SDA", "x": 10.0, "y": 20.0}])
+        try:
+            gate = PreAnalysisGate()
+
+            class MockGlobalLabelA:
+                name = "SCL"
+                position = PositionSpec(x=50.0, y=60.0)
+                shape = "bidirectional"
+
+            class MockGlobalLabelB:
+                name = "SCL"
+                position = PositionSpec(x=80.0, y=90.0)
+                shape = "bidirectional"
+
+            class BatchConnectOp:
+                op_type = "batch_connect"
+                target_file = "test.kicad_sch"
+                nets = []
+                global_labels = [MockGlobalLabelA(), MockGlobalLabelB()]
+
+            result = gate.analyze(BatchConnectOp(), ir, Path("test.kicad_sch"))
+            assert result.blocked is True
+            assert any(
+                b.category == "duplicate_global_label" for b in result.blockers
+            )
+            dup_blocker = next(
+                b for b in result.blockers if b.category == "duplicate_global_label"
+            )
+            assert "intra-operation" in dup_blocker.details or "duplicate" in dup_blocker.message.lower()
+        finally:
+            _cleanup_ir(ir)
