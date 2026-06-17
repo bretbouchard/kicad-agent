@@ -20,7 +20,7 @@ import logging
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
-from kicad_agent.ir.base import _clear_registry
+from kicad_agent.ir.base import _clear_registry, _deregister_ir
 from kicad_agent.ir.pcb_ir import PcbIR
 from kicad_agent.ir.schematic_ir import SchematicIR
 from kicad_agent.ir.transaction import Transaction
@@ -41,6 +41,20 @@ if TYPE_CHECKING:
     from kicad_agent.ops.executor import OperationExecutor
 
 logger = logging.getLogger(__name__)
+
+
+class BatchOpFailedError(Exception):
+    """Raised when a batch operation fails, triggering rollback (D-08).
+
+    L-02 fix: Chains the original exception via __cause__ for better tracebacks.
+    """
+
+    def __init__(self, op_type: str, target_file: str, reason: str):
+        self.op_type = op_type
+        self.target_file = target_file
+        super().__init__(
+            f"Batch op '{op_type}' failed on '{target_file}': {reason}"
+        )
 
 
 def _get_pre_analysis_gate():
@@ -243,9 +257,11 @@ def execute_batch(executor: OperationExecutor, ops: list[Operation]) -> dict[str
                     f"{file_path.suffix or file_path.name}"
                 )
 
-        # Pre-analysis gate: check all ops against this file's IR
-        if file_path.suffix == ".kicad_sch":
-            gate = _get_pre_analysis_gate()
+        # H-04 fix: Run pre-analysis gate for ALL file types, not just .kicad_sch
+        # The universal gate (Plan 96-01) now handles .kicad_pcb and cross-file
+        # via file-type dispatch internally.
+        gate = _get_pre_analysis_gate()
+        if file_path in ir_map:
             ir = ir_map[file_path]
             for op in ops_for_file:
                 root = op.root
@@ -280,91 +296,174 @@ def execute_batch(executor: OperationExecutor, ops: list[Operation]) -> dict[str
                 pre_contents[file_path] = file_path.read_text(encoding="utf-8")
 
     # Phase 3 -- Apply mutations and serialize (once per file)
-    # O-BUG-009: Individual op failures captured as structured errors,
-    # remaining ops continue. Entire batch succeeds if any ops succeed.
+    # D-08: Stop-and-rollback on first op failure (no more partial mutation).
+    # D-03: Cumulative IR state -- re-parse after each mutation for gate checks.
+    from kicad_agent.ops.execution import try_native_parse as _try_native_parse
+
     all_results: list[dict[str, Any]] = []
-    any_success = False
 
-    for file_path in file_order:
-        ops_for_file = file_ops[file_path]
-        ir = ir_map[file_path]
-        parse_result = parse_result_map[file_path]
+    def _dispatch_op(root, ir, file_path):
+        """Dispatch a single op based on file type."""
+        if file_path.suffix == ".kicad_pcb":
+            return dispatch_pcb(root.op_type, root, ir, file_path)
+        elif is_project_file(file_path):
+            return dispatch_project(root.op_type, root, file_path)
+        else:
+            handler = _SCHEMATIC_HANDLERS.get(root.op_type)
+            if handler is not None:
+                return handler(root, ir, file_path)
+            else:
+                sq_handler = _SCHEMATIC_QUERY_HANDLERS.get(root.op_type)
+                if sq_handler is not None:
+                    return sq_handler(root, ir, file_path)
+                else:
+                    raise ValueError(f"Unknown op_type: {root.op_type!r}")
 
-        with Transaction(file_path) as txn:
-            for op in ops_for_file:
-                root = op.root
-                try:
-                    if file_path.suffix == ".kicad_pcb":
-                        details = dispatch_pcb(root.op_type, root, ir, file_path)
-                    elif is_project_file(file_path):
-                        details = dispatch_project(
-                            root.op_type, root, file_path
+    def _reparse_ir(file_path):
+        """Re-parse file after mutation using dual path (H-03 fix).
+
+        Mirrors execute_pcb() logic: try native first, fall back to kiutils.
+        """
+        if file_path.suffix == ".kicad_pcb":
+            native_board = _try_native_parse(file_path)
+            if native_board is not None:
+                return PcbIR.from_native(native_board)
+            else:
+                fresh_parse = parse_pcb(file_path)
+                fresh_uuid = extract_uuids(fresh_parse.raw_content, "pcb")
+                return PcbIR(_parse_result=fresh_parse, _uuid_map=fresh_uuid)
+        elif file_path.suffix == ".kicad_sch":
+            fresh_parse = parse_schematic(file_path)
+            return SchematicIR(_parse_result=fresh_parse)
+        return None
+
+    def _run_phase3():
+        """Execute Phase 3 mutations inside the current transaction context."""
+        nonlocal all_results
+
+        for file_path in file_order:
+            ops_for_file = file_ops[file_path]
+            ir = ir_map[file_path]
+            parse_result = parse_result_map[file_path]
+
+            with Transaction(file_path) as txn:
+                for op in ops_for_file:
+                    root = op.root
+                    try:
+                        # D-03: Pre-flight check against current (possibly
+                        # mutated) IR before each op
+                        gate = _get_pre_analysis_gate()
+                        pre_result = gate.analyze(root, ir, file_path)
+                        if pre_result.blocked:
+                            raise BatchOpFailedError(
+                                root.op_type,
+                                root.target_file,
+                                f"Pre-flight blocked: {'; '.join(f.message for f in pre_result.blockers)}",
+                            )
+
+                        details = _dispatch_op(root, ir, file_path)
+
+                        all_results.append({
+                            "success": True,
+                            "operation": root.op_type,
+                            "target_file": root.target_file,
+                            "details": details,
+                        })
+
+                        # D-03 + H-03: Re-parse after mutation for
+                        # cumulative state. Deregister old IR first
+                        # to prevent spurious registry guard errors
+                        # when Python reuses GC'd ParseResult ids.
+                        _deregister_ir(ir)
+                        fresh_ir = _reparse_ir(file_path)
+                        if fresh_ir is not None:
+                            ir = fresh_ir
+                            ir_map[file_path] = fresh_ir
+
+                    except Exception as e:
+                        logger.error(
+                            "Batch op failed: %s on %s: %s "
+                            "-- stopping batch and rolling back (D-08)",
+                            root.op_type, root.target_file, e,
                         )
-                    else:
-                        handler = _SCHEMATIC_HANDLERS.get(root.op_type)
-                        if handler is not None:
-                            details = handler(root, ir, file_path)
-                        else:
-                            sq_handler = _SCHEMATIC_QUERY_HANDLERS.get(root.op_type)
-                            if sq_handler is not None:
-                                details = sq_handler(root, ir, file_path)
-                            else:
-                                raise ValueError(f"Unknown op_type: {root.op_type!r}")
+                        # L-02 fix: chain original exception
+                        raise BatchOpFailedError(
+                            root.op_type, root.target_file, str(e)
+                        ) from e
 
-                    all_results.append({
-                        "success": True,
-                        "operation": root.op_type,
-                        "target_file": root.target_file,
-                        "details": details,
-                    })
-                    any_success = True
-                except Exception as e:
-                    logger.error(
-                        "Batch op failed: %s on %s: %s",
-                        root.op_type, root.target_file, e,
+                # Serialize once per file
+                if file_path.suffix == ".kicad_pcb":
+                    uuid_map = uuid_map_store.get(file_path)
+                    if not ir.raw_written:
+                        serialize_pcb(
+                            parse_result, file_path, uuid_map=uuid_map
+                        )
+                elif not is_project_file(file_path):
+                    serialize_schematic(parse_result, file_path)
+                    content = file_path.read_text(encoding="utf-8")
+                    normalized = normalize_kicad_output(content)
+                    file_path.write_text(normalized, encoding="utf-8")
+
+                txn.commit()
+
+                # Push undo entry for this file (M-05: synthetic batch op_type)
+                if undo_stack is not None and file_path in pre_contents:
+                    post_content = file_path.read_text(encoding="utf-8")
+                    post_mtime = file_path.stat().st_mtime_ns
+                    op_type_name = f"batch[{len(ops_for_file)}]"
+                    undo_stack.push(
+                        file_path,
+                        pre_contents[file_path],
+                        post_content,
+                        op_type_name,
+                        post_mtime,
                     )
-                    all_results.append({
-                        "success": False,
-                        "operation": root.op_type,
-                        "target_file": root.target_file,
-                        "error": str(e),
-                        "error_type": type(e).__name__,
-                    })
 
-            # Serialize once per file
-            if file_path.suffix == ".kicad_pcb":
-                uuid_map = uuid_map_store.get(file_path)
-                if not ir.raw_written:
-                    serialize_pcb(parse_result, file_path, uuid_map=uuid_map)
-            elif not is_project_file(file_path):
-                serialize_schematic(parse_result, file_path)
-                content = file_path.read_text(encoding="utf-8")
-                normalized = normalize_kicad_output(content)
-                file_path.write_text(normalized, encoding="utf-8")
+            # Invalidate old cache entry and store fresh one after write
+            if cache:
+                cache.invalidate(file_path)
+                if file_path.suffix == ".kicad_pcb":
+                    cache.put(
+                        file_path,
+                        CacheEntry(
+                            parse_result=parse_result,
+                            uuid_map=uuid_map_store.get(file_path),
+                        ),
+                    )
+                elif not is_project_file(file_path):
+                    cache.put(
+                        file_path, CacheEntry(parse_result=parse_result)
+                    )
 
-            txn.commit()
+    # D-08: Run Phase 3; any failure triggers rollback via BatchOpFailedError
+    # propagating to Transaction.__exit__. For multi-file batches, earlier
+    # committed files need manual rollback from pre_contents snapshots.
+    try:
+        _run_phase3()
+    except BatchOpFailedError:
+        # Roll back any files that were already committed in this batch
+        # before the failing op (multi-file batches).
+        if len(file_order) > 1 and undo_stack is not None:
+            for fp in file_order:
+                if fp in pre_contents and fp.exists():
+                    original = pre_contents[fp]
+                    try:
+                        fp.write_text(original, encoding="utf-8")
+                    except OSError as e:
+                        logger.error(
+                            "Failed to rollback %s after batch failure: %s",
+                            fp, e,
+                        )
+        return {
+            "success": False,
+            "results": all_results,
+            "error": (
+                "Batch stopped and rolled back: operation failure (D-08)"
+            ),
+        }
 
-            # Push undo entry for this file (M-05: synthetic batch op_type)
-            if undo_stack is not None and file_path in pre_contents:
-                post_content = file_path.read_text(encoding="utf-8")
-                post_mtime = file_path.stat().st_mtime_ns
-                op_type = f"batch[{len(ops_for_file)}]"
-                undo_stack.push(file_path, pre_contents[file_path], post_content, op_type, post_mtime)
-
-        # Invalidate old cache entry and store fresh one after write
-        if cache:
-            cache.invalidate(file_path)
-            if file_path.suffix == ".kicad_pcb":
-                cache.put(
-                    file_path,
-                    CacheEntry(
-                        parse_result=parse_result,
-                        uuid_map=uuid_map_store.get(file_path),
-                    ),
-                )
-            elif not is_project_file(file_path):
-                cache.put(
-                    file_path, CacheEntry(parse_result=parse_result)
-                )
-
-    return {"success": any_success, "results": all_results, "partial": not any_success or any([not r["success"] for r in all_results])}
+    return {
+        "success": bool(all_results) and all(r["success"] for r in all_results),
+        "results": all_results,
+        "partial": any(not r["success"] for r in all_results) if all_results else False,
+    }

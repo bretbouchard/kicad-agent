@@ -74,10 +74,11 @@ class TestBatchExecutor:
         assert result["results"] == []
 
     def test_three_ops_same_file_parses_once(self, tmp_path: Path) -> None:
-        """Three ops on same file triggers one parse."""
+        """Three ops on same file triggers one parse in Phase 1 plus
+        cumulative re-parses in Phase 3 (D-03)."""
         _copy_arduino_fixture(tmp_path)
 
-        # Use validate_refs (read-only) to confirm single-parse behavior
+        # Use validate_refs (read-only) to confirm parse behavior
         ops = [
             _make_validate_refs_op("test.kicad_sch"),
             _make_validate_refs_op("test.kicad_sch"),
@@ -95,7 +96,8 @@ class TestBatchExecutor:
             result = executor.execute_batch(ops)
 
         assert result["success"] is True
-        assert mock_parse.call_count == 1
+        # D-03: 1 Phase 1 parse + 3 cumulative re-parses = 4
+        assert mock_parse.call_count == 4
 
     def test_writes_file_once(self, tmp_path: Path) -> None:
         """Three modify_property ops on same file triggers one serialization."""
@@ -242,8 +244,8 @@ class TestBatchExecutor:
             result = executor.execute_batch(ops)
 
         assert result["success"] is True
-        # Should parse once (cache miss on first access, cache was empty)
-        assert mock_parse.call_count == 1
+        # D-03: 1 Phase 1 parse (cache miss) + 2 cumulative re-parses = 3
+        assert mock_parse.call_count == 3
 
     def test_rolls_back_all_mutations_if_serialization_fails(
         self, tmp_path: Path
@@ -458,11 +460,14 @@ class TestBatchDependencyValidation:
 
 
 class TestOBUG009PartialFailure:
-    """O-BUG-009: Individual op failures don't abort entire batch."""
+    """D-08: Batch stops and rolls back on first op failure."""
 
     def test_partial_failure_returns_structured_errors(self, tmp_path: Path) -> None:
-        """Batch with middle op failing returns partial results with error details."""
+        """D-08: Batch with middle op failing stops and rolls back."""
         _copy_arduino_fixture(tmp_path)
+
+        # Read original to verify rollback
+        original = (tmp_path / "test.kicad_sch").read_text(encoding="utf-8")
 
         ops = [
             _make_modify_property_op("test.kicad_sch", "J1", "Value", "val1"),
@@ -489,23 +494,20 @@ class TestOBUG009PartialFailure:
         finally:
             _handlers_mod._SCHEMATIC_HANDLERS["modify_property"] = orig_handler
 
-        # Batch should succeed (at least one op succeeded)
-        assert result["success"] is True
-        assert result["partial"] is True
-        assert len(result["results"]) == 3
+        # D-08: Batch should fail (stop-and-rollback on first failure)
+        assert result["success"] is False
+        assert "rolled back" in result["error"].lower()
 
-        # First and third should succeed
+        # Only the first op result should be present (succeeded before failure)
+        assert len(result["results"]) == 1
         assert result["results"][0]["success"] is True
-        assert result["results"][2]["success"] is True
 
-        # Middle should fail with structured error
-        assert result["results"][1]["success"] is False
-        assert "error" in result["results"][1]
-        assert "error_type" in result["results"][1]
-        assert result["results"][1]["error_type"] == "RuntimeError"
+        # File should be rolled back to original
+        current = (tmp_path / "test.kicad_sch").read_text(encoding="utf-8")
+        assert current == original
 
     def test_all_ops_fail_returns_not_success(self, tmp_path: Path) -> None:
-        """Batch where all ops fail returns success=False."""
+        """D-08: Batch where all ops fail returns success=False with rollback."""
         _copy_arduino_fixture(tmp_path)
 
         ops = [
@@ -528,5 +530,406 @@ class TestOBUG009PartialFailure:
             _handlers_mod._SCHEMATIC_HANDLERS["modify_property"] = orig_handler
 
         assert result["success"] is False
-        assert result["partial"] is True
-        assert all(not r["success"] for r in result["results"])
+        assert "rolled back" in result["error"].lower()
+
+
+# ---------------------------------------------------------------------------
+# TestBatchRollback (D-08, L-02)
+# ---------------------------------------------------------------------------
+
+
+class TestBatchRollback:
+    """D-08: Stop-and-rollback on first op failure with exception chaining."""
+
+    def test_single_op_failure_triggers_rollback(self, tmp_path: Path) -> None:
+        """D-08: Failed op in batch triggers Transaction rollback."""
+        _copy_arduino_fixture(tmp_path)
+        original = (tmp_path / "test.kicad_sch").read_text(encoding="utf-8")
+
+        ops = [
+            _make_modify_property_op("test.kicad_sch", "J1", "Value", "bad"),
+        ]
+
+        executor = OperationExecutor(base_dir=tmp_path)
+
+        from kicad_agent.ops import handlers as _handlers_mod
+        orig_handler = _handlers_mod._SCHEMATIC_HANDLERS.get("modify_property")
+
+        def _failing_handler(root, ir, file_path):
+            raise RuntimeError("Intentional failure")
+
+        _handlers_mod._SCHEMATIC_HANDLERS["modify_property"] = _failing_handler
+        try:
+            result = executor.execute_batch(ops)
+        finally:
+            _handlers_mod._SCHEMATIC_HANDLERS["modify_property"] = orig_handler
+
+        assert result["success"] is False
+        assert "rolled back" in result["error"].lower()
+
+        # File must be restored to original
+        current = (tmp_path / "test.kicad_sch").read_text(encoding="utf-8")
+        assert current == original
+
+    def test_multi_file_batch_failure_rolls_back_all(self, tmp_path: Path) -> None:
+        """D-08: Multi-file batch failure rolls back all files."""
+        fixture = Path(__file__).parent / "fixtures" / "Arduino_Mega" / "Arduino_Mega.kicad_sch"
+        file_a = tmp_path / "a.kicad_sch"
+        file_b = tmp_path / "b.kicad_sch"
+        shutil.copy2(fixture, file_a)
+        shutil.copy2(fixture, file_b)
+        original_a = file_a.read_text(encoding="utf-8")
+        original_b = file_b.read_text(encoding="utf-8")
+
+        ops = [
+            _make_modify_property_op("a.kicad_sch", "J1", "Value", "changed_a"),
+            _make_validate_refs_op("a.kicad_sch"),
+            _make_modify_property_op("b.kicad_sch", "J1", "Value", "changed_b"),
+            _make_validate_refs_op("b.kicad_sch"),
+        ]
+
+        executor = OperationExecutor(base_dir=tmp_path)
+
+        from kicad_agent.ops import handlers as _handlers_mod
+        orig_handler = _handlers_mod._SCHEMATIC_HANDLERS.get("modify_property")
+        call_count = [0]
+
+        def _failing_on_b(root, ir, file_path):
+            call_count[0] += 1
+            if "b" in str(file_path):
+                raise RuntimeError("Fail on file b")
+            return orig_handler(root, ir, file_path)
+
+        _handlers_mod._SCHEMATIC_HANDLERS["modify_property"] = _failing_on_b
+        try:
+            result = executor.execute_batch(ops)
+        finally:
+            _handlers_mod._SCHEMATIC_HANDLERS["modify_property"] = orig_handler
+
+        assert result["success"] is False
+        assert "rolled back" in result["error"].lower()
+
+        # Both files should be restored to originals
+        assert file_a.read_text(encoding="utf-8") == original_a
+        assert file_b.read_text(encoding="utf-8") == original_b
+
+    def test_batch_op_failure_raises_batch_error(self, tmp_path: Path) -> None:
+        """D-08: BatchOpFailedError triggers rollback and returns error."""
+        _copy_arduino_fixture(tmp_path)
+
+        ops = [_make_modify_property_op("test.kicad_sch", "J1", "Value", "x")]
+
+        executor = OperationExecutor(base_dir=tmp_path)
+
+        from kicad_agent.ops import handlers as _handlers_mod
+        orig_handler = _handlers_mod._SCHEMATIC_HANDLERS.get("modify_property")
+
+        def _fail(root, ir, file_path):
+            raise RuntimeError("boom")
+
+        _handlers_mod._SCHEMATIC_HANDLERS["modify_property"] = _fail
+        try:
+            result = executor.execute_batch(ops)
+        finally:
+            _handlers_mod._SCHEMATIC_HANDLERS["modify_property"] = orig_handler
+
+        # BatchOpFailedError is caught by the outer handler, returning error
+        assert result["success"] is False
+        assert "rolled back" in result["error"].lower()
+
+    def test_batch_op_failure_chains_original_exception(self, tmp_path: Path) -> None:
+        """L-02: BatchOpFailedError is created with from e chaining."""
+        _copy_arduino_fixture(tmp_path)
+
+        ops = [_make_modify_property_op("test.kicad_sch", "J1", "Value", "x")]
+
+        executor = OperationExecutor(base_dir=tmp_path)
+
+        from kicad_agent.ops import handlers as _handlers_mod
+        from kicad_agent.ops.batch_executor import BatchOpFailedError
+        orig_handler = _handlers_mod._SCHEMATIC_HANDLERS.get("modify_property")
+
+        def _fail(root, ir, file_path):
+            raise ValueError("root cause error")
+
+        _handlers_mod._SCHEMATIC_HANDLERS["modify_property"] = _fail
+        try:
+            # Verify BatchOpFailedError chains correctly
+            try:
+                executor.execute_batch(ops)
+            except BatchOpFailedError as e:
+                assert e.__cause__ is not None
+                assert isinstance(e.__cause__, ValueError)
+                assert "root cause error" in str(e.__cause__)
+        finally:
+            _handlers_mod._SCHEMATIC_HANDLERS["modify_property"] = orig_handler
+
+
+# ---------------------------------------------------------------------------
+# TestCumulativeIR (D-03, H-03)
+# ---------------------------------------------------------------------------
+
+
+class TestCumulativeIR:
+    """D-03 + H-03: Cumulative IR re-parse with dual parse path."""
+
+    def test_batch_reparse_after_schematic_mutation(self, tmp_path: Path) -> None:
+        """D-03: Schematic IR re-parsed after mutation."""
+        _copy_arduino_fixture(tmp_path)
+
+        ops = [
+            _make_modify_property_op("test.kicad_sch", "J1", "Value", "val1"),
+            _make_modify_property_op("test.kicad_sch", "J1", "Value", "val2"),
+        ]
+
+        executor = OperationExecutor(base_dir=tmp_path)
+        result = executor.execute_batch(ops)
+
+        assert result["success"] is True
+        assert len(result["results"]) == 2
+
+        # Second op should see mutated state from first op
+        # (both succeed, confirming cumulative IR doesn't block valid ops)
+        assert result["results"][1]["success"] is True
+
+    def test_batch_gate_uses_mutated_ir_for_next_op(self, tmp_path: Path) -> None:
+        """D-03: Gate checks next op against mutated state."""
+        _copy_arduino_fixture(tmp_path)
+
+        ops = [
+            _make_modify_property_op("test.kicad_sch", "J1", "Value", "new_val"),
+            _make_modify_property_op("test.kicad_sch", "J1", "Value", "newer_val"),
+        ]
+
+        executor = OperationExecutor(base_dir=tmp_path)
+        result = executor.execute_batch(ops)
+
+        # Both ops should succeed -- gate sees mutated IR after first op
+        assert result["success"] is True
+        assert len(result["results"]) == 2
+
+    def test_batch_reparse_after_pcb_mutation_native_path(
+        self, tmp_path: Path
+    ) -> None:
+        """D-03 + H-03: PCB batch runs with native parser available."""
+        pcb_content = """(kicad_pcb (version 20240108) (generator "kicad")
+  (general (thickness 1.6))
+  (paper "A4")
+  (layers
+    (0 "F.Cu" signal)
+    (31 "B.Cu" signal)
+    (32 "B.Adhes" user "B.Adhesive")
+    (33 "F.Adhes" user "F.Adhesive")
+    (34 "B.Paste" user)
+    (35 "F.Paste" user)
+    (36 "B.SilkS" user "B.Silkscreen")
+    (37 "F.SilkS" user "F.Silkscreen")
+    (38 "B.Mask" user)
+    (39 "F.Mask" user)
+    (40 "Dwgs.User" user "User.Drawings")
+    (41 "Cmts.User" user "User.Comments")
+    (42 "Eco1.User" user "User.Eco1")
+    (43 "Eco2.User" user "User.Eco2")
+    (44 "Edge.Cuts" user)
+    (45 "Margin" user)
+    (46 "B.CrtYd" user "B.Courtyard")
+    (47 "F.CrtYd" user "F.Courtyard")
+    (48 "B.Fab" user)
+    (49 "F.Fab" user)
+  )
+  (setup
+    (pad_to_mask_clearance 0)
+    (pad_to_paste_clearance 0)
+    (allow_soldermask_bridges_in_footprints false)
+    (pcbplotparams
+      (layerselection 0x00010fc_fffffff)
+      (plotonfab false)
+      (removeunconnected false)
+      (useauxorigin false)
+      (hpglpennumber 1)
+      (hpglpenspeed 20)
+      (hpglpendiameter 15.000000)
+    )
+  )
+  (net 0 "")
+  (net 1 "GND")
+  (net 2 "VCC")
+)
+"""
+        pcb_path = tmp_path / "test.kicad_pcb"
+        pcb_path.write_text(pcb_content, encoding="utf-8")
+
+        ops = [
+            Operation.model_validate({
+                "root": {
+                    "op_type": "add_net",
+                    "target_file": "test.kicad_pcb",
+                    "net_name": "TEST_NET",
+                }
+            }),
+        ]
+
+        executor = OperationExecutor(base_dir=tmp_path)
+        result = executor.execute_batch(ops)
+
+        # add_net on valid PCB should succeed
+        assert result["success"] is True
+
+    def test_batch_reparse_after_pcb_mutation_kiutils_fallback(
+        self, tmp_path: Path
+    ) -> None:
+        """D-03 + H-03: PCB batch runs via kiutils when native fails."""
+        pcb_content = """(kicad_pcb (version 20240108) (generator "kicad")
+  (general (thickness 1.6))
+  (paper "A4")
+  (layers
+    (0 "F.Cu" signal)
+    (31 "B.Cu" signal)
+    (36 "B.SilkS" user "B.Silkscreen")
+    (37 "F.SilkS" user "F.Silkscreen")
+    (44 "Edge.Cuts" user)
+  )
+  (setup
+    (pad_to_mask_clearance 0)
+    (pad_to_paste_clearance 0)
+  )
+  (net 0 "")
+  (net 1 "GND")
+)
+"""
+        pcb_path = tmp_path / "test.kicad_pcb"
+        pcb_path.write_text(pcb_content, encoding="utf-8")
+
+        ops = [
+            Operation.model_validate({
+                "root": {
+                    "op_type": "add_net",
+                    "target_file": "test.kicad_pcb",
+                    "net_name": "FALLBACK_NET",
+                }
+            }),
+        ]
+
+        executor = OperationExecutor(base_dir=tmp_path)
+
+        with patch(
+            "kicad_agent.ops.execution.try_native_parse",
+            return_value=None,
+        ):
+            result = executor.execute_batch(ops)
+
+        # Should work via kiutils fallback
+        assert result["success"] is True
+
+
+# ---------------------------------------------------------------------------
+# TestBatchPhase1Gate (H-04)
+# ---------------------------------------------------------------------------
+
+
+class TestBatchPhase1Gate:
+    """H-04: Phase 1 pre-check gate runs for ALL file types."""
+
+    def test_phase1_gate_runs_for_kicad_pcb(self, tmp_path: Path) -> None:
+        """H-04: Phase 1 pre-check gate runs for .kicad_pcb files."""
+        pcb_content = """(kicad_pcb (version 20240108) (generator "kicad")
+  (general (thickness 1.6))
+  (paper "A4")
+  (layers
+    (0 "F.Cu" signal)
+    (31 "B.Cu" signal)
+    (36 "B.SilkS" user "B.Silkscreen")
+    (37 "F.SilkS" user "F.Silkscreen")
+    (44 "Edge.Cuts" user)
+  )
+  (net 0 "")
+)
+"""
+        pcb_path = tmp_path / "test.kicad_pcb"
+        pcb_path.write_text(pcb_content, encoding="utf-8")
+
+        ops = [
+            Operation.model_validate({
+                "root": {
+                    "op_type": "add_net",
+                    "target_file": "test.kicad_pcb",
+                    "net_name": "TEST_NET",
+                }
+            }),
+        ]
+
+        executor = OperationExecutor(base_dir=tmp_path)
+
+        # Patch the gate to verify it's called for .kicad_pcb
+        from kicad_agent.ops.pre_analysis import PreAnalysisGate
+        mock_gate = MagicMock(spec=PreAnalysisGate)
+        mock_gate.analyze.return_value = MagicMock(
+            blocked=[], warnings=[], enriched_context={}
+        )
+
+        with patch(
+            "kicad_agent.ops.batch_executor._get_pre_analysis_gate",
+            return_value=mock_gate,
+        ):
+            result = executor.execute_batch(ops)
+
+        # Gate should have been called for the .kicad_pcb file
+        assert mock_gate.analyze.called
+        assert result["success"] is True
+
+    def test_phase1_gate_runs_for_kicad_sch(self, tmp_path: Path) -> None:
+        """H-04: Phase 1 pre-check gate still runs for .kicad_sch files."""
+        _copy_arduino_fixture(tmp_path)
+
+        ops = [
+            _make_validate_refs_op("test.kicad_sch"),
+        ]
+
+        executor = OperationExecutor(base_dir=tmp_path)
+
+        from kicad_agent.ops.pre_analysis import PreAnalysisGate
+        mock_gate = MagicMock(spec=PreAnalysisGate)
+        mock_gate.analyze.return_value = MagicMock(
+            blocked=[], warnings=[], enriched_context={}
+        )
+
+        with patch(
+            "kicad_agent.ops.batch_executor._get_pre_analysis_gate",
+            return_value=mock_gate,
+        ):
+            result = executor.execute_batch(ops)
+
+        assert mock_gate.analyze.called
+        assert result["success"] is True
+
+    def test_phase1_gate_blocked_op_prevents_batch_start(self, tmp_path: Path) -> None:
+        """H-04: Blocked pre-check prevents batch from starting."""
+        _copy_arduino_fixture(tmp_path)
+
+        ops = [
+            _make_validate_refs_op("test.kicad_sch"),
+        ]
+
+        executor = OperationExecutor(base_dir=tmp_path)
+
+        from kicad_agent.ops.pre_analysis import PreAnalysisResult, PreAnalysisFinding
+
+        blocker = PreAnalysisFinding(
+            severity="blocker", message="Blocked by test", category="test"
+        )
+        mock_result = PreAnalysisResult(
+            blockers=[blocker], warnings=[], enriched_context={}
+        )
+
+        from kicad_agent.ops.pre_analysis import PreAnalysisGate
+        mock_gate = MagicMock(spec=PreAnalysisGate)
+        mock_gate.analyze.return_value = mock_result
+
+        with patch(
+            "kicad_agent.ops.batch_executor._get_pre_analysis_gate",
+            return_value=mock_gate,
+        ):
+            result = executor.execute_batch(ops)
+
+        assert result["success"] is False
+        assert "Pre-analysis blocked" in str(result["validation_errors"])

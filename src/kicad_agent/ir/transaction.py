@@ -219,19 +219,26 @@ class Transaction:
         """Remove snapshot file and temp directory.
 
         Council M-03: Robust to partial states (file gone, dir gone).
+        D-09: Log cleanup failures at WARNING instead of silently suppressing.
         """
         try:
             if self._snapshot_path and self._snapshot_path.exists():
                 self._snapshot_path.unlink()
         except FileNotFoundError:
-            pass  # Already cleaned up
+            pass  # Already cleaned up -- acceptable
         try:
             if self._snap_dir:
                 snap_dir_path = Path(self._snap_dir)
                 if snap_dir_path.exists():
                     snap_dir_path.rmdir()
-        except (FileNotFoundError, OSError):
-            pass  # Directory already removed or not empty
+        except FileNotFoundError:
+            pass  # Directory already removed -- acceptable
+        except OSError as e:
+            # D-09: Log cleanup failures loudly instead of silently suppressing
+            logger.warning(
+                "Failed to cleanup transaction snapshot directory %s: %s",
+                self._snap_dir, e,
+            )
         finally:
             self._snap_dir = None
             self._snapshot_path = None

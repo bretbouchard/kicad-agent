@@ -164,7 +164,11 @@ class PersistentUndoStack(UndoStack):
                 self._entry_filenames[entry_id] = entry_file
 
             except Exception as exc:
-                logger.debug("Failed to load undo entry: %s", exc)
+                # D-11: Log failure at WARNING instead of debug
+                logger.warning(
+                    "Failed to load undo entry %s: %s (data may be incomplete)",
+                    entry_file, exc,
+                )
                 continue
 
         if loaded:
