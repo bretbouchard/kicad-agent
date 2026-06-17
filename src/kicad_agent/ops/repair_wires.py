@@ -123,8 +123,12 @@ def repair_wire_snapping(ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     net_index: NetPositionIndex | None = None
     try:
         net_index = NetPositionIndex.from_file(file_path)
-    except Exception:
-        logger.debug("Could not build NetPositionIndex for wire snapping, skipping net safety checks")
+    except Exception as e:
+        # D-11: Log failure at WARNING instead of debug
+        logger.warning(
+            "Could not build NetPositionIndex for wire snapping, "
+            "skipping net safety checks: %s", e,
+        )
 
     wire_endpoints = ir.get_wire_endpoints()
     snapped_count = 0

@@ -16,6 +16,7 @@ Security (threat model):
 - T-04-06: Dispatch uses exact op_type matching; unknown raises ValueError
 - T-24-01: Path confinement checks for cross-file and create operations
 - H-04: Symlink protection in undo stack push
+- D-10: LockError raised on lock file write failure
 - L-05: External modification detection via mtime
 """
 
@@ -55,6 +56,16 @@ _LOCK_WARN_INTERVAL_S = 30.0  # Don't warn more often than this
 _last_lock_warn: float = 0.0
 
 
+class LockError(RuntimeError):
+    """Raised when lock file creation fails (D-10).
+
+    Concurrent writes to KiCad files cause corruption -- this is a
+    blocker, not a warning. Only raised on WRITE failure; lock READ
+    failure at site (1) remains soft warning per M-02.
+    """
+    pass
+
+
 def _check_concurrent_access(file_path: Path) -> None:
     """Check for and warn about concurrent access to the same file.
 
@@ -86,8 +97,14 @@ def _check_concurrent_access(file_path: Path) -> None:
     try:
         lock_content = f"{file_path.name}:pid={os.getpid()}"
         lock_path.write_text(lock_content, encoding="utf-8")
-    except OSError:
-        pass  # Best-effort lock creation
+    except OSError as e:
+        # D-10: Lock file creation failure MUST raise LockError.
+        # Concurrent writes to KiCad files cause corruption -- this is a blocker.
+        # M-02 note: Site (1) above (lock read failure) remains soft warning.
+        raise LockError(
+            f"Failed to create lock file {lock_path}: {e}. "
+            "Concurrent writes may corrupt KiCad files."
+        ) from e
 
 logger = logging.getLogger(__name__)
 
