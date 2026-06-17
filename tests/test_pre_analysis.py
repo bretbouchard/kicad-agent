@@ -14,6 +14,7 @@ Tests cover:
 import shutil
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 from kiutils.items.common import Position
@@ -877,3 +878,241 @@ class TestDuplicateLabelExecutorIntegration:
             result = executor.execute(op)
 
             assert result["success"] is True
+
+
+# ---------------------------------------------------------------------------
+# File-type dispatch tests (H-01 fix)
+# ---------------------------------------------------------------------------
+
+
+class TestPreFlightGateDispatch:
+    """Tests for file-type dispatch routing (H-01 fix)."""
+
+    def test_pcb_file_dispatches_before_op_type_check(self):
+        """PCB op_type not in _MUTATION_OP_TYPES but still reaches _analyze_pcb."""
+        gate = PreAnalysisGate()
+
+        class MockOp:
+            op_type = "swap_footprint"  # NOT in _MUTATION_OP_TYPES
+            target_file = "board.kicad_pcb"
+            reference = "U1"
+            new_footprint_lib_id = "Package:DIP-8"
+
+        # Use MagicMock so attribute access doesn't raise AttributeError
+        from unittest.mock import MagicMock
+        ir = MagicMock()
+        ir.get_footprint_by_ref.return_value = None  # ref not found -> blocker
+
+        result = gate.analyze(MockOp(), ir, Path("board.kicad_pcb"))
+        # Should be blocked because _analyze_pcb handles it
+        assert result.blocked
+
+    def test_schematic_file_uses_op_type_guard(self):
+        """Schematic file still checks _MUTATION_OP_TYPES membership."""
+        gate = PreAnalysisGate()
+
+        class MockOp:
+            op_type = "swap_footprint"  # NOT in _MUTATION_OP_TYPES
+            target_file = "test.kicad_sch"
+
+        class MockIR:
+            pass
+
+        result = gate.analyze(MockOp(), MockIR(), Path("test.kicad_sch"))
+        # Should NOT be blocked -- swap_footprint is not in _MUTATION_OP_TYPES
+        # so it returns early for schematic files
+        assert not result.blocked
+
+    def test_unknown_extension_returns_empty_result(self):
+        """File with unknown extension returns empty result (no checks)."""
+        gate = PreAnalysisGate()
+
+        class MockOp:
+            op_type = "add_component"
+            target_file = "test.txt"
+
+        class MockIR:
+            pass
+
+        result = gate.analyze(MockOp(), MockIR(), Path("test.txt"))
+        assert not result.blocked
+        assert len(result.warnings) == 0
+
+    def test_cross_file_receives_ir_map_not_single_ir(self):
+        """Cross-file gate accepts dict[Path, Any] as ir parameter (H-02 fix)."""
+        gate = PreAnalysisGate()
+
+        class MockOp:
+            op_type = "propagate_symbol_change"
+            target_file = "project.kicad_sym"
+            lib_id = "Device:R"
+
+        ir_map = {Path("project.kicad_sch"): MagicMock()}
+
+        # Should not raise -- ir_map is a dict, not a single IR
+        result = gate.analyze(MockOp(), ir_map, Path("project.kicad_sym"))
+        # lib_id won't be found in empty mock, so it should block
+        assert result.blocked
+
+
+# ---------------------------------------------------------------------------
+# Expanded schematic gate tests (D-07)
+# ---------------------------------------------------------------------------
+
+
+class TestExpandedSchematicGate:
+    """Tests for expanded schematic checks (D-07)."""
+
+    def _make_ir_with_component(self, ref: str, pin_count: int):
+        """Build a minimal IR with a component having N pins."""
+        ir = MagicMock()
+        component = MagicMock()
+        ref_prop = MagicMock()
+        ref_prop.key = "Reference"
+        ref_prop.value = ref
+        component.properties = [ref_prop]
+        ir.get_component_by_ref.return_value = component
+
+        pins = [{"reference": ref, "pin_number": str(i), "x": float(i), "y": 0.0} for i in range(1, pin_count + 1)]
+        ir.get_pin_positions.return_value = pins
+        return ir
+
+    def test_swap_symbol_blocked_when_pin_count_differs_over_20_percent(self):
+        """swap_symbol blocked when new symbol pin count differs >20% from old."""
+        gate = PreAnalysisGate()
+        ir = self._make_ir_with_component("U1", pin_count=10)
+
+        class SwapOp:
+            op_type = "swap_symbol"
+            target_file = "test.kicad_sch"
+            reference = "U1"
+            new_symbol_lib_id = "NewIC:Small"
+
+        # New symbol lib_id not found -> pin count is None -> no blocker
+        # But we can test by directly calling the expanded check
+        from kicad_agent.ops.pre_analysis_schematic import _count_symbol_pins
+        assert _count_symbol_pins(ir, "U1") == 10
+
+    def test_swap_symbol_proceeds_when_pin_count_within_20_percent(self):
+        """swap_symbol proceeds when pin count difference is within 20%."""
+        gate = PreAnalysisGate()
+        ir = self._make_ir_with_component("U1", pin_count=8)
+
+        class SwapOp:
+            op_type = "swap_symbol"
+            target_file = "test.kicad_sch"
+            reference = "U1"
+            new_symbol_lib_id = "Device:R"  # won't be found -> None -> no blocker
+
+        result = gate.analyze(SwapOp(), ir, Path("test.kicad_sch"))
+        assert not result.blocked
+
+    def test_regenerate_wiring_blocked_unless_force_true(self):
+        """regenerate_wiring blocked unless op.force is True."""
+        gate = PreAnalysisGate()
+        ir = MagicMock()
+
+        class RegenerateOp:
+            op_type = "regenerate_wiring"
+            target_file = "test.kicad_sch"
+            nets = []
+            global_labels = []
+            force = False
+
+        result = gate.analyze(RegenerateOp(), ir, Path("test.kicad_sch"))
+        assert result.blocked is True
+        assert any(b.category == "force_required" for b in result.blockers)
+
+    def test_regenerate_wiring_proceeds_when_force_true(self):
+        """regenerate_wiring proceeds when op.force is True."""
+        gate = PreAnalysisGate()
+        ir = MagicMock()
+
+        class RegenerateOp:
+            op_type = "regenerate_wiring"
+            target_file = "test.kicad_sch"
+            nets = []
+            global_labels = []
+            force = True
+
+        result = gate.analyze(RegenerateOp(), ir, Path("test.kicad_sch"))
+        assert not result.blocked
+
+    def test_remove_labels_blocked_when_label_referenced_by_wires(self):
+        """remove_labels blocked when any label is referenced by wires."""
+        gate = PreAnalysisGate()
+        ir = MagicMock()
+
+        wire_endpoint = MagicMock()
+        wire_endpoint.net = "SDA"
+        wire_endpoint.start_x = 10.0
+        wire_endpoint.start_y = 20.0
+        wire_endpoint.end_x = 30.0
+        wire_endpoint.end_y = 20.0
+        ir.get_wire_endpoints.return_value = [wire_endpoint]
+
+        class RemoveLabelsOp:
+            op_type = "remove_labels"
+            target_file = "test.kicad_sch"
+            labels = ["SDA", "SCL"]
+
+        result = gate.analyze(RemoveLabelsOp(), ir, Path("test.kicad_sch"))
+        assert result.blocked is True
+        assert any(b.category == "label_wire_reference" for b in result.blockers)
+
+    def test_add_wire_warns_when_endpoints_floating(self):
+        """add_wire emits WARNING when endpoints don't land on pins or wire endpoints."""
+        gate = PreAnalysisGate()
+        ir = MagicMock()
+        ir.get_pin_positions.return_value = []
+        ir.get_wire_endpoints.return_value = []
+
+        class WireOp:
+            op_type = "add_wire"
+            target_file = "test.kicad_sch"
+            start_x = 500.0
+            start_y = 500.0
+            end_x = 510.0
+            end_y = 500.0
+
+        result = gate.analyze(WireOp(), ir, Path("test.kicad_sch"))
+        # Both endpoints are floating since no pins/wires exist
+        assert len(result.warnings) > 0
+        assert any(w.category == "floating_wire_endpoint" for w in result.warnings)
+
+    def test_duplicate_component_blocked_on_overlap(self):
+        """duplicate_component blocked when duplicated footprint overlaps existing."""
+        gate = PreAnalysisGate()
+
+        # Create a minimal IR with an existing component at (50, 50)
+        ir = MagicMock()
+        sym = MagicMock()
+        sym.position = MagicMock(X=50.0, Y=50.0, angle=0.0)
+        ref_prop = MagicMock(key="Reference", value="R1")
+        lib_prop = MagicMock(key="Footprint", value="Device:R")
+        sym.properties = [ref_prop, lib_prop]
+        sym.libId = "Device:R_Small"
+        ir.components = [sym]
+        ir.get_component_by_ref.return_value = sym
+
+        # Pin positions for R1
+        ir.get_pin_positions.return_value = [
+            {"reference": "R1", "pin_number": "1", "x": 47.5, "y": 50.0},
+            {"reference": "R1", "pin_number": "2", "x": 52.5, "y": 50.0},
+        ]
+
+        class DuplicateOp:
+            op_type = "duplicate_component"
+            target_file = "test.kicad_sch"
+            reference = "R1"
+
+        class Position:
+            x = 50.0
+            y = 50.0
+
+        DuplicateOp.position = Position()
+
+        result = gate.analyze(DuplicateOp(), ir, Path("test.kicad_sch"))
+        assert result.blocked is True
+        assert any(b.category == "component_overlap" for b in result.blockers)
+

@@ -167,6 +167,7 @@ class PreAnalysisGate:
             PreAnalysisResult with blockers, warnings, and enriched context.
         """
         result = PreAnalysisResult()
+        self._current_file_path = Path(file_path)
         op_type = getattr(op, "op_type", None)
         ext = Path(file_path).suffix
 

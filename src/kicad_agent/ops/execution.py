@@ -468,6 +468,22 @@ def execute_pcb(
         if cache:
             cache.put(file_path, CacheEntry(parse_result=parse_result, uuid_map=uuid_map, native_board=native_board))
 
+    # Pre-flight gate: check before mutating (D-01)
+    gate = get_pre_analysis_gate()
+    pre_result = gate.analyze(root, ir, file_path)
+    if pre_result.blocked:
+        blocker_msgs = [f.message for f in pre_result.blockers]
+        return {
+            "success": False,
+            "operation": root.op_type,
+            "target_file": root.target_file,
+            "pre_analysis": pre_result.to_dict(),
+            "error": f"Pre-flight blocked: {'; '.join(blocker_msgs)}",
+        }
+    if pre_result.warnings:
+        for w in pre_result.warnings:
+            logger.warning("Pre-flight warning [%s]: %s", w.category, w.message)
+
     with Transaction(file_path) as txn:
         details = dispatch_pcb(root.op_type, root, ir, file_path)
 
@@ -657,6 +673,24 @@ def execute_cross_file(
         for fp in file_paths:
             if fp.exists():
                 pre_contents[fp] = fp.read_text(encoding="utf-8")
+
+    # Pre-flight gate: check before mutating (D-01)
+    # H-02 fix: Pass full ir_map so cross-file checks can access all files' IRs
+    gate = get_pre_analysis_gate()
+    first_file = file_paths[0]
+    pre_result = gate.analyze(root, ir_map, first_file)
+    if pre_result.blocked:
+        blocker_msgs = [f.message for f in pre_result.blockers]
+        return {
+            "success": False,
+            "operation": root.op_type,
+            "target_file": root.target_file,
+            "pre_analysis": pre_result.to_dict(),
+            "error": f"Pre-flight blocked: {'; '.join(blocker_msgs)}",
+        }
+    if pre_result.warnings:
+        for w in pre_result.warnings:
+            logger.warning("Pre-flight warning [%s]: %s", w.category, w.message)
 
     # Phase 3: Open AtomicOperation and execute handler
     with AtomicOperation(file_paths) as atomic:
