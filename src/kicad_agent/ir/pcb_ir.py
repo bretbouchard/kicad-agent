@@ -31,6 +31,7 @@ Usage (kiutils fallback):
     footprints = ir.footprints
 """
 
+import hashlib
 import logging
 import re
 from dataclasses import dataclass, field, replace
@@ -901,11 +902,24 @@ class PcbIR(BaseIR):
 
         Consolidates the 3-line pattern (atomic write + replace raw_content +
         set _raw_written) used across 7 call sites into a single method.
+
+        D-14: Verifies the write by reading back and comparing SHA-256 hashes.
+        Raises IOError if the written content does not match expected.
         """
+        expected_hash = hashlib.sha256(new_raw.encode("utf-8")).hexdigest()
         from kicad_agent.io.atomic_write import atomic_write
         atomic_write(self._parse_result.file_path, new_raw)
         self._parse_result = replace(self._parse_result, raw_content=new_raw)
         self._raw_written = True
+
+        # D-14: Read back and verify write integrity
+        actual = self._parse_result.file_path.read_text(encoding="utf-8")
+        actual_hash = hashlib.sha256(actual.encode("utf-8")).hexdigest()
+        if actual_hash != expected_hash:
+            raise IOError(
+                f"Write verification failed for {self._parse_result.file_path}: "
+                f"expected hash {expected_hash[:16]}..., got {actual_hash[:16]}..."
+            )
 
     def _update_parse_result(self, new_result: ParseResult, new_uuid_map: UUIDMap) -> None:
         """Update parse result after raw content write.

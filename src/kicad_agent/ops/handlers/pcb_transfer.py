@@ -7,14 +7,12 @@ This operation is DIFFERENT from UpdatePcbFromSchematicOp (which uses kicad-cli
 netlist export for actual PCB sync). This operation:
 - Validates the transfer CONTRACT before any PCB mutation
 - Runs TransferContractValidator which auto-runs SchematicIntentGate
-- Has NO force/bypass flag in the operation schema (gates fail closed)
+- Has NO force/bypass flag (D-12: gates fail closed, no bypass)
 - Provides stub/placeholder footprint detection
-- CLI-only --force flag exists for human testing but is NOT in the operation schema
 
 Security (T-87-06, T-87-07):
 - No force/bypass field in the Pydantic schema -- LLM agents cannot bypass gates
-- force parameter exists only at the handler function level (CLI-only escape hatch)
-- The force flag is documented as testing-only and NOT exposed via MCP or operation schema
+- No force parameter in handler functions -- validation always runs
 """
 
 from __future__ import annotations
@@ -68,7 +66,6 @@ class UpdateFromSchematicOp(BaseModel):
     )
 
     # NOTE: NO force/bypass field. Gates fail closed. LLM agents cannot bypass.
-    # The handler function accepts an optional force parameter for CLI-only human testing.
 
     @field_validator("schematic_path", "pcb_path", mode="before")
     @classmethod
@@ -197,8 +194,6 @@ def handle_update_from_schematic(
     op: UpdateFromSchematicOp,
     ir_map: dict[Path, Any],
     base_dir: Path,
-    *,
-    force: bool = False,
 ) -> dict[str, Any]:
     """Execute the schematic-to-PCB transfer operation.
 
@@ -215,9 +210,6 @@ def handle_update_from_schematic(
         op: The UpdateFromSchematicOp with schematic_path, pcb_path, dry_run.
         ir_map: Dict of file path -> IR instance (SchematicIR, PcbIR).
         base_dir: Base directory for resolving paths.
-        force: CLI-only bypass flag. NOT part of the operation schema.
-            When True, skips gate validation for human testing.
-            This is a testing-only escape hatch and must NOT be exposed via MCP.
 
     Returns:
         Dict with pass, gate, blockers, warnings, artifacts, and contract status.
@@ -225,25 +217,6 @@ def handle_update_from_schematic(
     from kicad_agent.ir.pcb_ir import PcbIR
     from kicad_agent.ir.schematic_ir import SchematicIR
     from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
-
-    # --- Force bypass (CLI-only, NOT in operation schema) ---
-    # Must come BEFORE schematic IR check so force=True always succeeds
-    if force:
-        logger.warning("Gate bypassed via --force flag (CLI-only, testing mode)")
-
-        result = {
-            "pass": True,
-            "gate": "transfer_contract",
-            "force_bypassed": True,
-            "blockers": [],
-            "warnings": [
-                "Gate validation bypassed via --force (CLI-only testing mode)"
-            ],
-            "artifacts": ["Force bypass -- contract not validated"],
-        }
-        if op.dry_run:
-            result["dry_run"] = True
-        return result
 
     # --- Locate schematic IR ---
     sch_ir: SchematicIR | None = None

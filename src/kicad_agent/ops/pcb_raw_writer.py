@@ -236,10 +236,13 @@ class PcbRawWriter:
         block = content[start:end]
 
         if field == "net_name":
-            # Replace (net N "old_name") with (net N "new_name")
+            # D-13 + H-05: Extract existing net number from content before substitution.
+            # Do NOT add ir parameter to @staticmethod (API contract).
+            existing_net_match = re.search(r'\(net\s+(\d+)\s+"[^"]*"\)', block)
+            existing_net_id = int(existing_net_match.group(1)) if existing_net_match else 0
             block = re.sub(
                 r'\(net\s+\d+\s+"[^"]*"\)',
-                f'(net 1 "{value}")',
+                f'(net {existing_net_id} "{value}")',
                 block,
                 count=1,
             )
