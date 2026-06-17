@@ -42,6 +42,17 @@ def _clear_registry() -> None:
         _ir_registry.clear()
 
 
+def _deregister_ir(ir: "BaseIR") -> None:
+    """Remove a ParseResult's id from the IR registry.
+
+    Must be called before replacing an IR with a fresh re-parse,
+    otherwise Python may reuse the GC'd ParseResult's id and the
+    one-IR-per-ParseResult guard raises a spurious error.
+    """
+    with _ir_registry_lock:
+        _ir_registry.discard(id(ir._parse_result))
+
+
 @dataclass
 class BaseIR:
     """Base class for all IR types. Tracks mutation state.
