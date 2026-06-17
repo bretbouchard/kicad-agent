@@ -174,6 +174,10 @@ class PreAnalysisGate:
         # Always run: component reference resolution check
         self._check_ref_resolution(op, ir, result)
 
+        # Label duplication check (runs AFTER wiring analysis for batch_connect)
+        if op_type in ("add_label", "batch_connect", "regenerate_wiring", "place_net_labels"):
+            self._analyze_label_operation(op, ir, result)
+
         return result
 
     # -------------------------------------------------------------------
@@ -433,6 +437,110 @@ class PreAnalysisGate:
             ))
 
     # -------------------------------------------------------------------
+    # Label duplication analysis
+    # -------------------------------------------------------------------
+
+    def _analyze_label_operation(
+        self, op: Any, ir: Any, result: PreAnalysisResult
+    ) -> None:
+        """Check for duplicate global labels before label-creating operations.
+
+        Global labels connect nets by name across a schematic (and across
+        sheets).  Two global labels with the same text are the *same* net --
+        a second one is always an error.  This check blocks at creation time
+        instead of waiting for ERC discovery.
+        """
+        existing_labels = _get_existing_global_label_names(ir)
+        op_type = op.op_type
+
+        if op_type == "add_label":
+            self._check_single_label(op, existing_labels, result)
+
+        elif op_type in ("batch_connect", "regenerate_wiring"):
+            self._check_label_list(op, existing_labels, result)
+
+        elif op_type == "place_net_labels":
+            # PlaceNetLabelsOp has no global_labels field -- labels are
+            # derived from a pin_map profile at handler level.  Nothing to
+            # check at pre-analysis time.
+            pass
+
+    def _check_single_label(
+        self, op: Any, existing: dict[str, list[tuple[float, float]]], result: PreAnalysisResult
+    ) -> None:
+        """Check a single add_label operation for duplicate global labels."""
+        if getattr(op, "label_type", None) != "global":
+            return  # Local and hierarchical labels can legitimately repeat.
+
+        name = op.name
+        if name in existing:
+            positions = existing[name]
+            result.blockers.append(PreAnalysisFinding(
+                severity="blocker",
+                category="duplicate_global_label",
+                message=(
+                    f"Global label '{name}' already exists in schematic -- "
+                    "duplicate global labels on the same net are not allowed"
+                ),
+                details={
+                    "label_name": name,
+                    "existing_positions": [
+                        {"x": x, "y": y} for x, y in positions
+                    ],
+                },
+            ))
+
+    def _check_label_list(
+        self, op: Any, existing: dict[str, list[tuple[float, float]]], result: PreAnalysisResult
+    ) -> None:
+        """Check a label list (batch_connect / regenerate_wiring) for duplicates."""
+        global_labels = getattr(op, "global_labels", [])
+        if not global_labels:
+            return
+
+        # Collect names from the operation
+        op_names: list[str] = []
+        for gl in global_labels:
+            op_names.append(gl.name)
+
+        # Check for intra-operation duplicates (same name appears twice in the list)
+        seen: set[str] = set()
+        for name in op_names:
+            if name in seen:
+                result.blockers.append(PreAnalysisFinding(
+                    severity="blocker",
+                    category="duplicate_global_label",
+                    message=(
+                        f"Global label '{name}' appears multiple times in operation "
+                        "-- intra-operation duplicate"
+                    ),
+                    details={
+                        "label_name": name,
+                        "duplicate_type": "intra_operation",
+                    },
+                ))
+            seen.add(name)
+
+        # Check against existing global labels in the schematic
+        for name in seen:
+            if name in existing:
+                positions = existing[name]
+                result.blockers.append(PreAnalysisFinding(
+                    severity="blocker",
+                    category="duplicate_global_label",
+                    message=(
+                        f"Global label '{name}' already exists in schematic -- "
+                        "duplicate global labels on the same net are not allowed"
+                    ),
+                    details={
+                        "label_name": name,
+                        "existing_positions": [
+                            {"x": x, "y": y} for x, y in positions
+                        ],
+                    },
+                ))
+
+    # -------------------------------------------------------------------
     # Shared checks
     # -------------------------------------------------------------------
 
@@ -686,6 +794,28 @@ def _get_power_nets(ir: Any) -> list[str]:
             if net_name not in power_nets:
                 power_nets.append(net_name)
     return sorted(power_nets)
+
+
+def _get_existing_global_label_names(
+    ir: Any,
+) -> dict[str, list[tuple[float, float]]]:
+    """Extract existing global label names from the schematic IR.
+
+    Returns:
+        Dict mapping global label name to list of (x, y) positions.
+        A name appearing more than once means duplicates already exist
+        in the schematic (which is itself an ERC error, but we still
+        report it as an existing position for the new-label check).
+    """
+    labels = ir.get_label_positions()
+    result: dict[str, list[tuple[float, float]]] = {}
+    for label in labels:
+        if label.get("label_type") != "global":
+            continue
+        name = label["name"]
+        pos = (label["x"], label["y"])
+        result.setdefault(name, []).append(pos)
+    return result
 
 
 def _point_near_segment(
