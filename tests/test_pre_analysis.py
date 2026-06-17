@@ -783,3 +783,96 @@ class TestDuplicateGlobalLabelDetection:
             assert "intra-operation" in dup_blocker.details or "duplicate" in dup_blocker.message.lower()
         finally:
             _cleanup_ir(ir)
+
+
+# ---------------------------------------------------------------------------
+# Integration test: executor blocks duplicate global labels end-to-end
+# ---------------------------------------------------------------------------
+
+
+class TestDuplicateLabelExecutorIntegration:
+    """End-to-end test proving the executor blocks duplicate global labels."""
+
+    def test_executor_blocks_duplicate_global_label(self):
+        """Adding a global label that already exists -> success=False, file unchanged."""
+        from kicad_agent.ops.executor import OperationExecutor
+        from kicad_agent.ops.schema import Operation
+
+        # Build a schematic with a pre-existing global label "SDA"
+        sch = Schematic()
+        sch.version = "20231120"
+        sch.generator = "kicad-agent-test"
+        sch.uuid = "00000000-0000-0000-0000-000000000001"
+        sch.sheet = sch
+
+        gl = GlobalLabel()
+        gl.text = "SDA"
+        gl.position = Position(X=10.0, Y=20.0, angle=0.0)
+        gl.shape = "bidirectional"
+        gl.uuid = "00000000-0000-0000-0000-000000000010"
+        sch.globalLabels.append(gl)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            sch_path = tmp_path / "test.kicad_sch"
+            sch.to_file(str(sch_path))
+            original_content = sch_path.read_text()
+
+            executor = OperationExecutor(base_dir=tmp_path)
+
+            op = Operation.model_validate({"root": {
+                "op_type": "add_label",
+                "target_file": "test.kicad_sch",
+                "name": "SDA",
+                "label_type": "global",
+                "position": {"x": 50.0, "y": 60.0},
+                "shape": "bidirectional",
+            }})
+
+            result = executor.execute(op)
+
+            assert result["success"] is False
+            assert "Pre-analysis blocked" in result.get("error", "")
+            assert "duplicate_global_label" in str(result.get("pre_analysis", ""))
+
+            # Verify file was NOT modified (no Transaction was entered)
+            assert sch_path.read_text() == original_content
+
+    def test_executor_allows_new_global_label(self):
+        """Adding a new global label name -> success=True."""
+        from kicad_agent.ops.executor import OperationExecutor
+        from kicad_agent.ops.schema import Operation
+
+        # Build a schematic with a pre-existing global label "SDA"
+        sch = Schematic()
+        sch.version = "20231120"
+        sch.generator = "kicad-agent-test"
+        sch.uuid = "00000000-0000-0000-0000-000000000001"
+        sch.sheet = sch
+
+        gl = GlobalLabel()
+        gl.text = "SDA"
+        gl.position = Position(X=10.0, Y=20.0, angle=0.0)
+        gl.shape = "bidirectional"
+        gl.uuid = "00000000-0000-0000-0000-000000000010"
+        sch.globalLabels.append(gl)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            sch_path = tmp_path / "test.kicad_sch"
+            sch.to_file(str(sch_path))
+
+            executor = OperationExecutor(base_dir=tmp_path)
+
+            op = Operation.model_validate({"root": {
+                "op_type": "add_label",
+                "target_file": "test.kicad_sch",
+                "name": "SCL",
+                "label_type": "global",
+                "position": {"x": 50.0, "y": 60.0},
+                "shape": "bidirectional",
+            }})
+
+            result = executor.execute(op)
+
+            assert result["success"] is True
