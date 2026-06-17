@@ -691,7 +691,7 @@ class TestDuplicateGlobalLabelDetection:
             _cleanup_ir(ir)
 
     def test_regenerate_wiring_no_existing_labels(self):
-        """regenerate_wiring with no existing global labels -> not blocked."""
+        """regenerate_wiring with force=True and no existing global labels -> not blocked."""
         ir = _make_ir_with_global_labels([])
         try:
             gate = PreAnalysisGate()
@@ -707,6 +707,7 @@ class TestDuplicateGlobalLabelDetection:
                 nets = []
                 global_labels = [MockGlobalLabel()]
                 no_connect_positions = []
+                force = True  # Required for regenerate_wiring (D-07)
 
             result = gate.analyze(RegenerateWiringOp(), ir, Path("test.kicad_sch"))
             assert result.blocked is False
