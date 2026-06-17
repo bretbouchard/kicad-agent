@@ -1,15 +1,26 @@
-"""Pre-analysis gate -- think before you act for editing operations.
+"""Universal pre-flight gate -- think before you act for ALL editing operations.
 
-Runs before mutation operations on schematics to detect problems early.
+Runs before mutation operations on schematics, PCBs, and cross-file
+operations to detect problems early. File-type dispatch routes to
+specialized check modules.
+
 Tiered enforcement:
   - BLOCKERS: Critical issues that prevent execution (overlap, unknown refs, etc.)
   - WARNINGS: Soft issues that don't prevent execution but should be noted
 
 Architecture:
   The gate is called by the executor before dispatching to handlers.
-  It receives the Operation and the already-parsed SchematicIR, so it adds
-  no extra parse cost. Analysis results are returned as a PreAnalysisResult
-  that the executor uses to either block or warn.
+  It receives the Operation and the already-parsed IR (SchematicIR, PcbIR,
+  or ir_map for cross-file), so it adds no extra parse cost.
+
+  File-type dispatch (H-01 fix):
+    1. Check file extension FIRST (before op-type guard)
+    2. .kicad_pcb -> _analyze_pcb -> pre_analysis_pcb.analyze_pcb()
+    3. .kicad_sch -> existing schematic analysis (op-type guarded)
+    4. Other valid KiCad -> _analyze_crossfile -> pre_analysis_crossfile.analyze_crossfile()
+    5. Unknown extension -> empty result
+
+  PCB and cross-file checks are extracted to separate modules (M-01 fix).
 
 Usage:
     from kicad_agent.ops.pre_analysis import PreAnalysisGate
@@ -26,15 +37,23 @@ import logging
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 logger = logging.getLogger(__name__)
 
-# M-03: Single source of truth for valid KiCad file extensions
+# M-03: Single source of truth for valid KiCad file extensions.
+# Imported by execution.py and other modules that need extension checks.
 _VALID_KICAD_EXTENSIONS = frozenset({
-    ".kicad_sch", ".kicad_pcb", ".kicad_sym", ".kicad_mod", ".kicad_pro", ".kicad_dru",
+    ".kicad_sch",
+    ".kicad_pcb",
+    ".kicad_sym",
+    ".kicad_mod",
+    ".kicad_pro",
+    ".kicad_dru",
 })
 
+# Extensions that indicate cross-file dispatch (not schematic, not PCB)
+_CROSSFILE_EXTENSIONS = _VALID_KICAD_EXTENSIONS - {".kicad_sch", ".kicad_pcb"}
 # Operations that benefit from pre-analysis (schematic mutations only)
 _MUTATION_OP_TYPES = frozenset({
     "add_component",
@@ -71,14 +90,7 @@ _COLLISION_TOLERANCE_MM = 2.54
 
 @dataclass(frozen=True)
 class PreAnalysisFinding:
-    """A single finding from pre-analysis.
-
-    Attributes:
-        severity: "blocker" prevents execution, "warning" logs but proceeds.
-        category: What kind of issue (overlap, unknown_ref, pin_conflict, etc.)
-        message: Human-readable description of the issue.
-        details: Structured data for programmatic consumption.
-    """
+    """A single finding from pre-analysis (blocker or warning)."""
 
     severity: str
     category: str
@@ -88,14 +100,7 @@ class PreAnalysisFinding:
 
 @dataclass
 class PreAnalysisResult:
-    """Result from the pre-analysis gate.
-
-    Attributes:
-        blockers: Critical issues that should prevent operation execution.
-        warnings: Soft issues that should be logged but don't prevent execution.
-        suggestions: Alternative approaches the caller might consider.
-        enriched_context: Extra data the handler can use to make better decisions.
-    """
+    """Result from the pre-analysis gate."""
 
     blockers: list[PreAnalysisFinding] = field(default_factory=list)
     warnings: list[PreAnalysisFinding] = field(default_factory=list)
@@ -135,32 +140,51 @@ class PreAnalysisResult:
 
 
 class PreAnalysisGate:
-    """Pre-analysis gate for editing operations.
-
-    Analyzes an operation against the current schematic state before
-    execution to catch problems early. Tiered enforcement: blockers
-    prevent execution, warnings proceed with logging.
-    """
+    """Pre-analysis gate for editing operations. Tiered enforcement: blockers prevent execution, warnings proceed with logging."""
 
     def analyze(
         self,
         op: Any,
-        ir: Any,
+        ir: Union[Any, dict[Path, Any]],
         file_path: Path,
     ) -> PreAnalysisResult:
         """Run pre-analysis on an operation.
 
+        H-01 fix: File-type dispatch FIRST (before op-type guard).
+        The _MUTATION_OP_TYPES set only contains schematic ops -- PCB and
+        cross-file ops would short-circuit at the old position.
+
+        H-02 fix: ir parameter accepts Union[Any, dict[Path, Any]] so
+        cross-file checks can receive the full ir_map.
+
         Args:
             op: The operation root model (e.g. AddComponentOp, MoveComponentOp).
-            ir: SchematicIR for the target file (already parsed).
-            file_path: Path to the target schematic file.
+            ir: IR for the target file (SchematicIR, PcbIR, or dict[Path, Any] for cross-file).
+            file_path: Path to the target file.
 
         Returns:
             PreAnalysisResult with blockers, warnings, and enriched context.
         """
         result = PreAnalysisResult()
-
+        self._current_file_path = Path(file_path)
         op_type = getattr(op, "op_type", None)
+        ext = Path(file_path).suffix
+
+        # File-type dispatch FIRST (H-01 fix)
+        if ext == ".kicad_pcb":
+            self._analyze_pcb(op, ir, result)
+            return result
+        elif ext == ".kicad_sch":
+            # Schematic path -- apply existing op-type guard below
+            pass
+        elif ext in _CROSSFILE_EXTENSIONS:
+            # Cross-file: ir may be ir_map (dict[Path, Any])
+            self._analyze_crossfile(op, ir, result)
+            return result
+        else:
+            return result  # Unknown file type: no checks
+
+        # Existing schematic guard (only reached for .kicad_sch files)
         if op_type not in _MUTATION_OP_TYPES:
             return result
 
@@ -183,15 +207,31 @@ class PreAnalysisGate:
         if op_type in ("add_label", "batch_connect", "regenerate_wiring", "place_net_labels"):
             self._analyze_label_operation(op, ir, result)
 
+        # Expanded schematic checks (D-07)
+        self._analyze_schematic_expanded(op, ir, result)
+
         return result
 
-    # -------------------------------------------------------------------
-    # Component placement analysis
-    # -------------------------------------------------------------------
+    # File-type dispatch delegates
 
-    def _analyze_add_component(
-        self, op: Any, ir: Any, result: PreAnalysisResult
-    ) -> None:
+    def _analyze_pcb(self, op: Any, ir: Any, result: PreAnalysisResult) -> None:
+        """Delegate to extracted PCB check module (D-05)."""
+        from kicad_agent.ops.pre_analysis_pcb import analyze_pcb
+        analyze_pcb(op, ir, self._current_file_path, result)
+
+    def _analyze_crossfile(self, op: Any, ir_or_map: Union[Any, dict[Path, Any]], result: PreAnalysisResult) -> None:
+        """Delegate to extracted cross-file check module (D-06, H-02)."""
+        from kicad_agent.ops.pre_analysis_crossfile import analyze_crossfile
+        analyze_crossfile(op, ir_or_map, self._current_file_path, result)
+
+    def _analyze_schematic_expanded(self, op: Any, ir: Any, result: PreAnalysisResult) -> None:
+        """Delegate to extracted expanded schematic check module (D-07)."""
+        from kicad_agent.ops.pre_analysis_schematic import analyze_schematic_expanded
+        analyze_schematic_expanded(op, ir, result)
+
+    # Component placement analysis
+
+    def _analyze_add_component(self, op: Any, ir: Any, result: PreAnalysisResult) -> None:
         """Check for overlap and spatial conflicts before adding a component."""
         new_x = op.position.x
         new_y = op.position.y
@@ -219,9 +259,7 @@ class PreAnalysisGate:
                 + ", ".join(o["ref"] for o in overlaps)
             )
 
-    def _analyze_move_component(
-        self, op: Any, ir: Any, result: PreAnalysisResult
-    ) -> None:
+    def _analyze_move_component(self, op: Any, ir: Any, result: PreAnalysisResult) -> None:
         """Check for overlap at destination before moving a component."""
         ref = op.reference
         dest_x = op.position.x
@@ -259,13 +297,9 @@ class PreAnalysisGate:
                 },
             ))
 
-    # -------------------------------------------------------------------
     # Wiring analysis
-    # -------------------------------------------------------------------
 
-    def _analyze_wiring(
-        self, op: Any, ir: Any, result: PreAnalysisResult
-    ) -> None:
+    def _analyze_wiring(self, op: Any, ir: Any, result: PreAnalysisResult) -> None:
         """Check for collision zones and pin conflicts before wiring."""
         pin_positions = ir.get_pin_positions()
 
@@ -297,9 +331,7 @@ class PreAnalysisGate:
         # Build connectivity context for enriched_context
         self._build_connectivity_context(ir, pin_positions, result)
 
-    def _check_pin_resolution(
-        self, op: Any, ir: Any, pin_positions: list[dict], result: PreAnalysisResult
-    ) -> None:
+    def _check_pin_resolution(self, op: Any, ir: Any, pin_positions: list[dict], result: PreAnalysisResult) -> None:
         """Verify that connect_pins references resolve to actual pins."""
         source_ref = getattr(op, "source", None)
         target_ref = getattr(op, "target", None)
@@ -322,9 +354,7 @@ class PreAnalysisGate:
                     details={"reference": ref, "pin": pin},
                 ))
 
-    def _check_batch_pin_resolution(
-        self, op: Any, ir: Any, pin_positions: list[dict], result: PreAnalysisResult
-    ) -> None:
+    def _check_batch_pin_resolution(self, op: Any, ir: Any, pin_positions: list[dict], result: PreAnalysisResult) -> None:
         """Verify all pins in a batch_connect operation resolve."""
         nets = getattr(op, "nets", [])
         for net_def in nets:
@@ -345,9 +375,7 @@ class PreAnalysisGate:
                         details={"reference": ref, "pin": pin, "net": getattr(net_def, "net_name", "")},
                     ))
 
-    def _check_wire_collision(
-        self, op: Any, collision_zones: list[dict], result: PreAnalysisResult
-    ) -> None:
+    def _check_wire_collision(self, op: Any, collision_zones: list[dict], result: PreAnalysisResult) -> None:
         """Check if a wire segment passes through any collision zones."""
         if not collision_zones:
             return
@@ -373,13 +401,9 @@ class PreAnalysisGate:
                     },
                 ))
 
-    # -------------------------------------------------------------------
     # Power symbol analysis
-    # -------------------------------------------------------------------
 
-    def _analyze_add_power(
-        self, op: Any, ir: Any, result: PreAnalysisResult
-    ) -> None:
+    def _analyze_add_power(self, op: Any, ir: Any, result: PreAnalysisResult) -> None:
         """Check for power net consistency before adding a power symbol."""
         power_net_name = getattr(op, "net_name", None) or getattr(op, "power_net", None)
         if power_net_name is None:
@@ -395,13 +419,9 @@ class PreAnalysisGate:
         # This is advisory -- the user might be intentionally adding a second power symbol
         # for current capacity reasons
 
-    # -------------------------------------------------------------------
     # Remove component analysis
-    # -------------------------------------------------------------------
 
-    def _analyze_remove_component(
-        self, op: Any, ir: Any, result: PreAnalysisResult
-    ) -> None:
+    def _analyze_remove_component(self, op: Any, ir: Any, result: PreAnalysisResult) -> None:
         """Check for dangling wires/labels before removing a component."""
         ref = op.reference
         component = ir.get_component_by_ref(ref)
@@ -441,20 +461,10 @@ class PreAnalysisGate:
                 },
             ))
 
-    # -------------------------------------------------------------------
     # Label duplication analysis
-    # -------------------------------------------------------------------
 
-    def _analyze_label_operation(
-        self, op: Any, ir: Any, result: PreAnalysisResult
-    ) -> None:
-        """Check for duplicate global labels before label-creating operations.
-
-        Global labels connect nets by name across a schematic (and across
-        sheets).  Two global labels with the same text are the *same* net --
-        a second one is always an error.  This check blocks at creation time
-        instead of waiting for ERC discovery.
-        """
+    def _analyze_label_operation(self, op: Any, ir: Any, result: PreAnalysisResult) -> None:
+        """Check for duplicate global labels before label-creating operations."""
         existing_labels = _get_existing_global_label_names(ir)
         op_type = op.op_type
 
@@ -470,9 +480,7 @@ class PreAnalysisGate:
             # check at pre-analysis time.
             pass
 
-    def _check_single_label(
-        self, op: Any, existing: dict[str, list[tuple[float, float]]], result: PreAnalysisResult
-    ) -> None:
+    def _check_single_label(self, op: Any, existing: dict[str, list[tuple[float, float]]], result: PreAnalysisResult) -> None:
         """Check a single add_label operation for duplicate global labels."""
         if getattr(op, "label_type", None) != "global":
             return  # Local and hierarchical labels can legitimately repeat.
@@ -495,9 +503,7 @@ class PreAnalysisGate:
                 },
             ))
 
-    def _check_label_list(
-        self, op: Any, existing: dict[str, list[tuple[float, float]]], result: PreAnalysisResult
-    ) -> None:
+    def _check_label_list(self, op: Any, existing: dict[str, list[tuple[float, float]]], result: PreAnalysisResult) -> None:
         """Check a label list (batch_connect / regenerate_wiring) for duplicates."""
         global_labels = getattr(op, "global_labels", [])
         if not global_labels:
@@ -549,9 +555,7 @@ class PreAnalysisGate:
     # Shared checks
     # -------------------------------------------------------------------
 
-    def _check_ref_resolution(
-        self, op: Any, ir: Any, result: PreAnalysisResult
-    ) -> None:
+    def _check_ref_resolution(self, op: Any, ir: Any, result: PreAnalysisResult) -> None:
         """Verify any component references in the operation exist in the schematic."""
         ref_fields = ["reference", "source_ref", "target_ref"]
         for field_name in ref_fields:
@@ -570,9 +574,7 @@ class PreAnalysisGate:
                     details={"reference": ref, "field": field_name},
                 ))
 
-    def _build_connectivity_context(
-        self, ir: Any, pin_positions: list[dict], result: PreAnalysisResult
-    ) -> None:
+    def _build_connectivity_context(self, ir: Any, pin_positions: list[dict], result: PreAnalysisResult) -> None:
         """Build connectivity context for enriched_context."""
         wire_endpoints = ir.get_wire_endpoints()
         label_positions = ir.get_label_positions()
@@ -619,15 +621,9 @@ class PreAnalysisGate:
     # -------------------------------------------------------------------
 
     @staticmethod
-    def _get_component_bounding_boxes(
-        ir: Any,
-        exclude_ref: Optional[str] = None,
-    ) -> list[dict[str, Any]]:
-        """Get bounding boxes for all placed components.
-
-        Returns:
-            List of dicts with ref, x, y, width, height, lib_id.
-        """
+    @staticmethod
+    def _get_component_bounding_boxes(ir: Any, exclude_ref: Optional[str] = None) -> list[dict[str, Any]]:
+        """Get bounding boxes for all placed components."""
         boxes: list[dict[str, Any]] = []
         for sym in ir.components:
             ref = ""
@@ -658,21 +654,9 @@ class PreAnalysisGate:
         return boxes
 
     @staticmethod
-    def _find_overlaps(
-        new_bbox: dict[str, Any],
-        existing: list[dict[str, Any]],
-        tolerance: float = _OVERLAP_TOLERANCE_MM,
-    ) -> list[dict[str, Any]]:
-        """Find existing bounding boxes that overlap with a new one.
-
-        Args:
-            new_bbox: Dict with x, y, width, height (center-based).
-            existing: List of dicts with x, y, width, height.
-            tolerance: Extra gap allowed between boxes (mm).
-
-        Returns:
-            List of overlapping component dicts.
-        """
+    @staticmethod
+    def _find_overlaps(new_bbox: dict[str, Any], existing: list[dict[str, Any]], tolerance: float = _OVERLAP_TOLERANCE_MM) -> list[dict[str, Any]]:
+        """Find existing bounding boxes that overlap with a new one."""
         overlaps: list[dict[str, Any]] = []
         nx1 = new_bbox["x"] - new_bbox["width"] / 2
         ny1 = new_bbox["y"] - new_bbox["height"] / 2
@@ -692,9 +676,7 @@ class PreAnalysisGate:
         return overlaps
 
 
-# ---------------------------------------------------------------------------
 # Module-level helpers
-# ---------------------------------------------------------------------------
 
 
 def _distance(x1: float, y1: float, x2: float, y2: float) -> float:
@@ -705,15 +687,7 @@ def _distance(x1: float, y1: float, x2: float, y2: float) -> float:
 def _estimated_bbox(
     x: float, y: float, lib_id: str, angle: float
 ) -> dict[str, Any]:
-    """Estimate a component's bounding box from its library ID.
-
-    Uses heuristics based on common component types since the actual
-    bounding box requires parsing the library symbol. These estimates
-    are generous to avoid false positives.
-
-    Returns:
-        Dict with x, y (center), width, height.
-    """
+    """Estimate a component's bounding box from its library ID using heuristics."""
     lib_lower = lib_id.lower()
 
     # Heuristic sizes based on common component types (in mm)
@@ -747,14 +721,7 @@ def _detect_collision_zones(
     pin_positions: list[dict],
     tolerance: float,
 ) -> list[dict[str, Any]]:
-    """Detect positions where pins from different components overlap.
-
-    These are collision zones where any wire would short pins from
-    different nets.
-
-    Returns:
-        List of dicts with x, y, pins (list of pin info dicts).
-    """
+    """Detect positions where pins from different components overlap."""
     # Group pins by rounded position
     position_groups: dict[tuple[float, float], list[dict]] = {}
     for pin in pin_positions:
@@ -804,14 +771,7 @@ def _get_power_nets(ir: Any) -> list[str]:
 def _get_existing_global_label_names(
     ir: Any,
 ) -> dict[str, list[tuple[float, float]]]:
-    """Extract existing global label names from the schematic IR.
-
-    Returns:
-        Dict mapping global label name to list of (x, y) positions.
-        A name appearing more than once means duplicates already exist
-        in the schematic (which is itself an ERC error, but we still
-        report it as an existing position for the new-label check).
-    """
+    """Extract existing global label names from the schematic IR."""
     labels = ir.get_label_positions()
     result: dict[str, list[tuple[float, float]]] = {}
     for label in labels:
@@ -823,16 +783,8 @@ def _get_existing_global_label_names(
     return result
 
 
-def _point_near_segment(
-    px: float, py: float,
-    x1: float, y1: float,
-    x2: float, y2: float,
-    tolerance: float,
-) -> bool:
-    """Check if a point is near a line segment.
-
-    Returns True if the minimum distance from point to segment <= tolerance.
-    """
+def _point_near_segment(px, py, x1, y1, x2, y2, tolerance) -> bool:
+    """Check if a point is near a line segment (distance <= tolerance)."""
     dx = x2 - x1
     dy = y2 - y1
     length_sq = dx * dx + dy * dy
