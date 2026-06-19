@@ -186,7 +186,7 @@ def main():
     p.add_argument("--learning_rate", type=float, default=1e-5)
     p.add_argument("--batch_size", type=int, default=1)
     p.add_argument("--gradient_accumulation_steps", type=int, default=8)
-    p.add_argument("--max_seq_length", type=int, default=4096)
+    p.add_argument("--max_seq_length", type=int, default=2048)
     p.add_argument("--warmup_ratio", type=float, default=0.1)
     p.add_argument("--logging_steps", type=int, default=5)
     p.add_argument("--save_steps", type=int, default=50)

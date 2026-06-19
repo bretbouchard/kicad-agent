@@ -84,7 +84,7 @@ CREATE_RESULT=$(vastai create instance "$OFFER_ID" \
     2>&1)
 
 echo "  $CREATE_RESULT"
-INSTANCE_ID=$(echo "$CREATE_RESULT" | python3 -c "import sys,json; d=json.loads(sys.stdin.read().replace(\"Started. \",\"\")); print(d.get('new_id', d.get('new_contract', '')))" 2>/dev/null)
+INSTANCE_ID=$(echo "$CREATE_RESULT" | python3 -c "import sys,json; d=json.loads(sys.stdin.read().replace(\"Started. \",\"\")); print(d.get('new_contract', ''))" 2>/dev/null)
 
 if [ -z "$INSTANCE_ID" ] || ! [[ "$INSTANCE_ID" =~ ^[0-9]+$ ]]; then
     echo "ERROR: Instance creation failed. Output above."
@@ -92,28 +92,21 @@ if [ -z "$INSTANCE_ID" ] || ! [[ "$INSTANCE_ID" =~ ^[0-9]+$ ]]; then
 fi
 
 echo "  Instance ID: ${INSTANCE_ID}"
-echo "  SSH port will be assigned — wait for ready state..."
+echo "  Waiting for instance to become ready..."
 
 # --- Step 3: Wait for instance to be ready ---
 echo -e "\n${GREEN}[3/5] Waiting for instance to start...${NC}"
 for i in $(seq 1 30); do
-    # Use --json flag to get machine-readable output
-    INSTANCE_JSON=$(vastai show instances --json 2>/dev/null)
-    STATE=$(echo "$INSTANCE_JSON" | python3 -c "
-import sys, json
-instances = json.loads(sys.stdin.read()) if sys.stdin.read() else []
-for inst in instances:
-    if inst.get('id') == $INSTANCE_ID:
-        print(inst.get('actual_status', ''))
-        break
-" 2>/dev/null || echo "")
+    # Use v1 API: 'show instance' (singular) with --raw for JSON
+    INSTANCE_RAW=$(vastai show instance "$INSTANCE_ID" --raw 2>/dev/null)
+    STATE=$(echo "$INSTANCE_RAW" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('actual_status',''))" 2>/dev/null || echo "")
 
     if [ "$STATE" = "running" ]; then
         echo "  Instance is running!"
         break
     fi
     if [ "$STATE" = "error" ]; then
-        echo "ERROR: Instance failed to start. Check: vastai show instances $INSTANCE_ID"
+        echo "ERROR: Instance failed to start. Check: vastai show instance $INSTANCE_ID"
         vastai destroy instance "$INSTANCE_ID" 2>/dev/null || true
         exit 1
     fi
@@ -121,37 +114,14 @@ for inst in instances:
     sleep 10
 done
 
-# Get SSH details via scp-url command (most reliable method)
-SCP_URL=$(vastai scp-url "$INSTANCE_ID" 2>/dev/null)
-if [ -n "$SCP_URL" ]; then
-    # scp-url returns: scp://root@host:port/
-    SSH_HOST=$(echo "$SCP_URL" | sed 's|scp://root@||' | cut -d':' -f1)
-    SSH_PORT=$(echo "$SCP_URL" | sed 's|scp://root@||' | cut -d':' -f2 | cut -d'/' -f1)
-else
-    # Fallback: parse from JSON
-    INSTANCE_JSON=$(vastai show instances --json 2>/dev/null)
-    SSH_HOST=$(echo "$INSTANCE_JSON" | python3 -c "
-import sys, json
-instances = json.loads(sys.stdin.read()) if sys.stdin.read() else []
-for inst in instances:
-    if inst.get('id') == $INSTANCE_ID:
-        print(inst.get('public_ipaddr', ''))
-        break
-" 2>/dev/null)
-    SSH_PORT=$(echo "$INSTANCE_JSON" | python3 -c "
-import sys, json
-instances = json.loads(sys.stdin.read()) if sys.stdin.read() else []
-for inst in instances:
-    if inst.get('id') == $INSTANCE_ID:
-        print(inst.get('ssh_port', ''))
-        break
-" 2>/dev/null)
-fi
+# Get SSH details from --raw JSON output (v1 API)
+INSTANCE_RAW=$(vastai show instance "$INSTANCE_ID" --raw 2>/dev/null)
+SSH_HOST=$(echo "$INSTANCE_RAW" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('public_ipaddr',''))" 2>/dev/null)
+SSH_PORT=$(echo "$INSTANCE_RAW" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('ssh_port',''))" 2>/dev/null)
 
 if [ -z "$SSH_HOST" ] || [ -z "$SSH_PORT" ]; then
     echo "ERROR: Could not get SSH details. Instance may not be ready."
     echo "  Check manually: vastai show instance $INSTANCE_ID"
-    echo "  Or: vastai scp-url $INSTANCE_ID"
     exit 1
 fi
 
