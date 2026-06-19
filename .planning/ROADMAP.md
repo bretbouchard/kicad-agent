@@ -19,7 +19,7 @@ Build an AI-safe KiCad structural editing tool across multiple milestones. First
 - **v3.2 Gap Analysis** - Phases 79 (in progress)
 - **v4.0 Hybrid Routing Intelligence** - Phases 80-84 (planned, Gemma 4 12B vision + Qwen2.5-0.5B text, all local)
 - **v4.1 Stage-Safe PCB Flow** - Phases 85-94 (planned, deterministic gates for schematic-to-manufacturing)
-- **v5.0 Vast.ai Training & External Storage** - Phases 96-97 (PLANNED)
+- **v5.0 Vast.ai Training & External Storage** - Phases 96-98 (PLANNED)
 
 ## Phases
 
@@ -780,6 +780,31 @@ Plans:
 - [x] 95-01-PLAN.md -- Cognee ingestion script with dry-run mode and verification queries (D-01)
 - [x] 95-02-PLAN.md -- KnowledgeManager with section chunking, op-to-section mapping, and lazy loading (D-02, D-03, D-05)
 - [x] 95-03-PLAN.md -- Token budget enforcement, prompt builder integration, --no-knowledge CLI flag (D-02, D-03, D-04)
+
+### Phase 96: Pre-flight validation overhaul: universal gate for all execution paths (PCB, cross-file, batch), silent failure hardening, structural fragility fixes
+
+**Goal:** Universal pre-flight gate covering all execution paths (schematic, PCB, cross-file) with PCB-specific checks, cross-file validation, batch cumulative IR tracking, silent failure hardening, and structural fragility fixes -- zero silent corruption paths
+**Requirements**: TBD
+**Depends on:** Phase 95
+**Plans:** 3/3 plans complete
+
+Plans:
+- [x] 96-01-PLAN.md -- Universal pre-flight gate with file-type dispatch, PCB/cross-file/schematic checks, gate wiring in execute_pcb and execute_cross_file (D-01, D-02, D-05, D-06, D-07)
+- [x] 96-02-PLAN.md -- Batch stop-and-rollback with cumulative IR, transaction cleanup logging, lock file errors, repair/undo failure logging (D-03, D-08, D-09, D-10, D-11)
+- [x] 96-03-PLAN.md -- Structural fragility fixes: force flag removal, hardcoded net fix, write verification, cross-file extension validation, content header validation (D-12, D-13, D-14, D-15, D-16)
+
+### Phase 97: KiCad Vision LoRA Training Execution
+
+**Goal:** Convert 200K coordinate-grounded maze routing chains + 6,696 PCB vision samples into unified Gemma 4 vision training dataset, execute LoRA training on Vast.ai RTX 3090, and verify adapter loads locally via mlx-vlm
+**Requirements**: D-01 through D-21 (all requirements defined in CONTEXT.md decisions)
+**Depends on:** Phase 96
+**Plans:** 4 plans
+
+Plans:
+- [ ] 97-01-PLAN.md -- Maze vision converter module + CLI + tests (D-02, D-04, D-05, D-20)
+- [ ] 97-02-PLAN.md -- Vast.ai training scripts adapted from spectral-primitives (D-06, D-07, D-08, D-09, D-10, D-11, D-12)
+- [ ] 97-03-PLAN.md -- Dataset merge CLI + adapter metadata registry (D-01, D-03, D-05, D-13, D-14, D-15)
+- [ ] 97-04-PLAN.md -- Adapter verification script + full pipeline checkpoint (D-16, D-17, D-18)
 
 ---
 
@@ -1655,7 +1680,7 @@ Plans:
 
 **Milestone Goal:** Adopt the proven Vast.ai GPU training flow (from spectral-primitives) for kicad-agent's LoRA training, and move all model artifacts to external storage.
 
-- [ ] **Phase 96: Vast.ai Training Pipeline** - Port the spectral-primitives Vast.ai training scripts (`vast_launch.sh` + `vast_train_gemma4.py`) for KiCad vision LoRA training. PCB spectrogram images as vision input, reasoning chains as output.
+- [x] **Phase 96: Vast.ai Training Pipeline** - Port the spectral-primitives Vast.ai training scripts (`vast_launch.sh` + `vast_train_gemma4.py`) for KiCad vision LoRA training. PCB spectrogram images as vision input, reasoning chains as output. (completed 2026-06-17)
 - [ ] **Phase 97: External Model Storage** - Move all trained adapters and training datasets to `/Volumes/Storage/models/kicad-agent/`. Adapter metadata registry with versioning.
 
 ### Phase 96: Vast.ai Training Pipeline
