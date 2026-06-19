@@ -801,10 +801,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 97-01-PLAN.md -- Maze vision converter module + CLI + tests (D-02, D-04, D-05, D-20)
-- [ ] 97-02-PLAN.md -- Vast.ai training scripts adapted from spectral-primitives (D-06, D-07, D-08, D-09, D-10, D-11, D-12)
-- [ ] 97-03-PLAN.md -- Dataset merge CLI + adapter metadata registry (D-01, D-03, D-05, D-13, D-14, D-15)
-- [ ] 97-04-PLAN.md -- Adapter verification script + full pipeline checkpoint (D-16, D-17, D-18)
+- [x] 97-01-PLAN.md -- Maze vision converter module + CLI + tests (D-02, D-04, D-05, D-20)
+- [x] 97-02-PLAN.md -- Vast.ai training scripts adapted from spectral-primitives (D-06, D-07, D-08, D-09, D-10, D-11, D-12)
+- [x] 97-03-PLAN.md -- Dataset merge CLI + adapter metadata registry (D-01, D-03, D-05, D-13, D-14, D-15)
+- [x] 97-04-PLAN.md -- Adapter verification script + full pipeline checkpoint (D-16, D-17, D-18)
 
 ---
 
@@ -1681,7 +1681,7 @@ Plans:
 **Milestone Goal:** Adopt the proven Vast.ai GPU training flow (from spectral-primitives) for kicad-agent's LoRA training, and move all model artifacts to external storage.
 
 - [x] **Phase 96: Vast.ai Training Pipeline** - Port the spectral-primitives Vast.ai training scripts (`vast_launch.sh` + `vast_train_gemma4.py`) for KiCad vision LoRA training. PCB spectrogram images as vision input, reasoning chains as output. (completed 2026-06-17)
-- [ ] **Phase 97: External Model Storage** - Move all trained adapters and training datasets to `/Volumes/Storage/models/kicad-agent/`. Adapter metadata registry with versioning.
+- [x] **Phase 97: External Model Storage** - Move all trained adapters and training datasets to `/Volumes/Storage/models/kicad-agent/`. Adapter metadata registry with versioning. (completed 2026-06-19)
 
 ### Phase 96: Vast.ai Training Pipeline
 **Goal:** Enable cheap (~$0.22/run) GPU LoRA training for KiCad vision models via Vast.ai, replicating the proven spectral-primitives workflow
