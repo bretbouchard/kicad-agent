@@ -36,16 +36,11 @@ class TestVastTrainKicad:
         # Must NOT contain old spectral output dir
         assert "gemma4-lora-adapter" not in source
 
-    def test_max_seq_length_is_4096(self):
+    def test_max_seq_length_default(self):
         source = SCRIPT_PATH.read_text()
-        assert "4096" in source
-        # Verify it's the argparse default
-        tree = ast.parse(source)
-        for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and node.name == "main":
-                for child in ast.walk(node):
-                    if isinstance(child, ast.Call):
-                        pass  # Argparse defaults checked via string presence
+        # Default is 2048 for 24GB VRAM compatibility (RTX 3090/4090 OOM fix)
+        assert "--max_seq_length" in source
+        assert "2048" in source
 
     def test_model_id_unchanged(self):
         source = SCRIPT_PATH.read_text()
