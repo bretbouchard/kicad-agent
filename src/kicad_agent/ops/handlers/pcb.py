@@ -1036,14 +1036,29 @@ def _handle_export_positions(op: Any, ir: PcbIR, file_path: Path) -> dict[str, A
     positions: dict[str, dict[str, float]] = {}
     target_refs = set(op.refs) if op.refs else set()
 
-    for fp in ir.footprints:
-        ref = getattr(fp, "reference", "")
-        if not ref:
-            continue
+    # Collect refs: prefer IR footprints, fall back to raw content scan
+    refs_to_export: list[str] = []
+    if ir.footprints:
+        for fp in ir.footprints:
+            props = getattr(fp, "properties", {})
+            ref = props.get("Reference", "") if isinstance(props, dict) else getattr(fp, "reference", "")
+            if ref:
+                refs_to_export.append(ref)
+    else:
+        # IR parser failed to load footprints — scan raw content
+        for m in re.finditer(r'^[ \t]+\(footprint ', raw, re.MULTILINE):
+            block_end = PcbRawWriter._find_matching_close(raw, m.start())
+            if block_end is None:
+                continue
+            block = raw[m.start():block_end]
+            ref_m = re.search(r'\(property "Reference" "([^"]+)"', block)
+            if ref_m:
+                refs_to_export.append(ref_m.group(1))
+
+    for ref in refs_to_export:
         if target_refs and ref not in target_refs:
             continue
 
-        # Extract position from raw content for accuracy
         start, end = PcbRawWriter._find_footprint_block(raw, ref)
         if start is None or end is None:
             continue
