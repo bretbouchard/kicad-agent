@@ -616,6 +616,58 @@ class PcbRawWriter:
         return (round(width, 3), round(height, 3))
 
     @staticmethod
+    def build_exclusion_zones(
+        content: str,
+        refs: list[str],
+        margin: float = 3.0,
+    ) -> list[tuple[float, float, float, float]]:
+        """Build AABB exclusion zones around specified footprints.
+
+        For each reference, extracts its pad extent and board position,
+        then creates a rectangle (with margin) that other components
+        should not overlap during placement.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            refs: References to build exclusion zones around.
+            margin: Extra margin in mm beyond the pad extent.
+
+        Returns:
+            List of (x1, y1, x2, y2) exclusion rectangles.
+        """
+        exclusions: list[tuple[float, float, float, float]] = []
+        for ref in refs:
+            start, end = PcbRawWriter._find_footprint_block(content, ref)
+            if start is None or end is None:
+                continue
+            block = content[start:end]
+
+            # Get footprint position
+            at_m = re.search(
+                r"^\s*\(at\s+([-\d.]+)\s+([-\d.]+)", block, re.MULTILINE
+            )
+            if not at_m:
+                continue
+            fx, fy = float(at_m.group(1)), float(at_m.group(2))
+
+            # Get pad extent in local coords
+            extent = PcbRawWriter.extract_footprint_extent(content, ref)
+            if extent:
+                pw, ph = extent
+            else:
+                pw, ph = 2.0, 2.0
+
+            # AABB: footprint position is center-ish, pad extent is local
+            # Conservative: use footprint origin as center of pad extent
+            x1 = fx - pw / 2 - margin
+            y1 = fy - ph / 2 - margin
+            x2 = fx + pw / 2 + margin
+            y2 = fy + ph / 2 + margin
+            exclusions.append((x1, y1, x2, y2))
+
+        return exclusions
+
+    @staticmethod
     def batch_expand_footprints(
         content: str,
         pcb_path: Path,

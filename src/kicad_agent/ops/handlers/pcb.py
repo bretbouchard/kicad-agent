@@ -1194,9 +1194,25 @@ def _handle_auto_place_zoned(op: Any, ir: PcbIR, file_path: Path) -> dict[str, A
     # Build fixed positions from op.fixed_positions
     fixed_positions: dict[str, tuple[float, float, float]] = dict(op.fixed_positions)
 
+    # Build exclusion zones from mounting holes and fixed connectors
+    exclusion_refs: list[str] = []
+    for comp in components:
+        ref = comp.reference
+        if ref.startswith("H"):  # Mounting holes
+            exclusion_refs.append(ref)
+    # Also exclude fixed position footprints from collision area
+    exclusion_refs.extend(fixed_positions.keys())
+
+    placed_boxes: list[tuple[float, float, float, float]] = []
+    if exclusion_refs:
+        exclusion_margin = max(op.clearance * 2, 3.0)
+        exclusion_zones = PcbRawWriter.build_exclusion_zones(
+            content, exclusion_refs, margin=exclusion_margin
+        )
+        placed_boxes.extend(exclusion_zones)
+
     # Build component lists per zone and place sequentially
     all_placed: dict[str, tuple[float, float, float]] = dict(fixed_positions)
-    placed_boxes: list[tuple[float, float, float, float]] = []
 
     for zone in zones:
         zone_name = zone.name
