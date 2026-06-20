@@ -299,9 +299,10 @@ def parse_ses(ses_text: str) -> SesParseResult:
     if res_match:
         res_unit = res_match.group(1)
         res_factor = int(res_match.group(2))
-        # (resolution um 10) → values in 0.01um, divide by 100000 for mm
+        # (resolution um 10) → values are in units of res_factor um.
+        # Divide by (res_factor * 1000) to convert to mm.
         if res_unit == "um":
-            resolution = res_factor * 10000.0
+            resolution = res_factor * 1000.0
         else:
             resolution = res_factor * 1000000.0  # mm-based, unlikely
     else:
