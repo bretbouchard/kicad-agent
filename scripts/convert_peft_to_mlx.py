@@ -122,14 +122,8 @@ def convert_config(input_path: Path, output_path: Path, weight_info: dict) -> No
             "rank": r,
             "scale": scale,
             "dropout": peft_config.get("lora_dropout", 0.0),
-            "keys": target_modules,
         },
         "base_model_name_or_path": peft_config.get("base_model_name_or_path", "google/gemma-4-12b-it"),
-        "peft_type": "LORA",
-        "r": r,
-        "lora_alpha": alpha,
-        "target_modules": target_modules,
-        "task_type": "CAUSAL_LM",
     }
 
     out_file = output_path / "adapter_config.json"
