@@ -1233,49 +1233,50 @@ def _handle_auto_place_zoned(op: Any, ir: PcbIR, file_path: Path) -> dict[str, A
         for comp in zone_components:
             w, h = comp_sizes.get(comp.reference, (2.0, 2.0))
             clearance = op.clearance
+            hw, hh = w / 2, h / 2
 
             found = False
-            x = x_start
-            while x + w <= x_end + 0.001:
-                y = y_start
-                while y + h <= y_end + 0.001:
+            x = x_start + hw + clearance
+            while x + hw <= x_end - clearance + 0.001:
+                y = y_start + hh + clearance
+                while y + hh <= y_end - clearance + 0.001:
                     overlap = False
                     for (ox0, oy0, ox1, oy1) in placed_boxes:
-                        if (x - clearance < ox1 and x + w + clearance > ox0 and
-                                y - clearance < oy1 and y + h + clearance > oy0):
+                        if (x + hw + clearance > ox0 and x - hw - clearance < ox1 and
+                                y + hh + clearance > oy0 and y - hh - clearance < oy1):
                             overlap = True
                             break
                     if not overlap:
-                        placed_boxes.append((x, y, x + w, y + h))
+                        placed_boxes.append((x - hw, y - hh, x + hw, y + hh))
                         all_placed[comp.reference] = (x, y, 0.0)
                         found = True
                         break
-                    y += max(op.grid, h)
+                    y += max(op.grid, hh * 2)
                 if found:
                     break
-                x += max(op.grid, w)
+                x += max(op.grid, hw * 2)
 
             if not found:
                 # Fallback: full board
-                x = 2.0
-                while x + w <= board_w - 2.0 + 0.001:
-                    y = 2.0
-                    while y + h <= board_h - 2.0 + 0.001:
+                x = 2.0 + hw + clearance
+                while x + hw <= board_w - 2.0 - clearance + 0.001:
+                    y = 2.0 + hh + clearance
+                    while y + hh <= board_h - 2.0 - clearance + 0.001:
                         overlap = False
                         for (ox0, oy0, ox1, oy1) in placed_boxes:
-                            if (x - clearance < ox1 and x + w + clearance > ox0 and
-                                    y - clearance < oy1 and y + h + clearance > oy0):
+                            if (x + hw + clearance > ox0 and x - hw - clearance < ox1 and
+                                    y + hh + clearance > oy0 and y - hh - clearance < oy1):
                                 overlap = True
                                 break
                         if not overlap:
-                            placed_boxes.append((x, y, x + w, y + h))
+                            placed_boxes.append((x - hw, y - hh, x + hw, y + hh))
                             all_placed[comp.reference] = (x, y, 0.0)
                             found = True
                             break
-                        y += max(op.grid, h)
+                        y += max(op.grid, hh * 2)
                     if found:
                         break
-                    x += max(op.grid, w)
+                    x += max(op.grid, hw * 2)
 
             if not found:
                 logger.warning("Could not place %s in zone '%s' or fallback", comp.reference, zone_name)
