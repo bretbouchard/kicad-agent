@@ -12,11 +12,13 @@ Usage:
 The adapter trained on Vast.ai (CUDA/PEFT) uses:
   - adapter_model.safetensors with keys like:
     base_model.model.model.language_model.layers.{i}.self_attn.{proj}.lora_A.weight
+    base_model.model.model.language_model.layers.{i}.mlp.{proj}.lora_A.weight  (V2+)
   - adapter_config.json with PEFT fields (peft_type, r, lora_alpha, target_modules)
 
 mlx-vlm expects:
   - adapters.safetensors with keys like:
     layers.{i}.self_attn.{proj}.lora_a / lora_b
+    layers.{i}.mlp.{proj}.lora_a / lora_b  (V2+)
   - adapter_config.json with mlx fields (fine_tune_type, num_layers, lora_parameters)
 """
 
@@ -35,24 +37,17 @@ except ImportError:
     print("Error: mlx not installed. pip install mlx", file=sys.stderr)
     sys.exit(1)
 
-try:
-    from safetensors.torch import load_file as load_safetensors
-    from safetensors.torch import save_file as save_safetensors
-except ImportError:
-    print("Error: safetensors not installed. pip install safetensors", file=sys.stderr)
-    sys.exit(1)
-
 
 def convert_weights(input_path: Path, output_path: Path) -> dict[str, list[str]]:
-    """Convert PEFT weights to mlx format.
+    """Convert PEFT weights to mlx format using numpy (no torch needed).
 
     PEFT key pattern:
       base_model.model.model.language_model.layers.{N}.self_attn.{proj}.lora_A.weight
-      base_model.model.model.language_model.layers.{N}.self_attn.{proj}.lora_B.weight
+      base_model.model.model.language_model.layers.{N}.mlp.{proj}.lora_A.weight  (V2+)
 
     mlx key pattern:
       layers.{N}.self_attn.{proj}.lora_a
-      layers.{N}.self_attn.{proj}.lora_b
+      layers.{N}.mlp.{proj}.lora_a  (V2+)
 
     Shape differences:
       PEFT lora_A: (r, in_dims)  -> mlx lora_a: (in_dims, r)  [transposed]
@@ -65,14 +60,19 @@ def convert_weights(input_path: Path, output_path: Path) -> dict[str, list[str]]
         print(f"Error: No adapter weights found in {input_path}", file=sys.stderr)
         sys.exit(1)
 
-    mlx_weights = {}
+    # Load weights using torch (handles bfloat16) then convert to numpy
+    from safetensors.torch import load_file as load_torch_safetensors
+    torch_weights = load_torch_safetensors(str(src_file))
+
+    numpy_weights = {}
     target_modules = set()
 
-    weights = load_safetensors(str(src_file))
-    for key, tensor in weights.items():
-        # Parse PEFT key
+    for key, tensor in torch_weights.items():
+        # Convert to float32 numpy array (handles bfloat16 via torch)
+        tensor = tensor.float().detach().cpu().numpy()
+        # Parse PEFT key — handle both self_attn and mlp modules
         m = re.match(
-            r"base_model\.model\.model\.language_model\.layers\.(\d+)\.self_attn\.(\w+)\.lora_([AB])\.weight",
+            r"base_model\.model\.model\.language_model\.layers\.(\d+)\.(\w+)\.(\w+)\.lora_([AB])\.weight",
             key,
         )
         if not m:
@@ -80,27 +80,27 @@ def convert_weights(input_path: Path, output_path: Path) -> dict[str, list[str]]
             continue
 
         layer_num = int(m.group(1))
-        proj = m.group(2)
-        ab = m.group(3).lower()  # 'a' or 'b'
+        block = m.group(2)  # "self_attn" or "mlp"
+        proj = m.group(3)
+        ab = m.group(4).lower()  # 'a' or 'b'
         target_modules.add(proj)
 
         # Build mlx key
-        mlx_key = f"layers.{layer_num}.self_attn.{proj}.lora_{ab}"
+        mlx_key = f"layers.{layer_num}.{block}.{proj}.lora_{ab}"
 
         # Convert: lora_A needs transpose (PEFT is (r, in), mlx is (in, r))
         if ab == "a":
             tensor = tensor.T
 
-        # torch -> numpy (mlx load_weights reads numpy safetensors)
-        mlx_weights[mlx_key] = tensor.float().numpy()
+        numpy_weights[mlx_key] = tensor
 
     # Save using numpy safetensors backend
     from safetensors.numpy import save_file as save_numpy_safetensors
     out_file = output_path / "adapters.safetensors"
-    save_numpy_safetensors(mlx_weights, str(out_file))
+    save_numpy_safetensors(numpy_weights, str(out_file))
 
-    print(f"  Converted {len(mlx_weights)} weights -> {out_file}")
-    return {"target_modules": sorted(target_modules), "num_keys": len(mlx_weights)}
+    print(f"  Converted {len(numpy_weights)} weights -> {out_file}")
+    return {"target_modules": sorted(target_modules), "num_keys": len(numpy_weights)}
 
 
 def convert_config(input_path: Path, output_path: Path, weight_info: dict) -> None:
