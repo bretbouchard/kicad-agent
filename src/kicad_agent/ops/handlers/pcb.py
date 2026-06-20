@@ -891,11 +891,11 @@ def _handle_auto_place(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
             continue
         w = getattr(fp, "width", 2.0) or 2.0
         h = getattr(fp, "height", 2.0) or 2.0
+        lib_id = getattr(fp, "lib_id", f"unknown:{ref}")
         comp_widths[ref] = (w, h)
         components.append(ComponentSpec(
+            library_id=lib_id,
             reference=ref,
-            width=max(0.1, w),
-            height=max(0.1, h),
         ))
 
     # Build fixed positions from fixed_refs
@@ -1150,8 +1150,9 @@ def _handle_auto_place_zoned(op: Any, ir: PcbIR, file_path: Path) -> dict[str, A
     board_w = board_bounds[2] - board_bounds[0] if board_bounds else 140.0
     board_h = board_bounds[3] - board_bounds[1] if board_bounds else 80.0
 
-    # Build component specs from PCB footprints
+    # Build component specs and size map from PCB footprints
     components: list[ComponentSpec] = []
+    comp_sizes: dict[str, tuple[float, float]] = {}
     target_refs = set(getattr(op, "refs", [])) if hasattr(op, "refs") else set()
 
     for fp in ir.footprints:
@@ -1161,12 +1162,13 @@ def _handle_auto_place_zoned(op: Any, ir: PcbIR, file_path: Path) -> dict[str, A
             continue
         if target_refs and ref not in target_refs:
             continue
+        lib_id = getattr(fp, "lib_id", f"unknown:{ref}")
         w = getattr(fp, "width", 0.0) or 2.0
         h = getattr(fp, "height", 0.0) or 2.0
+        comp_sizes[ref] = (max(0.1, w), max(0.1, h))
         components.append(ComponentSpec(
+            library_id=lib_id,
             reference=ref,
-            width=max(0.1, w),
-            height=max(0.1, h),
         ))
 
     # Assign components to zones
@@ -1204,7 +1206,7 @@ def _handle_auto_place_zoned(op: Any, ir: PcbIR, file_path: Path) -> dict[str, A
         zone_components.sort(key=lambda c: (0 if c.reference in priority_set else 1, c.reference))
 
         for comp in zone_components:
-            w, h = comp.width, comp.height
+            w, h = comp_sizes.get(comp.reference, (2.0, 2.0))
             clearance = op.clearance
 
             found = False
