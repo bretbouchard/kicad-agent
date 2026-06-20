@@ -4,6 +4,7 @@ Handlers receive (op, PcbIR, file_path) and return a result dict.
 """
 
 import logging
+import re
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable
@@ -1017,6 +1018,315 @@ def _handle_auto_route_manhattan(op: Any, ir: PcbIR, file_path: Path) -> dict[st
         "nets_routed": nets_routed,
         "layer": getattr(op, "layer", "F.Cu"),
         "track_width": getattr(op, "track_width", 0.15),
+    }
+
+
+@register_pcb("export_positions")
+def _handle_export_positions(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Export current footprint positions to a JSON file.
+
+    Extracts (at X Y angle) from every footprint block using
+    PcbRawWriter._find_footprint_block for quote-aware paren tracking.
+    """
+    import json
+
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    raw = ir.raw_content
+    positions: dict[str, dict[str, float]] = {}
+    target_refs = set(op.refs) if op.refs else set()
+
+    for fp in ir.footprints:
+        ref = getattr(fp, "reference", "")
+        if not ref:
+            continue
+        if target_refs and ref not in target_refs:
+            continue
+
+        # Extract position from raw content for accuracy
+        start, end = PcbRawWriter._find_footprint_block(raw, ref)
+        if start is None or end is None:
+            continue
+
+        block = raw[start:end]
+        at_m = re.search(r'\(at\s+([-\d.]+)\s+([-\d.]+)(?:\s+([-\d.]+))?\s*\)', block)
+        if not at_m:
+            continue
+
+        x, y = float(at_m.group(1)), float(at_m.group(2))
+        angle = float(at_m.group(3)) if at_m.group(3) else 0.0
+        positions[ref] = {"x": round(x, 6), "y": round(y, 6), "angle": round(angle, 6)}
+
+    # Write JSON
+    output_path = file_path.parent / op.output_file
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps({"positions": positions}, indent=2) + "\n")
+
+    return {
+        "exported_count": len(positions),
+        "output_file": str(output_path),
+    }
+
+
+@register_pcb("import_positions")
+def _handle_import_positions(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Import footprint positions from a JSON file and apply to PCB.
+
+    Reads positions JSON and calls PcbRawWriter.modify_footprint_position
+    for each reference.
+    """
+    import json
+
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    positions_path = file_path.parent / op.positions_file
+    if not positions_path.exists():
+        raise FileNotFoundError(f"Positions file not found: {positions_path}")
+
+    data = json.loads(positions_path.read_text())
+    positions = data.get("positions", {})
+    target_refs = set(op.refs) if op.refs else set()
+
+    updated = 0
+    content = ir.raw_content
+
+    for ref, pos in positions.items():
+        if target_refs and ref not in target_refs:
+            continue
+
+        x = pos.get("x", 0.0)
+        y = pos.get("y", 0.0)
+        angle = pos.get("angle", 0.0)
+
+        new_content = PcbRawWriter.modify_footprint_position(content, ref, x, y, angle)
+        if new_content != content:
+            content = new_content
+            updated += 1
+
+    if updated > 0:
+        ir.commit_raw_content(content)
+
+    return {
+        "updated_count": updated,
+        "total_in_file": len(positions),
+        "positions_file": str(positions_path),
+    }
+
+
+@register_pcb("auto_place_zoned")
+def _handle_auto_place_zoned(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Zone-aware placement with AABB collision and optional SA optimization.
+
+    Assigns components to functional zones, sweeps each zone with
+    collision avoidance, then optionally runs SA refinement.
+    """
+    from kicad_agent.generation.intent import ComponentSpec, NetSpec
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+    from kicad_agent.placement.zone_partition import assign_to_zone, build_keepouts_from_zone
+
+    # Extract board bounds
+    board_bounds = ir.get_board_bounds()
+    board_w = board_bounds[2] - board_bounds[0] if board_bounds else 140.0
+    board_h = board_bounds[3] - board_bounds[1] if board_bounds else 80.0
+
+    # Build component specs from PCB footprints
+    components: list[ComponentSpec] = []
+    target_refs = set(getattr(op, "refs", [])) if hasattr(op, "refs") else set()
+
+    for fp in ir.footprints:
+        ref = getattr(fp, "reference", "")
+        if not ref:
+            continue
+        if target_refs and ref not in target_refs:
+            continue
+        w = getattr(fp, "width", 0.0) or 2.0
+        h = getattr(fp, "height", 0.0) or 2.0
+        components.append(ComponentSpec(
+            reference=ref,
+            width=max(0.1, w),
+            height=max(0.1, h),
+        ))
+
+    # Assign components to zones
+    zones = op.zones
+    zone_assignments: dict[str, str] = {}
+    for comp in components:
+        zone_name = assign_to_zone(
+            comp.reference, "",
+            zones=zones,
+        )
+        zone_assignments[comp.reference] = zone_name
+
+    # Build fixed positions from op.fixed_positions
+    fixed_positions: dict[str, tuple[float, float, float]] = dict(op.fixed_positions)
+
+    # Build component lists per zone and place sequentially
+    content = ir.raw_content
+    all_placed: dict[str, tuple[float, float, float]] = dict(fixed_positions)
+    placed_boxes: list[tuple[float, float, float, float]] = []
+
+    for zone in zones:
+        zone_name = zone.name
+        x_start, x_end = zone.x_range
+        y_start, y_end = zone.y_range
+
+        # Collect components assigned to this zone (excluding fixed)
+        zone_components = [
+            c for c in components
+            if zone_assignments.get(c.reference) == zone_name
+            and c.reference not in fixed_positions
+        ]
+
+        # Sort by priority: refs in priority_refs first
+        priority_set = set(zone.priority_refs)
+        zone_components.sort(key=lambda c: (0 if c.reference in priority_set else 1, c.reference))
+
+        for comp in zone_components:
+            w, h = comp.width, comp.height
+            clearance = op.clearance
+
+            found = False
+            x = x_start
+            while x + w <= x_end + 0.001:
+                y = y_start
+                while y + h <= y_end + 0.001:
+                    overlap = False
+                    for (ox0, oy0, ox1, oy1) in placed_boxes:
+                        if (x - clearance < ox1 and x + w + clearance > ox0 and
+                                y - clearance < oy1 and y + h + clearance > oy0):
+                            overlap = True
+                            break
+                    if not overlap:
+                        placed_boxes.append((x, y, x + w, y + h))
+                        all_placed[comp.reference] = (x, y, 0.0)
+                        found = True
+                        break
+                    y += max(op.grid, h)
+                if found:
+                    break
+                x += max(op.grid, w)
+
+            if not found:
+                # Fallback: full board
+                x = 2.0
+                while x + w <= board_w - 2.0 + 0.001:
+                    y = 2.0
+                    while y + h <= board_h - 2.0 + 0.001:
+                        overlap = False
+                        for (ox0, oy0, ox1, oy1) in placed_boxes:
+                            if (x - clearance < ox1 and x + w + clearance > ox0 and
+                                    y - clearance < oy1 and y + h + clearance > oy0):
+                                overlap = True
+                                break
+                        if not overlap:
+                            placed_boxes.append((x, y, x + w, y + h))
+                            all_placed[comp.reference] = (x, y, 0.0)
+                            found = True
+                            break
+                        y += max(op.grid, h)
+                    if found:
+                        break
+                    x += max(op.grid, w)
+
+            if not found:
+                logger.warning("Could not place %s in zone '%s' or fallback", comp.reference, zone_name)
+
+    # Apply positions to PCB content
+    applied = 0
+    for ref, (x, y, angle) in all_placed.items():
+        if ref in fixed_positions:
+            continue
+        new_content = PcbRawWriter.modify_footprint_position(content, ref, x, y, angle)
+        if new_content != content:
+            content = new_content
+            applied += 1
+
+    # Optionally run SA refinement via existing engine
+    source = "zoned_sweep"
+    score = 0.0
+    hpwl = 0.0
+    violations: list[dict[str, Any]] = []
+
+    if op.optimize and len(all_placed) > 1:
+        from kicad_agent.placement.engine import HybridPlacementEngine, PlacementRequest
+
+        # Build nets from PCB if available
+        nets: list[NetSpec] = []
+        if op.schematic_file:
+            sch_path = file_path.parent / op.schematic_file
+            if sch_path.exists():
+                netlist = ir.extract_netlist()
+                for net_name, pins in netlist.items():
+                    net_refs = []
+                    # Extract refs from pad positions
+                    for px, py in pins:
+                        for r, pos in all_placed.items():
+                            if abs(pos[0] - px) < 0.5 and abs(pos[1] - py) < 0.5:
+                                net_refs.append(r)
+                    if len(set(net_refs)) >= 2:
+                        nets.append(NetSpec(name=net_name, refs=list(set(net_refs))))
+
+        # Build keepout zones from assigned zones
+        keepout_zones: list[tuple[float, float, float, float]] = []
+        for zone_def in zones:
+            other_zones = [z for z in zones if z.name != zone_def.name]
+            for other in other_zones:
+                keepout_zones.append(other.x_range + other.y_range)
+
+        request = PlacementRequest(
+            components=components,
+            nets=nets,
+            board_width=board_w,
+            board_height=board_h,
+            fixed_positions=fixed_positions,
+            keepout_zones=keepout_zones,
+            min_clearance=op.clearance,
+            use_ml=False,
+            refine_sa=True,
+        )
+
+        engine = HybridPlacementEngine()
+        output = engine.place(request)
+
+        if output.positions and output.score > score:
+            # Apply SA-optimized positions
+            sa_content = ir.raw_content
+            sa_applied = 0
+            for ref, (x, y, angle) in output.positions.items():
+                if ref in fixed_positions:
+                    continue
+                new_content = PcbRawWriter.modify_footprint_position(sa_content, ref, x, y, angle)
+                if new_content != sa_content:
+                    sa_content = new_content
+                    sa_applied += 1
+
+            if sa_applied > 0:
+                content = sa_content
+                applied = sa_applied
+                source = "zoned_sa"
+                score = output.score
+                hpwl = output.hpwl
+                violations = output.violations
+
+    if applied > 0:
+        ir.commit_raw_content(content)
+
+    # Count per-zone placements
+    zone_counts: dict[str, int] = {}
+    for ref, zone_name in zone_assignments.items():
+        if ref in all_placed:
+            zone_counts[zone_name] = zone_counts.get(zone_name, 0) + 1
+
+    return {
+        "placed_count": len(all_placed),
+        "applied_count": applied,
+        "fixed_count": len(fixed_positions),
+        "unplaced_count": len(components) - len(all_placed) + len(fixed_positions),
+        "zone_counts": zone_counts,
+        "source": source,
+        "score": score,
+        "hpwl": hpwl,
+        "violations": violations,
     }
 
 

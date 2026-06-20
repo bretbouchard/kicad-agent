@@ -254,6 +254,10 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
 )
 from kicad_agent.ops._schema_placement import (  # noqa: E402
     AutoPlaceOp,
+    ExportPositionsOp,
+    ImportPositionsOp,
+    AutoPlaceZonedOp,
+    ZoneDefinition,
 )
 from kicad_agent.ops._schema_validation import (  # noqa: E402
     ValidatePowerNetsOp,
@@ -471,6 +475,9 @@ class Operation(BaseModel):
         | FixSilkscreenOverCopperOp
         | BatchExpandFootprintsOp
         | AutoPlaceOp
+        | ExportPositionsOp
+        | ImportPositionsOp
+        | AutoPlaceZonedOp
         | ImportSesOp
         | AutoRouteManhattanOp
         | AnalyzeGapsOp
@@ -575,6 +582,10 @@ __all__ = [
     "FixSilkscreenOverCopperOp",
     # Placement ops
     "AutoPlaceOp",
+    "ExportPositionsOp",
+    "ImportPositionsOp",
+    "AutoPlaceZonedOp",
+    "ZoneDefinition",
     # Validation ops
     "ValidatePowerNetsOp",
     "ValidateSchematicOp",
