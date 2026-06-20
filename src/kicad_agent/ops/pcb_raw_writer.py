@@ -556,6 +556,66 @@ class PcbRawWriter:
         return None, None
 
     @staticmethod
+    def extract_footprint_extent(
+        content: str, reference: str
+    ) -> tuple[float, float] | None:
+        """Extract pad bounding box for a footprint, returned as (width, height).
+
+        Scans all ``(pad ...)`` blocks within the target footprint and
+        computes the bounding box of all pad extents in local coordinates.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            reference: Reference designator to find.
+
+        Returns:
+            (width, height) in mm, or None if not found.
+        """
+        start, end = PcbRawWriter._find_footprint_block(content, reference)
+        if start is None or end is None:
+            return None
+
+        block = content[start:end]
+
+        # Extract all pad blocks
+        pad_positions: list[float] = []
+        for pad_m in re.finditer(r"\(pad\s", block):
+            pad_start = pad_m.start()
+            pad_end = PcbRawWriter._find_matching_close(block, pad_start)
+            if pad_end is None:
+                continue
+            pad_block = block[pad_start:pad_end + 1]
+
+            # Extract (at X Y [angle])
+            at_m = re.search(r"\(at\s+([-\d.]+)\s+([-\d.]+)", pad_block)
+            if not at_m:
+                continue
+            px, py = float(at_m.group(1)), float(at_m.group(2))
+
+            # Extract (size W H)
+            size_m = re.search(r"\(size\s+([-\d.]+)\s+([-\d.]+)", pad_block)
+            if not size_m:
+                continue
+            pw, ph = float(size_m.group(1)), float(size_m.group(2))
+
+            pad_positions.append(px - pw / 2)
+            pad_positions.append(py - ph / 2)
+            pad_positions.append(px + pw / 2)
+            pad_positions.append(py + ph / 2)
+
+        if not pad_positions:
+            return None
+
+        x_min = min(pad_positions[0::4])
+        y_min = min(pad_positions[1::4])
+        x_max = max(pad_positions[2::4])
+        y_max = max(pad_positions[3::4])
+
+        width = max(0.5, x_max - x_min)
+        height = max(0.5, y_max - y_min)
+        return (round(width, 3), round(height, 3))
+
+    @staticmethod
     def batch_expand_footprints(
         content: str,
         pcb_path: Path,

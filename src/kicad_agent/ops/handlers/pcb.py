@@ -881,7 +881,6 @@ def _handle_auto_place(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
 
     # Build component specs from PCB footprints
     components: list[ComponentSpec] = []
-    comp_widths: dict[str, tuple[float, float]] = {}
     for fp in ir.footprints:
         props = getattr(fp, "properties", {})
         ref = props.get("Reference", "") if isinstance(props, dict) else getattr(fp, "reference", "")
@@ -889,14 +888,18 @@ def _handle_auto_place(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
             continue
         if op.fixed_refs and ref in op.fixed_refs:
             continue
-        w = getattr(fp, "width", 2.0) or 2.0
-        h = getattr(fp, "height", 2.0) or 2.0
         lib_id = getattr(fp, "lib_id", f"unknown:{ref}")
-        comp_widths[ref] = (w, h)
         components.append(ComponentSpec(
             library_id=lib_id,
             reference=ref,
         ))
+
+    # Extract real pad extents from raw content
+    comp_widths: dict[str, tuple[float, float]] = {}
+    raw = ir.raw_content
+    for comp in components:
+        extent = PcbRawWriter.extract_footprint_extent(raw, comp.reference)
+        comp_widths[comp.reference] = extent if extent else (2.0, 2.0)
 
     # Build fixed positions from fixed_refs
     fixed_positions: dict[str, tuple[float, float, float]] = {}
@@ -1163,13 +1166,20 @@ def _handle_auto_place_zoned(op: Any, ir: PcbIR, file_path: Path) -> dict[str, A
         if target_refs and ref not in target_refs:
             continue
         lib_id = getattr(fp, "lib_id", f"unknown:{ref}")
-        w = getattr(fp, "width", 0.0) or 2.0
-        h = getattr(fp, "height", 0.0) or 2.0
-        comp_sizes[ref] = (max(0.1, w), max(0.1, h))
         components.append(ComponentSpec(
             library_id=lib_id,
             reference=ref,
         ))
+
+    # Extract real pad extents from raw content for accurate collision boxes
+    content = ir.raw_content
+    comp_sizes: dict[str, tuple[float, float]] = {}
+    for comp in components:
+        extent = PcbRawWriter.extract_footprint_extent(content, comp.reference)
+        if extent:
+            comp_sizes[comp.reference] = extent
+        else:
+            comp_sizes[comp.reference] = (2.0, 2.0)
 
     # Assign components to zones
     zones = op.zones
@@ -1185,7 +1195,6 @@ def _handle_auto_place_zoned(op: Any, ir: PcbIR, file_path: Path) -> dict[str, A
     fixed_positions: dict[str, tuple[float, float, float]] = dict(op.fixed_positions)
 
     # Build component lists per zone and place sequentially
-    content = ir.raw_content
     all_placed: dict[str, tuple[float, float, float]] = dict(fixed_positions)
     placed_boxes: list[tuple[float, float, float, float]] = []
 
