@@ -213,18 +213,23 @@ class HybridPlacementEngine:
         )
         is_valid, violations = validator.validate(positions, component_sizes)
 
-        # Safety net: resolve any residual overlaps
+        # Safety net: resolve any residual overlaps (skip fixed components)
         has_any, overlap_count = validator.has_overlaps(positions, component_sizes)
         if has_any:
             from kicad_agent.placement.packing import resolve_overlaps
 
-            positions = resolve_overlaps(
+            resolved = resolve_overlaps(
                 positions,
                 component_sizes,
                 request.board_width,
                 request.board_height,
                 request.min_clearance,
             )
+            # Restore fixed positions that resolve_overlaps may have shifted
+            for ref, pos in request.fixed_positions.items():
+                if ref in positions:
+                    resolved[ref] = pos
+            positions = resolved
             is_valid, violations = validator.validate(positions, component_sizes)
 
         # Score positions
