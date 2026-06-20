@@ -385,7 +385,7 @@ def _extract_nets(pcb_content: str) -> dict[str, list[str]]:
             if pad_abs_end is None:
                 continue
             pad_block = pcb_content[pad_abs_start:pad_abs_end + 1]
-            net_match = re.search(r'\(net\s+\d+\s+"([^"]+)"', pad_block)
+            net_match = re.search(r'\(net\s+(?:\d+\s+)?"([^"]+)"', pad_block)
             if net_match:
                 net_name = net_match.group(1)
                 pin_ref = f"{reference}-{pad_name}"
