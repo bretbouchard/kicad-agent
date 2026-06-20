@@ -883,7 +883,8 @@ def _handle_auto_place(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     components: list[ComponentSpec] = []
     comp_widths: dict[str, tuple[float, float]] = {}
     for fp in ir.footprints:
-        ref = getattr(fp, "reference", "")
+        props = getattr(fp, "properties", {})
+        ref = props.get("Reference", "") if isinstance(props, dict) else getattr(fp, "reference", "")
         if op.component_refs and ref not in op.component_refs:
             continue
         if op.fixed_refs and ref in op.fixed_refs:
@@ -901,13 +902,18 @@ def _handle_auto_place(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     fixed_positions: dict[str, tuple[float, float, float]] = {}
     if op.fixed_refs:
         for fp in ir.footprints:
-            ref = getattr(fp, "reference", "")
+            props = getattr(fp, "properties", {})
+            ref = props.get("Reference", "") if isinstance(props, dict) else getattr(fp, "reference", "")
             if ref in op.fixed_refs:
                 pos = getattr(fp, "position", None)
                 if pos is not None:
-                    x = getattr(pos, "X", 0.0)
-                    y = getattr(pos, "Y", 0.0)
-                    angle = getattr(pos, "angle", 0.0) or 0.0
+                    if isinstance(pos, tuple) and len(pos) >= 2:
+                        x, y = float(pos[0]), float(pos[1])
+                        angle = float(pos[2]) if len(pos) >= 3 else 0.0
+                    else:
+                        x = getattr(pos, "X", 0.0)
+                        y = getattr(pos, "Y", 0.0)
+                        angle = getattr(pos, "angle", 0.0) or 0.0
                     fixed_positions[ref] = (x, y, angle)
 
     request = PlacementRequest(
@@ -1149,7 +1155,8 @@ def _handle_auto_place_zoned(op: Any, ir: PcbIR, file_path: Path) -> dict[str, A
     target_refs = set(getattr(op, "refs", [])) if hasattr(op, "refs") else set()
 
     for fp in ir.footprints:
-        ref = getattr(fp, "reference", "")
+        props = getattr(fp, "properties", {})
+        ref = props.get("Reference", "") if isinstance(props, dict) else getattr(fp, "reference", "")
         if not ref:
             continue
         if target_refs and ref not in target_refs:
