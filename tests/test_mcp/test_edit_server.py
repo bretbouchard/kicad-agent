@@ -559,12 +559,12 @@ class TestWorkflowDispatch:
     """Test list_workflows and get_workflow MCP dispatch."""
 
     @pytest.mark.asyncio
-    async def test_list_workflows_returns_8_templates(self, tmp_path: Path) -> None:
+    async def test_list_workflows_returns_9_templates(self, tmp_path: Path) -> None:
         executor = MagicMock(spec=OperationExecutor)
         result = await dispatch_tool("list_workflows", {}, executor, tmp_path)
         assert result.isError is not True
         body = json.loads(result.content[0].text)
-        assert len(body) == 8
+        assert len(body) == 9
         names = {w["name"] for w in body}
         assert "fix_erc_errors" in names
         assert "wire_schematic" in names
