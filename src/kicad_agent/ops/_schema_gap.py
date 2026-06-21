@@ -70,3 +70,63 @@ class FillGapsOp(BaseModel):
     )
     run_drc: bool = Field(default=True, description="Run DRC between iterations")
     use_ai: bool = Field(default=True, description="Use AI for prioritization")
+
+
+class StripShortsOp(BaseModel):
+    """Remove shorting track segments identified by DRC shorting_items violations.
+
+    Parses DRC report for shorting_items, matches by net name and exact
+    endpoint coordinates within tolerance, then removes matched (segment ...)
+    blocks from raw PCB S-expression text.
+
+    Attributes:
+        op_type: Discriminator literal ``"strip_shorts"``.
+        target_file: Relative path to the target .kicad_pcb file.
+        drc_report: Path to existing DRC report. If None, auto-runs kicad-cli pcb drc.
+        tolerance_mm: Coordinate matching tolerance in mm (default 0.01).
+    """
+
+    op_type: Literal["strip_shorts"] = "strip_shorts"
+    target_file: TargetFile
+    drc_report: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=512,
+        description="Path to existing DRC report. If None, auto-runs kicad-cli pcb drc",
+    )
+    tolerance_mm: float = Field(
+        default=0.01,
+        gt=0,
+        le=1.0,
+        description="Coordinate matching tolerance in mm",
+    )
+
+
+class RemoveDanglingTracksOp(BaseModel):
+    """Iteratively remove dangling tracks and vias from a PCB.
+
+    Runs DRC, parses track_dangling and via_dangling violations, matches
+    coordinates to PCB segments/vias, removes fully-dangling elements (both
+    endpoints orphaned), then iterates until convergence.
+
+    Attributes:
+        op_type: Discriminator literal ``"remove_dangling_tracks"``.
+        target_file: Relative path to the target .kicad_pcb file.
+        max_iterations: Maximum cleanup iterations for cascading orphans (default 30).
+        tolerance_mm: Coordinate matching tolerance in mm (default 0.001).
+    """
+
+    op_type: Literal["remove_dangling_tracks"] = "remove_dangling_tracks"
+    target_file: TargetFile
+    max_iterations: int = Field(
+        default=30,
+        ge=1,
+        le=100,
+        description="Maximum cleanup iterations for cascading orphans",
+    )
+    tolerance_mm: float = Field(
+        default=0.001,
+        gt=0,
+        le=1.0,
+        description="Coordinate matching tolerance in mm",
+    )
