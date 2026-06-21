@@ -1,0 +1,1174 @@
+# Part mapping table for BOM generation with LCSC/JLCPCB supplier codes.
+# Source: hardware/generate_boms.py (proven across 55 analog-ecosystem modules)
+# Users can extend this file or supply a custom mapping_file path.
+#
+# Categories: ics, passives (capacitors, resistors, diodes, ferrites, leds),
+#             potentiometers, connectors
+# Each entry: lcsc, package, basic (JLCPCB basic/extended), price_usd
+
+ics:
+  TL072CDR:
+    lcsc: "C6762"
+    package: "SOIC-8"
+    basic: true
+    price_usd: 0.28
+  TL072:
+    lcsc: "C6762"
+    package: "SOIC-8"
+    basic: true
+    price_usd: 0.28
+  TL074CDR:
+    lcsc: "C6764"
+    package: "SOIC-14"
+    basic: true
+    price_usd: 0.42
+  TL074:
+    lcsc: "C6764"
+    package: "SOIC-14"
+    basic: true
+    price_usd: 0.42
+  NE5532DR:
+    lcsc: "C73919"
+    package: "SOIC-8"
+    basic: true
+    price_usd: 0.35
+  NE5532:
+    lcsc: "C73919"
+    package: "SOIC-8"
+    basic: true
+    price_usd: 0.35
+  MCP3008T-I/SL:
+    lcsc: "C108308"
+    package: "SOIC-16"
+    basic: false
+    price_usd: 1.85
+  MCP3008:
+    lcsc: "C108308"
+    package: "SOIC-16"
+    basic: false
+    price_usd: 1.85
+  MCP4728-E/UN:
+    lcsc: "C740462"
+    package: "TSSOP-20"
+    basic: false
+    price_usd: 2.10
+  MCP4728:
+    lcsc: "C740462"
+    package: "TSSOP-20"
+    basic: false
+    price_usd: 2.10
+  SN74HC14DR:
+    lcsc: "C5581"
+    package: "SOIC-14"
+    basic: true
+    price_usd: 0.22
+  SN74HC14:
+    lcsc: "C5581"
+    package: "SOIC-14"
+    basic: true
+    price_usd: 0.22
+  "74HC14":
+    lcsc: "C5581"
+    package: "SOIC-14"
+    basic: true
+    price_usd: 0.22
+  SN74HC595DR:
+    lcsc: "C5948"
+    package: "SOIC-16"
+    basic: true
+    price_usd: 0.25
+  SN74HC595:
+    lcsc: "C5948"
+    package: "SOIC-16"
+    basic: true
+    price_usd: 0.25
+  "74HC595":
+    lcsc: "C5948"
+    package: "SOIC-16"
+    basic: true
+    price_usd: 0.25
+  CD4066BM/TR:
+    lcsc: "C512975"
+    package: "SOIC-14"
+    basic: true
+    price_usd: 0.30
+  CD4066:
+    lcsc: "C512975"
+    package: "SOIC-14"
+    basic: true
+    price_usd: 0.30
+  "4066":
+    lcsc: "C512975"
+    package: "SOIC-14"
+    basic: true
+    price_usd: 0.30
+  EL817S:
+    lcsc: "C311652"
+    package: "SOP-4"
+    basic: true
+    price_usd: 0.18
+  EL817:
+    lcsc: "C311652"
+    package: "SOP-4"
+    basic: true
+    price_usd: 0.18
+  AMS1117-5.0:
+    lcsc: "C6187"
+    package: "SOT-223"
+    basic: true
+    price_usd: 0.10
+  AMS1117-3.3:
+    lcsc: "C6186"
+    package: "SOT-223"
+    basic: true
+    price_usd: 0.10
+  L7805:
+    lcsc: "C6187"
+    package: "SOT-223"
+    basic: true
+    price_usd: 0.10
+  MCP23017-E/SP:
+    lcsc: "C470119"
+    package: "SSOP-28"
+    basic: false
+    price_usd: 1.20
+  MCP23017:
+    lcsc: "C470119"
+    package: "SSOP-28"
+    basic: false
+    price_usd: 1.20
+  LM13700M/NOPB:
+    lcsc: "C73414"
+    package: "SOIC-16"
+    basic: false
+    price_usd: 1.50
+  LM13700:
+    lcsc: "C73414"
+    package: "SOIC-16"
+    basic: false
+    price_usd: 1.50
+  TC1044SCPA:
+    lcsc: "C82231"
+    package: "SOIC-8"
+    basic: false
+    price_usd: 0.85
+  TC1044:
+    lcsc: "C82231"
+    package: "SOIC-8"
+    basic: false
+    price_usd: 0.85
+  MMBT3904:
+    lcsc: "C426096"
+    package: "SOT-23"
+    basic: true
+    price_usd: 0.02
+  "2N3904":
+    lcsc: "C426096"
+    package: "SOT-23"
+    basic: true
+    price_usd: 0.02
+  PT2399-S:
+    lcsc: "C82362"
+    package: "SOIC-16"
+    basic: false
+    price_usd: 0.65
+  PT2399:
+    lcsc: "C82362"
+    package: "SOIC-16"
+    basic: false
+    price_usd: 0.65
+  P82B96DP:
+    lcsc: "C93128"
+    package: "SOIC-8"
+    basic: false
+    price_usd: 0.95
+  P82B96:
+    lcsc: "C93128"
+    package: "SOIC-8"
+    basic: false
+    price_usd: 0.95
+  MCP4131-103E/SN:
+    lcsc: "C79878"
+    package: "SOIC-8"
+    basic: false
+    price_usd: 0.78
+  MCP4131:
+    lcsc: "C79878"
+    package: "SOIC-8"
+    basic: false
+    price_usd: 0.78
+  AD9833BRMZ:
+    lcsc: "C329122"
+    package: "TSSOP-10"
+    basic: false
+    price_usd: 2.80
+  AD9833:
+    lcsc: "C329122"
+    package: "TSSOP-10"
+    basic: false
+    price_usd: 2.80
+  NSL-32SR3:
+    lcsc: "C336826"
+    package: "SMD"
+    basic: false
+    price_usd: 1.40
+  NSL-32:
+    lcsc: "C336826"
+    package: "SMD"
+    basic: false
+    price_usd: 1.40
+  AS3320:
+    lcsc: "N/A"
+    package: "DIP-18"
+    basic: false
+    price_usd: 5.50
+  MAX7219CWG:
+    lcsc: "C99644"
+    package: "SOIC-24"
+    basic: false
+    price_usd: 1.60
+  MAX7219:
+    lcsc: "C99644"
+    package: "SOIC-24"
+    basic: false
+    price_usd: 1.60
+  G6K-2P-Y:
+    lcsc: "C141369"
+    package: "SMD"
+    basic: false
+    price_usd: 2.20
+  G6K-2P:
+    lcsc: "C141369"
+    package: "SMD"
+    basic: false
+    price_usd: 2.20
+  RP2350B:
+    lcsc: "N/A"
+    package: "QFN-80"
+    basic: false
+    price_usd: 1.50
+  RP2354A:
+    lcsc: "N/A"
+    package: "QFN-60"
+    basic: false
+    price_usd: 1.10
+  MF10-N:
+    lcsc: "N/A"
+    package: "DIP-20"
+    basic: false
+    price_usd: 0.00
+  MF10:
+    lcsc: "N/A"
+    package: "DIP-20"
+    basic: false
+    price_usd: 0.00
+  SSD1306:
+    lcsc: "N/A"
+    package: "Module"
+    basic: false
+    price_usd: 1.50
+  SSD1306_SPI:
+    lcsc: "N/A"
+    package: "Module"
+    basic: false
+    price_usd: 1.50
+  USB_C_16pin:
+    lcsc: "C165948"
+    package: "USB-C SMD"
+    basic: false
+    price_usd: 0.40
+  ZSS-108-02-G-D-540:
+    lcsc: "N/A"
+    package: "THT Header"
+    basic: false
+    price_usd: 2.80
+  LM358:
+    lcsc: "C7950"
+    package: "SOIC-8"
+    basic: true
+    price_usd: 0.15
+  OP07:
+    lcsc: "C7433"
+    package: "SOIC-8"
+    basic: false
+    price_usd: 0.55
+  TL082:
+    lcsc: "C6762"
+    package: "SOIC-8"
+    basic: true
+    price_usd: 0.28
+  TL084:
+    lcsc: "C6764"
+    package: "SOIC-14"
+    basic: true
+    price_usd: 0.42
+  LF353:
+    lcsc: "C6762"
+    package: "SOIC-8"
+    basic: true
+    price_usd: 0.30
+  SSM2164:
+    lcsc: "N/A"
+    package: "DIP-16"
+    basic: false
+    price_usd: 4.50
+  V2164:
+    lcsc: "N/A"
+    package: "DIP-16"
+    basic: false
+    price_usd: 4.50
+  LM741:
+    lcsc: "C8930"
+    package: "SOIC-8"
+    basic: true
+    price_usd: 0.20
+  THAT2180:
+    lcsc: "N/A"
+    package: "DIP-8/SMD"
+    basic: false
+    price_usd: 5.00
+  BD139:
+    lcsc: "C8650"
+    package: "SOT-32"
+    basic: false
+    price_usd: 0.35
+  BD140:
+    lcsc: "C8651"
+    package: "SOT-32"
+    basic: false
+    price_usd: 0.35
+  "2N5457":
+    lcsc: "N/A"
+    package: "SOT-23"
+    basic: false
+    price_usd: 0.50
+  BC547:
+    lcsc: "C25212"
+    package: "SOT-23"
+    basic: true
+    price_usd: 0.02
+  BC557:
+    lcsc: "C84635"
+    package: "SOT-23"
+    basic: true
+    price_usd: 0.02
+  SSM2212:
+    lcsc: "N/A"
+    package: "SOIC-8"
+    basic: false
+    price_usd: 3.50
+  MAT02:
+    lcsc: "N/A"
+    package: "SOIC-8"
+    basic: false
+    price_usd: 4.00
+  PCM1808:
+    lcsc: "C174498"
+    package: "TSSOP-14"
+    basic: false
+    price_usd: 1.80
+  INA217:
+    lcsc: "N/A"
+    package: "DIP-8/SOIC"
+    basic: false
+    price_usd: 3.50
+  THAT1512:
+    lcsc: "N/A"
+    package: "DIP-8/SOIC"
+    basic: false
+    price_usd: 2.80
+  SJR-5V:
+    lcsc: "C37899"
+    package: "SMD Relay"
+    basic: false
+    price_usd: 0.65
+  BAV99:
+    lcsc: "C2500"
+    package: "SOT-23"
+    basic: true
+    price_usd: 0.02
+  BC847:
+    lcsc: "C21255"
+    package: "SOT-23"
+    basic: true
+    price_usd: 0.02
+  BC857:
+    lcsc: "C82425"
+    package: "SOT-23"
+    basic: true
+    price_usd: 0.02
+  CD22M3494:
+    lcsc: "N/A"
+    package: "SOIC-28W"
+    basic: false
+    price_usd: 3.50
+  AS3394E:
+    lcsc: "N/A"
+    package: "SOIC-22"
+    basic: false
+    price_usd: 8.00
+  AS3394:
+    lcsc: "N/A"
+    package: "SOIC-22"
+    basic: false
+    price_usd: 8.00
+  YM3812:
+    lcsc: "N/A"
+    package: "DIP-24"
+    basic: false
+    price_usd: 4.00
+  YAC512:
+    lcsc: "N/A"
+    package: "DIP-16"
+    basic: false
+    price_usd: 3.00
+  VTL5C1:
+    lcsc: "N/A"
+    package: "DIP-6"
+    basic: false
+    price_usd: 3.50
+  VTL5C:
+    lcsc: "N/A"
+    package: "DIP-6"
+    basic: false
+    price_usd: 3.50
+  MMBT3906:
+    lcsc: "C426104"
+    package: "SOT-23"
+    basic: true
+    price_usd: 0.02
+  "2N3906":
+    lcsc: "C426104"
+    package: "SOT-23"
+    basic: true
+    price_usd: 0.02
+  J112:
+    lcsc: "C145922"
+    package: "SOT-23"
+    basic: false
+    price_usd: 0.25
+  TLV5618:
+    lcsc: "N/A"
+    package: "SOIC-8"
+    basic: false
+    price_usd: 1.50
+  MCP4822:
+    lcsc: "C160396"
+    package: "SOIC-8"
+    basic: false
+    price_usd: 1.30
+
+passives:
+  capacitors:
+    "100nF":
+      lcsc: "C1525"
+      package: "0805"
+      basic: true
+      price_usd: 0.008
+    "0.1uF":
+      lcsc: "C1525"
+      package: "0805"
+      basic: true
+      price_usd: 0.008
+    "10uF":
+      lcsc: "C1585"
+      package: "0805"
+      basic: true
+      price_usd: 0.015
+    "100uF":
+      lcsc: "C126028"
+      package: "1206"
+      basic: false
+      price_usd: 0.10
+    "1uF":
+      lcsc: "C28323"
+      package: "0805"
+      basic: true
+      price_usd: 0.010
+    "22uF":
+      lcsc: "C172344"
+      package: "0805"
+      basic: false
+      price_usd: 0.025
+    "4.7uF":
+      lcsc: "C17714"
+      package: "0805"
+      basic: true
+      price_usd: 0.012
+    "47uF":
+      lcsc: "C167720"
+      package: "1206"
+      basic: false
+      price_usd: 0.08
+    "220nF":
+      lcsc: "C510134"
+      package: "0805"
+      basic: false
+      price_usd: 0.012
+    "0.22uF":
+      lcsc: "C510134"
+      package: "0805"
+      basic: false
+      price_usd: 0.012
+    "10nF":
+      lcsc: "C1710"
+      package: "0805"
+      basic: true
+      price_usd: 0.008
+    "47nF":
+      lcsc: "C510135"
+      package: "0805"
+      basic: false
+      price_usd: 0.010
+    "1nF":
+      lcsc: "C43109"
+      package: "0805"
+      basic: true
+      price_usd: 0.008
+    "470pF":
+      lcsc: "C510132"
+      package: "0805"
+      basic: false
+      price_usd: 0.008
+    "33pF":
+      lcsc: "C101890"
+      package: "0805"
+      basic: false
+      price_usd: 0.008
+    "100pF":
+      lcsc: "C510128"
+      package: "0805"
+      basic: false
+      price_usd: 0.008
+    "330pF":
+      lcsc: "C510133"
+      package: "0805"
+      basic: false
+      price_usd: 0.008
+    "220pF":
+      lcsc: "C102477"
+      package: "0805"
+      basic: false
+      price_usd: 0.008
+    "2.2nF":
+      lcsc: "C510130"
+      package: "0805"
+      basic: false
+      price_usd: 0.010
+    "3.3nF":
+      lcsc: "C510131"
+      package: "0805"
+      basic: false
+      price_usd: 0.010
+    "6.8nF":
+      lcsc: "C528462"
+      package: "0805"
+      basic: false
+      price_usd: 0.010
+    "68nF":
+      lcsc: "C510136"
+      package: "0805"
+      basic: false
+      price_usd: 0.010
+    "15nF":
+      lcsc: "C510129"
+      package: "0805"
+      basic: false
+      price_usd: 0.010
+    "150nF":
+      lcsc: "C510133"
+      package: "0805"
+      basic: false
+      price_usd: 0.010
+    "0.01uF":
+      lcsc: "C1710"
+      package: "0805"
+      basic: true
+      price_usd: 0.008
+    "0.47uF":
+      lcsc: "C510136"
+      package: "0805"
+      basic: false
+      price_usd: 0.012
+    "0.33uF":
+      lcsc: "C510135"
+      package: "0805"
+      basic: false
+      price_usd: 0.012
+    "330uF":
+      lcsc: "N/A"
+      package: "Radial"
+      basic: false
+      price_usd: 0.30
+    "470uF":
+      lcsc: "N/A"
+      package: "Radial"
+      basic: false
+      price_usd: 0.35
+    "1000uF":
+      lcsc: "N/A"
+      package: "Radial"
+      basic: false
+      price_usd: 0.50
+    "22nF":
+      lcsc: "N/A"
+      package: "0805"
+      basic: false
+      price_usd: 0.010
+    "4.7nF":
+      lcsc: "C510130"
+      package: "0805"
+      basic: false
+      price_usd: 0.010
+    "2nF":
+      lcsc: "C510130"
+      package: "0805"
+      basic: false
+      price_usd: 0.010
+    "47pF":
+      lcsc: "C510129"
+      package: "0805"
+      basic: false
+      price_usd: 0.008
+    "10pF":
+      lcsc: "C510128"
+      package: "0805"
+      basic: false
+      price_usd: 0.008
+    "22pF":
+      lcsc: "C101890"
+      package: "0805"
+      basic: false
+      price_usd: 0.008
+    "560pF":
+      lcsc: "N/A"
+      package: "0805"
+      basic: false
+      price_usd: 0.008
+    "820pF":
+      lcsc: "N/A"
+      package: "0805"
+      basic: false
+      price_usd: 0.008
+    "180pF":
+      lcsc: "N/A"
+      package: "0805"
+      basic: false
+      price_usd: 0.008
+    "150pF":
+      lcsc: "N/A"
+      package: "0805"
+      basic: false
+      price_usd: 0.008
+    "220uF":
+      lcsc: "N/A"
+      package: "Radial"
+      basic: false
+      price_usd: 0.25
+    "10uF/50V":
+      lcsc: "C1585"
+      package: "0805"
+      basic: true
+      price_usd: 0.020
+    "100uF/50V":
+      lcsc: "C126028"
+      package: "1206"
+      basic: false
+      price_usd: 0.15
+    "220uF/50V":
+      lcsc: "N/A"
+      package: "Radial"
+      basic: false
+      price_usd: 0.30
+    "470uF/25V":
+      lcsc: "N/A"
+      package: "Radial"
+      basic: false
+      price_usd: 0.40
+
+  resistors:
+    "1k":
+      lcsc: "C17513"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "1.0k":
+      lcsc: "C17513"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "4.7k":
+      lcsc: "C17673"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "10k":
+      lcsc: "C17414"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "100k":
+      lcsc: "C149504"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "1M":
+      lcsc: "C17514"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "470":
+      lcsc: "C17710"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "470R":
+      lcsc: "C17710"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "100":
+      lcsc: "C17408"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "100R":
+      lcsc: "C17408"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "10":
+      lcsc: "C17406"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "220":
+      lcsc: "C17554"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "220R":
+      lcsc: "C17554"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "2.2k":
+      lcsc: "C17520"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "3.3k":
+      lcsc: "C17625"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "22k":
+      lcsc: "C17532"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "47k":
+      lcsc: "C17713"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "68k":
+      lcsc: "C17735"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "33k":
+      lcsc: "C17641"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "15k":
+      lcsc: "C17526"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "6.8k":
+      lcsc: "C17698"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "8.2k":
+      lcsc: "C17707"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "2k":
+      lcsc: "C17516"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "3k":
+      lcsc: "C17524"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "5.1k":
+      lcsc: "C17677"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "5.6k":
+      lcsc: "C17683"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "7.5k":
+      lcsc: "C17703"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "12k":
+      lcsc: "C17530"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "18k":
+      lcsc: "C17534"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "39k":
+      lcsc: "C17647"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "56k":
+      lcsc: "C17725"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "82k":
+      lcsc: "C17741"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "150k":
+      lcsc: "C17540"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "220k":
+      lcsc: "C17546"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "330k":
+      lcsc: "C17560"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "470k":
+      lcsc: "C17576"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "680k":
+      lcsc: "C17592"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "2.2M":
+      lcsc: "C17550"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "4.7M":
+      lcsc: "C17580"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "0R":
+      lcsc: "C17413"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "22R":
+      lcsc: "C17556"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "33R":
+      lcsc: "C17627"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "47R":
+      lcsc: "C17675"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "51R":
+      lcsc: "C17677"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "68R":
+      lcsc: "C17697"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "75R":
+      lcsc: "C17701"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "1.5k":
+      lcsc: "C17518"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "330":
+      lcsc: "C17621"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "680":
+      lcsc: "C17733"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "1k2":
+      lcsc: "C17516"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "1.2k":
+      lcsc: "C17516"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "120":
+      lcsc: "C17410"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "180":
+      lcsc: "C17456"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "510":
+      lcsc: "C17677"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "200k":
+      lcsc: "C17542"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "2.7k":
+      lcsc: "C17522"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "3.9k":
+      lcsc: "C17629"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "16k":
+      lcsc: "C17534"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "20k":
+      lcsc: "C17540"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "120k":
+      lcsc: "C17540"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "300":
+      lcsc: "C17621"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "300R":
+      lcsc: "C17621"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "360":
+      lcsc: "C17623"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "560":
+      lcsc: "C17681"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "620":
+      lcsc: "C17687"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "820":
+      lcsc: "C17705"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "330R":
+      lcsc: "C17621"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "560R":
+      lcsc: "C17681"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "620R":
+      lcsc: "C17687"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+    "820R":
+      lcsc: "C17705"
+      package: "0805"
+      basic: true
+      price_usd: 0.003
+
+  diodes:
+    "1N4148":
+      lcsc: "C2128"
+      package: "SOD-323"
+      basic: true
+      price_usd: 0.01
+    "1N4148WS":
+      lcsc: "C2128"
+      package: "SOD-323"
+      basic: true
+      price_usd: 0.01
+    "BAV99":
+      lcsc: "C2500"
+      package: "SOT-23"
+      basic: true
+      price_usd: 0.02
+    "1N5819":
+      lcsc: "C191023"
+      package: "SOD-323"
+      basic: false
+      price_usd: 0.03
+    "SS14":
+      lcsc: "C2480"
+      package: "SOD-323"
+      basic: true
+      price_usd: 0.03
+
+  leds:
+    "LED_Green":
+      lcsc: "C2297"
+      package: "0805"
+      basic: true
+      price_usd: 0.01
+    "LED_Yellow":
+      lcsc: "C2296"
+      package: "0805"
+      basic: true
+      price_usd: 0.01
+    "LED_Red":
+      lcsc: "C84256"
+      package: "0805"
+      basic: true
+      price_usd: 0.01
+    "LED":
+      lcsc: "C2297"
+      package: "0805"
+      basic: true
+      price_usd: 0.01
+
+  ferrites:
+    "Ferrite 220R":
+      lcsc: "C1015"
+      package: "0805"
+      basic: true
+      price_usd: 0.005
+    "220R@100MHz":
+      lcsc: "C1015"
+      package: "0805"
+      basic: true
+      price_usd: 0.005
+    "FB":
+      lcsc: "C1015"
+      package: "0805"
+      basic: true
+      price_usd: 0.005
+
+potentiometers:
+  "B10k":
+    lcsc: "N/A"
+    package: "THT Panel"
+    basic: false
+    price_usd: 0.80
+  "B50k":
+    lcsc: "N/A"
+    package: "THT Panel"
+    basic: false
+    price_usd: 0.80
+  "B100k":
+    lcsc: "N/A"
+    package: "THT Panel"
+    basic: false
+    price_usd: 0.80
+  "A10k":
+    lcsc: "N/A"
+    package: "THT Panel"
+    basic: false
+    price_usd: 0.80
+  "A100k":
+    lcsc: "N/A"
+    package: "THT Panel"
+    basic: false
+    price_usd: 0.80
+  "A1M":
+    lcsc: "N/A"
+    package: "THT Panel"
+    basic: false
+    price_usd: 0.80
+  "A50k":
+    lcsc: "N/A"
+    package: "THT Panel"
+    basic: false
+    price_usd: 0.80
+  "B1M":
+    lcsc: "N/A"
+    package: "THT Panel"
+    basic: false
+    price_usd: 0.80
+  "10kB":
+    lcsc: "N/A"
+    package: "THT Panel"
+    basic: false
+    price_usd: 0.80
+  "100kB":
+    lcsc: "N/A"
+    package: "THT Panel"
+    basic: false
+    price_usd: 0.80
+  "50kB":
+    lcsc: "N/A"
+    package: "THT Panel"
+    basic: false
+    price_usd: 0.80
+
+connectors:
+  USB_C_16pin:
+    lcsc: "C165948"
+    package: "USB-C SMD"
+    basic: false
+    price_usd: 0.40
+  ZSS-108-02-G-D-540:
+    lcsc: "N/A"
+    package: "THT Header"
+    basic: false
+    price_usd: 2.80
