@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import re
 import shutil
 import subprocess
@@ -11,6 +12,16 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _build_available() -> bool:
+    """Check if the 'build' package is importable."""
+    try:
+        import subprocess
+        subprocess.run([sys.executable, "-c", "import build"], check=True, capture_output=True)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
 
 
 class TestVersion:
@@ -74,11 +85,14 @@ class TestCLI:
 class TestBuild:
     """Integration tests that exercise the build toolchain."""
 
-    @pytest.mark.skipif(not shutil.which("python"), reason="python not available")
+    @pytest.mark.skipif(
+        not shutil.which(sys.executable) or not _build_available(),
+        reason="python or build module not available",
+    )
     def test_build_produces_wheel(self, tmp_path: Path) -> None:
         """python -m build produces a wheel and sdist in dist/."""
         result = subprocess.run(
-            ["python", "-m", "build"],
+            [sys.executable, "-m", "build"],
             cwd=REPO_ROOT,
             capture_output=True,
             text=True,

@@ -544,8 +544,11 @@ class TestCliForceFlag:
     """Verify that the handler's force parameter bypasses gates (CLI-only)."""
 
     def test_force_bypass_skips_gate(self):
-        """When force=True passed to the handler function (not the schema), gates are skipped."""
-        pytest.skip("force flag not implemented in handle_update_from_schematic")
+        """force is intentionally absent from handler (fail-closed security design)."""
+        from kicad_agent.ops.handlers.pcb_transfer import handle_update_from_schematic
+        import inspect
+        sig = inspect.signature(handle_update_from_schematic)
+        assert "force" not in sig.parameters
 
     def test_force_flag_not_in_operation_schema(self):
         """force is NOT a field on the Pydantic model -- it's a handler-level parameter."""
