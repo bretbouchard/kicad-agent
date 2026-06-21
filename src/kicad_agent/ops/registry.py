@@ -655,6 +655,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": ["analyze_gaps"],
         "conflicts": [],
     },
+    "fill_zones": {
+        "category": "pcb",
+        "description": "Fill copper zones on PCB using KiCad pcbnew API",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
     "parse_erc": {
         "category": "erc",
         "description": "Parse ERC results for a schematic file",

@@ -194,9 +194,10 @@ def _handle_fill_zones(
         with open(result_path, "r") as f:
             result = json.load(f)
 
-        # Sync IR with the file that pcbnew.SaveBoard wrote
+        # Mark IR as raw-written so execute_pcb skips kiutils serialization.
+        # pcbnew.SaveBoard already wrote the file; we don't need to write again.
         if not dry_run:
-            ir.commit_raw_content(file_path.read_text(encoding="utf-8"))
+            ir._raw_written = True
 
         return {
             "success": True,
