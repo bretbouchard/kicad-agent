@@ -87,6 +87,57 @@ def _find_java() -> str | None:
     return shutil.which("java")
 
 
+def _find_freeroute_batch(jar_path: str) -> Path | None:
+    """Find compiled FreerouteBatch.class for classpath execution.
+
+    Search order:
+    1. Same directory as the JAR (e.g. ~/.kicad-agent/tools/FreerouteBatch.class)
+    2. kicad-agent routing module directory (bundled at install time)
+
+    If .class not found but .java exists in the routing module directory,
+    attempt to compile it using ``javac``.
+
+    Args:
+        jar_path: Path to the Freerouting JAR file.
+
+    Returns:
+        Path to the directory containing FreerouteBatch.class, or None.
+    """
+    jar_dir = Path(jar_path).parent
+
+    # Check same directory as JAR
+    if (jar_dir / "FreerouteBatch.class").exists():
+        return jar_dir
+
+    # Check kicad-agent routing module directory
+    routing_dir = Path(__file__).parent
+    class_file = routing_dir / "FreerouteBatch.class"
+    java_file = routing_dir / "FreerouteBatch.java"
+
+    if class_file.exists():
+        return routing_dir
+
+    # Attempt compilation from source
+    if java_file.exists():
+        javac = shutil.which("javac")
+        if javac:
+            logger.info("Compiling FreerouteBatch.java from %s", java_file)
+            try:
+                result = subprocess.run(
+                    [javac, "-cp", jar_path, str(java_file)],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                if result.returncode == 0 and class_file.exists():
+                    return routing_dir
+                logger.warning("FreerouteBatch.java compilation failed: %s", result.stderr)
+            except subprocess.TimeoutExpired:
+                logger.warning("FreerouteBatch.java compilation timed out")
+
+    return None
+
+
 def export_dsn(
     pcb_path: Path,
     output_dir: Path | None = None,
@@ -210,14 +261,29 @@ def route_with_freerouting(
 
     # Run Freerouting with headless mode (no GUI needed)
     ses_path = output_dir / f"{pcb_path.stem}{_SES_EXTENSION}"
-    cmd = [
-        java,
-        "-Djava.awt.headless=true",
-        "-jar", jar,
-        "-de", str(dsn_path),  # Input DSN file
-        "-do", str(ses_path),  # Output SES file
-        "-mp", str(max_passes),  # Max passes
-    ]
+
+    # Try FreerouteBatch.java classpath pattern first (proven, more control)
+    batch_dir = _find_freeroute_batch(jar)
+    if batch_dir:
+        cmd = [
+            java,
+            "-Djava.awt.headless=true",
+            "-cp", f"{jar}:{batch_dir}",
+            "FreerouteBatch",
+            str(dsn_path), str(ses_path), str(max_passes),
+        ]
+        logger.info("Using FreerouteBatch classpath pattern from %s", batch_dir)
+    else:
+        # Fall back to JAR -de/-do flags (existing behavior)
+        cmd = [
+            java,
+            "-Djava.awt.headless=true",
+            "-jar", jar,
+            "-de", str(dsn_path),  # Input DSN file
+            "-do", str(ses_path),  # Output SES file
+            "-mp", str(max_passes),  # Max passes
+        ]
+        logger.info("Using JAR -de/-do fallback pattern")
 
     logger.info("Running Freerouting: %s", " ".join(cmd))
     try:
