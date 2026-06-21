@@ -342,6 +342,8 @@ from kicad_agent.ops._schema_gap import (  # noqa: E402
     FillZonesOp,
     StripShortsOp,
     RemoveDanglingTracksOp,
+    AutoRouteFreeroutingOp,
+    GenerateBomOp,
 )
 from kicad_agent.ops.handlers.pcb_transfer import (  # noqa: E402
     UpdateFromSchematicOp,
@@ -488,6 +490,8 @@ class Operation(BaseModel):
         | FillZonesOp
         | StripShortsOp
         | RemoveDanglingTracksOp
+        | AutoRouteFreeroutingOp
+        | GenerateBomOp
         | RunGateCheckOp
         | GateStatusOp
         | UpdateFromSchematicOp
@@ -668,6 +672,8 @@ __all__ = [
     "FillZonesOp",
     "StripShortsOp",
     "RemoveDanglingTracksOp",
+    "AutoRouteFreeroutingOp",
+    "GenerateBomOp",
     # PCB transfer ops
     "UpdateFromSchematicOp",
     # Constraint ops
