@@ -9,12 +9,12 @@ class TestExecutionModule:
     def test_import(self):
         """Execution module is importable."""
         from kicad_agent.ops import execution
-        assert hasattr(execution, "execute_single_operation")
+        assert hasattr(execution, "execute_schematic")
 
     def test_execute_single_callable(self):
-        """execute_single_operation is callable."""
-        from kicad_agent.ops.execution import execute_single_operation
-        assert callable(execute_single_operation)
+        """execute_schematic is callable."""
+        from kicad_agent.ops.execution import execute_schematic
+        assert callable(execute_schematic)
 
 
 class TestBatchExecutor:
@@ -41,9 +41,9 @@ class TestOpsHandler:
 
 
 class TestConflictDetector:
-    """Tests for conflict detector module."""
+    """Tests for conflict detection (handled in batch_executor)."""
 
     def test_import(self):
-        """Conflict detector module is importable."""
-        from kicad_agent.ops import conflict_detector
-        assert hasattr(conflict_detector, "validate_conflicts")
+        """Batch executor exposes conflict validation."""
+        from kicad_agent.ops import batch_executor
+        assert hasattr(batch_executor, "execute_batch")

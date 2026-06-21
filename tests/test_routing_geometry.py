@@ -2,8 +2,8 @@
 
 import pytest
 
-from kicad_agent.routing.geometry import (
-    point_to_segment_distance,
+from kicad_agent.routing.graph import (
+    _point_to_segment_distance as point_to_segment_distance,
 )
 
 

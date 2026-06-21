@@ -87,7 +87,7 @@ class TestOneIRPerParseResult:
     def test_duplicate_ir_raises(self, arduino_mega_sch: Path) -> None:
         """Creating a second IR for the same ParseResult raises RuntimeError."""
         result = parse_schematic(arduino_mega_sch)
-        SchematicIR(_parse_result=result)
+        ir = SchematicIR(_parse_result=result)  # noqa: F841 -- held alive intentionally
 
         with pytest.raises(RuntimeError, match="ParseResult already has an IR wrapper"):
             SchematicIR(_parse_result=result)

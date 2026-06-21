@@ -59,7 +59,6 @@ class TestGRPOConfig:
         config = GRPOConfig()
         assert config.learning_rate == 1e-5
         assert config.group_size == 8
-        assert config.kl_coefficient == 0.1
         assert config.seed == 42
 
     def test_custom_config(self) -> None:

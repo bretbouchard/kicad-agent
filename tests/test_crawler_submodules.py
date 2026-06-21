@@ -32,7 +32,7 @@ class TestGithubDiscovery:
         assert GithubDiscovery is not None
 
     def test_creation(self):
-        """GithubDiscovery can be created with mock client."""
-        mock_client = MagicMock()
-        discovery = GithubDiscovery(mock_client)
+        """GithubDiscovery can be created with a token."""
+        from kicad_agent.crawler.github_discovery import GithubDiscovery
+        discovery = GithubDiscovery(token="fake-test-token")
         assert discovery is not None

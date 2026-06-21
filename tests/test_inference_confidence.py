@@ -131,6 +131,7 @@ def test_analyze_returns_confidence(tmp_path: Path) -> None:
         wrapper._llm_client = MagicMock()
         wrapper._reward_model = MagicMock()
         wrapper._models_loaded = True
+        wrapper._knowledge_manager = None
 
         chain_idx = [0]
         def fake_generate(messages):

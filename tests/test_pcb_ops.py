@@ -34,6 +34,11 @@ def _clear_ir_registry():
 
 def _create_minimal_pcb(tmpdir: Path, name: str = "test.kicad_pcb") -> tuple[Path, PcbIR]:
     """Create a minimal PCB with a GND net, save it, and return parsed IR."""
+    # Clear the IR registry to prevent id-collision failures when this helper
+    # is called many times across tests in the same session.
+    from kicad_agent.ir.base import _clear_registry
+    _clear_registry()
+
     pcb_path = tmpdir / name
     board = Board.create_new()
     board.general.thickness = 1.6

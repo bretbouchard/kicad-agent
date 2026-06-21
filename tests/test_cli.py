@@ -42,7 +42,13 @@ VALID_MOVE = json.dumps({
 def _run(*args: str, cwd: str | None = None) -> subprocess.CompletedProcess[str]:
     """Invoke the CLI via ``python -m kicad_agent.cli``."""
     cmd = [sys.executable, "-m", "kicad_agent.cli", *args]
-    return subprocess.run(cmd, capture_output=True, text=True, cwd=cwd)
+    # Inherit PYTHONPATH so the uninstalled source tree (src/) is importable.
+    env = None
+    src_dir = str(Path(__file__).resolve().parent.parent / "src")
+    import os
+    env = dict(os.environ)
+    env["PYTHONPATH"] = src_dir + os.pathsep + env.get("PYTHONPATH", "")
+    return subprocess.run(cmd, capture_output=True, text=True, cwd=cwd, env=env)
 
 
 # ---------------------------------------------------------------------------

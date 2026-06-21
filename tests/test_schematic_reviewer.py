@@ -223,9 +223,9 @@ class TestExecutorQueryHandler:
 
     def test_query_handler_registered(self):
         """review_schematic query handler exists in executor registry."""
-        from kicad_agent.ops.executor import _QUERY_HANDLERS
+        from kicad_agent.ops.executor import _SCHEMATIC_QUERY_HANDLERS
 
-        assert "review_schematic" in _QUERY_HANDLERS
+        assert "review_schematic" in _SCHEMATIC_QUERY_HANDLERS
 
 
 # ---------------------------------------------------------------------------

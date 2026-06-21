@@ -64,7 +64,7 @@ class TestNetClassDef:
 
     def test_creation(self):
         """NetClassDef can be created."""
-        nc = NetClassDef(name="Default", clearance=0.2, trace_width=0.25)
+        nc = NetClassDef(name="Default", clearance=0.2, track_width=0.25)
         assert nc.name == "Default"
         assert nc.clearance == 0.2
 

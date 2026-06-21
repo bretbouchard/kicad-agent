@@ -1,5 +1,7 @@
 """Tests for export render module."""
 
+from pathlib import Path
+
 import pytest
 
 from kicad_agent.export.render import RenderResult, render_pcb

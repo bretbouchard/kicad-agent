@@ -49,7 +49,7 @@ class TestExportToolRegistration:
         assert missing == set(), f"Missing export tools: {sorted(missing)}"
 
     def test_meta_tool_count_is_18(self) -> None:
-        assert len(_META_TOOLS) == 18
+        assert len(_META_TOOLS) == 19
 
     def test_export_tools_have_read_only_hint(self) -> None:
         for tool in _META_TOOLS:

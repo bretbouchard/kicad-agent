@@ -26,5 +26,5 @@ class TestEasyedaApi:
 
     def test_import(self):
         """EasyEDA API module is importable."""
-        from kicad_agent.crawler.easyeda_api import EasyedaAPI
-        assert EasyedaAPI is not None
+        from kicad_agent.crawler.easyeda_api import EasyEdaClient
+        assert EasyEdaClient is not None

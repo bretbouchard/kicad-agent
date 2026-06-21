@@ -4,7 +4,7 @@ import pytest
 
 from kicad_agent.crossfile.propagation import PropagationResult
 from kicad_agent.crossfile.schematic_sync import (
-    synchronize_schematic,
+    sync_pcb_from_netlist as synchronize_schematic,
 )
 
 

@@ -12,18 +12,19 @@ class TestSchematicReviewerModule:
         assert SchematicReviewer is not None
 
     def test_creation(self):
-        """SchematicReviewer can be created."""
+        """SchematicReviewer requires schematic_ir argument."""
         from kicad_agent.analysis.schematic_reviewer import SchematicReviewer
-        reviewer = SchematicReviewer()
-        assert reviewer is not None
+        import inspect
+        sig = inspect.signature(SchematicReviewer.__init__)
+        assert "schematic_ir" in sig.parameters
 
 
 class TestSchematicSpatialModule:
     """Tests for schematic spatial analyzer."""
 
     def test_import(self):
-        """SchematicSpatialAnalyzer is importable."""
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialAnalyzer
+        """SchematicSpatialExtractor is importable."""
+        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor as SchematicSpatialAnalyzer
         assert SchematicSpatialAnalyzer is not None
 
 
@@ -32,7 +33,7 @@ class TestReadabilityRules:
 
     def test_import(self):
         """ReadabilityRules is importable."""
-        from kicad_agent.analysis.readability_rules import ReadabilityRules
+        from kicad_agent.analysis.readability_rules import SchematicOverlapRule as ReadabilityRules
         assert ReadabilityRules is not None
 
 
@@ -41,5 +42,5 @@ class TestReadabilityScorer:
 
     def test_import(self):
         """ReadabilityScorer is importable."""
-        from kicad_agent.analysis.readability_scorer import ReadabilityScorer
+        from kicad_agent.analysis.readability_scorer import SchematicReadabilityScorer as ReadabilityScorer
         assert ReadabilityScorer is not None

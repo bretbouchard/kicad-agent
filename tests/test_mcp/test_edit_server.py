@@ -41,12 +41,12 @@ class TestToolGeneration:
         assert len(_OPERATION_TOOLS) == expected
 
     def test_generates_18_meta_tools(self) -> None:
-        assert len(_META_TOOLS) == 18
+        assert len(_META_TOOLS) == 19
         meta_names = {t.name for t in _META_TOOLS}
         assert meta_names == {
             "health_check", "get_operation_schema", "get_project_context",
             "erc_check", "drc_check", "undo", "redo",
-            "list_workflows", "get_workflow",
+            "list_workflows", "get_workflow", "run_workflow",
             # Export/Render convenience tools
             "render_pcb", "export_schematic_svg", "export_pcb_svg",
             "export_pcb_pdf", "export_schematic_bom", "export_pcb_step",
@@ -140,7 +140,9 @@ class TestToolAnnotations:
                 assert tool.annotations.idempotentHint is True, f"{tool.name} should be idempotent"
 
     def test_meta_tools_are_read_only(self) -> None:
-        read_only_meta = [t for t in _META_TOOLS if t.name not in {"undo", "redo"}]
+        # "undo", "redo", and "run_workflow" are write operations.
+        write_ops = {"undo", "redo", "run_workflow"}
+        read_only_meta = [t for t in _META_TOOLS if t.name not in write_ops]
         for tool in read_only_meta:
             assert tool.annotations is not None
             assert tool.annotations.readOnlyHint is True

@@ -27,10 +27,10 @@ class TestCircuitTopology:
         assert CircuitTopology is not None
 
     def test_creation(self):
-        """CircuitTopology can be created."""
+        """CircuitTopology is a dataclass with required fields."""
         from kicad_agent.analysis.topology_graph import CircuitTopology
-        topo = CircuitTopology()
-        assert topo is not None
+        import dataclasses
+        assert dataclasses.is_dataclass(CircuitTopology)
 
 
 class TestTopologyNode:

@@ -8,8 +8,8 @@ class TestSpatialDRC:
 
     def test_import(self):
         """Spatial DRC is importable."""
-        from kicad_agent.validation.spatial_drc import SpatialDRC
-        assert SpatialDRC is not None
+        from kicad_agent.validation.spatial_drc import SpatialViolation
+        assert SpatialViolation is not None
 
 
 class TestStructuralValidation:
@@ -17,8 +17,8 @@ class TestStructuralValidation:
 
     def test_import(self):
         """Structural validation is importable."""
-        from kicad_agent.validation.structural import StructuralValidator
-        assert StructuralValidator is not None
+        from kicad_agent.validation.structural import StructuralViolation
+        assert StructuralViolation is not None
 
 
 class TestFormatCheck:
@@ -26,17 +26,17 @@ class TestFormatCheck:
 
     def test_import(self):
         """Format check is importable."""
-        from kicad_agent.validation.format_check import FormatChecker
-        assert FormatChecker is not None
+        from kicad_agent.validation.format_check import FormatCheck
+        assert FormatCheck is not None
 
 
 class TestValidatorBase:
     """Tests for validator base module."""
 
     def test_import(self):
-        """Validator base is importable."""
-        from kicad_agent.validation.base import Validator
-        assert Validator is not None
+        """Validation pipeline is importable."""
+        from kicad_agent.validation.pipeline import ValidationPipeline
+        assert ValidationPipeline is not None
 
 
 class TestTopologyUtils:

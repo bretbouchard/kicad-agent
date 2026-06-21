@@ -21,7 +21,7 @@ class TestRegistryCompleteness:
     """Verify the registry has the expected number of operations."""
 
     def test_registry_has_98_operations(self) -> None:
-        assert len(OPERATION_REGISTRY) == 111
+        assert len(OPERATION_REGISTRY) == 124
 
     def test_validate_registry_completeness_passes(self) -> None:
         result = validate_registry_completeness()
@@ -129,6 +129,10 @@ class TestQueryFunctions:
             "analyze_ground_topology",
             "trace_net_from_label",
             "analyze_gaps",
+            "gate_status",
+            "run_gate_check",
+            "get_constraints",
+            "export_positions",
         }
         assert readonly_types == expected_readonly
         assert len(readonly) == len(expected_readonly)

@@ -771,11 +771,17 @@ class TestCLI:
 
     def test_dry_run_does_not_generate(self):
         """CLI --dry-run reports plan without generating files."""
+        import os
         import subprocess
+        import sys
+
+        env = dict(os.environ)
+        src_dir = str(Path(__file__).resolve().parent.parent / "src")
+        env["PYTHONPATH"] = src_dir + os.pathsep + env.get("PYTHONPATH", "")
 
         result = subprocess.run(
             [
-                "python",
+                sys.executable,
                 "-m",
                 "kicad_agent.training.mass_generate",
                 "--dry-run",
@@ -783,6 +789,7 @@ class TestCLI:
             capture_output=True,
             text=True,
             timeout=30,
+            env=env,
         )
         assert result.returncode == 0
         assert "Templates:" in result.stdout

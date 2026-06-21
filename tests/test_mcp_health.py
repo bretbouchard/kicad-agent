@@ -7,15 +7,15 @@ class TestMcpExportTools:
     """Tests for MCP export tools."""
 
     def test_import(self):
-        """MCP export tools module is importable."""
-        from kicad_agent.mcp.test_mcp_export_tools import TestMcpExportTools
-        assert TestMcpExportTools is not None
+        """MCP edit_server module (with export tools) is importable."""
+        from kicad_agent.mcp import edit_server
+        assert edit_server is not None
 
 
 class TestMcpHealthCheck:
     """Tests for MCP health check."""
 
     def test_import(self):
-        """MCP health check module is importable."""
-        from kicad_agent.mcp.test_mcp_health_check import TestMcpHealthCheck
-        assert TestMcpHealthCheck is not None
+        """MCP edit_server module (with health check tool) is importable."""
+        from kicad_agent.mcp import edit_server
+        assert hasattr(edit_server, "call_tool")

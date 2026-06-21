@@ -56,13 +56,13 @@ class TestParseRawSexp:
         """Simple S-expression parses to list."""
         result = parse_raw_sexp("(a b c)")
         assert isinstance(result, list)
-        assert len(result) == 4  # [Symbol(a), Symbol(b), Symbol(c)]
+        assert len(result) == 3  # [Symbol(a), Symbol(b), Symbol(c)]
 
     def test_nested(self):
         """Nested S-expression parses correctly."""
         result = parse_raw_sexp("(a (b c) d)")
         assert isinstance(result, list)
-        assert len(result) == 4
+        assert len(result) == 3
 
     def test_string_values(self):
         """String values preserved."""

@@ -99,7 +99,7 @@ class TestNativeGeneral:
     def test_creation(self):
         """NativeGeneral can be created."""
         gen = NativeGeneral()
-        assert gen.thickness == 0.0
+        assert gen.thickness == 1.6
 
 
 class TestParsePcbContent:

@@ -36,6 +36,7 @@ def _make_wrapper(n_best: int = 4, max_workers: int = 4) -> "InferenceWrapper":
     wrapper._llm_client = MagicMock()
     wrapper._reward_model = MagicMock()
     wrapper._models_loaded = True
+    wrapper._knowledge_manager = None
     return wrapper
 
 

@@ -27,7 +27,8 @@ class TestTransactionResult:
 
     def test_creation(self):
         """TransactionResult can be created."""
-        result = TransactionResult(success=True, original_path="/tmp/test.kicad_sch")
+        from pathlib import Path
+        result = TransactionResult(success=True, target_file=Path("/tmp/test.kicad_sch"))
         assert result.success is True
 
 

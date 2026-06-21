@@ -123,9 +123,13 @@ class TestGitignore:
 
     def test_subprocess_undo_no_history(self, project_dir):
         """Undo via subprocess exits 1 when no history exists."""
+        import os
+        env = dict(os.environ)
+        src_dir = str(Path(__file__).resolve().parent.parent / "src")
+        env["PYTHONPATH"] = src_dir + os.pathsep + env.get("PYTHONPATH", "")
         result = subprocess.run(
             [sys.executable, "-m", "kicad_agent.cli", "undo", "-p", str(project_dir)],
-            capture_output=True, text=True,
+            capture_output=True, text=True, env=env,
         )
         assert result.returncode == 1
         assert "Cannot undo" in result.stderr

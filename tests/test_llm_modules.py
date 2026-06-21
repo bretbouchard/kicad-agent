@@ -13,21 +13,25 @@ class TestLocalClient:
 
     def test_creation_with_defaults(self):
         """LocalLLMClient creates with default model."""
+        from kicad_agent.llm.local_client import LocalLLMClient
         client = LocalLLMClient()
         assert "Qwen" in client.model
 
     def test_creation_custom_model(self):
         """LocalLLMClient accepts custom model name."""
+        from kicad_agent.llm.local_client import LocalLLMClient
         client = LocalLLMClient(model="custom/model")
         assert client.model == "custom/model"
 
     def test_adapter_path_property(self):
         """adapter_path property returns string."""
+        from kicad_agent.llm.local_client import LocalLLMClient
         client = LocalLLMClient()
         assert isinstance(client.adapter_path, str)
 
     def test_unload_model(self):
         """unload_model is safe to call on fresh client."""
+        from kicad_agent.llm.local_client import LocalLLMClient
         client = LocalLLMClient()
         client.unload_model()  # Should not raise
         client.unload_model()  # Idempotent

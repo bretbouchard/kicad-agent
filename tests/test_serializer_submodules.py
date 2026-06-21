@@ -37,7 +37,7 @@ class TestUuidReinjectorModule:
     def test_uuid_map_creation(self):
         """UUIDMap can be created."""
         m = UUIDMap()
-        assert m.entries == []
+        assert m.entries == ()
 
     def test_uuid_map_with_source_type(self):
         """UUIDMap accepts source_file_type."""

@@ -2,6 +2,8 @@
 
 import pytest
 
+from kicad_agent.analysis.net_classifier import SignalIntegrity
+
 
 class TestNetClassifierModule:
     """Tests for NetClassifier class."""
