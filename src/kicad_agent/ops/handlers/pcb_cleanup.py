@@ -324,6 +324,7 @@ def _handle_strip_shorts(
                 }
         finally:
             # Keep report for audit trail, don't delete
+            pass
 
     # Parse shorting items
     drc_endpoints = parse_drc_shorting_items(drc_report)
