@@ -258,29 +258,29 @@ def remove_elements(
 
 
 # ---------------------------------------------------------------------------
-# strip_shorts handler
+# Importable inner functions for pipeline use
 # ---------------------------------------------------------------------------
 
 
-@register_cleanup("strip_shorts")
-def _handle_strip_shorts(
-    op: Any,
-    ir: PcbIR,
+def _do_strip_shorts(
     file_path: Path,
+    ir: PcbIR,
+    *,
+    tolerance_mm: float = 0.01,
 ) -> dict[str, Any]:
     """Remove shorting track segments identified by DRC shorting_items.
 
-    Creates a backup, runs DRC (or uses provided report), parses shorting_items,
-    matches segments by net name + endpoint coordinates within tolerance, and
-    removes matched segment blocks from raw PCB text.
+    Importable inner function that can be called directly by pipeline handlers
+    without going through the full handler dispatch. Creates a backup, runs DRC,
+    parses shorting_items, matches by net + coordinates, removes segments.
 
     Args:
-        op: StripShortsOp with target_file, drc_report, tolerance_mm.
-        ir: PcbIR providing raw PCB text.
         file_path: Resolved path to the .kicad_pcb file.
+        ir: PcbIR providing raw PCB text.
+        tolerance_mm: Coordinate matching tolerance in mm.
 
     Returns:
-        Dict with removed, shorts_found, artifacts_removed counts.
+        Dict with success, removed, shorts_found, artifacts_removed counts.
     """
     # Create backup
     backup_path = Path(str(file_path) + ".bak")
@@ -296,35 +296,22 @@ def _handle_strip_shorts(
             "artifacts_removed": 0,
         }
 
-    # Get DRC report
-    if op.drc_report:
-        drc_report = Path(op.drc_report)
-        if not drc_report.exists():
+    # Auto-run DRC
+    with tempfile.NamedTemporaryFile(
+        suffix=".rpt", prefix="strip_shorts_drc_", delete=False,
+    ) as tmp:
+        drc_report = Path(tmp.name)
+    try:
+        if not run_drc(file_path, drc_report):
             return {
                 "success": False,
-                "error": f"DRC report not found: {op.drc_report}",
+                "error": "kicad-cli pcb drc failed or produced empty report",
                 "removed": 0,
                 "shorts_found": 0,
                 "artifacts_removed": 0,
             }
-    else:
-        # Auto-run DRC
-        with tempfile.NamedTemporaryFile(
-            suffix=".rpt", prefix="strip_shorts_drc_", delete=False,
-        ) as tmp:
-            drc_report = Path(tmp.name)
-        try:
-            if not run_drc(file_path, drc_report):
-                return {
-                    "success": False,
-                    "error": "kicad-cli pcb drc failed or produced empty report",
-                    "removed": 0,
-                    "shorts_found": 0,
-                    "artifacts_removed": 0,
-                }
-        finally:
-            # Keep report for audit trail, don't delete
-            pass
+    except Exception:
+        pass
 
     # Parse shorting items
     drc_endpoints = parse_drc_shorting_items(drc_report)
@@ -343,7 +330,7 @@ def _handle_strip_shorts(
     segments = parse_segments(pcb_text)
     logger.info("PCB segments: %d", len(segments))
 
-    tol = op.tolerance_mm
+    tol = tolerance_mm
     to_remove: list[dict] = []
 
     # Match segments by net + endpoint coordinates
@@ -381,7 +368,6 @@ def _handle_strip_shorts(
         }
 
     # Remove matched segments
-    seg_indices = {seg['line_start'] for seg in to_remove}
     pcb_lines = pcb_text.split('\n')
     lines_to_remove: set[int] = set()
     for seg in to_remove:
@@ -415,32 +401,28 @@ def _handle_strip_shorts(
     }
 
 
-# ---------------------------------------------------------------------------
-# remove_dangling_tracks handler
-# ---------------------------------------------------------------------------
-
-
-@register_cleanup("remove_dangling_tracks")
-def _handle_remove_dangling_tracks(
-    op: Any,
-    ir: PcbIR,
+def _do_remove_dangling(
     file_path: Path,
+    ir: PcbIR,
+    *,
+    max_iterations: int = 30,
+    tolerance_mm: float = 0.001,
 ) -> dict[str, Any]:
     """Iteratively remove dangling tracks and vias from a PCB.
 
+    Importable inner function that can be called directly by pipeline handlers.
     Runs DRC each iteration, parses track_dangling and via_dangling violations,
-    matches coordinates to segments/vias, removes ONLY fully-dangling segments
-    (both endpoints orphaned), then iterates until convergence or max_iterations.
-
-    Half-connected segments at pads are NOT removed (false positives).
+    removes fully-dangling segments (both endpoints orphaned), iterates until
+    convergence.
 
     Args:
-        op: RemoveDanglingTracksOp with target_file, max_iterations, tolerance_mm.
-        ir: PcbIR providing raw PCB text.
         file_path: Resolved path to the .kicad_pcb file.
+        ir: PcbIR providing raw PCB text.
+        max_iterations: Maximum cleanup iterations.
+        tolerance_mm: Coordinate matching tolerance in mm.
 
     Returns:
-        Dict with iterations, tracks_removed, vias_removed, remaining_dangling.
+        Dict with success, iterations, tracks_removed, vias_removed, remaining_dangling.
     """
     # Create backup
     backup_path = Path(str(file_path) + ".bak")
@@ -457,8 +439,8 @@ def _handle_remove_dangling_tracks(
             "remaining_dangling": 0,
         }
 
-    tol = op.tolerance_mm
-    max_iter = op.max_iterations
+    tol = tolerance_mm
+    max_iter = max_iterations
     total_tracks_removed = 0
     total_vias_removed = 0
     pcb_text = ir.raw_content if ir.raw_content else file_path.read_text()
@@ -628,3 +610,138 @@ def _handle_remove_dangling_tracks(
         "vias_removed": total_vias_removed,
         "remaining_dangling": remaining,
     }
+
+
+# ---------------------------------------------------------------------------
+# strip_shorts handler (delegates to _do_strip_shorts)
+# ---------------------------------------------------------------------------
+
+
+@register_cleanup("strip_shorts")
+def _handle_strip_shorts(
+    op: Any,
+    ir: PcbIR,
+    file_path: Path,
+) -> dict[str, Any]:
+    """Remove shorting track segments identified by DRC shorting_items.
+
+    Handler wrapper that delegates to _do_strip_shorts with op parameters.
+    """
+    drc_report = getattr(op, "drc_report", None)
+    tolerance = getattr(op, "tolerance_mm", 0.01)
+
+    if drc_report:
+        # Use provided DRC report path -- create a compatibility wrapper
+        report_path = Path(drc_report)
+        if not report_path.exists():
+            return {
+                "success": False,
+                "error": f"DRC report not found: {drc_report}",
+                "removed": 0,
+                "shorts_found": 0,
+                "artifacts_removed": 0,
+            }
+        # Parse directly from provided report
+        return _strip_shorts_from_report(file_path, ir, report_path, tolerance)
+
+    return _do_strip_shorts(file_path, ir, tolerance_mm=tolerance)
+
+
+def _strip_shorts_from_report(
+    file_path: Path,
+    ir: PcbIR,
+    drc_report: Path,
+    tolerance_mm: float = 0.01,
+) -> dict[str, Any]:
+    """Strip shorts using a pre-existing DRC report."""
+    backup_path = Path(str(file_path) + ".bak")
+    try:
+        shutil.copy2(file_path, backup_path)
+    except OSError as exc:
+        return {
+            "success": False,
+            "error": f"Failed to create backup: {exc}",
+            "removed": 0,
+            "shorts_found": 0,
+            "artifacts_removed": 0,
+        }
+
+    drc_endpoints = parse_drc_shorting_items(drc_report)
+    if not drc_endpoints:
+        return {"success": True, "removed": 0, "shorts_found": 0, "artifacts_removed": 0}
+
+    pcb_text = ir.raw_content if ir.raw_content else file_path.read_text()
+    segments = parse_segments(pcb_text)
+
+    to_remove: list[dict] = []
+    for target_net, tx, ty in drc_endpoints:
+        for seg in segments:
+            if seg.get('net', '') != target_net:
+                continue
+            for ex, ey in [
+                (seg.get('start_x', 0), seg.get('start_y', 0)),
+                (seg.get('end_x', 0), seg.get('end_y', 0)),
+            ]:
+                if abs(ex - tx) < tolerance_mm and abs(ey - ty) < tolerance_mm:
+                    if seg not in to_remove:
+                        to_remove.append(seg)
+
+    artifacts_removed = 0
+    for seg in segments:
+        if seg in to_remove:
+            continue
+        sx, sy = seg.get('start_x', 0), seg.get('start_y', 0)
+        ex, ey = seg.get('end_x', 0), seg.get('end_y', 0)
+        if abs(sx - ex) < tolerance_mm and abs(sy - ey) < tolerance_mm:
+            to_remove.append(seg)
+            artifacts_removed += 1
+
+    if not to_remove:
+        return {"success": True, "removed": 0, "shorts_found": len(drc_endpoints), "artifacts_removed": 0}
+
+    lines_to_remove: set[int] = set()
+    for seg in to_remove:
+        for ln in range(seg['line_start'], seg['line_end'] + 1):
+            lines_to_remove.add(ln)
+
+    new_text = '\n'.join(
+        l for i, l in enumerate(pcb_text.split('\n')) if i not in lines_to_remove
+    )
+
+    if not validate_paren_balance(new_text):
+        shutil.copy2(backup_path, file_path)
+        return {
+            "success": False,
+            "error": "Paren balance check failed after removal. Backup restored.",
+            "removed": 0,
+            "shorts_found": len(drc_endpoints),
+            "artifacts_removed": 0,
+        }
+
+    ir.commit_raw_content(new_text)
+    return {
+        "success": True,
+        "removed": len(to_remove),
+        "shorts_found": len(drc_endpoints),
+        "artifacts_removed": artifacts_removed,
+    }
+
+
+# ---------------------------------------------------------------------------
+# remove_dangling_tracks handler (delegates to _do_remove_dangling)
+# ---------------------------------------------------------------------------
+
+
+@register_cleanup("remove_dangling_tracks")
+def _handle_remove_dangling_tracks(
+    op: Any,
+    ir: PcbIR,
+    file_path: Path,
+) -> dict[str, Any]:
+    """Iteratively remove dangling tracks and vias from a PCB.
+
+    Handler wrapper that delegates to _do_remove_dangling with op parameters.
+    """
+    max_iter = getattr(op, "max_iterations", 30)
+    tol = getattr(op, "tolerance_mm", 0.001)
+    return _do_remove_dangling(file_path, ir, max_iterations=max_iter, tolerance_mm=tol)

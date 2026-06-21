@@ -130,3 +130,76 @@ class RemoveDanglingTracksOp(BaseModel):
         le=1.0,
         description="Coordinate matching tolerance in mm",
     )
+
+
+class AutoRouteFreeroutingOp(BaseModel):
+    """Full auto-route pipeline: DSN export -> Freerouting -> SES import -> cleanup.
+
+    Chains the complete Freerouting auto-routing pipeline into a single operation:
+    1. Export PCB to Specctra DSN format
+    2. Run Freerouting headless batch auto-router
+    3. Import SES routing result back into PCB
+    4. Strip shorting segments (optional cleanup)
+    5. Remove dangling tracks/vias (optional cleanup)
+
+    Consolidates the 5-script manual pipeline (export_dsn_raw.py + FreerouteBatch.java
+    + import_ses.py + strip_shorts.py + remove_dangling.py) into one kicad-agent
+    operation. No project needs its own Freerouting JAR copy.
+
+    Attributes:
+        op_type: Discriminator literal ``"auto_route_freerouting"``.
+        target_file: Relative path to the target .kicad_pcb file.
+        passes: Maximum Freerouting routing passes (default 25).
+        cleanup_shorts: Run strip_shorts after SES import (default True).
+        cleanup_dangling: Run remove_dangling_tracks after strip_shorts (default True).
+    """
+
+    op_type: Literal["auto_route_freerouting"] = "auto_route_freerouting"
+    target_file: TargetFile
+    passes: int = Field(
+        default=25,
+        ge=1,
+        le=200,
+        description="Maximum Freerouting routing passes",
+    )
+    cleanup_shorts: bool = Field(
+        default=True,
+        description="Run strip_shorts after import",
+    )
+    cleanup_dangling: bool = Field(
+        default=True,
+        description="Run remove_dangling_tracks after import",
+    )
+
+
+class GenerateBomOp(BaseModel):
+    """Generate a BOM with LCSC/JLCPCB part numbers from a KiCad schematic.
+
+    Parses component instances (symbol blocks) from a .kicad_sch file,
+    looks up each component in an externalized YAML part mapping table,
+    aggregates by part+value, and returns a structured BOM with LCSC codes,
+    quantities, and estimated costs.
+
+    This is a read-only operation -- it never modifies the schematic.
+
+    Attributes:
+        op_type: Discriminator literal ``"generate_bom"``.
+        target_file: Relative path to the target .kicad_sch file.
+        supplier: Supplier name for part lookup (default ``"lcsc"``).
+        mapping_file: Optional path to custom part mapping YAML.
+            Defaults to the bundled ``data/part-mappings.yaml``.
+    """
+
+    op_type: Literal["generate_bom"] = "generate_bom"
+    target_file: TargetFile
+    supplier: str = Field(
+        default="lcsc",
+        min_length=1,
+        max_length=32,
+        description="Supplier name for part lookup",
+    )
+    mapping_file: str | None = Field(
+        default=None,
+        max_length=512,
+        description="Path to custom part mapping YAML. Defaults to bundled part-mappings.yaml",
+    )
