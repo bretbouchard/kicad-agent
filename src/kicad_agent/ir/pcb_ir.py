@@ -927,15 +927,22 @@ class PcbIR(BaseIR):
         Re-parses the file to keep the in-memory kiutils Board in sync
         with raw S-expression modifications. Handles IR registry bookkeeping.
         """
-        from kicad_agent.ir.base import _ir_registry, _ir_registry_lock
+        from kicad_agent.ir.base import (
+            _ir_registry, _ir_registry_lock, _ir_finalizers,
+        )
 
         old_id = id(self._parse_result)
         new_id = id(new_result)
         with _ir_registry_lock:
             _ir_registry.discard(old_id)
+            old_fin = _ir_finalizers.pop(old_id, None)
+            if old_fin is not None:
+                old_fin.detach()
             if new_id in _ir_registry:
                 raise RuntimeError("New ParseResult already has an IR wrapper")
             _ir_registry.add(new_id)
+            import weakref
+            _ir_finalizers[new_id] = weakref.finalize(self, _ir_registry.discard, new_id)
         self._parse_result = new_result
         self._uuid_map = new_uuid_map
         self._raw_written = True

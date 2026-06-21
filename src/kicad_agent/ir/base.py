@@ -20,6 +20,7 @@ Usage:
 
 import logging
 import threading
+import weakref
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -32,14 +33,28 @@ logger = logging.getLogger(__name__)
 # Council HIGH: Registry to enforce one-IR-per-ParseResult invariant.
 # Uses id() of ParseResult for lookup since dataclass IR instances are unhashable.
 # Thread-safe for concurrent access.
+#
+# Each registered id is paired with a weakref finalizer for the IR. When the IR
+# is garbage-collected (taking its ParseResult with it) the finalizer removes
+# the id from the set. This prevents spurious "ParseResult already has an IR
+# wrapper" errors when Python reuses a gc'd ParseResult's id() for a new object.
 _ir_registry: set[int] = set()
+_ir_finalizers: "dict[int, weakref.finalize]" = {}
 _ir_registry_lock = threading.Lock()
+
+
+def _finalize_ir(pr_id: int) -> None:
+    """Finalizer callback to remove a gc'd IR's id from the registry."""
+    with _ir_registry_lock:
+        _ir_registry.discard(pr_id)
+        _ir_finalizers.pop(pr_id, None)
 
 
 def _clear_registry() -> None:
     """Clear the IR registry. For testing only."""
     with _ir_registry_lock:
         _ir_registry.clear()
+        _ir_finalizers.clear()
 
 
 def _deregister_ir(ir: "BaseIR") -> None:
@@ -50,7 +65,11 @@ def _deregister_ir(ir: "BaseIR") -> None:
     one-IR-per-ParseResult guard raises a spurious error.
     """
     with _ir_registry_lock:
-        _ir_registry.discard(id(ir._parse_result))
+        pr_id = id(ir._parse_result)
+        _ir_registry.discard(pr_id)
+        fin = _ir_finalizers.pop(pr_id, None)
+        if fin is not None:
+            fin.detach()
 
 
 @dataclass
@@ -86,6 +105,9 @@ class BaseIR:
                     "Create only one IR per ParseResult to prevent shared-reference bugs."
                 )
             _ir_registry.add(pr_id)
+            # Register a finalizer that removes the id when this IR is gc'd.
+            # This prevents stale entries when Python reuses a gc'd id().
+            _ir_finalizers[pr_id] = weakref.finalize(self, _finalize_ir, pr_id)
 
     @property
     def file_path(self) -> Any:

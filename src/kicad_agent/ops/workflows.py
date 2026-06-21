@@ -106,7 +106,8 @@ WORKFLOW_TEMPLATES: dict[str, WorkflowTemplate] = {
         name="route_and_fill",
         description="Analyze routing gaps and fill them via iterative fix loop",
         steps=[
-            WorkflowStep(op_type="fill_gaps", description="Analyze and fill routing gaps"),
+            WorkflowStep(op_type="analyze_gaps", description="Analyze PCB for routing gaps"),
+            WorkflowStep(op_type="fill_gaps", description="Fill detected routing gaps"),
         ],
         file_types=[".kicad_pcb"],
     ),

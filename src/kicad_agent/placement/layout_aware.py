@@ -559,7 +559,7 @@ class LayoutAwarePlacer:
             from kicad_agent.placement.interactive import _compute_overlap_penalty
 
             overlap_penalty = _compute_overlap_penalty(
-                current_free, component_sizes, constraints.min_clearance
+                current_free, component_sizes, 1.0,  # min_clearance
             )
 
             return hpwl + clearance_penalty + keepout_penalty + constraint_penalty + overlap_penalty

@@ -239,7 +239,10 @@ class AscWriter:
             sym.position.angle, sym.mirror
         )
         if value:
-            comp.attributes["Value"] = value
+            # spicelib >= 1.5: comp.attributes triggers reset_attributes()
+            # which is not implemented on the base SchematicComponent. Write
+            # to the underlying _attributes dict directly.
+            comp._attributes["Value"] = value
 
         editor.add_component(comp)
 

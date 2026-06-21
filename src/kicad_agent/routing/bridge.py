@@ -62,7 +62,7 @@ class TrackSegment:
             f"    (layer \"{self.layer}\")",
         ]
         if self.net:
-            parts.append(f'    (net "{self.net}")')
+            parts.append(f'    (net {self.net_id} "{self.net}")')
         if uuid_tag:
             parts.append(f"    (uuid {uuid_tag})")
         parts.append("  )")
@@ -170,7 +170,7 @@ class ViaSegment:
             f'    (layers "{self.from_layer}" "{self.to_layer}")',
         ]
         if self.net:
-            parts.append(f'    (net "{self.net}")')
+            parts.append(f'    (net {self.net_id} "{self.net}")')
         if uuid_tag:
             parts.append(f"    (uuid {uuid_tag})")
         parts.append("  )")

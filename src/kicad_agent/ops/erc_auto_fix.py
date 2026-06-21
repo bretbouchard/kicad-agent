@@ -627,11 +627,14 @@ def _deregister_parse_result(parse_result: Any) -> None:
     reuse memory addresses after garbage collection, causing false collisions.
     Call this after each sheet's IR is no longer needed.
     """
-    from kicad_agent.ir.base import _ir_registry, _ir_registry_lock
+    from kicad_agent.ir.base import _ir_registry, _ir_registry_lock, _ir_finalizers
 
     pr_id = id(parse_result)
     with _ir_registry_lock:
         _ir_registry.discard(pr_id)
+        fin = _ir_finalizers.pop(pr_id, None)
+        if fin is not None:
+            fin.detach()
 
 
 def erc_auto_fix_hierarchical(

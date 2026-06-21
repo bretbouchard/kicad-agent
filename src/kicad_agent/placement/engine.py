@@ -361,15 +361,20 @@ class HybridPlacementEngine:
             pack_components_no_overlap,
             resolve_overlaps,
         )
+        from kicad_agent.placement.graph import _estimate_size_inline
 
-        # Build component_sizes as (width, height) from components
-        # ComponentSpec may not have width/height — use default 2.0mm footprint
+        # Build component_sizes as (width, height) from components.
+        # Use the same estimated_size heuristic as the placement graph so
+        # packing and validation agree on bounding boxes (ICs are ~10mm,
+        # not the 2.0mm default used for passives).
         comp_sizes_wh: dict[str, tuple[float, float]] = {}
         for comp in request.components:
             w = getattr(comp, "width", 0.0)
             h = getattr(comp, "height", 0.0)
-            w = w if w > 0 else 2.0
-            h = h if h > 0 else 2.0
+            if w <= 0 or h <= 0:
+                est = _estimate_size_inline(comp)
+                w = w if w > 0 else est
+                h = h if h > 0 else est
             comp_sizes_wh[comp.reference] = (w, h)
 
         result = pack_components_no_overlap(

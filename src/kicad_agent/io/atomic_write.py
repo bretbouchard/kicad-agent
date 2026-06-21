@@ -20,9 +20,10 @@ def atomic_write(file_path: Path, content: str) -> None:
     cleanup (prevents orphaned temp files on failure).
 
     Args:
-        file_path: Target file path.
+        file_path: Target file path (Path or str).
         content: Content to write.
     """
+    file_path = Path(file_path)
     fd, tmp_path = tempfile.mkstemp(
         dir=file_path.parent,
         prefix=".kicad_",

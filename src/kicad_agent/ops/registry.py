@@ -430,6 +430,33 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": ["move_component"],
     },
+    "auto_place_zoned": {
+        "category": "pcb",
+        "description": "Auto-place components on a PCB with zone-aware packing",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": ["move_component", "auto_place"],
+    },
+    "export_positions": {
+        "category": "pcb",
+        "description": "Export footprint positions from a PCB to a JSON file",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": True,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
+    "import_positions": {
+        "category": "pcb",
+        "description": "Import footprint positions from a JSON file and apply to a PCB",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": ["move_component", "auto_place"],
+    },
     "route_diff_pair": {
         "category": "pcb",
         "description": "Route a differential pair with impedance-controlled spacing and length matching",
@@ -1162,6 +1189,7 @@ VALID_CATEGORIES: frozenset[str] = frozenset({
     "readability",
     "gap",
     "constraint",
+    "gate",
 })
 
 

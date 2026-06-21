@@ -81,7 +81,7 @@ def parse_asc(asc_path: str | Path) -> LTspiceSchematic:
         comp = editor.get_component(ref)
         pos, rot = editor.get_component_position(ref)
         value = editor.get_component_value(ref)
-        info = editor.get_component_info(ref)
+        info = editor.get_component_parameters(ref)
 
         # Rotation enum to string (e.g. ERotation.R0 -> "R0")
         rotation_str = ASC_INV_ROTATION_DICT.get(rot, str(rot))

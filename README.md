@@ -211,7 +211,7 @@ The skill routes natural language requests through the Python backend — Claude
 
 ## Operations Reference
 
-98 operations across 18 categories:
+121 operations across 21 categories:
 
 ### Component Operations
 
