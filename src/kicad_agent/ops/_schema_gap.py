@@ -15,19 +15,17 @@ class FillZonesOp(BaseModel):
     This is the exception to the "no kiutils for PCBs" rule because zone fill
     geometry must come from KiCad's own engine (pcbnew.SaveBoard is safe).
 
+    pcbnew's ZONE_FILLER fills ALL zones unconditionally; per-layer filtering
+    is not supported by the underlying engine.
+
     Attributes:
         op_type: Discriminator literal ``"fill_zones"``.
         target_file: Relative path to the target .kicad_pcb file.
-        layers: Layers to fill, or ``["all"]`` for every zone on the board.
         dry_run: If True, list zones without filling.
     """
 
     op_type: Literal["fill_zones"] = "fill_zones"
     target_file: TargetFile
-    layers: list[str] = Field(
-        default=["all"],
-        description="Layers to fill, or ['all'] for every zone",
-    )
     dry_run: bool = Field(
         default=False,
         description="List zones without filling",

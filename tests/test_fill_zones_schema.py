@@ -18,29 +18,21 @@ class TestFillZonesOpValid:
         op = FillZonesOp(target_file="board.kicad_pcb")
         assert op.op_type == "fill_zones"
         assert op.target_file == "board.kicad_pcb"
-        assert op.layers == ["all"]
         assert op.dry_run is False
 
     def test_fill_zones_full(self) -> None:
         """fill_zones with all fields specified."""
         op = FillZonesOp(
             target_file="board.kicad_pcb",
-            layers=["F.Cu", "B.Cu"],
             dry_run=True,
         )
         assert op.op_type == "fill_zones"
-        assert op.layers == ["F.Cu", "B.Cu"]
         assert op.dry_run is True
 
     def test_discriminator_value(self) -> None:
         """op_type discriminator must be exactly 'fill_zones'."""
         op = FillZonesOp(target_file="test.kicad_pcb")
         assert op.op_type == "fill_zones"
-
-    def test_layers_default_all(self) -> None:
-        """Default layers is ['all']."""
-        op = FillZonesOp(target_file="test.kicad_pcb")
-        assert op.layers == ["all"]
 
     def test_dry_run_default_false(self) -> None:
         """Default dry_run is False."""

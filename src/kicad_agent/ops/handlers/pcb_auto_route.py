@@ -107,6 +107,9 @@ def _handle_auto_route_freerouting(
     )
 
     # --- Stage 4: Strip shorts (best-effort) ---
+    # TODO(M-4): Each cleanup stage re-runs kicad-cli pcb drc independently.
+    # Consider caching the DRC report between strip_shorts and
+    # remove_dangling_tracks to avoid redundant subprocess invocations.
     cleanup_shorts = getattr(op, "cleanup_shorts", True)
     if cleanup_shorts:
         logger.info("Stage 4: Stripping shorts")
@@ -121,9 +124,11 @@ def _handle_auto_route_freerouting(
                     short_stats.get("error", "unknown"),
                 )
                 stats["shorts_stripped"] = 0
+                stats["cleanup_shorts_error"] = short_stats.get("error", "unknown")
         except Exception as exc:
             logger.warning("strip_shorts raised exception (non-fatal): %s", exc)
             stats["shorts_stripped"] = 0
+            stats["cleanup_shorts_error"] = str(exc)
     else:
         stats["shorts_stripped"] = 0
 
@@ -144,11 +149,13 @@ def _handle_auto_route_freerouting(
                     dangling_stats.get("error", "unknown"),
                 )
                 stats["dangling_removed"] = 0
+                stats["cleanup_dangling_error"] = dangling_stats.get("error", "unknown")
         except Exception as exc:
             logger.warning(
                 "remove_dangling_tracks raised exception (non-fatal): %s", exc,
             )
             stats["dangling_removed"] = 0
+            stats["cleanup_dangling_error"] = str(exc)
     else:
         stats["dangling_removed"] = 0
 

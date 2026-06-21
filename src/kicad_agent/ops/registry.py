@@ -1213,29 +1213,9 @@ OPERATION_REGISTRY: dict[str, OpMeta] = {
 }
 
 # Known valid categories (derived from catalog)
-VALID_CATEGORIES: frozenset[str] = frozenset({
-    "component",
-    "net",
-    "reference",
-    "footprint",
-    "wire",
-    "remove",
-    "query",
-    "library",
-    "pcb",
-    "erc",
-    "create",
-    "repair",
-    "sheet",
-    "crossfile",
-    "routing",
-    "schematic_intel",
-    "erc_smart",
-    "readability",
-    "gap",
-    "constraint",
-    "gate",
-})
+VALID_CATEGORIES: frozenset[str] = frozenset(
+    data["category"] for data in _RAW_CATALOG.values()
+)
 
 
 # ---------------------------------------------------------------------------

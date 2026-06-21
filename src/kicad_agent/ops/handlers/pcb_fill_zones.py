@@ -70,7 +70,6 @@ import sys
 board_path = sys.argv[1]
 result_path = sys.argv[2]
 dry_run = sys.argv[3] == "true"
-verbose = sys.argv[3] == "true" and "--verbose" in sys.argv
 
 import wx
 wx.App(False)
@@ -84,13 +83,13 @@ zone_list = []
 for i, zone in enumerate(zones):
     layer = zone.GetLayerName()
     net = zone.GetNetname()
-    zone_list.append({{"index": i, "layer": layer, "net": net}})
+    zone_list.append({"index": i, "layer": layer, "net": net})
 
-result = {{
+result = {
     "zones": zone_list,
     "filled_count": len(zone_list),
     "dry_run": dry_run,
-}}
+}
 
 if not dry_run:
     filler = pcbnew.ZONE_FILLER(board)
@@ -114,8 +113,11 @@ def _handle_fill_zones(
     Creates a backup before modification, then spawns a subprocess
     using KiCad's bundled Python to run pcbnew operations.
 
+    pcbnew's ZONE_FILLER fills ALL zones unconditionally; per-layer
+    filtering is not supported by the underlying engine.
+
     Args:
-        op: FillZonesOp with target_file, layers, dry_run.
+        op: FillZonesOp with target_file, dry_run.
         ir: PcbIR (not used -- pcbnew operates directly on file).
         file_path: Resolved path to the .kicad_pcb file.
 

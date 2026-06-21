@@ -34,7 +34,7 @@ def register_bom(op_type: str) -> Callable:
 # Bundled YAML path
 # ---------------------------------------------------------------------------
 
-_BUNDLED_MAPPINGS_PATH = Path(__file__).parent.parent.parent.parent / "data" / "part-mappings.yaml"
+_BUNDLED_MAPPINGS_PATH = Path(__file__).parent.parent.parent.parent.parent / "data" / "part-mappings.yaml"
 
 
 def _load_mappings(custom_path: str | None = None) -> dict:

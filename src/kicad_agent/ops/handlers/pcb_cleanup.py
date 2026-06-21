@@ -310,8 +310,15 @@ def _do_strip_shorts(
                 "shorts_found": 0,
                 "artifacts_removed": 0,
             }
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("DRC subprocess raised: %s", exc)
+        return {
+            "success": False,
+            "error": f"DRC subprocess raised: {exc}",
+            "removed": 0,
+            "shorts_found": 0,
+            "artifacts_removed": 0,
+        }
 
     # Parse shorting items
     drc_endpoints = parse_drc_shorting_items(drc_report)
@@ -448,6 +455,7 @@ def _do_remove_dangling(
     # DRC report tempfile
     drc_report = Path(tempfile.mktemp(suffix=".rpt", prefix="dangling_drc_"))
 
+    iteration = 0
     try:
         for iteration in range(1, max_iter + 1):
             logger.info("Dangling cleanup iteration %d/%d", iteration, max_iter)
@@ -673,6 +681,8 @@ def _strip_shorts_from_report(
     pcb_text = ir.raw_content if ir.raw_content else file_path.read_text()
     segments = parse_segments(pcb_text)
 
+    # TODO(M-3): This short-matching logic duplicates _do_strip_shorts above.
+    # Extract into a shared helper to keep the two paths in sync.
     to_remove: list[dict] = []
     for target_net, tx, ty in drc_endpoints:
         for seg in segments:
