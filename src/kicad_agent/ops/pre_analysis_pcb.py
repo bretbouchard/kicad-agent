@@ -16,7 +16,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# PCB mutation operations that require pre-flight checks
+# PCB mutation operations that require pre-flight checks.
+# Tracks/vias ops implemented in Phase 101 (101-01 through 101-03):
+#   add_track, add_arc_track, add_via, delete_track, delete_via,
+#   move_track_endpoint, lock_track, lock_via, add_stitching_via_pattern.
+# These do not currently require bespoke pre-flight checks (no footprint/net
+# topology validation), but are listed so the gate recognizes them as known
+# mutation ops rather than rejecting them as unknown.
 _PCB_MUTATION_OP_TYPES = frozenset({
     "swap_footprint",
     "remove_net",
@@ -26,9 +32,14 @@ _PCB_MUTATION_OP_TYPES = frozenset({
     "modify_net",
     "rename_net",
     "add_via",
-    "remove_via",
+    "delete_via",
     "add_track",
-    "remove_track",
+    "add_arc_track",
+    "delete_track",
+    "move_track_endpoint",
+    "lock_track",
+    "lock_via",
+    "add_stitching_via_pattern",
 })
 
 # Overlap tolerance in mm for footprint collision checks

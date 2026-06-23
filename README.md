@@ -31,7 +31,10 @@ kicad-agent solves this with **constrained structural editing** — the AI emits
 - LTspice integration: .asc file parsing, simulation command injection, raw waveform analysis
 - ADI footprint library: Analog Devices symbol/footprint resolution with ZIP-based cache
 
-**v2.1 (latest):**
+**v2.2 (latest):**
+- **Track & Via operations** -- 9 new PCB ops for manual copper routing: add_track, add_arc_track, add_via, delete_track, delete_via, move_track_endpoint, lock_track, lock_via, add_stitching_via_pattern (Phase 101, foundation for auto-route pipeline)
+
+**v2.1:**
 - **Component search MCP server** — search JLCPCB/EasyEDA components from any AI agent (anonymous, no API key)
 - **File creation operations** — create_schematic, create_pcb, create_project, create_symbol
 - Real-world training data from open-source KiCad projects (71K repos discovered)
@@ -211,7 +214,7 @@ The skill routes natural language requests through the Python backend — Claude
 
 ## Operations Reference
 
-121 operations across 21 categories:
+135 operations across 22 categories (including 9 new track/via ops):
 
 ### Component Operations
 
@@ -231,6 +234,22 @@ The skill routes natural language requests through the Python backend — Claude
 | `add_net` | pcb | Add a named or auto-named net |
 | `remove_net` | pcb | Remove a net and disconnect all pads |
 | `rename_net` | pcb | Rename a net across all connected pads |
+
+### Track & Via Operations
+
+Manual copper routing primitives for auto-route pipelines, stitching, and guard rings. All ops operate on raw S-expressions to avoid kiutils PCB corruption.
+
+| Operation | Files | Description |
+|-----------|-------|-------------|
+| `add_track` | pcb | Add a single copper segment (start, end, layer, width, net) |
+| `add_arc_track` | pcb | Add a curved copper segment for guard rings, serpentine traces, RF meanders |
+| `add_via` | pcb | Add a single via (default 0.7mm pad / 0.3mm drill per JLC 4-layer floor) |
+| `delete_track` | pcb | Delete a segment by UUID (works even when locked -- lock only blocks Freerouting) |
+| `delete_via` | pcb | Delete a via by UUID |
+| `move_track_endpoint` | pcb | Move the start or end point of an existing segment (by UUID + endpoint selector) |
+| `lock_track` | pcb | Set (locked) on a segment (protects from Freerouting ripup during auto-route) |
+| `lock_via` | pcb | Set (locked) on a via |
+| `add_stitching_via_pattern` | pcb | Generate a grid of stitching vias for GND plane stitching (region + pitch) |
 
 ### Reference Operations
 
