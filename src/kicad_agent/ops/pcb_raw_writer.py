@@ -734,6 +734,167 @@ class PcbRawWriter:
         return content[:start] + new_block + content[end:]
 
     # ------------------------------------------------------------------
+    # Lock track / via + stitching via pattern (Phase 101-03)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def lock_segment(content: str, uuid_str: str) -> str:
+        """Lock a ``(segment ...)`` block by UUID.
+
+        Adds the ``(locked)`` token as the first property inside the segment
+        block, immediately after ``(segment``. KiCad 10 format is
+        ``(segment (locked) (start ...) (end ...) ...)`` -- locked MUST
+        precede the other properties so pcbnew recognizes it.
+
+        H1 (council): No real ``(locked)`` example was found in
+        ``/Users/bretbouchard/apps/analog-ecosystem/hardware/`` or in KiCad
+        template files -- only ``(unlocked yes)`` pad fields. The canonical
+        KiCad 10 form per the file format documentation is used.
+
+        Idempotent: if the segment already contains ``(locked)`` the content
+        is returned unchanged.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            uuid_str: UUID of the segment to lock.
+
+        Returns:
+            Modified content with ``(locked)`` injected as the first property.
+
+        Raises:
+            ValueError: If no segment with the given UUID is found.
+        """
+        start, end = PcbRawWriter._find_block_by_uuid(content, "segment", uuid_str)
+        if start is None or end is None:
+            raise ValueError(f"Segment with UUID '{uuid_str}' not found")
+
+        return PcbRawWriter._inject_locked_token(content, start, end)
+
+    @staticmethod
+    def lock_via(content: str, uuid_str: str) -> str:
+        """Lock a ``(via ...)`` block by UUID.
+
+        Adds the ``(locked)`` token as the first property inside the via
+        block. Same algorithm as ``lock_segment`` but for vias.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            uuid_str: UUID of the via to lock.
+
+        Returns:
+            Modified content with ``(locked)`` injected as the first property.
+
+        Raises:
+            ValueError: If no via with the given UUID is found.
+        """
+        start, end = PcbRawWriter._find_block_by_uuid(content, "via", uuid_str)
+        if start is None or end is None:
+            raise ValueError(f"Via with UUID '{uuid_str}' not found")
+
+        return PcbRawWriter._inject_locked_token(content, start, end)
+
+    @staticmethod
+    def _inject_locked_token(
+        content: str, block_start: int, block_end: int,
+    ) -> str:
+        """Inject ``(locked)`` immediately after the opening block token.
+
+        Locates the first whitespace gap after ``(KIND`` and inserts
+        ``(locked) `` there. If the block already contains ``(locked)``
+        anywhere at the top level, returns content unchanged (idempotent).
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            block_start: Byte offset of the opening paren of the block.
+            block_end: Byte offset one past the closing paren.
+
+        Returns:
+            Modified content with ``(locked)`` injected as the first property.
+        """
+        block = content[block_start:block_end]
+
+        # Idempotent: detect existing (locked) token at top level.
+        # Use a regex anchored to the start of the block (right after the
+        # opening kind token) so we don't false-positive on nested locks
+        # (segments don't have nested locked, but defensive).
+        if re.search(r"^\s*\([a-z]+\s+\(locked\)", block):
+            return content
+
+        # Find end of the ``(kind`` token -- first whitespace or ')' after
+        # the opening paren. We insert `` (locked)`` immediately after the
+        # kind keyword.
+        kind_match = re.match(r"^(\s*\([a-z]+)(\s+|\))", block)
+        if not kind_match:
+            # Defensive: malformed block, return unchanged
+            return content
+
+        insert_pos_in_block = kind_match.end(1)
+        injection = " (locked)"
+        new_block = (
+            block[:insert_pos_in_block]
+            + injection
+            + block[insert_pos_in_block:]
+        )
+        return content[:block_start] + new_block + content[block_end:]
+
+    @staticmethod
+    def build_stitching_via_pattern(
+        net_name: str,
+        region: tuple[tuple[float, float], tuple[float, float]] | list,
+        grid_spacing: float,
+        size: float = 0.4,
+        drill: float = 0.2,
+        layers: list[str] | None = None,
+    ) -> str:
+        """Build a grid of stitching vias as a single S-expression string.
+
+        Generates vias on a regular grid bounded by ``region`` using
+        ``build_via_sexp(...)`` from Phase 101-01. Each via gets a fresh
+        UUID via ``uuid.uuid4()`` so uniqueness is guaranteed.
+
+        Args:
+            net_name: Net name for all vias (e.g. "GND").
+            region: ``(corner1, corner2)`` where each corner is ``(x, y)`` in mm.
+                ``corner1`` is the min corner, ``corner2`` is the max corner.
+            grid_spacing: Spacing between adjacent vias in mm.
+            size: Via pad diameter in mm.
+            drill: Via drill hole diameter in mm.
+            layers: List of layer names the vias connect (default F.Cu + B.Cu).
+
+        Returns:
+            Newline-joined ``(via ...)`` blocks ready for ``insert_segments``.
+        """
+        if layers is None:
+            layers = ["F.Cu", "B.Cu"]
+
+        x_min, y_min = region[0]
+        x_max, y_max = region[1]
+
+        # Normalize in case caller flipped min/max
+        if x_min > x_max:
+            x_min, x_max = x_max, x_min
+        if y_min > y_max:
+            y_min, y_max = y_max, y_min
+
+        blocks: list[str] = []
+        x = x_min
+        while x <= x_max + 1e-9:  # +epsilon for floating-point inclusivity
+            y = y_min
+            while y <= y_max + 1e-9:
+                block = PcbRawWriter.build_via_sexp(
+                    at=(x, y),
+                    size=size,
+                    drill=drill,
+                    layers=layers,
+                    net_name=net_name,
+                )
+                blocks.append(block)
+                y += grid_spacing
+            x += grid_spacing
+
+        return "\n".join(blocks)
+
+    # ------------------------------------------------------------------
     # Footprint update (#40 migration)
     # ------------------------------------------------------------------
 

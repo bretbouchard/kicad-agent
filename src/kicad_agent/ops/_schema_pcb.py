@@ -871,3 +871,71 @@ class MoveTrackEndpointOp(BaseModel):
         description="Which endpoint to move: 'start' or 'end'",
     )
     to: tuple[float, float] = Field(description="New (x, y) coordinates in mm")
+
+
+class LockTrackOp(BaseModel):
+    """Lock a straight track segment by UUID (Phase 101-03).
+
+    Injects ``(locked)`` as the first property of the matching
+    ``(segment ...)`` block so pcbnew treats the track as immovable.
+    Idempotent -- locking an already-locked segment is a no-op.
+
+    Attributes:
+        op_type: Discriminator literal ``"lock_track"``.
+        target_file: Relative path to the target KiCad PCB file.
+        uuid: UUID of the segment to lock.
+    """
+
+    op_type: Literal["lock_track"] = "lock_track"
+    target_file: TargetFile
+    uuid: str = Field(min_length=1, description="UUID of the segment to lock")
+
+
+class LockViaOp(BaseModel):
+    """Lock a via by UUID (Phase 101-03).
+
+    Same algorithm as ``LockTrackOp`` but for ``(via ...)`` blocks.
+
+    Attributes:
+        op_type: Discriminator literal ``"lock_via"``.
+        target_file: Relative path to the target KiCad PCB file.
+        uuid: UUID of the via to lock.
+    """
+
+    op_type: Literal["lock_via"] = "lock_via"
+    target_file: TargetFile
+    uuid: str = Field(min_length=1, description="UUID of the via to lock")
+
+
+class AddStitchingViaPatternOp(BaseModel):
+    """Add a grid of stitching vias to a PCB (Phase 101-03).
+
+    Generates vias on a regular grid bounded by ``region`` using
+    ``PcbRawWriter.build_via_sexp(...)`` from Phase 101-01 and inserts them
+    before the closing paren via ``insert_segments``.
+
+    Attributes:
+        op_type: Discriminator literal ``"add_stitching_via_pattern"``.
+        target_file: Relative path to the target KiCad PCB file.
+        net: Net name for all vias (e.g. "GND").
+        grid_spacing_mm: Spacing between adjacent vias in mm.
+        region: ``((x_min, y_min), (x_max, y_max))`` defining the bounding
+            rectangle of the via grid in mm.
+        size: Via pad diameter in mm (default 0.4 for JLC stitching).
+        drill: Via drill hole diameter in mm (default 0.2 for JLC stitching).
+        layers: List of layer names the vias connect (default F.Cu + B.Cu).
+    """
+
+    op_type: Literal["add_stitching_via_pattern"] = "add_stitching_via_pattern"
+    target_file: TargetFile
+    net: str = Field(min_length=1, max_length=128, description="Net name")
+    grid_spacing_mm: float = Field(gt=0.01, description="Via-to-via spacing in mm")
+    region: tuple[tuple[float, float], tuple[float, float]] = Field(
+        description="((x_min, y_min), (x_max, y_max)) bounding box in mm",
+    )
+    size: float = Field(default=0.4, gt=0.01, description="Via pad diameter in mm")
+    drill: float = Field(default=0.2, gt=0.01, description="Via drill diameter in mm")
+    layers: list[str] = Field(
+        default_factory=lambda: ["F.Cu", "B.Cu"],
+        description="Layers the vias connect",
+    )

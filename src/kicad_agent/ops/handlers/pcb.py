@@ -348,6 +348,75 @@ def _handle_move_track_endpoint(op: Any, ir: PcbIR, file_path: Path) -> dict[str
     }
 
 
+@register_pcb("lock_track")
+def _handle_lock_track(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Lock a straight track segment by UUID via PcbRawWriter (Phase 101-03).
+
+    Injects ``(locked)`` as the first property of the ``(segment ...)`` block
+    matching ``op.uuid``. Idempotent -- locking an already-locked segment
+    returns the content unchanged.
+    """
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    new_content = PcbRawWriter.lock_segment(ir.raw_content, op.uuid)
+    ir.commit_raw_content(new_content)
+
+    return {"uuid": op.uuid, "locked": "segment"}
+
+
+@register_pcb("lock_via")
+def _handle_lock_via(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Lock a via by UUID via PcbRawWriter (Phase 101-03).
+
+    Injects ``(locked)`` as the first property of the ``(via ...)`` block
+    matching ``op.uuid``. Idempotent.
+    """
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    new_content = PcbRawWriter.lock_via(ir.raw_content, op.uuid)
+    ir.commit_raw_content(new_content)
+
+    return {"uuid": op.uuid, "locked": "via"}
+
+
+@register_pcb("add_stitching_via_pattern")
+def _handle_add_stitching_via_pattern(
+    op: Any, ir: PcbIR, file_path: Path,
+) -> dict[str, Any]:
+    """Add a grid of stitching vias to a PCB (Phase 101-03).
+
+    Generates vias on a regular grid bounded by ``op.region`` using
+    ``build_via_sexp`` and inserts them before the closing paren via
+    ``insert_segments``. Each via gets a fresh UUID.
+    """
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    sexpr_blocks = PcbRawWriter.build_stitching_via_pattern(
+        net_name=op.net,
+        region=(tuple(op.region[0]), tuple(op.region[1])),
+        grid_spacing=op.grid_spacing_mm,
+        size=op.size,
+        drill=op.drill,
+        layers=list(op.layers),
+    )
+
+    # Count generated vias for the result
+    via_count = sexpr_blocks.count("(via\n") + sexpr_blocks.count("(via ")
+
+    new_content = PcbRawWriter.insert_segments(ir.raw_content, sexpr_blocks)
+    ir.commit_raw_content(new_content)
+
+    return {
+        "net": op.net,
+        "grid_spacing_mm": op.grid_spacing_mm,
+        "region": [list(op.region[0]), list(op.region[1])],
+        "vias_added": via_count,
+        "size": op.size,
+        "drill": op.drill,
+        "layers": list(op.layers),
+    }
+
+
 @register_pcb("batch_expand_footprints")
 def _handle_batch_expand_footprints(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.pcb_raw_writer import PcbRawWriter

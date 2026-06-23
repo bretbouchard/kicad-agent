@@ -1259,6 +1259,33 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "lock_track": {
+        "category": "pcb",
+        "description": "Lock a straight track segment by UUID (inject (locked) token)",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_point",
+        "requires": [],
+        "conflicts": [],
+    },
+    "lock_via": {
+        "category": "pcb",
+        "description": "Lock a via by UUID (inject (locked) token)",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_point",
+        "requires": [],
+        "conflicts": [],
+    },
+    "add_stitching_via_pattern": {
+        "category": "pcb",
+        "description": "Add a grid of stitching vias bounded by a region",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_point",
+        "requires": [],
+        "conflicts": [],
+    },
 }
 
 OPERATION_REGISTRY: dict[str, OpMeta] = {

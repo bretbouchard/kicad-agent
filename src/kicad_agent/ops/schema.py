@@ -257,6 +257,9 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
     DeleteTrackOp,
     DeleteViaOp,
     MoveTrackEndpointOp,
+    LockTrackOp,
+    LockViaOp,
+    AddStitchingViaPatternOp,
 )
 from kicad_agent.ops._schema_placement import (  # noqa: E402
     AutoPlaceOp,
@@ -497,6 +500,9 @@ class Operation(BaseModel):
         | DeleteTrackOp
         | DeleteViaOp
         | MoveTrackEndpointOp
+        | LockTrackOp
+        | LockViaOp
+        | AddStitchingViaPatternOp
         | AnalyzeGapsOp
         | FillGapsOp
         | FillZonesOp
@@ -589,6 +595,9 @@ __all__ = [
     "DeleteTrackOp",
     "DeleteViaOp",
     "MoveTrackEndpointOp",
+    "LockTrackOp",
+    "LockViaOp",
+    "AddStitchingViaPatternOp",
     "ModifyNetClassOp",
     "RemoveNetClassOp",
     "ListNetClassesOp",
