@@ -383,6 +383,24 @@ class RemoveCopperZoneOp(BaseModel):
         return self
 
 
+class DeleteCopperZoneOp(BaseModel):
+    """Delete a copper zone by UUID (Phase 101-06 alias of remove_copper_zone).
+
+    Plan 101-06 M1: this op provides the canonical "delete by UUID" name
+    required by routing-rick for downstream auto-route phases. Functionally
+    identical to ``RemoveCopperZoneOp`` -- both delegate to the same handler.
+
+    Attributes:
+        op_type: Discriminator literal ``"delete_copper_zone"``.
+        target_file: Relative path to the target KiCad PCB file (H-01 validated).
+        zone_uuid: Zone UUID (tstamp) to identify the zone.
+    """
+
+    op_type: Literal["delete_copper_zone"] = "delete_copper_zone"
+    target_file: TargetFile
+    zone_uuid: str = Field(min_length=1, max_length=64, description="Zone UUID (tstamp)")
+
+
 class RefillCopperZoneOp(BaseModel):
     """Strip filled polygon data from a zone so KiCad refills on next save.
 
@@ -447,6 +465,41 @@ class AddKeepoutAreaOp(BaseModel):
     )
     polygon: list[tuple[float, float]] = Field(
         min_length=3, description="Keepout area outline points",
+    )
+
+
+class AddZoneKeepoutOp(BaseModel):
+    """Add a zone keepout with rule-based clearance (Phase 101-06).
+
+    Plan 101-06 M1 (routing-rick M5): canonical op name expected by
+    downstream auto-route phases. Functionally identical to
+    ``AddKeepoutAreaOp`` but exposes the ``rule_clearance_mm`` parameter
+    which adds a ``(rule (clearance N))`` wrapper inside the zone block
+    (KiCad 10 zone rule syntax).
+
+    Attributes:
+        op_type: Discriminator literal ``"add_zone_keepout"``.
+        target_file: Relative path to the target KiCad PCB file.
+        layer: Layer restriction (``"*"`` = all layers).
+        keepout_type: Type of keepout restriction.
+        polygon: Keepout area outline points (minimum 3).
+        rule_clearance_mm: Optional rule clearance in mm. When set, adds
+            ``(rule (clearance N))`` wrapper inside the zone block.
+    """
+
+    op_type: Literal["add_zone_keepout"] = "add_zone_keepout"
+    target_file: TargetFile
+    layer: str = Field(default="*", max_length=32, description="Layer restriction (* = all)")
+    keepout_type: str = Field(
+        default="through_hole",
+        pattern=r"^(?:through_hole|via|tracks|pads)$",
+        description="Type of keepout restriction",
+    )
+    polygon: list[tuple[float, float]] = Field(
+        min_length=3, description="Keepout area outline points",
+    )
+    rule_clearance_mm: Optional[float] = Field(
+        default=None, gt=0, description="Rule clearance in mm (adds (rule (clearance N)) wrapper)",
     )
 
 

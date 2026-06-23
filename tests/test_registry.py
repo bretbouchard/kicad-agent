@@ -21,7 +21,9 @@ class TestRegistryCompleteness:
     """Verify the registry has the expected number of operations."""
 
     def test_registry_has_98_operations(self) -> None:
-        assert len(OPERATION_REGISTRY) == 124
+        # Phase 101-06: 141 ops (was 124 -- two new aliases added:
+        # delete_copper_zone and add_zone_keepout, plus prior phase additions)
+        assert len(OPERATION_REGISTRY) == 141
 
     def test_validate_registry_completeness_passes(self) -> None:
         result = validate_registry_completeness()

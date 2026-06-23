@@ -574,6 +574,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "delete_copper_zone": {
+        "category": "pcb",
+        "description": "Delete a copper zone by UUID (Phase 101-06 alias of remove_copper_zone)",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_point",
+        "requires": [],
+        "conflicts": [],
+    },
     "refill_copper_zone": {
         "category": "pcb",
         "description": "Strip filled polygon data from a zone so KiCad refills it",
@@ -595,6 +604,15 @@ _RAW_CATALOG: dict[str, dict] = {
     "add_keepout_area": {
         "category": "pcb",
         "description": "Add a keepout area to a PCB",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_point",
+        "requires": [],
+        "conflicts": [],
+    },
+    "add_zone_keepout": {
+        "category": "pcb",
+        "description": "Add a zone keepout with optional (rule (clearance N)) wrapper (Phase 101-06)",
         "file_types": [".kicad_pcb"],
         "is_readonly": False,
         "scope": "single_point",

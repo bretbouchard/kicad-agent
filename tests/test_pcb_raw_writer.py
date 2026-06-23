@@ -94,25 +94,30 @@ class TestBuildZoneSexpr:
     """PcbRawWriter.build_zone_sexp — zone S-expression generation."""
 
     def test_basic_zone_structure(self):
-        """Generated zone has correct net, layer, and polygon."""
+        """Generated zone has correct net, layer, and polygon (KiCad 10 format)."""
         result = PcbRawWriter.build_zone_sexp(
             net_number=1,
             net_name="GND",
             layer="F.Cu",
             polygon=[(0, 0), (100, 0), (100, 100), (0, 100)],
         )
-        # KiCad format: (net "name") — universal across all versions
-        assert '(net "GND")' in result
+        # KiCad 10 zone format: paired (net N) + (net_name "NAME") tokens
+        assert "(net 1)" in result
+        assert '(net_name "GND")' in result
         assert '(layer "F.Cu")' in result
         assert "(xy 0 0)" in result
         assert "(xy 100 100)" in result
         # UUID must be quoted (fixes #65)
         assert '(uuid "00000000-0000-0000-0000-000000000000")' in result
-        # No stub filled_polygon (fixes #65)
+        # KiCad 10 requires (filled_areas_thickness no) token (Phase 101-06)
+        assert "(filled_areas_thickness no)" in result
+        # KiCad 10 uses (fill ...) without legacy "yes" argument
+        assert "(fill" in result
+        assert "(fill yes" not in result
+        # No stub filled_polygons (fixes #65)
         assert "filled_polygon" not in result
         # No invalid fields
         assert "zone_locks" not in result
-        assert "net_name" not in result
 
     def test_custom_clearance_and_thickness(self):
         """Custom clearance and min_thickness appear in output."""
@@ -139,16 +144,17 @@ class TestBuildZoneSexpr:
         )
         assert f'(uuid "{test_uuid}")' in result
 
-    def test_name_only_net_format(self):
-        """When net_number is 0 and name is provided, uses (net "name") format."""
+    def test_paired_net_and_net_name_format(self):
+        """KiCad 10 zones use paired (net N) + (net_name "NAME") tokens."""
         result = PcbRawWriter.build_zone_sexp(
-            net_number=0,
+            net_number=5,
             net_name="GND",
             layer="F.Cu",
             polygon=[(0, 0), (100, 100)],
         )
-        assert '(net "GND")' in result
-        assert "net_name" not in result
+        # Both tokens required (Phase 101-06, Council C1)
+        assert "(net 5)" in result
+        assert '(net_name "GND")' in result
 
 
 class TestInsertZone:
@@ -365,7 +371,8 @@ class TestIntegrationWithRealPcb:
         result = PcbRawWriter.insert_zone(content, zone_sexp)
 
         assert '(zone' in result
-        assert '(net "GND")' in result
+        # KiCad 10 paired net format (Phase 101-06)
+        assert '(net_name "GND")' in result
         assert '(layer "F.Cu")' in result
         # UUID quoted (fixes #65)
         assert '(uuid "' in result

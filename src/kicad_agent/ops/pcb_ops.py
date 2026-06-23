@@ -219,6 +219,11 @@ def remove_copper_zone(
 
     Tries UUID first, falls back to index.
 
+    Uses PcbRawWriter for raw S-expression splicing so the op works on both
+    freshly-parsed boards and boards where prior ops wrote to raw_content
+    (e.g. add_copper_zone). Kiutils' in-memory board may be stale after a
+    raw write -- operating on raw content is the only reliable path.
+
     Args:
         ir: PcbIR for the target PCB.
         file_path: Path to the PCB file (Path or str).
@@ -232,28 +237,44 @@ def remove_copper_zone(
         ValueError: If neither UUID nor index provided, or UUID not found.
         IndexError: If index is out of range.
     """
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
     if zone_uuid is not None:
-        target = next((z for z in ir.board.zones if z.tstamp == zone_uuid), None)
-        if target is None:
+        start, end = PcbRawWriter.find_zone_block(ir.raw_content, zone_uuid)
+        if start is None or end is None:
             raise ValueError(f"Zone with UUID '{zone_uuid}' not found")
+        identifier = zone_uuid
     elif zone_index is not None:
-        if zone_index < 0 or zone_index >= len(ir.board.zones):
+        start, end = PcbRawWriter.find_zone_block_by_index(ir.raw_content, zone_index)
+        if start is None or end is None:
             raise IndexError(
-                f"Zone index {zone_index} out of range "
-                f"(0-{max(0, len(ir.board.zones) - 1)})"
+                f"Zone index {zone_index} out of range"
             )
-        target = ir.board.zones[zone_index]
+        identifier = f"index:{zone_index}"
     else:
         raise ValueError("Must specify zone_uuid or zone_index")
 
-    removed_uuid = target.tstamp
-    ir.board.zones.remove(target)
+    raw = ir.raw_content
+    trim_start = start
+    if trim_start > 0 and raw[trim_start - 1] == "\n":
+        trim_start -= 1
+    new_content = raw[:trim_start] + raw[end:]
+    ir.commit_raw_content(new_content)
 
-    ir._record_mutation("remove_copper_zone", {"zone_uuid": removed_uuid})
+    # Best-effort: also drop from in-memory board if present
+    if zone_uuid is not None:
+        target = next((z for z in ir.board.zones if z.tstamp == zone_uuid), None)
+        if target is not None:
+            ir.board.zones.remove(target)
+    else:
+        if zone_index < len(ir.board.zones):
+            ir.board.zones.pop(zone_index)
+
+    ir._record_mutation("remove_copper_zone", {"zone_uuid": identifier})
 
     return {
         "removed": True,
-        "zone_uuid": removed_uuid,
+        "zone_uuid": identifier,
     }
 
 
@@ -515,11 +536,17 @@ def add_keepout_area(
     layer: str = "*",
     keepout_type: str = "through_hole",
     polygon: list[tuple[float, float]] | None = None,
+    rule_clearance_mm: float | None = None,
 ) -> dict[str, Any]:
     """Add a keepout area to the PCB.
 
-    Builds a (zone (net 0 "") (layer ...) (keepout ...) (polygon ...))
+    Builds a (zone (net 0) (net_name "") (layer ...) (keepout ...) (polygon ...))
     S-expression and inserts it via PcbRawWriter.insert_zone().
+
+    KiCad 10 format (Phase 101-06, routing-rick M5):
+    - Uses paired (net 0) + (net_name "") per KiCad 10 zone rule
+    - Adds optional (rule (clearance N)) wrapper when rule_clearance_mm is set
+    - Uses (filled_areas_thickness no) token to match KiCad 10 writer output
 
     Args:
         ir: PcbIR for the target PCB.
@@ -527,9 +554,12 @@ def add_keepout_area(
         layer: Layer restriction ("*" = all layers).
         keepout_type: Type of keepout (through_hole, via, tracks, pads).
         polygon: Keepout outline points. Uses board bbox if None.
+        rule_clearance_mm: Optional rule clearance in mm. When set, adds
+            ``(rule (clearance N))`` wrapper inside the zone block per
+            routing-rick M5 finding.
 
     Returns:
-        Dict with keepout_added, layer, keepout_type.
+        Dict with keepout_added, layer, keepout_type, rule_clearance_mm.
     """
     import uuid as _uuid
 
@@ -544,8 +574,14 @@ def add_keepout_area(
         f"(xy {x:g} {y:g})" for x, y in polygon
     )
 
+    rule_line = (
+        f'    (rule\n      (clearance {rule_clearance_mm:g})\n    )\n'
+        if rule_clearance_mm is not None else ''
+    )
+
     zone_sexp = f"""  (zone
-    (net 0 "")
+    (net 0)
+    (net_name "")
     (layer "{layer}")
     (uuid "{keepout_uuid}")
     (hatch edge 0.5)
@@ -553,8 +589,9 @@ def add_keepout_area(
       (clearance 0)
     )
     (min_thickness 0.25)
+    (filled_areas_thickness no)
     (keepout {keepout_type})
-    (polygon
+{rule_line}    (polygon
       (pts
         {xy_entries}
       )
@@ -569,12 +606,14 @@ def add_keepout_area(
     ir._record_mutation("add_keepout_area", {
         "layer": layer,
         "keepout_type": keepout_type,
+        "rule_clearance_mm": rule_clearance_mm,
     })
 
     return {
         "keepout_added": True,
         "layer": layer,
         "keepout_type": keepout_type,
+        "rule_clearance_mm": rule_clearance_mm,
     }
 
 

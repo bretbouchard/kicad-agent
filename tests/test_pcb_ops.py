@@ -93,7 +93,8 @@ class TestAddCopperZone:
             # The raw S-expression on disk is authoritative.
             assert "(zone" in pcb_path.read_text()
             raw = pcb_path.read_text()
-            assert '(net "GND")' in raw
+            # KiCad 10 paired net format (Phase 101-06, Council C1)
+            assert '(net_name "GND")' in raw
             assert '(layer "F.Cu")' in raw
             assert "(clearance 0.5)" in raw
 
@@ -137,9 +138,10 @@ class TestAddCopperZone:
             assert len(zone.polygons[0].coordinates) == 4
 
     def test_add_copper_zone_kicad10_net_format(self):
-        """Verify zone uses correct KiCad net format: (net N "NAME").
+        """Verify zone uses correct KiCad 10 paired net format.
 
-        Regression test for bugs #34, #38, #65.
+        KiCad 10 zones use paired (net N) + (net_name "NAME") tokens.
+        Regression test for bugs #34, #38, #65, and Phase 101-06 C1.
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             pcb_path, ir = _create_minimal_pcb(Path(tmpdir))
@@ -147,9 +149,15 @@ class TestAddCopperZone:
             add_copper_zone(ir, pcb_path, net_name="GND", layer="F.Cu", clearance=0.5)
 
             raw = pcb_path.read_text()
-            # Correct format: (net 1 "GND") — not (net 1) (net_name "GND")
-            assert '(net "GND")' in raw, "Zone should use (net N \"name\") format"
-            assert 'net_name' not in raw, "Zone should NOT have net_name field"
+            # KiCad 10 paired format: (net N) + (net_name "NAME")
+            assert re.search(r'\(net\s+\d+\s*\)', raw), \
+                "Zone should use (net N) numbered form"
+            assert '(net_name "GND")' in raw, \
+                "Zone should have (net_name \"GND\") paired with (net N)"
+            # (filled_areas_thickness no) is required by KiCad 10
+            assert "(filled_areas_thickness no)" in raw
+            # (fill yes) is legacy -- KiCad 10 uses (fill ...) without "yes"
+            assert "(fill yes" not in raw
             # UUID quoted (fix #65)
             assert '(uuid "' in raw, "UUID must be quoted"
             # No stub filled_polygon

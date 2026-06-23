@@ -131,6 +131,21 @@ def _handle_remove_copper_zone(op: Any, ir: PcbIR, file_path: Path) -> dict[str,
     )
 
 
+@register_pcb("delete_copper_zone")
+def _handle_delete_copper_zone(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Delete a copper zone by UUID (Phase 101-06 alias of remove_copper_zone).
+
+    Plan 101-06 M1: canonical "delete by UUID" name expected by routing-rick
+    for downstream auto-route phases. Delegates to remove_copper_zone.
+    """
+    from kicad_agent.ops.pcb_ops import remove_copper_zone
+    return remove_copper_zone(
+        ir, file_path,
+        zone_uuid=op.zone_uuid,
+        zone_index=None,
+    )
+
+
 @register_pcb("refill_copper_zone")
 def _handle_refill_copper_zone(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.pcb_ops import refill_copper_zone
@@ -159,6 +174,25 @@ def _handle_add_keepout_area(op: Any, ir: PcbIR, file_path: Path) -> dict[str, A
         layer=op.layer,
         keepout_type=op.keepout_type,
         polygon=op.polygon,
+    )
+
+
+@register_pcb("add_zone_keepout")
+def _handle_add_zone_keepout(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Add a zone keepout with optional rule clearance (Phase 101-06).
+
+    Plan 101-06 M1 (routing-rick M5): canonical op name expected by
+    downstream auto-route phases. Delegates to add_keepout_area, forwarding
+    the optional ``rule_clearance_mm`` parameter which adds a
+    ``(rule (clearance N))`` wrapper inside the zone block.
+    """
+    from kicad_agent.ops.pcb_ops import add_keepout_area
+    return add_keepout_area(
+        ir, file_path,
+        layer=op.layer,
+        keepout_type=op.keepout_type,
+        polygon=op.polygon,
+        rule_clearance_mm=getattr(op, "rule_clearance_mm", None),
     )
 
 

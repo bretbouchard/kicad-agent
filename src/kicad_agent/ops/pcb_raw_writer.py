@@ -118,32 +118,43 @@ class PcbRawWriter:
             f"(xy {x:g} {y:g})" for x, y in polygon
         )
 
-        # Net format: always use (net "name") for zones. KiCad 10+ zones
-        # resolve the net name to number internally; using (net N "name")
-        # breaks older file formats (version 20250125) which reject numbered
-        # net references in zones. Name-only is universal across all versions.
+        # KiCad 10 zone net format (Phase 101-06, Council C1):
+        # Zones require BOTH (net N) and (net_name "NAME") tokens, verified
+        # against real KiCad 10 boards (version 20260206) and KiCad 9 boards
+        # (version 20250125). The earlier "(net "name")" name-only form was
+        # wrong -- it breaks kicad-cli parsing on both versions. Both versions
+        # also require (filled_areas_thickness no) and (fill ...) without the
+        # legacy "yes" argument.
         if net_name:
-            net_line = f'(net "{net_name}")'
+            net_line = f'(net {net_number})'
+            net_name_line = f'(net_name "{net_name}")'
         else:
-            net_line = '(net 0 "")'
+            net_line = '(net 0)'
+            net_name_line = '(net_name "")'
 
         # UUID quoted per KiCad S-expression format
         uuid_line = f'(uuid "{uuid}")'
 
+        # Optional priority line -- only emit when nonzero to match the
+        # KiCad writer's behavior (priority 0 is the default and omitted).
+        priority_line = f'    (priority {priority})\n' if priority > 0 else ''
+
         parts = [
             '  (zone',
             f'    {net_line}',
+            f'    {net_name_line}',
             f'    (layer "{layer}")',
             f'    {uuid_line}',
             '    (hatch edge 0.5)',
+            priority_line +
             '    (connect_pads',
             f'      (clearance {clearance:g})',
             '    )',
             f'    (min_thickness {min_thickness:g})',
-            '    (fill yes',
+            '    (filled_areas_thickness no)',
+            '    (fill',
             f'      (thermal_gap {clearance:g})',
             f'      (thermal_bridge_width {clearance:g})',
-            '      (island_removal_mode 1)',
             '    )',
             '    (polygon',
             '      (pts',

@@ -239,9 +239,11 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
     ModifyProjectSettingsOp,
     ModifyCopperZoneOp,
     RemoveCopperZoneOp,
+    DeleteCopperZoneOp,
     RefillCopperZoneOp,
     ModifyZonePolygonOp,
     AddKeepoutAreaOp,
+    AddZoneKeepoutOp,
     RemoveKeepoutAreaOp,
     MoveFootprintOp,
     BatchExpandFootprintsOp,
@@ -460,9 +462,11 @@ class Operation(BaseModel):
         | ErcAutoFixHierarchicalOp
         | ModifyCopperZoneOp
         | RemoveCopperZoneOp
+        | DeleteCopperZoneOp
         | RefillCopperZoneOp
         | ModifyZonePolygonOp
         | AddKeepoutAreaOp
+        | AddZoneKeepoutOp
         | RemoveKeepoutAreaOp
         | MoveFootprintOp
         | ResolvePinPositionsOp
@@ -610,9 +614,11 @@ __all__ = [
     "ModifyProjectSettingsOp",
     "ModifyCopperZoneOp",
     "RemoveCopperZoneOp",
+    "DeleteCopperZoneOp",
     "RefillCopperZoneOp",
     "ModifyZonePolygonOp",
     "AddKeepoutAreaOp",
+    "AddZoneKeepoutOp",
     "RemoveKeepoutAreaOp",
     "MoveFootprintOp",
     "RouteDiffPairOp",
