@@ -254,6 +254,9 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
     AddTrackOp,
     AddArcTrackOp,
     AddViaOp,
+    DeleteTrackOp,
+    DeleteViaOp,
+    MoveTrackEndpointOp,
 )
 from kicad_agent.ops._schema_placement import (  # noqa: E402
     AutoPlaceOp,
@@ -491,6 +494,9 @@ class Operation(BaseModel):
         | AddTrackOp
         | AddArcTrackOp
         | AddViaOp
+        | DeleteTrackOp
+        | DeleteViaOp
+        | MoveTrackEndpointOp
         | AnalyzeGapsOp
         | FillGapsOp
         | FillZonesOp
@@ -580,6 +586,9 @@ __all__ = [
     "AddTrackOp",
     "AddArcTrackOp",
     "AddViaOp",
+    "DeleteTrackOp",
+    "DeleteViaOp",
+    "MoveTrackEndpointOp",
     "ModifyNetClassOp",
     "RemoveNetClassOp",
     "ListNetClassesOp",

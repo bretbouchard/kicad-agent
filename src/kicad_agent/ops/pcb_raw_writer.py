@@ -584,6 +584,156 @@ class PcbRawWriter:
         return "\n".join(parts) + "\n"
 
     # ------------------------------------------------------------------
+    # Delete / move track elements (Phase 101-02)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _find_block_by_uuid(
+        content: str, block_kind: str, uuid_str: str,
+    ) -> tuple[Optional[int], Optional[int]]:
+        """Find the byte range of a top-level ``(KIND ...)`` block containing uuid.
+
+        Scans for ``(KIND`` block starts (e.g. ``(segment``, ``(via``),
+        then uses ``_find_matching_close()`` for correct handling of nested
+        parens and quoted strings. Returns the first block whose uuid field
+        matches.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            block_kind: Block kind keyword without the leading paren
+                (e.g. ``"segment"``, ``"via"``, ``"arc"``).
+            uuid_str: UUID string to match against ``(uuid "...")`` inside
+                the block. Only matches OUTSIDE of quoted strings.
+
+        Returns:
+            (start, end) byte offsets with end being the closing paren
+            position + 1 (exclusive end), or ``(None, None)`` if not found.
+        """
+        kind_pat = re.compile(
+            r"^[ \t]*\(" + re.escape(block_kind) + r"\b", re.MULTILINE,
+        )
+        for match in kind_pat.finditer(content):
+            start = match.start()
+            end = PcbRawWriter._find_matching_close(content, start + 1)
+            if end is None:
+                continue
+            block = content[start : end + 1]
+            # Look for (uuid "...") at the top level of this block. The
+            # _find_matching_close already accounts for strings, so a plain
+            # substring search for the uuid token is safe here.
+            uuid_pat = re.compile(
+                r'\(uuid\s+"' + re.escape(uuid_str) + r'"',
+            )
+            if uuid_pat.search(block):
+                return start, end + 1
+        return None, None
+
+    @staticmethod
+    def delete_segment(content: str, uuid_str: str) -> str:
+        """Delete a ``(segment ...)`` block by UUID.
+
+        Walks the content for ``(segment`` blocks and removes the one whose
+        ``(uuid "...")`` field matches ``uuid_str``. The leading whitespace
+        (newline + indentation) is also removed so the file stays tidy.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            uuid_str: UUID of the segment to delete.
+
+        Returns:
+            Modified content with the segment block removed.
+
+        Raises:
+            ValueError: If no segment with the given UUID is found.
+        """
+        start, end = PcbRawWriter._find_block_by_uuid(content, "segment", uuid_str)
+        if start is None or end is None:
+            raise ValueError(f"Segment with UUID '{uuid_str}' not found")
+
+        trim_start = start
+        if trim_start > 0 and content[trim_start - 1] == "\n":
+            trim_start -= 1
+        return content[:trim_start] + content[end:]
+
+    @staticmethod
+    def delete_via(content: str, uuid_str: str) -> str:
+        """Delete a ``(via ...)`` block by UUID.
+
+        Same algorithm as ``delete_segment`` but for via blocks.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            uuid_str: UUID of the via to delete.
+
+        Returns:
+            Modified content with the via block removed.
+
+        Raises:
+            ValueError: If no via with the given UUID is found.
+        """
+        start, end = PcbRawWriter._find_block_by_uuid(content, "via", uuid_str)
+        if start is None or end is None:
+            raise ValueError(f"Via with UUID '{uuid_str}' not found")
+
+        trim_start = start
+        if trim_start > 0 and content[trim_start - 1] == "\n":
+            trim_start -= 1
+        return content[:trim_start] + content[end:]
+
+    @staticmethod
+    def move_segment_endpoint(
+        content: str,
+        uuid_str: str,
+        end_kind: str,
+        to_xy: tuple[float, float] | list[float],
+    ) -> str:
+        """Move the start or end point of a ``(segment ...)`` block.
+
+        Finds the segment by UUID, then rewrites its ``(start X Y)`` or
+        ``(end X Y)`` field with the new coordinates. Coordinates are
+        formatted with ``%g`` to match the rest of Phase 101-01.
+
+        Args:
+            content: Raw .kicad_pcb S-expression text.
+            uuid_str: UUID of the segment to modify.
+            end_kind: Either ``"start"`` or ``"end"`` -- which endpoint
+                to move.
+            to_xy: New ``(x, y)`` coordinates in mm.
+
+        Returns:
+            Modified content with the endpoint moved.
+
+        Raises:
+            ValueError: If ``end_kind`` is invalid, the segment UUID is
+                not found, or the segment block has no matching
+                ``(start ...)`` / ``(end ...)`` field.
+        """
+        if end_kind not in ("start", "end"):
+            raise ValueError(
+                f"end_kind must be 'start' or 'end', got {end_kind!r}",
+            )
+
+        start, end = PcbRawWriter._find_block_by_uuid(content, "segment", uuid_str)
+        if start is None or end is None:
+            raise ValueError(f"Segment with UUID '{uuid_str}' not found")
+
+        block = content[start:end]
+        x, y = to_xy
+        new_field = f"({end_kind} {x:g} {y:g})"
+
+        field_pat = re.compile(
+            r"\(" + end_kind + r"\s+[-0-9.]+\s+[-0-9.]+\s*\)",
+        )
+        match = field_pat.search(block)
+        if match is None:
+            raise ValueError(
+                f"Segment {uuid_str!r} has no ({end_kind} X Y) field",
+            )
+
+        new_block = block[: match.start()] + new_field + block[match.end() :]
+        return content[:start] + new_block + content[end:]
+
+    # ------------------------------------------------------------------
     # Footprint update (#40 migration)
     # ------------------------------------------------------------------
 

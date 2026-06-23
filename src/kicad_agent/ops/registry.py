@@ -1232,6 +1232,33 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "delete_track": {
+        "category": "pcb",
+        "description": "Delete a straight track segment from a PCB by UUID",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_point",
+        "requires": [],
+        "conflicts": [],
+    },
+    "delete_via": {
+        "category": "pcb",
+        "description": "Delete a via from a PCB by UUID",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_point",
+        "requires": [],
+        "conflicts": [],
+    },
+    "move_track_endpoint": {
+        "category": "pcb",
+        "description": "Move the start or end point of a track segment by UUID",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_point",
+        "requires": [],
+        "conflicts": [],
+    },
 }
 
 OPERATION_REGISTRY: dict[str, OpMeta] = {

@@ -297,6 +297,57 @@ def _handle_add_via(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     }
 
 
+@register_pcb("delete_track")
+def _handle_delete_track(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Delete a straight track segment by UUID via PcbRawWriter (Phase 101-02).
+
+    Locates the ``(segment ...)`` block matching ``op.uuid`` and removes it
+    entirely. Raises ``ValueError`` (surfaced as execution failure) when the
+    UUID is not present on disk.
+    """
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    new_content = PcbRawWriter.delete_segment(ir.raw_content, op.uuid)
+    ir.commit_raw_content(new_content)
+
+    return {"uuid": op.uuid, "deleted": "segment"}
+
+
+@register_pcb("delete_via")
+def _handle_delete_via(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Delete a via by UUID via PcbRawWriter (Phase 101-02)."""
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    new_content = PcbRawWriter.delete_via(ir.raw_content, op.uuid)
+    ir.commit_raw_content(new_content)
+
+    return {"uuid": op.uuid, "deleted": "via"}
+
+
+@register_pcb("move_track_endpoint")
+def _handle_move_track_endpoint(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Move the start or end point of a track segment (Phase 101-02).
+
+    Rewrites the ``(start X Y)`` or ``(end X Y)`` field of the segment
+    identified by ``op.uuid`` with the new coordinates from ``op.to``.
+    """
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    new_content = PcbRawWriter.move_segment_endpoint(
+        ir.raw_content,
+        op.uuid,
+        op.end,
+        tuple(op.to),
+    )
+    ir.commit_raw_content(new_content)
+
+    return {
+        "uuid": op.uuid,
+        "end": op.end,
+        "to": list(op.to),
+    }
+
+
 @register_pcb("batch_expand_footprints")
 def _handle_batch_expand_footprints(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.pcb_raw_writer import PcbRawWriter

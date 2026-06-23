@@ -817,3 +817,57 @@ class AddViaOp(BaseModel):
         default_factory=lambda: ["F.Cu", "B.Cu"],
         description="Layers the via connects",
     )
+
+
+class DeleteTrackOp(BaseModel):
+    """Delete a straight track segment from a PCB by UUID (Phase 101-02).
+
+    Locates the ``(segment ...)`` block whose ``(uuid "...")`` field matches
+    and removes it entirely, including its trailing newline.
+
+    Attributes:
+        op_type: Discriminator literal ``"delete_track"``.
+        target_file: Relative path to the target KiCad PCB file.
+        uuid: UUID of the segment to delete.
+    """
+
+    op_type: Literal["delete_track"] = "delete_track"
+    target_file: TargetFile
+    uuid: str = Field(min_length=1, description="UUID of the segment to delete")
+
+
+class DeleteViaOp(BaseModel):
+    """Delete a via from a PCB by UUID (Phase 101-02).
+
+    Attributes:
+        op_type: Discriminator literal ``"delete_via"``.
+        target_file: Relative path to the target KiCad PCB file.
+        uuid: UUID of the via to delete.
+    """
+
+    op_type: Literal["delete_via"] = "delete_via"
+    target_file: TargetFile
+    uuid: str = Field(min_length=1, description="UUID of the via to delete")
+
+
+class MoveTrackEndpointOp(BaseModel):
+    """Move the start or end point of a track segment (Phase 101-02).
+
+    Locates the ``(segment ...)`` block by UUID and rewrites either its
+    ``(start X Y)`` or ``(end X Y)`` field with the new coordinates.
+
+    Attributes:
+        op_type: Discriminator literal ``"move_track_endpoint"``.
+        target_file: Relative path to the target KiCad PCB file.
+        uuid: UUID of the segment to modify.
+        end: Which endpoint to move -- ``"start"`` or ``"end"``.
+        to: New ``(x, y)`` coordinates in mm.
+    """
+
+    op_type: Literal["move_track_endpoint"] = "move_track_endpoint"
+    target_file: TargetFile
+    uuid: str = Field(min_length=1, description="UUID of the segment to modify")
+    end: Literal["start", "end"] = Field(
+        description="Which endpoint to move: 'start' or 'end'",
+    )
+    to: tuple[float, float] = Field(description="New (x, y) coordinates in mm")
