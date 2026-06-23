@@ -939,3 +939,85 @@ class AddStitchingViaPatternOp(BaseModel):
         default_factory=lambda: ["F.Cu", "B.Cu"],
         description="Layers the vias connect",
     )
+
+
+class PlaceComponentOp(BaseModel):
+    """Place a component (footprint) on a PCB (Phase 101-05).
+
+    Generates a KiCad 10 ``(footprint ...)`` S-expression using a parametric
+    SMD library (Option A) for common 0402/0603/0805 cap and resistor
+    packages, and inserts it before the closing paren. Pad nets use the
+    KiCad 10 string-only ``(net "NAME")`` format.
+
+    Supported footprints (parametric, IPC-7351 nominal pad geometry):
+        - Capacitor_SMD:C_0402_1005Metric
+        - Capacitor_SMD:C_0603_1608Metric
+        - Capacitor_SMD:C_0805_2012Metric
+        - Resistor_SMD:R_0402_1005Metric
+        - Resistor_SMD:R_0603_1608Metric
+        - Resistor_SMD:R_0805_2012Metric
+
+    Unsupported IDs raise ValueError at handler time. Loading footprints
+    from an installed KiCad library (Option B) is a future enhancement.
+
+    Attributes:
+        op_type: Discriminator literal ``"place_component"``.
+        target_file: Relative path to the target KiCad PCB file.
+        ref: Reference designator (e.g. "C42", "R15").
+        footprint: Footprint library ID (e.g. "Capacitor_SMD:C_0402_1005Metric").
+        library: Optional symbol library name (reserved for future use).
+        at: (x, y) position in mm.
+        layer: "F.Cu" (default) or "B.Cu".
+        rotation: Rotation in degrees (default 0).
+        net_pad_map: Dict mapping pad number to net name. Pads not in map
+            are emitted without a ``(net ...)`` field (unconnected).
+    """
+
+    op_type: Literal["place_component"] = "place_component"
+    target_file: TargetFile
+    ref: str = Field(min_length=1, max_length=16, description="Reference designator")
+    footprint: str = Field(
+        min_length=1, max_length=128,
+        description='Footprint library ID, e.g. "Capacitor_SMD:C_0402_1005Metric"',
+    )
+    library: Optional[str] = Field(
+        default=None, max_length=64,
+        description="Optional symbol library name (reserved for future use)",
+    )
+    at: tuple[float, float] = Field(description="(x, y) position in mm")
+    layer: str = Field(default="F.Cu", description='Copper layer ("F.Cu" or "B.Cu")')
+    rotation: float = Field(default=0.0, description="Rotation in degrees")
+    net_pad_map: dict[str, str] = Field(
+        default_factory=dict,
+        description='Mapping of pad number to net name, e.g. {"1": "+3V3", "2": "GND"}',
+    )
+
+    @field_validator("ref")
+    @classmethod
+    def _validate_ref_safe(cls, v: str) -> str:
+        return _validate_sexpr_safe_string(v)
+
+    @field_validator("footprint")
+    @classmethod
+    def _validate_footprint_safe(cls, v: str) -> str:
+        # Footprint IDs contain a colon which is in the safe-id pattern
+        if not re.match(r'^[A-Za-z0-9_\-:.]+$', v):
+            raise ValueError(
+                "footprint contains unsafe characters. "
+                "Allowed: alphanumeric, underscore, dash, colon, dot."
+            )
+        return v
+
+    @field_validator("layer")
+    @classmethod
+    def _validate_layer(cls, v: str) -> str:
+        if v not in ("F.Cu", "B.Cu"):
+            raise ValueError('layer must be "F.Cu" or "B.Cu"')
+        return v
+
+    @field_validator("net_pad_map")
+    @classmethod
+    def _validate_net_pad_map(cls, v: dict[str, str]) -> dict[str, str]:
+        for pad_num, net_name in v.items():
+            _validate_sexpr_safe_string(net_name)
+        return v

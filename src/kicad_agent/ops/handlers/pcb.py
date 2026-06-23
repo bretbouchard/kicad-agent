@@ -417,6 +417,52 @@ def _handle_add_stitching_via_pattern(
     }
 
 
+@register_pcb("place_component")
+def _handle_place_component(
+    op: Any, ir: PcbIR, file_path: Path,
+) -> dict[str, Any]:
+    """Place a component (footprint) on a PCB (Phase 101-05).
+
+    Builds a KiCad 10 ``(footprint ...)`` S-expression using the parametric
+    SMD library (Option A) for 0402/0603/0805 cap and resistor packages,
+    and inserts it before the closing paren.
+
+    The value field defaults to an empty string (typical for caps). For
+    resistors the caller can pass ``value`` via the ``net_pad_map``-style
+    field -- but the current schema has no ``value`` field, so we emit an
+    empty string. This is intentional: ERC catches value-less footprints
+    later if needed.
+
+    Raises:
+        ValueError: Propagated from ``build_footprint_sexp`` if the
+            ``footprint`` ID is not in the parametric library.
+    """
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    sexp = PcbRawWriter.build_footprint_sexp(
+        footprint_id=op.footprint,
+        ref=op.ref,
+        value="",
+        at=tuple(op.at),
+        layer=op.layer,
+        rotation=op.rotation,
+        net_pad_map=dict(op.net_pad_map),
+    )
+
+    new_content = PcbRawWriter.insert_segments(ir.raw_content, sexp)
+    ir.commit_raw_content(new_content)
+
+    return {
+        "ref": op.ref,
+        "footprint": op.footprint,
+        "at": list(op.at),
+        "layer": op.layer,
+        "rotation": op.rotation,
+        "net_pad_map": dict(op.net_pad_map),
+    }
+
+
+
 @register_pcb("batch_expand_footprints")
 def _handle_batch_expand_footprints(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.pcb_raw_writer import PcbRawWriter

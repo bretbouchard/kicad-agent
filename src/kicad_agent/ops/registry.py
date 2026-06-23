@@ -1286,6 +1286,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "place_component": {
+        "category": "pcb",
+        "description": "Place a component (footprint) on a PCB -- parametric SMD library for 0402/0603/0805 caps and resistors",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_point",
+        "requires": [],
+        "conflicts": [],
+    },
 }
 
 OPERATION_REGISTRY: dict[str, OpMeta] = {

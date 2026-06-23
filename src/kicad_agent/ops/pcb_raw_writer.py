@@ -1326,6 +1326,219 @@ class PcbRawWriter:
         }
 
 
+
+    # ------------------------------------------------------------------
+    # Component placement (Phase 101-05)
+    # ------------------------------------------------------------------
+
+    # Parametric SMD footprint library (Option A).
+    # Pad geometry per IPC-7351 nominal for common 0402/0603/0805 packages.
+    # Each entry yields pad_width, pad_height, pad_pitch (center-to-center).
+    # Source: IPC-SM-782 / KiCad standard footprint libraries.
+    _SMD_FOOTPRINT_LIBRARY = {
+        "Capacitor_SMD:C_0402_1005Metric": {
+            "pad_width": 0.56, "pad_height": 0.50, "pad_pitch": 0.44,
+            "descr": "Capacitor SMD 0402 (1005 Metric), IPC-7351 nominal",
+            "tags": "capacitor",
+        },
+        "Capacitor_SMD:C_0603_1608Metric": {
+            "pad_width": 0.80, "pad_height": 0.95, "pad_pitch": 0.80,
+            "descr": "Capacitor SMD 0603 (1608 Metric), IPC-7351 nominal",
+            "tags": "capacitor",
+        },
+        "Capacitor_SMD:C_0805_2012Metric": {
+            "pad_width": 1.05, "pad_height": 1.25, "pad_pitch": 0.95,
+            "descr": "Capacitor SMD 0805 (2012 Metric), IPC-7351 nominal",
+            "tags": "capacitor",
+        },
+        "Resistor_SMD:R_0402_1005Metric": {
+            "pad_width": 0.56, "pad_height": 0.50, "pad_pitch": 0.44,
+            "descr": "Resistor SMD 0402 (1005 Metric), IPC-7351 nominal",
+            "tags": "resistor",
+        },
+        "Resistor_SMD:R_0603_1608Metric": {
+            "pad_width": 0.80, "pad_height": 0.95, "pad_pitch": 0.80,
+            "descr": "Resistor SMD 0603 (1608 Metric), IPC-7351 nominal",
+            "tags": "resistor",
+        },
+        "Resistor_SMD:R_0805_2012Metric": {
+            "pad_width": 1.05, "pad_height": 1.25, "pad_pitch": 0.95,
+            "descr": "Resistor SMD 0805 (2012 Metric), IPC-7351 nominal",
+            "tags": "resistor",
+        },
+    }
+
+    @staticmethod
+    def list_supported_footprints():
+        """Return the list of supported footprint library IDs (Option A).
+
+        Unsupported IDs should raise ValueError from build_footprint_sexp.
+        Loading footprints from an installed KiCad library (Option B) is
+        a future enhancement.
+        """
+        return sorted(PcbRawWriter._SMD_FOOTPRINT_LIBRARY.keys())
+
+    @staticmethod
+    def build_footprint_sexp(
+        footprint_id,
+        ref,
+        value,
+        at,
+        layer="F.Cu",
+        rotation=0.0,
+        net_pad_map=None,
+    ):
+        """Build a KiCad 10 ``(footprint ...)`` S-expression for an SMD passive.
+
+        Uses the parametric ``_SMD_FOOTPRINT_LIBRARY`` (Option A) for common
+        0402/0603/0805 cap and resistor packages. Pads use the KiCad 10
+        string-only ``(net "NAME")`` net reference.
+
+        The footprint name embedded in the PCB is the bare footprint name
+        (the part after the colon in the library ID), matching the format
+        KiCad itself writes when syncing from schematic.
+
+        Args:
+            footprint_id: Library ID, e.g. "Capacitor_SMD:C_0402_1005Metric".
+            ref: Reference designator, e.g. "C42".
+            value: Value string (typically "" for caps, "100" for resistors).
+            at: (x, y) position in mm.
+            layer: "F.Cu" or "B.Cu". B.Cu mirrors pad X coordinates and
+                swaps to B-prefixed layers.
+            rotation: Rotation in degrees (default 0).
+            net_pad_map: Mapping of pad number to net name. Pads not in the
+                map are emitted without a ``(net ...)`` field (unconnected).
+
+        Returns:
+            Complete ``(footprint ...)`` S-expression block (indented,
+            trailing newline).
+
+        Raises:
+            ValueError: If ``footprint_id`` is not in the parametric library.
+        """
+        if footprint_id not in PcbRawWriter._SMD_FOOTPRINT_LIBRARY:
+            supported = ", ".join(PcbRawWriter.list_supported_footprints())
+            raise ValueError(
+                "Unsupported footprint: " + repr(footprint_id) +
+                ". Parametric library (Option A) supports only: " + supported +
+                ". Loading arbitrary footprints from installed KiCad libraries "
+                "(Option B) is a future enhancement."
+            )
+
+        if net_pad_map is None:
+            net_pad_map = {}
+
+        geom = PcbRawWriter._SMD_FOOTPRINT_LIBRARY[footprint_id]
+        pad_w = geom["pad_width"]
+        pad_h = geom["pad_height"]
+        pad_pitch = geom["pad_pitch"]
+        descr = geom["descr"]
+        tags = geom["tags"]
+
+        # Bare footprint name (after the colon). KiCad embeds without lib prefix.
+        if ":" in footprint_id:
+            fp_name = footprint_id.split(":", 1)[1]
+        else:
+            fp_name = footprint_id
+
+        x, y = at
+        is_bottom = (layer == "B.Cu")
+
+        # Layer names for pads differ between F.Cu and B.Cu
+        if is_bottom:
+            pad_layers = "\"B.Cu\" \"B.Mask\" \"B.Paste\""
+            silk_layer = "B.SilkS"
+            fab_layer = "B.Fab"
+        else:
+            pad_layers = "\"F.Cu\" \"F.Mask\" \"F.Paste\""
+            silk_layer = "F.SilkS"
+            fab_layer = "F.Fab"
+
+        # Pad X coords are symmetric regardless of layer
+        pad1_x = -pad_pitch / 2.0
+        pad2_x = pad_pitch / 2.0
+
+        # (at X Y) or (at X Y ANGLE)
+        if abs(rotation) < 1e-9:
+            at_line = "(at " + format(x, "g") + " " + format(y, "g") + ")"
+        else:
+            at_line = ("(at " + format(x, "g") + " " + format(y, "g")
+                       + " " + format(rotation, "g") + ")")
+
+        # Generate unique UUIDs for each element that needs one
+        fp_uuid = str(uuid.uuid4())
+        ref_uuid = str(uuid.uuid4())
+        val_uuid = str(uuid.uuid4())
+        pad1_uuid = str(uuid.uuid4())
+        pad2_uuid = str(uuid.uuid4())
+
+        lines = []
+        lines.append("\t(footprint \"" + fp_name + "\"")
+        lines.append("\t\t(layer \"" + layer + "\")")
+        lines.append("\t\t(uuid \"" + fp_uuid + "\")")
+        lines.append("\t\t" + at_line)
+        lines.append("\t\t(descr \"" + descr + "\")")
+        lines.append("\t\t(tags \"" + tags + "\")")
+
+        # Reference property
+        lines.append("\t\t(property \"Reference\" \"" + ref + "\"")
+        lines.append("\t\t\t(at 0 -1.5 0)")
+        lines.append("\t\t\t(layer \"" + silk_layer + "\")")
+        lines.append("\t\t\t(uuid \"" + ref_uuid + "\")")
+        lines.append("\t\t\t(effects")
+        lines.append("\t\t\t\t(font")
+        lines.append("\t\t\t\t\t(size 1 1)")
+        lines.append("\t\t\t\t\t(thickness 0.15)")
+        lines.append("\t\t\t\t)")
+        lines.append("\t\t\t)")
+        lines.append("\t\t)")
+
+        # Value property
+        lines.append("\t\t(property \"Value\" \"" + value + "\"")
+        lines.append("\t\t\t(at 0 1.5 0)")
+        lines.append("\t\t\t(layer \"" + fab_layer + "\")")
+        lines.append("\t\t\t(uuid \"" + val_uuid + "\")")
+        lines.append("\t\t\t(effects")
+        lines.append("\t\t\t\t(font")
+        lines.append("\t\t\t\t\t(size 1 1)")
+        lines.append("\t\t\t\t\t(thickness 0.15)")
+        lines.append("\t\t\t\t)")
+        lines.append("\t\t\t)")
+        lines.append("\t\t)")
+
+        # attr smd
+        lines.append("\t\t(attr smd)")
+
+        # Pad 1
+        lines.append("\t\t(pad \"1\" smd roundrect")
+        lines.append("\t\t\t(at " + format(pad1_x, "g") + " 0)")
+        lines.append("\t\t\t(size " + format(pad_w, "g") + " " + format(pad_h, "g") + ")")
+        lines.append("\t\t\t(layers " + pad_layers + ")")
+        lines.append("\t\t\t(roundrect_rratio 0.25)")
+        if "1" in net_pad_map:
+            lines.append("\t\t\t(net \"" + net_pad_map["1"] + "\")")
+        lines.append("\t\t\t(uuid \"" + pad1_uuid + "\")")
+        lines.append("\t\t)")
+
+        # Pad 2
+        lines.append("\t\t(pad \"2\" smd roundrect")
+        lines.append("\t\t\t(at " + format(pad2_x, "g") + " 0)")
+        lines.append("\t\t\t(size " + format(pad_w, "g") + " " + format(pad_h, "g") + ")")
+        lines.append("\t\t\t(layers " + pad_layers + ")")
+        lines.append("\t\t\t(roundrect_rratio 0.25)")
+        if "2" in net_pad_map:
+            lines.append("\t\t\t(net \"" + net_pad_map["2"] + "\")")
+        lines.append("\t\t\t(uuid \"" + pad2_uuid + "\")")
+        lines.append("\t\t)")
+
+        # Close footprint
+        lines.append("\t)")
+
+        return "\n".join(lines) + "\n"
+
+
+
+
 def _strip_library_metadata(sexp: str) -> str:
     """Remove library-only fields from a .kicad_mod file for PCB embedding."""
     for pattern in [
