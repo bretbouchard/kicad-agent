@@ -1205,6 +1205,33 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "add_track": {
+        "category": "pcb",
+        "description": "Add a single straight track segment to a PCB (KiCad 10 net format)",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_point",
+        "requires": [],
+        "conflicts": [],
+    },
+    "add_arc_track": {
+        "category": "pcb",
+        "description": "Add a single arc track segment to a PCB (KiCad 10 net format)",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_point",
+        "requires": [],
+        "conflicts": [],
+    },
+    "add_via": {
+        "category": "pcb",
+        "description": "Add a single via to a PCB (KiCad 10 net format, JLC 4-layer defaults)",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_point",
+        "requires": [],
+        "conflicts": [],
+    },
 }
 
 OPERATION_REGISTRY: dict[str, OpMeta] = {

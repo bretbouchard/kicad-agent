@@ -10,6 +10,7 @@ Consolidates raw-write sites (Council C-02):
 - update_footprint (was in ir/pcb_ir.py)
 - insert_zone (new for #38)
 - modify_footprint_position (new for #39)
+- build_segment_sexp / build_arc_sexp / build_via_sexp (new for Phase 101-01)
 
 Usage:
     from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
@@ -19,6 +20,7 @@ Usage:
 """
 
 import re
+import uuid
 from pathlib import Path
 from typing import Any, Optional
 
@@ -447,6 +449,139 @@ class PcbRawWriter:
         new_block = at_pattern.sub(new_at, block, count=1)
 
         return content[:start] + new_block + content[end:]
+
+    # ------------------------------------------------------------------
+    # Track / arc / via builders (Phase 101-01)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def build_segment_sexp(
+        start: tuple[float, float],
+        end: tuple[float, float],
+        width: float,
+        layer: str,
+        net_name: str,
+        uuid_str: Optional[str] = None,
+    ) -> str:
+        """Build a KiCad 10 ``(segment ...)`` S-expression for a straight track.
+
+        Uses the KiCad 10 string-only net reference ``(net "NAME")`` --
+        NOT the legacy ``(net N "NAME")`` form (H3: segment-net-format).
+
+        Args:
+            start: (x, y) start coordinates in mm.
+            end: (x, y) end coordinates in mm.
+            width: Trace width in mm.
+            layer: Copper layer name (e.g. "F.Cu").
+            net_name: Net name (e.g. "GND").
+            uuid_str: Optional UUID string. If None, a new uuid4 is generated.
+
+        Returns:
+            Complete ``(segment ...)`` S-expression block (indented, trailing newline).
+        """
+        if uuid_str is None:
+            uuid_str = str(uuid.uuid4())
+
+        sx, sy = start
+        ex, ey = end
+        parts = [
+            "  (segment",
+            f"    (start {sx:g} {sy:g})",
+            f"    (end {ex:g} {ey:g})",
+            f"    (width {width:g})",
+            f'    (layer "{layer}")',
+            f'    (net "{net_name}")',
+            f'    (uuid "{uuid_str}")',
+            "  )",
+        ]
+        return "\n".join(parts) + "\n"
+
+    @staticmethod
+    def build_arc_sexp(
+        start: tuple[float, float],
+        mid: tuple[float, float],
+        end: tuple[float, float],
+        width: float,
+        layer: str,
+        net_name: str,
+        uuid_str: Optional[str] = None,
+    ) -> str:
+        """Build a KiCad 10 ``(arc ...)`` S-expression for a curved track.
+
+        Uses the KiCad 10 string-only net reference ``(net "NAME")``.
+
+        Args:
+            start: (x, y) arc start coordinates in mm.
+            mid: (x, y) arc midpoint coordinates in mm.
+            end: (x, y) arc end coordinates in mm.
+            width: Trace width in mm.
+            layer: Copper layer name (e.g. "F.Cu").
+            net_name: Net name (e.g. "GND").
+            uuid_str: Optional UUID string. If None, a new uuid4 is generated.
+
+        Returns:
+            Complete ``(arc ...)`` S-expression block (indented, trailing newline).
+        """
+        if uuid_str is None:
+            uuid_str = str(uuid.uuid4())
+
+        sx, sy = start
+        mx, my = mid
+        ex, ey = end
+        parts = [
+            "  (arc",
+            f"    (start {sx:g} {sy:g})",
+            f"    (mid {mx:g} {my:g})",
+            f"    (end {ex:g} {ey:g})",
+            f"    (width {width:g})",
+            f'    (layer "{layer}")',
+            f'    (net "{net_name}")',
+            f'    (uuid "{uuid_str}")',
+            "  )",
+        ]
+        return "\n".join(parts) + "\n"
+
+    @staticmethod
+    def build_via_sexp(
+        at: tuple[float, float],
+        size: float,
+        drill: float,
+        layers: list[str],
+        net_name: str,
+        uuid_str: Optional[str] = None,
+    ) -> str:
+        """Build a KiCad 10 ``(via ...)`` S-expression.
+
+        Uses the KiCad 10 string-only net reference ``(net "NAME")``.
+
+        Args:
+            at: (x, y) via center coordinates in mm.
+            size: Via pad diameter in mm.
+            drill: Via drill hole diameter in mm.
+            layers: List of layer names the via connects (e.g. ["F.Cu", "B.Cu"]).
+            net_name: Net name (e.g. "GND").
+            uuid_str: Optional UUID string. If None, a new uuid4 is generated.
+
+        Returns:
+            Complete ``(via ...)`` S-expression block (indented, trailing newline).
+        """
+        if uuid_str is None:
+            uuid_str = str(uuid.uuid4())
+
+        x, y = at
+        # Quote each layer name and join with single spaces, all inside (layers ...)
+        layers_inner = " ".join(f'"{layer}"' for layer in layers)
+        parts = [
+            "  (via",
+            f"    (at {x:g} {y:g})",
+            f"    (size {size:g})",
+            f"    (drill {drill:g})",
+            f"    (layers {layers_inner})",
+            f'    (net "{net_name}")',
+            f'    (uuid "{uuid_str}")',
+            "  )",
+        ]
+        return "\n".join(parts) + "\n"
 
     # ------------------------------------------------------------------
     # Footprint update (#40 migration)

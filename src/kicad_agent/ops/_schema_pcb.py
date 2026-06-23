@@ -736,3 +736,84 @@ class AutoRouteManhattanOp(BaseModel):
         default=True,
         description="Remove all existing segments before routing",
     )
+
+
+class AddTrackOp(BaseModel):
+    """Add a single straight track segment to a PCB (Phase 101-01).
+
+    Generates a KiCad 10 ``(segment ...)`` S-expression with the string-only
+    ``(net "NAME")`` net reference and inserts it before the closing paren.
+
+    Attributes:
+        op_type: Discriminator literal ``"add_track"``.
+        target_file: Relative path to the target KiCad PCB file.
+        net: Net name (e.g. "GND", "/SIG1").
+        start: (x, y) start coordinates in mm.
+        end: (x, y) end coordinates in mm.
+        width: Trace width in mm.
+        layer: Copper layer name (e.g. "F.Cu").
+    """
+
+    op_type: Literal["add_track"] = "add_track"
+    target_file: TargetFile
+    net: str = Field(min_length=1, max_length=128, description="Net name")
+    start: tuple[float, float] = Field(description="(x, y) start in mm")
+    end: tuple[float, float] = Field(description="(x, y) end in mm")
+    width: float = Field(default=0.2, gt=0.01, description="Trace width in mm")
+    layer: str = Field(default="F.Cu", description="Copper layer name")
+
+
+class AddArcTrackOp(BaseModel):
+    """Add a single arc track segment to a PCB (Phase 101-01).
+
+    Generates a KiCad 10 ``(arc ...)`` S-expression with start/mid/end
+    control points and the string-only ``(net "NAME")`` net reference.
+
+    Attributes:
+        op_type: Discriminator literal ``"add_arc_track"``.
+        target_file: Relative path to the target KiCad PCB file.
+        net: Net name.
+        start: (x, y) arc start coordinates in mm.
+        mid: (x, y) arc midpoint coordinates in mm.
+        end: (x, y) arc end coordinates in mm.
+        width: Trace width in mm.
+        layer: Copper layer name.
+    """
+
+    op_type: Literal["add_arc_track"] = "add_arc_track"
+    target_file: TargetFile
+    net: str = Field(min_length=1, max_length=128, description="Net name")
+    start: tuple[float, float] = Field(description="(x, y) start in mm")
+    mid: tuple[float, float] = Field(description="(x, y) midpoint in mm")
+    end: tuple[float, float] = Field(description="(x, y) end in mm")
+    width: float = Field(default=0.2, gt=0.01, description="Trace width in mm")
+    layer: str = Field(default="F.Cu", description="Copper layer name")
+
+
+class AddViaOp(BaseModel):
+    """Add a single via to a PCB (Phase 101-01).
+
+    Generates a KiCad 10 ``(via ...)`` S-expression with the string-only
+    ``(net "NAME")`` net reference. Default size=0.7 / drill=0.3 matches
+    the JLC 4-layer floor (H2: stackup constraints).
+
+    Attributes:
+        op_type: Discriminator literal ``"add_via"``.
+        target_file: Relative path to the target KiCad PCB file.
+        net: Net name.
+        at: (x, y) via center coordinates in mm.
+        size: Via pad diameter in mm.
+        drill: Via drill hole diameter in mm.
+        layers: List of layer names the via connects (default F.Cu + B.Cu).
+    """
+
+    op_type: Literal["add_via"] = "add_via"
+    target_file: TargetFile
+    net: str = Field(min_length=1, max_length=128, description="Net name")
+    at: tuple[float, float] = Field(description="(x, y) via center in mm")
+    size: float = Field(default=0.7, gt=0.01, description="Via pad diameter in mm")
+    drill: float = Field(default=0.3, gt=0.01, description="Via drill diameter in mm")
+    layers: list[str] = Field(
+        default_factory=lambda: ["F.Cu", "B.Cu"],
+        description="Layers the via connects",
+    )

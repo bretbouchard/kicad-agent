@@ -211,6 +211,92 @@ def _handle_move_footprint(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any
     }
 
 
+@register_pcb("add_track")
+def _handle_add_track(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Add a straight track segment via PcbRawWriter (Phase 101-01).
+
+    Builds a KiCad 10 ``(segment ...)`` S-expression with the string-only
+    ``(net "NAME")`` net reference and inserts it before the closing paren.
+    """
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    sexp = PcbRawWriter.build_segment_sexp(
+        start=tuple(op.start),
+        end=tuple(op.end),
+        width=op.width,
+        layer=op.layer,
+        net_name=op.net,
+    )
+    new_content = PcbRawWriter.insert_segments(ir.raw_content, sexp)
+    ir.commit_raw_content(new_content)
+
+    return {
+        "net": op.net,
+        "start": list(op.start),
+        "end": list(op.end),
+        "width": op.width,
+        "layer": op.layer,
+    }
+
+
+@register_pcb("add_arc_track")
+def _handle_add_arc_track(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Add an arc track segment via PcbRawWriter (Phase 101-01).
+
+    Builds a KiCad 10 ``(arc ...)`` S-expression with start/mid/end control
+    points and inserts it before the closing paren.
+    """
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    sexp = PcbRawWriter.build_arc_sexp(
+        start=tuple(op.start),
+        mid=tuple(op.mid),
+        end=tuple(op.end),
+        width=op.width,
+        layer=op.layer,
+        net_name=op.net,
+    )
+    new_content = PcbRawWriter.insert_segments(ir.raw_content, sexp)
+    ir.commit_raw_content(new_content)
+
+    return {
+        "net": op.net,
+        "start": list(op.start),
+        "mid": list(op.mid),
+        "end": list(op.end),
+        "width": op.width,
+        "layer": op.layer,
+    }
+
+
+@register_pcb("add_via")
+def _handle_add_via(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Add a via via PcbRawWriter (Phase 101-01).
+
+    Builds a KiCad 10 ``(via ...)`` S-expression with the string-only
+    ``(net "NAME")`` net reference and inserts it before the closing paren.
+    """
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    sexp = PcbRawWriter.build_via_sexp(
+        at=tuple(op.at),
+        size=op.size,
+        drill=op.drill,
+        layers=list(op.layers),
+        net_name=op.net,
+    )
+    new_content = PcbRawWriter.insert_segments(ir.raw_content, sexp)
+    ir.commit_raw_content(new_content)
+
+    return {
+        "net": op.net,
+        "at": list(op.at),
+        "size": op.size,
+        "drill": op.drill,
+        "layers": list(op.layers),
+    }
+
+
 @register_pcb("batch_expand_footprints")
 def _handle_batch_expand_footprints(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.pcb_raw_writer import PcbRawWriter

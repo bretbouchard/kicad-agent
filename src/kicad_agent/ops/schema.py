@@ -251,6 +251,9 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
     FixSilkscreenOverCopperOp,
     ImportSesOp,
     AutoRouteManhattanOp,
+    AddTrackOp,
+    AddArcTrackOp,
+    AddViaOp,
 )
 from kicad_agent.ops._schema_placement import (  # noqa: E402
     AutoPlaceOp,
@@ -485,6 +488,9 @@ class Operation(BaseModel):
         | AutoPlaceZonedOp
         | ImportSesOp
         | AutoRouteManhattanOp
+        | AddTrackOp
+        | AddArcTrackOp
+        | AddViaOp
         | AnalyzeGapsOp
         | FillGapsOp
         | FillZonesOp
@@ -571,6 +577,9 @@ __all__ = [
     "AutoRouteOp",
     "ImportSesOp",
     "AutoRouteManhattanOp",
+    "AddTrackOp",
+    "AddArcTrackOp",
+    "AddViaOp",
     "ModifyNetClassOp",
     "RemoveNetClassOp",
     "ListNetClassesOp",
