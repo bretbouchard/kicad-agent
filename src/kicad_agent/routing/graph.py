@@ -53,6 +53,7 @@ class RoutingGraph:
         query_engine: SpatialQueryEngine | None = None,
         layers: list[str] | None = None,
         required_nodes: set[tuple[float, float]] | None = None,
+        forbidden_zones: list[dict] | None = None,
     ) -> None:
         """Build routing graph from board bounds, obstacles, and constraints.
 
@@ -67,6 +68,12 @@ class RoutingGraph:
             required_nodes: Set of (x, y) positions (pad locations) that must
                 exist as graph nodes even if inside an obstacle. Pads are
                 inside footprints but must be routable.
+            forbidden_zones: Phase 122B Gap 2 — Optional list of impassable
+                zones per layer. Each item is a dict with keys:
+                ``layer`` (copper layer name), ``x1``, ``y1``, ``x2``, ``y2``
+                (bounds in mm). Grid nodes inside these zones are excluded
+                from the graph entirely. Used for analog/digital split barriers
+                like the C4 constraint (B.Cu never crosses x=100mm).
 
         Raises:
             ValueError: If grid would exceed max_nodes.
@@ -119,10 +126,40 @@ class RoutingGraph:
             ys.append(round(y, 6))
             y += grid_res
 
+        # Phase 122B Gap 2: Build per-layer forbidden zone lookup.
+        # Grid nodes inside these zones are excluded from the graph entirely,
+        # making them impassable. Used for hard constraints like the C4 rule
+        # (B.Cu must not cross x=100mm on the analog board).
+        forbidden_by_layer: dict[str, list[tuple[float, float, float, float]]] = {}
+        if forbidden_zones:
+            for zone in forbidden_zones:
+                z_layer = zone.get("layer", "")
+                if not z_layer:
+                    continue
+                forbidden_by_layer.setdefault(z_layer, []).append((
+                    float(zone["x1"]),
+                    float(zone["y1"]),
+                    float(zone["x2"]),
+                    float(zone["y2"]),
+                ))
+
+        def _in_forbidden_zone(gx: float, gy: float, layer: str) -> bool:
+            """Check if (gx, gy) on layer is inside any forbidden zone."""
+            zones = forbidden_by_layer.get(layer)
+            if not zones:
+                return False
+            return any(
+                x1 <= gx <= x2 and y1 <= gy <= y2
+                for x1, y1, x2, y2 in zones
+            )
+
         nodes: list[tuple[float, float, str]] = []
         for layer in active_layers:
             for gx in xs:
                 for gy in ys:
+                    # Phase 122B Gap 2: skip forbidden zones entirely.
+                    if _in_forbidden_zone(gx, gy, layer):
+                        continue
                     pt = ShapelyPoint(gx, gy)
                     # Skip nodes inside any obstacle, UNLESS it's a required
                     # node (pad position inside its own footprint courtyard).

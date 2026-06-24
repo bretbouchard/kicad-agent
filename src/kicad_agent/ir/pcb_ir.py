@@ -788,6 +788,94 @@ class PcbIR(BaseIR):
 
         return obstacles
 
+    def extract_track_obstacles(
+        self,
+        clearance_mm: float = 0.2,
+        skip_nets: set[str] | None = None,
+    ) -> list:
+        """Extract SpatialBox obstacles from existing copper track segments.
+
+        Phase 122B Gap 1: existing tracks must be visible to the router so
+        new routes don't cross them (eliminates tracks_crossing violations).
+
+        Each (segment ...) on a copper layer becomes a thin inflated SpatialBox
+        corridor on that layer. The box is axis-aligned (bounding box of the
+        segment) which is conservative but correct — it over-blocks near-45
+        segments slightly, but never allows a crossing.
+
+        Args:
+            clearance_mm: Extra clearance corridor around tracks in mm.
+                Defaults to 0.2mm (typical trace-to-trace clearance).
+            skip_nets: Optional set of net names whose tracks should NOT be
+                obstacles. Use this when re-routing a specific net to allow
+                the router to replace its existing traces.
+
+        Returns:
+            List of SpatialBox obstacles with layer attribute set to the
+            track's copper layer (e.g., "F.Cu", "B.Cu").
+        """
+        from kicad_agent.spatial.primitives import SpatialBox
+
+        obstacles: list[SpatialBox] = []
+        skip = skip_nets or set()
+
+        # Access board segments (NativeSegment or kiutils equivalent).
+        board = self.board
+        segments = getattr(board, "segments", None) or []
+        if not segments:
+            # Try trace_items property as fallback.
+            try:
+                segments = self.trace_items
+            except Exception:
+                segments = []
+
+        _COPPER_LAYERS = {"F.Cu", "B.Cu"} | {
+            f"In{i}.Cu" for i in range(1, 10)
+        }
+
+        for seg in segments:
+            # Skip non-copper layers (silkscreen, courtyard, etc.).
+            layer = getattr(seg, "layer", "") or ""
+            if layer not in _COPPER_LAYERS:
+                continue
+
+            # Skip tracks whose net is being re-routed.
+            net_name = getattr(seg, "net_name", "") or ""
+            if net_name in skip:
+                continue
+
+            start = getattr(seg, "start", None)
+            end = getattr(seg, "end", None)
+            if start is None or end is None:
+                continue
+
+            sx = float(getattr(start, "x", getattr(start, "X", 0)))
+            sy = float(getattr(start, "y", getattr(start, "Y", 0)))
+            ex = float(getattr(end, "x", getattr(end, "X", 0)))
+            ey = float(getattr(end, "y", getattr(end, "Y", 0)))
+
+            width = float(getattr(seg, "width", 0.2)) or 0.2
+            # Corridor = track width + clearance on both sides.
+            corridor = width / 2.0 + clearance_mm
+
+            x1 = min(sx, ex) - corridor
+            y1 = min(sy, ey) - corridor
+            x2 = max(sx, ex) + corridor
+            y2 = max(sy, ey) + corridor
+
+            obstacles.append(SpatialBox(
+                x1=round(x1, 4),
+                y1=round(y1, 4),
+                x2=round(x2, 4),
+                y2=round(y2, 4),
+                entity_type="track",
+                entity_id=getattr(seg, "uuid", "") or "",
+                layer=layer,
+                reference=net_name,
+            ))
+
+        return obstacles
+
     def extract_net_id_map(self) -> dict[str, int]:
         """Extract mapping from net name to net ID number.
 

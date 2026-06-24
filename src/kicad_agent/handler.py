@@ -45,6 +45,18 @@ def validate_operation(
             suggestion="Check that your JSON is well-formed. Ensure all strings are quoted, brackets are closed, and there are no trailing commas.",
         )
 
+    # Phase 122B Gap 4: Alias 'native_route' -> 'auto_route'.
+    # The brief's CLI invocation uses {"op":"native_route","route_all_unconnected":true}.
+    # Map it to auto_route with multi-layer defaults so the existing handler runs.
+    if parsed.get("op_type") == "native_route" or parsed.get("op") == "native_route":
+        parsed["op_type"] = "auto_route"
+        # If route_all_unconnected is set, ensure nets is empty (all nets).
+        if parsed.get("route_all_unconnected"):
+            parsed.setdefault("nets", [])
+            # Default to multi-layer if layers not specified.
+            if not parsed.get("layers") and "layer" not in parsed:
+                parsed["layers"] = ["F.Cu", "B.Cu"]
+
     # -- Step 2: Validate against Pydantic schema --
     try:
         op = Operation.model_validate({"root": parsed})

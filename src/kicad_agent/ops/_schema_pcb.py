@@ -180,6 +180,34 @@ class AutoRouteOp(BaseModel):
                     "Council C-03: max 3 passes for A*, Freerouting has its own pass control.",
     )
 
+    # Phase 122B Gap 4 — convenience fields for native multi-layer routing.
+    route_all_unconnected: bool = Field(
+        default=False,
+        description="Phase 122B: When True, route every unconnected net on the board. "
+                    "Sets nets=[] (all nets) and uses multi-layer routing by default.",
+    )
+    max_iterations: int = Field(
+        default=1,
+        ge=1,
+        le=5,
+        description="Phase 122B: Maximum routing iterations (1-5). Each iteration "
+                    "re-routes failed nets with a relaxed grid. Council C-03 caps "
+                    "at 5 to prevent runaway loops.",
+    )
+    forbidden_zones: Optional[list[dict]] = Field(
+        default=None,
+        description="Phase 122B Gap 2: per-layer impassable zones. Each dict: "
+                    "{layer: 'B.Cu', x1, y1, x2, y2} in mm. Used for hard constraints "
+                    "like the C4 rule (B.Cu must not cross x=100mm on analog board).",
+    )
+    net_class_map: Optional[dict[str, dict]] = Field(
+        default=None,
+        description="Phase 122B Gap 3: per-net class overrides. Maps net name to "
+                    "a dict of {trace_width_mm, clearance_mm, via_diameter_mm, ...}. "
+                    "When set, each net is routed with its class's constraints instead "
+                    "of the global defaults.",
+    )
+
     @field_validator("layers")
     @classmethod
     def _validate_layer_names(cls, v: list[str]) -> list[str]:

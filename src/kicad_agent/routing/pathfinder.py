@@ -260,6 +260,7 @@ def build_routing_graph(
     constraints: RoutingConstraints | None = None,
     layers: list[str] | None = None,
     required_nodes: set[tuple[float, float]] | None = None,
+    forbidden_zones: list[dict] | None = None,
 ) -> RoutingGraph:
     """Convenience function to build a routing graph.
 
@@ -270,6 +271,8 @@ def build_routing_graph(
         layers: List of copper layer names for multi-layer routing.
             Defaults to ["F.Cu"] for single-layer.
         required_nodes: Set of (x, y) pad positions that must be routable.
+        forbidden_zones: Phase 122B Gap 2 — per-layer impassable zones.
+            Each dict: {layer, x1, y1, x2, y2}.
 
     Returns:
         Constructed RoutingGraph.
@@ -282,4 +285,5 @@ def build_routing_graph(
         constraints=constraints or RC(),
         layers=layers,
         required_nodes=required_nodes,
+        forbidden_zones=forbidden_zones,
     )

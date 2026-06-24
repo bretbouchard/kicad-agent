@@ -662,14 +662,21 @@ class NativeParser:
             seg.layer = _find_string_child(seg_block, "layer")
 
             # Net
+            # KiCad 10 format: (net "NAME")        -- string-only
+            # KiCad 9 format:  (net NUMBER "NAME") -- number + name
             net_block = _find_symbol(seg_block, "net")
             if net_block and len(net_block) >= 2:
-                try:
-                    seg.net_number = int(net_block[1])
-                except (ValueError, TypeError):
-                    pass
-                if len(net_block) >= 3 and isinstance(net_block[2], str):
-                    seg.net_name = net_block[2]
+                # Phase 122B Gap 1: handle KiCad 10 string-only net format.
+                if isinstance(net_block[1], str):
+                    seg.net_name = net_block[1]
+                    # No net_number in KiCad 10 string-only format; leave as 0.
+                else:
+                    try:
+                        seg.net_number = int(net_block[1])
+                    except (ValueError, TypeError):
+                        pass
+                    if len(net_block) >= 3 and isinstance(net_block[2], str):
+                        seg.net_name = net_block[2]
 
             segments.append(seg)
 
@@ -703,15 +710,18 @@ class NativeParser:
                 except (ValueError, TypeError):
                     pass
 
-            # Net
+            # Net (KiCad 10 string-only format supported, same as segments)
             net_block = _find_symbol(via_block, "net")
             if net_block and len(net_block) >= 2:
-                try:
-                    via.net_number = int(net_block[1])
-                except (ValueError, TypeError):
-                    pass
-                if len(net_block) >= 3 and isinstance(net_block[2], str):
-                    via.net_name = net_block[2]
+                if isinstance(net_block[1], str):
+                    via.net_name = net_block[1]
+                else:
+                    try:
+                        via.net_number = int(net_block[1])
+                    except (ValueError, TypeError):
+                        pass
+                    if len(net_block) >= 3 and isinstance(net_block[2], str):
+                        via.net_name = net_block[2]
 
             # Layers
             layers_block = _find_symbol(via_block, "layers")

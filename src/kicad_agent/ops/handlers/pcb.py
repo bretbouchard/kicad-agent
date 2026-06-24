@@ -621,7 +621,7 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
             layer_trace_widths=layer_trace_widths,
         )
 
-    # --- Phase 1: Extract footprint obstacles (kicad-agent-7) ---
+    # --- Phase 1: Extract footprint + track obstacles (kicad-agent-7, Phase 122B Gap 1) ---
     obstacles = ir.extract_obstacles(clearance_mm=constraints.clearance_mm)
     logger.info(
         "Auto-route: extracted %d obstacles from %d footprints",
@@ -629,12 +629,31 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
         len(ir.footprints),
     )
 
+    # Phase 122B Gap 1: Treat existing copper tracks as obstacles so new
+    # routes go around them rather than crossing them. Skip nets being
+    # re-routed (op.nets) so the router can replace those traces.
+    track_skip_nets: set[str] = set(op.nets) if op.nets else set()
+    track_obstacles = ir.extract_track_obstacles(
+        clearance_mm=constraints.clearance_mm,
+        skip_nets=track_skip_nets,
+    )
+    if track_obstacles:
+        obstacles.extend(track_obstacles)
+        logger.info(
+            "Auto-route: extracted %d track obstacles (skip_nets=%d)",
+            len(track_obstacles),
+            len(track_skip_nets),
+        )
+
     netlist = ir.extract_netlist()
     if not netlist:
         return {"routed_nets": 0, "segments": 0, "message": "No nets to route"}
 
     if op.nets:
         netlist = {n: pins for n, pins in netlist.items() if n in op.nets}
+    # Phase 122B Gap 4: route_all_unconnected = all nets (empty filter).
+    # Note: this is already the default behavior when op.nets is empty, but
+    # we document the intent here for clarity.
 
     # --- Phase 2: Filter power/ground nets (they get copper zones) ---
     _power_prefixes = ("+", "GND", "AGND", "VDD", "VSS", "VCC")
@@ -691,12 +710,14 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     logger.info("Auto-route: routing bounds %.1f x %.1f mm", bounds[2]-bounds[0], bounds[3]-bounds[1])
 
     # --- Phase 3: Build routing graph with obstacles and required pad nodes ---
+    # Phase 122B Gap 2: pass forbidden_zones through to the graph constructor.
     routing_graph = build_routing_graph(
         bounds,
         obstacles=obstacles,
         constraints=constraints,
         layers=active_layers if is_multilayer else None,
         required_nodes=_all_pads,
+        forbidden_zones=getattr(op, "forbidden_zones", None),
     )
 
     # --- Phase 4: Sequential routing with rip-up (kicad-agent-7) ---
@@ -713,24 +734,85 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
 
     results: dict[str, RouteResult] = {}
     failed_nets: list[str] = []
-    for net_name, pins in net_order:
-        if len(pins) < 2:
-            continue
 
-        if len(pins) == 2:
-            # Simple 2-pin net: direct A* route.
-            result = route_net(routing_graph, pins[0], pins[1], net_name)
-        else:
-            # Multi-pin net: sequential nearest-neighbor Steiner tree.
-            result = route_all_nets(routing_graph, {net_name: pins}).get(net_name)
+    # Phase 122B Gap 4: max_iterations retry loop.
+    # First pass uses the base graph at 0.25mm grid. Each retry rebuilds
+    # the graph with a relaxed grid (0.5mm, then 0.7mm) and re-routes
+    # only the failed nets. This helps with dense pin clusters where
+    # tight grids block the pathfinder.
+    max_iter = getattr(op, "max_iterations", 1) if hasattr(op, "max_iterations") else 1
+    current_constraints = constraints
+    current_graph = routing_graph
 
-        if result is not None and result.success:
-            results[net_name] = result
-            routing_graph.mark_path_as_obstacle(
-                result.path, clearance=constraints.trace_width_mm,
+    for iteration in range(max_iter):
+        if iteration > 0:
+            # Rebuild graph with coarser grid for failed nets only.
+            coarser_grid = min(
+                current_constraints.grid_resolution_mm * 1.5,
+                0.8,  # cap at 0.8mm
             )
-        else:
-            failed_nets.append(net_name)
+            current_constraints = RoutingConstraints(
+                dielectric_constant=current_constraints.dielectric_constant,
+                dielectric_height_mm=current_constraints.dielectric_height_mm,
+                copper_thickness_mm=current_constraints.copper_thickness_mm,
+                layer_trace_widths=current_constraints.layer_trace_widths,
+                grid_resolution_mm=coarser_grid,
+            )
+            logger.info(
+                "Auto-route iter %d: rebuilding graph at %.2fmm grid for %d failed nets",
+                iteration + 1,
+                coarser_grid,
+                len(failed_nets),
+            )
+            current_graph = build_routing_graph(
+                bounds,
+                obstacles=obstacles,
+                constraints=current_constraints,
+                layers=active_layers if is_multilayer else None,
+                required_nodes=_all_pads,
+                forbidden_zones=getattr(op, "forbidden_zones", None),
+            )
+            # Re-mark already-routed paths as obstacles in new graph.
+            for prior_result in results.values():
+                current_graph.mark_path_as_obstacle(
+                    prior_result.path,
+                    clearance=current_constraints.trace_width_mm,
+                )
+            # Restrict net_order to failed nets only.
+            net_order = [
+                (n, p) for n, p in route_nets.items()
+                if n in failed_nets and len(p) >= 2
+            ]
+            failed_nets = []  # reset; will be repopulated
+
+        for net_name, pins in net_order:
+            if len(pins) < 2:
+                continue
+
+            if len(pins) == 2:
+                # Simple 2-pin net: direct A* route.
+                result = route_net(current_graph, pins[0], pins[1], net_name)
+            else:
+                # Multi-pin net: sequential nearest-neighbor Steiner tree.
+                result = route_all_nets(current_graph, {net_name: pins}).get(net_name)
+
+            if result is not None and result.success:
+                results[net_name] = result
+                current_graph.mark_path_as_obstacle(
+                    result.path, clearance=current_constraints.trace_width_mm,
+                )
+                if net_name in failed_nets:
+                    failed_nets.remove(net_name)
+            else:
+                if net_name not in failed_nets:
+                    failed_nets.append(net_name)
+
+        if not failed_nets:
+            break  # all routed — done
+
+    # Update constraints reference so downstream code (length matching,
+    # segment emission) uses the last-used constraints (finest that worked).
+    constraints = current_constraints
 
     # Length matching: apply sawtooth to specified net pairs (ROUTE-07).
     matched_pairs: list[dict[str, Any]] = []
