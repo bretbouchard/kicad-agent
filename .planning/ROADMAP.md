@@ -816,7 +816,7 @@ Plans:
 Plans:
 - [x] 98-01-PLAN.md — AiRoutingStrategy + prompt builder (few-shot JSON) + defensive JSON extractor (R-1, R-2, R-3)
 - [x] 98-02-PLAN.md — StrategyValidator (coordinate/net/layer gates) + R-6 fallback wiring to DeterministicStrategy (R-4, R-6)
-- [ ] 98-03-PLAN.md — Eval harness CLI comparing AI vs deterministic on 3 fixtures + SC-1 through SC-5 evaluators (R-5)
+- [x] 98-03-PLAN.md — Eval harness CLI comparing AI vs deterministic on 3 fixtures + SC-1 through SC-5 evaluators (R-5)
 
 ### Phase 99: Freerouting Integration Hardening
 

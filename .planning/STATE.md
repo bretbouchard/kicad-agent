@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: Executing Phase 98
-stopped_at: Completed Phase 98 Plan 02 — StrategyValidator (R-4) + R-6 fallback wiring. Built strategy_validator.py (4 sub-validators: coordinate bounds, net refs, layer hints, keepout layers; stackup discovery chain -> {F.Cu,B.Cu} default). Modified ai_strategy.py (broad except Exception -> DeterministicStrategy fallback with 'ai_fallback:' routing_notes prefix). 4 TDD commits (2 RED + 2 GREEN), 44 new tests, 267 Phase 100/routing regression pass (zero impact). Plan 02 COMPLETE.
-last_updated: "2026-06-25T17:12:41.000Z"
+status: Phase 98 Complete — Verification Pending
+stopped_at: Completed Phase 98 Plan 03 — Eval harness CLI (R-5) + SC-1..SC-5 evaluators + integration tests. Built scripts/phase98_eval.py (StrategyEvalResult 13 metrics, run_strategy_with_orchestrator, run_drc, load_ai_strategy, format_comparison_table, evaluate_sc1/sc2/sc3/sc5, fallback_rate M-4 diagnostic, CLI with --fixtures/--json/--no-ai). 4 integration tests (opt-in via @pytest.mark.integration). 2 TDD commits, 35 new tests (31 unit + 4 integration), 93 Phase 98 + 266 Phase 100 regression pass (zero impact). M-3 tie-breaking + M-4 fallback_rate Council findings resolved. Phase 98 COMPLETE (all 3 plans shipped).
+last_updated: "2026-06-25T17:30:00.000Z"
 last_activity: 2026-06-25
 progress:
   total_phases: 129
   completed_phases: 50
   total_plans: 272
-  completed_plans: 215
+  completed_plans: 216
   percent: 79
 ---
 
@@ -26,8 +26,8 @@ Last activity: 2026-06-25
 
 ## Current Position
 
-Phase: 98 (ai-routing-strategy-advisor) — EXECUTING
-Plan: 3 of 3 (Plans 01-02 complete: AiRoutingStrategy core + R-4/R-6 validation+fallback)
+Phase: 98 (ai-routing-strategy-advisor) — COMPLETE (all 3 plans shipped)
+Plan: 3 of 3 (Plans 01-03 complete: AiRoutingStrategy core + R-4/R-6 validation+fallback + eval harness)
 **All milestones shipped (v1.0 through v4.1). 94 phases, 266 plans, 3300+ tests.**
 
 Last milestone: v4.1 Stage-Safe PCB Flow (Phases 85-94)
@@ -489,6 +489,10 @@ Priority: Start with Phases 85-87 (gate architecture + schematic intent + transf
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 98-03]: M-3 (Council) — evaluate_sc2 uses "matches or beats" semantics for SC-2. Ties count as wins: `<=` for via_count and total_trace_length_mm (lower better), `>=` for completion_pct (higher better). Aligns with CONTEXT.md:50 wording and avoids ambiguity where ai.via_count == det.via_count.
+- [Phase 98-03]: M-4 (Council) — --json output includes `fallback_rate` diagnostic alongside `sc1_parse_success_rate`. Distinguishes "model failed to parse JSON" (SC-1 failure) from "orchestrator invoked R-6 deterministic safety net" (fallback_rate). Both are tracked so eval consumers can diagnose whether SC-1 failures are parse errors vs full AI path failures.
+- [Phase 98-03]: run_drc returns (False, -1) sentinel on any failure — kicad-cli missing, timeout, or malformed report never crashes the eval harness (T-98-03-02 best-effort).
+- [Phase 98-03]: load_ai_strategy is the ONLY function that loads the 23.8 GB model — isolated so unit tests never trigger it. Integration tests opt-in via @pytest.mark.integration + importorskip("mlx_vlm") + skipif(kicad-cli/adapter missing).
 - [Phase 101-03]: place_missing_units dedup moved outside `if pos is None:` block — applies to ALL position sources (_find_position_for_unit output AND fallback). Nudge by +offset_x/+offset_y. Also fixed dry_run not populating _occupied_positions (was only in non-dry_run branch).
 - [Phase 101-03]: place_no_connects_from_erc pin-type lookup uses _lookup_pin_type_with_tolerance helper (per-axis abs() within SNAP_TOLERANCE=0.01mm) replacing exact round(x, 2) dict keys. Removed dead pos_to_type dict. Default "passive" preserved for backward compat.
 - [Phase 101-02]: update_symbols_from_library crash fixed via sym.entryName (not sym.name) at 2 sites — repair_components.py:152 (op's lookup) + symbol_mismatch.py:141 (Rule 1: sibling bug in _get_library_pin_signature on same code path, called by op at line 79 before its own lookup)
