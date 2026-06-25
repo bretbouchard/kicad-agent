@@ -84,42 +84,38 @@ def _extract_brace_spans(text: str) -> list[str]:
 
     Tracks brace depth accounting for string literals (so braces inside JSON
     string values do not confuse the matcher).
+
+    IN-02 (Council): single-pass O(n) implementation using a stack of open-brace
+    positions. The previous implementation re-scanned from ``start + 1`` when a
+    span failed to close, giving O(n^2) worst-case on deeply nested input with
+    no matching close. This version visits each character exactly once.
     """
     spans: list[str] = []
-    i = 0
-    n = len(text)
-    while i < n:
-        if text[i] != "{":
-            i += 1
-            continue
-        # Scan forward to matching close brace at depth 0
-        depth = 0
-        in_string = False
-        escape = False
-        start = i
-        j = i
-        while j < n:
-            ch = text[j]
-            if in_string:
-                if escape:
-                    escape = False
-                elif ch == "\\":
-                    escape = True
-                elif ch == '"':
-                    in_string = False
-            else:
-                if ch == '"':
-                    in_string = True
-                elif ch == "{":
-                    depth += 1
-                elif ch == "}":
-                    depth -= 1
-                    if depth == 0:
-                        spans.append(text[start : j + 1])
-                        i = j + 1
-                        break
-            j += 1
+    # Stack of open-brace indices that are at depth 0 (top-level span starts).
+    # Nested opens are tracked via depth but only depth-0 starts are recorded.
+    stack: list[int] = []
+    depth = 0
+    in_string = False
+    escape = False
+    for i, ch in enumerate(text):
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
         else:
-            # Ran off end without closing — not a valid span
-            i = start + 1
+            if ch == '"':
+                in_string = True
+            elif ch == "{":
+                if depth == 0:
+                    stack.append(i)
+                depth += 1
+            elif ch == "}":
+                if depth > 0:
+                    depth -= 1
+                    if depth == 0 and stack:
+                        start = stack.pop()
+                        spans.append(text[start : i + 1])
     return spans

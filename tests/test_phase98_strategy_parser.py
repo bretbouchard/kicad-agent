@@ -8,7 +8,9 @@ triggers the R-6 fallback path in Plan 98-02.
 
 from __future__ import annotations
 
-from kicad_agent.routing.strategy_parser import parse_strategy_json
+import time
+
+from kicad_agent.routing.strategy_parser import _extract_brace_spans, parse_strategy_json
 
 
 class TestBareJson:
@@ -80,3 +82,39 @@ class TestNestedBraces:
         assert isinstance(keepouts, list)
         assert len(keepouts) == 1
         assert keepouts[0]["reason"] == "zone {0}"
+
+
+class TestExtractBraceSpansPerformance:
+    """IN-02 (Council): _extract_brace_spans must be O(n), not O(n^2).
+
+    The previous implementation re-scanned from start+1 when a brace span
+    failed to close, giving quadratic worst-case on deeply nested unclosed
+    input. The single-pass stack version must handle 100k unclosed braces
+    in well under a second.
+    """
+
+    def test_extract_spans_balanced(self) -> None:
+        spans = _extract_brace_spans('pre {"a": 1} mid {"b": 2} post')
+        assert len(spans) == 2
+        assert spans[0] == '{"a": 1}'
+        assert spans[1] == '{"b": 2}'
+
+    def test_extract_spans_unclosed_returns_empty(self) -> None:
+        spans = _extract_brace_spans("{no close here")
+        assert spans == []
+
+    def test_extract_spans_ignores_braces_inside_strings(self) -> None:
+        spans = _extract_brace_spans('{"reason": "zone {0}"}')
+        assert spans == ['{"reason": "zone {0}"}']
+
+    def test_deeply_nested_unclosed_does_not_re_scan_quadratically(self) -> None:
+        """100k unclosed braces must complete in under 2 seconds (O(n) check).
+
+        A regression to the old O(n^2) algorithm would take minutes on this input.
+        """
+        hostile = "{" * 100_000
+        start = time.monotonic()
+        spans = _extract_brace_spans(hostile)
+        elapsed = time.monotonic() - start
+        assert spans == []  # all unclosed -> no complete spans
+        assert elapsed < 2.0, f"O(n) check failed: took {elapsed:.2f}s"
