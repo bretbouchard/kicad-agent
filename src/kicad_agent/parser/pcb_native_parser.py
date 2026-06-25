@@ -666,7 +666,7 @@ class NativeParser:
             # KiCad 9 format:  (net NUMBER "NAME") -- number + name
             net_block = _find_symbol(seg_block, "net")
             if net_block and len(net_block) >= 2:
-                # Phase 122B Gap 1: handle KiCad 10 string-only net format.
+                # Phase 99 Gap 1: handle KiCad 10 string-only net format.
                 if isinstance(net_block[1], str):
                     seg.net_name = net_block[1]
                     # No net_number in KiCad 10 string-only format; leave as 0.

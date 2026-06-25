@@ -582,7 +582,7 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
 
     # Build base constraints with stackup parameters.
     # Use 0.25mm grid for better pad snapping on dense boards.
-    # Phase 122B: honor grid_resolution_mm override if provided (large boards
+    # Phase 99: honor grid_resolution_mm override if provided (large boards
     # need coarser grid to keep graph size under max_nodes).
     _grid_res = getattr(op, "grid_resolution_mm", None) or 0.25
     constraints = RoutingConstraints(
@@ -624,7 +624,7 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
             layer_trace_widths=layer_trace_widths,
         )
 
-    # --- Phase 1: Extract footprint + track obstacles (kicad-agent-7, Phase 122B Gap 1) ---
+    # --- Phase 1: Extract footprint + track obstacles (kicad-agent-7, Phase 99 Gap 1) ---
     obstacles = ir.extract_obstacles(clearance_mm=constraints.clearance_mm)
     logger.info(
         "Auto-route: extracted %d obstacles from %d footprints",
@@ -632,7 +632,7 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
         len(ir.footprints),
     )
 
-    # Phase 122B Gap 1: Treat existing copper tracks as obstacles so new
+    # Phase 99 Gap 1: Treat existing copper tracks as obstacles so new
     # routes go around them rather than crossing them. Skip nets being
     # re-routed (op.nets) so the router can replace those traces.
     track_skip_nets: set[str] = set(op.nets) if op.nets else set()
@@ -654,7 +654,7 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
 
     if op.nets:
         netlist = {n: pins for n, pins in netlist.items() if n in op.nets}
-    # Phase 122B Gap 4: route_all_unconnected = all nets (empty filter).
+    # Phase 99 Gap 4: route_all_unconnected = all nets (empty filter).
     # Note: this is already the default behavior when op.nets is empty, but
     # we document the intent here for clarity.
 
@@ -713,7 +713,7 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     logger.info("Auto-route: routing bounds %.1f x %.1f mm", bounds[2]-bounds[0], bounds[3]-bounds[1])
 
     # --- Phase 3: Build routing graph with obstacles and required pad nodes ---
-    # Phase 122B Gap 2: pass forbidden_zones through to the graph constructor.
+    # Phase 99 Gap 2: pass forbidden_zones through to the graph constructor.
     routing_graph = build_routing_graph(
         bounds,
         obstacles=obstacles,
@@ -738,7 +738,7 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     results: dict[str, RouteResult] = {}
     failed_nets: list[str] = []
 
-    # Phase 122B Gap 4: max_iterations retry loop.
+    # Phase 99 Gap 4: max_iterations retry loop.
     # First pass uses the base graph at 0.25mm grid. Each retry rebuilds
     # the graph with a relaxed grid (0.5mm, then 0.7mm) and re-routes
     # only the failed nets. This helps with dense pin clusters where

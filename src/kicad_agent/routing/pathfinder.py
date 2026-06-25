@@ -271,7 +271,7 @@ def build_routing_graph(
         layers: List of copper layer names for multi-layer routing.
             Defaults to ["F.Cu"] for single-layer.
         required_nodes: Set of (x, y) pad positions that must be routable.
-        forbidden_zones: Phase 122B Gap 2 — per-layer impassable zones.
+        forbidden_zones: Phase 99 Gap 2 — per-layer impassable zones.
             Each dict: {layer, x1, y1, x2, y2}.
 
     Returns:
