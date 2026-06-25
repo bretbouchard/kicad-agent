@@ -4,14 +4,19 @@ Replaces kiutils Board objects for PCB reads. Provides typed access to all
 board elements (nets, footprints, zones, tracks, vias, net classes, graphic
 items, board outline) without kiutils dependency.
 
-All dataclasses are mutable (not frozen) to support the PcbIR adapter pattern
-where PcbIR methods append to board.nets, etc.
+All 14 dataclasses are FROZEN (Phase 100 CR-01 closure — Council Exec Review 99
+§7.7-deferred critical finding). Mutation is only possible via
+``dataclasses.replace()``, which produces a new instance and leaves the
+original intact. This satisfies the project CRITICAL immutability rule
+(``~/.claude/rules/coding-style.md``) and provides the snapshot semantics
+required by the Phase 100 RoutingOrchestrator rollback mechanism (Plan 02).
 
-# TODO(immutability): Council Exec Review 99 CR-01/WR-07 — these 14 dataclasses
-# violate the project CRITICAL immutability rule (~/.claude/rules/coding-style.md).
-# Tracked deferral: see .planning/STATE.md "Deferred Items" under CR-01.
-# Resolution plan: convert to @dataclass(frozen=True), migrate 8 mutation sites
-# to dataclasses.replace(). Revisit in Phase 100 (RoutingOrchestrator).
+Collection-typed fields default to ``tuple`` (not ``list``) — tuples are
+immutable, so the board cannot be corrupted by ``board.nets.append(...)``.
+``NativeFootprint.properties`` is exposed as a ``MappingProxyType`` view over
+an internal tuple of ``(key, value)`` pairs: readers
+(``fp.properties.get("Reference")``) work unchanged, while writers
+(``fp.properties["x"] = "y"``) raise ``TypeError``.
 
 UUID Preservation Note (Council HIGH-4 / D-07):
   UUIDs are preserved in raw_content (no kiutils round-trip = no UUID loss).
@@ -37,7 +42,8 @@ S-expression Origin:
   - NativeStackup  -> (stackup ...)
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from types import MappingProxyType
 from typing import NamedTuple
 
 
@@ -61,7 +67,7 @@ class _NativePosition(NamedTuple):
 # ---------------------------------------------------------------------------
 
 
-@dataclass
+@dataclass(frozen=True)
 class NativeNet:
     """Board-level net declaration: (net N "NAME")."""
 
@@ -69,7 +75,7 @@ class NativeNet:
     name: str = ""
 
 
-@dataclass
+@dataclass(frozen=True)
 class NativeNetClass:
     """Net class definition: (net_class "Name" ...).
 
@@ -83,10 +89,10 @@ class NativeNetClass:
     track_width: float = 0.0
     via_diameter: float = 0.0
     via_drill: float = 0.0
-    add_nets: list[str] = field(default_factory=list)
+    add_nets: tuple[str, ...] = ()
 
 
-@dataclass
+@dataclass(frozen=True)
 class NativePad:
     """Pad within a footprint: (pad N type shape ...).
 
@@ -107,24 +113,36 @@ class NativePad:
     drill: float = 0.0
 
 
-@dataclass
+@dataclass(frozen=True)
 class NativeFootprint:
     """Footprint placement: (footprint "lib:fp" ...).
 
-    position is (x, y, angle). properties dict holds "Reference", "Value", etc.
-    with the same interface as kiutils fp.properties.
+    position is (x, y, angle). ``properties`` is exposed as a read-only
+    ``MappingProxyType`` view (CR-01): readers work unchanged, writers raise
+    ``TypeError``. The underlying storage is ``_properties_tuple`` of
+    ``(key, value)`` pairs; mutation must go through ``dataclasses.replace``.
     """
 
     lib_id: str = ""
     position: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    pads: list[NativePad] = field(default_factory=list)
-    properties: dict[str, str] = field(default_factory=dict)
+    pads: tuple["NativePad", ...] = ()
+    _properties_tuple: tuple[tuple[str, str], ...] = ()
     layer: str = ""
-    graphic_items: list = field(default_factory=list)
+    graphic_items: tuple = ()
     uuid: str = ""
 
+    @property
+    def properties(self) -> MappingProxyType[str, str]:
+        """Read-only dict view over the internal properties tuple.
 
-@dataclass
+        Readers (``fp.properties.get("Reference")``) work unchanged.
+        Writers (``fp.properties["x"] = "y"``) raise ``TypeError`` — use
+        ``dataclasses.replace`` to update.
+        """
+        return MappingProxyType(dict(self._properties_tuple))
+
+
+@dataclass(frozen=True)
 class NativeSegment:
     """Copper track segment: (segment (start X Y) (end X Y) (width W) (layer L) (net N))."""
 
@@ -136,7 +154,7 @@ class NativeSegment:
     net_name: str = ""
 
 
-@dataclass
+@dataclass(frozen=True)
 class NativeVia:
     """Through-hole via: (via (at X Y) (size D) (drill DR) (net N))."""
 
@@ -148,10 +166,10 @@ class NativeVia:
     layers: tuple[str, str] = ("", "")
 
 
-@dataclass
+@dataclass(frozen=True)
 class NativeGraphicItem:
-    """Board-level graphic element: gr_line, gr_arc, gr_circle, gr_rect, gr_poly, gr_curve,
-    gr_text, gr_text_box, dimension, target.
+    """Board-level graphic element: gr-line, gr-arc, gr-circle, gr-rect, gr-poly, gr-curve,
+    gr-text, gr-text-box, dimension, target.
 
     Council HIGH-2: supports 6 geometric types (line, arc, circle, rect, poly, curve).
     P-BUG-005: adds 4 annotation types (gr_text, gr_text_box, dimension, target).
@@ -178,7 +196,7 @@ class NativeGraphicItem:
     target_size: float = 0.0
 
 
-@dataclass
+@dataclass(frozen=True)
 class NativeZone:
     """Copper zone: (zone ...).
 
@@ -197,8 +215,8 @@ class NativeZone:
     net: int = 0
     netName: str = ""
     layer: str = ""
-    layers: list[str] = field(default_factory=list)
-    polygon_points: list[tuple[float, float]] = field(default_factory=list)
+    layers: tuple[str, ...] = ()
+    polygon_points: tuple[tuple[float, float], ...] = ()
     clearance: float = 0.0
     priority: int = 0
     minThickness: float = 0.25
@@ -227,14 +245,14 @@ class NativeZone:
         return self.keepout_tracks == "not_allowed" or self.keepout_vias == "not_allowed"
 
 
-@dataclass
+@dataclass(frozen=True)
 class NativeBoardOutline:
     """Board outline: all graphic items on Edge.Cuts layer."""
 
-    items: list[NativeGraphicItem] = field(default_factory=list)
+    items: tuple[NativeGraphicItem, ...] = ()
 
 
-@dataclass
+@dataclass(frozen=True)
 class NativeGeneral:
     """General board settings: (general ...).
 
@@ -243,10 +261,10 @@ class NativeGeneral:
     """
 
     thickness: float = 1.6
-    layers: list = field(default_factory=list)
+    layers: tuple = ()
 
 
-@dataclass
+@dataclass(frozen=True)
 class NativeStackupLayer:
     """Single layer in a stackup: (layer "F.Cu" (type "copper")) or (layer "dielectric 1" (type "core")).
 
@@ -261,21 +279,18 @@ class NativeStackupLayer:
     thickness: float = 0.0
 
 
-@dataclass
+@dataclass(frozen=True)
 class NativeStackup:
     """Board stackup definition: (setup (stackup ...)).
 
     Council CRITICAL-2: needed by spatial/layer_stackup.py (board.setup.stackup.layers).
-    Phase 99 R-4: `layers` is now list[NativeStackupLayer] (typed). Downstream
-    consumers that previously treated `layers` as list[str] are updated; the
-    mutable-default `field(default_factory=list)` is preserved for backward compat
-    with any Phase 76 consumer still appending bare strings.
+    Phase 99 R-4: `layers` is now tuple[NativeStackupLayer, ...] (typed, frozen).
     """
 
-    layers: list = field(default_factory=list)
+    layers: tuple = ()
 
 
-@dataclass
+@dataclass(frozen=True)
 class NativeSetup:
     """Board setup section: (setup ...).
 
@@ -290,38 +305,44 @@ class NativeSetup:
 # ---------------------------------------------------------------------------
 
 
-@dataclass
+@dataclass(frozen=True)
 class NativeBoard:
     """Top-level native PCB board: (kicad_pcb ...).
 
     Replaces kiutils Board for structured PCB reads. Provides typed access
-    to all board elements without kiutils dependency.
+    to all board elements without kiutils dependency. Frozen (CR-01).
 
     Kiutils-compatible properties (Council CRITICAL-2):
-      graphicItems -> returns graphic_items (pcb_ops.py, board_outline.py, etc.)
-      traceItems   -> returns segments + vias combined (maze_generator.py)
-      layers       -> returns general.layers (export/general.py)
+      graphicItems -> returns list(graphic_items) (pcb_ops.py, board_outline.py)
+      traceItems   -> returns list(segments) + list(vias) (maze_generator.py)
+      layers       -> returns list(general.layers) (export/general.py)
     """
 
     version: str = ""
     generator: str = ""
-    nets: list[NativeNet] = field(default_factory=list)
-    footprints: list[NativeFootprint] = field(default_factory=list)
-    segments: list[NativeSegment] = field(default_factory=list)
-    vias: list[NativeVia] = field(default_factory=list)
-    zones: list[NativeZone] = field(default_factory=list)
-    net_classes: list[NativeNetClass] = field(default_factory=list)
-    graphic_items: list[NativeGraphicItem] = field(default_factory=list)
+    nets: tuple[NativeNet, ...] = ()
+    footprints: tuple[NativeFootprint, ...] = ()
+    segments: tuple[NativeSegment, ...] = ()
+    vias: tuple[NativeVia, ...] = ()
+    zones: tuple[NativeZone, ...] = ()
+    net_classes: tuple[NativeNetClass, ...] = ()
+    graphic_items: tuple[NativeGraphicItem, ...] = ()
     board_outline: NativeBoardOutline | None = None
     raw_content: str = ""
     file_path: str = ""
-    general: NativeGeneral = field(default_factory=NativeGeneral)
+    general: NativeGeneral = None  # type: ignore[assignment]
     setup: NativeSetup | None = None
+
+    def __post_init__(self) -> None:
+        # Frozen dataclasses cannot assign in __init__ directly, so default
+        # NativeGeneral() is materialized here via object.__setattr__.
+        if self.general is None:
+            object.__setattr__(self, "general", NativeGeneral())
 
     @property
     def graphicItems(self) -> list[NativeGraphicItem]:
         """Kiutils compatibility: pcb_ops.py, board_outline.py, maze_generator.py."""
-        return self.graphic_items
+        return list(self.graphic_items)
 
     @property
     def traceItems(self) -> list:
@@ -331,7 +352,7 @@ class NativeBoard:
     @property
     def layers(self) -> list:
         """Kiutils compatibility: export/general.py accesses board.layers."""
-        return self.general.layers
+        return list(self.general.layers)
 
 
 __all__ = [
