@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
 status: Executing Phase 101
-stopped_at: Completed Phase 101 Plan 02 — Fixed update_symbols_from_library crash (P0-001). Replaced sym.name with sym.entryName at 2 sites (repair_components.py:152 + symbol_mismatch.py:141 — Rule 1 sibling bug on same code path). 2 new regression tests, zero regression (85/85 in test_schematic_repair.py). Ready for Phase 101 Plan 03.
-last_updated: "2026-06-25T08:52:00.000Z"
+stopped_at: Completed Phase 101 Plan 03 — Fixed place_missing_units dedup bypass (P0-002 R-2) + place_no_connects_from_erc tolerance matching (P0-004 R-4). 4 TDD commits (2 RED + 2 GREEN), 4 new regression tests, 98 passed / 1 skipped (zero regression). Ready for Phase 101 Plan 04.
+last_updated: "2026-06-25T09:25:00.000Z"
 last_activity: 2026-06-25
 progress:
   total_phases: 129
   completed_phases: 49
   total_plans: 269
-  completed_plans: 210
+  completed_plans: 211
   percent: 78
 ---
 
@@ -76,6 +76,30 @@ Last activity: 2026-06-25 -- Phase 101 execution started
     (TestUpdateSymbolsFromLibraryNoCrash: no_crash_on_mismatch + uses_entryName_for_matching)
   - Test 2 forces entryName branch via empty libraryNickname (defeats libId short-circuit)
   - 85/85 tests pass in test_schematic_repair.py, 4/4 symbol_mismatch tests, zero regression
+
+- Plan 101-03: Fix place_missing_units collisions + place_no_connects_from_erc wrong positions (R-2 P0-002 + R-4 P0-004) (COMPLETE)
+  - R-2: Moved _occupied_positions dedup while-loop OUTSIDE the `if pos is None:` block
+    in place_missing_units so it applies to ALL position sources (was only fallback).
+    Bug: _find_position_for_unit returned the same wire-derived position for multiple
+    parent components (U30/U31/U32/U33) when a shared wire endpoint was within
+    max_distance=100mm of each parent, bypassing dedup. Backplane: +29 ERC violations
+    per affected component.
+  - R-2 Rule 1 deviation: also fixed dry_run mode not populating _occupied_positions.
+    The .add() was at line 707 inside the non-dry_run placement branch; dry_run hit
+    `continue` at line 679 before reaching it. Now records position immediately after
+    dedup resolution (before dry_run check), covering both paths.
+  - R-4: Added _lookup_pin_type_with_tolerance(x, y, pin_positions, tolerance) helper
+    in repair_erc.py using per-axis abs() comparison within SNAP_TOLERANCE=0.01mm.
+    Replaced pos_to_type.get(pos_key, "passive") exact dict lookup (round(x, 2) keys).
+    Bug: pin at x=127.015 (key 127.02) and violation at x=127.014 (key 127.01) missed,
+    defaulted to "passive", placed no_connect on power_in pin → no_connect_connected.
+  - Removed dead pos_to_type dict (lines 229-232); nothing else reads it.
+  - 4 new tests (2 per bug): TestPlaceMissingUnitsNoCollisions (2/4 instance scenarios
+    with shared wire endpoints triggering voting convergence) +
+    TestPlaceNoConnectsFromErcToleranceMatching (X-axis + Y-axis rounding boundaries).
+  - 4 fixture helpers for raw S-expression TL072 schematics (lib_symbol + components + wires).
+  - 98 passed / 1 skipped in affected files (was 94, +4 new, zero regression).
+    128 passed in broader run including test_erc_auto_fix.py.
 
 ### Phase 99: Freerouting Integration Hardening (in progress)
 
@@ -431,6 +455,8 @@ Priority: Start with Phases 85-87 (gate architecture + schematic intent + transf
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 101-03]: place_missing_units dedup moved outside `if pos is None:` block — applies to ALL position sources (_find_position_for_unit output AND fallback). Nudge by +offset_x/+offset_y. Also fixed dry_run not populating _occupied_positions (was only in non-dry_run branch).
+- [Phase 101-03]: place_no_connects_from_erc pin-type lookup uses _lookup_pin_type_with_tolerance helper (per-axis abs() within SNAP_TOLERANCE=0.01mm) replacing exact round(x, 2) dict keys. Removed dead pos_to_type dict. Default "passive" preserved for backward compat.
 - [Phase 101-02]: update_symbols_from_library crash fixed via sym.entryName (not sym.name) at 2 sites — repair_components.py:152 (op's lookup) + symbol_mismatch.py:141 (Rule 1: sibling bug in _get_library_pin_signature on same code path, called by op at line 79 before its own lookup)
 - [Phase 101-01]: erc_auto_fix + erc_auto_fix_hierarchical DEPRECATED via OpMeta field + runtime warning (not removed) — prevents ongoing KiCad 10 data-loss while raw S-expr rewrite is deferred
 - [v4.1]: Stage-safe flow shifts from "file-safe editing" to "stage-safe design" — every design transition has a deterministic gate
@@ -568,8 +594,8 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 101 Plan 02 — Fixed update_symbols_from_library crash (P0-001). Replaced sym.name with sym.entryName at 2 sites (repair_components.py:152 + symbol_mismatch.py:141 — Rule 1 sibling bug on same code path). 2 new regression tests, zero regression (85/85 in test_schematic_repair.py). Ready for Phase 101 Plan 03.
-Resume with: Phase 101 Plan 03 (R-2 + R-4: place_missing_units dedup + place_no_connects_from_erc position transform).
+Stopped at: Completed Phase 101 Plan 03 — Fixed place_missing_units dedup bypass (P0-002 R-2) + place_no_connects_from_erc tolerance matching (P0-004 R-4). 4 TDD commits (2 RED + 2 GREEN), 4 new regression tests, 98 passed / 1 skipped (zero regression). Ready for Phase 101 Plan 04.
+Resume with: Phase 101 Plan 04 (R-5 P0-005: remove_dangling_wires criteria alignment — accept ERC positions as ground truth, bypass geometric heuristics).
 
 ### Phase 100: RoutingOrchestrator and Human Approval Loop (complete)
 

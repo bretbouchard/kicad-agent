@@ -849,7 +849,7 @@ Plans:
 Plans:
 - [x] 101-01-PLAN.md — R-3: Deprecate erc_auto_fix + erc_auto_fix_hierarchical (add `deprecated` field to OpMeta, mark both ops, emit DeprecationWarning) — COMPLETE 2026-06-25
 - [x] 101-02-PLAN.md — R-1: Fix update_symbols_from_library crash (sym.name → sym.entryName, 2 sites: repair_components.py + symbol_mismatch.py) — COMPLETE 2026-06-25
-- [ ] 101-03-PLAN.md — R-2 + R-4: Fix position transform bugs (place_missing_units dedup bypass + place_no_connects_from_erc tolerance matching)
+- [x] 101-03-PLAN.md — R-2 + R-4: Fix position transform bugs (place_missing_units dedup bypass + place_no_connects_from_erc tolerance matching) — COMPLETE 2026-06-25
 - [ ] 101-04-PLAN.md — R-5: Fix remove_dangling_wires criteria alignment (trust_erc parameter + ERC wire_dangling passthrough)
 
 ---
