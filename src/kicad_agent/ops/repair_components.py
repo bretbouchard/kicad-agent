@@ -646,18 +646,33 @@ def place_missing_units(
                     first_comp.position.X + offset_idx * offset_x,
                     first_comp.position.Y + offset_idx * offset_y,
                 )
-                # Issue #3: avoid position collisions with previously
-                # placed units from other base references.
+
+            # P0-002 fix: ALWAYS check dedup, regardless of whether pos came
+            # from _find_position_for_unit or the fallback. The previous code
+            # only deduped fallback positions, causing collisions when
+            # _find_position_for_unit returned the same position for multiple
+            # parent instances (e.g., U30/U31/U32/U33 all getting unit C at
+            # the same spot because a shared wire endpoint was within
+            # max_distance of each parent). See BUGS/P0-002-place-missing-
+            # units-collides-positions.md.
+            pos_key = _round_pos(pos[0], pos[1])
+            while pos_key in _occupied_positions:
+                # Nudge by offset until clear. Use offset_x/offset_y which
+                # are the configured unit spacing (default 25.4mm / 0.0mm).
+                pos = (
+                    pos[0] + offset_x,
+                    pos[1] + offset_y,
+                )
                 pos_key = _round_pos(pos[0], pos[1])
-                while pos_key in _occupied_positions:
-                    offset_idx += 1
-                    pos = (
-                        first_comp.position.X + offset_idx * offset_x,
-                        first_comp.position.Y + offset_idx * offset_y,
-                    )
-                    pos_key = _round_pos(pos[0], pos[1])
 
             new_x, new_y = pos
+
+            # P0-002 fix (dry_run): record the occupied position here so the
+            # dedup set stays accurate even when dry_run skips the placement
+            # branch below. Previously, dry_run mode returned colliding
+            # positions because _occupied_positions was only populated at the
+            # end of the non-dry-run branch.
+            _occupied_positions.add(_round_pos(new_x, new_y))
 
             if dry_run:
                 unit_letter = chr(ord("A") + missing_num - 1)
