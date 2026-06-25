@@ -366,3 +366,115 @@ class TestPlaceNoConnectsFromErcPinColocation:
             # (unless filtered by pin type or other safety checks)
             assert result["placed"] + result["skipped_pin_type"] + \
                    result["skipped_connected"] + result["skipped_power_net"] >= 1
+
+
+class TestPlaceNoConnectsFromErcToleranceMatching:
+    """Phase 101-03 R-4 (P0-004): pin-type lookup must use tolerance matching.
+
+    Bug: pos_to_type dict used round(x, 2) keys (10um grid). ERC violation
+    positions have sub-micron precision, so a pin at (127.003, 85.997) and
+    a violation at (127.00, 86.00) round to DIFFERENT keys. The lookup
+    defaults to "passive", skipping the UNSAFE_PIN_TYPES check, and a
+    no_connect gets placed on a power_in pin → no_connect_connected violation.
+    """
+
+    def test_no_connect_tolerance_matching(self):
+        """Pin at sub-0.01mm offset from violation is still identified correctly.
+
+        Setup: power_in pin at (127.015, 85.995). ERC reports violation at
+        (127.014, 85.994) — only 0.001mm off, but round(127.015, 2)=127.02
+        while round(127.014, 2)=127.01. The exact dict key lookup misses,
+        defaults to "passive", and places a no_connect on the power_in pin.
+        After the fix, tolerance-based lookup (SNAP_TOLERANCE=0.01mm)
+        correctly identifies the pin as power_in and skips it.
+        """
+        from kicad_agent.ops.erc_parser import ViolationPosition
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sch_path = Path(tmpdir) / "test.kicad_sch"
+            sch = Schematic.create_new()
+            sch.to_file(str(sch_path))
+            result = parse_schematic(sch_path)
+            ir = SchematicIR(_parse_result=result)
+
+            # Pin at (127.015, 85.995) with electrical_type "power_in"
+            # round(127.015, 2) = 127.02, round(85.995, 2) = 86.0
+            mock_pins = [
+                {"reference": "U1", "pin_name": "VCC", "pin_number": "1",
+                 "x": 127.015, "y": 85.995, "electrical_type": "power_in"},
+            ]
+
+            # Violation at (127.014, 85.994) — 0.001mm from pin
+            # round(127.014, 2) = 127.01, round(85.994, 2) = 85.99
+            # Dict keys DIFFER despite sub-0.01mm distance.
+            violation = ViolationPosition(
+                x=127.014, y=85.994, sheet="/", description="pin not connected",
+            )
+
+            with patch.object(ir, "get_pin_positions", return_value=mock_pins):
+                with patch.object(ir, "get_wire_endpoints", return_value=[]):
+                    with patch.object(ir, "get_label_positions", return_value=[]):
+                        with patch("kicad_agent.ops.erc_parser.extract_violation_positions",
+                                   return_value=[violation]):
+                            with patch("kicad_agent.ops.repair.NetPositionIndex") as mock_idx:
+                                mock_idx.from_file.return_value = MagicMock(
+                                    get_net_at=MagicMock(return_value=None)
+                                )
+                                result = place_no_connects_from_erc(ir, sch_path)
+
+            # Tolerance-based lookup should identify the pin as power_in
+            # (within SNAP_TOLERANCE=0.01mm) and skip it.
+            assert result["skipped_pin_type"] >= 1, (
+                f"Expected pin to be skipped as power_in via tolerance match, "
+                f"got {result}. Bug: exact dict key lookup missed because "
+                f"round(127.015,2)=127.02 != round(127.014,2)=127.01."
+            )
+            assert result["placed"] == 0, (
+                f"Should NOT place no_connect on power_in pin, got placed={result['placed']}"
+            )
+
+    def test_no_connect_tolerance_matching_y_boundary(self):
+        """Pin at Y rounding boundary is correctly identified.
+
+        Variation of the rounding-boundary bug on the Y axis: pin_y=85.995
+        rounds to 86.00, violation_y=85.994 rounds to 85.99. Different keys,
+        same pin. Tolerance matching catches it.
+        """
+        from kicad_agent.ops.erc_parser import ViolationPosition
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sch_path = Path(tmpdir) / "test.kicad_sch"
+            sch = Schematic.create_new()
+            sch.to_file(str(sch_path))
+            result = parse_schematic(sch_path)
+            ir = SchematicIR(_parse_result=result)
+
+            # Pin X matches violation X exactly; Y differs by 0.001mm across boundary
+            mock_pins = [
+                {"reference": "U1", "pin_name": "VCC", "pin_number": "1",
+                 "x": 100.00, "y": 85.995, "electrical_type": "input"},
+            ]
+
+            violation = ViolationPosition(
+                x=100.00, y=85.994, sheet="/", description="pin not connected",
+            )
+
+            with patch.object(ir, "get_pin_positions", return_value=mock_pins):
+                with patch.object(ir, "get_wire_endpoints", return_value=[]):
+                    with patch.object(ir, "get_label_positions", return_value=[]):
+                        with patch("kicad_agent.ops.erc_parser.extract_violation_positions",
+                                   return_value=[violation]):
+                            with patch("kicad_agent.ops.repair.NetPositionIndex") as mock_idx:
+                                mock_idx.from_file.return_value = MagicMock(
+                                    get_net_at=MagicMock(return_value=None)
+                                )
+                                result = place_no_connects_from_erc(ir, sch_path)
+
+            assert result["skipped_pin_type"] >= 1, (
+                f"Expected input pin at Y rounding boundary to be skipped via "
+                f"tolerance match. round(85.995,2)=86.0 vs round(85.994,2)=85.99 "
+                f"— got {result}"
+            )
+            assert result["placed"] == 0, (
+                f"Should NOT place no_connect on input pin at Y rounding boundary"
+            )
