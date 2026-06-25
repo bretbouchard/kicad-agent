@@ -12,11 +12,33 @@ adapter. The adapter was trained on 6696 samples of FREE-TEXT PCB analysis
 This is the bridge between training distribution (natural language) and
 inference target (structured JSON). Per RESEARCH.md Pitfall 1 + Q1, prompts
 are image-primary with netlist metadata rendered as compact text.
+
+IN-01 (Council): net names are sanitized before interpolation so special
+characters (backslashes, double-quotes, newlines) cannot degrade prompt
+structure. KiCad net names are restricted in character set in practice,
+but this is defensive.
 """
 
 from __future__ import annotations
 
 from kicad_agent.routing.strategy import BoardState, Pin
+
+
+def _sanitize_net_name(name: str) -> str:
+    """Sanitize a net name for safe interpolation into a JSON prompt.
+
+    IN-01 (Council): collapses backslashes and double-quotes so a hostile
+    or malformed net name cannot break out of the quoted JSON string context.
+    Also strips newlines. Returns the sanitized name (without surrounding quotes).
+    """
+    return (
+        str(name)
+        .replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", " ")
+        .replace("\r", " ")
+        .strip()
+    )
 
 
 def build_strategy_prompt(
@@ -36,10 +58,10 @@ def build_strategy_prompt(
     """
     min_x, min_y, max_x, max_y = board_state.board_bounds
     net_lines = "\n".join(
-        f"  - \"{name}\" ({len(pins)} pins)"
+        f"  - \"{_sanitize_net_name(name)}\" ({len(pins)} pins)"
         for name, pins in netlist.items()
     )
-    net_names_list = ", ".join(f'"{n}"' for n in netlist.keys())
+    net_names_list = ", ".join(f'"{_sanitize_net_name(n)}"' for n in netlist.keys())
 
     return f"""You are a PCB routing strategy advisor. Output ONLY a JSON object matching this schema. No prose.
 

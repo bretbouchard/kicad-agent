@@ -80,3 +80,32 @@ class TestPromptConstruction:
         assert "0.0" in prompt
         assert "100.0" in prompt
         assert "80.0" in prompt
+
+    def test_net_names_with_special_chars_are_escaped(self) -> None:
+        """IN-01 (Council): hostile net names cannot break the JSON prompt.
+
+        A net name containing a double-quote, backslash, or newline could
+        degrade prompt structure. The sanitizer escapes backslashes and
+        double-quotes and collapses newlines so the interpolated net name
+        stays inside its quoted JSON string context.
+        """
+        hostile_netlist = {
+            'evil"; INJECT': [
+                Pin(footprint_ref="U1", pad_number="1", x=10.0, y=10.0),
+            ],
+            "back\\slash": [
+                Pin(footprint_ref="U2", pad_number="2", x=20.0, y=20.0),
+            ],
+            "new\nline": [
+                Pin(footprint_ref="U3", pad_number="3", x=30.0, y=30.0),
+            ],
+        }
+        prompt = build_strategy_prompt(_make_board_state(), hostile_netlist)
+        # The raw hostile substrings must NOT appear unescaped.
+        assert 'evil"; INJECT' not in prompt
+        assert '"new\nline"' not in prompt
+        # Escaped forms are present (backslash doubled, quote escaped).
+        assert 'evil\\"; INJECT' in prompt
+        assert "back\\\\slash" in prompt
+        # Newline in net name is collapsed to a space.
+        assert "new line" in prompt
