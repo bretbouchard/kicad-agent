@@ -33,3 +33,7 @@ training_output/
 # Freerouting output (generated DSN/SES during test runs)
 tests/fixtures/freerouting/
 tests/fixtures/*/freerouting/
+# Council IN-04: KiCad + kicad-agent lock files (should never be committed)
+*.lck
+~$*
+.kicad_agent.lock
