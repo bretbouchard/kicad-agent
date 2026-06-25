@@ -833,7 +833,7 @@ Plans:
 **Goal:** Intelligent dispatcher that routes each net through the right backend (in-house A* for simple, Freerouting for complex) with a human approval gate over the result. Builds on existing InteractiveRoutingSession and MultiPassRouter. Includes CR-01 immutability refactor (deferred from Phase 99 Council Exec Review §7.7).
 **Requirements**: R-1 RoutingOrchestrator with RoutingStrategy interface (deterministic policies now, AI pluggable in Phase 98); R-2 Per-net dispatch (net class, pin count, density, diff-pair → router selection); R-3 InteractiveRoutingSession extended for Freerouting output; R-4 Rollback via PersistentUndoStack; R-5 Audit trail (net, router, strategy, result, timestamp); R-6 Deterministic fallback policy; R-7 Batch orchestration API; CR-01 NativeBoard immutability refactor (14 frozen dataclasses + 8 mutation sites migrated to dataclasses.replace)
 **Depends on:** Phase 99
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 100-01-PLAN.md — CR-01 immutability refactor (14 NativeBoard dataclasses frozen + all native-path mutation sites migrated to dataclasses.replace) — **COMPLETE 2026-06-25** (8 immutability tests + 357 regression tests pass)
