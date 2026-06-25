@@ -811,10 +811,12 @@ Plans:
 **Goal:** Use trained Gemma 4 12B V2 vision LoRA to generate routing strategy — net priorities, layer assignments, keepout suggestions — consumed by the Phase 100 orchestrator as `RoutingStrategy` inputs. Strategy-to-constraints translator, validation gate, eval harness vs. deterministic baseline.
 **Requirements**: R-1 KiCadVisionPipeline wired into RoutingOrchestrator via RoutingStrategy interface; R-2 Strategy prompt emits structured JSON (net_priorities, layer_hints, keepouts, routing_notes); R-3 Strategy-to-constraints translator; R-4 Validation gate (reject out-of-bounds, unknown nets, impossible layers); R-5 Eval harness (AI-guided vs Phase 100 baseline: completion rate, via count, trace length, DRC); R-6 Graceful degradation to deterministic fallback
 **Depends on:** Phase 99, Phase 100
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 98 to break down)
+- [ ] 98-01-PLAN.md — AiRoutingStrategy + prompt builder (few-shot JSON) + defensive JSON extractor (R-1, R-2, R-3)
+- [ ] 98-02-PLAN.md — StrategyValidator (coordinate/net/layer gates) + R-6 fallback wiring to DeterministicStrategy (R-4, R-6)
+- [ ] 98-03-PLAN.md — Eval harness CLI comparing AI vs deterministic on 3 fixtures + SC-1 through SC-5 evaluators (R-5)
 
 ### Phase 99: Freerouting Integration Hardening
 
