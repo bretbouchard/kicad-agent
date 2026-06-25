@@ -82,9 +82,12 @@ class TestProtocolCompliance:
         assert params == ["self", "board_state", "netlist"]
 
     def test_no_inheritance_from_protocol(self) -> None:
-        # Protocol uses structural subtyping — NOT inheritance
+        # Protocol uses structural subtyping - NOT inheritance.
+        # RoutingStrategy is typing.Protocol WITHOUT @runtime_checkable, so
+        # issubclass() raises TypeError (proves it's not inherited).
         assert AiRoutingStrategy.__bases__ == (object,)
-        assert not issubclass(AiRoutingStrategy, RoutingStrategy)
+        with pytest.raises(TypeError):
+            issubclass(AiRoutingStrategy, RoutingStrategy)
 
     def test_has_strategize_method(self) -> None:
         assert hasattr(AiRoutingStrategy, "strategize")
