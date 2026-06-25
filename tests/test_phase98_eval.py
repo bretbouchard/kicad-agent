@@ -23,7 +23,7 @@ from kicad_agent.routing.orchestrator import (
     NetRouteResult,
     RoutingOrchestrationResult,
 )
-from kicad_agent.routing.strategy import RouterBackend
+from kicad_agent.routing.strategy import DeterministicStrategy, RouterBackend
 
 
 # ---------------------------------------------------------------------------
