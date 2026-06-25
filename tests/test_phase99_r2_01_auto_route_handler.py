@@ -129,17 +129,6 @@ def test_auto_route_defaults_snap_angle_to_none(monkeypatch):
     )
 
 
-def test_auto_route_caps_max_passes_to_five(monkeypatch):
-    """max_iterations > 5 is capped to 5 (schema safety cap, Council WR-02)."""
-    if not _FIXTURE.exists():
-        import pytest
-        pytest.skip(f"Fixture missing: {_FIXTURE}")
-
-    from kicad_agent.ops.handlers.pcb import _handle_auto_route
-
-    captured: dict = {}
-    _patch_freerouting(monkeypatch, captured)
-
 def test_auto_route_schema_caps_max_iterations():
     """Schema rejects max_iterations > 5 (Council WR-02 primary enforcement)."""
     from kicad_agent.ops._schema_pcb import AutoRouteOp
