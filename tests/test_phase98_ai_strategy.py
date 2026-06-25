@@ -135,21 +135,25 @@ class TestResultTranslation:
         assert result.routing_notes == "ok"
 
     def test_missing_net_in_router_assignment_defaults_to_astar(self) -> None:
-        # Model omits N1 from router_assignment
+        # Model omits N1 from router_assignment. Provide complete
+        # net_priorities so R-4 validation passes and the translator's
+        # safe-default behavior is exercised (not the fallback path).
         raw = (
-            '{"net_priorities": ["GND", "VCC"], '
+            '{"net_priorities": ["GND", "VCC", "N1"], '
             '"router_assignment": {"GND": "astar", "VCC": "freerouting"}}'
         )
         strategy = _make_strategy(raw)
         result = strategy.strategize(_make_board_state(), _make_netlist())
 
-        # Every net in netlist must have an entry
+        # Every net in netlist must have an entry (translator fills missing).
         assert "N1" in result.router_assignment
         assert result.router_assignment["N1"] == RouterBackend.ASTAR
 
     def test_unknown_backend_string_defaults_to_astar(self) -> None:
+        # Complete net_priorities so R-4 passes and the translator's
+        # safe-default coercion is exercised directly (not the fallback).
         raw = (
-            '{"net_priorities": ["GND"], '
+            '{"net_priorities": ["GND", "VCC", "N1"], '
             '"router_assignment": {"GND": "magic_router", "VCC": "astar", "N1": "astar"}}'
         )
         strategy = _make_strategy(raw)
@@ -211,10 +215,15 @@ class TestCategoryFallback:
         assert isinstance(result, RoutingStrategyResult)
         assert result.routing_notes.startswith("ai_fallback:")
 
-    def test_f4_unknown_net_falls_back(self) -> None:
-        # Valid JSON structure but references a phantom net.
+    def test_f4_net_coverage_violation_falls_back(self) -> None:
+        # Model emits net_priorities missing N1. The translator does NOT
+        # auto-fill missing priorities (unlike router_assignment), so this
+        # is a real net-coverage violation R-4 catches and triggers fallback.
+        # (Unknown nets in priorities/assignment/layer_hints are filtered by
+        # the translator before R-4 runs; R-4's unknown-net check is a
+        # defense-in-depth backstop verified directly in SC-4 batch tests.)
         raw = (
-            '{"net_priorities": ["GND", "VCC", "N1", "PHANTOM"], '
+            '{"net_priorities": ["GND", "VCC"], '
             '"router_assignment": {"GND": "astar", "VCC": "astar", "N1": "astar"}, '
             '"layer_hints": {}, "keepouts": []}'
         )
@@ -222,6 +231,7 @@ class TestCategoryFallback:
         result = strategy.strategize(_make_board_state(), _make_netlist())
         assert isinstance(result, RoutingStrategyResult)
         assert result.routing_notes.startswith("ai_fallback:")
+        assert "net_priorities" in result.routing_notes or "ValueError" in result.routing_notes
 
     def test_f5_invalid_layer_falls_back(self) -> None:
         # 2-layer board (validator with board=None defaults to {F.Cu, B.Cu}).

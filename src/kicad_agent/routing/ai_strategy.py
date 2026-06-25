@@ -1,4 +1,4 @@
-"""Phase 98 R-1, R-3: AiRoutingStrategy implementing RoutingStrategy Protocol.
+"""Phase 98 R-1, R-3, R-6: AiRoutingStrategy implementing RoutingStrategy Protocol.
 
 Thin adapter around KiCadVisionPipeline that:
 1. Renders the PCB to a PNG (via render_pcb_layer_png)
@@ -6,6 +6,8 @@ Thin adapter around KiCadVisionPipeline that:
 3. Runs vision inference (KiCadVisionPipeline.generate_from_image)
 4. Extracts structured JSON (via parse_strategy_json)
 5. Translates to RoutingStrategyResult with safe defaults
+6. Validates via StrategyValidator (R-4 semantic gate)
+7. On ANY failure, falls back to DeterministicStrategy (R-6 graceful degradation)
 
 Implements the Phase 100 RoutingStrategy Protocol via STRUCTURAL SUBTYPING
 (duck typing) - NO inheritance. This is deliberate: Protocol enables pluggable
@@ -14,20 +16,21 @@ strategies without coupling to a base class.
 Per RESEARCH.md Pattern 1: wraps KiCadVisionPipeline without modifying it.
 Per Council M-1: RouterBackend(value.lower()) wrapped in try/except.
 Per RESEARCH.md T-98-01-02: unknown backends default to ASTAR (lowest privilege).
-
-R-6 fallback (DeterministicStrategy) is NOT wired here - it lives in Plan 98-02
-where StrategyValidator wraps this class. This plan raises _AiStrategyError so
-Plan 02's wrapper can catch it and trigger fallback.
+Per Plan 02 R-6: broad except Exception -> DeterministicStrategy fallback.
+  The model is untrusted; any failure mode must not crash the orchestrator.
+  DeterministicStrategy is trusted deterministic code that always succeeds.
 """
 
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 from kicad_agent.routing.strategy import (
     BoardState,
+    DeterministicStrategy,
     Keepout,
     Pin,
     RouterBackend,
@@ -35,6 +38,7 @@ from kicad_agent.routing.strategy import (
 )
 from kicad_agent.routing.strategy_parser import parse_strategy_json
 from kicad_agent.routing.strategy_prompts import build_strategy_prompt
+from kicad_agent.routing.strategy_validator import StrategyValidator
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +46,12 @@ logger = logging.getLogger(__name__)
 class _AiStrategyError(Exception):
     """Internal failure signal for AiRoutingStrategy.
 
-    Raised on render failure, empty model output, or JSON extraction failure.
-    Plan 98-02's StrategyValidator wrapper catches this and triggers the R-6
-    DeterministicStrategy fallback.
+    Raised on render failure, empty model output, or JSON extraction failure
+    INSIDE the try block of :meth:`AiRoutingStrategy.strategize`. The outer
+    broad except catches it (and any other Exception) and triggers the R-6
+    DeterministicStrategy fallback. Kept as a distinct type so the fallback
+    log message can distinguish "expected AI-path failure" from "unexpected
+    error".
     """
 
 
@@ -77,10 +84,33 @@ class AiRoutingStrategy:
         pipeline: Any,
         pcb_path: Path,
         render_fn: Any = None,
+        validator: StrategyValidator | None = None,
+        board: Any = None,
     ) -> None:
+        """Initialize AiRoutingStrategy.
+
+        Args:
+            pipeline: KiCadVisionPipeline instance (typed Any to avoid hard
+                mlx-vlm import at module load time - the pipeline is 23.8 GB).
+            pcb_path: Path to the .kicad_pcb file to render for vision input.
+            render_fn: Injectable render function for testing. Defaults to
+                render_pcb_layer_png via lazy import.
+            validator: Optional :class:`StrategyValidator` for the R-4 gate.
+                When ``None``, a default ``StrategyValidator(board=board)`` is
+                constructed so layer validation uses the provided board (or
+                falls back to the {F.Cu, B.Cu} 2-layer default if board is
+                also None).
+            board: Optional :class:`NativeBoard` (or duck-typed equivalent)
+                used by the default validator for layer-stackup lookups.
+                Ignored when ``validator`` is provided.
+        """
         self._pipeline = pipeline
         self._pcb_path = pcb_path
         self._render_fn = render_fn if render_fn is not None else _default_render
+        self._board = board
+        self._validator = (
+            validator if validator is not None else StrategyValidator(board=board)
+        )
 
     def strategize(
         self,
@@ -89,36 +119,66 @@ class AiRoutingStrategy:
     ) -> RoutingStrategyResult:
         """Produce a routing strategy from PCB render + vision inference.
 
-        Flow:
-        1. Render PCB to PNG (raises _AiStrategyError on failure)
+        Flow (all inside a single try/except for R-6 graceful degradation):
+        1. Render PCB to PNG
         2. Build few-shot JSON prompt
-        3. Run vision inference (raises _AiStrategyError on empty output)
-        4. Extract JSON (raises _AiStrategyError on parse failure)
+        3. Run vision inference
+        4. Extract JSON (parse_strategy_json never raises - returns {})
         5. Translate to RoutingStrategyResult with safe defaults
+        6. Run R-4 StrategyValidator (raises ValueError on invalid)
 
-        Does NOT implement R-6 fallback - that's Plan 98-02's responsibility.
+        On ANY exception (render failure, empty output, parse failure,
+        validation failure, inference error), falls back to
+        :class:`DeterministicStrategy` with ``routing_notes`` prefixed
+        ``ai_fallback:`` so the audit trail can grep for AI-path failures.
+
+        The broad ``except Exception`` is intentional and documented per
+        RESEARCH.md Graceful Degradation Strategy. The model is untrusted.
+        DeterministicStrategy is trusted deterministic code that always
+        succeeds. This is NOT swallowing errors - the failure is logged at
+        WARNING level and the fallback result records the reason.
         """
-        # 1. Render
         try:
-            image = self._render_fn(self._pcb_path)
+            # 1. Render
+            try:
+                image = self._render_fn(self._pcb_path)
+            except Exception as exc:
+                raise _AiStrategyError(f"render failed: {exc}") from exc
+
+            # 2. Prompt
+            prompt = build_strategy_prompt(board_state, netlist)
+
+            # 3. Inference
+            raw = self._pipeline.generate_from_image(image, prompt)
+            if not raw or len(raw.strip()) < 10:
+                raise _AiStrategyError("empty or too-short model output")
+
+            # 4. Parse
+            parsed = parse_strategy_json(raw)
+            if not parsed:
+                raise _AiStrategyError("json extraction returned empty dict")
+
+            # 5. Translate
+            result = _translate_to_result(parsed, board_state, netlist)
+
+            # 6. R-4 validation gate (raises ValueError on invalid)
+            self._validator.validate(result, board_state, netlist)
+
+            return result
         except Exception as exc:
-            raise _AiStrategyError(f"render failed: {exc}") from exc
-
-        # 2. Prompt
-        prompt = build_strategy_prompt(board_state, netlist)
-
-        # 3. Inference
-        raw = self._pipeline.generate_from_image(image, prompt)
-        if not raw or len(raw.strip()) < 10:
-            raise _AiStrategyError("empty or too-short model output")
-
-        # 4. Parse
-        parsed = parse_strategy_json(raw)
-        if not parsed:
-            raise _AiStrategyError("json extraction failed")
-
-        # 5. Translate
-        return _translate_to_result(parsed, board_state, netlist)
+            # R-6: broad catch - model output is untrusted, any failure mode
+            # must not crash the orchestrator. DeterministicStrategy is
+            # trusted deterministic code that always succeeds.
+            logger.warning(
+                "AI strategy failed, falling back to deterministic: %s: %s",
+                type(exc).__name__,
+                exc,
+            )
+            fallback = DeterministicStrategy().strategize(board_state, netlist)
+            return replace(
+                fallback,
+                routing_notes=f"ai_fallback: {type(exc).__name__}: {exc}",
+            )
 
 
 def _translate_to_result(
