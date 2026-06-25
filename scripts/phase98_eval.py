@@ -313,7 +313,15 @@ def evaluate_sc2(
     Returns:
         List of metric names where AI matches or beats deterministic.
         Possible values: "completion_pct", "via_count", "total_trace_length_mm".
+        Empty when the AI result is a fallback (parse_success=False) — ties
+        on identical metrics must not mask "model contributed nothing".
     """
+    # ME-02 (Council): short-circuit on R-6 fallback. When the AI strategy
+    # fell back to DeterministicStrategy, the AI result is byte-identical to
+    # the deterministic baseline, so every metric is a tie. Counting those
+    # ties as wins would mask a 100%-fallback run as a perfect SC-2 score.
+    if not ai.parse_success:
+        return []
     winners: list[str] = []
     if ai.completion_pct >= det.completion_pct:
         winners.append("completion_pct")

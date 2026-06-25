@@ -491,14 +491,42 @@ class TestCategorySuccessCriteria:
         assert len(winners) == 3
 
     def test_sc2_tie_counts_as_match(self) -> None:
-        """M-3: when ai.via_count == det.via_count, it counts as 'matches or beats'."""
+        """M-3: when ai.via_count == det.via_count, it counts as 'matches or beats'.
+
+        ME-02: ties only count when AI genuinely parsed (parse_success=True).
+        """
         from scripts.phase98_eval import evaluate_sc2
 
         det = _eval_result(strategy="DeterministicStrategy", completion=0.5, vias=5, trace=100.0)
-        ai = _eval_result(strategy="AiRoutingStrategy", completion=0.5, vias=5, trace=100.0)
+        ai = _eval_result(
+            strategy="AiRoutingStrategy",
+            completion=0.5,
+            vias=5,
+            trace=100.0,
+            parse_success=True,
+        )
         winners = evaluate_sc2(det, ai)
         # All 3 are ties -> all 3 count as 'matches or beats'
         assert len(winners) == 3
+
+    def test_sc2_does_not_count_fallback_ties_as_wins(self) -> None:
+        """ME-02: fallback (parse_success=False) short-circuits to empty winners.
+
+        When AI falls back to DeterministicStrategy, all metrics are identical
+        ties. Counting them as wins would mask 'model contributed nothing'.
+        """
+        from scripts.phase98_eval import evaluate_sc2
+
+        det = _eval_result(strategy="DeterministicStrategy", completion=0.5, vias=5, trace=100.0)
+        ai_fallback = _eval_result(
+            strategy="AiRoutingStrategy",
+            completion=0.5,
+            vias=5,
+            trace=100.0,
+            parse_success=False,
+        )
+        winners = evaluate_sc2(det, ai_fallback)
+        assert winners == []
 
     def test_sc2_ai_loses(self) -> None:
         from scripts.phase98_eval import evaluate_sc2
