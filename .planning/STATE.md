@@ -381,6 +381,7 @@ Last activity: 2026-06-25
 - Phase 98 REFRAMED: AI Routing Strategy Advisor — vision model emits strategy consumed by Phase 100 orchestrator (closed-loop approach replaced by Option A architecture: Freerouting + orchestrator + AI advisor)
 - Phase 99 added: Freerouting Integration Hardening — replaces conceptual Phase 122B; closes real multi-layer gaps (footprint obstacles, net classes, zones, via types, 45° traces). Multi-layer graph scaffolding already exists in graph.py:156-247
 - Phase 100 added: RoutingOrchestrator and Human Approval Loop — dispatcher routes nets to A* vs Freerouting, defines RoutingStrategy interface that Phase 98 plugs into, extends InteractiveRoutingSession for Freerouting output
+- Phase 101 added: Schematic Ops Bug Fixes — close 5 P0/P1 bugs (P0-001 through P0-005) from analog-ecosystem backplane cleanup. BUGS/ reports source.
 
 ### v4.1 Stage-Safe PCB Flow (Phases 85-94)
 
