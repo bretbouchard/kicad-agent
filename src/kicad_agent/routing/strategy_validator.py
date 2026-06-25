@@ -233,17 +233,3 @@ class StrategyValidator:
                     f"invalid keepout layer {k.layer!r} "
                     f"(valid: {sorted(valid_layers)}): {k}"
                 )
-
-
-class ValidationResult:
-    """Placeholder for future structured-validation return type.
-
-    The current validator raises :class:`ValueError` on the first violation
-    and returns ``None`` on success. A structured result type (list of
-    per-field errors) is reserved for a future enhancement if the
-    orchestrator ever needs to collect multiple violations in one pass.
-    Kept here as a documented anchor so downstream code can reference
-    ``ValidationResult`` without importing surprises later.
-    """
-
-    __slots__ = ()
