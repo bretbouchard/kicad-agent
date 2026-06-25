@@ -172,6 +172,7 @@ def _handle_add_wire(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any
     return ir.add_wire(
         start_x=op.start_x, start_y=op.start_y,
         end_x=op.end_x, end_y=op.end_y,
+        force=getattr(op, "force", False),
     )
 
 

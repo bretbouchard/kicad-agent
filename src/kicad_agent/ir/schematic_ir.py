@@ -429,23 +429,235 @@ class SchematicIR(BaseIR):
 
         return unresolved
 
+    # -------------------------------------------------------------------
+    # Net resolution (Phase 129: net-aware wire generation)
+    # -------------------------------------------------------------------
+
+    # Tolerance for position matching when resolving nets. KiCad schematics
+    # use a 1.27mm grid; 0.5mm is tight enough to avoid cross-grid collisions
+    # while tolerating minor float drift from symbol rotation math.
+    _NET_POS_TOL: float = 0.5
+
+    # Reference prefix for power symbols. KiCad uses "#PWRxxxx" for invisible
+    # power-port references; the rail name lives in the Value property.
+    _PWR_REF_PREFIX: str = "#PWR"
+
+    # lib_id prefix for KiCad's standard power library.
+    _PWR_LIB_PREFIX: str = "power:"
+
+    def _is_power_symbol(self, component: Any) -> bool:
+        """Detect whether a component is a KiCad power symbol.
+
+        Power symbols declare a global net through their Value (e.g. "+5V",
+        "GND", "-12V"). They are recognised two ways:
+            1. Reference designator starts with "#PWR" (invisible power port)
+            2. lib_id starts with "power:" (KiCad's standard power library)
+
+        Args:
+            component: A kiutils SchematicSymbol.
+
+        Returns:
+            True if the component is a power symbol.
+        """
+        ref = self.get_component_property(component, "Reference") or ""
+        if ref.startswith(self._PWR_REF_PREFIX):
+            return True
+        lib_id = getattr(component, "libId", "") or ""
+        if lib_id.startswith(self._PWR_LIB_PREFIX):
+            return True
+        return False
+
+    def _resolve_net_at_position(
+        self, x: float, y: float, _tol: float | None = None
+    ) -> Optional[str]:
+        """Determine the net name at a given schematic position.
+
+        Checks (in order of precision):
+            1. Labels at this position (local, global, hierarchical) -- a label
+               directly at the coordinate wins outright.
+            2. Component pins at this position -- if the pin belongs to a power
+               symbol, the symbol's Value is the net name.
+            3. Wire graph traversal (BFS) -- walk connected wire endpoints up
+               to a depth limit looking for a labelled position.
+
+        Args:
+            x, y: Position in mm.
+            _tol: Position tolerance in mm. Defaults to ``_NET_POS_TOL``
+                (0.5mm) which is tighter than the 1.27mm KiCad grid.
+
+        Returns:
+            Net name if one can be resolved, ``None`` if the position has no
+            determinable net assignment (e.g. empty space or unconnected wire).
+        """
+        tol = _tol if _tol is not None else self._NET_POS_TOL
+
+        # 1. Labels at position -- direct, most precise.
+        for label in self.get_label_positions():
+            if abs(label["x"] - x) <= tol and abs(label["y"] - y) <= tol:
+                return label["name"]
+
+        # 2. Power-symbol pins at position.
+        for pin in self.get_pin_positions():
+            if abs(pin["x"] - x) > tol or abs(pin["y"] - y) > tol:
+                continue
+            comp = self.get_component_by_ref(pin.get("reference", ""))
+            if comp is not None and self._is_power_symbol(comp):
+                value = self.get_component_property(comp, "Value")
+                if value:
+                    return value
+
+        # 3. BFS through the wire graph for a labelled position.
+        return self._trace_wire_to_net(x, y, tol)
+
+    def _trace_wire_to_net(
+        self,
+        start_x: float,
+        start_y: float,
+        tol: float,
+        _max_depth: int = 64,
+    ) -> Optional[str]:
+        """BFS through wire endpoints to find a labelled net.
+
+        Starts at (start_x, start_y) and walks the wire graph (wires sharing
+        endpoints within ``tol``) until a position with a label is reached or
+        the depth budget is exhausted.
+
+        Args:
+            start_x, start_y: Seed position in mm.
+            tol: Endpoint matching tolerance in mm.
+            _max_depth: Maximum number of wire hops before giving up.
+
+        Returns:
+            Net name from the first labelled position reached, or ``None``.
+        """
+        # Pre-compute label positions once.
+        labels = self.get_label_positions()
+        if not labels:
+            return None
+
+        # Fast exit: if the seed itself is labelled, return it.
+        for label in labels:
+            if abs(label["x"] - start_x) <= tol and abs(label["y"] - start_y) <= tol:
+                return label["name"]
+
+        wires = self.get_wire_endpoints()
+        if not wires:
+            return None
+
+        def _near(a: tuple[float, float], b: tuple[float, float]) -> bool:
+            return abs(a[0] - b[0]) <= tol and abs(a[1] - b[1]) <= tol
+
+        seed = (start_x, start_y)
+        # Build an adjacency list keyed by coordinate tuples to avoid O(N^2)
+        # scans during BFS. Two wires are "connected" if any of their
+        # endpoints match within tolerance.
+        endpoints: list[tuple[tuple[float, float], tuple[float, float]]] = []
+        for w in wires:
+            endpoints.append(((w["start_x"], w["start_y"]), (w["end_x"], w["end_y"])))
+
+        visited_edges: set[int] = set()
+        visited_nodes: set[tuple[float, float]] = set()
+        # Normalise seed into the visited set using rounding so equivalent
+        # float coords collapse together.
+        def _key(pt: tuple[float, float]) -> tuple[float, float]:
+            return (round(pt[0], 3), round(pt[1], 3))
+
+        frontier: list[tuple[float, float]] = [seed]
+        visited_nodes.add(_key(seed))
+
+        for _ in range(_max_depth):
+            if not frontier:
+                break
+            next_frontier: list[tuple[float, float]] = []
+            for node in frontier:
+                # Check labels at this node.
+                for label in labels:
+                    if abs(label["x"] - node[0]) <= tol and abs(label["y"] - node[1]) <= tol:
+                        return label["name"]
+                # Expand to neighbouring wire endpoints.
+                for idx, (a, b) in enumerate(endpoints):
+                    if idx in visited_edges:
+                        continue
+                    if _near(a, node) or _near(b, node):
+                        visited_edges.add(idx)
+                        other = b if _near(a, node) else a
+                        if _key(other) not in visited_nodes:
+                            visited_nodes.add(_key(other))
+                            next_frontier.append(other)
+            frontier = next_frontier
+
+        return None
+
     def add_wire(
-        self, start_x: float, start_y: float, end_x: float, end_y: float
+        self,
+        start_x: float,
+        start_y: float,
+        end_x: float,
+        end_y: float,
+        force: bool = False,
     ) -> dict[str, Any]:
         """Add a wire segment between two points.
+
+        Phase 129 -- net-aware wire generation:
+
+            Before creating the wire, the method resolves the net at each
+            endpoint (via :meth:`_resolve_net_at_position`). If both
+            endpoints resolve to *different* nets, the wire is rejected with
+            a :class:`ValueError` because it would short two power rails or
+            signals together (the root cause of the backplane +5V/+3V3/GND
+            shorts generated in Phase 26).
+
+            Callers who genuinely need to override the check (e.g. to merge
+            two ground variants, or to wire an as-yet-unlabelled position)
+            may pass ``force=True``. The override is logged in the mutation
+            trail for auditability.
 
         Args:
             start_x: Start X coordinate in mm.
             start_y: Start Y coordinate in mm.
             end_x: End X coordinate in mm.
             end_y: End Y coordinate in mm.
+            force: When ``True``, skip net-conflict validation. The conflict
+                (if any) is still recorded in the returned dict under
+                ``"net_conflict_overridden"`` for traceability. Default
+                ``False`` -- validation is ON.
 
         Returns:
-            Dict with wire details.
+            Dict with wire details. May include:
+
+                - ``"net_conflict_overridden"``: present when ``force=True``
+                  bypassed a detected conflict.
+                - ``"duplicate"``: ``True`` when an identical wire already
+                  exists and creation was skipped.
+
+        Raises:
+            ValueError: If the start and end endpoints resolve to different,
+                non-empty net names. The error message includes both net
+                names and the coordinates so callers can pinpoint the short
+                in their generation pipeline.
         """
         import uuid
         from kiutils.items.schitems import Connection
         from kiutils.items.common import Position, Stroke
+
+        # Net-conflict detection (Phase 129). Runs BEFORE the wire object is
+        # constructed so we never mutate the schematic on a rejected call.
+        start_net = self._resolve_net_at_position(start_x, start_y)
+        end_net = self._resolve_net_at_position(end_x, end_y)
+        net_conflict: Optional[dict[str, str]] = None
+        if (
+            start_net is not None
+            and end_net is not None
+            and start_net != end_net
+        ):
+            net_conflict = {"start_net": start_net, "end_net": end_net}
+            if not force:
+                raise ValueError(
+                    f"Wire from ({start_x},{start_y}) to ({end_x},{end_y}) "
+                    f"would short different nets: '{start_net}' and "
+                    f"'{end_net}'. Wire creation rejected to prevent "
+                    f"schematic corruption. Pass force=True to override."
+                )
 
         wire = Connection(
             type="wire",
@@ -463,21 +675,30 @@ class SchematicIR(BaseIR):
                     and abs(existing["start_y"] - start_y) <= _tol
                     and abs(existing["end_x"] - end_x) <= _tol
                     and abs(existing["end_y"] - end_y) <= _tol):
-                return {
+                result: dict[str, Any] = {
                     "start": [start_x, start_y],
                     "end": [end_x, end_y],
                     "duplicate": True,
                 }
-        
+                if net_conflict is not None:
+                    result["net_conflict_overridden"] = net_conflict
+                return result
+
         self._parse_result.kiutils_obj.graphicalItems.append(wire)
-        self._record_mutation("add_wire", {
-            "start": [start_x, start_y],
-            "end": [end_x, end_y],
-        })
-        return {
+        mutation_payload: dict[str, Any] = {
             "start": [start_x, start_y],
             "end": [end_x, end_y],
         }
+        if net_conflict is not None:
+            mutation_payload["net_conflict_overridden"] = net_conflict
+        self._record_mutation("add_wire", mutation_payload)
+        result = {
+            "start": [start_x, start_y],
+            "end": [end_x, end_y],
+        }
+        if net_conflict is not None:
+            result["net_conflict_overridden"] = net_conflict
+        return result
 
     def add_label(
         self,

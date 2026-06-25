@@ -14,6 +14,17 @@ from kicad_agent.ops.schema import (
 class AddWireOp(BaseModel):
     """Add a wire segment between two points in a schematic.
 
+    Phase 129 -- net-aware wire generation:
+
+        By default the operation validates that both endpoints resolve to the
+        same net (or at least one endpoint is unlabelled). A ``ValueError`` is
+        raised when the endpoints would short two different nets, preventing
+        the schematic corruption seen in the backplane power rails.
+
+        Set ``force=True`` to override validation when merging ground variants
+        or wiring unlabelled positions. The override is recorded in the
+        mutation log for auditability.
+
     Attributes:
         op_type: Discriminator literal ``"add_wire"``.
         target_file: Relative path to the target KiCad schematic file (H-01 validated).
@@ -21,6 +32,7 @@ class AddWireOp(BaseModel):
         start_y: Start Y coordinate in mm.
         end_x: End X coordinate in mm.
         end_y: End Y coordinate in mm.
+        force: When ``True``, skip net-conflict validation. Default ``False``.
     """
 
     op_type: Literal["add_wire"] = "add_wire"
@@ -29,6 +41,14 @@ class AddWireOp(BaseModel):
     start_y: float = Field(description="Start Y coordinate in mm")
     end_x: float = Field(description="End X coordinate in mm")
     end_y: float = Field(description="End Y coordinate in mm")
+    force: bool = Field(
+        default=False,
+        description=(
+            "Override net-conflict validation. Use when intentionally merging "
+            "ground variants (e.g. GND/AGND) or wiring unlabelled positions. "
+            "The override is logged in the mutation trail."
+        ),
+    )
 
     @field_validator("start_x", "start_y", "end_x", "end_y")
     @classmethod
