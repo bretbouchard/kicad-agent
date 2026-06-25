@@ -624,6 +624,8 @@ None.
 
 - **WR-07** (Medium, Council Exec Review 99): **RESOLVED 2026-06-25 (subsumed by CR-01 closure above).** `PcbIR.remove_net` now rebuilds pads via `dataclasses.replace(pad, net_name="", net_number=0)` and rebuilds the footprint and board via replace chain. Tags: council-deferred,immutability,phase-99,wr-07.
 
+- **Out-of-scope finding (2026-06-25, surfaced during Phase 101 regression check)**: `generate_bom` is registered as a readonly op (`src/kicad_agent/ops/registry.py:1221`) but missing from query handler dispatch (`_SCHEMATIC_QUERY_HANDLERS` / `_QUERY_HANDLERS` / `_GATE_HANDLERS`). Test failure: `tests/test_schematic_query_dispatch.py::TestReadonlyCoverage::test_schematic_readonly_ops_have_query_handler`. Pre-existing — not caused by Phase 101 (verified by stashing Phase 101 changes; failure persists on master). Resolution: either add `generate_bom` to `_QUERY_HANDLERS` or remove the readonly classification. Likely belongs in `_QUERY_HANDLERS` since it has a BOM handler at `src/kicad_agent/ops/handlers/pcb_bom.py:381`.
+
 ## Session Continuity
 
 Stopped at: Completed Phase 101 Plan 04 — Fixed remove_dangling_wires criteria mismatch (P0-005 R-5). Added trust_erc parameter (default True) with ERC wire_dangling position passthrough. Council H-1 dispatcher fix applied (trust_erc=op.trust_erc). 2 TDD commits (1 RED + 1 GREEN), 4 new tests, 132 passed / 1 skipped (zero regression). PHASE 101 COMPLETE — all 5 P0/P1 bugs closed.
