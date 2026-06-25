@@ -144,7 +144,14 @@ class NativeFootprint:
 
 @dataclass(frozen=True)
 class NativeSegment:
-    """Copper track segment: (segment (start X Y) (end X Y) (width W) (layer L) (net N))."""
+    """Copper track segment: (segment (start X Y) (end X Y) (width W) (layer L) (net N)).
+
+    CR-01: carries its KiCad uuid so callers can join on the stable UUID value
+    rather than on a positional index. The UUID extractor and the parser use
+    different traversal orders, so positional indices diverge on real boards
+    (nested segments inside groups, mixed parent types). UUID is the identity
+    the UUID system was designed to provide.
+    """
 
     start: _NativePosition | None = None
     end: _NativePosition | None = None
@@ -152,11 +159,15 @@ class NativeSegment:
     layer: str = ""
     net_number: int = 0
     net_name: str = ""
+    uuid: str = ""
 
 
 @dataclass(frozen=True)
 class NativeVia:
-    """Through-hole via: (via (at X Y) (size D) (drill DR) (net N))."""
+    """Through-hole via: (via (at X Y) (size D) (drill DR) (net N)).
+
+    CR-01: carries its KiCad uuid (same rationale as NativeSegment).
+    """
 
     position: tuple[float, float] = (0.0, 0.0)
     drill: float = 0.0
@@ -164,6 +175,7 @@ class NativeVia:
     net_number: int = 0
     net_name: str = ""
     layers: tuple[str, str] = ("", "")
+    uuid: str = ""
 
 
 @dataclass(frozen=True)

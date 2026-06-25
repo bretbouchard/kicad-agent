@@ -149,6 +149,130 @@ class TestRollbackNetUsesPcbir:
 
 
 # ---------------------------------------------------------------------------
+# CR-01: UUID-based rollback (regression for parent_index divergence)
+# ---------------------------------------------------------------------------
+
+
+class TestRollbackNetUuidJoin:
+    """CR-01: rollback_net must join on UUID value, NOT on extract_uuids
+    parent_index.
+
+    The UUID extractor (regex byte-order) and NativeBoard.segments (parse-tree
+    DFS) use different traversal orders. On a board with a (segment ...) nested
+    inside a (group ...), the parent_index would diverge from the NativeBoard
+    index — causing rollback to either miss the UUID entirely or delete the
+    wrong segment.
+
+    This test builds a minimal board with both a top-level segment and a
+    nested segment inside a (group ...), gives them distinct UUIDs, and
+    verifies that rollback_net removes ONLY the target net's segment(s).
+    """
+
+    def test_rollback_with_nested_segment_in_group(self, tmp_path: Path) -> None:
+        # Minimal KiCad 10 PCB with:
+        # - one top-level segment on net "TARGET" (uuid target-top)
+        # - one segment nested inside a (group ...) on net "OTHER" (uuid other-nested)
+        # - one top-level segment on net "OTHER" (uuid other-top)
+        #
+        # If rollback_net joined on parent_index, deleting "TARGET" could
+        # accidentally hit "other-nested" or "other-top" (divergence).
+        # Joining on UUID value removes only target-top.
+        pcb = tmp_path / "nested_segment.kicad_pcb"
+        pcb.write_text(
+            '(kicad_pcb\n'
+            '\t(version 20241229)\n'
+            '\t(generator "test")\n'
+            '\t(general (thickness 1.6))\n'
+            '\t(layers\n'
+            '\t\t(0 "F.Cu" signal)\n'
+            '\t\t(31 "B.Cu" signal)\n'
+            '\t)\n'
+            '\t(net 0 "")\n'
+            '\t(net 1 "TARGET")\n'
+            '\t(net 2 "OTHER")\n'
+            '\t(segment\n'
+            '\t\t(start 10.0 10.0)\n'
+            '\t\t(end 20.0 10.0)\n'
+            '\t\t(width 0.25)\n'
+            '\t\t(layer "F.Cu")\n'
+            '\t\t(net 1 "TARGET")\n'
+            '\t\t(uuid "target-top-0000-0000-0000-000000000001")\n'
+            '\t)\n'
+            '\t(segment\n'
+            '\t\t(start 30.0 30.0)\n'
+            '\t\t(end 40.0 30.0)\n'
+            '\t\t(width 0.25)\n'
+            '\t\t(layer "F.Cu")\n'
+            '\t\t(net 2 "OTHER")\n'
+            '\t\t(uuid "other-top-0000-0000-0000-000000000002")\n'
+            '\t)\n'
+            '\t(group\n'
+            '\t\t(uuid "group-0000-0000-0000-000000000003")\n'
+            '\t\t(segment\n'
+            '\t\t\t(start 50.0 50.0)\n'
+            '\t\t\t(end 60.0 50.0)\n'
+            '\t\t\t(width 0.25)\n'
+            '\t\t\t(layer "F.Cu")\n'
+            '\t\t\t(net 2 "OTHER")\n'
+            '\t\t\t(uuid "other-nested-0000-0000-0000-000000000004")\n'
+            '\t\t)\n'
+            '\t)\n'
+            ')\n',
+            encoding="utf-8",
+        )
+
+        orch = RoutingOrchestrator()
+        orch.rollback_net(pcb, "TARGET")
+
+        new_raw = pcb.read_text(encoding="utf-8")
+        # The target segment must be gone.
+        assert "target-top-0000-0000-0000-000000000001" not in new_raw
+        # The OTHER net segments (both top-level and nested) must survive —
+        # rollback joined on UUID value, so it could not accidentally hit them
+        # via a divergent parent_index.
+        assert "other-top-0000-0000-0000-000000000002" in new_raw
+        assert "other-nested-0000-0000-0000-000000000004" in new_raw
+
+    def test_segment_uuid_field_populated_by_parser(self, tmp_path: Path) -> None:
+        # CR-01 directly: NativeSegment must carry the uuid after parse.
+        pcb = tmp_path / "uuid_field.kicad_pcb"
+        pcb.write_text(
+            '(kicad_pcb\n'
+            '\t(version 20241229)\n'
+            '\t(generator "test")\n'
+            '\t(general (thickness 1.6))\n'
+            '\t(layers\n'
+            '\t\t(0 "F.Cu" signal)\n'
+            '\t)\n'
+            '\t(net 0 "")\n'
+            '\t(net 1 "SIG")\n'
+            '\t(segment\n'
+            '\t\t(start 1.0 1.0)\n'
+            '\t\t(end 2.0 2.0)\n'
+            '\t\t(width 0.25)\n'
+            '\t\t(layer "F.Cu")\n'
+            '\t\t(net 1 "SIG")\n'
+            '\t\t(uuid "seg-uuid-0000-0000-0000-000000000010")\n'
+            '\t)\n'
+            '\t(via\n'
+            '\t\t(at 5.0 5.0)\n'
+            '\t\t(size 0.6)\n'
+            '\t\t(drill 0.3)\n'
+            '\t\t(layers "F.Cu" "B.Cu")\n'
+            '\t\t(net 1 "SIG")\n'
+            '\t\t(uuid "via-uuid-0000-0000-0000-000000000011")\n'
+            '\t)\n'
+            ')\n',
+            encoding="utf-8",
+        )
+        board = NativeParser.parse_pcb(pcb)
+        assert len(board.segments) == 1
+        assert board.segments[0].uuid == "seg-uuid-0000-0000-0000-000000000010"
+        assert len(board.vias) == 1
+        assert board.vias[0].uuid == "via-uuid-0000-0000-0000-000000000011"
+
+
+# ---------------------------------------------------------------------------
 # M2: 10-cycle mock-DRC test (ALWAYS runs, never skips)
 # ---------------------------------------------------------------------------
 

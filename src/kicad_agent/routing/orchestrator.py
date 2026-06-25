@@ -15,11 +15,14 @@ Council corrections applied:
   tuple[str, dict[str, int]] — NOT a net_filter parameter.
 - H2: rollback_net uses PcbRawWriter.delete_segment/delete_via via UUID, NOT
   regex on raw S-expression text.
+- CR-01: rollback_net joins on the UUID value carried by NativeSegment /
+  NativeVia, NOT on extract_uuids parent_index. The parent_index diverges
+  from NativeBoard.segments ordering on real boards (nested segments).
+- CR-02: all writes go through atomic_write (temp + fsync + rename), NOT
+  bare pcb_path.write_text.
 - H4: _validate_strategy_result rejects unknown nets and invalid backends.
 - M4: NOT thread-safe (documented in RoutingOrchestrator docstring).
 - R3-L2: op_type tags are explicit constants ("route_board_pre", "route_board_post").
-- R3-L3: rollback_net uses bulk extract_uuids(content, file_type) then walks
-  UUIDMap.entries filtering by parent_type — NOT per-element functions.
 """
 
 from __future__ import annotations
@@ -543,9 +546,16 @@ class RoutingOrchestrator:
         """H2: Surgically remove a single net's routed segments/vias.
 
         Parses the board via NativeParser, identifies segments and vias
-        matching net_name, extracts their UUIDs from the raw S-expression
-        via the bulk ``extract_uuids(content, file_type)`` API (R3-L3),
-        and applies PcbRawWriter.delete_segment / delete_via per UUID.
+        matching net_name, and applies PcbRawWriter.delete_segment /
+        delete_via per UUID value.
+
+        CR-01: joins on the UUID *value* directly (carried by NativeSegment
+        and NativeVia since the CR-01 fix), NOT on a positional parent_index.
+        The UUID extractor (regex byte-order) and NativeBoard.segments
+        (parse-tree DFS) use different traversal orders, so parent_index
+        diverges from NativeBoard index on any board with nested segments
+        (e.g., inside a (group ...)). The UUID value is the stable identity
+        the UUID system was designed to provide.
 
         Footprint pad net declarations are PRESERVED — only routed tracks
         (segments) and vias at the board level are removed. This replaces
@@ -560,7 +570,6 @@ class RoutingOrchestrator:
         """
         from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
         from kicad_agent.parser.pcb_native_parser import NativeParser
-        from kicad_agent.parser.uuid_extractor import extract_uuids
 
         # Snapshot before rollback if an undo stack is provided.
         if undo_stack is not None:
@@ -570,39 +579,22 @@ class RoutingOrchestrator:
         # 1. Parse the board to find segments/vias matching the net.
         board = NativeParser.parse_pcb(pcb_path)
 
-        # 2. Collect indices of segments + vias to remove.
-        seg_indices_to_remove = [
-            i for i, s in enumerate(board.segments)
-            if s.net_name == net_name
-        ]
-        via_indices_to_remove = [
-            i for i, v in enumerate(board.vias)
-            if v.net_name == net_name
-        ]
+        # 2. CR-01: collect UUIDs directly from the parsed segments/vias.
+        #    The UUID value is the stable identity — joining on it avoids the
+        #    index-divergence bug where extract_uuids parent_index (regex
+        #    byte-order) != NativeBoard index (parse-tree DFS).
+        seg_uuids = [s.uuid for s in board.segments if s.net_name == net_name and s.uuid]
+        via_uuids = [v.uuid for v in board.vias if v.net_name == net_name and v.uuid]
 
-        if not seg_indices_to_remove and not via_indices_to_remove:
-            # Nothing to remove — net has no routed tracks. No-op.
+        if not seg_uuids and not via_uuids:
+            # Nothing to remove — net has no routed tracks (or they lack UUIDs).
+            # No-op.
             return
 
-        # 3. R3-L3: Extract all UUIDs in one bulk call, then filter by
-        #    parent_type and parent_index. The actual API is:
-        #       extract_uuids(content, file_type) -> UUIDMap
-        #    UUIDMap.entries is a tuple of UUIDEntry with fields:
-        #       uuid_value, parent_type, parent_index, line_number
-        raw = pcb_path.read_text(encoding="utf-8")
-        uuid_map = extract_uuids(raw, file_type="pcb")
-
-        seg_uuids: list[str] = []
-        via_uuids: list[str] = []
-        for entry in uuid_map.entries:
-            if entry.parent_type == "segment" and entry.parent_index in seg_indices_to_remove:
-                seg_uuids.append(entry.uuid_value)
-            elif entry.parent_type == "via" and entry.parent_index in via_indices_to_remove:
-                via_uuids.append(entry.uuid_value)
-
-        # 4. Apply deletions via PcbRawWriter (atomic string operations).
+        # 3. Apply deletions via PcbRawWriter (atomic string operations).
         #    Each delete is a string transform; if a UUID is somehow not
-        #    found (stale index), we skip it rather than crash.
+        #    found (stale), we skip it rather than crash.
+        raw = pcb_path.read_text(encoding="utf-8")
         for uuid_str in seg_uuids:
             try:
                 raw = PcbRawWriter.delete_segment(raw, uuid_str)
@@ -614,7 +606,7 @@ class RoutingOrchestrator:
             except ValueError:
                 logger.debug("Via UUID %s not found in raw content (stale?)", uuid_str)
 
-        # 5. Write atomically.
+        # 4. Write atomically.
         # CR-02: use atomic_write (temp + fsync + rename) — never bare write_text.
         atomic_write(pcb_path, raw)
 

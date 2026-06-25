@@ -714,6 +714,7 @@ class NativeParser:
             width = 0.0
             net_number = 0
             net_name = ""
+            uuid = ""
 
             # Start
             start_block = _find_symbol(seg_block, "start")
@@ -746,6 +747,11 @@ class NativeParser:
             # Layer
             layer = _find_string_child(seg_block, "layer")
 
+            # CR-01: capture the segment's uuid so rollback can join on the
+            # stable UUID value rather than a positional parent_index that
+            # diverges from NativeBoard.segments ordering on real boards.
+            uuid = _find_string_child(seg_block, "uuid")
+
             # Net
             # KiCad 10 format: (net "NAME")        -- string-only
             # KiCad 9 format:  (net NUMBER "NAME") -- number + name
@@ -770,6 +776,7 @@ class NativeParser:
                 layer=layer,
                 net_number=net_number,
                 net_name=net_name,
+                uuid=uuid,
             ))
 
         return tuple(segments)
@@ -789,6 +796,7 @@ class NativeParser:
             net_number = 0
             net_name = ""
             layers: tuple[str, str] = ("", "")
+            uuid = ""
 
             # Position
             at_vals = _find_at(via_block)
@@ -832,6 +840,9 @@ class NativeParser:
                     str(layers_block[2]),
                 )
 
+            # CR-01: capture the via's uuid (same rationale as segments).
+            uuid = _find_string_child(via_block, "uuid")
+
             vias.append(NativeVia(
                 position=position,
                 drill=drill,
@@ -839,6 +850,7 @@ class NativeParser:
                 net_number=net_number,
                 net_name=net_name,
                 layers=layers,
+                uuid=uuid,
             ))
 
         return tuple(vias)
