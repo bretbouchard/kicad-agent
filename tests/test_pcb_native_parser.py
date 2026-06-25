@@ -248,8 +248,9 @@ class TestBoardStructure:
 
     def test_net_classes_default_empty(self, arduino_board):
         # Arduino Mega may not have explicit net classes
-        # (uses "Default" which may be implicit)
-        assert isinstance(arduino_board.net_classes, list)
+        # (uses "Default" which may be implicit).
+        # CR-01: NativeBoard collection fields are tuples (frozen-friendly).
+        assert isinstance(arduino_board.net_classes, (list, tuple))
 
     def test_segments_default_empty(self, arduino_board):
         # Arduino Mega has no routed segments
@@ -324,7 +325,9 @@ class TestKiutilsCompatibility:
     """Tests for kiutils-compatible properties (Council CRITICAL-2)."""
 
     def test_native_board_graphicItems_property(self, arduino_board):
-        assert arduino_board.graphicItems is arduino_board.graphic_items
+        # CR-01: graphicItems returns a list view over the tuple storage.
+        # Identity no longer holds; equality does.
+        assert arduino_board.graphicItems == list(arduino_board.graphic_items)
 
     def test_native_board_traceItems_property(self, arduino_board):
         trace_items = arduino_board.traceItems
@@ -409,7 +412,8 @@ class TestKiutilsCompatibility:
         # CRITICAL-2 compatibility fields
         assert zone.net == 2
         assert zone.netName == "VCC"
-        assert zone.layers == ["B.Cu"]
+        # CR-01: zone.layers is a tuple (immutable storage).
+        assert zone.layers == ("B.Cu",)
         assert zone.minThickness == 0.3
         assert zone.net_number == 2
         assert zone.net_name == "VCC"
@@ -535,35 +539,42 @@ class TestNativePosition:
 class TestNativeBoardProperties:
     """Tests for NativeBoard kiutils-compatible properties."""
 
-    def test_graphicItems_returns_same_list(self):
-        board = NativeBoard()
-        items = [NativeGraphicItem()]
-        board.graphic_items = items
-        assert board.graphicItems is items
+    def test_graphicItems_returns_list_view(self):
+        # CR-01: graphic_items is a tuple; graphicItems returns a list view.
+        import dataclasses
+        items = (NativeGraphicItem(),)
+        board = NativeBoard(graphic_items=items)
+        assert board.graphicItems == list(items)
+        assert isinstance(board.graphicItems, list)
 
     def test_traceItems_combines_segments_and_vias(self):
         from kicad_agent.parser.pcb_native_types import NativeSegment, NativeVia
 
-        board = NativeBoard()
-        board.segments = [NativeSegment()]
-        board.vias = [NativeVia()]
+        # CR-01: construct immutably (segments/vias are tuples).
+        board = NativeBoard(
+            segments=(NativeSegment(),),
+            vias=(NativeVia(),),
+        )
         assert len(board.traceItems) == 2
 
     def test_layers_returns_general_layers(self):
-        board = NativeBoard()
-        board.general.layers = ["F.Cu", "B.Cu"]
+        # CR-01: general.layers is a tuple; layers property returns a list view.
+        board = NativeBoard(
+            general=NativeGeneral(layers=("F.Cu", "B.Cu")),
+        )
         assert board.layers == ["F.Cu", "B.Cu"]
 
     def test_empty_board_defaults(self):
         board = NativeBoard()
         assert board.version == ""
         assert board.generator == ""
-        assert board.nets == []
-        assert board.footprints == []
-        assert board.segments == []
-        assert board.vias == []
-        assert board.zones == []
-        assert board.graphic_items == []
+        # CR-01: collection fields default to empty tuples (immutable).
+        assert board.nets == ()
+        assert board.footprints == ()
+        assert board.segments == ()
+        assert board.vias == ()
+        assert board.zones == ()
+        assert board.graphic_items == ()
         assert board.board_outline is None
         assert board.general.thickness == 1.6
         assert board.setup is None

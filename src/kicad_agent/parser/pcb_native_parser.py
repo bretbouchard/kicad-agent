@@ -341,34 +341,39 @@ class NativeParser:
     def _build_board(
         cls, tree: Any, content: str, file_path: str
     ) -> NativeBoard:
-        """Walk the parsed S-expression tree and build a NativeBoard."""
+        """Walk the parsed S-expression tree and build a NativeBoard.
+
+        CR-01: constructs the board in a single constructor call. All field
+        values are extracted into locals first, then passed to NativeBoard().
+        No in-place mutation on the frozen board.
+        """
         # Find (kicad_pcb ...) root
         root = _find_symbol(tree, "kicad_pcb")
         if root is None:
             logger.warning("No kicad_pcb root found in PCB content")
             return NativeBoard(raw_content=content, file_path=file_path)
 
-        board = NativeBoard(raw_content=content, file_path=file_path)
-
         # Version and generator
+        version = ""
         version_sym = _find_symbol(root, "version")
         if version_sym and len(version_sym) > 1:
-            board.version = str(version_sym[1])
+            version = str(version_sym[1])
 
+        generator = ""
         generator_sym = _find_symbol(root, "generator")
         if generator_sym and len(generator_sym) > 1:
-            board.generator = str(generator_sym[1])
+            generator = str(generator_sym[1])
 
         # Extract all element types
-        board.nets = cls._extract_nets(root)
-        board.net_classes = cls._extract_net_classes(root)
-        board.footprints = cls._extract_footprints(root)
-        board.segments = cls._extract_segments(root)
-        board.vias = cls._extract_vias(root)
-        board.zones = cls._extract_zones(root)
-        board.graphic_items = cls._extract_graphic_items(root)
-        board.general = cls._extract_general(root)
-        board.setup = cls._extract_setup(root)
+        nets = tuple(cls._extract_nets(root))
+        net_classes = tuple(cls._extract_net_classes(root))
+        footprints = cls._extract_footprints(root)
+        segments = cls._extract_segments(root)
+        vias = cls._extract_vias(root)
+        zones = cls._extract_zones(root)
+        graphic_items = tuple(cls._extract_graphic_items(root))
+        general = cls._extract_general(root)
+        setup = cls._extract_setup(root)
 
         # Warn about unsupported top-level elements.
         _KNOWN_TOP_LEVEL = {
@@ -384,11 +389,29 @@ class NativeParser:
                     _check_unsupported(block_name)
 
         # Build board outline from Edge.Cuts graphic items
-        edge_items = [gi for gi in board.graphic_items if gi.layer == "Edge.Cuts"]
+        board_outline: NativeBoardOutline | None = None
+        edge_items = tuple(
+            gi for gi in graphic_items if gi.layer == "Edge.Cuts"
+        )
         if edge_items:
-            board.board_outline = NativeBoardOutline(items=edge_items)
+            board_outline = NativeBoardOutline(items=edge_items)
 
-        return board
+        return NativeBoard(
+            version=version,
+            generator=generator,
+            nets=nets,
+            footprints=footprints,
+            segments=segments,
+            vias=vias,
+            zones=zones,
+            net_classes=net_classes,
+            graphic_items=graphic_items,
+            board_outline=board_outline,
+            raw_content=content,
+            file_path=file_path,
+            general=general,
+            setup=setup,
+        )
 
     # -----------------------------------------------------------------------
     # Element extractors
@@ -428,40 +451,50 @@ class NativeParser:
         return nets
 
     @classmethod
-    def _extract_net_classes(cls, root: list) -> list[NativeNetClass]:
-        """Extract (net_class "Name" ...) declarations."""
+    def _extract_net_classes(cls, root: list) -> tuple[NativeNetClass, ...]:
+        """Extract (net_class "Name" ...) declarations.
+
+        CR-01: returns a tuple. Builds locals then constructs each
+        NativeNetClass in a single constructor call.
+        """
         classes: list[NativeNetClass] = []
         for nc_block in _find_all_symbols(root, "net_class"):
             if len(nc_block) < 2:
                 continue
-            nc = NativeNetClass(name=str(nc_block[1]))
+            name = str(nc_block[1])
+
+            clearance = 0.0
+            track_width = 0.0
+            via_diameter = 0.0
+            via_drill = 0.0
+            add_nets: list[str] = []
 
             # Extract parameters from children
-            clearance = _find_first_value(nc_block, "clearance")
-            if clearance is not None:
+            clearance_val = _find_first_value(nc_block, "clearance")
+            if clearance_val is not None:
                 try:
-                    nc.clearance = float(clearance)
+                    clearance = float(clearance_val)
                 except (ValueError, TypeError):
                     pass
 
-            track_width = _find_first_value(nc_block, "trace_width")
-            if track_width is not None:
+            track_width_val = _find_first_value(nc_block, "trace_width")
+            if track_width_val is not None:
                 try:
-                    nc.track_width = float(track_width)
+                    track_width = float(track_width_val)
                 except (ValueError, TypeError):
                     pass
 
             via_diam = _find_first_value(nc_block, "via_diameter")
             if via_diam is not None:
                 try:
-                    nc.via_diameter = float(via_diam)
+                    via_diameter = float(via_diam)
                 except (ValueError, TypeError):
                     pass
 
             via_dr = _find_first_value(nc_block, "via_drill")
             if via_dr is not None:
                 try:
-                    nc.via_drill = float(via_dr)
+                    via_drill = float(via_dr)
                 except (ValueError, TypeError):
                     pass
 
@@ -474,43 +507,56 @@ class NativeParser:
                 ):
                     net_name = item[1]
                     if isinstance(net_name, str):
-                        nc.add_nets.append(net_name)
+                        add_nets.append(net_name)
 
-            classes.append(nc)
+            classes.append(NativeNetClass(
+                name=name,
+                clearance=clearance,
+                track_width=track_width,
+                via_diameter=via_diameter,
+                via_drill=via_drill,
+                add_nets=tuple(add_nets),
+            ))
 
-        return classes
+        return tuple(classes)
 
     @classmethod
-    def _extract_footprints(cls, root: list) -> list[NativeFootprint]:
-        """Extract (footprint "lib:fp" ...) blocks."""
+    def _extract_footprints(cls, root: list) -> tuple[NativeFootprint, ...]:
+        """Extract (footprint "lib:fp" ...) blocks.
+
+        CR-01: returns a tuple. Builds locals (props_pairs, graphic_items)
+        then constructs each NativeFootprint in a single constructor call.
+        """
         footprints: list[NativeFootprint] = []
         for fp_block in _find_all_symbols(root, "footprint"):
             if len(fp_block) < 2:
                 continue
 
-            fp = NativeFootprint()
-            fp.lib_id = str(fp_block[1]) if fp_block[1] is not None else ""
+            lib_id = str(fp_block[1]) if fp_block[1] is not None else ""
 
             # Position (at X Y [angle])
+            position: tuple[float, float, float] = (0.0, 0.0, 0.0)
             at_vals = _find_at(fp_block)
             if at_vals and len(at_vals) >= 2:
                 x, y = at_vals[0], at_vals[1]
                 angle = at_vals[2] if len(at_vals) > 2 else 0.0
-                fp.position = (x, y, angle)
+                position = (x, y, angle)
 
             # UUID
-            fp.uuid = _find_string_child(fp_block, "uuid")
+            uuid = _find_string_child(fp_block, "uuid")
 
             # Layer
-            fp.layer = _find_string_child(fp_block, "layer")
+            layer = _find_string_child(fp_block, "layer")
 
-            # Properties
+            # Properties — accumulate as list of (key, value) pairs (later
+            # stored as the internal _properties_tuple).
+            props_pairs: list[tuple[str, str]] = []
             ref = _find_property(fp_block, "Reference")
             if ref:
-                fp.properties["Reference"] = ref
+                props_pairs.append(("Reference", ref))
             val = _find_property(fp_block, "Value")
             if val:
-                fp.properties["Value"] = val
+                props_pairs.append(("Value", val))
 
             # Extract all property keys (not just Reference/Value)
             for item in fp_block:
@@ -521,12 +567,13 @@ class NativeParser:
                     and isinstance(item[1], str)
                     and isinstance(item[2], str)
                 ):
-                    fp.properties[item[1]] = item[2]
+                    props_pairs.append((item[1], item[2]))
 
             # Pads
-            fp.pads = cls._extract_pads(fp_block)
+            pads = cls._extract_pads(fp_block)
 
             # Graphic items (fp_line, fp_arc, fp_circle)
+            graphic_items: list = []
             for fp_item_type, native_type in [
                 ("fp_line", "line"),
                 ("fp_arc", "arc"),
@@ -535,48 +582,62 @@ class NativeParser:
                 for gr_block in _find_all_symbols(fp_block, fp_item_type):
                     gi = cls._parse_graphic_block(gr_block, native_type)
                     if gi is not None:
-                        fp.graphic_items.append(gi)
+                        graphic_items.append(gi)
 
-            footprints.append(fp)
+            footprints.append(NativeFootprint(
+                lib_id=lib_id,
+                position=position,
+                pads=pads,
+                _properties_tuple=tuple(props_pairs),
+                layer=layer,
+                graphic_items=tuple(graphic_items),
+                uuid=uuid,
+            ))
 
-        return footprints
+        return tuple(footprints)
 
     @classmethod
-    def _extract_pads(cls, fp_block: list) -> list[NativePad]:
-        """Extract pads from a footprint block."""
+    def _extract_pads(cls, fp_block: list) -> tuple[NativePad, ...]:
+        """Extract pads from a footprint block.
+
+        CR-01: returns a tuple (frozen-friendly). Builds locals then constructs
+        each NativePad in a single constructor call.
+        """
         pads: list[NativePad] = []
         for pad_block in _find_all_symbols(fp_block, "pad"):
             if len(pad_block) < 3:
                 continue
 
-            pad = NativePad()
-
             # Pad number (second element, string)
-            pad.number = str(pad_block[1]) if pad_block[1] is not None else ""
+            number = str(pad_block[1]) if pad_block[1] is not None else ""
 
             # Pad type (third element: "smd", "thru_hole", "np_thru_hole")
-            pad.pad_type = str(pad_block[2]) if pad_block[2] is not None else ""
+            pad_type = str(pad_block[2]) if pad_block[2] is not None else ""
 
             # Shape (fourth element: "rect", "circle", "oval", etc.)
+            shape = ""
             if len(pad_block) > 3:
-                pad.shape = str(pad_block[3])
+                shape = str(pad_block[3])
 
             # Position
+            position: tuple[float, float] = (0.0, 0.0)
             at_vals = _find_at(pad_block)
             if at_vals and len(at_vals) >= 2:
-                pad.position = (at_vals[0], at_vals[1])
+                position = (at_vals[0], at_vals[1])
 
             # Size (size W H)
+            size: tuple[float, float] = (0.0, 0.0)
             size_block = _find_symbol(pad_block, "size")
             if size_block and len(size_block) >= 3:
                 try:
                     w = float(size_block[1])
                     h = float(size_block[2])
-                    pad.size = (w, h)
+                    size = (w, h)
                 except (ValueError, TypeError):
                     pass
 
             # Layers
+            layers = ""
             layers_block = _find_symbol(pad_block, "layers")
             if layers_block and len(layers_block) > 1:
                 # layers can have multiple values: (layers "*.Cu" "*.Mask")
@@ -584,17 +645,20 @@ class NativeParser:
                 for val in layers_block[1:]:
                     if isinstance(val, str):
                         layer_parts.append(val)
-                pad.layers = " ".join(layer_parts)
+                layers = " ".join(layer_parts)
 
             # Drill
+            drill = 0.0
             drill_block = _find_symbol(pad_block, "drill")
             if drill_block and len(drill_block) >= 2:
                 try:
-                    pad.drill = float(drill_block[1])
+                    drill = float(drill_block[1])
                 except (ValueError, TypeError):
                     pass
 
             # Net (net N "NAME") or (net "NAME")
+            net_name = ""
+            net_number = 0
             for item in pad_block:
                 if (
                     isinstance(item, list)
@@ -603,39 +667,59 @@ class NativeParser:
                 ):
                     if isinstance(item[1], str):
                         # (net "NAME") -- no number
-                        pad.net_name = item[1]
+                        net_name = item[1]
                     elif len(item) >= 3:
                         # (net N "NAME") -- has number
                         try:
-                            pad.net_number = int(item[1])
+                            net_number = int(item[1])
                         except (ValueError, TypeError):
                             pass
                         if isinstance(item[2], str):
-                            pad.net_name = item[2]
+                            net_name = item[2]
                     break
 
             # Pin function (pinfunction "name") -- Council HIGH-3
-            pad.pinfunction = _find_string_child(pad_block, "pinfunction")
+            pinfunction = _find_string_child(pad_block, "pinfunction")
 
             # Pin type (pintype "type") -- Council HIGH-3
-            pad.pintype = _find_string_child(pad_block, "pintype")
+            pintype = _find_string_child(pad_block, "pintype")
 
-            pads.append(pad)
+            pads.append(NativePad(
+                number=number,
+                net_name=net_name,
+                net_number=net_number,
+                position=position,
+                layers=layers,
+                shape=shape,
+                pad_type=pad_type,
+                pinfunction=pinfunction,
+                pintype=pintype,
+                size=size,
+                drill=drill,
+            ))
 
-        return pads
+        return tuple(pads)
 
     @classmethod
-    def _extract_segments(cls, root: list) -> list[NativeSegment]:
-        """Extract (segment ...) blocks."""
+    def _extract_segments(cls, root: list) -> tuple[NativeSegment, ...]:
+        """Extract (segment ...) blocks.
+
+        CR-01: returns a tuple. Builds locals then constructs each NativeSegment
+        in a single constructor call.
+        """
         segments: list[NativeSegment] = []
         for seg_block in _find_all_symbols(root, "segment"):
-            seg = NativeSegment()
+            start: _NativePosition | None = None
+            end: _NativePosition | None = None
+            width = 0.0
+            net_number = 0
+            net_name = ""
 
             # Start
             start_block = _find_symbol(seg_block, "start")
             if start_block and len(start_block) >= 3:
                 try:
-                    seg.start = _NativePosition(
+                    start = _NativePosition(
                         float(start_block[1]), float(start_block[2])
                     )
                 except (ValueError, TypeError):
@@ -645,7 +729,7 @@ class NativeParser:
             end_block = _find_symbol(seg_block, "end")
             if end_block and len(end_block) >= 3:
                 try:
-                    seg.end = _NativePosition(
+                    end = _NativePosition(
                         float(end_block[1]), float(end_block[2])
                     )
                 except (ValueError, TypeError):
@@ -655,12 +739,12 @@ class NativeParser:
             width_val = _find_first_value(seg_block, "width")
             if width_val is not None:
                 try:
-                    seg.width = float(width_val)
+                    width = float(width_val)
                 except (ValueError, TypeError):
                     pass
 
             # Layer
-            seg.layer = _find_string_child(seg_block, "layer")
+            layer = _find_string_child(seg_block, "layer")
 
             # Net
             # KiCad 10 format: (net "NAME")        -- string-only
@@ -669,37 +753,53 @@ class NativeParser:
             if net_block and len(net_block) >= 2:
                 # Phase 99 Gap 1: handle KiCad 10 string-only net format.
                 if isinstance(net_block[1], str):
-                    seg.net_name = net_block[1]
+                    net_name = net_block[1]
                     # No net_number in KiCad 10 string-only format; leave as 0.
                 else:
                     try:
-                        seg.net_number = int(net_block[1])
+                        net_number = int(net_block[1])
                     except (ValueError, TypeError):
                         pass
                     if len(net_block) >= 3 and isinstance(net_block[2], str):
-                        seg.net_name = net_block[2]
+                        net_name = net_block[2]
 
-            segments.append(seg)
+            segments.append(NativeSegment(
+                start=start,
+                end=end,
+                width=width,
+                layer=layer,
+                net_number=net_number,
+                net_name=net_name,
+            ))
 
-        return segments
+        return tuple(segments)
 
     @classmethod
-    def _extract_vias(cls, root: list) -> list[NativeVia]:
-        """Extract (via ...) blocks."""
+    def _extract_vias(cls, root: list) -> tuple[NativeVia, ...]:
+        """Extract (via ...) blocks.
+
+        CR-01: returns a tuple. Builds locals then constructs each NativeVia
+        in a single constructor call.
+        """
         vias: list[NativeVia] = []
         for via_block in _find_all_symbols(root, "via"):
-            via = NativeVia()
+            position: tuple[float, float] = (0.0, 0.0)
+            drill = 0.0
+            diameter = 0.0
+            net_number = 0
+            net_name = ""
+            layers: tuple[str, str] = ("", "")
 
             # Position
             at_vals = _find_at(via_block)
             if at_vals and len(at_vals) >= 2:
-                via.position = (at_vals[0], at_vals[1])
+                position = (at_vals[0], at_vals[1])
 
             # Size (diameter)
             size_val = _find_first_value(via_block, "size")
             if size_val is not None:
                 try:
-                    via.diameter = float(size_val)
+                    diameter = float(size_val)
                 except (ValueError, TypeError):
                     pass
 
@@ -707,7 +807,7 @@ class NativeParser:
             drill_val = _find_first_value(via_block, "drill")
             if drill_val is not None:
                 try:
-                    via.drill = float(drill_val)
+                    drill = float(drill_val)
                 except (ValueError, TypeError):
                     pass
 
@@ -715,76 +815,104 @@ class NativeParser:
             net_block = _find_symbol(via_block, "net")
             if net_block and len(net_block) >= 2:
                 if isinstance(net_block[1], str):
-                    via.net_name = net_block[1]
+                    net_name = net_block[1]
                 else:
                     try:
-                        via.net_number = int(net_block[1])
+                        net_number = int(net_block[1])
                     except (ValueError, TypeError):
                         pass
                     if len(net_block) >= 3 and isinstance(net_block[2], str):
-                        via.net_name = net_block[2]
+                        net_name = net_block[2]
 
             # Layers
             layers_block = _find_symbol(via_block, "layers")
             if layers_block and len(layers_block) >= 3:
-                via.layers = (
+                layers = (
                     str(layers_block[1]),
                     str(layers_block[2]),
                 )
 
-            vias.append(via)
+            vias.append(NativeVia(
+                position=position,
+                drill=drill,
+                diameter=diameter,
+                net_number=net_number,
+                net_name=net_name,
+                layers=layers,
+            ))
 
-        return vias
+        return tuple(vias)
 
     @classmethod
-    def _extract_zones(cls, root: list) -> list[NativeZone]:
-        """Extract (zone ...) blocks with CRITICAL-2 compatibility fields."""
+    def _extract_zones(cls, root: list) -> tuple[NativeZone, ...]:
+        """Extract (zone ...) blocks with CRITICAL-2 compatibility fields.
+
+        CR-01: returns a tuple. Builds locals then constructs each NativeZone
+        in a single constructor call.
+        """
         zones: list[NativeZone] = []
         for zone_block in _find_all_symbols(root, "zone"):
-            zone = NativeZone()
+            net_number = 0
+            net_name = ""
+            net = 0
+            netName = ""
+            layer = ""
+            layers: tuple[str, ...] = ()
+            polygon_points: list[tuple[float, float]] = []
+            clearance = 0.0
+            priority = 0
+            minThickness = 0.25
+            uuid = ""
+            keepout_tracks = "allowed"
+            keepout_vias = "allowed"
+            keepout_pads = "allowed"
+            keepout_copperpour = "allowed"
+            keepout_footprints = "allowed"
 
             # Net
             net_block = _find_symbol(zone_block, "net")
             if net_block and len(net_block) >= 2:
                 try:
                     net_num = int(net_block[1])
-                    zone.net_number = net_num
-                    zone.net = net_num  # CRITICAL-2 compatibility
+                    net_number = net_num
+                    net = net_num  # CRITICAL-2 compatibility
                 except (ValueError, TypeError):
                     pass
                 if len(net_block) >= 3 and isinstance(net_block[2], str):
-                    zone.net_name = net_block[2]
-                    zone.netName = net_block[2]  # CRITICAL-2 compatibility
+                    net_name = net_block[2]
+                    netName = net_block[2]  # CRITICAL-2 compatibility
 
             # Phase 99 Rule 1 fix: real KiCad zones emit (net N) and (net_name "NAME")
             # as SEPARATE sibling fields (not the combined (net N "NAME") form used in
             # nets list). Read the standalone (net_name ...) field so R-3 copper-pour
             # classification (Category 1: net_name != "") works on real fixtures.
-            if not zone.net_name:
+            if not net_name:
                 net_name_val = _find_string_child(zone_block, "net_name")
                 if net_name_val:
-                    zone.net_name = net_name_val
-                    zone.netName = net_name_val  # CRITICAL-2 compatibility
+                    net_name = net_name_val
+                    netName = net_name_val  # CRITICAL-2 compatibility
 
             # Layer
             layer_block = _find_symbol(zone_block, "layer")
             if layer_block and len(layer_block) >= 2:
-                zone.layer = str(layer_block[1])
-                zone.layers = [zone.layer]  # CRITICAL-2 compatibility
+                layer = str(layer_block[1])
+                layers = (layer,)  # CRITICAL-2 compatibility
 
             # Layers list (KiCad 10 zones can have multiple layers)
             layers_block = _find_symbol(zone_block, "layers")
             if layers_block and len(layers_block) > 1:
-                zone.layers = [str(v) for v in layers_block[1:] if isinstance(v, str)]
+                layers = tuple(
+                    str(v) for v in layers_block[1:] if isinstance(v, str)
+                )
 
             # UUID
-            zone.uuid = _find_string_child(zone_block, "uuid")
+            uuid = _find_string_child(zone_block, "uuid")
 
             # Priority
             prio_val = _find_first_value(zone_block, "priority")
             if prio_val is not None:
                 try:
-                    zone.priority = int(prio_val)
+                    priority = int(prio_val)
                 except (ValueError, TypeError):
                     pass
 
@@ -792,7 +920,7 @@ class NativeParser:
             clear_val = _find_first_value(zone_block, "clearance")
             if clear_val is not None:
                 try:
-                    zone.clearance = float(clear_val)
+                    clearance = float(clear_val)
                 except (ValueError, TypeError):
                     pass
 
@@ -800,7 +928,7 @@ class NativeParser:
             min_t_val = _find_first_value(zone_block, "min_thickness")
             if min_t_val is not None:
                 try:
-                    zone.minThickness = float(min_t_val)  # CRITICAL-2 field name
+                    minThickness = float(min_t_val)  # CRITICAL-2 field name
                 except (ValueError, TypeError):
                     pass
 
@@ -809,6 +937,13 @@ class NativeParser:
             # "not_allowed". Defaults remain "allowed" if subblock absent.
             keepout_block = _find_symbol(zone_block, "keepout")
             if keepout_block is not None:
+                keepout_lookup = {
+                    "keepout_tracks": keepout_tracks,
+                    "keepout_vias": keepout_vias,
+                    "keepout_pads": keepout_pads,
+                    "keepout_copperpour": keepout_copperpour,
+                    "keepout_footprints": keepout_footprints,
+                }
                 for field_name, attr_name in [
                     ("tracks", "keepout_tracks"),
                     ("vias", "keepout_vias"),
@@ -818,9 +953,16 @@ class NativeParser:
                 ]:
                     value = _find_first_value(keepout_block, field_name)
                     if value is not None:
-                        setattr(zone, attr_name, str(value))
+                        keepout_lookup[attr_name] = str(value)
+                keepout_tracks = keepout_lookup["keepout_tracks"]
+                keepout_vias = keepout_lookup["keepout_vias"]
+                keepout_pads = keepout_lookup["keepout_pads"]
+                keepout_copperpour = keepout_lookup["keepout_copperpour"]
+                keepout_footprints = keepout_lookup["keepout_footprints"]
 
-            # Polygon points (filled_polygon or polygon)
+            # Polygon points (filled_polygon or polygon) — accumulate in local
+            # list (frozen-friendly: local list is fine, only the dataclass field
+            # must be immutable).
             for poly_name in ("filled_polygon", "polygon"):
                 poly_block = _find_symbol(zone_block, poly_name)
                 if poly_block:
@@ -835,13 +977,30 @@ class NativeParser:
                                     try:
                                         x = float(pt_item[1])
                                         y = float(pt_item[2])
-                                        zone.polygon_points.append((x, y))
+                                        polygon_points.append((x, y))
                                     except (ValueError, TypeError):
                                         pass
 
-            zones.append(zone)
+            zones.append(NativeZone(
+                net_number=net_number,
+                net_name=net_name,
+                net=net,
+                netName=netName,
+                layer=layer,
+                layers=layers,
+                polygon_points=tuple(polygon_points),
+                clearance=clearance,
+                priority=priority,
+                minThickness=minThickness,
+                uuid=uuid,
+                keepout_tracks=keepout_tracks,
+                keepout_vias=keepout_vias,
+                keepout_pads=keepout_pads,
+                keepout_copperpour=keepout_copperpour,
+                keepout_footprints=keepout_footprints,
+            ))
 
-        return zones
+        return tuple(zones)
 
     @classmethod
     def _extract_graphic_items(cls, root: list) -> list[NativeGraphicItem]:
@@ -878,14 +1037,27 @@ class NativeParser:
     def _parse_graphic_block(
         cls, block: list, item_type: str
     ) -> NativeGraphicItem | None:
-        """Parse a graphic item block into NativeGraphicItem."""
-        gi = NativeGraphicItem(item_type=item_type)
+        """Parse a graphic item block into NativeGraphicItem.
+
+        CR-01: builds locals then constructs the frozen dataclass in a single
+        constructor call (no in-place mutation).
+        """
+        start: _NativePosition | None = None
+        end: _NativePosition | None = None
+        center: _NativePosition | None = None
+        mid: _NativePosition | None = None
+        radius = 0.0
+        width = 0.0
+        filled: str | None = None
+        text = ""
+        font_size = 0.0
+        target_size = 0.0
 
         # Start
         start_block = _find_symbol(block, "start")
         if start_block and len(start_block) >= 3:
             try:
-                gi.start = _NativePosition(
+                start = _NativePosition(
                     float(start_block[1]), float(start_block[2])
                 )
             except (ValueError, TypeError):
@@ -895,7 +1067,7 @@ class NativeParser:
         end_block = _find_symbol(block, "end")
         if end_block and len(end_block) >= 3:
             try:
-                gi.end = _NativePosition(
+                end = _NativePosition(
                     float(end_block[1]), float(end_block[2])
                 )
             except (ValueError, TypeError):
@@ -905,7 +1077,7 @@ class NativeParser:
         center_block = _find_symbol(block, "center")
         if center_block and len(center_block) >= 3:
             try:
-                gi.center = _NativePosition(
+                center = _NativePosition(
                     float(center_block[1]), float(center_block[2])
                 )
             except (ValueError, TypeError):
@@ -915,7 +1087,7 @@ class NativeParser:
         mid_block = _find_symbol(block, "mid")
         if mid_block and len(mid_block) >= 3:
             try:
-                gi.mid = _NativePosition(
+                mid = _NativePosition(
                     float(mid_block[1]), float(mid_block[2])
                 )
             except (ValueError, TypeError):
@@ -925,28 +1097,28 @@ class NativeParser:
         radius_val = _find_first_value(block, "radius")
         if radius_val is not None:
             try:
-                gi.radius = float(radius_val)
+                radius = float(radius_val)
             except (ValueError, TypeError):
                 pass
 
         # Layer
-        gi.layer = _find_string_child(block, "layer")
+        layer = _find_string_child(block, "layer")
 
         # Width / stroke
         width_val = _find_first_value(block, "width")
         if width_val is not None:
             try:
-                gi.width = float(width_val)
+                width = float(width_val)
             except (ValueError, TypeError):
                 pass
 
         # Also check stroke width for KiCad 10 format
         stroke_block = _find_symbol(block, "stroke")
-        if stroke_block and not gi.width:
+        if stroke_block and not width:
             stroke_width = _find_first_value(stroke_block, "width")
             if stroke_width is not None:
                 try:
-                    gi.width = float(stroke_width)
+                    width = float(stroke_width)
                 except (ValueError, TypeError):
                     pass
 
@@ -954,17 +1126,17 @@ class NativeParser:
         filled_val = _find_first_value(block, "fill")
         if filled_val is not None:
             # (fill yes) or (fill no) -> "yes"/"no"
-            gi.filled = str(filled_val)
+            filled = str(filled_val)
 
         # UUID
-        gi.uuid = _find_string_child(block, "uuid")
+        uuid = _find_string_child(block, "uuid")
 
         # P-BUG-005: Text content (gr_text, gr_text_box)
         if item_type in ("text", "text_box"):
             # gr_text: (gr_text "text content" ...)
             # gr_text_box: (gr_text_box "text content" ...)
             if len(block) > 1 and isinstance(block[1], str):
-                gi.text = block[1]
+                text = block[1]
             # Also check for (effects ...) font size
             effects_block = _find_symbol(block, "effects")
             if effects_block:
@@ -973,7 +1145,7 @@ class NativeParser:
                     size_block = _find_symbol(font_block, "size")
                     if size_block and len(size_block) >= 3:
                         try:
-                            gi.font_size = float(size_block[1])
+                            font_size = float(size_block[1])
                         except (ValueError, TypeError):
                             pass
                 # Check rotation in effects
@@ -987,35 +1159,48 @@ class NativeParser:
         if item_type == "dimension":
             dim_text = _find_symbol(block, "property")
             if dim_text and len(dim_text) >= 3 and isinstance(dim_text[2], str):
-                gi.text = dim_text[2]
+                text = dim_text[2]
 
         # P-BUG-005: Target size
         if item_type == "target":
             size_val = _find_first_value(block, "size")
             if size_val is not None:
                 try:
-                    gi.target_size = float(size_val)
+                    target_size = float(size_val)
                 except (ValueError, TypeError):
                     pass
 
-        return gi
+        return NativeGraphicItem(
+            item_type=item_type,
+            start=start,
+            end=end,
+            mid=mid,
+            center=center,
+            radius=radius,
+            layer=layer,
+            width=width,
+            filled=filled,
+            uuid=uuid,
+            text=text,
+            font_size=font_size,
+            target_size=target_size,
+        )
 
     @classmethod
     def _extract_general(cls, root: list) -> NativeGeneral:
         """Extract (general ...) section. CRITICAL-2 compatibility."""
-        general = NativeGeneral()
+        thickness = 1.6
+        layers: tuple = ()
 
         gen_block = _find_symbol(root, "general")
-        if gen_block is None:
-            return general
-
-        # Thickness
-        thickness_val = _find_first_value(gen_block, "thickness")
-        if thickness_val is not None:
-            try:
-                general.thickness = float(thickness_val)
-            except (ValueError, TypeError):
-                pass
+        if gen_block is not None:
+            # Thickness
+            thickness_val = _find_first_value(gen_block, "thickness")
+            if thickness_val is not None:
+                try:
+                    thickness = float(thickness_val)
+                except (ValueError, TypeError):
+                    pass
 
         # Layers (top-level layers, not general's children)
         layers_block = _find_symbol(root, "layers")
@@ -1026,9 +1211,9 @@ class NativeParser:
                     layer_list.append(str(item[1]))
                 elif isinstance(item, str):
                     layer_list.append(item)
-            general.layers = layer_list
+            layers = tuple(layer_list)
 
-        return general
+        return NativeGeneral(thickness=thickness, layers=layers)
 
     @classmethod
     def _extract_setup(cls, root: list) -> NativeSetup | None:
@@ -1044,15 +1229,14 @@ class NativeParser:
         if setup_block is None:
             return None
 
-        setup = NativeSetup()
-
+        stackup: NativeStackup | None = None
         stackup_block = _find_symbol(setup_block, "stackup")
         if stackup_block is not None:
-            stackup = NativeStackup()
-            stackup.layers = cls._extract_stackup_layers(stackup_block)
-            setup.stackup = stackup
+            stackup = NativeStackup(
+                layers=tuple(cls._extract_stackup_layers(stackup_block))
+            )
 
-        return setup
+        return NativeSetup(stackup=stackup)
 
     @classmethod
     def _extract_stackup_layers(cls, stackup_block: list) -> list:

@@ -324,9 +324,13 @@ class TestExternalConsumerCompatibility:
     """Council CRITICAL-2: External consumers access ir.board attributes transparently."""
 
     def test_ir_board_graphicItems_compatible(self, native_ir: PcbIR):
-        """ir.board.graphicItems returns same as ir.board.graphic_items."""
+        """ir.board.graphicItems returns a list view over graphic_items.
+
+        CR-01: graphicItems is now a list-returning property over the tuple
+        storage (identity no longer holds; equality does).
+        """
         board = native_ir.board
-        assert board.graphicItems is board.graphic_items
+        assert board.graphicItems == list(board.graphic_items)
 
     def test_ir_board_traceItems_compatible(self, native_ir: PcbIR):
         """ir.board.traceItems returns combined segments+vias."""
@@ -355,9 +359,12 @@ class TestExternalConsumerCompatibility:
         assert len(layers) > 0
 
     def test_ir_board_zones_compat(self, native_ir: PcbIR):
-        """ir.board.zones list is accessible (empty for Arduino Mega but valid)."""
+        """ir.board.zones is accessible (empty for Arduino Mega but valid).
+
+        CR-01: zones is a tuple (immutable storage). Accept tuple or list.
+        """
         board = native_ir.board
-        assert isinstance(board.zones, list)
+        assert isinstance(board.zones, (list, tuple))
 
 
 # ---------------------------------------------------------------------------

@@ -23,9 +23,10 @@ class TestNativeBoard:
     def test_creation_empty(self):
         """NativeBoard can be created with minimal args."""
         board = NativeBoard(raw_content="", file_path="")
-        assert board.footprints == []
-        assert board.nets == []
-        assert board.segments == []
+        # CR-01: collection fields default to empty tuples (immutable).
+        assert board.footprints == ()
+        assert board.nets == ()
+        assert board.segments == ()
 
     def test_creation_with_content(self):
         """NativeBoard stores raw_content."""
@@ -41,8 +42,9 @@ class TestNativeFootprint:
         """NativeFootprint can be created."""
         fp = NativeFootprint()
         assert fp.lib_id == ""
-        assert fp.pads == []
-        assert fp.graphic_items == []
+        # CR-01: collection fields default to empty tuples (immutable).
+        assert fp.pads == ()
+        assert fp.graphic_items == ()
 
 
 class TestNativeNet:
@@ -81,7 +83,8 @@ class TestNativeZone:
     def test_creation(self):
         """NativeZone can be created."""
         zone = NativeZone()
-        assert zone.polygon_points == []
+        # CR-01: collection fields default to empty tuples (immutable).
+        assert zone.polygon_points == ()
 
 
 class TestNativeGraphicItem:
@@ -108,12 +111,13 @@ class TestParsePcbContent:
     def test_empty_content(self):
         """Empty content returns empty board."""
         board = NativeParser.parse_pcb_content("")
-        assert board.footprints == []
+        # CR-01: collection fields default to empty tuples (immutable).
+        assert board.footprints == ()
 
     def test_whitespace_only(self):
         """Whitespace-only content returns empty board."""
         board = NativeParser.parse_pcb_content("   \n  ")
-        assert board.footprints == []
+        assert board.footprints == ()
 
     def test_minimal_valid(self):
         """Minimal valid PCB content parses."""

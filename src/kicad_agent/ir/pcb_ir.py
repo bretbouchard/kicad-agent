@@ -132,16 +132,27 @@ class PcbIR(BaseIR):
 
     @property
     def footprints(self) -> list:
-        """Access to PCB footprints."""
+        """Access to PCB footprints.
+
+        CR-01: NativeBoard stores footprints as a tuple (immutable). Return a
+        list view for backward compatibility with downstream consumers and
+        existing tests that expect a list. The underlying storage is still
+        immutable — callers must use PcbIR mutation methods, not direct append.
+        """
         if self._native_board is not None:
-            return self._native_board.footprints
+            return list(self._native_board.footprints)
         return self._parse_result.kiutils_obj.footprints
 
     @property
     def nets(self) -> list:
-        """Access to PCB nets."""
+        """Access to PCB nets.
+
+        CR-01: returns a list view over the immutable tuple storage. Use
+        PcbIR.add_net/remove_net/rename_net to mutate — direct append on the
+        returned list will NOT update the underlying NativeBoard.
+        """
         if self._native_board is not None:
-            return self._native_board.nets
+            return list(self._native_board.nets)
         return self._parse_result.kiutils_obj.nets
 
     @property
@@ -187,10 +198,15 @@ class PcbIR(BaseIR):
         if self._is_native:
             from kicad_agent.parser.pcb_native_types import NativeNet
             net = NativeNet(number=net_number, name=net_name)
+            # CR-01: NativeBoard is frozen — build a new board via replace.
+            self._native_board = replace(
+                self._native_board,
+                nets=(*self._native_board.nets, net),
+            )
         else:
             net = Net(number=net_number, name=net_name)
+            self.board.nets.append(net)
 
-        self.board.nets.append(net)
         self._record_mutation("add_net", {
             "net_name": net_name,
             "net_number": net_number,
@@ -211,20 +227,38 @@ class PcbIR(BaseIR):
             raise ValueError(f"Net '{net_name}' not found")
 
         # Disconnect all pads connected to this net
-        for fp in self.board.footprints:
-            for pad in fp.pads:
-                if self._is_native:
-                    # NativePad has .net_name directly
-                    if pad.net_name == net_name:
-                        pad.net_name = ""
-                        pad.net_number = 0
-                else:
+        if self._is_native:
+            # CR-01: NativeBoard/NativeFootprint/NativePad are frozen —
+            # rebuild footprints and pads via dataclasses.replace.
+            new_footprints = tuple(
+                replace(
+                    fp,
+                    pads=tuple(
+                        replace(pad, net_name="", net_number=0)
+                        if pad.net_name == net_name
+                        else pad
+                        for pad in fp.pads
+                    ),
+                )
+                for fp in self._native_board.footprints
+            )
+            new_nets = tuple(
+                n for n in self._native_board.nets if n.name != net_name
+            )
+            self._native_board = replace(
+                self._native_board,
+                footprints=new_footprints,
+                nets=new_nets,
+            )
+        else:
+            for fp in self.board.footprints:
+                for pad in fp.pads:
                     # kiutils pad has .net (Net object)
                     if pad.net is not None and pad.net.name == net_name:
                         pad.net = None
+            # Remove the net from the board in-place (avoids stale list references)
+            self.board.nets[:] = [n for n in self.board.nets if n.name != net_name]
 
-        # Remove the net from the board in-place (avoids stale list references)
-        self.board.nets[:] = [n for n in self.board.nets if n.name != net_name]
         self._record_mutation("remove_net", {"net_name": net_name})
 
     def rename_net(self, old_name: str, new_name: str) -> None:
@@ -241,17 +275,28 @@ class PcbIR(BaseIR):
             raise ValueError(f"Net '{new_name}' already exists")
 
         if self._is_native:
-            # Update the net in board.nets
-            for i, n in enumerate(self.board.nets):
-                if n.name == old_name:
-                    n.name = new_name
-                    break
-
-            # Propagate to all connected pads
-            for fp in self.board.footprints:
-                for pad in fp.pads:
-                    if pad.net_name == old_name:
-                        pad.net_name = new_name
+            # CR-01: rebuild nets and footprints/pads immutably via replace.
+            new_nets = tuple(
+                replace(n, name=new_name) if n.name == old_name else n
+                for n in self._native_board.nets
+            )
+            new_footprints = tuple(
+                replace(
+                    fp,
+                    pads=tuple(
+                        replace(pad, net_name=new_name)
+                        if pad.net_name == old_name
+                        else pad
+                        for pad in fp.pads
+                    ),
+                )
+                for fp in self._native_board.footprints
+            )
+            self._native_board = replace(
+                self._native_board,
+                nets=new_nets,
+                footprints=new_footprints,
+            )
         else:
             # Update the net in board.nets
             for i, n in enumerate(self.board.nets):
@@ -350,18 +395,34 @@ class PcbIR(BaseIR):
                 if pad.net_name:
                     pad_nets[pad.number] = (pad.net_name, pad.net_number)
 
-            # Update the lib_id
-            fp.lib_id = new_footprint_lib_id
-
-            # Restore pad nets for matching pad numbers
+            # CR-01: rebuild pads immutably via replace, then rebuild the
+            # footprint and the board's footprints tuple.
             preserved_count = 0
+            new_pads_list = []
             for pad in fp.pads:
                 if pad.number in pad_nets:
-                    pad.net_name, pad.net_number = pad_nets[pad.number]
+                    saved_name, saved_num = pad_nets[pad.number]
+                    new_pads_list.append(
+                        replace(pad, net_name=saved_name, net_number=saved_num)
+                    )
                     preserved_count += 1
                 else:
-                    pad.net_name = ""
-                    pad.net_number = 0
+                    new_pads_list.append(
+                        replace(pad, net_name="", net_number=0)
+                    )
+
+            new_fp = replace(
+                fp,
+                lib_id=new_footprint_lib_id,
+                pads=tuple(new_pads_list),
+            )
+            self._native_board = replace(
+                self._native_board,
+                footprints=tuple(
+                    new_fp if cur_fp is fp else cur_fp
+                    for cur_fp in self._native_board.footprints
+                ),
+            )
         else:
             # Save current pad-to-net mapping
             pad_nets_k: dict[str, Any] = {}
