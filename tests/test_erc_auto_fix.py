@@ -323,3 +323,67 @@ class TestOpMetaDeprecatedField:
             assert meta.deprecated is False, (
                 f"{op_type} should NOT be deprecated (only erc_auto_fix ops are)"
             )
+
+
+class TestErcAutoFixDeprecationWarning:
+    """Tests that handler entry points emit DeprecationWarning (P0-003)."""
+
+    def test_erc_auto_fix_emits_deprecation_warning(self, arduino_ir, tmp_path):
+        """erc_auto_fix() must emit DeprecationWarning referencing P0-003."""
+        import warnings
+        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+
+        # Copy fixture to tmp so we don't mutate the original
+        target = tmp_path / "test.kicad_sch"
+        target.write_bytes(ARDUINO_SCH.read_bytes())
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            try:
+                erc_auto_fix(arduino_ir, target, max_iterations=1)
+            except Exception:
+                # Warning must fire BEFORE any file mutation or exception
+                # propagation. We only care about the warning here.
+                pass
+
+        deprecation_warnings = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+        assert len(deprecation_warnings) >= 1, (
+            "erc_auto_fix must emit at least one DeprecationWarning"
+        )
+        msg = str(deprecation_warnings[0].message)
+        assert "DEPRECATED" in msg, (
+            f"Warning message must contain 'DEPRECATED', got: {msg}"
+        )
+        assert "P0-003" in msg, (
+            f"Warning message must reference P0-003, got: {msg}"
+        )
+
+    def test_erc_auto_fix_hierarchical_emits_deprecation_warning(self, tmp_path):
+        """erc_auto_fix_hierarchical() must emit DeprecationWarning referencing P0-003."""
+        import warnings
+        from kicad_agent.ops.erc_auto_fix import erc_auto_fix_hierarchical
+
+        # Copy fixture to tmp so we don't mutate the original
+        target = tmp_path / "test.kicad_sch"
+        target.write_bytes(ARDUINO_SCH.read_bytes())
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            try:
+                erc_auto_fix_hierarchical(target, max_iterations=1)
+            except Exception:
+                # Warning must fire BEFORE any file mutation or exception
+                # propagation. We only care about the warning here.
+                pass
+
+        deprecation_warnings = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+        assert len(deprecation_warnings) >= 1, (
+            "erc_auto_fix_hierarchical must emit at least one DeprecationWarning"
+        )
+        msg = str(deprecation_warnings[0].message)
+        assert "DEPRECATED" in msg, (
+            f"Warning message must contain 'DEPRECATED', got: {msg}"
+        )
+        assert "P0-003" in msg, (
+            f"Warning message must reference P0-003, got: {msg}"
+        )
