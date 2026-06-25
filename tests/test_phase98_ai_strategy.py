@@ -231,7 +231,10 @@ class TestCategoryFallback:
         result = strategy.strategize(_make_board_state(), _make_netlist())
         assert isinstance(result, RoutingStrategyResult)
         assert result.routing_notes.startswith("ai_fallback:")
-        assert "net_priorities" in result.routing_notes or "ValueError" in result.routing_notes
+        # IN-04 (Council): tighten to the specific violation. N1 is in the
+        # netlist but missing from net_priorities, so R-4 raises the
+        # "missing from net_priorities" message (per strategy_validator.py).
+        assert "missing from net_priorities" in result.routing_notes
 
     def test_f5_invalid_layer_falls_back(self) -> None:
         # 2-layer board (validator with board=None defaults to {F.Cu, B.Cu}).
