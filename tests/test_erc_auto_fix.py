@@ -254,3 +254,72 @@ class TestExecutorDispatch:
         ]
         for op_type in ops:
             assert op_type in _SCHEMATIC_HANDLERS, f"{op_type} not registered"
+
+
+# --- Phase 101-01: OpMeta deprecation field (R-3 / P0-003) ---
+
+
+class TestOpMetaDeprecatedField:
+    """Tests that OpMeta has a deprecated field and the two erc_auto_fix ops use it."""
+
+    def test_opmeta_has_deprecated_field(self):
+        """OpMeta model must have a `deprecated` field of type bool with default False."""
+        from kicad_agent.ops.registry import OpMeta
+
+        assert "deprecated" in OpMeta.model_fields, (
+            "OpMeta must have a 'deprecated' field"
+        )
+        # Default must be False (backward compat for all other ops)
+        meta = OpMeta(
+            op_type="test_op",
+            category="test",
+            description="test",
+            file_types=[".kicad_sch"],
+            is_readonly=True,
+            scope="single_file",
+            requires=[],
+            conflicts=[],
+        )
+        assert meta.deprecated is False, (
+            "deprecated field must default to False for backward compatibility"
+        )
+
+    def test_erc_auto_fix_registry_deprecated_flag(self):
+        """OPERATION_REGISTRY['erc_auto_fix'] must have deprecated=True."""
+        from kicad_agent.ops.registry import OPERATION_REGISTRY
+
+        meta = OPERATION_REGISTRY.get("erc_auto_fix")
+        assert meta is not None, "erc_auto_fix must be in OPERATION_REGISTRY"
+        assert meta.deprecated is True, (
+            "erc_auto_fix must be marked deprecated=True (P0-003)"
+        )
+
+    def test_erc_auto_fix_hierarchical_registry_deprecated_flag(self):
+        """OPERATION_REGISTRY['erc_auto_fix_hierarchical'] must have deprecated=True."""
+        from kicad_agent.ops.registry import OPERATION_REGISTRY
+
+        meta = OPERATION_REGISTRY.get("erc_auto_fix_hierarchical")
+        assert meta is not None, (
+            "erc_auto_fix_hierarchical must be in OPERATION_REGISTRY"
+        )
+        assert meta.deprecated is True, (
+            "erc_auto_fix_hierarchical must be marked deprecated=True (P0-003)"
+        )
+
+    def test_non_deprecated_ops_default_false(self):
+        """A sampling of other ops must have deprecated=False (no collateral deprecation)."""
+        from kicad_agent.ops.registry import OPERATION_REGISTRY
+
+        sample_ops = [
+            "add_component",
+            "remove_component",
+            "add_wire",
+            "update_symbols_from_library",
+            "place_missing_units",
+        ]
+        for op_type in sample_ops:
+            meta = OPERATION_REGISTRY.get(op_type)
+            assert meta is not None, f"{op_type} must be in registry"
+            assert meta.deprecated is False, (
+                f"{op_type} should NOT be deprecated (only erc_auto_fix ops are)"
+            )
