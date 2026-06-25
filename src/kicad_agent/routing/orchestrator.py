@@ -581,6 +581,14 @@ class RoutingOrchestrator:
             net_name: Name of the net whose routed segments/vias to remove.
             undo_stack: Optional PersistentUndoStack for snapshotting the
                 rollback. If provided, a pre-rollback snapshot is pushed.
+
+        LO-02 stale-IR warning: this method takes pcb_path (not a PcbIR),
+        so any in-memory PcbIR held by the caller (e.g., an
+        InteractiveRoutingSession caching _netlist / _suggestions) becomes
+        STALE after rollback. Callers that reuse an IR across a rollback
+        MUST re-parse via NativeParser.parse_pcb / PcbIR.from_native before
+        reading board state again. extract_netlist / get_board_bounds on a
+        stale IR will return pre-rollback data.
         """
         from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
         from kicad_agent.parser.pcb_native_parser import NativeParser
@@ -639,6 +647,16 @@ class RoutingOrchestrator:
         Pops the most recent undo entry for pcb_path and restores its
         pre_content. This is a full rollback (all nets), coarser than
         rollback_net but simpler and guaranteed consistent.
+
+        LO-01 PRE/POST duality: route_board pushes TWO undo entries — a
+        "route_board_pre" entry (capturing the pre-route state in BOTH
+        pre_content and post_content) and a "route_board_post" entry
+        (capturing pre-route in pre_content and post-route in post_content).
+        pop_undo returns the most recent (POST) entry first. Restoring
+        its pre_content reverts to the PRE-ROUTE state. A second
+        rollback_full call pops the PRE entry and restores to the same
+        pre-route state (a no-op masked as success). Callers that need
+        idempotent rollback should check the PCB content before calling.
         """
         entry = undo_stack.pop_undo(pcb_path)
         if entry is not None:
