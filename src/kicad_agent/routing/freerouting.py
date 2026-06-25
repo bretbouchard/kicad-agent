@@ -37,6 +37,16 @@ logger = logging.getLogger(__name__)
 # Default Freerouting JAR name (downloaded from freerouting.org)
 _FREEROUTING_JAR = "freerouting.jar"
 
+# Provenance: stock Freerouting build 20f1a72e546b9b23c7ba5127086885cfacbdd4be
+# Built 2026-05-13 with Java 25.0.2 (Eclipse Adoptium 25.0.2+10-LTS).
+# Newer than upstream v2.2.4 release — includes multi-layer routing fix (v2.2.3)
+# and board-hash stagnation detection (v2.2.4). Byte-identical copies at:
+#   ~/.kicad-agent/tools/freerouting.jar  (canonical, loaded via _find_freerouting)
+#   ~/apps/freerouting/freerouting.jar    (reference copy)
+# sha1: 4a2a586f8e749bed0810da9722b959703db8974a
+_FREEROUTING_BUILD_REVISION = "20f1a72e546b9b23c7ba5127086885cfacbdd4be"
+_FREEROUTING_BUILD_SHA1 = "4a2a586f8e749bed0810da9722b959703db8974a"
+
 # DSN export/import file extensions
 _DSN_EXTENSION = ".dsn"
 _SES_EXTENSION = ".ses"
