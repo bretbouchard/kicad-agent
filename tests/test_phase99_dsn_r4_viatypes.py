@@ -234,12 +234,23 @@ class TestMicroviaDeferralBeadExists:
     Since Beads MCP is unavailable in this executor context, we verify via a
     documented deferral in SUMMARY.md instead (see 99-02-SUMMARY.md).
     This test asserts the deferral is documented, not that a Bead exists.
+
+    Council IN-07: the .planning/ path coupling here is a KNOWN WORKAROUND
+    for the §7.7 no-silent-deferral rule without Beads MCP access in the test
+    environment. The test skips gracefully if the SUMMARY is absent. When Beads
+    MCP is available in CI, this should migrate to assert a deferred Bead with
+    labels 'council-deferred,feature,phase-99,r-4-microvia' exists, or the
+    deferral should move to a phase-local DEFERRALS.md that is not gitignored
+    (unlike .planning/). The current coupling is acceptable because the SUMMARY
+    is written at plan completion and the assertion is keyword-based ('microvia'),
+    not phase-number-specific beyond the directory path.
     """
 
     def test_microvia_deferral_documented(self) -> None:
         """Microvia deferral is documented in 99-02-SUMMARY.md (H-1 fix)."""
-        summary = Path(__file__).parent.parent / ".planning" / "phases" / (
-            "99-freerouting-integration-hardening" / "99-02-SUMMARY.md"
+        summary = (
+            Path(__file__).parent.parent / ".planning" / "phases"
+            / "99-freerouting-integration-hardening" / "99-02-SUMMARY.md"
         )
         if not summary.exists():
             pytest.skip("99-02-SUMMARY.md not yet written (written at plan completion)")
