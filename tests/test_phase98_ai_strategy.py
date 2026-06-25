@@ -1,12 +1,15 @@
-"""Phase 98 Task 3: AiRoutingStrategy class implementing RoutingStrategy Protocol.
+"""Phase 98 Plan 01+02: AiRoutingStrategy class implementing RoutingStrategy Protocol.
 
 Tests verify R-1 (Protocol compliance via structural subtyping, NO inheritance),
 R-3 (translation correctness with safe defaults), and error paths (empty
 output, render failure). Uses mocked pipeline — never loads the 23.8 GB Gemma
 model in unit tests.
 
-Fallback wiring (R-6) lives in Plan 98-02; this plan tests the error-raising
-path directly via _AiStrategyError.
+Plan 02 extends this with R-6 fallback wiring: any failure (empty output,
+malformed JSON, validation failure, render failure, inference failure) is
+caught and replaced with a DeterministicStrategy result whose routing_notes
+is prefixed ``ai_fallback:``. The original ``_AiStrategyError``-raising tests
+in TestErrorPaths have been replaced with fallback-asserting equivalents.
 """
 
 from __future__ import annotations
@@ -17,14 +20,16 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.routing.ai_strategy import AiRoutingStrategy, _AiStrategyError
+from kicad_agent.routing.ai_strategy import AiRoutingStrategy
 from kicad_agent.routing.strategy import (
     BoardState,
+    DeterministicStrategy,
     Pin,
     RouterBackend,
     RoutingStrategy,
     RoutingStrategyResult,
 )
+from kicad_agent.routing.strategy_validator import StrategyValidator
 
 
 def _make_board_state(total_nets: int = 3) -> BoardState:
@@ -56,6 +61,9 @@ def _make_netlist() -> dict[str, list[Pin]]:
 def _make_strategy(
     pipeline_output: str = '{"net_priorities": []}',
     render_fn=None,
+    *,
+    validator: StrategyValidator | None = None,
+    board=None,
 ) -> AiRoutingStrategy:
     pipeline = MagicMock()
     pipeline.generate_from_image.return_value = pipeline_output
@@ -65,6 +73,19 @@ def _make_strategy(
         pipeline=pipeline,
         pcb_path=Path("/fake/board.kicad_pcb"),
         render_fn=render_fn,
+        validator=validator,
+        board=board,
+    )
+
+
+def _valid_full_json() -> str:
+    """Model JSON that should pass R-4 validation and NOT trigger fallback."""
+    return (
+        '{"net_priorities": ["GND", "VCC", "N1"], '
+        '"router_assignment": {"GND": "astar", "VCC": "astar", "N1": "astar"}, '
+        '"layer_hints": {}, '
+        '"keepouts": [], '
+        '"routing_notes": "ok"}'
     )
 
 
@@ -149,21 +170,133 @@ class TestResultTranslation:
         assert "BOGUS" not in result.router_assignment
 
 
-class TestErrorPaths:
-    def test_empty_model_output_raises_ai_strategy_error(self) -> None:
+class TestCategoryFallback:
+    """R-6 fallback wiring: any failure -> DeterministicStrategy result.
+
+    Every fallback result must:
+    - Be a RoutingStrategyResult
+    - Have routing_notes starting with "ai_fallback:"
+    - Have non-empty net_priorities (fallback always produces valid output)
+    - Equal DeterministicStrategy().strategize(same inputs) except for notes
+    """
+
+    def test_f1_empty_output_falls_back(self) -> None:
         strategy = _make_strategy("")
-        with pytest.raises(_AiStrategyError):
-            strategy.strategize(_make_board_state(), _make_netlist())
+        result = strategy.strategize(_make_board_state(), _make_netlist())
+        expected = DeterministicStrategy().strategize(
+            _make_board_state(), _make_netlist()
+        )
+        assert isinstance(result, RoutingStrategyResult)
+        assert result.routing_notes.startswith("ai_fallback:")
+        assert result.net_priorities == expected.net_priorities
+        assert result.router_assignment == expected.router_assignment
 
-    def test_render_failure_raises_ai_strategy_error(self) -> None:
+    def test_f2_malformed_json_falls_back(self) -> None:
+        strategy = _make_strategy("I cannot help with that.")
+        result = strategy.strategize(_make_board_state(), _make_netlist())
+        assert isinstance(result, RoutingStrategyResult)
+        assert result.routing_notes.startswith("ai_fallback:")
+
+    def test_f3_invalid_coordinates_fall_back(self) -> None:
+        # Valid JSON, but keepout x1 is out of bounds.
+        raw = (
+            '{"net_priorities": ["GND", "VCC", "N1"], '
+            '"router_assignment": {"GND": "astar", "VCC": "astar", "N1": "astar"}, '
+            '"layer_hints": {}, '
+            '"keepouts": [{"x1": -999.0, "y1": 0.0, "x2": 10.0, "y2": 10.0, '
+            '"layer": "F.Cu", "reason": "bad"}]}'
+        )
+        strategy = _make_strategy(raw)
+        result = strategy.strategize(_make_board_state(), _make_netlist())
+        assert isinstance(result, RoutingStrategyResult)
+        assert result.routing_notes.startswith("ai_fallback:")
+
+    def test_f4_unknown_net_falls_back(self) -> None:
+        # Valid JSON structure but references a phantom net.
+        raw = (
+            '{"net_priorities": ["GND", "VCC", "N1", "PHANTOM"], '
+            '"router_assignment": {"GND": "astar", "VCC": "astar", "N1": "astar"}, '
+            '"layer_hints": {}, "keepouts": []}'
+        )
+        strategy = _make_strategy(raw)
+        result = strategy.strategize(_make_board_state(), _make_netlist())
+        assert isinstance(result, RoutingStrategyResult)
+        assert result.routing_notes.startswith("ai_fallback:")
+
+    def test_f5_invalid_layer_falls_back(self) -> None:
+        # 2-layer board (validator with board=None defaults to {F.Cu, B.Cu}).
+        # Model suggests In3.Cu -> validator rejects -> fallback.
+        raw = (
+            '{"net_priorities": ["GND", "VCC", "N1"], '
+            '"router_assignment": {"GND": "astar", "VCC": "astar", "N1": "astar"}, '
+            '"layer_hints": {"GND": "In3.Cu"}, '
+            '"keepouts": []}'
+        )
+        strategy = _make_strategy(raw)
+        result = strategy.strategize(_make_board_state(), _make_netlist())
+        assert isinstance(result, RoutingStrategyResult)
+        assert result.routing_notes.startswith("ai_fallback:")
+
+    def test_f6_render_failure_falls_back(self) -> None:
         def failing_render(pcb_path):
-            raise RuntimeError("kicad-cli exploded")
+            raise FileNotFoundError("kicad-cli not found")
 
-        strategy = _make_strategy('{"net_priorities": []}', render_fn=failing_render)
-        with pytest.raises(_AiStrategyError, match="render"):
-            strategy.strategize(_make_board_state(), _make_netlist())
+        strategy = _make_strategy(_valid_full_json(), render_fn=failing_render)
+        result = strategy.strategize(_make_board_state(), _make_netlist())
+        assert isinstance(result, RoutingStrategyResult)
+        assert result.routing_notes.startswith("ai_fallback:")
+        # Render-failure path should mention the failure in the notes.
+        assert "FileNotFoundError" in result.routing_notes or "render" in result.routing_notes.lower()
 
-    def test_unparseable_output_raises_ai_strategy_error(self) -> None:
-        strategy = _make_strategy("totally not json at all")
-        with pytest.raises(_AiStrategyError):
-            strategy.strategize(_make_board_state(), _make_netlist())
+    def test_f7_inference_exception_falls_back(self) -> None:
+        pipeline = MagicMock()
+        pipeline.generate_from_image.side_effect = RuntimeError("model OOM")
+        strategy = AiRoutingStrategy(
+            pipeline=pipeline,
+            pcb_path=Path("/fake/board.kicad_pcb"),
+            render_fn=MagicMock(return_value=MagicMock()),
+        )
+        result = strategy.strategize(_make_board_state(), _make_netlist())
+        assert isinstance(result, RoutingStrategyResult)
+        assert result.routing_notes.startswith("ai_fallback:")
+
+    def test_f8_happy_path_does_not_trigger_fallback(self) -> None:
+        # Valid JSON that passes R-4 validation -> routing_notes must NOT
+        # start with ai_fallback:.
+        strategy = _make_strategy(_valid_full_json())
+        result = strategy.strategize(_make_board_state(), _make_netlist())
+        assert isinstance(result, RoutingStrategyResult)
+        assert not result.routing_notes.startswith("ai_fallback:")
+        assert result.routing_notes == "ok"
+
+    def test_f9_fallback_result_is_valid_and_nonempty(self) -> None:
+        strategy = _make_strategy("")
+        result = strategy.strategize(_make_board_state(), _make_netlist())
+        assert isinstance(result, RoutingStrategyResult)
+        assert len(result.net_priorities) > 0
+        assert set(result.router_assignment.keys()) == set(_make_netlist().keys())
+
+    def test_f10_default_validator_built_when_none_passed(self) -> None:
+        # Construct without validator — should build a default
+        # StrategyValidator(board=None) internally.
+        strategy = _make_strategy(_valid_full_json())
+        # Internal _validator must be a StrategyValidator instance.
+        assert isinstance(strategy._validator, StrategyValidator)
+        # And strategize still works (happy path).
+        result = strategy.strategize(_make_board_state(), _make_netlist())
+        assert isinstance(result, RoutingStrategyResult)
+
+    def test_f11_explicit_validator_used_when_passed(self) -> None:
+        custom = StrategyValidator(board=None)
+        strategy = _make_strategy(_valid_full_json(), validator=custom)
+        assert strategy._validator is custom
+
+
+class TestCategoryDeterminism:
+    def test_d1_same_mock_output_yields_same_result(self) -> None:
+        # With a deterministic mock pipeline, two calls must produce equal
+        # results (R-6 fallback is itself deterministic).
+        strategy = _make_strategy(_valid_full_json())
+        r1 = strategy.strategize(_make_board_state(), _make_netlist())
+        r2 = strategy.strategize(_make_board_state(), _make_netlist())
+        assert r1 == r2
