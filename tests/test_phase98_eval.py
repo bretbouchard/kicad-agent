@@ -298,10 +298,10 @@ class TestCategoryDrc:
         fake_pcb = tmp_path / "fake.kicad_pcb"
         fake_pcb.write_text("(kicad_pcb)")
 
-        # Mock subprocess to produce a report with 3 unconnected items
+        # Mock subprocess to produce a report with 3 unconnected items.
+        # run_drc writes to <stem>.<tag>.drc.json (ME-03); default tag is "default".
         def fake_report(*args: Any, **kwargs: Any) -> Any:
-            # Write a fake DRC JSON report
-            report_path = fake_pcb.with_suffix(".drc.json")
+            report_path = fake_pcb.with_suffix(".default.drc.json")
             report_path.write_text(json.dumps({
                 "violations": [
                     {"type": "unconnected_items", "description": "x"},
@@ -315,6 +315,37 @@ class TestCategoryDrc:
             drc_pass, unconnected = run_drc(fake_pcb)
         assert drc_pass is False
         assert unconnected == 3
+
+    def test_run_drc_tag_prevents_collision(self, tmp_path: Path) -> None:
+        """ME-03: two run_drc calls with distinct tags produce distinct report files.
+
+        Previously both calls wrote <stem>.drc.json, clobbering each other.
+        Now the tag is embedded: <stem>.<tag>.drc.json.
+        """
+        from scripts.phase98_eval import run_drc
+
+        fake_pcb = tmp_path / "board.kicad_pcb"
+        fake_pcb.write_text("(kicad_pcb)")
+
+        # Track the --output paths kicad-cli is invoked with.
+        invoked_outputs: list[str] = []
+
+        def fake_run(cmd: list[str], **kwargs: Any) -> Any:
+            # Extract --output path from the command vector.
+            out_idx = cmd.index("--output")
+            invoked_outputs.append(cmd[out_idx + 1])
+            # Write an empty-violations report at that path so run_drc can parse it.
+            Path(cmd[out_idx + 1]).write_text(json.dumps({"violations": []}))
+            return MagicMock(returncode=0)
+
+        with patch("scripts.phase98_eval.subprocess.run", side_effect=fake_run):
+            run_drc(fake_pcb, tag="det")
+            run_drc(fake_pcb, tag="ai")
+
+        assert len(invoked_outputs) == 2
+        assert invoked_outputs[0] != invoked_outputs[1]
+        assert invoked_outputs[0].endswith(".det.drc.json")
+        assert invoked_outputs[1].endswith(".ai.drc.json")
 
 
 # ===========================================================================

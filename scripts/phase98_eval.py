@@ -86,6 +86,8 @@ def run_strategy_with_orchestrator(
     pcb_path: Path,
     project_dir: Path,
     strategy_name: str,
+    *,
+    drc_tag: str = "default",
 ) -> StrategyEvalResult:
     """Run a strategy through the orchestrator and collect eval metrics.
 
@@ -100,6 +102,8 @@ def run_strategy_with_orchestrator(
         project_dir: Project directory for audit trail output.
         strategy_name: Display name for the result ("DeterministicStrategy"
             or "AiRoutingStrategy").
+        drc_tag: Tag passed to :func:`run_drc` to avoid report-path collisions
+            when deterministic and AI copies share the same stem (ME-03).
 
     Returns:
         StrategyEvalResult with computed metrics + DRC result.
@@ -130,7 +134,7 @@ def run_strategy_with_orchestrator(
                 validation_passed = False
                 break
 
-    drc_pass, drc_unconnected = run_drc(pcb_path)
+    drc_pass, drc_unconnected = run_drc(pcb_path, tag=drc_tag)
 
     return StrategyEvalResult(
         fixture_name=pcb_path.stem,
@@ -148,7 +152,7 @@ def run_strategy_with_orchestrator(
     )
 
 
-def run_drc(pcb_path: Path) -> tuple[bool, int]:
+def run_drc(pcb_path: Path, *, tag: str = "default") -> tuple[bool, int]:
     """Run kicad-cli pcb drc on a PCB file.
 
     Returns:
@@ -156,9 +160,16 @@ def run_drc(pcb_path: Path) -> tuple[bool, int]:
         timeout, malformed report), returns (False, -1) sentinel so the
         eval harness continues without crashing.
 
+    Args:
+        pcb_path: Path to the .kicad_pcb file to check.
+        tag: Tag embedded in the report filename (``<stem>.<tag>.drc.json``)
+            so deterministic and AI runs on same-stem copies do not collide.
+            ME-03 (Council): previously both callers wrote ``<stem>.drc.json``
+            clobbering each other.
+
     Threat T-98-03-02: best-effort. DRC must never crash the eval harness.
     """
-    out_path = pcb_path.with_suffix(".drc.json")
+    out_path = pcb_path.with_suffix(f".{tag}.drc.json")
     try:
         proc = subprocess.run(
             [
@@ -473,6 +484,7 @@ def main(argv: list[str] | None = None) -> int:
                     pcb_path=pcb_copy,
                     project_dir=project_dir,
                     strategy_name="DeterministicStrategy",
+                    drc_tag="det",
                 )
                 results.append(det_result)
             except Exception as exc:
@@ -488,6 +500,7 @@ def main(argv: list[str] | None = None) -> int:
                         pcb_path=pcb_copy_ai,
                         project_dir=project_dir,
                         strategy_name="AiRoutingStrategy",
+                        drc_tag="ai",
                     )
                     results.append(ai_result)
                 except Exception as exc:
