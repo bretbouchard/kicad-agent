@@ -13,7 +13,6 @@ Covers:
 from __future__ import annotations
 
 import dataclasses
-from typing import get_type_hints
 
 import pytest
 
@@ -130,9 +129,12 @@ class TestRoutingStrategyResult:
 
 
 class TestRoutingStrategyProtocol:
-    def test_strategize_method_in_type_hints(self) -> None:
-        hints = get_type_hints(RoutingStrategy)
-        assert "strategize" in hints
+    def test_strategize_method_exists_on_protocol(self) -> None:
+        # Protocol classes expose their methods via __protocol_attrs__ or
+        # direct attribute access. get_type_hints returns only annotated
+        # fields, not methods, so we check method presence directly.
+        assert hasattr(RoutingStrategy, "strategize")
+        assert callable(getattr(RoutingStrategy, "strategize", None))
 
     def test_deterministic_strategy_satisfies_protocol(self) -> None:
         # Structural typing: Protocol satisfaction checked via hasattr.
