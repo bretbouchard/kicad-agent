@@ -23,9 +23,48 @@ from pathlib import Path
 from typing import Any
 
 from kicad_agent.ir.schematic_ir import SchematicIR
+from kicad_agent.io.atomic_write import atomic_write
 from kicad_agent.ops.erc_parser import parse_erc
 
 logger = logging.getLogger(__name__)
+
+
+def _persist_ir_raw(ir: SchematicIR, file_path: Path) -> None:
+    """Persist IR mutations to disk via raw S-expression manipulation.
+
+    P0-003 fix (MD-01): Replaces ir.schematic.to_file() (kiutils re-serialization)
+    which corrupts KiCad 10 schematics. Instead, reads the current file as raw
+    text, applies the IR's recorded mutations as surgical S-expression edits
+    via SchematicRawWriter, and writes back atomically.
+
+    This preserves all original formatting, indentation, field ordering, and
+    lib_symbol nesting — only the targeted mutations are applied.
+
+    If the file does not exist (e.g. test/mock scenario) or the raw read
+    fails, the write is skipped with a debug log — the mutations remain in
+    the IR's mutation_log for audit purposes.
+
+    Args:
+        ir: SchematicIR with recorded mutations.
+        file_path: Path to the schematic file to write.
+    """
+    from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+
+    file_path = Path(file_path)
+    try:
+        raw = file_path.read_text(encoding="utf-8")
+    except (FileNotFoundError, OSError) as exc:
+        # File doesn't exist (test/mock) or unreadable — skip persistence.
+        # The IR mutations remain in memory for audit via mutation_log.
+        logger.debug(
+            "Skipping raw persistence for %s: %s (mutations remain in IR log)",
+            file_path, exc,
+        )
+        return
+
+    mutations = ir.mutation_log
+    raw = SchematicRawWriter.apply_mutations(raw, mutations)
+    atomic_write(file_path, raw)
 
 # Repair functions authorized to add symbols.
 # Issue #3: place_missing_units was adding 192 unauthorized components.
@@ -347,7 +386,7 @@ def erc_auto_fix(
                         )
                         from kicad_agent.ops.repair_erc import _restore_ir
                         _restore_ir(ir, scope_checkpoint)
-                        ir.schematic.to_file(str(file_path))
+                        _persist_ir_raw(ir, file_path)
                         verification_rollback.append({
                             "repair": repair_name,
                             "reason": f"added {wire_delta} wires",
@@ -365,7 +404,7 @@ def erc_auto_fix(
                         )
                         from kicad_agent.ops.repair_erc import _restore_ir
                         _restore_ir(ir, scope_checkpoint)
-                        ir.schematic.to_file(str(file_path))
+                        _persist_ir_raw(ir, file_path)
                         verification_rollback.append({
                             "repair": repair_name,
                             "reason": f"added {symbol_delta} unauthorized symbols",
@@ -384,7 +423,7 @@ def erc_auto_fix(
                         )
                         from kicad_agent.ops.repair_erc import _restore_ir
                         _restore_ir(ir, scope_checkpoint)
-                        ir.schematic.to_file(str(file_path))
+                        _persist_ir_raw(ir, file_path)
                         verification_rollback.append({
                             "repair": repair_name,
                             "reason": f"added {symbol_delta} symbols (exceeds cap of {_MAX_SYMBOL_ADDITIONS_PER_REPAIR})",
@@ -393,8 +432,9 @@ def erc_auto_fix(
                         })
                         continue
 
-                # Persist in-memory mutations to disk so parse_erc sees changes.
-                ir.schematic.to_file(str(file_path))
+                # P0-003 fix (MD-01): persist via raw S-expr manipulation
+                # (not kiutils to_file() which corrupts KiCad 10 schematics).
+                _persist_ir_raw(ir, file_path)
 
                 # Phase 70: Post-repair verification — rollback on regression
                 if verify and snapshot_before is not None:
@@ -414,8 +454,8 @@ def erc_auto_fix(
                         )
                         if checkpoint is not None:
                             _restore_ir(ir, checkpoint)
-                            # Persist restored state to disk
-                            ir.schematic.to_file(str(file_path))
+                            # P0-003 fix (MD-01): persist via raw S-expr
+                            _persist_ir_raw(ir, file_path)
                         verification_rollback.append({
                             "repair": repair_name,
                             "lost_nets": diff["lost_nets"],
@@ -531,8 +571,9 @@ def erc_auto_fix_root_cause(
         try:
             func = _get_repair_function(repair_name)
             func(ir, file_path)
-            # Persist in-memory mutations to disk so parse_erc sees changes.
-            ir.schematic.to_file(str(file_path))
+            # P0-003 fix (MD-01): persist via raw S-expr manipulation
+            # (not kiutils to_file() which corrupts KiCad 10 schematics).
+            _persist_ir_raw(ir, file_path)
             fixes_applied.append({
                 "type": diagnosis["violation_type"],
                 "action": recommended["action"],

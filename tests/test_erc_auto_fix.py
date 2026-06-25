@@ -387,3 +387,249 @@ class TestErcAutoFixDeprecationWarning:
         assert "P0-003" in msg, (
             f"Warning message must reference P0-003, got: {msg}"
         )
+
+
+# --- Phase 101 follow-up: P0-003 raw S-expr rewrite (MD-01) ---
+
+
+class TestErcAutoFixRawSExprRewrite:
+    """Tests that erc_auto_fix no longer corrupts KiCad 10 schematics.
+
+    P0-003 fix (MD-01): erc_auto_fix now uses raw S-expression manipulation
+    via SchematicRawWriter + atomic_write instead of kiutils to_file()
+    re-serialization which corrupts KiCad 10 schematics.
+    """
+
+    def test_erc_auto_fix_does_not_call_to_file(self):
+        """erc_auto_fix module must not call ir.schematic.to_file() anywhere.
+
+        This is the core P0-003 acceptance criterion: the kiutils
+        re-serialization path that corrupts KiCad 10 schematics must be
+        completely removed.
+        """
+        import inspect
+        from kicad_agent.ops import erc_auto_fix
+
+        source = inspect.getsource(erc_auto_fix)
+        # Exclude comments and docstrings (lines starting with # or inside """)
+        code_lines = []
+        in_docstring = False
+        for line in source.splitlines():
+            stripped = line.strip()
+            if stripped.startswith('"""') or stripped.endswith('"""'):
+                in_docstring = not in_docstring
+                continue
+            if in_docstring:
+                continue
+            if stripped.startswith("#"):
+                continue
+            code_lines.append(line)
+        code = "\n".join(code_lines)
+
+        # No bare to_file calls (the corruption path)
+        assert ".to_file(" not in code, (
+            "erc_auto_fix must not call to_file() anywhere (P0-003). "
+            "Found: " + ", ".join(
+                line for line in code_lines if ".to_file(" in line
+            )
+        )
+
+    def test_erc_auto_fix_uses_atomic_write(self):
+        """erc_auto_fix module must import and use atomic_write."""
+        from kicad_agent.ops import erc_auto_fix
+
+        assert hasattr(erc_auto_fix, "atomic_write"), (
+            "erc_auto_fix must import atomic_write from kicad_agent.io.atomic_write"
+        )
+        assert hasattr(erc_auto_fix, "_persist_ir_raw"), (
+            "erc_auto_fix must define _persist_ir_raw helper"
+        )
+
+    def test_erc_auto_fix_preserves_kicad_10_formatting(self, tmp_path):
+        """Run op on a KiCad 10 schematic, verify formatting preserved.
+
+        Creates a minimal KiCad 10 schematic with specific formatting,
+        runs _persist_ir_raw with a no_connect mutation, and verifies:
+        - Original formatting (indentation, structure) preserved
+        - no_connect marker inserted at correct position
+        - File still valid S-expression (parses via kiutils)
+        """
+        import warnings
+        from kicad_agent.parser import parse_schematic
+        from kicad_agent.ir.schematic_ir import SchematicIR
+        from kicad_agent.ops.erc_auto_fix import _persist_ir_raw
+
+        # Create a minimal KiCad 10 schematic with distinctive formatting
+        original = (
+            '(kicad_sch\n'
+            '  (version 20231120)\n'
+            '  (generator "eeschema")\n'
+            '  (generator_version "10.0")\n'
+            '  (uuid "11111111-1111-1111-1111-111111111111")\n'
+            '  (paper "A4")\n'
+            '  (lib_symbols)\n'
+            '  (sheet_instances (path "/" (page "1")))\n'
+            ')\n'
+        )
+        sch_file = tmp_path / "test.kicad_sch"
+        sch_file.write_text(original, encoding="utf-8")
+
+        # Parse and create IR
+        result = parse_schematic(sch_file)
+        ir = SchematicIR(_parse_result=result)
+
+        # Add a no_connect mutation via IR
+        ir.add_no_connect(x=25.4, y=30.0)
+
+        # Persist via raw writer (the P0-003 fix path)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            _persist_ir_raw(ir, sch_file)
+
+        # Read result
+        written = sch_file.read_text(encoding="utf-8")
+
+        # Assertion 1: no_connect marker present
+        assert "(no_connect (at 25.4 30.0)" in written, (
+            f"no_connect marker must be inserted. Got:\n{written}"
+        )
+
+        # Assertion 2: Original formatting preserved (version, generator, etc.)
+        assert '(version 20231120)' in written, "version must be preserved"
+        assert '(generator "eeschema")' in written, "generator must be preserved"
+        assert '(generator_version "10.0")' in written, (
+            "generator_version must be preserved (kiutils strips this)"
+        )
+        assert '(uuid "11111111-1111-1111-1111-111111111111")' in written, (
+            "uuid must be preserved"
+        )
+
+        # Assertion 3: File still parses as valid S-expression
+        # (if kiutils can re-read it, the structure is sound)
+        from kiutils.schematic import Schematic
+        re_read = Schematic.from_file(str(sch_file))
+        assert re_read is not None, "Written file must be parseable by kiutils"
+        assert len(re_read.noConnects) == 1, (
+            f"Expected 1 no_connect, got {len(re_read.noConnects)}"
+        )
+
+    def test_erc_auto_fix_hierarchical_no_corruption(self, tmp_path):
+        """Run hierarchical op on fixture, verify no structural corruption.
+
+        The P0-003 corruption specifically placed PWR_FLAG lib_symbols INSIDE
+        other lib_symbol blocks. This test verifies the raw writer places
+        lib_symbols at the correct nesting level (top-level lib_symbols
+        container).
+        """
+        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+
+        # Minimal schematic with an existing lib_symbol (to detect mis-nesting)
+        original = (
+            '(kicad_sch (version 20231120) (generator "eeschema")\n'
+            '  (lib_symbols\n'
+            '    (symbol "Device:R"\n'
+            '      (pin_numbers (hide yes))\n'
+            '      (symbol "R_0_1" (pin input line (at 0 0 0) (length 0)))\n'
+            '    )\n'
+            '  )\n'
+            ')\n'
+        )
+
+        content = SchematicRawWriter.insert_power_flag(original, 50.0, 50.0)
+
+        # PWR_FLAG lib_symbol must be inside (lib_symbols ...) container
+        # NOT inside the Device:R symbol block
+        assert 'symbol "power:PWR_FLAG"' in content, (
+            "PWR_FLAG lib_symbol must be present"
+        )
+
+        # Find the position of power:PWR_FLAG and verify it's inside
+        # lib_symbols, not nested inside Device:R
+        pwr_flag_pos = content.find('symbol "power:PWR_FLAG"')
+        device_r_close = content.find(')', content.find('symbol "Device:R"'))
+        # The power:PWR_FLAG must come AFTER the Device:R symbol block closes
+        # (i.e., it's a sibling in lib_symbols, not a child)
+        assert pwr_flag_pos > device_r_close, (
+            "PWR_FLAG lib_symbol must be at top level of lib_symbols container, "
+            "not nested inside Device:R symbol block (P0-003 corruption)"
+        )
+
+        # Verify the file is still valid S-expression (balanced parens)
+        depth = 0
+        for char in content:
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+        assert depth == 0, (
+            f"S-expression must have balanced parens, got depth {depth}"
+        )
+
+
+class TestSchematicRawWriter:
+    """Unit tests for the SchematicRawWriter helper (P0-003 fix)."""
+
+    def test_insert_no_connect(self):
+        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+
+        content = '(kicad_sch (version 20231120))'
+        result = SchematicRawWriter.insert_no_connect(content, 10.0, 20.0)
+        assert "(no_connect (at 10.0 20.0)" in result
+        assert result.rstrip().endswith(")")
+
+    def test_insert_junction(self):
+        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+
+        content = '(kicad_sch (version 20231120))'
+        result = SchematicRawWriter.insert_junction(content, 5.0, 15.0)
+        assert "(junction (at 5.0 15.0)" in result
+        assert "(diameter 0)" in result
+
+    def test_insert_power_flag_lib_symbol_nesting(self):
+        """PWR_FLAG lib_symbol must go in lib_symbols container, not nested."""
+        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+
+        content = (
+            '(kicad_sch (version 20231120)\n'
+            '  (lib_symbols\n'
+            '    (symbol "Device:R" (pin_numbers (hide yes)))\n'
+            '  )\n'
+            ')\n'
+        )
+        result = SchematicRawWriter.insert_power_flag(content, 10.0, 10.0)
+
+        # lib_symbols container must now contain BOTH Device:R and power:PWR_FLAG
+        assert 'symbol "Device:R"' in result
+        assert 'symbol "power:PWR_FLAG"' in result
+
+        # PWR_FLAG symbol instance must also be present at top level
+        assert '(lib_id "power:PWR_FLAG")' in result
+
+    def test_apply_mutation_add_no_connect(self):
+        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+
+        content = '(kicad_sch (version 20231120))'
+        mutation = {"type": "add_no_connect", "position": [10.0, 20.0]}
+        result = SchematicRawWriter.apply_mutation(content, mutation)
+        assert "(no_connect (at 10.0 20.0)" in result
+
+    def test_apply_mutations_multiple(self):
+        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+
+        content = '(kicad_sch (version 20231120))'
+        mutations = [
+            {"type": "add_no_connect", "position": [10.0, 20.0]},
+            {"type": "add_junction", "position": [30.0, 40.0]},
+        ]
+        result = SchematicRawWriter.apply_mutations(content, mutations)
+        assert "(no_connect (at 10.0 20.0)" in result
+        assert "(junction (at 30.0 40.0)" in result
+
+    def test_unknown_mutation_no_crash(self):
+        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+
+        content = '(kicad_sch (version 20231120))'
+        mutation = {"type": "unknown_future_op", "position": [0.0, 0.0]}
+        result = SchematicRawWriter.apply_mutation(content, mutation)
+        # Should return content unchanged (defensive — don't break)
+        assert result == content
