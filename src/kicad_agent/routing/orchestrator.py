@@ -200,12 +200,20 @@ class RoutingOrchestrator:
         ir = PcbIR.from_native(native_board)
 
         # 2. Extract netlist (dict[str, list[Pin]]) + board_state.
-        raw_netlist = ir.extract_netlist()  # dict[str, list[(x, y)]]
+        # MD-02/WR-05: use extract_netlist_with_refs to get the real
+        # footprint_ref + pad_number instead of synthesizing a fake
+        # f"net_{net_name}" that misleads Phase 98 strategies.
+        raw_netlist = ir.extract_netlist_with_refs()
         netlist: dict[str, list[Pin]] = {}
-        for net_name, pin_positions in raw_netlist.items():
+        for net_name, pin_tuples in raw_netlist.items():
             pins: list[Pin] = []
-            for idx, (x, y) in enumerate(pin_positions):
-                pins.append(Pin(footprint_ref=f"net_{net_name}", pad_number=str(idx), x=x, y=y))
+            for footprint_ref, pad_number, x, y in pin_tuples:
+                pins.append(Pin(
+                    footprint_ref=footprint_ref,
+                    pad_number=pad_number,
+                    x=x,
+                    y=y,
+                ))
             netlist[net_name] = pins
 
         bounds = ir.get_board_bounds() or (0.0, 0.0, 0.0, 0.0)

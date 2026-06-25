@@ -713,6 +713,66 @@ class PcbIR(BaseIR):
                         netlist[net_name].append((round(pad_x, 4), round(pad_y, 4)))
         return netlist
 
+    def extract_netlist_with_refs(
+        self,
+    ) -> dict[str, list[tuple[str, str, float, float]]]:
+        """Extract netlist with real footprint reference and pad number per pin.
+
+        MD-02/WR-05: returns the real (footprint_ref, pad_number, x, y) tuple
+        per pin so callers do not have to synthesize a fake footprint_ref.
+        ``extract_netlist()`` (above) returns only (x, y) positions and loses
+        the footprint reference; this method preserves it for downstream
+        consumers (e.g., Phase 98 strategy advisor reasoning about
+        per-footprint pin topology).
+
+        Returns:
+            Dict mapping net name to list of
+            (footprint_ref, pad_number, x, y) tuples. footprint_ref is the
+            reference designator (e.g., "R1") when available, else the
+            lib_id (e.g., "Device:R") as a fallback.
+        """
+        netlist: dict[str, list[tuple[str, str, float, float]]] = {}
+        for fp in self.footprints:
+            fp_x, fp_y, _ = self._unpack_position(fp.position)
+
+            # MD-02: prefer the reference designator ("R1", "C2", ...) over
+            # lib_id. Fall back to lib_id if no Reference property exists.
+            footprint_ref = ""
+            if self._is_native:
+                props = getattr(fp, "properties", None)
+                if props is not None:
+                    footprint_ref = props.get("Reference", "") or props.get("reference", "")
+                if not footprint_ref:
+                    footprint_ref = getattr(fp, "lib_id", "") or ""
+            else:
+                footprint_ref = getattr(fp, "reference", "") or getattr(fp, "lib_id", "")
+
+            for pad in fp.pads:
+                if self._is_native:
+                    if pad.net_name:
+                        pad_pos = pad.position
+                        pad_x = fp_x + (pad_pos[0] if len(pad_pos) > 0 else 0.0)
+                        pad_y = fp_y + (pad_pos[1] if len(pad_pos) > 1 else 0.0)
+                        net_name = pad.net_name
+                        pad_number = str(pad.number) if pad.number != "" else ""
+                        if net_name not in netlist:
+                            netlist[net_name] = []
+                        netlist[net_name].append(
+                            (footprint_ref, pad_number, round(pad_x, 4), round(pad_y, 4))
+                        )
+                else:
+                    if pad.net is not None and pad.net.name:
+                        pad_x = fp_x + (pad.position.X if hasattr(pad.position, 'X') else 0)
+                        pad_y = fp_y + (pad.position.Y if hasattr(pad.position, 'Y') else 0)
+                        net_name = pad.net.name
+                        pad_number = str(getattr(pad, "number", "") or "")
+                        if net_name not in netlist:
+                            netlist[net_name] = []
+                        netlist[net_name].append(
+                            (footprint_ref, pad_number, round(pad_x, 4), round(pad_y, 4))
+                        )
+        return netlist
+
     def extract_obstacles(
         self,
         clearance_mm: float = 0.3,
