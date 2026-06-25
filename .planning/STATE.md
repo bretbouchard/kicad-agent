@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: Executing Phase 99
-stopped_at: Completed Phase 99 Plan 02 (R-4 via padstacks + R-6 SES multi-layer bridge).
-last_updated: "2026-06-25T01:30:00.000Z"
+status: Phase 99 Complete
+stopped_at: Completed Phase 99 Plan 03 (SC-3/SC-4/SC-5 validation + baseline metrics).
+last_updated: "2026-06-25T03:00:00.000Z"
 last_activity: 2026-06-25
 progress:
   total_phases: 128
-  completed_phases: 47
+  completed_phases: 48
   total_plans: 263
-  completed_plans: 205
-  percent: 78
+  completed_plans: 207
+  percent: 79
 ---
 
 # Project State
@@ -26,8 +26,8 @@ Last activity: 2026-06-25
 
 ## Current Position
 
-Phase: 99 (freerouting-integration-hardening) — EXECUTING
-Plan: 2 of 3
+Phase: 99 (freerouting-integration-hardening) — COMPLETE
+Plan: 3 of 3
 **All milestones shipped (v1.0 through v4.1). 94 phases, 265 plans, 3300+ tests.**
 
 Last milestone: v4.1 Stage-Safe PCB Flow (Phases 85-94)
@@ -53,7 +53,7 @@ Prior milestones: v4.0 Hybrid Routing (80-84), v3.2 Gap Analysis (79), v3.1 Coun
 
 Council review: 4 findings fixed, all passing.
 
-Last activity: 2026-06-25 -- Phase 99 plan 02 complete (R-4 via padstacks + R-6 SES bridge)
+Last activity: 2026-06-25
 
 ### Phase 99: Freerouting Integration Hardening (in progress)
 
@@ -76,6 +76,16 @@ Last activity: 2026-06-25 -- Phase 99 plan 02 complete (R-4 via padstacks + R-6 
   - Rule 1 fixes: empty pad number, FreerouteBatch scoring NPE, unquoted UUID (KiCad 10)
   - M-4 smoke test: kicad-cli pcb drc accepts quoted UUID via (exit 0)
   - 18 new tests across 4 files + reference SES fixture
+
+- Plan 99-03: SC-3/SC-4/SC-5 validation + baseline metrics (COMPLETE)
+  - SC-3 PASS: Freerouting-routed smd_test_board passes kicad-cli pcb drc (0 unconnected)
+  - SC-4: Baseline metrics for 3 fixtures (smd_test_board 50% completion DRC PASS, RaspberryPi-uHAT 3.2%, synthetic 4-layer)
+  - SC-5 xfail: Freerouting v2.2.4 ignores DSN snap_angle in batch mode (documented limitation)
+  - scripts/phase99_baseline.py CLI with --json for Phase 100 dispatch
+  - Synthetic 4-layer fixture: 4 copper layers, 2 net classes (Power/Signal), 2 zones
+  - 6 Rule 1/3 fixes: DSN class doubling, SMD padstack spaces, net name regex, SES resolution divisor, Y-negation, FreerouteBatch snap_angle
+  - smd_test_board fixture fixed (was DRC-unloadable: nets in setup, missing B.Cu)
+  - 5 new tests across 2 files + baseline script + synthetic fixture
 
 ### Phase 95: Dual Knowledge Base Integration (v2.2)
 
