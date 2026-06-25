@@ -1075,7 +1075,12 @@ def _strip_library_metadata(sexp: str) -> str:
 
     KiCad library .kicad_mod files include version/generator/compatibility fields
     that are not valid inside a PCB's embedded footprint blocks.
+
+    Council WR-04: normalize CRLF -> LF at entry so the \\n-anchored regex patterns
+    below work on Windows-produced libraries (KiCad writes CRLF on Windows).
     """
+    # Normalize line endings: CRLF (Windows) and lone CR -> LF (Unix).
+    sexp = sexp.replace('\r\n', '\n').replace('\r', '\n')
     # Remove (version ...), (generator "..."), (generator_version "...")
     # In the library file these are at single-tab indent under (footprint ...)
     for pattern in [
