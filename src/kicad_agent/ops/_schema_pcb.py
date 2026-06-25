@@ -207,6 +207,15 @@ class AutoRouteOp(BaseModel):
                     "When set, each net is routed with its class's constraints instead "
                     "of the global defaults.",
     )
+    grid_resolution_mm: Optional[float] = Field(
+        default=None,
+        ge=0.1,
+        le=2.0,
+        description="Phase 122B: Override grid resolution in mm. Smaller values give "
+                    "finer paths but increase graph size (memory/time). Use 0.5 for "
+                    "large boards (100mm+), 0.25 for small dense boards. "
+                    "Default: 0.25mm.",
+    )
 
     @field_validator("layers")
     @classmethod

@@ -582,11 +582,14 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
 
     # Build base constraints with stackup parameters.
     # Use 0.25mm grid for better pad snapping on dense boards.
+    # Phase 122B: honor grid_resolution_mm override if provided (large boards
+    # need coarser grid to keep graph size under max_nodes).
+    _grid_res = getattr(op, "grid_resolution_mm", None) or 0.25
     constraints = RoutingConstraints(
         dielectric_constant=4.5,
         dielectric_height_mm=0.2,
         copper_thickness_mm=0.035,
-        grid_resolution_mm=0.25,
+        grid_resolution_mm=_grid_res,
     )
 
     # Impedance control: calculate trace width per layer (ROUTE-06).
@@ -749,7 +752,7 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
             # Rebuild graph with coarser grid for failed nets only.
             coarser_grid = min(
                 current_constraints.grid_resolution_mm * 1.5,
-                0.8,  # cap at 0.8mm
+                0.8,  # cap at 0.8mm regardless of starting grid
             )
             current_constraints = RoutingConstraints(
                 dielectric_constant=current_constraints.dielectric_constant,
