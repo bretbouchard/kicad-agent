@@ -7,6 +7,12 @@ items, board outline) without kiutils dependency.
 All dataclasses are mutable (not frozen) to support the PcbIR adapter pattern
 where PcbIR methods append to board.nets, etc.
 
+# TODO(immutability): Council Exec Review 99 CR-01/WR-07 — these 14 dataclasses
+# violate the project CRITICAL immutability rule (~/.claude/rules/coding-style.md).
+# Tracked deferral: see .planning/STATE.md "Deferred Items" under CR-01.
+# Resolution plan: convert to @dataclass(frozen=True), migrate 8 mutation sites
+# to dataclasses.replace(). Revisit in Phase 100 (RoutingOrchestrator).
+
 UUID Preservation Note (Council HIGH-4 / D-07):
   UUIDs are preserved in raw_content (no kiutils round-trip = no UUID loss).
   NativeBoard typed fields only get UUIDs where the parser explicitly extracts
