@@ -175,9 +175,15 @@ class AiRoutingStrategy:
                 exc,
             )
             fallback = DeterministicStrategy().strategize(board_state, netlist)
+            # ME-04 (Council): sanitize exception text. The exception message
+            # can contain untrusted model output (parse errors, validation
+            # errors derived from model JSON). Truncate to 200 chars and
+            # collapse newlines so the audit trail stays single-line and
+            # bounded. Keep the exception type (trusted Python class name).
+            safe_msg = str(exc).replace("\n", " ").replace("\r", " ").strip()[:200]
             return replace(
                 fallback,
-                routing_notes=f"ai_fallback: {type(exc).__name__}: {exc}",
+                routing_notes=f"ai_fallback: {type(exc).__name__}: {safe_msg}",
             )
 
 
