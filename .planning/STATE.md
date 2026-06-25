@@ -514,6 +514,7 @@ Recent decisions affecting current work:
 
 - All milestones shipped. Ready for next milestone planning.
 - Phase 75 added retroactively: Pre-Analysis Gate and Context Intelligence (ad-hoc work tracked post-hoc)
+- **Phase 102 (proposed): Schematic Ops Bug Fixes** — 5 P0/P1 bugs from analog-ecosystem backplane cleanup (BUGS/P0-001 through P0-005). Out-of-scope for Phase 99 (freerouting) but blocking ~600 ERC violations on production backplane work. Fix priority: P0-003 deprecation (data loss) → P0-001 quick fix → P0-002+P0-004 position transforms → P0-005 criteria alignment. See `BUGS/README.md` for details.
 
 ### Quick Tasks Completed
 
