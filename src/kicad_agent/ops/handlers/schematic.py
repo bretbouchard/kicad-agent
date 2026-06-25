@@ -407,6 +407,7 @@ def _handle_remove_dangling_wires(op: Any, ir: SchematicIR, file_path: Path) -> 
         ir, file_path,
         max_length_mm=op.max_length_mm,
         dry_run=op.dry_run,
+        trust_erc=op.trust_erc,
     )
 
 

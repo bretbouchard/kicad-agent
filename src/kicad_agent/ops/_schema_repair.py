@@ -166,6 +166,9 @@ class RemoveDanglingWiresOp(BaseModel):
         target_file: Relative path to the .kicad_sch file.
         max_length_mm: Only remove wires shorter than this (safety). None = no limit.
         dry_run: If True, report what would be removed without modifying.
+        trust_erc: If True (default), also remove wires at ERC wire_dangling
+            positions even if geometric criteria don't flag them. Aligns
+            with KiCad ERC electrical definition. [P0-005]
     """
 
     op_type: Literal["remove_dangling_wires"] = "remove_dangling_wires"
@@ -177,6 +180,15 @@ class RemoveDanglingWiresOp(BaseModel):
     dry_run: bool = Field(
         default=False,
         description="Report removals without modifying the file",
+    )
+    trust_erc: bool = Field(
+        default=True,
+        description=(
+            "If True (default), also remove wires at ERC wire_dangling "
+            "violation positions even if geometric criteria don't flag "
+            "them. Aligns with KiCad ERC's electrical definition of "
+            "'dangling'. [P0-005]"
+        ),
     )
 
 

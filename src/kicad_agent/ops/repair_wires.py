@@ -407,6 +407,7 @@ def remove_dangling_wires(
     ir: SchematicIR, file_path: Path, *,
     max_length_mm: float | None = None,
     dry_run: bool = False,
+    trust_erc: bool = True,
 ) -> dict[str, Any]:
     """Remove wire segments with unconnected endpoints.
 
@@ -418,6 +419,13 @@ def remove_dangling_wires(
         file_path: Resolved path to the schematic file.
         max_length_mm: Only remove wires shorter than this. None = no limit.
         dry_run: If True, report without modifying.
+        trust_erc: If True (default), also remove wires at ERC wire_dangling
+            violation positions even if geometric criteria don't flag them.
+            This aligns the op with KiCad ERC's electrical definition of
+            "dangling" (which includes wires ending at wrong-type labels,
+            crossing wires without junctions, etc.). When ERC reports no
+            wire_dangling violations, falls back to geometric criteria only.
+            [P0-005 fix] See BUGS/P0-005-remove-dangling-wires-criteria-mismatch.md
 
     Returns:
         Dict with removed_count and details.
@@ -496,6 +504,52 @@ def remove_dangling_wires(
                         wire_info["end_x"], wire_info["end_y"],
                     ), 4),
                 })
+
+    # P0-005 fix: ERC position passthrough. KiCad ERC uses an electrical
+    # definition of "dangling" (includes wrong-type labels, crossing
+    # without junction) that is broader than our geometric heuristic.
+    # When trust_erc=True, augment the geometric results with any wire
+    # whose endpoint matches an ERC wire_dangling violation position.
+    erc_removed: list[dict[str, Any]] = []
+    if trust_erc:
+        try:
+            from kicad_agent.ops.erc_parser import extract_violation_positions
+            erc_positions = extract_violation_positions(file_path, "wire_dangling")
+            erc_pos_set = {_round_pos(p.x, p.y) for p in erc_positions}
+
+            # Check wires not already flagged by geometric criteria
+            already_flagged = set(wires_to_remove)
+            for wire_info in wire_endpoints:
+                wire_idx = wire_info["wire_index"]
+                if wire_idx in already_flagged:
+                    continue
+                start_key = _round_pos(wire_info["start_x"], wire_info["start_y"])
+                end_key = _round_pos(wire_info["end_x"], wire_info["end_y"])
+                if start_key in erc_pos_set or end_key in erc_pos_set:
+                    length = round(_distance(
+                        wire_info["start_x"], wire_info["start_y"],
+                        wire_info["end_x"], wire_info["end_y"],
+                    ), 4)
+                    if dry_run:
+                        erc_removed.append({
+                            "position": [wire_info["start_x"], wire_info["start_y"]],
+                            "length": length,
+                            "dry_run": True,
+                            "source": "erc_passthrough",
+                        })
+                    else:
+                        wires_to_remove.append(wire_idx)
+                        erc_removed.append({
+                            "position": [wire_info["start_x"], wire_info["start_y"]],
+                            "length": length,
+                            "source": "erc_passthrough",
+                        })
+        except Exception as exc:
+            logger.debug("trust_erc lookup failed, using geometric only: %s", exc)
+
+    # Merge ERC-passthrough removals into the main removed list so the
+    # return value includes both geometric and ERC-sourced removals.
+    removed.extend(erc_removed)
 
     if wires_to_remove and not dry_run:
         # Remove in reverse order to preserve indices
