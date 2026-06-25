@@ -821,7 +821,7 @@ Plans:
 **Goal:** Make Freerouting the reliable multi-layer routing backend by importing full board context (footprints, net classes, zones, via rules) from `.kicad_pcb` and validating output against DRC. Replaces the conceptual "Phase 122B" — multi-layer graph routing is already implemented (graph.py:156-247); this phase closes the real gaps.
 **Requirements**: R-1 Footprint courtyard+pad obstacles from .kicad_pcb into DSN; R-2 Net class propagation (trace width, via std, clearance); R-3 Copper zones + keepouts as routing rules; R-4 Via type config (THT/blind/buried/microvia) from stackup; R-5 45° trace mode; R-6 Freerouting output → TrackSegment/ViaSegment bridge verified multilayer; R-7 Sweep "Phase 122B" code comments → "Phase 99"
 **Depends on:** (standalone — uses existing freerouting.py, dsn_generator.py, FreerouteBatch.java)
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 99-01-PLAN.md — DSN generator refactor: R-1 footprints, R-2 net classes, R-3 zones, R-5 snap_angle, R-7 comment sweep
