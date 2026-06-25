@@ -26,6 +26,7 @@ class OpMeta(BaseModel):
         scope: Execution scope -- single_point, single_file, or multi_file.
         requires: List of prerequisite op_types that must run first.
         conflicts: List of op_types that conflict with this one.
+        deprecated: True if this op is deprecated and should not be used.
     """
 
     op_type: str
@@ -36,6 +37,7 @@ class OpMeta(BaseModel):
     scope: Literal["single_point", "single_file", "multi_file"]
     requires: list[str]
     conflicts: list[str]
+    deprecated: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -1149,6 +1151,7 @@ _RAW_CATALOG: dict[str, dict] = {
         "scope": "single_file",
         "requires": ["parse_erc"],
         "conflicts": [],
+        "deprecated": True,
     },
     "erc_auto_fix_hierarchical": {
         "category": "erc_smart",
@@ -1158,6 +1161,7 @@ _RAW_CATALOG: dict[str, dict] = {
         "scope": "multi_file",
         "requires": ["parse_erc"],
         "conflicts": [],
+        "deprecated": True,
     },
     # review_schematic was missing from the original catalog but exists in schema
     "review_schematic": {
