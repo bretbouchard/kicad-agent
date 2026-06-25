@@ -18,6 +18,7 @@ Usage:
 """
 
 import logging
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -212,6 +213,14 @@ def erc_auto_fix(
             unhandled_violations: List of {type, count} for unmapped violation types.
             verification_rollback: List of repairs that were rolled back (when verify=True).
     """
+    warnings.warn(
+        "erc_auto_fix is DEPRECATED (P0-003): kiutils re-serialization corrupts "
+        "KiCad 10 schematics. Use targeted individual ops (add_no_connect, "
+        "place_no_connects_from_erc, add_power_flags, remove_dangling_wires) "
+        "instead. Full raw S-expr rewrite tracked as follow-up. See BUGS/P0-003.md.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     if mode == "root_cause":
         return erc_auto_fix_root_cause(
             ir, file_path, max_iterations, fix_classes, sheet_filter
@@ -660,6 +669,14 @@ def erc_auto_fix_hierarchical(
             per_sheet: Dict mapping sheet_path to erc_auto_fix result.
             total_remaining: Sum of remaining violations across all sheets.
     """
+    warnings.warn(
+        "erc_auto_fix_hierarchical is DEPRECATED (P0-003): kiutils re-serialization "
+        "corrupts KiCad 10 schematics. Use targeted individual ops (add_no_connect, "
+        "place_no_connects_from_erc, add_power_flags, remove_dangling_wires) "
+        "instead. Full raw S-expr rewrite tracked as follow-up. See BUGS/P0-003.md.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     from kicad_agent.parser.schematic_parser import parse_schematic
 
     # Step 1: Run ERC once on root (gets violations from all sheets)
