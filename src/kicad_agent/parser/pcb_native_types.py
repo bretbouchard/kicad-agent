@@ -42,7 +42,7 @@ S-expression Origin:
   - NativeStackup  -> (stackup ...)
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import NamedTuple
 
@@ -342,14 +342,10 @@ class NativeBoard:
     board_outline: NativeBoardOutline | None = None
     raw_content: str = ""
     file_path: str = ""
-    general: NativeGeneral = None  # type: ignore[assignment]
+    # MD-03/WR-06: use default_factory instead of None + __post_init__ patch.
+    # Cleanly type-safe, no # type: ignore, works on frozen dataclasses.
+    general: NativeGeneral = field(default_factory=NativeGeneral)
     setup: NativeSetup | None = None
-
-    def __post_init__(self) -> None:
-        # Frozen dataclasses cannot assign in __init__ directly, so default
-        # NativeGeneral() is materialized here via object.__setattr__.
-        if self.general is None:
-            object.__setattr__(self, "general", NativeGeneral())
 
     @property
     def graphicItems(self) -> list[NativeGraphicItem]:
