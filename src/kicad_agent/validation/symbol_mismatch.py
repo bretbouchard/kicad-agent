@@ -133,7 +133,12 @@ def _get_library_pin_signature(
 
     # Find the symbol by name
     for sym in lib.symbols:
-        if sym.libId == lib_id or sym.name == symbol_name:
+        # kiutils Symbol class exposes libId (property) and entryName (field).
+        # It does NOT have a `name` attribute -- using sym.name raises
+        # AttributeError. libId matches qualified IDs ("Device:R");
+        # entryName matches unqualified ("R").
+        # [P0-001 fix] See BUGS/P0-001-update-symbols-from-library-crash.md
+        if sym.libId == lib_id or sym.entryName == symbol_name:
             pin_map: dict[str, dict[str, str]] = {}
             for unit in sym.units:
                 for pin in unit.pins:
