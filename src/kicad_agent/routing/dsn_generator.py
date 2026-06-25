@@ -214,10 +214,13 @@ def generate_dsn(
             # after `pin` (padstack, name, x, y). Empty pad numbers collapse the
             # f-string to 3 numeric tokens, causing a parse error on the next
             # image. Substitute a stable placeholder when pad number is empty.
-            pin_name = pin['name'] if pin['name'] else "pad"
+            # Council WR-03: quote pin name with DSN doubled-quote escaping so
+            # pad numbers containing whitespace/quotes don't break the parser.
+            raw_name = pin['name'] if pin['name'] else "pad"
+            safe_name = raw_name.replace('"', '""')
             lines.append(
-                f"      (pin {pin['padstack']} {pin_name}"
-                f" {int(pin['x'] * _MM_TO_UM)} {int(pin['y'] * _MM_TO_UM)})"
+                f'      (pin {pin["padstack"]} "{safe_name}"'
+                f' {int(pin["x"] * _MM_TO_UM)} {int(pin["y"] * _MM_TO_UM)})'
             )
         lines.append("    )")
     # SMD padstacks
