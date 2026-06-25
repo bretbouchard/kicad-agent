@@ -1,0 +1,1199 @@
+(pcb KiCad
+  (parser
+    (string_quote ")
+    (space_in_quoted_tokens on)
+    (host_cad KiCad)
+    (host_version "10.0")
+    (generated_by_freerouting)
+  )
+  (resolution um 10)
+  (unit um)
+  (structure
+    (layer F.Cu
+      (type signal)
+    )
+    (layer B.Cu
+      (type signal)
+    )
+    (boundary
+      (rect pcb 99900.0 46560.0 201700.0 100100.0)
+    )
+    (boundary
+      (polygon signal 0
+        100000.0 46660.0
+        201600.0 46660.0
+        201600.0 100000.0
+        100000.0 100000.0
+      )
+    )
+    (via "Via[0-1]")
+    (rule
+      (width 250.0)
+      (clearance 250.0)
+      (clearance 10000.0 (type smd_to_turn_gap))
+    )
+    (snap_angle 
+      fortyfive_degree
+    )
+    (control
+      (via_at_smd off)
+    )
+  )
+  (placement
+    (component "Arduino_MountingHole:MountingHole_3.2mm"
+      (place 
+        MH6 196520.0 97460.0 front 0
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+      )
+      (place 
+        MH1 115240.0 49200.0 front 0
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+      )
+      (place 
+        MH2 113970.0 97460.0 front 0
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+      )
+      (place 
+        MH3 166040.0 64440.0 front 0
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+      )
+      (place 
+        MH4 166040.0 92380.0 front 0
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+      )
+      (place 
+        MH5 190170.0 49200.0 front 0
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+        (pin pad (clearance_class default))
+      )
+    )
+    (component "Connector_PinSocket_2.54mm:PinSocket_1x08_P2.54mm_Vertical"
+      (place 
+        J1 127940.0 97460.0 front 90
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+      )
+      (place 
+        J3 150800.0 97460.0 front 90
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+      )
+      (place 
+        J5 173660.0 97460.0 front 90
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+      )
+      (place 
+        J4 145720.0 49200.0 front 90
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+      )
+      (place 
+        J6 168580.0 49200.0 front 90
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+      )
+    )
+    (component "Connector_PinSocket_2.54mm:PinSocket_1x10_P2.54mm_Vertical"
+      (place 
+        J2 118796.0 49200.0 front 90
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "9" (clearance_class default))
+        (pin "10" (clearance_class default))
+      )
+    )
+    (component "Connector_PinSocket_2.54mm:PinSocket_2x18_P2.54mm_Vertical"
+      (place 
+        J7 193980.0 92380.0 front 180
+        (pin "1" (clearance_class default))
+        (pin "2" (clearance_class default))
+        (pin "3" (clearance_class default))
+        (pin "4" (clearance_class default))
+        (pin "5" (clearance_class default))
+        (pin "6" (clearance_class default))
+        (pin "7" (clearance_class default))
+        (pin "8" (clearance_class default))
+        (pin "9" (clearance_class default))
+        (pin "10" (clearance_class default))
+        (pin "11" (clearance_class default))
+        (pin "12" (clearance_class default))
+        (pin "13" (clearance_class default))
+        (pin "14" (clearance_class default))
+        (pin "15" (clearance_class default))
+        (pin "16" (clearance_class default))
+        (pin "17" (clearance_class default))
+        (pin "18" (clearance_class default))
+        (pin "19" (clearance_class default))
+        (pin "20" (clearance_class default))
+        (pin "21" (clearance_class default))
+        (pin "22" (clearance_class default))
+        (pin "23" (clearance_class default))
+        (pin "24" (clearance_class default))
+        (pin "25" (clearance_class default))
+        (pin "26" (clearance_class default))
+        (pin "27" (clearance_class default))
+        (pin "28" (clearance_class default))
+        (pin "29" (clearance_class default))
+        (pin "30" (clearance_class default))
+        (pin "31" (clearance_class default))
+        (pin "32" (clearance_class default))
+        (pin "33" (clearance_class default))
+        (pin "34" (clearance_class default))
+        (pin "35" (clearance_class default))
+        (pin "36" (clearance_class default))
+      )
+    )
+  )
+  (library
+    (image "Arduino_MountingHole:MountingHole_3.2mm"
+      (side front)
+      (pin "TH_3200:3200_um" pad 0.0 0.0)
+      (pin "TH_3200:3200_um" pad 0.0 0.0)
+      (pin "TH_3200:3200_um" pad 0.0 0.0)
+      (pin "TH_3200:3200_um" pad 0.0 0.0)
+      (pin "TH_3200:3200_um" pad 0.0 0.0)
+      (pin "TH_3200:3200_um" pad 0.0 0.0)
+      (outline
+        (rect signal 194920.0 95860.0 198120.0 99059.0)
+      )
+    )
+    (image "Connector_PinSocket_2.54mm:PinSocket_1x08_P2.54mm_Vertical"
+      (side front)
+      (pin "TH_1700:1000_um" "1" 0.0 0.0)
+      (pin "TH_1700:1000_um" "2" 0.0 2540.0)
+      (pin "TH_1700:1000_um" "3" 0.0 5080.0)
+      (pin "TH_1700:1000_um" "4" 0.0 7620.0)
+      (pin "TH_1700:1000_um" "5" 0.0 10160.0)
+      (pin "TH_1700:1000_um" "6" 0.0 12700.0)
+      (pin "TH_1700:1000_um" "7" 0.0 15240.0)
+      (pin "TH_1700:1000_um" "8" 0.0 17780.0)
+      (pin "TH_1700:1000_um" "1" 0.0 0.0)
+      (pin "TH_1700:1000_um" "2" 0.0 2540.0)
+      (pin "TH_1700:1000_um" "3" 0.0 5080.0)
+      (pin "TH_1700:1000_um" "4" 0.0 7620.0)
+      (pin "TH_1700:1000_um" "5" 0.0 10160.0)
+      (pin "TH_1700:1000_um" "6" 0.0 12700.0)
+      (pin "TH_1700:1000_um" "7" 0.0 15240.0)
+      (pin "TH_1700:1000_um" "8" 0.0 17780.0)
+      (pin "TH_1700:1000_um" "1" 0.0 0.0)
+      (pin "TH_1700:1000_um" "2" 0.0 2540.0)
+      (pin "TH_1700:1000_um" "3" 0.0 5080.0)
+      (pin "TH_1700:1000_um" "4" 0.0 7620.0)
+      (pin "TH_1700:1000_um" "5" 0.0 10160.0)
+      (pin "TH_1700:1000_um" "6" 0.0 12700.0)
+      (pin "TH_1700:1000_um" "7" 0.0 15240.0)
+      (pin "TH_1700:1000_um" "8" 0.0 17780.0)
+      (pin "TH_1700:1000_um" "1" 0.0 0.0)
+      (pin "TH_1700:1000_um" "2" 0.0 2540.0)
+      (pin "TH_1700:1000_um" "3" 0.0 5080.0)
+      (pin "TH_1700:1000_um" "4" 0.0 7620.0)
+      (pin "TH_1700:1000_um" "5" 0.0 10160.0)
+      (pin "TH_1700:1000_um" "6" 0.0 12700.0)
+      (pin "TH_1700:1000_um" "7" 0.0 15240.0)
+      (pin "TH_1700:1000_um" "8" 0.0 17780.0)
+      (pin "TH_1700:1000_um" "1" 0.0 0.0)
+      (pin "TH_1700:1000_um" "2" 0.0 2540.0)
+      (pin "TH_1700:1000_um" "3" 0.0 5080.0)
+      (pin "TH_1700:1000_um" "4" 0.0 7620.0)
+      (pin "TH_1700:1000_um" "5" 0.0 10160.0)
+      (pin "TH_1700:1000_um" "6" 0.0 12700.0)
+      (pin "TH_1700:1000_um" "7" 0.0 15240.0)
+      (pin "TH_1700:1000_um" "8" 0.0 17780.0)
+      (outline
+        (rect signal -1800.0 -1800.0 1750.0 19550.0)
+      )
+    )
+    (image "Connector_PinSocket_2.54mm:PinSocket_1x10_P2.54mm_Vertical"
+      (side front)
+      (pin "TH_1700:1000_um" "1" 0.0 0.0)
+      (pin "TH_1700:1000_um" "2" 0.0 2540.0)
+      (pin "TH_1700:1000_um" "3" 0.0 5080.0)
+      (pin "TH_1700:1000_um" "4" 0.0 7620.0)
+      (pin "TH_1700:1000_um" "5" 0.0 10160.0)
+      (pin "TH_1700:1000_um" "6" 0.0 12700.0)
+      (pin "TH_1700:1000_um" "7" 0.0 15240.0)
+      (pin "TH_1700:1000_um" "8" 0.0 17780.0)
+      (pin "TH_1700:1000_um" "9" 0.0 20320.0)
+      (pin "TH_1700:1000_um" "10" 0.0 22860.0)
+      (outline
+        (rect signal -1800.0 -1800.0 1750.0 24600.0)
+      )
+    )
+    (image "Connector_PinSocket_2.54mm:PinSocket_2x18_P2.54mm_Vertical"
+      (side front)
+      (pin "TH_1700:1000_um" "1" 0.0 0.0)
+      (pin "TH_1700:1000_um" "2" -2540.0 0.0)
+      (pin "TH_1700:1000_um" "3" 0.0 2540.0)
+      (pin "TH_1700:1000_um" "4" -2540.0 2540.0)
+      (pin "TH_1700:1000_um" "5" 0.0 5080.0)
+      (pin "TH_1700:1000_um" "6" -2540.0 5080.0)
+      (pin "TH_1700:1000_um" "7" 0.0 7620.0)
+      (pin "TH_1700:1000_um" "8" -2540.0 7620.0)
+      (pin "TH_1700:1000_um" "9" 0.0 10160.0)
+      (pin "TH_1700:1000_um" "10" -2540.0 10160.0)
+      (pin "TH_1700:1000_um" "11" 0.0 12700.0)
+      (pin "TH_1700:1000_um" "12" -2540.0 12700.0)
+      (pin "TH_1700:1000_um" "13" 0.0 15240.0)
+      (pin "TH_1700:1000_um" "14" -2540.0 15240.0)
+      (pin "TH_1700:1000_um" "15" 0.0 17780.0)
+      (pin "TH_1700:1000_um" "16" -2540.0 17780.0)
+      (pin "TH_1700:1000_um" "17" 0.0 20320.0)
+      (pin "TH_1700:1000_um" "18" -2540.0 20320.0)
+      (pin "TH_1700:1000_um" "19" 0.0 22860.0)
+      (pin "TH_1700:1000_um" "20" -2540.0 22860.0)
+      (pin "TH_1700:1000_um" "21" 0.0 25400.0)
+      (pin "TH_1700:1000_um" "22" -2540.0 25400.0)
+      (pin "TH_1700:1000_um" "23" 0.0 27940.0)
+      (pin "TH_1700:1000_um" "24" -2540.0 27940.0)
+      (pin "TH_1700:1000_um" "25" 0.0 30480.0)
+      (pin "TH_1700:1000_um" "26" -2540.0 30480.0)
+      (pin "TH_1700:1000_um" "27" 0.0 33020.0)
+      (pin "TH_1700:1000_um" "28" -2540.0 33020.0)
+      (pin "TH_1700:1000_um" "29" 0.0 35560.0)
+      (pin "TH_1700:1000_um" "30" -2540.0 35560.0)
+      (pin "TH_1700:1000_um" "31" 0.0 38100.0)
+      (pin "TH_1700:1000_um" "32" -2540.0 38100.0)
+      (pin "TH_1700:1000_um" "33" 0.0 40640.0)
+      (pin "TH_1700:1000_um" "34" -2540.0 40640.0)
+      (pin "TH_1700:1000_um" "35" 0.0 43180.0)
+      (pin "TH_1700:1000_um" "36" -2540.0 43180.0)
+      (outline
+        (rect signal -4340.0 -1800.0 1760.0 44950.0)
+      )
+    )
+    (padstack "Via[0-1]"
+      (shape
+        (circle F.Cu 800.0 0.0 0.0)
+      )
+      (shape
+        (circle B.Cu 800.0 0.0 0.0)
+      )
+      (attach off)
+    )
+    (padstack "TH_1700:1000_um"
+      (shape
+        (circle F.Cu 1700.0 0.0 0.0)
+      )
+      (shape
+        (circle B.Cu 1700.0 0.0 0.0)
+      )
+      (attach off)
+    )
+    (padstack "TH_3200:3200_um"
+      (shape
+        (circle F.Cu 3200.0 0.0 0.0)
+      )
+      (shape
+        (circle B.Cu 3200.0 0.0 0.0)
+      )
+      (attach off)
+    )
+  )
+  (network
+    (net +3V3 1
+      (pins
+        J1-"4"
+        J1-"4"
+        J1-"4"
+        J1-"4"
+        J1-"4"
+      )
+    )
+    (net +5V 1
+      (pins
+        J7-"36"
+        J7-"35"
+        J1-"5"
+        J1-"5"
+        J1-"5"
+        J1-"5"
+        J1-"5"
+      )
+    )
+    (net /*10 1
+      (pins
+        J2-"8"
+      )
+    )
+    (net /*11 1
+      (pins
+        J2-"7"
+      )
+    )
+    (net /*12 1
+      (pins
+        J2-"6"
+      )
+    )
+    (net /*13 1
+      (pins
+        J2-"5"
+      )
+    )
+    (net /*2 1
+      (pins
+        J4-"6"
+        J4-"6"
+        J4-"6"
+        J4-"6"
+        J4-"6"
+      )
+    )
+    (net /*3 1
+      (pins
+        J4-"5"
+        J4-"5"
+        J4-"5"
+        J4-"5"
+        J4-"5"
+      )
+    )
+    (net /*4 1
+      (pins
+        J4-"4"
+        J4-"4"
+        J4-"4"
+        J4-"4"
+        J4-"4"
+      )
+    )
+    (net /*44 1
+      (pins
+        J7-"11"
+      )
+    )
+    (net /*45 1
+      (pins
+        J7-"12"
+      )
+    )
+    (net /*46 1
+      (pins
+        J7-"9"
+      )
+    )
+    (net /*5 1
+      (pins
+        J4-"3"
+        J4-"3"
+        J4-"3"
+        J4-"3"
+        J4-"3"
+      )
+    )
+    (net /*52 1
+      (pins
+        J7-"3"
+      )
+    )
+    (net /*6 1
+      (pins
+        J4-"2"
+        J4-"2"
+        J4-"2"
+        J4-"2"
+        J4-"2"
+      )
+    )
+    (net /*7 1
+      (pins
+        J4-"1"
+        J4-"1"
+        J4-"1"
+        J4-"1"
+        J4-"1"
+      )
+    )
+    (net /*8 1
+      (pins
+        J2-"10"
+      )
+    )
+    (net /*9 1
+      (pins
+        J2-"9"
+      )
+    )
+    (net /22 1
+      (pins
+        J7-"33"
+      )
+    )
+    (net /23 1
+      (pins
+        J7-"34"
+      )
+    )
+    (net /24 1
+      (pins
+        J7-"31"
+      )
+    )
+    (net /25 1
+      (pins
+        J7-"32"
+      )
+    )
+    (net /26 1
+      (pins
+        J7-"29"
+      )
+    )
+    (net /27 1
+      (pins
+        J7-"30"
+      )
+    )
+    (net /28 1
+      (pins
+        J7-"27"
+      )
+    )
+    (net /29 1
+      (pins
+        J7-"28"
+      )
+    )
+    (net /30 1
+      (pins
+        J7-"25"
+      )
+    )
+    (net /31 1
+      (pins
+        J7-"26"
+      )
+    )
+    (net /32 1
+      (pins
+        J7-"23"
+      )
+    )
+    (net /33 1
+      (pins
+        J7-"24"
+      )
+    )
+    (net /34 1
+      (pins
+        J7-"21"
+      )
+    )
+    (net /35 1
+      (pins
+        J7-"22"
+      )
+    )
+    (net /36 1
+      (pins
+        J7-"19"
+      )
+    )
+    (net /37 1
+      (pins
+        J7-"20"
+      )
+    )
+    (net /38 1
+      (pins
+        J7-"17"
+      )
+    )
+    (net /39 1
+      (pins
+        J7-"18"
+      )
+    )
+    (net /40 1
+      (pins
+        J7-"15"
+      )
+    )
+    (net /41 1
+      (pins
+        J7-"16"
+      )
+    )
+    (net /42 1
+      (pins
+        J7-"13"
+      )
+    )
+    (net /43 1
+      (pins
+        J7-"14"
+      )
+    )
+    (net /47 1
+      (pins
+        J7-"10"
+      )
+    )
+    (net /48 1
+      (pins
+        J7-"7"
+      )
+    )
+    (net /49 1
+      (pins
+        J7-"8"
+      )
+    )
+    (net /50 1
+      (pins
+        J7-"5"
+      )
+    )
+    (net /51 1
+      (pins
+        J7-"6"
+      )
+    )
+    (net /53 1
+      (pins
+        J7-"4"
+      )
+    )
+    (net /A0 1
+      (pins
+        J3-"1"
+        J3-"1"
+        J3-"1"
+        J3-"1"
+        J3-"1"
+      )
+    )
+    (net /A1 1
+      (pins
+        J3-"2"
+        J3-"2"
+        J3-"2"
+        J3-"2"
+        J3-"2"
+      )
+    )
+    (net /A10 1
+      (pins
+        J5-"3"
+        J5-"3"
+        J5-"3"
+        J5-"3"
+        J5-"3"
+      )
+    )
+    (net /A11 1
+      (pins
+        J5-"4"
+        J5-"4"
+        J5-"4"
+        J5-"4"
+        J5-"4"
+      )
+    )
+    (net /A12 1
+      (pins
+        J5-"5"
+        J5-"5"
+        J5-"5"
+        J5-"5"
+        J5-"5"
+      )
+    )
+    (net /A13 1
+      (pins
+        J5-"6"
+        J5-"6"
+        J5-"6"
+        J5-"6"
+        J5-"6"
+      )
+    )
+    (net /A14 1
+      (pins
+        J5-"7"
+        J5-"7"
+        J5-"7"
+        J5-"7"
+        J5-"7"
+      )
+    )
+    (net /A15 1
+      (pins
+        J5-"8"
+        J5-"8"
+        J5-"8"
+        J5-"8"
+        J5-"8"
+      )
+    )
+    (net /A2 1
+      (pins
+        J3-"3"
+        J3-"3"
+        J3-"3"
+        J3-"3"
+        J3-"3"
+      )
+    )
+    (net /A3 1
+      (pins
+        J3-"4"
+        J3-"4"
+        J3-"4"
+        J3-"4"
+        J3-"4"
+      )
+    )
+    (net /A4 1
+      (pins
+        J3-"5"
+        J3-"5"
+        J3-"5"
+        J3-"5"
+        J3-"5"
+      )
+    )
+    (net /A5 1
+      (pins
+        J3-"6"
+        J3-"6"
+        J3-"6"
+        J3-"6"
+        J3-"6"
+      )
+    )
+    (net /A6 1
+      (pins
+        J3-"7"
+        J3-"7"
+        J3-"7"
+        J3-"7"
+        J3-"7"
+      )
+    )
+    (net /A7 1
+      (pins
+        J3-"8"
+        J3-"8"
+        J3-"8"
+        J3-"8"
+        J3-"8"
+      )
+    )
+    (net /A8 1
+      (pins
+        J5-"1"
+        J5-"1"
+        J5-"1"
+        J5-"1"
+        J5-"1"
+      )
+    )
+    (net /A9 1
+      (pins
+        J5-"2"
+        J5-"2"
+        J5-"2"
+        J5-"2"
+        J5-"2"
+      )
+    )
+    (net /AREF 1
+      (pins
+        J2-"3"
+      )
+    )
+    (net /IOREF 1
+      (pins
+        J1-"2"
+        J1-"2"
+        J1-"2"
+        J1-"2"
+        J1-"2"
+      )
+    )
+    (net /RX0{slash}0 1
+      (pins
+        J4-"8"
+        J4-"8"
+        J4-"8"
+        J4-"8"
+        J4-"8"
+      )
+    )
+    (net /RX1{slash}19 1
+      (pins
+        J6-"6"
+        J6-"6"
+        J6-"6"
+        J6-"6"
+        J6-"6"
+      )
+    )
+    (net /RX2{slash}17 1
+      (pins
+        J6-"4"
+        J6-"4"
+        J6-"4"
+        J6-"4"
+        J6-"4"
+      )
+    )
+    (net /RX3{slash}15 1
+      (pins
+        J6-"2"
+        J6-"2"
+        J6-"2"
+        J6-"2"
+        J6-"2"
+      )
+    )
+    (net /SCL{slash}21 1
+      (pins
+        J2-"1"
+        J6-"8"
+        J6-"8"
+        J6-"8"
+        J6-"8"
+        J6-"8"
+      )
+    )
+    (net /SDA{slash}20 1
+      (pins
+        J2-"2"
+        J6-"7"
+        J6-"7"
+        J6-"7"
+        J6-"7"
+        J6-"7"
+      )
+    )
+    (net /TX0{slash}1 1
+      (pins
+        J4-"7"
+        J4-"7"
+        J4-"7"
+        J4-"7"
+        J4-"7"
+      )
+    )
+    (net /TX1{slash}18 1
+      (pins
+        J6-"5"
+        J6-"5"
+        J6-"5"
+        J6-"5"
+        J6-"5"
+      )
+    )
+    (net /TX2{slash}16 1
+      (pins
+        J6-"3"
+        J6-"3"
+        J6-"3"
+        J6-"3"
+        J6-"3"
+      )
+    )
+    (net /TX3{slash}14 1
+      (pins
+        J6-"1"
+        J6-"1"
+        J6-"1"
+        J6-"1"
+        J6-"1"
+      )
+    )
+    (net /~{RESET} 1
+      (pins
+        J1-"3"
+        J1-"3"
+        J1-"3"
+        J1-"3"
+        J1-"3"
+      )
+    )
+    (net GND 1
+      (pins
+        J7-"2"
+        J7-"1"
+        J2-"4"
+        J1-"7"
+        J1-"6"
+        J1-"7"
+        J1-"6"
+        J1-"7"
+        J1-"6"
+        J1-"7"
+        J1-"6"
+        J1-"7"
+        J1-"6"
+      )
+    )
+    (net VCC 1
+      (pins
+        J1-"8"
+        J1-"8"
+        J1-"8"
+        J1-"8"
+        J1-"8"
+      )
+    )
+    (net "unconnected-(J1-Pin_1-Pad1)" 1
+      (pins
+        J1-"1"
+        J1-"1"
+        J1-"1"
+        J1-"1"
+        J1-"1"
+      )
+    )
+    (via 
+      "Via[0-1]" "Via[0-1]" default
+    )
+    (via_rule
+      default "Via[0-1]"
+    )
+    (via_rule
+      default "Via[0-1]"
+    )
+    (class default
+      +3V3 +5V /*10 /*11 /*12 /*13 /*2 /*3
+      /*4 /*44 /*45 /*46 /*5 /*52 /*6 /*7
+      /*8 /*9 /22 /23 /24 /25 /26 /27
+      /28 /29 /30 /31 /32 /33 /34 /35
+      /36 /37 /38 /39 /40 /41 /42 /43
+      /47 /48 /49 /50 /51 /53 /A0 /A1
+      /A10 /A11 /A12 /A13 /A14 /A15 /A2 /A3
+      /A4 /A5 /A6 /A7 /A8 /A9 /AREF /IOREF
+      /RX0{slash}0 /RX1{slash}19 /RX2{slash}17 /RX3{slash}15 /SCL{slash}21 /SDA{slash}20 /TX0{slash}1 /TX1{slash}18
+      /TX2{slash}16 /TX3{slash}14 /~{RESET} GND VCC "unconnected-(J1-Pin_1-Pad1)"
+      (clearance_class default)
+      (via_rule default)
+      (rule
+        (width 250.0)
+      )
+      (circuit 
+        (use_layer F.Cu B.Cu)
+      )
+    )
+  )
+  (wiring
+    (wire
+      (polyline_path F.Cu 250.0
+        118796.0 49200.0 118796.1 49200.1 
+        118796.0 49200.0 120637.3 47358.7 
+        146945.2 47953.9 146945.3 47953.9 
+        148958.7 47358.7 150800.0 49200.0 
+        150800.0 49200.0 150800.1 49199.9 
+      )
+      (net /SCL{slash}21 1)
+      (clearance_class default)
+    )
+    (wire
+      (polyline_path B.Cu 250.0
+        117519.3 86715.2 117519.4 86715.2 
+        117519.3 86715.2 117519.3 55543.3 
+        117519.3 55543.3 111176.0 49200.0 
+        111176.0 49200.0 111175.9 49200.1 
+      )
+      (net GND 1)
+      (clearance_class default)
+    )
+    (wire
+      (polyline_path F.Cu 250.0
+        193980.0 92380.0 193980.1 92379.9 
+        193980.0 92380.0 188315.2 86715.2 
+        188315.2 86715.2 117519.3 86715.2 
+        117519.3 86715.2 117519.3 86715.3 
+      )
+      (net GND 1)
+      (clearance_class default)
+    )
+    (wire
+      (polyline_path F.Cu 250.0
+        196520.0 92380.0 196520.0 92379.9 
+        196520.0 92380.0 193980.0 92380.0 
+        193980.0 92380.0 193980.0 92380.1 
+      )
+      (net GND 1)
+      (clearance_class default)
+    )
+    (wire
+      (polyline_path F.Cu 250.0
+        191542.1 52504.3 191542.1 52504.2 
+        191542.1 52504.3 128966.6 52504.3 
+        125350.1 56120.8 128966.6 52504.3 
+      )
+      (net +5V 1)
+      (clearance_class default)
+    )
+    (wire
+      (polyline_path B.Cu 250.0
+        117780.0 97460.0 117780.1 97460.1 
+        117780.0 97460.0 128966.6 86273.4 
+        128966.6 86273.4 128966.6 52504.3 
+        128966.6 52504.3 128966.5 52504.3 
+      )
+      (net +5V 1)
+      (clearance_class default)
+    )
+    (wire
+      (polyline_path B.Cu 250.0
+        193980.0 49200.0 193979.9 49199.9 
+        191550.7 51629.3 191550.6 51629.4 
+        191542.1 51629.3 191542.1 52504.3 
+        191542.1 52504.3 191542.2 52504.3 
+      )
+      (net +5V 1)
+      (clearance_class default)
+    )
+    (wire
+      (polyline_path F.Cu 250.0
+        196520.0 49200.0 196520.0 49199.9 
+        196520.0 49200.0 193980.0 49200.0 
+        193980.0 49200.0 193980.0 49200.1 
+      )
+      (net +5V 1)
+      (clearance_class default)
+    )
+    (via "Via[0-1]" 117519.3 86715.2
+      (net GND 1)
+      (clearance_class default)
+    )
+    (via "Via[0-1]" 128966.6 52504.3
+      (net +5V 1)
+      (clearance_class default)
+    )
+    (via "Via[0-1]" 191542.1 52504.3
+      (net +5V 1)
+      (clearance_class default)
+    )
+  )
+)
