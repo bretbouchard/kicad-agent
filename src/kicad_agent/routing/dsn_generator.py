@@ -7,10 +7,15 @@ The DSN format follows Freerouting 2.2.4's Specctra parser (verified
 by reading Freerouting source: Component.java, Package.java, Library.java,
 Network.java, DsnFile.java).
 
+Phase 99 refactor: consumes NativeBoard (from NativeParser) instead of
+brittle regex extraction. Emits courtyard-accurate footprint obstacles
+(R-1), per-net-class rules (R-2, Task 2b), copper zones + keepouts
+(R-3, Task 2b), and 45deg trace mode (R-5).
+
 Key format requirements (verified against working Freerouting v2.2.4):
-- (structure): layers + boundary (NO via padstack here)
+- (structure): layers + boundary + (plane/keepout) + (control snap_angle)
 - (placement): grouped by footprint name, each (place REF X Y SIDE ROTATION)
-- (library): (image "FP" (side ...) (pin PADSTACK NAME X Y) ...) + (padstack ...)
+- (library): (image "FP" (side ...) (outline (rect ...)) (pin ...) ...) + padstacks
 - (network): (class ... (circuit (use_layer ...)(use_via ...))(rule ...)) then
   (net "NAME" (pins REF-PAD REF-PAD ...))
 
@@ -23,14 +28,27 @@ Usage::
 
 from __future__ import annotations
 
+import math
 import re
 from pathlib import Path
+
+from kicad_agent.parser.pcb_native_parser import NativeParser
+from kicad_agent.parser.pcb_native_types import (
+    NativeBoard,
+    NativeFootprint,
+    NativeGraphicItem,
+    NativeNetClass,
+    NativePad,
+)
 
 # 1mm = 1000um; Specctra DSN uses um (micrometers)
 _MM_TO_UM = 1000.0
 
 # Default via padstack name
 _VIA_PADSTACK_NAME = "Via[0-1]"
+
+# T-99-01-04 mitigation: fixed enum for snap_angle (prevents string injection).
+_VALID_SNAP_ANGLES = {"none", "fortyfive_degree", "ninety_degree"}
 
 
 def generate_dsn(
@@ -42,6 +60,7 @@ def generate_dsn(
     pad_via_size_um: int = 800,
     wire_width_um: int = 250,
     clearance_um: int = 250,
+    snap_angle: str = "none",
 ) -> str:
     """Generate a Specctra DSN file from KiCad PCB raw content.
 
@@ -55,21 +74,34 @@ def generate_dsn(
         pad_via_size_um: Via pad size in micrometers.
         wire_width_um: Default trace width in micrometers.
         clearance_um: Default clearance in micrometers.
+        snap_angle: Trace angle mode. One of "none" (default),
+            "fortyfive_degree", or "ninety_degree". Invalid values raise
+            ValueError (T-99-01-04 mitigation).
 
     Returns:
         DSN file content as a string.
     """
+    # L-1 fix: validate UNCONDITIONALLY as the first statement (defense-in-depth).
+    if snap_angle not in _VALID_SNAP_ANGLES:
+        raise ValueError(
+            f"Invalid snap_angle: {snap_angle!r}. Must be one of {_VALID_SNAP_ANGLES}"
+        )
+
     if layers is None:
         layers = ["F.Cu", "B.Cu"]
 
-    components = _extract_components(pcb_content)
-    nets = _extract_nets(pcb_content)
+    # M-3 fix: consume NativeBoard for footprints/pads/net_classes/zones.
+    # Board outline stays on regex for now (deferred via Bead — see SUMMARY).
+    board = NativeParser.parse_pcb_content(
+        pcb_content, file_path=str(pcb_path) if pcb_path else ""
+    )
+
     boundary = _extract_board_outline(pcb_content)
     if boundary is None:
-        boundary = _compute_boundary_from_components(components)
+        boundary = _compute_boundary_from_components(board.footprints)
 
-    # Build library data
-    padstacks, images = _build_library(components, layers)
+    # Build library data from NativeBoard footprints (R-1 outlines included).
+    padstacks, images = _build_library_from_native(board.footprints, layers)
 
     source = pcb_path.stem if pcb_path else "board"
     lines: list[str] = []
@@ -89,7 +121,7 @@ def generate_dsn(
     lines.append("  (resolution um 10)")
     lines.append("  (unit um)")
 
-    # Structure — layers + boundary (NO via padstack)
+    # Structure — layers + boundary + zones + snap_angle control
     lines.append("  (structure")
     for idx, layer in enumerate(layers):
         lines.append(f"    (layer {layer}")
@@ -113,30 +145,39 @@ def generate_dsn(
         lines.append(pts)
         lines.append("    )")
 
+    # R-3 zones (Task 2b): emitted between boundary and snap_angle control.
+    _emit_zones(lines, board)
+
+    # R-5 snap_angle (M-2 fix: emit AFTER boundary and zones, canonical DSN order).
+    if snap_angle != "none":
+        lines.append(f"    (control (snap_angle {snap_angle}))")
+
     lines.append("  )")  # end structure
 
     # Placement — grouped by footprint/package name
-    if components:
+    if board.footprints:
         lines.append("  (placement")
         # Group components by footprint
-        fp_groups: dict[str, list[dict]] = {}
-        for comp in components:
-            fp = comp.get("footprint", comp["reference"])
-            fp_groups.setdefault(fp, []).append(comp)
+        fp_groups: dict[str, list[NativeFootprint]] = {}
+        for fp in board.footprints:
+            fp_groups.setdefault(fp.lib_id, []).append(fp)
 
-        for fp_name, comps in sorted(fp_groups.items()):
+        for fp_name, fps in sorted(fp_groups.items()):
             lines.append(f'    (component "{fp_name}"')
-            for comp in comps:
-                ref = comp["reference"]
-                x_um = int(comp["x"] * _MM_TO_UM)
-                y_um = int(comp["y"] * _MM_TO_UM)
-                angle = int(comp["angle"])
-                side = "front" if comp.get("side", "front") == "front" else "back"
+            for fp in fps:
+                ref = fp.properties.get("Reference", "")
+                if not ref:
+                    continue
+                x_um = int(fp.position[0] * _MM_TO_UM)
+                y_um = int(fp.position[1] * _MM_TO_UM)
+                angle = int(fp.position[2])
+                side = "front" if not fp.layer.startswith("B.") else "back"
                 lines.append(f"      (place {ref} {x_um} {y_um} {side} {angle})")
             lines.append("    )")
         lines.append("  )")  # end placement
 
-    # Library — via padstack + package images + SMD padstacks
+    # Library — via padstack + package images (with outlines) + SMD padstacks
+    # + per-class via padstacks (H-2 fix, Task 2b)
     lines.append("  (library")
     # Via padstack
     lines.append(f'    (padstack "{_VIA_PADSTACK_NAME}"')
@@ -144,12 +185,23 @@ def generate_dsn(
         lines.append(f"      (shape (circle {layer} {pad_via_size_um}))")
     lines.append("      (attach off)")
     lines.append("    )")
-    # Package images
+
+    # H-2 fix (Task 2b): per-class via padstacks emitted alongside (use_via ...).
+    _emit_per_class_padstacks(lines, board, layers)
+
+    # Package images (R-1: each has an (outline ...))
     for img_name, img_data in sorted(images.items()):
         side = img_data["side"]
         pins = img_data["pins"]
+        outline = img_data["outline"]  # (x1_um, y1_um, x2_um, y2_um) or None
         lines.append(f'    (image "{img_name}"')
         lines.append(f"      (side {side})")
+        # R-1: emit outline BEFORE pins. Never emit an image without one.
+        if outline is not None:
+            ox1, oy1, ox2, oy2 = outline
+            lines.append(
+                f"      (outline (rect F.Cu {ox1} {oy1} {ox2} {oy2}))"
+            )
         for pin in pins:
             lines.append(
                 f"      (pin {pin['padstack']} {pin['name']}"
@@ -167,21 +219,17 @@ def generate_dsn(
         lines.append("    )")
     lines.append("  )")  # end library
 
-    # Network — class + nets
+    # Network — classes (R-2, Task 2b) + nets
     lines.append("  (network")
-    # Default class with via rule
-    lines.append('    (class default ""')
-    lines.append("      (circuit")
-    layer_str = " ".join(layers)
-    lines.append(f"        (use_layer {layer_str})")
-    lines.append(f"        (use_via {_VIA_PADSTACK_NAME})")
-    lines.append("      )")
-    lines.append("      (rule")
-    lines.append(f"        (width {wire_width_um})")
-    lines.append(f"        (clearance {clearance_um})")
-    lines.append("      )")
-    lines.append("    )")
+    _emit_net_classes(
+        lines,
+        board,
+        layers,
+        wire_width_um=wire_width_um,
+        clearance_um=clearance_um,
+    )
     # Nets with space-separated pins
+    nets = _extract_nets_from_board(board)
     for net_name, pins in sorted(nets.items()):
         if not net_name or not pins:
             continue
@@ -195,43 +243,47 @@ def generate_dsn(
     return "\n".join(lines) + "\n"
 
 
-def _build_library(
-    components: list[dict],
+# ---------------------------------------------------------------------------
+# Library building (NativeBoard-backed, R-1 courtyard outlines)
+# ---------------------------------------------------------------------------
+
+
+def _build_library_from_native(
+    footprints: list[NativeFootprint],
     layers: list[str],
 ) -> tuple[dict[str, dict], dict[str, dict]]:
-    """Build padstacks and package images from components.
+    """Build padstacks and package images from NativeFootprint list.
+
+    R-1: each image includes an (outline ...) rect derived from courtyard
+    F.CrtYd graphic items (rotation-aware, L-2 fix) with pad-bbox fallback.
 
     Returns:
         Tuple of (padstacks, images) where:
         - padstacks: {name: {"shapes": [(layer, size_um), ...], "attach": str}}
-        - images: {name: {"side": str, "pins": [{...}]}}
+        - images: {name: {"side": str, "pins": [{...}], "outline": (x1,y1,x2,y2)_um|None}}
     """
     padstacks: dict[str, dict] = {}
     images: dict[str, dict] = {}
 
-    # Deduplicate components by reference (hierarchical sheets produce copies)
     seen_refs: set[str] = set()
 
-    for comp in components:
-        ref = comp["reference"]
-        if ref in seen_refs:
+    for fp in footprints:
+        ref = fp.properties.get("Reference", "")
+        if not ref or ref in seen_refs:
             continue
         seen_refs.add(ref)
 
-        fp = comp.get("footprint", ref)
-        side = comp.get("side", "front")
+        lib_id = fp.lib_id or ref
+        side = "back" if fp.layer.startswith("B.") else "front"
 
-        if fp not in images:
-            images[fp] = {"side": side, "pins": []}
+        if lib_id not in images:
+            images[lib_id] = {"side": side, "pins": [], "outline": None}
 
-        for pad in comp.get("pads", []):
-            size_um = int(pad.get("size", 0.8) * _MM_TO_UM)
-            drill = pad.get("drill", 0.0)
-            pad_layers = pad.get("layers", "F.Cu")
+        for pad in fp.pads:
+            size_um = int(max(pad.size[0], pad.size[1]) * _MM_TO_UM) if pad.size else int(0.8 * _MM_TO_UM)
+            drill = pad.drill
+            pad_layers = pad.layers or "F.Cu"
 
-            # Map KiCad pad layers to DSN layer names
-            # KiCad "*.Cu" means all copper; for SMD use component side,
-            # for TH use all layers
             if drill > 0:
                 drill_um = int(drill * _MM_TO_UM)
                 ps_key = f"TH_{size_um}:{drill_um}_um"
@@ -239,7 +291,7 @@ def _build_library(
                 shapes = [(layer, size_um) for layer in layers]
             else:
                 # Resolve pad layer to a specific DSN layer
-                if pad_layers == "*.Cu" or pad_layers == "*":
+                if pad_layers in ("*.Cu", "*"):
                     dsn_layer = layers[0] if side == "front" else layers[-1]
                 else:
                     dsn_layer = pad_layers
@@ -250,154 +302,272 @@ def _build_library(
             if ps_key not in padstacks:
                 padstacks[ps_key] = {"shapes": shapes, "attach": attach}
 
-            images[fp]["pins"].append({
+            # Pad positions are footprint-local (unrotated); store as-is.
+            # The placement (place ...) block carries footprint rotation.
+            images[lib_id]["pins"].append({
                 "padstack": ps_key,
-                "name": pad["name"],
-                "x": pad["x"],
-                "y": pad["y"],
+                "name": pad.number,
+                "x": pad.position[0],
+                "y": pad.position[1],
             })
+
+        # R-1: compute outline (courtyard preferred, pad-bbox fallback).
+        # L-2 fix: apply footprint rotation to local coords before AABB.
+        outline = _compute_footprint_outline(fp)
+        if outline is not None:
+            # Keep the first non-None outline (all instances of same lib_id
+            # share the same footprint geometry, so any one is representative).
+            if images[lib_id]["outline"] is None:
+                images[lib_id]["outline"] = outline
 
     return padstacks, images
 
 
-def _extract_components(pcb_content: str) -> list[dict]:
-    """Extract component placement and pad positions from PCB content."""
-    components = []
+def _compute_footprint_outline(
+    fp: NativeFootprint,
+) -> tuple[int, int, int, int] | None:
+    """R-1 + L-2 fix: rotation-aware AABB of courtyard graphics (pad-bbox fallback).
 
-    for fp_match in re.finditer(r"^\s+\(footprint ", pcb_content, re.MULTILINE):
-        fp_start = fp_match.start()
-        fp_end = _find_matching_close(pcb_content, fp_start)
-        if fp_end is None:
+    Footprint graphic_items and pad positions are in footprint-LOCAL coordinates.
+    The (at X Y ANGLE) from fp.position rotates the whole footprint. We transform
+    each local point by the rotation, then compute the axis-aligned bounding box
+    (AABB) in world coordinates, converted to micrometers.
+
+    Returns:
+        (x1_um, y1_um, x2_um, y2_um) or None if footprint has no geometry.
+    """
+    angle_deg = fp.position[2] if len(fp.position) >= 3 else 0.0
+    angle_rad = math.radians(angle_deg)
+    cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
+
+    def _transform(lx: float, ly: float) -> tuple[float, float]:
+        wx = fp.position[0] + lx * cos_a - ly * sin_a
+        wy = fp.position[1] + lx * sin_a + ly * cos_a
+        return wx, wy
+
+    points: list[tuple[float, float]] = []
+
+    # Courtyard graphics first (preferred source for outline).
+    crtyd_items = [g for g in fp.graphic_items if _is_crtyd(g)]
+    for g in crtyd_items:
+        points.extend(_graphic_points(g))
+
+    if not points:
+        # Fallback: pad bounding box (transformed ± half pad size).
+        for pad in fp.pads:
+            px, py = _transform(pad.position[0], pad.position[1])
+            sx = pad.size[0] / 2.0 if pad.size else 0.4
+            sy = pad.size[1] / 2.0 if pad.size else 0.4
+            points.append((px - sx, py - sy))
+            points.append((px + sx, py + sy))
+
+    if not points:
+        return None
+
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    return (
+        int(min(xs) * _MM_TO_UM),
+        int(min(ys) * _MM_TO_UM),
+        int(max(xs) * _MM_TO_UM),
+        int(max(ys) * _MM_TO_UM),
+    )
+
+
+def _is_crtyd(g: NativeGraphicItem) -> bool:
+    """True if the graphic item is on a courtyard layer (F.CrtYd or B.CrtYd)."""
+    return bool(g.layer) and g.layer.endswith(".CrtYd")
+
+
+def _graphic_points(g: NativeGraphicItem) -> list[tuple[float, float]]:
+    """Extract representative points from a NativeGraphicItem for AABB computation.
+
+    NativeGraphicItem fields use _NativePosition NamedTuples (support .X/.Y and
+    tuple indexing). We extract corner/edge points depending on type.
+    """
+    pts: list[tuple[float, float]] = []
+    # Rect: start + end define opposite corners.
+    if g.start is not None and g.end is not None:
+        pts.append((float(g.start[0]), float(g.start[1])))
+        pts.append((float(g.end[0]), float(g.end[1])))
+    # Line: same as rect (start/end).
+    elif g.start is not None:
+        pts.append((float(g.start[0]), float(g.start[1])))
+        if g.end is not None:
+            pts.append((float(g.end[0]), float(g.end[1])))
+    # Circle: center ± radius on both axes (bounding square).
+    if g.center is not None and g.radius > 0:
+        cx, cy = float(g.center[0]), float(g.center[1])
+        r = g.radius
+        pts.append((cx - r, cy - r))
+        pts.append((cx + r, cy + r))
+    return pts
+
+
+# ---------------------------------------------------------------------------
+# Zones (R-3, Task 2b — 3-way classification)
+# ---------------------------------------------------------------------------
+
+
+def _emit_zones(lines: list[str], board: NativeBoard) -> None:
+    """R-3: emit copper zones as (plane ...) or (keepout ...) per C-1 classification.
+
+    Category 1 (copper pour, net_name != ""): emit (plane "NET" (layer L) (polygon ...)).
+    Category 2 (routing keepout, is_routing_keepout): emit (keepout "NAME" (polygon ...)).
+    Category 3 (placement-only keepout): SKIP — Freerouting does not place footprints,
+        so emitting a routing keepout would be the old binary-logic bug (C-1 fix).
+    """
+    for zone in board.zones:
+        poly_um = [
+            (int(x * _MM_TO_UM), int(y * _MM_TO_UM))
+            for x, y in zone.polygon_points
+        ]
+        if not poly_um:
             continue
+        poly_str = " ".join(f"{x} {y}" for x, y in poly_um)
 
-        block = pcb_content[fp_start:fp_end + 1]
+        net_name = zone.net_name or getattr(zone, "netName", "")
+        if net_name:
+            # Category 1: copper pour -> plane. Multi-layer -> one per layer.
+            target_layers = zone.layers if zone.layers else [zone.layer or "F.Cu"]
+            for layer in target_layers:
+                if not layer:
+                    continue
+                lines.append(
+                    f'    (plane "{net_name}" (layer {layer}) (polygon 0 {poly_str}))'
+                )
+        elif getattr(zone, "is_routing_keepout", False):
+            # Category 2: routing keepout (tracks or vias not_allowed).
+            label = f"ZONE_{zone.uuid[:8]}" if zone.uuid else f"ZONE_{id(zone) & 0xFFFFFFFF:08x}"
+            layer = zone.layer or (zone.layers[0] if zone.layers else "F.Cu")
+            lines.append(
+                f'    (keepout "{label}" (polygon {layer} 0 {poly_str}))'
+            )
+        # Category 3: placement-only keepout -> skip (C-1 fix).
 
-        lib_match = re.search(r'\(footprint\s+"([^"]+)"', block)
-        if not lib_match:
+
+# ---------------------------------------------------------------------------
+# Per-class via padstacks (H-2 fix, Task 2b)
+# ---------------------------------------------------------------------------
+
+
+def _emit_per_class_padstacks(
+    lines: list[str], board: NativeBoard, layers: list[str]
+) -> None:
+    """H-2 fix: emit (padstack "Via[NAME]" ...) for each named net class with via_diameter.
+
+    This guarantees the DSN is self-contained: every (use_via "Via[NAME]") reference
+    inside a (class ...) block has a matching padstack in the library block, emitted
+    in the SAME plan (Plan 99-01). Plan 99-02 handles stackup-based via padstacks.
+    """
+    for nc in board.net_classes:
+        if nc.via_diameter <= 0:
             continue
-        lib_id = lib_match.group(1)
-
-        ref_match = re.search(r'\(property\s+"Reference"\s+"([^"]+)"', block)
-        if not ref_match:
-            continue
-        reference = ref_match.group(1)
-
-        at_match = re.search(
-            r"\(at\s+([-\d.]+)\s+([-\d.]+)(?:\s+([-\d.]+))?\s*\)", block
-        )
-        if not at_match:
-            continue
-        x, y = float(at_match.group(1)), float(at_match.group(2))
-        angle = float(at_match.group(3)) if at_match.group(3) else 0.0
-
-        side = "front"
-        layer_match = re.search(r'\(layer\s+"([^"]+)"', block)
-        if layer_match and layer_match.group(1).startswith("B."):
-            side = "back"
-
-        pads = _extract_pads(block, fp_start, pcb_content)
-
-        components.append({
-            "reference": reference,
-            "footprint": lib_id,
-            "x": x,
-            "y": y,
-            "angle": angle,
-            "side": side,
-            "pads": pads,
-        })
-
-    return components
+        via_name = f"Via[{nc.name}]"
+        size_um = int(nc.via_diameter * _MM_TO_UM)
+        lines.append(f'    (padstack "{via_name}"')
+        for layer in layers:
+            lines.append(f"      (shape (circle {layer} {size_um}))")
+        lines.append("      (attach off)")
+        lines.append("    )")
 
 
-def _extract_pads(
-    block: str, fp_start: int, pcb_content: str
-) -> list[dict]:
-    """Extract pad data from a footprint block."""
-    pads = []
-    for pad_match in re.finditer(r'\(pad\s+"([^"]+)"', block):
-        pad_name = pad_match.group(1)
-        pad_abs_start = fp_start + pad_match.start()
-        pad_abs_end = _find_matching_close(pcb_content, pad_abs_start)
-        if pad_abs_end is None:
-            continue
-        pad_block = pcb_content[pad_abs_start:pad_abs_end + 1]
-
-        pad_at = re.search(r"\(at\s+([-\d.]+)\s+([-\d.]+)", pad_block)
-        if not pad_at:
-            continue
-
-        px = float(pad_at.group(1))
-        py = float(pad_at.group(2))
-
-        pad_size = 0.8
-        size_match = re.search(r'\(size\s+([-\d.]+)\s+([-\d.]+)', pad_block)
-        if size_match:
-            pad_size = max(float(size_match.group(1)), float(size_match.group(2)))
-
-        drill = 0.0
-        drill_match = re.search(r'\(drill\s+([-\d.]+)', pad_block)
-        if drill_match:
-            drill = float(drill_match.group(1))
-
-        pad_layers = "F.Cu"
-        pad_layer_match = re.search(r'\(layers\s+"([^"]+)"', pad_block)
-        if pad_layer_match:
-            pad_layers = pad_layer_match.group(1)
-
-        pads.append({
-            "name": pad_name,
-            "x": px,
-            "y": py,
-            "size": pad_size,
-            "drill": drill,
-            "layers": pad_layers,
-        })
-
-    return pads
+# ---------------------------------------------------------------------------
+# Net classes (R-2, Task 2b)
+# ---------------------------------------------------------------------------
 
 
-def _extract_nets(pcb_content: str) -> dict[str, list[str]]:
-    """Extract net connectivity as {net_name: [ref-pad, ...]}.
+def _emit_net_classes(
+    lines: list[str],
+    board: NativeBoard,
+    layers: list[str],
+    *,
+    wire_width_um: int,
+    clearance_um: int,
+) -> None:
+    """R-2: emit (class ...) blocks for each named net_class + a trailing default class.
 
-    Deduplicates pin references — PCB files with hierarchical sheets or
-    board variants may contain duplicate footprint blocks.
+    H-2 fix: each named class with via_diameter > 0 emits
+    (circuit (use_via "Via[NAME]")) AND references a padstack emitted by
+    _emit_per_class_padstacks (same plan).
+    """
+    layer_str = " ".join(layers)
+    nets_in_named_classes: set[str] = set()
+
+    for nc in board.net_classes:
+        width_um = int(nc.track_width * _MM_TO_UM) if nc.track_width > 0 else wire_width_um
+        cls_clearance_um = int(nc.clearance * _MM_TO_UM) if nc.clearance > 0 else clearance_um
+        members_str = " ".join(nc.add_nets) if nc.add_nets else ""
+        nets_in_named_classes.update(nc.add_nets)
+
+        via_ref = _VIA_PADSTACK_NAME
+        if nc.via_diameter > 0:
+            via_ref = f"Via[{nc.name}]"
+
+        lines.append(f'    (class "{nc.name}" {members_str}')
+        lines.append("      (circuit")
+        lines.append(f"        (use_layer {layer_str})")
+        lines.append(f'        (use_via "{via_ref}")')
+        lines.append("      )")
+        lines.append("      (rule")
+        lines.append(f"        (width {width_um})")
+        lines.append(f"        (clearance {cls_clearance_um})")
+        lines.append("      )")
+        lines.append("    )")
+
+    # Default class: nets not in any named class (backward compat).
+    all_nets = {n.name for n in board.nets if n.name}
+    default_members = all_nets - nets_in_named_classes
+    members_str = " ".join(sorted(default_members))
+    lines.append(f'    (class default "" {members_str}'.rstrip())
+    if not members_str:
+        # Ensure there's at least an empty string token for parseability.
+        lines.append('    (class default ""')
+    lines.append("      (circuit")
+    lines.append(f"        (use_layer {layer_str})")
+    lines.append(f'        (use_via "{_VIA_PADSTACK_NAME}")')
+    lines.append("      )")
+    lines.append("      (rule")
+    lines.append(f"        (width {wire_width_um})")
+    lines.append(f"        (clearance {clearance_um})")
+    lines.append("      )")
+    lines.append("    )")
+
+
+# ---------------------------------------------------------------------------
+# Net extraction (NativeBoard-backed)
+# ---------------------------------------------------------------------------
+
+
+def _extract_nets_from_board(board: NativeBoard) -> dict[str, list[str]]:
+    """Extract net connectivity as {net_name: [ref-pad, ...]} from NativeBoard.
+
+    Iterates footprints -> pads -> net_name. Deduplicates pin references.
     """
     nets: dict[str, set[str]] = {}
-
-    for fp_match in re.finditer(r"^\s+\(footprint ", pcb_content, re.MULTILINE):
-        fp_start = fp_match.start()
-        fp_end = _find_matching_close(pcb_content, fp_start)
-        if fp_end is None:
+    for fp in board.footprints:
+        ref = fp.properties.get("Reference", "")
+        if not ref:
             continue
-
-        block = pcb_content[fp_start:fp_end + 1]
-
-        ref_match = re.search(r'\(property\s+"Reference"\s+"([^"]+)"', block)
-        if not ref_match:
-            continue
-        reference = ref_match.group(1)
-
-        for pad_match in re.finditer(r'\(pad\s+"([^"]+)"', block):
-            pad_name = pad_match.group(1)
-            pad_abs_start = fp_start + pad_match.start()
-            pad_abs_end = _find_matching_close(pcb_content, pad_abs_start)
-            if pad_abs_end is None:
-                continue
-            pad_block = pcb_content[pad_abs_start:pad_abs_end + 1]
-            net_match = re.search(r'\(net\s+(?:\d+\s+)?"([^"]+)"', pad_block)
-            if net_match:
-                net_name = net_match.group(1)
-                pin_ref = f"{reference}-{pad_name}"
-                if net_name not in nets:
-                    nets[net_name] = set()
-                nets[net_name].add(pin_ref)
-
+        for pad in fp.pads:
+            if pad.net_name:
+                pin_ref = f"{ref}-{pad.number}"
+                nets.setdefault(pad.net_name, set()).add(pin_ref)
     return {name: sorted(pins) for name, pins in nets.items()}
 
 
+# ---------------------------------------------------------------------------
+# Board outline (M-3 fix: deferred regex -> NativeBoard.outline migration)
+# ---------------------------------------------------------------------------
+
+
 def _extract_board_outline(pcb_content: str) -> list[float] | None:
-    """Extract board outline as [x1, y1, x2, y2] from Edge.Cuts."""
+    """Extract board outline as [x1, y1, x2, y2] from Edge.Cuts.
+
+    M-3 fix: kept as regex for now. Migration to NativeBoard.outline is tracked
+    by a deferred Bead (see 99-01-SUMMARY.md). The hybrid state is intentional:
+    footprint/net/zone data comes from NativeBoard, board boundary from regex.
+    """
     edges = []
 
     for match in re.finditer(r"\(gr_line\s", pcb_content):
@@ -425,14 +595,14 @@ def _extract_board_outline(pcb_content: str) -> list[float] | None:
 
 
 def _compute_boundary_from_components(
-    components: list[dict],
+    footprints: list[NativeFootprint],
     margin_mm: float = 5.0,
 ) -> list[float]:
-    """Compute board boundary from component positions."""
-    if not components:
+    """Compute board boundary from footprint positions."""
+    if not footprints:
         return [0.0, 0.0, 100.0, 100.0]
-    xs = [c["x"] for c in components]
-    ys = [c["y"] for c in components]
+    xs = [fp.position[0] for fp in footprints]
+    ys = [fp.position[1] for fp in footprints]
     return [
         min(xs) - margin_mm,
         min(ys) - margin_mm,

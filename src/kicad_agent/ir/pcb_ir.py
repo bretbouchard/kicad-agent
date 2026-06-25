@@ -795,7 +795,7 @@ class PcbIR(BaseIR):
     ) -> list:
         """Extract SpatialBox obstacles from existing copper track segments.
 
-        Phase 122B Gap 1: existing tracks must be visible to the router so
+        Phase 99 Gap 1: existing tracks must be visible to the router so
         new routes don't cross them (eliminates tracks_crossing violations).
 
         Each (segment ...) on a copper layer becomes a thin inflated SpatialBox

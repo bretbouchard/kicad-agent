@@ -143,6 +143,7 @@ def export_dsn(
     output_dir: Path | None = None,
     *,
     layers: list[str] | None = None,
+    snap_angle: str = "none",
 ) -> Path:
     """Export PCB in Specctra DSN format.
 
@@ -153,6 +154,8 @@ def export_dsn(
         pcb_path: Path to .kicad_pcb file.
         output_dir: Output directory. Defaults to pcb_path parent.
         layers: Copper layers to include. Default ["F.Cu", "B.Cu"].
+        snap_angle: Trace angle mode ("none", "fortyfive_degree", "ninety_degree").
+            Threads through to generate_dsn (Phase 99 R-5 / BLOCKER-1).
 
     Returns:
         Path to the generated .dsn file.
@@ -172,7 +175,7 @@ def export_dsn(
     dsn_path = output_dir / f"{pcb_path.stem}{_DSN_EXTENSION}"
 
     pcb_content = pcb_path.read_text(encoding="utf-8")
-    dsn_text = generate_dsn(pcb_content, pcb_path, layers=layers)
+    dsn_text = generate_dsn(pcb_content, pcb_path, layers=layers, snap_angle=snap_angle)
 
     dsn_path.write_text(dsn_text, encoding="utf-8")
     logger.info("Generated DSN: %s (%d bytes)", dsn_path, len(dsn_text))
@@ -205,6 +208,7 @@ def route_with_freerouting(
     *,
     freerouting_jar: str | None = None,
     max_passes: int = 5,
+    snap_angle: str = "none",
 ) -> FreeroutingResult:
     """Auto-route a PCB using Freerouting.
 
@@ -217,6 +221,8 @@ def route_with_freerouting(
         output_dir: Output directory for DSN and SES files.
         freerouting_jar: Explicit path to Freerouting JAR. If None, auto-detects.
         max_passes: Maximum routing passes (default 5).
+        snap_angle: Trace angle mode ("none", "fortyfive_degree", "ninety_degree").
+            Threads through export_dsn to generate_dsn (Phase 99 R-5 / BLOCKER-1).
 
     Returns:
         FreeroutingResult with success status and file paths.
@@ -249,7 +255,7 @@ def route_with_freerouting(
 
     try:
         # Export DSN
-        dsn_path = export_dsn(pcb_path, output_dir)
+        dsn_path = export_dsn(pcb_path, output_dir, snap_angle=snap_angle)
     except Exception as e:
         return FreeroutingResult(
             success=False,

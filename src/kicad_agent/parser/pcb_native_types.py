@@ -178,6 +178,12 @@ class NativeZone:
 
     Council CRITICAL-2 compatibility fields (net, netName, layers, minThickness)
     mirror kiutils Zone attribute names so downstream consumers work unchanged.
+
+    Phase 99 C-1 fix: keepout_* fields capture the (keepout ...) subblock type
+    so zones can be classified as copper pour, routing keepout, or placement-only
+    keepout. The is_routing_keepout property drives the 3-way classification
+    that prevents Freerouting from being told to avoid regions the source PCB
+    allows tracks through (the old binary net_name == "" bug).
     """
 
     net_number: int = 0
@@ -191,11 +197,28 @@ class NativeZone:
     priority: int = 0
     minThickness: float = 0.25
     uuid: str = ""
+    # Phase 99 C-1 fix: captures the (keepout ...) subblock type.
+    # Defaults of "allowed" mean: zones WITHOUT a keepout subblock are treated
+    # as non-routing-restricted (a plain copper pour has no keepout subblock).
+    keepout_tracks: str = "allowed"
+    keepout_vias: str = "allowed"
+    keepout_pads: str = "allowed"
+    keepout_copperpour: str = "allowed"
+    keepout_footprints: str = "allowed"
 
     @property
     def tstamp(self) -> str:
         """Kiutils compatibility: returns uuid. Council CRITICAL-2."""
         return self.uuid
+
+    @property
+    def is_routing_keepout(self) -> bool:
+        """C-1 fix: True if this zone blocks routing (tracks OR vias not allowed).
+
+        Placement-only keepouts (only footprints not_allowed) do NOT block
+        routing and must not be emitted as DSN (keepout ...) to Freerouting.
+        """
+        return self.keepout_tracks == "not_allowed" or self.keepout_vias == "not_allowed"
 
 
 @dataclass

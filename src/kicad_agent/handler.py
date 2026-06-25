@@ -45,7 +45,7 @@ def validate_operation(
             suggestion="Check that your JSON is well-formed. Ensure all strings are quoted, brackets are closed, and there are no trailing commas.",
         )
 
-    # Phase 122B Gap 4: Alias 'native_route' -> 'auto_route'.
+    # Phase 99 Gap 4: Alias 'native_route' -> 'auto_route'.
     # The brief's CLI invocation uses {"op":"native_route","route_all_unconnected":true}.
     # Map it to auto_route with multi-layer defaults so the existing handler runs.
     if parsed.get("op_type") == "native_route" or parsed.get("op") == "native_route":

@@ -666,7 +666,7 @@ class NativeParser:
             # KiCad 9 format:  (net NUMBER "NAME") -- number + name
             net_block = _find_symbol(seg_block, "net")
             if net_block and len(net_block) >= 2:
-                # Phase 122B Gap 1: handle KiCad 10 string-only net format.
+                # Phase 99 Gap 1: handle KiCad 10 string-only net format.
                 if isinstance(net_block[1], str):
                     seg.net_name = net_block[1]
                     # No net_number in KiCad 10 string-only format; leave as 0.
@@ -755,6 +755,16 @@ class NativeParser:
                     zone.net_name = net_block[2]
                     zone.netName = net_block[2]  # CRITICAL-2 compatibility
 
+            # Phase 99 Rule 1 fix: real KiCad zones emit (net N) and (net_name "NAME")
+            # as SEPARATE sibling fields (not the combined (net N "NAME") form used in
+            # nets list). Read the standalone (net_name ...) field so R-3 copper-pour
+            # classification (Category 1: net_name != "") works on real fixtures.
+            if not zone.net_name:
+                net_name_val = _find_string_child(zone_block, "net_name")
+                if net_name_val:
+                    zone.net_name = net_name_val
+                    zone.netName = net_name_val  # CRITICAL-2 compatibility
+
             # Layer
             layer_block = _find_symbol(zone_block, "layer")
             if layer_block and len(layer_block) >= 2:
@@ -792,6 +802,22 @@ class NativeParser:
                     zone.minThickness = float(min_t_val)  # CRITICAL-2 field name
                 except (ValueError, TypeError):
                     pass
+
+            # Phase 99 C-1 fix: parse (keepout (tracks X) (vias X) (pads X)
+            # (copperpour X) (footprints X)) subblock. Values are "allowed" or
+            # "not_allowed". Defaults remain "allowed" if subblock absent.
+            keepout_block = _find_symbol(zone_block, "keepout")
+            if keepout_block is not None:
+                for field_name, attr_name in [
+                    ("tracks", "keepout_tracks"),
+                    ("vias", "keepout_vias"),
+                    ("pads", "keepout_pads"),
+                    ("copperpour", "keepout_copperpour"),
+                    ("footprints", "keepout_footprints"),
+                ]:
+                    value = _find_first_value(keepout_block, field_name)
+                    if value is not None:
+                        setattr(zone, attr_name, str(value))
 
             # Polygon points (filled_polygon or polygon)
             for poly_name in ("filled_polygon", "polygon"):

@@ -68,7 +68,7 @@ class RoutingGraph:
             required_nodes: Set of (x, y) positions (pad locations) that must
                 exist as graph nodes even if inside an obstacle. Pads are
                 inside footprints but must be routable.
-            forbidden_zones: Phase 122B Gap 2 — Optional list of impassable
+            forbidden_zones: Phase 99 Gap 2 — Optional list of impassable
                 zones per layer. Each item is a dict with keys:
                 ``layer`` (copper layer name), ``x1``, ``y1``, ``x2``, ``y2``
                 (bounds in mm). Grid nodes inside these zones are excluded
@@ -126,7 +126,7 @@ class RoutingGraph:
             ys.append(round(y, 6))
             y += grid_res
 
-        # Phase 122B Gap 2: Build per-layer forbidden zone lookup.
+        # Phase 99 Gap 2: Build per-layer forbidden zone lookup.
         # Grid nodes inside these zones are excluded from the graph entirely,
         # making them impassable. Used for hard constraints like the C4 rule
         # (B.Cu must not cross x=100mm on the analog board).
@@ -157,7 +157,7 @@ class RoutingGraph:
         for layer in active_layers:
             for gx in xs:
                 for gy in ys:
-                    # Phase 122B Gap 2: skip forbidden zones entirely.
+                    # Phase 99 Gap 2: skip forbidden zones entirely.
                     if _in_forbidden_zone(gx, gy, layer):
                         continue
                     pt = ShapelyPoint(gx, gy)
