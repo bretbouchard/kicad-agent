@@ -31,6 +31,7 @@ from kicad_agent.ops.repair import (
     repair_wire_snapping,
     resolve_shorted_nets,
     snap_to_grid,
+    update_symbols_from_library,
 )
 from kicad_agent.parser import parse_schematic
 
@@ -1796,4 +1797,244 @@ class TestSnapToGridAnchorProximity:
         result = snap_to_grid(ir, grid_mm=1.27)
         # Wire near anchor AND snap target (67.31) far from anchor → skip
         assert result["skipped_connectivity"] >= 1
+
+
+# ---------------------------------------------------------------------------
+# update_symbols_from_library (P0-001 regression)
+# ---------------------------------------------------------------------------
+
+
+def _write_minimal_symbol_library(
+    lib_path: Path,
+    lib_name: str,
+    entry_name: str,
+    *,
+    sym_library_nickname: str | None = None,
+) -> None:
+    """Write a minimal .kicad_sym library with one symbol having one pin.
+
+    The pin uses electrical_type "passive" (the library canonical version).
+
+    Args:
+        lib_name: Library name for the sym-lib-table entry (used to resolve URI).
+        entry_name: Symbol entry name (e.g. "R").
+        sym_library_nickname: Override for the in-file symbol's libraryNickname.
+            If None, defaults to lib_name (so sym.libId == "Device:R").
+            If set to "" (empty), sym.libId == "R" (just entryName) -- this
+            forces update_symbols_from_library to fall through from the
+            libId-match branch to the entryName-match branch, which is where
+            the P0-001 AttributeError bug lives.
+    """
+    from kiutils.items.common import Position as KiutilsPosition
+    from kiutils.symbol import Symbol, SymbolLib, SymbolPin
+
+    pin = SymbolPin(
+        name="1",
+        number="1",
+        electricalType="passive",
+        position=KiutilsPosition(0.0, 0.0),
+        length=2.54,
+    )
+    nickname = lib_name if sym_library_nickname is None else sym_library_nickname
+    sym = Symbol(libraryNickname=nickname, entryName=entry_name)
+    sym.pins.append(pin)
+    lib = SymbolLib()
+    lib.symbols = [sym]
+    lib.to_file(str(lib_path))
+
+
+def _write_sym_lib_table(project_dir: Path, lib_name: str, lib_filename: str) -> None:
+    """Write a project-local sym-lib-table pointing at lib_filename."""
+    table_content = (
+        f'(sym_lib_table\n'
+        f'  (version 7)\n'
+        f'  (lib (name "{lib_name}")(type "KiCad")'
+        f'(uri "${{KIPRJMOD}}/{lib_filename}")(options "")(descr "test lib"))\n'
+        f')'
+    )
+    (project_dir / "sym-lib-table").write_text(table_content, encoding="utf-8")
+
+
+def _build_schematic_with_mismatched_embedded_symbol(
+    sch_path: Path,
+    lib_name: str,
+    entry_name: str,
+    embedded_pin_type: str = "unspecified",
+    reference: str = "R1",
+) -> SchematicIR:
+    """Build a schematic whose embedded lib_symbol pin type diverges from library.
+
+    The embedded symbol has the same lib_id and pin count as the library
+    version, but a DIFFERENT electrical_type on its pin. This is the exact
+    lib_symbol_mismatch scenario that triggered P0-001.
+
+    Also places a SchematicSymbol component (R1) referencing the lib_id so
+    that SchematicIR.get_all_references() returns it — the op only processes
+    lib_ids that are actually used by placed components.
+    """
+    import uuid as uuid_mod
+
+    from kiutils.items.common import Effects, Font, Position as KiutilsPosition, Property
+    from kiutils.items.schitems import SchematicSymbol
+    from kiutils.symbol import Symbol, SymbolPin
+
+    sch = Schematic.create_new()
+
+    # Build embedded lib_symbol with mismatched pin electrical type.
+    # The library canonical version (written separately) uses "passive".
+    pin = SymbolPin(
+        name="1",
+        number="1",
+        electricalType=embedded_pin_type,
+        position=KiutilsPosition(0.0, 0.0),
+        length=2.54,
+    )
+    # Sub-symbols in units[] are Symbol instances with unitId/styleId set.
+    unit = Symbol(entryName=entry_name, unitId=1, styleId=1)
+    unit.pins = [pin]
+
+    embedded = Symbol(libraryNickname=lib_name, entryName=entry_name)
+    embedded.units = [unit]
+    sch.libSymbols.append(embedded)
+
+    # Place a component instance referencing the embedded lib_symbol.
+    # Without a placed SchematicSymbol, get_all_references() returns nothing
+    # and the op skips processing entirely (never reaching the buggy line).
+    placed = SchematicSymbol(
+        libraryNickname=lib_name,
+        entryName=entry_name,
+        position=KiutilsPosition(25.0, 25.0, 0.0),
+        uuid=str(uuid_mod.uuid4()),
+        properties=[
+            Property(
+                key="Reference",
+                value=reference,
+                id=0,
+                position=KiutilsPosition(0.0, 0.0, angle=0.0),
+                effects=Effects(font=Font()),
+            ),
+            Property(
+                key="Value",
+                value=entry_name,
+                id=1,
+                position=KiutilsPosition(0.0, 0.0, angle=0.0),
+                effects=Effects(font=Font()),
+            ),
+            Property(
+                key="Footprint",
+                value="",
+                id=2,
+                position=KiutilsPosition(0.0, 0.0, angle=0.0),
+                effects=Effects(font=Font()),
+            ),
+        ],
+    )
+    sch.schematicSymbols.append(placed)
+
+    sch.to_file(str(sch_path))
+    result = parse_schematic(sch_path)
+    return SchematicIR(_parse_result=result)
+
+
+class TestUpdateSymbolsFromLibraryNoCrash:
+    """P0-001 regression: update_symbols_from_library must not crash with
+    AttributeError: 'Symbol' object has no attribute 'name'.
+
+    The kiutils Symbol class exposes libId (property) and entryName (field),
+    NOT name. The op must use entryName for unqualified-name matching.
+    """
+
+    def test_update_symbols_from_library_no_crash_on_mismatch(self):
+        """Calling the op on a schematic with lib_symbol_mismatch must not raise.
+
+        Previously crashed with AttributeError before any file modification.
+        The op may report skips (e.g. symbol_not_in_library) but must return a
+        well-formed dict, never leak an AttributeError.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_dir = Path(tmpdir)
+            lib_name = "Device"
+            entry_name = "R"
+            lib_filename = "Device.kicad_sym"
+            lib_path = project_dir / lib_filename
+            sch_path = project_dir / "test.kicad_sch"
+
+            _write_minimal_symbol_library(lib_path, lib_name, entry_name)
+            _write_sym_lib_table(project_dir, lib_name, lib_filename)
+            ir = _build_schematic_with_mismatched_embedded_symbol(
+                sch_path, lib_name, entry_name,
+                embedded_pin_type="unspecified",  # differs from library "passive"
+            )
+
+            # Must NOT raise AttributeError. Returns a dict.
+            result = update_symbols_from_library(ir, sch_path)
+
+            assert isinstance(result, dict)
+            assert "updated" in result
+            assert "skipped" in result
+            # No "error" key should leak from an unhandled AttributeError.
+            assert "error" not in result or not result["error"].startswith(
+                "'Symbol' object has no attribute 'name'"
+            ), f"AttributeError leaked: {result.get('error')}"
+
+    def test_update_symbols_from_library_uses_entryName_for_matching(self):
+        """The op must find the library symbol via entryName (not name).
+
+        The P0-001 bug lives in the second clause of the symbol-match OR:
+            if sym.libId == lib_id or sym.name == symbol_name:
+                                       ^^^^^^^^^^ <-- AttributeError
+
+        To exercise that second clause, this test builds a library file whose
+        symbol has an EMPTY libraryNickname, so sym.libId returns just "R"
+        (the entryName, unqualified) rather than "Device:R". The schematic's
+        lib_id is "Device:R", so the first clause (sym.libId == lib_id) is
+        False and the code falls through to the entryName clause.
+
+        Before the fix: AttributeError: 'Symbol' object has no attribute 'name'
+        (caught by the surrounding try/except, recorded as a skip with the
+        error message -- so we also assert no skip carries that error).
+        After the fix: sym.entryName == "R" matches, symbol is re-embedded.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_dir = Path(tmpdir)
+            lib_name = "Device"
+            entry_name = "R"
+            lib_filename = "Device.kicad_sym"
+            lib_path = project_dir / lib_filename
+            sch_path = project_dir / "test.kicad_sch"
+
+            # Empty in-file nickname forces sym.libId == "R" (not "Device:R"),
+            # so the libId-match clause fails and the entryName clause runs.
+            _write_minimal_symbol_library(
+                lib_path, lib_name, entry_name,
+                sym_library_nickname="",
+            )
+            _write_sym_lib_table(project_dir, lib_name, lib_filename)
+            ir = _build_schematic_with_mismatched_embedded_symbol(
+                sch_path, lib_name, entry_name,
+                embedded_pin_type="unspecified",  # library uses "passive" -> mismatch
+            )
+
+            result = update_symbols_from_library(ir, sch_path)
+
+            # No skip should carry the AttributeError message.
+            for skip in result["skipped"]:
+                reason = skip.get("reason", "")
+                assert "has no attribute 'name'" not in reason, (
+                    f"AttributeError leaked into skip reason: {skip}. "
+                    f"Full result: {result}"
+                )
+
+            # The symbol should be FOUND via entryName matching and updated.
+            # If entryName matching is broken, the op would skip with
+            # reason="symbol_not_in_library" (source_symbol stays None).
+            skip_reasons = [s.get("reason", "") for s in result["skipped"]]
+            assert "symbol_not_in_library" not in skip_reasons, (
+                f"Symbol not found via entryName matching. "
+                f"Skipped: {result['skipped']}"
+            )
+            assert len(result["updated"]) >= 1, (
+                f"Expected >=1 updated symbol, got updated={result['updated']} "
+                f"skipped={result['skipped']}"
+            )
 
