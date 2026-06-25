@@ -24,6 +24,40 @@ def _distance(x1: float, y1: float, x2: float, y2: float) -> float:
     return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
 
+def _lookup_pin_type_with_tolerance(
+    x: float,
+    y: float,
+    pin_positions: list[dict[str, Any]],
+    tolerance: float,
+) -> str:
+    """Find pin electrical type at (x, y) within tolerance. Default "passive".
+
+    Replaces exact dict-key lookup which fails when ERC violation positions
+    and pin positions differ by sub-micron precision that rounds to different
+    2-decimal keys. Uses the same SNAP_TOLERANCE pattern as _near_anchor.
+
+    P0-004 fix: see BUGS/P0-004-place-no-connects-from-erc-wrong-positions.md.
+    The previous code built pos_to_type with round(p["x"], 2) keys; a pin at
+    x=127.015 (key 127.02) and violation at x=127.014 (key 127.01) missed,
+    defaulting to "passive" and placing a no_connect on power_in pins.
+
+    Args:
+        x: X coordinate of the ERC violation position.
+        y: Y coordinate of the ERC violation position.
+        pin_positions: List of pin position dicts from ir.get_pin_positions().
+        tolerance: Maximum per-axis distance in mm for a match
+                   (use SNAP_TOLERANCE = 0.01).
+
+    Returns:
+        The pin's electrical_type if a match is found, else "passive"
+        (same default as the old dict .get() for backward compatibility).
+    """
+    for p in pin_positions:
+        if abs(x - p["x"]) <= tolerance and abs(y - p["y"]) <= tolerance:
+            return p.get("electrical_type", "passive")
+    return "passive"
+
+
 def _is_position_connected(
     x: float, y: float, connected_positions: list[tuple[float, float]],
 ) -> bool:
@@ -224,12 +258,11 @@ def place_no_connects_from_erc(ir: SchematicIR, sch_path: Path) -> dict[str, Any
                 "skipped_pin_type": 0, "skipped_power_net": 0,
                 "skipped_connected": 0}
 
-    # Build pin position -> electrical type lookup from IR
+    # Build pin position list from IR. Pin electrical type is looked up
+    # per-violation via _lookup_pin_type_with_tolerance (P0-004 fix) — the
+    # previous pos_to_type dict used round(x, 2) keys that missed sub-micron
+    # precision offsets between ERC violation positions and pin positions.
     pin_positions = ir.get_pin_positions()
-    pos_to_type: dict[tuple[float, float], str] = {}
-    for p in pin_positions:
-        key = (round(p["x"], 2), round(p["y"], 2))
-        pos_to_type[key] = p.get("electrical_type", "passive")
 
     # Issue #13: Build pin position list for co-location detection.
     # Power symbols connect to component pins by sharing coordinates.
@@ -319,7 +352,15 @@ def place_no_connects_from_erc(ir: SchematicIR, sch_path: Path) -> dict[str, Any
             continue
 
         # Check pin electrical type
-        pin_type = pos_to_type.get(pos_key, "passive")
+        # P0-004 fix: tolerance-based lookup replaces exact dict key.
+        # ERC violation positions can differ from pin positions by sub-micron
+        # precision, causing round(x, 2) to produce different keys
+        # (e.g., pin 127.015 -> key 127.02, violation 127.014 -> key 127.01).
+        # The tolerance helper reads directly from pin_positions (the source
+        # list), matching within SNAP_TOLERANCE per axis.
+        pin_type = _lookup_pin_type_with_tolerance(
+            vp.x, vp.y, pin_positions, SNAP_TOLERANCE,
+        )
         if pin_type in UNSAFE_PIN_TYPES:
             skipped_pin_type += 1
             logger.debug(
