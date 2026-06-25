@@ -56,7 +56,7 @@ class TestSesViaParse:
         """
         ses = _wrap_ses(
             '  (wiring\n'
-            '    (via "Via[0-1]" 500000 300000\n'
+            '    (via "Via[0-1]" 50000 30000\n'
             '      (net GND 1)\n'
             '    )\n'
             '  )\n'
@@ -66,7 +66,7 @@ class TestSesViaParse:
         via = result.vias[0]
         assert via.net == "GND"
         assert via.x_mm == pytest.approx(50.0, abs=0.01)
-        assert via.y_mm == pytest.approx(-30.0, abs=0.01)  # Y negated
+        assert via.y_mm == pytest.approx(30.0, abs=0.01)  # Phase 99-03: no Y-negation (KiCad Y-down preserved)
         # Via[0-1] is THT spanning F.Cu + B.Cu.
         assert via.from_layer == "F.Cu"
         assert via.to_layer == "B.Cu"
@@ -106,11 +106,13 @@ class TestSesViaParse:
 
         If a future Freerouting version emits explicit layer tokens, parse_ses
         should prefer them over padstack-name derivation.
-        Coordinates 500000 300000 at (resolution um 10) = 50.0mm, 30.0mm.
+        Coordinates 50000 30000 at (resolution um 10) = 50.0mm, 30.0mm
+        (Phase 99-03 Rule 1 fix: divisor is 1000, not 10000 — Freerouting
+        emits raw um values regardless of declared resolution).
         """
         ses = _wrap_ses(
             '  (wiring\n'
-            '    (via F.Cu In1.Cu 500000 300000 800 400)\n'
+            '    (via F.Cu In1.Cu 50000 30000 800 400)\n'
             '  )\n'
         )
         result = parse_ses(ses)
@@ -119,7 +121,7 @@ class TestSesViaParse:
         assert via.from_layer == "F.Cu"
         assert via.to_layer == "In1.Cu"
         assert via.x_mm == pytest.approx(50.0, abs=0.01)
-        assert via.y_mm == pytest.approx(-30.0, abs=0.01)
+        assert via.y_mm == pytest.approx(30.0, abs=0.01)  # Phase 99-03: no Y-negation
 
     def test_via_float_coordinates(self) -> None:
         """Via coordinates may be floating point (reference SES has 117519.3)."""
@@ -133,8 +135,11 @@ class TestSesViaParse:
         result = parse_ses(ses)
         assert len(result.vias) == 1
         via = result.vias[0]
-        assert via.x_mm == pytest.approx(11.75193, abs=0.001)
-        assert via.y_mm == pytest.approx(-8.67152, abs=0.001)
+        # Phase 99-03 Rule 1 fix: 117519.3 / 1000 = 117.5193mm (not 11.75).
+        # Reference SES captured from Freerouting v2.2.4 on Arduino_Mega
+        # confirms vias at ~117mm emit as 117519.3 (raw um, not decaum).
+        assert via.x_mm == pytest.approx(117.5193, abs=0.001)
+        assert via.y_mm == pytest.approx(86.7152, abs=0.001)  # no Y-negation
 
 
 class TestSesToKiCadSexprLayers:

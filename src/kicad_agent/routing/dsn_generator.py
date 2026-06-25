@@ -302,11 +302,19 @@ def _build_library_from_native(
                 attach = "off"
                 shapes = [(layer, size_um) for layer in layers]
             else:
-                # Resolve pad layer to a specific DSN layer
+                # Resolve pad layer to a specific DSN layer.
+                # Rule 1 fix (Phase 99-03): KiCad SMD pads carry a space-
+                # separated layer set like "F.Cu F.Paste F.Mask". DSN only
+                # cares about the copper layer for routing; the previous
+                # code used the full multi-layer string as dsn_layer, which
+                # embedded spaces into the padstack name AND into the
+                # (shape (circle LAYER SIZE)) emission. Freerouting then saw
+                # an unquoted multi-token padstack reference in (pin ...)
+                # and aborted with "Parse error". Take the first token only.
                 if pad_layers in ("*.Cu", "*"):
                     dsn_layer = layers[0] if side == "front" else layers[-1]
                 else:
-                    dsn_layer = pad_layers
+                    dsn_layer = pad_layers.split()[0] if pad_layers else "F.Cu"
                 ps_key = f"SMD_{dsn_layer}_{size_um}_um"
                 attach = "on"
                 shapes = [(dsn_layer, size_um)]
@@ -604,13 +612,24 @@ def _emit_net_classes(
         lines.append("    )")
 
     # Default class: nets not in any named class (backward compat).
-    all_nets = {n.name for n in board.nets if n.name}
+    # Rule 1 fix (Phase 99-03): board.nets is often empty on boards whose
+    # top-level (net ...) declarations aren't populated by NativeParser.
+    # _extract_nets_from_board is the authoritative source (it walks
+    # footprint->pad->net_name). Without this, default_members is empty and
+    # Freerouting sees a network with no nets to route.
+    routed_nets = set(_extract_nets_from_board(board).keys())
+    all_nets = {n.name for n in board.nets if n.name} | routed_nets
     default_members = all_nets - nets_in_named_classes
     members_str = " ".join(sorted(default_members))
-    lines.append(f'    (class default "" {members_str}'.rstrip())
-    if not members_str:
-        # Ensure there's at least an empty string token for parseability.
-        lines.append('    (class default ""')
+    # Rule 1 fix (Phase 99-03): the previous code emitted the class header
+    # TWICE when members_str was empty (once unconditionally on the line
+    # below, once inside the `if not members_str` block). Freerouting then
+    # saw a nested (class default "" (class default "" ...)) and aborted
+    # with "Parse error". Emit exactly one header line.
+    if members_str:
+        lines.append(f'    (class default "" {members_str}')
+    else:
+        lines.append('    (class default "")')
     lines.append("      (circuit")
     lines.append(f"        (use_layer {layer_str})")
     lines.append(f'        (use_via "{_VIA_PADSTACK_NAME}")')

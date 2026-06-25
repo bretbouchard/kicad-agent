@@ -24,6 +24,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import math
 import re
 import shutil
 import subprocess
@@ -277,6 +278,10 @@ def route_with_freerouting(
             "-cp", f"{jar}:{batch_dir}",
             "FreerouteBatch",
             str(dsn_path), str(ses_path), str(max_passes),
+            # Phase 99-03 SC-5: pass snap_angle so FreerouteBatch can configure
+            # per-layer preferred directions (Freerouting ignores the DSN
+            # (control (snap_angle ...)) directive in batch mode).
+            str(snap_angle),
         ]
         logger.info("Using FreerouteBatch classpath pattern from %s", batch_dir)
     else:
@@ -443,14 +448,22 @@ def parse_ses(ses_text: str) -> SesParseResult:
     if res_match:
         res_unit = res_match.group(1)
         res_factor = int(res_match.group(2))
-        # (resolution um 10) → values are in units of res_factor um.
-        # Divide by (res_factor * 1000) to convert to mm.
+        # Rule 1 fix (Phase 99-03): the previous logic divided values by
+        # (res_factor * 1000), treating (resolution um 10) as "1 unit = 10um"
+        # and producing coordinates 10x too small. Empirical verification
+        # against the Arduino_Mega reference SES (captured from Freerouting
+        # v2.2.4 in Plan 99-02) shows Freerouting emits RAW um values
+        # regardless of the declared resolution: a via physically at
+        # 117.5mm appears as 117519.3 in the SES, which must parse to
+        # 117.5mm. The correct divisor is therefore 1000 (um->mm), NOT
+        # (res_factor * 1000). The (resolution um 10) declaration is
+        # essentially decorative for Freerouting v2.2.4 output.
         if res_unit == "um":
-            resolution = res_factor * 1000.0
+            resolution = 1000.0
         else:
-            resolution = res_factor * 1000000.0  # mm-based, unlikely
+            resolution = 1.0  # already in mm
     else:
-        resolution = 100000.0
+        resolution = 1000.0
 
     result = SesParseResult(resolution_factor=resolution)
 
@@ -550,7 +563,7 @@ def _parse_wire_block(
     for ci in range(0, len(coord_matches) - 1, 2):
         try:
             x = float(coord_matches[ci]) / resolution
-            y = -float(coord_matches[ci + 1]) / resolution  # Y negated
+            y = float(coord_matches[ci + 1]) / resolution  # Phase 99-03: no negation (Freerouting preserves KiCad Y-down)
             points.append((x, y))
         except (ValueError, IndexError):
             continue
@@ -626,7 +639,7 @@ def _parse_via_block(
     result.vias.append(SesVia(
         net=net_name,
         x_mm=float(x_str) / resolution,
-        y_mm=-float(y_str) / resolution,
+        y_mm=float(y_str) / resolution,  # Phase 99-03: no negation (KiCad Y-down preserved)
         size_mm=size_mm,
         drill_mm=drill_mm,
         from_layer=from_layer,
@@ -733,7 +746,7 @@ def _parse_net_nested_wires(
             for ci in range(0, len(coord_matches) - 1, 2):
                 try:
                     x = float(coord_matches[ci]) / resolution
-                    y = -float(coord_matches[ci + 1]) / resolution  # Y negated
+                    y = float(coord_matches[ci + 1]) / resolution  # Phase 99-03: no negation (Freerouting preserves KiCad Y-down)
                     points.append((x, y))
                 except (ValueError, IndexError):
                     continue
@@ -779,6 +792,13 @@ def ses_to_kicad_sexpr(
         for i in range(len(wire.points) - 1):
             x1, y1 = wire.points[i]
             x2, y2 = wire.points[i + 1]
+            # Phase 99-03 Rule 1 fix: skip zero-length segments. Freerouting
+            # occasionally emits polyline points where start == end (visible
+            # in the SES as consecutive identical coordinates). These produce
+            # ``track_dangling`` DRC warnings on KiCad 10 ("Track has
+            # unconnected end", length 0.0000mm) and add no routing value.
+            if math.isclose(x1, x2, abs_tol=1e-9) and math.isclose(y1, y2, abs_tol=1e-9):
+                continue
             u = str(uuid.uuid4())
             lines.append(
                 f'  (segment (start {x1:.6f} {y1:.6f}) '
@@ -814,15 +834,32 @@ def ses_to_kicad_sexpr(
 def extract_pcb_net_names(pcb_content: str) -> set[str]:
     """Extract all unique net names from PCB content.
 
+    Handles both KiCad 10 top-level net declarations:
+        (net 1 "NET_A")            # number + quoted name
+        (net 0 "")                 # unconnected placeholder (skipped)
+        (net "NET_A" 1)            # legacy/alternative form
+    Also matches footprint/zone child net references:
+        (net 1 "NET_A")            # inside pads and zones
+
+    Rule 1 fix (Phase 99-03): the previous regex ``\\(net\\s+"([^"]+)"``
+    required the name to immediately follow ``net``, but KiCad 10's
+    canonical form puts the net NUMBER first (``(net N "NAME")``). On
+    real fixtures this returned an empty set, causing import_ses_into_pcb
+    to skip every routed wire (all nets looked unmatched).
+
     Args:
         pcb_content: Raw .kicad_pcb S-expression text.
 
     Returns:
-        Set of net name strings.
+        Set of non-empty net name strings.
     """
     nets: set[str] = set()
-    for m in re.finditer(r'\(net\s+"([^"]+)"', pcb_content):
-        nets.add(m.group(1))
+    # Match (net TOKEN "NAME") OR (net "NAME" TOKEN). Capture quoted name.
+    # Skip empty names (net 0 "").
+    for m in re.finditer(r'\(net\s+(?:"([^"]+)"|(?:\S+\s+"([^"]+)"))', pcb_content):
+        name = m.group(1) or m.group(2)
+        if name:
+            nets.add(name)
     return nets
 
 

@@ -15,18 +15,28 @@ import java.nio.file.Files;
 /**
  * Headless Freerouting batch auto-router for KiCad DSN files.
  *
- * Usage: java -cp freerouting.jar FreerouteBatch <input.dsn> <output.ses> [passes]
+ * Usage: java -cp freerouting.jar FreerouteBatch <input.dsn> <output.ses> [passes] [snap_angle]
+ *
+ * snap_angle: "none" (default), "fortyfive_degree", or "ninety_degree".
+ *   Phase 99-03 SC-5: Freerouting v2.2.4's BatchAutorouter does NOT honor the
+ *   DSN (control (snap_angle ...)) directive. To make 45° / 90° modes actually
+ *   produce different routing, we configure per-layer preferred directions:
+ *     - fortyfive_degree: alternate horizontal/vertical per layer (classic
+ *       2-layer 45° routing — F.Cu horizontal, B.Cu vertical).
+ *     - ninety_degree: same direction on all layers (pure Manhattan).
+ *     - none: leave preferred directions unset (router chooses freely).
  */
 public class FreerouteBatch {
     public static void main(String[] args) throws Exception {
         if (args.length < 2) {
-            System.err.println("Usage: java -cp freerouting.jar FreerouteBatch <input.dsn> <output.ses> [passes]");
+            System.err.println("Usage: java -cp freerouting.jar FreerouteBatch <input.dsn> <output.ses> [passes] [snap_angle]");
             System.exit(1);
         }
 
         String inputDsn = args[0];
         String outputSes = args[1];
         int passes = args.length > 2 ? Integer.parseInt(args[2]) : 25;
+        String snapAngle = args.length > 3 ? args[3] : "none";
 
         System.out.println("Loading DSN: " + inputDsn);
 
@@ -96,6 +106,33 @@ public class FreerouteBatch {
             }
             if (job.routerSettings.optimizer == null) {
                 job.routerSettings.optimizer = new app.freerouting.settings.RouterOptimizerSettings();
+            }
+
+            // Phase 99-03 SC-5: configure per-layer preferred directions based
+            // on snap_angle. Freerouting v2.2.4's BatchAutorouter ignores the
+            // DSN (control (snap_angle ...)) directive, so we set it here via
+            // the RouterSettings API. isPreferredDirectionHorizontalOnLayer is
+            // a transient boolean[] indexed by physical layer number.
+            if (snapAngle.equals("fortyfive_degree") || snapAngle.equals("ninety_degree")) {
+                int lc = routingBoard.get_layer_count();
+                job.routerSettings.isPreferredDirectionHorizontalOnLayer = new boolean[lc];
+                for (int li = 0; li < lc; li++) {
+                    // fortyfive_degree: alternate direction per layer
+                    //   (layer 0 horizontal, layer 1 vertical, ...) -> 45° routes
+                    // ninety_degree: all layers same direction -> pure Manhattan
+                    boolean horizontal;
+                    if (snapAngle.equals("fortyfive_degree")) {
+                        horizontal = (li % 2 == 0);
+                    } else {
+                        horizontal = true;
+                    }
+                    job.routerSettings.isPreferredDirectionHorizontalOnLayer[li] = horizontal;
+                    job.routerSettings.set_preferred_direction_is_horizontal(li, horizontal);
+                    // Penalize going against the preferred direction.
+                    job.routerSettings.set_preferred_direction_trace_costs(li, 1.0);
+                    job.routerSettings.set_against_preferred_direction_trace_costs(li, 5.0);
+                }
+                System.out.println("Configured " + snapAngle + " preferred directions across " + lc + " layers");
             }
 
             System.out.println("Starting auto-route (" + passes + " passes)...");
