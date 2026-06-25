@@ -194,6 +194,14 @@ class AutoRouteOp(BaseModel):
                     "re-routes failed nets with a relaxed grid. Council C-03 caps "
                     "at 5 to prevent runaway loops.",
     )
+    snap_angle: Optional[Literal["none", "ninety_degree", "fortyfive_degree"]] = Field(
+        default=None,
+        description="Phase 99 R-5 (Council WR-01/CR-02): Trace angle mode threaded to "
+                    "Freerouting. 'none' (any-angle, default), 'fortyfive_degree' (45° "
+                    "preferred), 'ninety_degree' (Manhattan). None defers to "
+                    "route_with_freerouting default ('none'). Only honored when "
+                    "strategy='freerouting'; ignored by A* pathfinder.",
+    )
     forbidden_zones: Optional[list[dict]] = Field(
         default=None,
         description="Phase 99 Gap 2: per-layer impassable zones. Each dict: "

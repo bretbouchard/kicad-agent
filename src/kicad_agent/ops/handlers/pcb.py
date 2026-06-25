@@ -525,8 +525,17 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     )
 
     if use_freerouting:
-        logger.info("Auto-route: using Freerouting (strategy=%s)", strategy)
-        fr_result = route_with_freerouting(file_path, max_passes=10)
+        # Phase 99 Council WR-02: honor op.max_iterations cap (schema le=5).
+        # Phase 99 Council WR-01/CR-02: thread snap_angle from AutoRouteOp.
+        max_passes = min(getattr(op, "max_iterations", 5), 5)
+        snap_angle = getattr(op, "snap_angle", None) or "none"
+        logger.info(
+            "Auto-route: using Freerouting (strategy=%s, max_passes=%d, snap_angle=%s)",
+            strategy, max_passes, snap_angle,
+        )
+        fr_result = route_with_freerouting(
+            file_path, max_passes=max_passes, snap_angle=snap_angle,
+        )
 
         if not fr_result.success:
             if strategy == "freerouting":
