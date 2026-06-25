@@ -595,6 +595,29 @@ def _parse_via_block(
         # Remove outermost paren pair.
         inner = inner[1:inner.rfind(")")]
 
+    # Council WR-08: strip nested (...) children BEFORE tokenizing so their
+    # numeric values (e.g., (net 123 4) -> "123", "4") cannot be mistaken
+    # for coordinates. Uses paren-balanced extraction to handle arbitrary
+    # nesting and quoted strings safely. Only top-level tokens remain.
+    child_re = re.compile(r'\(')
+    cleaned_parts: list[str] = []
+    search_pos = 0
+    while search_pos < len(inner):
+        open_idx = inner.find("(", search_pos)
+        if open_idx == -1:
+            cleaned_parts.append(inner[search_pos:])
+            break
+        # Append text before the "("
+        cleaned_parts.append(inner[search_pos:open_idx])
+        child = _extract_paren_block(inner, open_idx)
+        if child is None:
+            # Unbalanced — append the "(" and advance to avoid infinite loop.
+            cleaned_parts.append(inner[open_idx])
+            search_pos = open_idx + 1
+        else:
+            search_pos = open_idx + len(child)
+    inner = "".join(cleaned_parts)
+
     tokens = inner.split()
     if not tokens or tokens[0] != "via":
         return
