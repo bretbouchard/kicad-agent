@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: Executing Phase 100 (Plan 01 complete)
-stopped_at: Completed Phase 100 Plan 01 — CR-01 NativeBoard immutability refactor (14 frozen dataclasses, all mutation sites migrated to dataclasses.replace).
-last_updated: "2026-06-25T07:00:00.000Z"
+status: Executing Phase 100 (Plan 02 complete — phase ready for verification)
+stopped_at: Completed Phase 100 Plan 02 — RoutingOrchestrator + DeterministicStrategy + audit trail + PcbIR rollback. Phase 100 fully implemented (both plans).
+last_updated: "2026-06-25T07:01:00.000Z"
 last_activity: 2026-06-25
 progress:
   total_phases: 129
   completed_phases: 48
   total_plans: 269
-  completed_plans: 208
-  percent: 77
+  completed_plans: 209
+  percent: 78
 ---
 
 # Project State
@@ -26,9 +26,9 @@ Last activity: 2026-06-25
 
 ## Current Position
 
-Phase: 100 (routingorchestrator-and-human-approval-loop) — EXECUTING
-Plan: 1 of 2
-**All milestones shipped (v1.0 through v4.1). 94 phases, 265 plans, 3300+ tests.**
+Phase: 100 (routingorchestrator-and-human-approval-loop) — EXECUTING (Plan 02 complete)
+Plan: 2 of 2 (complete)
+**All milestones shipped (v1.0 through v4.1). 94 phases, 266 plans, 3300+ tests.**
 
 Last milestone: v4.1 Stage-Safe PCB Flow (Phases 85-94)
 
@@ -510,6 +510,15 @@ Recent decisions affecting current work:
 - [v3.0-54]: Overall DFM score is minimum of all stage scores and panelization score
 - [v3.0-54]: CLI exit codes: 0 (score >= 0.5), 1 (score < 0.5), 2 (error)
 - [v3.0-54]: isinstance() type guards prevent MagicMock auto-attribute string matching
+- [v2.2-100]: RoutingStrategy is a typing.Protocol (not ABC) — enables Phase 98 structural subtyping without inheritance
+- [v2.2-100]: RouterBackend has exactly 2 variants (ASTAR, FREEROUTING) — MULTI_PASS removed as dead code (H1, YAGNI)
+- [v2.2-100]: BoardState has no layer_count field — no dispatch case reads it (H3, YAGNI)
+- [v2.2-100]: DeterministicStrategy dispatch order is first-match-wins: diff pair → power+zones → high pin (>10) → simple 2-pin (≤20 nets) → default ASTAR
+- [v2.2-100]: Audit trail uses JSONL with os.fsync after each line for crash durability (H5); query_by_net skips truncated lines gracefully
+- [v2.2-100]: Rollback uses PcbRawWriter.delete_segment/delete_via via UUID extraction — NOT regex on S-expressions (H2, avoids pad-definition corruption)
+- [v2.2-100]: UUID extraction uses bulk extract_uuids(content, file_type) then parent_index filtering (R3-L3)
+- [v2.2-100]: Per-net Freerouting completion attribution via SES parse (parse_ses), not just success flag — accurate baseline measurement
+- [v2.2-100]: SC-5 baseline test asserts >= 45% (lower bound only) — orchestrator combines A* + Freerouting so should meet or exceed Freerouting-alone baseline
 
 ### Pending Todos
 
@@ -535,5 +544,22 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 100 Plan 01 — CR-01 NativeBoard immutability refactor. Foundation ready for Plan 02 (RoutingOrchestrator) which depends on immutable board snapshots for rollback.
-Resume with: Phase 100 Plan 02 (RoutingOrchestrator) or next `/gsd-execute-phase`.
+Stopped at: Completed Phase 100 Plan 02 — RoutingOrchestrator + DeterministicStrategy + audit trail + PcbIR rollback. Phase 100 fully implemented (both plans complete). Ready for `/gsd-verify-work 100` or next phase.
+Resume with: Phase 100 verification, or Phase 101 (Schematic Ops Bug Fixes), or Phase 98 (AI Routing Strategy Advisor — now has the RoutingStrategy Protocol contract to implement).
+
+### Phase 100: RoutingOrchestrator and Human Approval Loop (complete)
+
+- Plan 100-01: CR-01 NativeBoard immutability refactor (COMPLETE)
+  - 14 frozen dataclasses, all native-path mutation sites migrated to dataclasses.replace
+  - Foundation for Plan 02's snapshot-based rollback
+
+- Plan 100-02: RoutingOrchestrator + audit + rollback (COMPLETE)
+  - RoutingStrategy Protocol (Phase 98 integration contract — pure, serializable, validatable)
+  - DeterministicStrategy with 5-case dispatch (diff pair → power+zones → high pin → simple 2-pin → default ASTAR)
+  - RouterBackend enum (2 variants: ASTAR, FREEROUTING — H1: MULTI_PASS removed)
+  - RoutingOrchestrator batch API (route_board single-call for full board)
+  - PcbIR-based per-net rollback via PcbRawWriter UUID deletion (H2 — no regex)
+  - Durable JSONL audit trail with os.fsync (H5)
+  - InteractiveRoutingSession.ingest_freerouting_result (SES wires → suggestions)
+  - Strategy output validation (H4 — unknown nets/invalid backends raise ValueError)
+  - 66 Phase 100 tests + 357 regression tests pass (431 total, zero regressions)
