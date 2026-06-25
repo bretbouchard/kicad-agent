@@ -21,6 +21,7 @@ Success criteria (CONTEXT.md):
 
 from __future__ import annotations
 
+import argparse
 import json
 import shutil
 import subprocess
@@ -226,13 +227,316 @@ def load_ai_strategy(pcb_path: Path) -> Any:
 
 
 # ---------------------------------------------------------------------------
-# CLI + comparison table + SC evaluators are added in Task 2.
-# Stub main so the module is importable without the full CLI.
+# Task 2: Comparison table, SC evaluators, CLI
 # ---------------------------------------------------------------------------
 
+_TABLE_COLUMNS = (
+    "fixture",
+    "strategy",
+    "completion_pct",
+    "via_count",
+    "trace_length_mm",
+    "drc_pass",
+    "parse_success",
+)
+
+
+def format_comparison_table(results: list[StrategyEvalResult]) -> str:
+    """Render a markdown comparison table from eval results.
+
+    Groups rows by fixture (deterministic then AI). Includes columns for
+    completion_pct, via_count, trace_length_mm, drc_pass, parse_success.
+
+    Args:
+        results: List of StrategyEvalResult (may be empty).
+
+    Returns:
+        Markdown-formatted table string. Returns "No results." when empty.
+    """
+    if not results:
+        return "No results."
+
+    header = "| " + " | ".join(_TABLE_COLUMNS) + " |"
+    separator = "| " + " | ".join("---" for _ in _TABLE_COLUMNS) + " |"
+    lines = [header, separator]
+
+    # Group by fixture, deterministic first then AI.
+    by_fixture: dict[str, list[StrategyEvalResult]] = {}
+    for r in results:
+        by_fixture.setdefault(r.fixture_name, []).append(r)
+
+    for fixture_name in sorted(by_fixture.keys()):
+        fixture_results = by_fixture[fixture_name]
+        # Sort so DeterministicStrategy appears before AiRoutingStrategy.
+        fixture_results.sort(key=lambda r: r.strategy_name)
+        for r in fixture_results:
+            lines.append(
+                f"| {r.fixture_name} | {r.strategy_name} | "
+                f"{r.completion_pct:.2%} | {r.via_count} | "
+                f"{r.total_trace_length_mm:.2f} | "
+                f"{'PASS' if r.drc_pass else 'FAIL'} | "
+                f"{'yes' if r.parse_success else 'no'} |"
+            )
+
+    return "\n".join(lines)
+
+
+def evaluate_sc1(results: list[StrategyEvalResult]) -> float:
+    """SC-1: parse_success rate across all AI results.
+
+    Threshold: >= 0.95 (CONTEXT.md success criterion 1).
+
+    The denominator is all AI strategy results; the numerator is AI results
+    where parse_success=True (i.e., the model produced parseable output and
+    did NOT fall back to deterministic).
+
+    Returns:
+        Float in [0.0, 1.0]. Returns 0.0 when there are no AI results.
+    """
+    ai_results = [r for r in results if r.strategy_name == "AiRoutingStrategy"]
+    if not ai_results:
+        return 0.0
+    successes = sum(1 for r in ai_results if r.parse_success)
+    return successes / len(ai_results)
+
+
+def evaluate_sc2(
+    det: StrategyEvalResult, ai: StrategyEvalResult
+) -> list[str]:
+    """SC-2: metrics where AI matches or beats deterministic.
+
+    Threshold: >= 2 of 3 metrics (CONTEXT.md success criterion 2).
+
+    M-3 (Council): "matches or beats" means ties count as a win. Direction:
+        - completion_pct: higher is better (ai >= det wins)
+        - via_count: lower is better (ai <= det wins)
+        - total_trace_length_mm: lower is better (ai <= det wins)
+
+    Args:
+        det: Deterministic strategy result for a single fixture.
+        ai: AI strategy result for the same fixture.
+
+    Returns:
+        List of metric names where AI matches or beats deterministic.
+        Possible values: "completion_pct", "via_count", "total_trace_length_mm".
+    """
+    winners: list[str] = []
+    if ai.completion_pct >= det.completion_pct:
+        winners.append("completion_pct")
+    if ai.via_count <= det.via_count:
+        winners.append("via_count")
+    if ai.total_trace_length_mm <= det.total_trace_length_mm:
+        winners.append("total_trace_length_mm")
+    return winners
+
+
+def evaluate_sc3(
+    det: StrategyEvalResult, ai: StrategyEvalResult
+) -> bool:
+    """SC-3: no DRC regression — AI drc_pass >= deterministic drc_pass.
+
+    Threshold: True (CONTEXT.md success criterion 3). If the deterministic
+    baseline routed a board cleanly (drc_pass=True), the AI strategy must
+    also route it cleanly. If the baseline failed DRC, AI passing is not a
+    regression.
+
+    Args:
+        det: Deterministic strategy result.
+        ai: AI strategy result (same fixture).
+
+    Returns:
+        True if AI drc_pass >= deterministic drc_pass (no regression).
+    """
+    return ai.drc_pass >= det.drc_pass
+
+
+def evaluate_sc5(results: list[StrategyEvalResult]) -> int:
+    """SC-5: count distinct fixtures with at least one AI result.
+
+    Threshold: >= 3 (CONTEXT.md success criterion 5 — end-to-end on >= 3
+    fixtures).
+
+    Returns:
+        Integer count of distinct fixture_name values among AI results.
+    """
+    ai_fixtures = {
+        r.fixture_name
+        for r in results
+        if r.strategy_name == "AiRoutingStrategy"
+    }
+    return len(ai_fixtures)
+
+
+def _compute_fallback_rate(results: list[StrategyEvalResult]) -> float:
+    """M-4 (Council): compute fallback_rate diagnostic.
+
+    Fraction of AI results that fell back to deterministic (parse_success=False).
+    Complements SC-1: SC-1 measures parse success, fallback_rate measures how
+    often the orchestrator had to invoke the R-6 safety net.
+    """
+    ai_results = [r for r in results if r.strategy_name == "AiRoutingStrategy"]
+    if not ai_results:
+        return 0.0
+    fallbacks = sum(1 for r in ai_results if not r.parse_success)
+    return fallbacks / len(ai_results)
+
+
+def _copy_fixture_to_tmp(fixture_path: Path, tmp_dir: Path) -> Path:
+    """Copy a fixture PCB into a temp dir (T-98-03-01 tampering mitigation).
+
+    The orchestrator mutates the PCB file in place. Running on the checked-in
+    fixture would corrupt it. This function copies the fixture to a temp dir
+    so the original is never touched.
+
+    Args:
+        fixture_path: Path to the checked-in fixture .kicad_pcb.
+        tmp_dir: Temporary directory to copy into.
+
+    Returns:
+        Path to the copied PCB file inside tmp_dir.
+    """
+    dest = tmp_dir / fixture_path.name
+    shutil.copy2(fixture_path, dest)
+    return dest
+
+
 def main(argv: list[str] | None = None) -> int:
-    """CLI entry point. Implemented in Task 2."""
-    raise NotImplementedError("CLI is implemented in Task 2")
+    """CLI entry point for the Phase 98 eval harness.
+
+    Flags:
+        --fixtures: Comma-separated fixture names or "all" (default: all).
+        --json: Emit machine-readable JSON instead of markdown table.
+        --no-ai: Run deterministic baseline only (skip AI strategy).
+
+    Returns:
+        0 on success, non-zero on error (unknown fixture, all fixtures missing).
+    """
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--fixtures",
+        type=str,
+        default="all",
+        help="Comma-separated fixture names (e.g. 'smd_test_board,synthetic_4layer') "
+             "or 'all'. Available: " + ", ".join(sorted(FIXTURES.keys())),
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit machine-readable JSON output (for CI / downstream tools).",
+    )
+    parser.add_argument(
+        "--no-ai",
+        action="store_true",
+        help="Run deterministic baseline only (skip AI strategy). Useful for "
+             "CI environments without the 23.8 GB vision model.",
+    )
+    args = parser.parse_args(argv)
+
+    # Resolve fixture list.
+    if args.fixtures == "all":
+        fixture_names = sorted(FIXTURES.keys())
+    else:
+        fixture_names = [n.strip() for n in args.fixtures.split(",") if n.strip()]
+
+    unknown = [n for n in fixture_names if n not in FIXTURES]
+    if unknown:
+        print(
+            f"ERROR: unknown fixture(s): {', '.join(unknown)}. "
+            f"Available: {', '.join(sorted(FIXTURES.keys()))}",
+            file=sys.stderr,
+        )
+        return 1
+
+    results: list[StrategyEvalResult] = []
+
+    for name in fixture_names:
+        fixture_path = FIXTURES[name]
+        if not fixture_path.exists():
+            print(f"WARNING: fixture {name} not found at {fixture_path}, skipping", file=sys.stderr)
+            continue
+
+        with tempfile.TemporaryDirectory(prefix=f"phase98_eval_{name}_") as tmp:
+            tmp_dir = Path(tmp)
+            project_dir = tmp_dir / "project"
+            project_dir.mkdir(exist_ok=True)
+
+            # Deterministic baseline (always runs).
+            pcb_copy = _copy_fixture_to_tmp(fixture_path, tmp_dir)
+            try:
+                det_result = run_strategy_with_orchestrator(
+                    DeterministicStrategy(),
+                    pcb_path=pcb_copy,
+                    project_dir=project_dir,
+                    strategy_name="DeterministicStrategy",
+                )
+                results.append(det_result)
+            except Exception as exc:
+                print(f"WARNING: deterministic strategy failed on {name}: {exc}", file=sys.stderr)
+
+            # AI strategy (unless --no-ai).
+            if not args.no_ai:
+                pcb_copy_ai = _copy_fixture_to_tmp(fixture_path, tmp_dir)
+                try:
+                    ai_strategy = load_ai_strategy(pcb_copy_ai)
+                    ai_result = run_strategy_with_orchestrator(
+                        ai_strategy,
+                        pcb_path=pcb_copy_ai,
+                        project_dir=project_dir,
+                        strategy_name="AiRoutingStrategy",
+                    )
+                    results.append(ai_result)
+                except Exception as exc:
+                    print(f"WARNING: AI strategy failed on {name}: {exc}", file=sys.stderr)
+
+    if not results:
+        print("ERROR: no results collected (all fixtures failed or missing).", file=sys.stderr)
+        return 1
+
+    # Compute SC evaluators.
+    sc1 = evaluate_sc1(results)
+    sc5 = evaluate_sc5(results)
+    fallback_rate = _compute_fallback_rate(results)
+
+    # SC-2 and SC-3 are per-fixture (need det + ai for same fixture).
+    sc2_winners_per_fixture: dict[str, list[str]] = {}
+    sc3_pass_per_fixture: dict[str, bool] = {}
+    by_fixture: dict[str, list[StrategyEvalResult]] = {}
+    for r in results:
+        by_fixture.setdefault(r.fixture_name, []).append(r)
+    for fixture_name, fixture_results in by_fixture.items():
+        det = next((r for r in fixture_results if r.strategy_name == "DeterministicStrategy"), None)
+        ai = next((r for r in fixture_results if r.strategy_name == "AiRoutingStrategy"), None)
+        if det and ai:
+            sc2_winners_per_fixture[fixture_name] = evaluate_sc2(det, ai)
+            sc3_pass_per_fixture[fixture_name] = evaluate_sc3(det, ai)
+
+    if args.json:
+        payload = {
+            "results": [asdict(r) for r in results],
+            "sc1_parse_success_rate": round(sc1, 4),
+            "sc2_winners_per_fixture": sc2_winners_per_fixture,
+            "sc3_no_regression_per_fixture": sc3_pass_per_fixture,
+            "sc5_distinct_fixtures": sc5,
+            # M-4 (Council): fallback_rate diagnostic for interpreting SC-1.
+            "fallback_rate": round(fallback_rate, 4),
+        }
+        print(json.dumps(payload, indent=2))
+    else:
+        print(format_comparison_table(results))
+        print()
+        print(f"SC-1 (parse_success rate): {sc1:.2%} (target: >=95%)")
+        print(f"SC-5 (distinct AI fixtures): {sc5} (target: >=3)")
+        print(f"fallback_rate: {fallback_rate:.2%}")
+        for fixture_name, winners in sc2_winners_per_fixture.items():
+            print(f"SC-2 ({fixture_name}): AI wins {len(winners)}/3 metrics: {winners}")
+        for fixture_name, passed in sc3_pass_per_fixture.items():
+            status = "PASS" if passed else "REGRESSION"
+            print(f"SC-3 ({fixture_name}): {status}")
+
+    return 0
 
 
 if __name__ == "__main__":
