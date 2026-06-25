@@ -464,6 +464,11 @@ def remove_dangling_wires(
     # Find dangling wires: both endpoints unanchored
     removed: list[dict[str, Any]] = []
     wires_to_remove: list[int] = []
+    # LO-02 fix: Track flagged indices in BOTH dry_run and mutate paths so
+    # the ERC passthrough doesn't double-count wires that match both
+    # geometric and ERC criteria. Previously dry_run skipped the
+    # wires_to_remove append, leaving already_flagged empty.
+    flagged_indices: set[int] = set()
 
     for wire_info in wire_endpoints:
         start_key = _round_pos(wire_info["start_x"], wire_info["start_y"])
@@ -486,6 +491,9 @@ def remove_dangling_wires(
                 if length > max_length_mm:
                     continue
 
+            # LO-01 fix: Normalize geometric entries to include source key
+            # so downstream consumers can read d["source"] without KeyError.
+            # LO-02 fix: Track flagged index in both branches.
             if dry_run:
                 removed.append({
                     "position": [wire_info["start_x"], wire_info["start_y"]],
@@ -494,6 +502,7 @@ def remove_dangling_wires(
                         wire_info["end_x"], wire_info["end_y"],
                     ), 4),
                     "dry_run": True,
+                    "source": "geometric",
                 })
             else:
                 wires_to_remove.append(wire_idx)
@@ -503,7 +512,9 @@ def remove_dangling_wires(
                         wire_info["start_x"], wire_info["start_y"],
                         wire_info["end_x"], wire_info["end_y"],
                     ), 4),
+                    "source": "geometric",
                 })
+            flagged_indices.add(wire_idx)
 
     # P0-005 fix: ERC position passthrough. KiCad ERC uses an electrical
     # definition of "dangling" (includes wrong-type labels, crossing
@@ -511,14 +522,21 @@ def remove_dangling_wires(
     # When trust_erc=True, augment the geometric results with any wire
     # whose endpoint matches an ERC wire_dangling violation position.
     erc_removed: list[dict[str, Any]] = []
+    # LO-03 fix: Surface ERC lookup failures so callers can distinguish
+    # "ERC found nothing" from "ERC failed to run". Previously this fell
+    # back silently at DEBUG level.
+    erc_fallback_used = False
     if trust_erc:
         try:
             from kicad_agent.ops.erc_parser import extract_violation_positions
             erc_positions = extract_violation_positions(file_path, "wire_dangling")
             erc_pos_set = {_round_pos(p.x, p.y) for p in erc_positions}
 
-            # Check wires not already flagged by geometric criteria
-            already_flagged = set(wires_to_remove)
+            # Check wires not already flagged by geometric criteria.
+            # LO-02 fix: Use flagged_indices (populated in both dry_run and
+            # mutate paths) instead of set(wires_to_remove) which was empty
+            # in dry_run mode.
+            already_flagged = flagged_indices
             for wire_info in wire_endpoints:
                 wire_idx = wire_info["wire_index"]
                 if wire_idx in already_flagged:
@@ -530,6 +548,8 @@ def remove_dangling_wires(
                         wire_info["start_x"], wire_info["start_y"],
                         wire_info["end_x"], wire_info["end_y"],
                     ), 4)
+                    # LO-01 fix: Include dry_run key on ERC entries for
+                    # schema consistency with geometric entries.
                     if dry_run:
                         erc_removed.append({
                             "position": [wire_info["start_x"], wire_info["start_y"]],
@@ -542,10 +562,16 @@ def remove_dangling_wires(
                         erc_removed.append({
                             "position": [wire_info["start_x"], wire_info["start_y"]],
                             "length": length,
+                            "dry_run": False,
                             "source": "erc_passthrough",
                         })
         except Exception as exc:
-            logger.debug("trust_erc lookup failed, using geometric only: %s", exc)
+            # LO-03 fix: Elevate to WARNING and signal fallback in return dict.
+            logger.warning(
+                "trust_erc lookup failed for %s, using geometric only: %s",
+                file_path, exc,
+            )
+            erc_fallback_used = True
 
     # Merge ERC-passthrough removals into the main removed list so the
     # return value includes both geometric and ERC-sourced removals.
@@ -563,10 +589,15 @@ def remove_dangling_wires(
                 ],
             })
 
-    return {
+    result: dict[str, Any] = {
         "removed_count": len(removed),
         "details": removed,
     }
+    # LO-03 fix: Surface ERC fallback so callers can distinguish "ERC found
+    # nothing" from "ERC failed to run". Only included when trust_erc=True.
+    if trust_erc and erc_fallback_used:
+        result["erc_fallback_used"] = True
+    return result
 
 
 def find_bridge_wires(
