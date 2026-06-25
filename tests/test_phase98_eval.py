@@ -388,6 +388,11 @@ class TestCategoryCli:
     def test_help_mentions_flags(self, capsys: pytest.CaptureFixture[str]) -> None:
         from scripts.phase98_eval import main
 
+        # IN-05 (Council): argparse exit code semantics.
+        # --help -> SystemExit(code=0)  (success, help printed to stdout)
+        # parse error -> SystemExit(code=2)  (error printed to stderr)
+        # We assert code==0 specifically so the test fails if --help ever
+        # triggers a parse error instead of the help path.
         with pytest.raises(SystemExit) as exc_info:
             main(["--help"])
         assert exc_info.value.code == 0
