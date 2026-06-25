@@ -38,21 +38,25 @@ def test_r1_pad_bbox_fallback_when_no_crtyd(monkeypatch, tmp_path) -> None:
         pytest.skip(f"Fixture missing: {_FIXTURE}")
     from kicad_agent.parser import pcb_native_parser as pnp_mod
     from kicad_agent.parser.pcb_native_types import NativeFootprint
+    import dataclasses
 
     content = _FIXTURE.read_text(encoding="utf-8")
     board = pnp_mod.NativeParser.parse_pcb_content(content, str(_FIXTURE))
     assert board.footprints, "Fixture needs footprints"
 
     # Force every footprint to have zero CrtYd graphics -> fallback path.
+    # Phase 100 CR-01: NativeFootprint is frozen — use dataclasses.replace, not in-place mutation.
     original_parse = pnp_mod.NativeParser.parse_pcb_content
 
     def _stripped_parse(text: str, file_path: str = ""):
         b = original_parse(text, file_path)
+        new_footprints = []
         for fp in b.footprints:
-            fp.graphic_items = [
+            stripped = tuple(
                 g for g in fp.graphic_items if not getattr(g.layer, "", "").endswith(".CrtYd")
-            ]
-        return b
+            )
+            new_footprints.append(dataclasses.replace(fp, graphic_items=stripped))
+        return dataclasses.replace(b, footprints=tuple(new_footprints))
 
     monkeypatch.setattr(pnp_mod.NativeParser, "parse_pcb_content", _stripped_parse)
 
