@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
 status: Executing Phase 101
-stopped_at: Completed Phase 101 Plan 01 — Deprecated erc_auto_fix + erc_auto_fix_hierarchical (P0-003). OpMeta.deprecated field added, both ops marked deprecated=True, runtime DeprecationWarning at handler entry. 6 new tests, zero regression. Ready for Phase 101 Plan 02.
-last_updated: "2026-06-25T09:00:00.000Z"
+stopped_at: Completed Phase 101 Plan 02 — Fixed update_symbols_from_library crash (P0-001). Replaced sym.name with sym.entryName at 2 sites (repair_components.py:152 + symbol_mismatch.py:141 — Rule 1 sibling bug on same code path). 2 new regression tests, zero regression (85/85 in test_schematic_repair.py). Ready for Phase 101 Plan 03.
+last_updated: "2026-06-25T08:52:00.000Z"
 last_activity: 2026-06-25
 progress:
   total_phases: 129
@@ -27,7 +27,7 @@ Last activity: 2026-06-25
 ## Current Position
 
 Phase: 101 (schematic-ops-bug-fixes) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 **All milestones shipped (v1.0 through v4.1). 94 phases, 266 plans, 3300+ tests.**
 
 Last milestone: v4.1 Stage-Safe PCB Flow (Phases 85-94)
@@ -64,6 +64,18 @@ Last activity: 2026-06-25 -- Phase 101 execution started
   - Warning fires BEFORE any file mutation; references P0-003 + alternative ops
   - 6 new tests (4 registry/field + 2 warning emission), zero regression on 92 sibling tests
   - Per CONTEXT.md D-2: deprecation ONLY this phase; raw S-expr rewrite deferred
+
+- Plan 101-02: Fix update_symbols_from_library crash (R-1 / P0-001) (COMPLETE)
+  - Replaced sym.name with sym.entryName at repair_components.py:152 (op's own lookup)
+  - Rule 1 deviation: also fixed sibling sym.name bug at symbol_mismatch.py:141
+    (_get_library_pin_signature — called by the op at line 79 BEFORE its own lookup,
+    so the validation helper crashed first; same code path, same root cause)
+  - kiutils Symbol class exposes libId (@property, "Device:R") and entryName (field, "R"),
+    NOT name. Match clause: `sym.libId == lib_id or sym.entryName == symbol_name`
+  - 2 new regression tests + 3 helpers in test_schematic_repair.py
+    (TestUpdateSymbolsFromLibraryNoCrash: no_crash_on_mismatch + uses_entryName_for_matching)
+  - Test 2 forces entryName branch via empty libraryNickname (defeats libId short-circuit)
+  - 85/85 tests pass in test_schematic_repair.py, 4/4 symbol_mismatch tests, zero regression
 
 ### Phase 99: Freerouting Integration Hardening (in progress)
 
@@ -419,6 +431,7 @@ Priority: Start with Phases 85-87 (gate architecture + schematic intent + transf
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 101-02]: update_symbols_from_library crash fixed via sym.entryName (not sym.name) at 2 sites — repair_components.py:152 (op's lookup) + symbol_mismatch.py:141 (Rule 1: sibling bug in _get_library_pin_signature on same code path, called by op at line 79 before its own lookup)
 - [Phase 101-01]: erc_auto_fix + erc_auto_fix_hierarchical DEPRECATED via OpMeta field + runtime warning (not removed) — prevents ongoing KiCad 10 data-loss while raw S-expr rewrite is deferred
 - [v4.1]: Stage-safe flow shifts from "file-safe editing" to "stage-safe design" — every design transition has a deterministic gate
 - [v4.1]: Phases 85-87 prioritized — biggest current weakness is gap between safe KiCad files and real schematic-to-PCB transfer
@@ -555,8 +568,8 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 101 Plan 01 — Deprecated erc_auto_fix + erc_auto_fix_hierarchical (P0-003). OpMeta.deprecated field added, both ops marked deprecated=True, runtime DeprecationWarning at handler entry. 6 new tests, zero regression. Ready for Phase 101 Plan 02.
-Resume with: Phase 101 Plan 02 (R-1: update_symbols_from_library attribute fix) or Phase 100 verification.
+Stopped at: Completed Phase 101 Plan 02 — Fixed update_symbols_from_library crash (P0-001). Replaced sym.name with sym.entryName at 2 sites (repair_components.py:152 + symbol_mismatch.py:141 — Rule 1 sibling bug on same code path). 2 new regression tests, zero regression (85/85 in test_schematic_repair.py). Ready for Phase 101 Plan 03.
+Resume with: Phase 101 Plan 03 (R-2 + R-4: place_missing_units dedup + place_no_connects_from_erc position transform).
 
 ### Phase 100: RoutingOrchestrator and Human Approval Loop (complete)
 
