@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: Ready to plan
-stopped_at: Completed Phase 100 Plan 02 — RoutingOrchestrator + DeterministicStrategy + audit trail + PcbIR rollback. Phase 100 fully implemented (both plans complete). Ready for `/gsd-verify-work 100` or next phase.
-last_updated: "2026-06-25T08:34:23.268Z"
+status: Executing Phase 101
+stopped_at: Completed Phase 101 Plan 01 — Deprecated erc_auto_fix + erc_auto_fix_hierarchical (P0-003). OpMeta.deprecated field added, both ops marked deprecated=True, runtime DeprecationWarning at handler entry. 6 new tests, zero regression. Ready for Phase 101 Plan 02.
+last_updated: "2026-06-25T09:00:00.000Z"
 last_activity: 2026-06-25
 progress:
   total_phases: 129
   completed_phases: 49
   total_plans: 269
-  completed_plans: 209
+  completed_plans: 210
   percent: 78
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 100 — routingorchestrator-and-human-approval-loop
+**Current focus:** Phase 101 — schematic-ops-bug-fixes
 Last activity: 2026-06-25
 
 ## Current Position
 
-Phase: 101
-Plan: Not started
+Phase: 101 (schematic-ops-bug-fixes) — EXECUTING
+Plan: 2 of 4
 **All milestones shipped (v1.0 through v4.1). 94 phases, 266 plans, 3300+ tests.**
 
 Last milestone: v4.1 Stage-Safe PCB Flow (Phases 85-94)
@@ -53,7 +53,17 @@ Prior milestones: v4.0 Hybrid Routing (80-84), v3.2 Gap Analysis (79), v3.1 Coun
 
 Council review: 4 findings fixed, all passing.
 
-Last activity: 2026-06-25 -- Phase 100 execution started
+Last activity: 2026-06-25 -- Phase 101 execution started
+
+### Phase 101: Schematic Ops Bug Fixes (in progress)
+
+- Plan 101-01: Deprecate erc_auto_fix ops (R-3 / P0-003) (COMPLETE)
+  - Added `deprecated: bool = False` field to OpMeta Pydantic model
+  - Marked erc_auto_fix + erc_auto_fix_hierarchical as deprecated=True in _RAW_CATALOG
+  - Runtime DeprecationWarning at both handler entry points (stacklevel=2)
+  - Warning fires BEFORE any file mutation; references P0-003 + alternative ops
+  - 6 new tests (4 registry/field + 2 warning emission), zero regression on 92 sibling tests
+  - Per CONTEXT.md D-2: deprecation ONLY this phase; raw S-expr rewrite deferred
 
 ### Phase 99: Freerouting Integration Hardening (in progress)
 
@@ -409,6 +419,7 @@ Priority: Start with Phases 85-87 (gate architecture + schematic intent + transf
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [Phase 101-01]: erc_auto_fix + erc_auto_fix_hierarchical DEPRECATED via OpMeta field + runtime warning (not removed) — prevents ongoing KiCad 10 data-loss while raw S-expr rewrite is deferred
 - [v4.1]: Stage-safe flow shifts from "file-safe editing" to "stage-safe design" — every design transition has a deterministic gate
 - [v4.1]: Phases 85-87 prioritized — biggest current weakness is gap between safe KiCad files and real schematic-to-PCB transfer
 - [v4.1]: LLM output is advisory; deterministic gates decide whether proposals can mutate files
@@ -544,8 +555,8 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 100 Plan 02 — RoutingOrchestrator + DeterministicStrategy + audit trail + PcbIR rollback. Phase 100 fully implemented (both plans complete). Ready for `/gsd-verify-work 100` or next phase.
-Resume with: Phase 100 verification, or Phase 101 (Schematic Ops Bug Fixes), or Phase 98 (AI Routing Strategy Advisor — now has the RoutingStrategy Protocol contract to implement).
+Stopped at: Completed Phase 101 Plan 01 — Deprecated erc_auto_fix + erc_auto_fix_hierarchical (P0-003). OpMeta.deprecated field added, both ops marked deprecated=True, runtime DeprecationWarning at handler entry. 6 new tests, zero regression. Ready for Phase 101 Plan 02.
+Resume with: Phase 101 Plan 02 (R-1: update_symbols_from_library attribute fix) or Phase 100 verification.
 
 ### Phase 100: RoutingOrchestrator and Human Approval Loop (complete)
 
