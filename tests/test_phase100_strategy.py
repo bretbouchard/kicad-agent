@@ -13,6 +13,7 @@ Covers:
 from __future__ import annotations
 
 import dataclasses
+import logging
 
 import pytest
 
@@ -234,3 +235,63 @@ class TestPin:
         p = _make_pin()
         with pytest.raises(dataclasses.FrozenInstanceError):
             p.x = 99.0  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# LO-05: DeterministicStrategy must not emit noisy warnings during population
+# ---------------------------------------------------------------------------
+
+
+class TestDeterministicStrategyNoWarningsOnPopulation:
+    """LO-05: When DeterministicStrategy builds dispatch from board state, it
+    must NOT log warnings for every populated net_class_map entry or
+    differential_pair. Normal population is expected behavior, not a warning
+    condition.
+
+    Acceptance: caplog captures zero WARNING (or higher) records emitted by
+    the strategy module during strategize() with a populated net_class_map
+    and differential_pairs.
+    """
+
+    def test_deterministic_strategy_no_warnings_on_normal_population(
+        self, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        ds = DeterministicStrategy(
+            differential_pairs=(("USB+", "USB-"), ("CLK+", "CLK-")),
+            net_class_map={
+                "VCC": "Power",
+                "GND": "Power",
+                "USB+": "Signal",
+                "USB-": "Signal",
+                "CLK+": "Signal",
+                "CLK-": "Signal",
+            },
+        )
+        bs = _make_board_state(total_nets=6, has_zones=True)
+        nl = _make_netlist(VCC=3, GND=3, USB=2, USBb=2, CLK=2, CLKb=2)
+        # Rename to match the diff pair net names.
+        nl.clear()
+        nl["VCC"] = [_make_pin(pad=str(i), x=float(i * 5), y=float(i * 5)) for i in range(3)]
+        nl["GND"] = [_make_pin(pad=str(i), x=float(i * 5), y=float(i * 5)) for i in range(3)]
+        nl["USB+"] = [_make_pin(pad="1"), _make_pin(pad="2", x=15.0)]
+        nl["USB-"] = [_make_pin(pad="1", x=20.0), _make_pin(pad="2", x=25.0)]
+        nl["CLK+"] = [_make_pin(pad="1", x=30.0), _make_pin(pad="2", x=35.0)]
+        nl["CLK-"] = [_make_pin(pad="1", x=40.0), _make_pin(pad="2", x=45.0)]
+
+        with caplog.at_level(logging.WARNING, logger="kicad_agent.routing.strategy"):
+            result = ds.strategize(bs, nl)
+
+        # LO-05 acceptance: zero WARNING records from strategy module.
+        warning_records = [
+            r for r in caplog.records
+            if r.levelno >= logging.WARNING
+            and r.name == "kicad_agent.routing.strategy"
+        ]
+        assert len(warning_records) == 0, (
+            f"DeterministicStrategy emitted {len(warning_records)} WARNING(s) "
+            f"during normal population (LO-05 violation): "
+            f"{[r.getMessage() for r in warning_records]}"
+        )
+        # Sanity: the strategy still produced a valid result.
+        assert isinstance(result, RoutingStrategyResult)
+        assert len(result.router_assignment) == 6
