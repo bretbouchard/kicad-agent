@@ -830,23 +830,29 @@ Plans:
 
 ### Phase 100: RoutingOrchestrator and Human Approval Loop
 
-**Goal:** Intelligent dispatcher that routes each net through the right backend (in-house A* for simple, Freerouting for complex) with a human approval gate over the result. Builds on existing InteractiveRoutingSession and MultiPassRouter.
-**Requirements**: R-1 RoutingOrchestrator with RoutingStrategy interface (deterministic policies now, AI pluggable in Phase 98); R-2 Per-net dispatch (net class, pin count, density, diff-pair → router selection); R-3 InteractiveRoutingSession extended for Freerouting output; R-4 Rollback via PersistentUndoStack; R-5 Audit trail (net, router, strategy, result, timestamp); R-6 Deterministic fallback policy; R-7 Batch orchestration API
+**Goal:** Intelligent dispatcher that routes each net through the right backend (in-house A* for simple, Freerouting for complex) with a human approval gate over the result. Builds on existing InteractiveRoutingSession and MultiPassRouter. Includes CR-01 immutability refactor (deferred from Phase 99 Council Exec Review §7.7).
+**Requirements**: R-1 RoutingOrchestrator with RoutingStrategy interface (deterministic policies now, AI pluggable in Phase 98); R-2 Per-net dispatch (net class, pin count, density, diff-pair → router selection); R-3 InteractiveRoutingSession extended for Freerouting output; R-4 Rollback via PersistentUndoStack; R-5 Audit trail (net, router, strategy, result, timestamp); R-6 Deterministic fallback policy; R-7 Batch orchestration API; CR-01 NativeBoard immutability refactor (14 frozen dataclasses + 8 mutation sites migrated to dataclasses.replace)
 **Depends on:** Phase 99
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 100 to break down)
+- [ ] 100-01-PLAN.md — CR-01 immutability refactor (14 NativeBoard dataclasses frozen + 8 mutation sites migrated to dataclasses.replace)
+- [ ] 100-02-PLAN.md — RoutingOrchestrator + DeterministicStrategy + InteractiveRoutingSession Freerouting ingestion + audit trail + batch API (R-1 through R-7)
 
 ### Phase 101: Schematic Ops Bug Fixes
 
 **Goal:** Close 5 P0/P1 schematic ops bugs blocking analog-ecosystem backplane cleanup (BUGS/P0-001 through P0-005). Three of five share a common root cause: position calculation without proper KiCad 10 transform handling. One is a simple attribute access bug. One requires deprecation + raw S-expr rewrite to prevent data loss.
 **Requirements**: R-1 P0-001 `update_symbols_from_library` crash (Symbol.name attribute access — quick fix); R-2 P0-002 `place_missing_units` position collision (dedup logic for multi-unit components); R-3 P0-003 `erc_auto_fix` data loss (deprecate + raw S-expr rewrite, NOT kiutils re-serialization); R-4 P0-004 `place_no_connects_from_erc` wrong positions (apply symbol rotation transform); R-5 P0-005 `remove_dangling_wires` criteria mismatch (align with KiCad ERC electrical definition)
 **Depends on:** (standalone — fixes existing ops, no new infrastructure)
-**Plans:** 0 plans
+**Plans:** 4 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 101 to break down)
+- [ ] 101-01-PLAN.md — R-3: Deprecate erc_auto_fix + erc_auto_fix_hierarchical (add `deprecated` field to OpMeta, mark both ops, emit DeprecationWarning)
+- [ ] 101-02-PLAN.md — R-1: Fix update_symbols_from_library crash (sym.name → sym.entryName one-line fix)
+- [ ] 101-03-PLAN.md — R-2 + R-4: Fix position transform bugs (place_missing_units dedup bypass + place_no_connects_from_erc tolerance matching)
+- [ ] 101-04-PLAN.md — R-5: Fix remove_dangling_wires criteria alignment (trust_erc parameter + ERC wire_dangling passthrough)
+
+---
 
 ---
 
