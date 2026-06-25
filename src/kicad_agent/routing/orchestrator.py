@@ -593,13 +593,20 @@ class RoutingOrchestrator:
         from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
         from kicad_agent.parser.pcb_native_parser import NativeParser
 
+        # LO-04: read the raw content ONCE and parse it via parse_pcb_content.
+        # Previously this method called NativeParser.parse_pcb(pcb_path) (which
+        # reads the file internally) and then separately pcb_path.read_text()
+        # for the raw string the writer needs. That doubled the file I/O on
+        # every rollback. Caching the single read + parse eliminates the
+        # redundancy.
+        raw = pcb_path.read_text(encoding="utf-8")
+
         # Snapshot before rollback if an undo stack is provided.
         if undo_stack is not None:
-            pre = pcb_path.read_text(encoding="utf-8")
-            undo_stack.push(pcb_path, pre, pre, op_type="rollback_net_pre")
+            undo_stack.push(pcb_path, raw, raw, op_type="rollback_net_pre")
 
-        # 1. Parse the board to find segments/vias matching the net.
-        board = NativeParser.parse_pcb(pcb_path)
+        # 1. Parse the cached content to find segments/vias matching the net.
+        board = NativeParser.parse_pcb_content(raw, file_path=str(pcb_path))
 
         # 2. CR-01: collect UUIDs directly from the parsed segments/vias.
         #    The UUID value is the stable identity — joining on it avoids the
@@ -616,7 +623,6 @@ class RoutingOrchestrator:
         # 3. Apply deletions via PcbRawWriter (atomic string operations).
         #    Each delete is a string transform; if a UUID is somehow not
         #    found (stale), we skip it rather than crash.
-        raw = pcb_path.read_text(encoding="utf-8")
         for uuid_str in seg_uuids:
             try:
                 raw = PcbRawWriter.delete_segment(raw, uuid_str)
@@ -633,9 +639,9 @@ class RoutingOrchestrator:
         atomic_write(pcb_path, raw)
 
         # Snapshot after rollback if undo stack provided.
+        # LO-04: post content equals raw (what we just wrote) — no third read.
         if undo_stack is not None:
-            post = pcb_path.read_text(encoding="utf-8")
-            undo_stack.push(pcb_path, raw, post, op_type="rollback_net_post")
+            undo_stack.push(pcb_path, raw, raw, op_type="rollback_net_post")
 
     def rollback_full(
         self,

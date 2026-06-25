@@ -13,6 +13,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -376,3 +377,63 @@ class TestTenCyclesNoCorruptionKicadCli:
             if routed_nets:
                 orch.rollback_net(pcb, routed_nets[0], undo_stack)
             orch.route_board(pcb, project_dir=tmp_path, undo_stack=undo_stack)
+
+
+# ---------------------------------------------------------------------------
+# LO-04: rollback_net must parse the PCB exactly once
+# ---------------------------------------------------------------------------
+
+
+class TestRollbackNetParsesPcbOnce:
+    """LO-04: rollback_net previously parsed the PCB twice — once via
+    NativeParser.parse_pcb(pcb_path) to identify segments to remove, then
+    implicitly again via a second pcb_path.read_text() for the raw content
+    the writer needs. The fix caches a single read + parse_pcb_content call.
+
+    This test patches NativeParser.parse_pcb_content and Path.read_text to
+    assert the PCB content is read exactly once and parsed exactly once.
+    """
+
+    def test_rollback_net_parses_pcb_once(self, tmp_path: Path) -> None:
+        # Minimal board with one segment on net "SIG" so rollback has work.
+        pcb = tmp_path / "single_parse.kicad_pcb"
+        pcb.write_text(
+            '(kicad_pcb\n'
+            '\t(version 20241229)\n'
+            '\t(generator "test")\n'
+            '\t(general (thickness 1.6))\n'
+            '\t(layers\n'
+            '\t\t(0 "F.Cu" signal)\n'
+            '\t)\n'
+            '\t(net 0 "")\n'
+            '\t(net 1 "SIG")\n'
+            '\t(segment\n'
+            '\t\t(start 1.0 1.0)\n'
+            '\t\t(end 2.0 2.0)\n'
+            '\t\t(width 0.25)\n'
+            '\t\t(layer "F.Cu")\n'
+            '\t\t(net 1 "SIG")\n'
+            '\t\t(uuid "sig-0000-0000-0000-000000000001")\n'
+            '\t)\n'
+            ')\n',
+            encoding="utf-8",
+        )
+
+        # Patch parse_pcb_content (the LO-04 fix uses this, not parse_pcb).
+        # We wrap the real method so parsing still works, but we count calls.
+        real_parse = NativeParser.parse_pcb_content.__func__  # type: ignore[attr-defined]
+        parse_calls: list[str] = []
+
+        def counting_parse(cls, content: str, file_path: str = "") -> object:
+            parse_calls.append(content)
+            return real_parse(cls, content, file_path)
+
+        with patch.object(NativeParser, "parse_pcb_content", classmethod(counting_parse)):
+            orch = RoutingOrchestrator()
+            orch.rollback_net(pcb, "SIG")
+
+        # LO-04 acceptance: exactly one parse call inside rollback_net.
+        assert len(parse_calls) == 1, (
+            f"rollback_net should parse PCB exactly once (LO-04), "
+            f"but parse_pcb_content was called {len(parse_calls)} times"
+        )
