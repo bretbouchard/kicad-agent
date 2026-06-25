@@ -99,7 +99,6 @@ class TestDataTypes:
                 drc_pass=True,
                 drc_unconnected=0,
                 elapsed_seconds=0.0,
-                model_output_chars=0,
                 parse_success=True,
                 validation_passed=True,
             ).via_count = 5  # type: ignore[misc]
@@ -118,7 +117,6 @@ class TestDataTypes:
             drc_pass=True,
             drc_unconnected=0,
             elapsed_seconds=1.2,
-            model_output_chars=0,
             parse_success=True,
             validation_passed=True,
         )
@@ -126,7 +124,7 @@ class TestDataTypes:
             "fixture_name", "strategy_name", "total_nets", "routed_nets",
             "completion_pct", "via_count", "total_trace_length_mm",
             "drc_pass", "drc_unconnected", "elapsed_seconds",
-            "model_output_chars", "parse_success", "validation_passed",
+            "parse_success", "validation_passed",
         ):
             assert hasattr(r, field), f"missing field: {field}"
 
@@ -334,7 +332,6 @@ def _eval_result(
     drc_unconnected: int = 0,
     parse_success: bool = True,
     validation_passed: bool = True,
-    model_chars: int = 0,
 ) -> Any:
     from scripts.phase98_eval import StrategyEvalResult
 
@@ -349,7 +346,6 @@ def _eval_result(
         drc_pass=drc_pass,
         drc_unconnected=drc_unconnected,
         elapsed_seconds=1.0,
-        model_output_chars=model_chars,
         parse_success=parse_success,
         validation_passed=validation_passed,
     )

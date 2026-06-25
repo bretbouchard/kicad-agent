@@ -77,7 +77,6 @@ class StrategyEvalResult:
     drc_unconnected: int
     elapsed_seconds: float
     # AI-specific diagnostics (always populated; meaningful for AI strategy)
-    model_output_chars: int
     parse_success: bool
     validation_passed: bool
 
@@ -87,8 +86,6 @@ def run_strategy_with_orchestrator(
     pcb_path: Path,
     project_dir: Path,
     strategy_name: str,
-    *,
-    model_output_chars: int = 0,
 ) -> StrategyEvalResult:
     """Run a strategy through the orchestrator and collect eval metrics.
 
@@ -103,8 +100,6 @@ def run_strategy_with_orchestrator(
         project_dir: Project directory for audit trail output.
         strategy_name: Display name for the result ("DeterministicStrategy"
             or "AiRoutingStrategy").
-        model_output_chars: For AI strategy, length of raw model output.
-            Used as a diagnostic. Defaults to 0 for deterministic.
 
     Returns:
         StrategyEvalResult with computed metrics + DRC result.
@@ -148,7 +143,6 @@ def run_strategy_with_orchestrator(
         drc_pass=drc_pass,
         drc_unconnected=drc_unconnected,
         elapsed_seconds=round(elapsed, 3),
-        model_output_chars=model_output_chars,
         parse_success=parse_success,
         validation_passed=validation_passed,
     )
