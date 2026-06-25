@@ -41,10 +41,15 @@ class TestDeterministicWithinFivePercentOfBaseline:
         routed = result.total_routed
         completion_pct = (routed / total) * 100.0
 
-        # Phase 99 baseline: 50%. Allowed band: 45-55%.
-        assert 45.0 <= completion_pct <= 55.0, (
-            f"Deterministic completion {completion_pct:.1f}% outside "
-            f"45-55% baseline band (baseline=50%)"
+        # Phase 99 baseline: 50% (Freerouting-alone on smd_test_board).
+        # SC-5: the orchestrator should meet or exceed the baseline within
+        # a 5% tolerance band. The orchestrator combines A* (for simple nets)
+        # with Freerouting (for complex nets), so it should do AT LEAST as
+        # well as Freerouting-alone. Lower bound: 45% (baseline minus 5%).
+        # No upper bound — doing better than baseline is the goal.
+        assert completion_pct >= 45.0, (
+            f"Deterministic completion {completion_pct:.1f}% below "
+            f"45% lower bound (baseline=50%, allowed variance -5%)"
         )
 
 

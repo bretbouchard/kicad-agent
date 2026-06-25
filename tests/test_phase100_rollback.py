@@ -84,29 +84,27 @@ class TestRollbackNetUsesPcbir:
                 pytest.fail(f"orchestrator.py imports re at module level: {line}")
 
     def test_rollback_removes_segments_for_net(self, tmp_path: Path) -> None:
-        # Build a board with a segment on REJECTED_NET, then roll it back.
+        # Inject a properly-formatted segment on a known net, then roll it back.
         pcb = _copy_fixture(tmp_path)
         undo_stack = PersistentUndoStack(project_dir=tmp_path)
 
-        # Inject a segment on a test net so we have something to remove.
-        # We use a real net from the fixture to ensure pads keep their assignment.
         raw = pcb.read_text(encoding="utf-8")
-        # Find a real net name to use for the injected segment.
         board = NativeParser.parse_pcb(pcb)
         assert len(board.nets) > 0
         target_net = board.nets[0].name
-        # Inject a segment referencing that net before the final close paren.
+        target_net_num = board.nets[0].number
+
+        # Inject a valid segment block (KiCad 10 format with uuid token)
+        # before the final closing paren of (kicad_pcb ...).
         injection = (
-            f'\n  (segment (start 1.0 1.0) (end 2.0 2.0) (width 0.25) '
-            f'(layer "F.Cu") (net 0) (tstamp 00000000-0000-0000-0000-000000000001))'
-        )
-        # We need the segment to reference the net by name via (net "name") form
-        # OR by number. PcbRawWriter.delete_segment works by UUID, so we inject
-        # a segment with a known UUID and then rollback by net name.
-        injection = (
-            f'\n  (segment (start 1.0 1.0) (end 2.0 2.0) (width 0.25) '
-            f'(layer "F.Cu") (net 0) "{target_net}")'
-            f' (tstamp aaaaaaaa-0000-0000-0000-000000000001))'
+            f'\t(segment\n'
+            f'\t\t(start 1.0 1.0)\n'
+            f'\t\t(end 2.0 2.0)\n'
+            f'\t\t(width 0.25)\n'
+            f'\t\t(layer "F.Cu")\n'
+            f'\t\t(net {target_net_num} "{target_net}")\n'
+            f'\t\t(uuid "aaaaaaaa-0000-0000-0000-000000000001")\n'
+            f'\t)\n'
         )
         last_close = raw.rfind(")")
         raw = raw[:last_close] + injection + raw[last_close:]

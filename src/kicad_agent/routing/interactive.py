@@ -27,6 +27,7 @@ from kicad_agent.routing.pathfinder import route_all_nets, route_net
 
 if TYPE_CHECKING:
     from kicad_agent.routing.diff_pair import DiffPairResult
+    from kicad_agent.routing.freerouting import SesParseResult
 
 
 class SuggestionStatus(str, Enum):
@@ -460,6 +461,59 @@ class InteractiveRoutingSession:
             max(all_y) + padding,
         )
         return self._board_bounds
+
+    def ingest_freerouting_result(
+        self,
+        ses_result: "SesParseResult",
+        net_filter: set[str] | None = None,
+    ) -> None:
+        """Merge Freerouting SES wires into the session as RoutingSuggestion objects.
+
+        Converts each SES wire (polyline) into a RoutingSuggestion matching the
+        existing A*-produced suggestion shape. Reuses the existing approve/reject/
+        reroute lifecycle unchanged.
+
+        R-3: This is the bridge between Freerouting output and the human approval
+        loop. After ingestion, suggestions from either backend flow through the
+        same approve()/reject()/reroute_rejected() pipeline — the user cannot
+        tell (nor care) which backend produced a suggestion.
+
+        Args:
+            ses_result: Parsed SES output from route_with_freerouting(). Must
+                have a ``wires`` attribute where each wire has ``net`` (str)
+                and ``points`` (list of (x, y) tuples). Unknown attribute
+                shapes fall back to empty defaults via getattr.
+            net_filter: If provided, only ingest wires whose net is in this set.
+                Used when the orchestrator dispatched only a subset of nets to
+                Freerouting.
+        """
+        import math
+        for wire in ses_result.wires:
+            net = getattr(wire, "net", "") or ""
+            if net_filter is not None and net not in net_filter:
+                continue
+            if net not in self._netlist:
+                # Pitfall 3: SES wire for a net not in our netlist. Skip
+                # silently — the orchestrator logs the mismatch separately.
+                continue
+            points = list(getattr(wire, "points", []))
+            if len(points) < 2:
+                continue
+            length_mm = sum(
+                math.hypot(
+                    points[i + 1][0] - points[i][0],
+                    points[i + 1][1] - points[i][1],
+                )
+                for i in range(len(points) - 1)
+            )
+            suggestion = RoutingSuggestion(
+                net_name=net,
+                path=points,
+                length_mm=length_mm,
+                is_differential_pair=net in self._diff_pair_map,
+                diff_pair_complement=self._diff_pair_map.get(net, ""),
+            )
+            self._suggestions[net] = suggestion
 
     @property
     def suggestions(self) -> dict[str, RoutingSuggestion]:
