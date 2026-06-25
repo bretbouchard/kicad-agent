@@ -16,6 +16,7 @@ Usage:
 
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass, field
 from enum import Enum
@@ -24,6 +25,8 @@ from typing import TYPE_CHECKING
 from kicad_agent.routing.constraints import RoutingConstraints
 from kicad_agent.routing.graph import RoutingGraph
 from kicad_agent.routing.pathfinder import route_all_nets, route_net
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from kicad_agent.routing.diff_pair import DiffPairResult
@@ -137,10 +140,38 @@ class InteractiveRoutingSession:
     ) -> None:
         """Route all nets and create RoutingSuggestion objects.
 
+        LO-03/WR-04: nets with fewer than 2 pins are surfaced as PENDING
+        suggestions with clearance_violations=["insufficient pins (N)"]
+        so the user sees they exist and can decide to ignore them. They
+        are NOT silently dropped from the session.
+
         Args:
             diff_pair_nets: Set of net names handled as differential pairs.
         """
         from kicad_agent.routing.diff_pair import route_differential_pair
+
+        # LO-03: surface nets with <2 pins as PENDING with a clearance
+        # violation marker. They cannot be routed but the user should see
+        # they exist (previously dropped silently, undercounting total_nets).
+        insufficient_pin_nets: list[tuple[str, int]] = []
+        for name, pins in self._netlist.items():
+            if name in diff_pair_nets:
+                continue
+            if len(pins) < 2:
+                insufficient_pin_nets.append((name, len(pins)))
+
+        for net_name, pin_count in insufficient_pin_nets:
+            logger.warning(
+                "Net '%s' has only %d pin(s); cannot route (needs >= 2). "
+                "Surfacing as PENDING suggestion.",
+                net_name, pin_count,
+            )
+            self._suggestions[net_name] = RoutingSuggestion(
+                net_name=net_name,
+                path=[],
+                length_mm=0.0,
+                clearance_violations=[f"insufficient pins ({pin_count})"],
+            )
 
         # Route non-diff-pair nets via batch routing.
         regular_netlist = {
