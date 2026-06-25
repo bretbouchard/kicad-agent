@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
 status: Executing Phase 99
-stopped_at: Completed Phase 95 - Dual Knowledge Base Integration (Cognee + section injection).
-last_updated: "2026-06-25T00:32:45.456Z"
+stopped_at: Completed Phase 99 Plan 02 (R-4 via padstacks + R-6 SES multi-layer bridge).
+last_updated: "2026-06-25T01:30:00.000Z"
 last_activity: 2026-06-25
 progress:
   total_phases: 128
   completed_phases: 47
   total_plans: 263
-  completed_plans: 204
+  completed_plans: 205
   percent: 78
 ---
 
@@ -27,7 +27,7 @@ Last activity: 2026-06-25
 ## Current Position
 
 Phase: 99 (freerouting-integration-hardening) — EXECUTING
-Plan: 1 of 3
+Plan: 2 of 3
 **All milestones shipped (v1.0 through v4.1). 94 phases, 265 plans, 3300+ tests.**
 
 Last milestone: v4.1 Stage-Safe PCB Flow (Phases 85-94)
@@ -53,7 +53,29 @@ Prior milestones: v4.0 Hybrid Routing (80-84), v3.2 Gap Analysis (79), v3.1 Coun
 
 Council review: 4 findings fixed, all passing.
 
-Last activity: 2026-06-25 -- Phase 99 execution started
+Last activity: 2026-06-25 -- Phase 99 plan 02 complete (R-4 via padstacks + R-6 SES bridge)
+
+### Phase 99: Freerouting Integration Hardening (in progress)
+
+- Plan 99-01: DSN generator NativeBoard refactor + R-1/R-2/R-3/R-5/R-7 (COMPLETE)
+  - NativeBoard-backed DSN generation replaces regex extraction
+  - Courtyard-accurate footprint outlines (R-1) with rotation-aware AABB
+  - Per-net-class rules with self-contained per-class via padstacks (R-2 + H-2)
+  - 3-way zone classification: plane / routing-keepout / placement-only-skip (R-3 + C-1)
+  - 45° trace mode via (control (snap_angle ...)) (R-5)
+  - snap_angle threaded through export_dsn + route_with_freerouting (BLOCKER-1)
+  - 22 new tests across 7 files
+
+- Plan 99-02: Via padstacks per stackup + SES multi-layer bridge (R-4, R-6) (COMPLETE)
+  - NativeStackupLayer type + _extract_stackup_layers helper (R-4 stackup typing)
+  - Stackup-based via padstacks: THT always, blind+buried when 4+ copper layers (R-4)
+  - parse_ses rewritten for actual Freerouting v2.2.4 (wiring ...) section format (R-6)
+  - Via layers derived from padstack name (Via[0-In1] -> F.Cu/In1.Cu)
+  - ses_to_kicad_sexpr routes through ViaSegment.to_sexpr (WARN-2 canonical emitter)
+  - Reference SES captured from Freerouting v2.2.4 on Arduino_Mega (H-3)
+  - Rule 1 fixes: empty pad number, FreerouteBatch scoring NPE, unquoted UUID (KiCad 10)
+  - M-4 smoke test: kicad-cli pcb drc accepts quoted UUID via (exit 0)
+  - 18 new tests across 4 files + reference SES fixture
 
 ### Phase 95: Dual Knowledge Base Integration (v2.2)
 

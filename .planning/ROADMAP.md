@@ -824,8 +824,8 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 99-01-PLAN.md — DSN generator refactor: R-1 footprints, R-2 net classes, R-3 zones, R-5 snap_angle, R-7 comment sweep
-- [ ] 99-02-PLAN.md — R-4 via padstacks per stackup + R-6 SES multi-layer via bridge verification
+- [x] 99-01-PLAN.md — DSN generator refactor: R-1 footprints, R-2 net classes, R-3 zones, R-5 snap_angle, R-7 comment sweep
+- [x] 99-02-PLAN.md — R-4 via padstacks per stackup + R-6 SES multi-layer via bridge verification
 - [ ] 99-03-PLAN.md — SC-3 e2e DRC validation + SC-4 baseline metrics + SC-5 45° vs Manhattan comparison
 
 ### Phase 100: RoutingOrchestrator and Human Approval Loop
