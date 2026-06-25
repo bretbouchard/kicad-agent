@@ -44,6 +44,13 @@ class RoutingAuditEntry:
         via_count: Number of vias in the route (0 if none or failed).
         drc_clean: True if the route passes DRC.
         notes: Free-text rationale (e.g., "user rejected: too close to GND").
+        strategy_notes: Notes from the RoutingStrategyResult.routing_notes
+            field. For DeterministicStrategy this is a static string. For
+            AiRoutingStrategy it carries the ``ai_fallback:`` prefix when
+            the model failed and the deterministic fallback was used (H-1 /
+            ME-05). Persisted to JSONL so the audit trail can reconstruct
+            whether AI contributed or fell back — previously this prefix
+            only landed in the in-memory result and Python logger.warning.
     """
 
     timestamp: str
@@ -56,6 +63,7 @@ class RoutingAuditEntry:
     via_count: int
     drc_clean: bool
     notes: str
+    strategy_notes: str = ""
 
 
 def _entry_to_dict(entry: RoutingAuditEntry) -> dict:
@@ -75,6 +83,7 @@ def _entry_to_dict(entry: RoutingAuditEntry) -> dict:
         "via_count": entry.via_count,
         "drc_clean": entry.drc_clean,
         "notes": entry.notes,
+        "strategy_notes": entry.strategy_notes,
     }
 
 
@@ -82,6 +91,9 @@ def _dict_to_entry(data: dict) -> RoutingAuditEntry:
     """Reconstruct a RoutingAuditEntry from a parsed JSON dict.
 
     Converts the router_used string back to a RouterBackend enum value.
+
+    strategy_notes is optional (defaults to "") for backward compatibility
+    with audit lines written before the H-1 / ME-05 fix added the field.
     """
     router_str = data.get("router_used", "")
     try:
@@ -105,6 +117,7 @@ def _dict_to_entry(data: dict) -> RoutingAuditEntry:
         via_count=int(data.get("via_count", 0)),
         drc_clean=bool(data.get("drc_clean", False)),
         notes=data.get("notes", ""),
+        strategy_notes=data.get("strategy_notes", ""),
     )
 
 

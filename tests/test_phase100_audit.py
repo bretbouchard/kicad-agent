@@ -34,6 +34,7 @@ def _make_entry(
     notes: str = "",
     dispatch_reason: str = "default astar",
     strategy: str = "deterministic",
+    strategy_notes: str = "",
 ) -> RoutingAuditEntry:
     return RoutingAuditEntry(
         timestamp="2026-06-25T00:00:00+00:00",
@@ -46,6 +47,7 @@ def _make_entry(
         via_count=via_count,
         drc_clean=drc_clean,
         notes=notes,
+        strategy_notes=strategy_notes,
     )
 
 
@@ -73,6 +75,7 @@ class TestRoutingAuditEntryFrozen:
             "via_count",
             "drc_clean",
             "notes",
+            "strategy_notes",
         }
 
 
@@ -99,7 +102,7 @@ class TestAppendJsonl:
         required = {
             "timestamp", "net_name", "router_used", "strategy",
             "dispatch_reason", "result", "route_length_mm",
-            "via_count", "drc_clean", "notes",
+            "via_count", "drc_clean", "notes", "strategy_notes",
         }
         assert required.issubset(data.keys())
 
@@ -191,3 +194,148 @@ class TestWriteAuditEntryStandalone:
         content = audit_path.read_text(encoding="utf-8")
         data = json.loads(content.strip())
         assert data["net_name"] == "SIG"
+
+
+# ---------------------------------------------------------------------------
+# H-1 / ME-05: strategy_notes persists to durable JSONL audit trail
+# ---------------------------------------------------------------------------
+
+
+class TestStrategyNotesPersistsToAudit:
+    """H-1 / ME-05: RoutingAuditEntry must persist strategy_notes so the
+    ``ai_fallback:`` prefix from AiRoutingStrategy reaches the durable JSONL
+    file — not just the in-memory result and Python logger.warning.
+
+    Previously the schema captured ``strategy=type(strategy).__name__`` but
+    discarded ``RoutingStrategyResult.routing_notes``. The Phase 98 eval
+    harness scanned net notes for the ``ai_fallback:`` marker in-memory, but
+    the durable trail could not reconstruct whether AI contributed or fell
+    back when analyzed post-hoc.
+    """
+
+    def test_audit_entry_includes_strategy_notes(self, tmp_path) -> None:
+        """strategy_notes flows through to the JSONL file on append."""
+        log = RoutingAuditLog(tmp_path / "audit.jsonl")
+        log.append(_make_entry(
+            net_name="VCC",
+            strategy_notes="deterministic: Phase 99 baseline heuristics",
+        ))
+        content = (tmp_path / "audit.jsonl").read_text(encoding="utf-8")
+        data = json.loads(content.strip())
+        assert data["strategy_notes"] == "deterministic: Phase 99 baseline heuristics"
+
+    def test_strategy_notes_round_trips_through_query_by_net(self, tmp_path) -> None:
+        """strategy_notes survives serialize -> deserialize -> query."""
+        log = RoutingAuditLog(tmp_path / "audit.jsonl")
+        log.append(_make_entry(
+            net_name="VCC",
+            strategy_notes="ai_fallback: ValueError: missing N1 from net_priorities",
+        ))
+        log2 = RoutingAuditLog(tmp_path / "audit.jsonl")
+        results = log2.query_by_net("VCC")
+        assert len(results) == 1
+        assert results[0].strategy_notes.startswith("ai_fallback:")
+        assert "ValueError" in results[0].strategy_notes
+
+    def test_strategy_notes_defaults_to_empty_string(self, tmp_path) -> None:
+        """Entries constructed without strategy_notes serialize as empty string."""
+        entry = RoutingAuditEntry(
+            timestamp="2026-06-25T00:00:00+00:00",
+            net_name="VCC",
+            router_used=RouterBackend.ASTAR,
+            strategy="deterministic",
+            dispatch_reason="test",
+            result="success",
+            route_length_mm=1.0,
+            via_count=0,
+            drc_clean=False,
+            notes="",
+        )
+        assert entry.strategy_notes == ""
+        # Round-trip through JSONL: missing key in old lines defaults to "".
+        log = RoutingAuditLog(tmp_path / "audit.jsonl")
+        log.append(entry)
+        # Manually rewrite the line WITHOUT strategy_notes to simulate a
+        # pre-H-1 audit entry and confirm backward-compatible deserialization.
+        raw = (tmp_path / "audit.jsonl").read_text(encoding="utf-8").strip()
+        data = json.loads(raw)
+        del data["strategy_notes"]
+        with open(tmp_path / "audit.jsonl", "w", encoding="utf-8") as f:
+            f.write(json.dumps(data) + "\n")
+        log2 = RoutingAuditLog(tmp_path / "audit.jsonl")
+        results = log2.query_by_net("VCC")
+        assert len(results) == 1
+        assert results[0].strategy_notes == ""
+
+
+# ---------------------------------------------------------------------------
+# H-1: AiRoutingStrategy fallback marker reaches audit trail via orchestrator
+# ---------------------------------------------------------------------------
+
+
+class TestAiFallbackMarkerPersistsToAudit:
+    """H-1 end-to-end: when AiRoutingStrategy falls back to DeterministicStrategy
+    on a model failure, the ``ai_fallback:`` prefix must reach the durable
+    JSONL audit trail via the orchestrator's strategy_notes population.
+
+    This test uses a minimal stub strategy that mimics AiRoutingStrategy's
+    fallback behavior (broad except -> deterministic result with ai_fallback:
+    prefix) and verifies the orchestrator persists the notes.
+    """
+
+    def test_ai_fallback_marker_persists_to_audit(self, tmp_path) -> None:
+        from pathlib import Path
+
+        from kicad_agent.routing.orchestrator import RoutingOrchestrator
+        from kicad_agent.routing.strategy import (
+            BoardState,
+            DeterministicStrategy,
+            Pin,
+            RouterBackend,
+            RoutingStrategyResult,
+        )
+
+        class StubAiFallbackStrategy:
+            """Mimics AiRoutingStrategy's R-6 fallback: returns a
+            deterministic result with routing_notes carrying the
+            ``ai_fallback:`` prefix."""
+
+            def strategize(
+                self,
+                board_state: BoardState,
+                netlist: dict[str, list[Pin]],
+            ) -> RoutingStrategyResult:
+                det = DeterministicStrategy()
+                det_result = det.strategize(board_state, netlist)
+                # Replace notes with the ai_fallback marker (mirrors
+                # ai_strategy.py line ~180).
+                return RoutingStrategyResult(
+                    net_priorities=det_result.net_priorities,
+                    layer_hints=det_result.layer_hints,
+                    keepouts=det_result.keepouts,
+                    router_assignment=det_result.router_assignment,
+                    routing_notes=(
+                        "ai_fallback: _AiStrategyError: empty model output"
+                    ),
+                )
+
+        # Minimal board with one net so route_board dispatches at least one net.
+        fixture = Path(__file__).parent / "fixtures" / "smd_test_board.kicad_pcb"
+        import shutil
+        pcb = tmp_path / "smd_test_board.kicad_pcb"
+        shutil.copy(fixture, pcb)
+
+        orch = RoutingOrchestrator(strategy=StubAiFallbackStrategy())
+        result = orch.route_board(pcb, project_dir=tmp_path)
+
+        # Read the audit JSONL and confirm the ai_fallback marker persisted.
+        audit_text = result.audit_path.read_text(encoding="utf-8")
+        lines = [ln for ln in audit_text.strip().split("\n") if ln.strip()]
+        assert len(lines) > 0
+        for line in lines:
+            data = json.loads(line)
+            assert data["strategy_notes"].startswith("ai_fallback:"), (
+                f"strategy_notes missing ai_fallback prefix in audit trail "
+                f"(H-1 violation): {data['strategy_notes']!r}"
+            )
+            assert "_AiStrategyError" in data["strategy_notes"]

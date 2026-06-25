@@ -303,6 +303,15 @@ class RoutingOrchestrator:
             # Persisting True would misclassify every routed net as DRC-clean
             # in the audit trail — polluting future analysis. The marker
             # [drc_deferred_to_board_level] makes the reason greppable.
+            #
+            # H-1 / ME-05: persist strategy_result.routing_notes in the
+            # strategy_notes field. For DeterministicStrategy this is a
+            # static descriptor. For AiRoutingStrategy it carries the
+            # ``ai_fallback:`` prefix when the model failed and the
+            # deterministic fallback handled dispatch. Previously this prefix
+            # only lived in the in-memory result and Python logger.warning —
+            # the durable JSONL trail could not distinguish a real AI win
+            # from a silent fallback.
             drc_notes = (nr.notes + " [drc_deferred_to_board_level]").strip()
             audit_log.append(RoutingAuditEntry(
                 timestamp=now_iso(),
@@ -315,6 +324,7 @@ class RoutingOrchestrator:
                 via_count=nr.via_count,
                 drc_clean=False,  # not checked at this stage
                 notes=drc_notes,
+                strategy_notes=strategy_result.routing_notes,
             ))
 
         # 8. Push post-route snapshot (R3-L2: explicit op_type).
