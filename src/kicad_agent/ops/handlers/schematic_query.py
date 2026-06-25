@@ -248,3 +248,16 @@ def _handle_review_schematic(op: Any, ir: SchematicIR, file_path: Path) -> dict[
         "factors": report.readability.factors,
         "suggestions": list(report.readability.suggestions),
     }
+
+
+@register_schematic_query("generate_bom")
+def _handle_generate_bom(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    """Handle generate_bom operation -- BOM with LCSC/JLCPCB part numbers (read-only).
+
+    Phase 101 follow-up: registered in _SCHEMATIC_QUERY_HANDLERS so the op
+    routes through execute_schematic_query (no Transaction, no serialization).
+    The handler implementation lives in handlers/pcb_bom.py and is also
+    merged into _PCB_HANDLERS at import time for backward compatibility.
+    """
+    from kicad_agent.ops.handlers.pcb_bom import _handle_generate_bom as _bom_handler
+    return _bom_handler(op, ir, file_path)
