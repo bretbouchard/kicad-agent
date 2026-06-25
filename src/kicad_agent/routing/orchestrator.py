@@ -290,6 +290,12 @@ class RoutingOrchestrator:
                 total_failed += 1
 
             # Audit entry per net (R-5).
+            # WR-03/MD-01: drc_clean=False because no per-net DRC is run here.
+            # The board-level DRC is deferred to a later verification phase.
+            # Persisting True would misclassify every routed net as DRC-clean
+            # in the audit trail — polluting future analysis. The marker
+            # [drc_deferred_to_board_level] makes the reason greppable.
+            drc_notes = (nr.notes + " [drc_deferred_to_board_level]").strip()
             audit_log.append(RoutingAuditEntry(
                 timestamp=now_iso(),
                 net_name=net_name,
@@ -299,8 +305,8 @@ class RoutingOrchestrator:
                 result="success" if nr.success else "failed",
                 route_length_mm=nr.route_length_mm,
                 via_count=nr.via_count,
-                drc_clean=True,  # R-5 Open Question 2: final board DRC only
-                notes=nr.notes,
+                drc_clean=False,  # not checked at this stage
+                notes=drc_notes,
             ))
 
         # 8. Push post-route snapshot (R3-L2: explicit op_type).
