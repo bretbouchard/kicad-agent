@@ -844,7 +844,7 @@ Plans:
 **Goal:** Close 5 P0/P1 schematic ops bugs blocking analog-ecosystem backplane cleanup (BUGS/P0-001 through P0-005). Three of five share a common root cause: position calculation without proper KiCad 10 transform handling. One is a simple attribute access bug. One requires deprecation + raw S-expr rewrite to prevent data loss.
 **Requirements**: R-1 P0-001 `update_symbols_from_library` crash (Symbol.name attribute access — quick fix); R-2 P0-002 `place_missing_units` position collision (dedup logic for multi-unit components); R-3 P0-003 `erc_auto_fix` data loss (deprecate + raw S-expr rewrite, NOT kiutils re-serialization); R-4 P0-004 `place_no_connects_from_erc` wrong positions (apply symbol rotation transform); R-5 P0-005 `remove_dangling_wires` criteria mismatch (align with KiCad ERC electrical definition)
 **Depends on:** (standalone — fixes existing ops, no new infrastructure)
-**Plans:** 4 plans
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 101-01-PLAN.md — R-3: Deprecate erc_auto_fix + erc_auto_fix_hierarchical (add `deprecated` field to OpMeta, mark both ops, emit DeprecationWarning) — COMPLETE 2026-06-25

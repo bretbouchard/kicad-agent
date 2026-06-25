@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: Phase 101 complete — ready for verification
-stopped_at: Completed Phase 101 Plan 04 — Fixed remove_dangling_wires criteria mismatch (P0-005 R-5). trust_erc parameter + ERC passthrough + Council H-1 dispatcher wiring. 2 TDD commits, 4 new tests, 132 passed / 1 skipped (zero regression). PHASE 101 COMPLETE — all 5 P0/P1 bugs closed.
-last_updated: "2026-06-25T09:30:00.000Z"
+status: Ready to plan
+stopped_at: Completed Phase 101 Plan 04 — Fixed remove_dangling_wires criteria mismatch (P0-005 R-5). Added trust_erc parameter (default True) with ERC wire_dangling position passthrough. Council H-1 dispatcher fix applied (trust_erc=op.trust_erc). 2 TDD commits (1 RED + 1 GREEN), 4 new tests, 132 passed / 1 skipped (zero regression). PHASE 101 COMPLETE — all 5 P0/P1 bugs closed.
+last_updated: "2026-06-25T16:02:17.182Z"
 last_activity: 2026-06-25
 progress:
   total_phases: 129
@@ -26,8 +26,8 @@ Last activity: 2026-06-25
 
 ## Current Position
 
-Phase: 101 (schematic-ops-bug-fixes) — COMPLETE (all 4 plans shipped)
-Plan: 4 of 4 (complete)
+Phase: 240
+Plan: Not started
 **All milestones shipped (v1.0 through v4.1). 94 phases, 266 plans, 3300+ tests.**
 
 Last milestone: v4.1 Stage-Safe PCB Flow (Phases 85-94)
@@ -113,18 +113,23 @@ Last activity: 2026-06-25
     When True (default), op augments geometric detection with ERC wire_dangling
     violation positions — treats ERC as ground truth for electrical "dangling"
     (wrong-type labels, crossings without junction) that geometric heuristics miss.
+
   - Bug: op silently reported "0 wires removed" on sheets with dozens of ERC
     wire_dangling violations because geometric criteria (endpoint has
     pin/label/junction/2+ wires) missed wires ERC flags electrically. Blocked
     Phase 127 wire cleanup effectiveness.
+
   - Council H-1 fix: dispatcher handlers/schematic.py:_handle_remove_dangling_wires
     now passes trust_erc=op.trust_erc. Without this, schema accepted trust_erc=False
     but dispatcher silently dropped it (op contract was broken; default True masked it).
+
   - ERC passthrough wrapped in try/except — malformed ERC output degrades to
     geometric-only. extract_violation_positions lazy-imported inside if trust_erc:
     block (avoids circular import, skips overhead when disabled).
+
   - Geometric fallback preserved (union, not replacement) — Phase 123 Wave 2
     success (143 violations removed via geometric path) retained.
+
   - RemoveDanglingWiresOp schema gains trust_erc: bool = Field(default=True).
   - 4 new tests: TestRemoveDanglingWiresTrustErc (erc_passthrough, geometric_fallback,
     default_true, geometric_only_when_no_erc). 132 passed / 1 skipped across 3
@@ -433,7 +438,7 @@ Last activity: 2026-06-25
 
 **Velocity:**
 
-- Total plans completed: 157
+- Total plans completed: 161
 - Average duration: 5 min
 - Total execution time: 6.5 hours
 
