@@ -30,6 +30,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+from kicad_agent.io.atomic_write import atomic_write
 from kicad_agent.routing.audit import RoutingAuditEntry, RoutingAuditLog, now_iso
 from kicad_agent.routing.strategy import (
     BoardState,
@@ -482,7 +483,8 @@ class RoutingOrchestrator:
             )
 
         # Write the routed content back.
-        pcb_path.write_text(new_content, encoding="utf-8")
+        # CR-02: use atomic_write (temp + fsync + rename) — never bare write_text.
+        atomic_write(pcb_path, new_content)
 
         # Parse the SES to get accurate per-net completion attribution.
         # Freerouting may return success=True even if it only routed a subset
@@ -613,7 +615,8 @@ class RoutingOrchestrator:
                 logger.debug("Via UUID %s not found in raw content (stale?)", uuid_str)
 
         # 5. Write atomically.
-        pcb_path.write_text(raw, encoding="utf-8")
+        # CR-02: use atomic_write (temp + fsync + rename) — never bare write_text.
+        atomic_write(pcb_path, raw)
 
         # Snapshot after rollback if undo stack provided.
         if undo_stack is not None:
@@ -633,4 +636,5 @@ class RoutingOrchestrator:
         """
         entry = undo_stack.pop_undo(pcb_path)
         if entry is not None:
-            pcb_path.write_text(entry.pre_content, encoding="utf-8")
+            # CR-02: use atomic_write (temp + fsync + rename) — never bare write_text.
+            atomic_write(pcb_path, entry.pre_content)
