@@ -789,7 +789,9 @@ def _parse_net_nested_wires(
 
         i = net_end + 1
 
-    return result
+    # Council IN-03: no return — function mutates result in place (appends to
+    # result.wires). Signature is -> None; the prior `return result` was
+    # redundant and ignored by the caller at parse_ses:481.
 
 
 def ses_to_kicad_sexpr(
