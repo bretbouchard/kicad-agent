@@ -66,6 +66,7 @@ If the AI can't produce structurally valid KiCad files through the tool layer, n
 - 6 golden end-to-end boards proving full flow
 - Documentation: stage-gate getting started, repair examples, guarantees vs suggestions
 - Phase 95: Dual Knowledge Base Integration — Cognee ingestion + section injection for local model prompts (73 tests)
+- Phase 99: Freerouting Integration Hardening — NativeBoard-backed DSN generator (R-1 courtyards, R-2 net classes, R-3 zones, R-4 stackup vias, R-5 snap_angle, R-6 SES multilayer bridge, R-7 comment sweep). SC-3 DRC PASS, SC-4 baseline on 3 fixtures, SC-5 xfail (Freerouting v2.2.4 ignores snap_angle in batch). 52 tests, Council APPROVE Round 4.
 
 **Previous:** v3.0 Full-Stack EDA shipped 2026-06-01. All 54 phases across 10 milestones complete.
 
@@ -124,4 +125,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-15 — Phase 95 dual knowledge base integration complete (Cognee ingestion + section injection)*
+*Last updated: 2026-06-25 — Phase 99 Freerouting Integration Hardening complete (NativeBoard-backed DSN, R-1 through R-7, Council APPROVE Round 4)*
