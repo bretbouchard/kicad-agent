@@ -102,11 +102,16 @@ def _filter_false_positives(violations: list[dict]) -> list[dict]:
     return filtered
 
 
-def _run_drc(temp_pcb: Path) -> tuple[bool, int]:
-    """Run kicad-cli pcb drc; return (drc_loaded, unconnected_count).
+def _run_drc(temp_pcb: Path) -> tuple[bool, int, Path]:
+    """Run kicad-cli pcb drc; return (drc_loaded, unconnected_count, report_path).
 
-    Returns (False, -1) when kicad-cli cannot load the board (structural
-    issue). Returns (True, N) when the report parses, N = unconnected count.
+    Returns (False, -1, report_path) when kicad-cli cannot load the board
+    (structural issue). Returns (True, N, report_path) when the report parses,
+    N = unconnected count.
+
+    Council IN-02: returns the actual report_path so callers unlink the real
+    output file instead of reconstructing it via with_suffix (which breaks if
+    kicad-cli changes its output naming convention).
     """
     out_path = temp_pcb.with_suffix(".drc.json")
     try:
@@ -121,24 +126,30 @@ def _run_drc(temp_pcb: Path) -> tuple[bool, int]:
             timeout=180,
         )
     except (FileNotFoundError, subprocess.TimeoutExpired):
-        return False, -1
+        return False, -1, out_path
     if result.returncode != 0 or not out_path.exists():
-        return False, -1
+        return False, -1, out_path
     try:
         report = json.loads(out_path.read_text())
     except (json.JSONDecodeError, OSError):
-        return False, -1
+        return False, -1, out_path
     violations = _filter_false_positives(report.get("violations", []))
     unconnected = sum(
         1 for v in violations
         if v.get("type") == "unconnected_items"
         or "unconnected" in v.get("description", "").lower()
     )
-    return True, unconnected
+    return True, unconnected, out_path
 
 
-def _collect_metrics(fixture: Path, max_passes: int = 3) -> FixtureMetrics:
-    """Route a single fixture and collect all metrics."""
+def _collect_metrics(
+    fixture: Path, max_passes: int = 3, snap_angle: str = "none"
+) -> FixtureMetrics:
+    """Route a single fixture and collect all metrics.
+
+    Council WR-06: snap_angle is threaded through to route_with_freerouting
+    so the baseline can measure 45° / 90° modes (not just default 'none').
+    """
     name = fixture.stem
     if not fixture.exists():
         return FixtureMetrics(
@@ -149,7 +160,9 @@ def _collect_metrics(fixture: Path, max_passes: int = 3) -> FixtureMetrics:
     pcb_content = fixture.read_text(encoding="utf-8")
     total_nets = _count_routable_nets(pcb_content)
     try:
-        route_result = route_with_freerouting(fixture, max_passes=max_passes)
+        route_result = route_with_freerouting(
+            fixture, max_passes=max_passes, snap_angle=snap_angle
+        )
     except Exception as exc:
         return FixtureMetrics(
             name=name, total_nets=total_nets, routed_nets=0, via_count=0,
@@ -178,13 +191,15 @@ def _collect_metrics(fixture: Path, max_passes: int = 3) -> FixtureMetrics:
             f.write(routed_pcb)
             temp_path = Path(f.name)
         try:
-            drc_loaded, drc_unconnected = _run_drc(temp_path)
+            # Council IN-02: capture the actual report path from _run_drc
+            # and unlink it directly (no with_suffix reconstruction).
+            drc_loaded, drc_unconnected, report_path = _run_drc(temp_path)
             drc_pass = drc_loaded and drc_unconnected == 0
             if not drc_loaded:
                 drc_unconnected = -1
         finally:
             temp_path.unlink(missing_ok=True)
-            temp_path.with_suffix(".drc.json").unlink(missing_ok=True)
+            report_path.unlink(missing_ok=True)
     except Exception:
         drc_pass = False
         drc_unconnected = -1
@@ -241,6 +256,14 @@ def main() -> int:
         "--passes", type=int, default=3,
         help="Max Freerouting passes (default 3)",
     )
+    parser.add_argument(
+        "--snap-angle",
+        choices=["none", "ninety_degree", "fortyfive_degree"],
+        default="none",
+        help="Freerouting trace angle mode (Council WR-06). Default 'none' "
+             "(any-angle). 'fortyfive_degree' for 45° preferred, "
+             "'ninety_degree' for pure Manhattan.",
+    )
     args = parser.parse_args()
 
     if not is_freerouting_available():
@@ -252,8 +275,15 @@ def main() -> int:
         return 1
 
     fixtures = [_DEFAULT_FIXTURES[0]] if args.quick else _DEFAULT_FIXTURES
-    print(f"Collecting baseline on {len(fixtures)} fixture(s)...", file=sys.stderr)
-    all_metrics = [_collect_metrics(f, max_passes=args.passes) for f in fixtures]
+    print(
+        f"Collecting baseline on {len(fixtures)} fixture(s) "
+        f"(snap_angle={args.snap_angle})...",
+        file=sys.stderr,
+    )
+    all_metrics = [
+        _collect_metrics(f, max_passes=args.passes, snap_angle=args.snap_angle)
+        for f in fixtures
+    ]
 
     if args.json:
         payload = json.dumps([asdict(m) for m in all_metrics], indent=2)
