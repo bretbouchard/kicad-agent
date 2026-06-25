@@ -29,12 +29,18 @@ from kicad_agent.routing.freerouting import (
 
 # L-3 fix: every synthetic SES must include (resolution um 10) as the first
 # line inside (session ...) so parse_ses reads the resolution factor correctly.
+# H-3 fix: via instances live in a (wiring ...) section (actual Freerouting
+# v2.2.4 format, verified via reference SES capture).
 _SES_HEADER = "(pcb KiCad\n  (resolution um 10)\n  (unit um)\n"
 _SES_FOOTER = ")\n"
 
 
 def _wrap_ses(body: str) -> str:
-    """Wrap a body fragment in a minimal valid SES envelope with resolution header."""
+    """Wrap a body fragment in a minimal valid SES envelope with resolution header.
+
+    For via tests, pass a (wiring ...) section as the body — vias live there
+    in actual Freerouting output, not inside (net ...) blocks.
+    """
     return _SES_HEADER + body + _SES_FOOTER
 
 
@@ -45,14 +51,13 @@ class TestSesViaParse:
         """(via "Via[0-1]" X Y) parses to SesVia with coords and default layers.
 
         This is the ACTUAL format Freerouting v2.2.4 emits (verified via
-        reference SES captured in Step B.5). No explicit layer tokens.
+        reference SES captured in Step B.5). Vias live in the (wiring ...)
+        section with a (net NAME N) child identifying the net.
         """
         ses = _wrap_ses(
-            '  (network_out\n'
-            '    (net "GND"\n'
-            '      (via "Via[0-1]" 500000 300000\n'
-            '        (net GND 1)\n'
-            '      )\n'
+            '  (wiring\n'
+            '    (via "Via[0-1]" 500000 300000\n'
+            '      (net GND 1)\n'
             '    )\n'
             '  )\n'
         )
@@ -69,11 +74,9 @@ class TestSesViaParse:
     def test_via_blind_padstack_name_derives_layers(self) -> None:
         """Via[0-In1] padstack name derives from_layer=F.Cu, to_layer=In1.Cu."""
         ses = _wrap_ses(
-            '  (network_out\n'
-            '    (net "SIG"\n'
-            '      (via "Via[0-In1]" 100000 200000\n'
-            '        (net SIG 1)\n'
-            '      )\n'
+            '  (wiring\n'
+            '    (via "Via[0-In1]" 100000 200000\n'
+            '      (net SIG 1)\n'
             '    )\n'
             '  )\n'
         )
@@ -86,11 +89,9 @@ class TestSesViaParse:
     def test_via_buried_padstack_name_derives_layers(self) -> None:
         """Via[In1-In2] padstack name derives from_layer=In1.Cu, to_layer=In2.Cu."""
         ses = _wrap_ses(
-            '  (network_out\n'
-            '    (net "SIG"\n'
-            '      (via "Via[In1-In2]" 100000 200000\n'
-            '        (net SIG 1)\n'
-            '      )\n'
+            '  (wiring\n'
+            '    (via "Via[In1-In2]" 100000 200000\n'
+            '      (net SIG 1)\n'
             '    )\n'
             '  )\n'
         )
@@ -105,12 +106,11 @@ class TestSesViaParse:
 
         If a future Freerouting version emits explicit layer tokens, parse_ses
         should prefer them over padstack-name derivation.
+        Coordinates 500000 300000 at (resolution um 10) = 50.0mm, 30.0mm.
         """
         ses = _wrap_ses(
-            '  (network_out\n'
-            '    (net "SIG"\n'
-            '      (via F.Cu In1.Cu 50000 30000 800 400)\n'
-            '    )\n'
+            '  (wiring\n'
+            '    (via F.Cu In1.Cu 500000 300000 800 400)\n'
             '  )\n'
         )
         result = parse_ses(ses)
@@ -124,11 +124,9 @@ class TestSesViaParse:
     def test_via_float_coordinates(self) -> None:
         """Via coordinates may be floating point (reference SES has 117519.3)."""
         ses = _wrap_ses(
-            '  (network_out\n'
-            '    (net "GND"\n'
-            '      (via "Via[0-1]" 117519.3 86715.2\n'
-            '        (net GND 1)\n'
-            '      )\n'
+            '  (wiring\n'
+            '    (via "Via[0-1]" 117519.3 86715.2\n'
+            '      (net GND 1)\n'
             '    )\n'
             '  )\n'
         )

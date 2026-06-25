@@ -210,8 +210,13 @@ def generate_dsn(
                 f"      (outline (rect F.Cu {ox1} {oy1} {ox2} {oy2}))"
             )
         for pin in pins:
+            # Rule 1 fix: Freerouting's Specctra parser expects exactly 4 tokens
+            # after `pin` (padstack, name, x, y). Empty pad numbers collapse the
+            # f-string to 3 numeric tokens, causing a parse error on the next
+            # image. Substitute a stable placeholder when pad number is empty.
+            pin_name = pin['name'] if pin['name'] else "pad"
             lines.append(
-                f"      (pin {pin['padstack']} {pin['name']}"
+                f"      (pin {pin['padstack']} {pin_name}"
                 f" {int(pin['x'] * _MM_TO_UM)} {int(pin['y'] * _MM_TO_UM)})"
             )
         lines.append("    )")

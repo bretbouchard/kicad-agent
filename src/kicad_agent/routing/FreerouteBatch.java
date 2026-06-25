@@ -66,7 +66,10 @@ public class FreerouteBatch {
             job.routerSettings.maxThreads = 1;
             job.routerSettings.applyBoardSpecificOptimizations(routingBoard);
 
-            // Scoring must be initialized separately
+            // Scoring must be initialized separately.
+            // Rule 1 fix: Freerouting v2.2.4's RouterScoringSettings default
+            // constructor leaves all Float/Integer fields null, causing NPE in
+            // BoardStatistics.calculateScore. Initialize ALL scoring fields.
             if (job.routerSettings.trace_pull_tight_accuracy == null) {
                 job.routerSettings.trace_pull_tight_accuracy = 5;
             }
@@ -84,6 +87,12 @@ public class FreerouteBatch {
             }
             if (job.routerSettings.scoring.unroutedNetPenalty == null) {
                 job.routerSettings.scoring.unroutedNetPenalty = 100f;
+            }
+            if (job.routerSettings.scoring.clearanceViolationPenalty == null) {
+                job.routerSettings.scoring.clearanceViolationPenalty = 50f;
+            }
+            if (job.routerSettings.scoring.bendPenalty == null) {
+                job.routerSettings.scoring.bendPenalty = 10f;
             }
             if (job.routerSettings.optimizer == null) {
                 job.routerSettings.optimizer = new app.freerouting.settings.RouterOptimizerSettings();

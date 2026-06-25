@@ -830,7 +830,7 @@ class TestRoutingBridge:
         assert "(width 0.2500)" in sexpr
         assert '"F.Cu"' in sexpr
         assert '"VCC"' in sexpr
-        assert "(uuid abc-123)" in sexpr
+        assert '(uuid "abc-123")' in sexpr
 
     def test_segments_to_sexpr_block(self) -> None:
         """segments_to_sexpr produces a multi-segment S-expression block."""
@@ -1336,7 +1336,7 @@ class TestViaSegment:
         assert '"F.Cu"' in sexpr
         assert '"B.Cu"' in sexpr
         assert '"VCC"' in sexpr
-        assert "(uuid test-uuid)" in sexpr
+        assert '(uuid "test-uuid")' in sexpr
 
     def test_to_sexpr_no_net(self) -> None:
         """ViaSegment with empty net omits net field."""

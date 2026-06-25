@@ -337,12 +337,19 @@ class SesWire:
 
 @dataclass(frozen=True)
 class SesVia:
-    """A via extracted from an SES file."""
+    """A via extracted from an SES file.
+
+    Phase 99 R-6: from_layer/to_layer replace the hardcoded "F.Cu" "B.Cu" that
+    previously lived in ses_to_kicad_sexpr. Defaults preserve backward compat
+    with any test fixture using the old single-layer form.
+    """
     net: str
     x_mm: float
     y_mm: float
     size_mm: float
     drill_mm: float
+    from_layer: str = "F.Cu"
+    to_layer: str = "B.Cu"
 
 
 @dataclass
@@ -353,11 +360,77 @@ class SesParseResult:
     resolution_factor: float = 100000.0
 
 
+def _layers_from_padstack_name(padstack_name: str) -> tuple[str, str]:
+    """R-6: derive (from_layer, to_layer) from a DSN via padstack name.
+
+    Freerouting v2.2.4 emits via instances as (via "Via[SPAN]" X Y ...) where
+    SPAN encodes the layer pair. This helper decodes the common forms:
+
+      Via[0-1]      -> ("F.Cu", "B.Cu")      # canonical THT padstack (always F.Cu/B.Cu)
+      Via[0-In1]    -> ("F.Cu", "In1.Cu")   # blind, outer-to-first-inner
+      Via[In1-In2]  -> ("In1.Cu", "In2.Cu") # buried, inner-to-inner
+
+    Via[0-1] is special-cased: although "0-1" looks like a numeric span, it is
+    the historical name for the default THT padstack that spans ALL layers. On
+    a 2-layer board this is F.Cu/B.Cu (the only pair). KiCad's (via ...) block
+    requires exactly two layers, so we emit the outer pair for THT vias.
+
+    Falls back to ("F.Cu", "B.Cu") for unrecognized names (safe default).
+    """
+    # Strip quotes if present.
+    name = padstack_name.strip().strip('"')
+    # Via[0-1] is the canonical THT padstack — always F.Cu/B.Cu in KiCad output.
+    if name == "Via[0-1]":
+        return ("F.Cu", "B.Cu")
+    # Extract the span between [ and ].
+    if "[" not in name or "]" not in name:
+        return ("F.Cu", "B.Cu")
+    span = name[name.index("[") + 1:name.index("]")]
+    if "-" not in span:
+        return ("F.Cu", "B.Cu")
+    parts = span.split("-", 1)
+    if len(parts) != 2:
+        return ("F.Cu", "B.Cu")
+    left, right = parts[0].strip(), parts[1].strip()
+    return (_layer_token_from_span_token(left), _layer_token_from_span_token(right))
+
+
+def _layer_token_from_span_token(token: str) -> str:
+    """Map a padstack span token to a KiCad layer name.
+
+    "0"   -> "F.Cu"   (outer front)
+    "1".."9" -> "In<N>.Cu" (inner copper; 1-based per KiCad convention)
+    "In1" -> "In1.Cu" (already-named inner)
+    "3" or higher even -> could be B.Cu on 2-layer, but ambiguous; treat as In<N>.Cu
+    For "B.Cu" / "F.Cu" passthrough, return as-is.
+    """
+    if not token:
+        return "F.Cu"
+    if token in ("F.Cu", "B.Cu"):
+        return token
+    if token.startswith("In") and token.endswith(".Cu") is False:
+        # "In1" -> "In1.Cu"
+        if token.endswith(".Cu"):
+            return token
+        return f"{token}.Cu"
+    if token.startswith("In") and token.endswith(".Cu"):
+        return token
+    # Numeric form: 0 = F.Cu, 1 = In1.Cu, 2 = In2.Cu, etc.
+    try:
+        idx = int(token)
+        if idx == 0:
+            return "F.Cu"
+        return f"In{idx}.Cu"
+    except ValueError:
+        return "F.Cu"
+
+
 def parse_ses(ses_text: str) -> SesParseResult:
     """Parse a Freerouting SES file into structured wire/via data.
 
     SES wire format: (wire (path LAYER WIDTH x1 y1 x2 y2 ...))
-    SES via format: (via LAYER X Y SIZE DRILL)
+    SES via format (Freerouting v2.2.4): (via "Via[0-1]" X Y [SIZE DRILL] ...)
+    Future-proof via format: (via F.Cu In1.Cu X Y SIZE DRILL)
     Coordinates are in 0.01um units when resolution is (resolution um 10).
 
     Args:
@@ -366,7 +439,6 @@ def parse_ses(ses_text: str) -> SesParseResult:
     Returns:
         SesParseResult with wires, vias, and resolution factor.
     """
-    # Detect resolution factor
     res_match = re.search(r'\(resolution\s+(\w+)\s+(\d+)\)', ses_text)
     if res_match:
         res_unit = res_match.group(1)
@@ -382,8 +454,227 @@ def parse_ses(ses_text: str) -> SesParseResult:
 
     result = SesParseResult(resolution_factor=resolution)
 
-    # Extract wires by scanning (net "name" ...) or (net name ...) blocks
-    # Freerouting SES may use quoted or unquoted net names with spaces
+    # R-6 fix: parse the (wiring ...) section — the actual Freerouting v2.2.4
+    # SES format. Wires and vias live as top-level children of (wiring ...),
+    # NOT nested inside (net ...) blocks. Each (wire ...) contains a
+    # (polyline_path LAYER WIDTH coords...) or (path LAYER WIDTH coords...)
+    # and a (net NAME N) child identifying the net.
+    _parse_wiring_section(ses_text, resolution, result)
+
+    # Legacy path: scan (net ...) blocks for nested (wire (path ...)).
+    # Preserves backward compat with any SES fixture using the older
+    # net-nested wire format. Safe no-op when wires already parsed above.
+    if not result.wires and not result.vias:
+        _parse_net_nested_wires(ses_text, resolution, result)
+
+    return result
+
+
+def _extract_paren_block(text: str, open_pos: int) -> str | None:
+    """Extract a balanced (...) block starting at open_pos.
+
+    Returns the block text including outer parens, or None if unbalanced.
+    Respects quoted strings (double quotes).
+    """
+    if open_pos >= len(text) or text[open_pos] != "(":
+        return None
+    depth = 0
+    i = open_pos
+    in_string = False
+    while i < len(text):
+        c = text[i]
+        if in_string:
+            if c == '"':
+                # DSN uses doubled quotes for literal " inside strings.
+                if i + 1 < len(text) and text[i + 1] == '"':
+                    i += 2
+                    continue
+                in_string = False
+            i += 1
+            continue
+        if c == '"':
+            in_string = True
+        elif c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth == 0:
+                return text[open_pos:i + 1]
+        i += 1
+    return None
+
+
+def _find_net_name_in_block(block: str) -> str:
+    """Extract the net name from a (net NAME N) or (net "NAME" N) child."""
+    m = re.search(r'\(net\s+(?:"([^"]+)"|(\S+))\s+\d+\)', block)
+    if m:
+        name = m.group(1) or m.group(2)
+        return name.replace("{slash}", "/")
+    return ""
+
+
+def _parse_wire_block(
+    block: str, resolution: float, result: SesParseResult
+) -> None:
+    """Parse a single (wire (polyline_path|path LAYER WIDTH coords...) ...) block."""
+    # Match polyline_path OR path (Freerouting v2.2.4 uses polyline_path).
+    path_m = re.search(
+        r'\((?:polyline_path|path)\s+(\S+)\s+(\S+)\s', block
+    )
+    if not path_m:
+        return
+    layer_name = path_m.group(1)
+    try:
+        width_mm = float(path_m.group(2)) / resolution
+    except ValueError:
+        return
+
+    # Collect coordinate pairs until closing paren of the path block.
+    coords_start = path_m.end()
+    path_depth = 0
+    coords_text = ""
+    k = coords_start
+    while k < len(block):
+        ch = block[k]
+        if ch == "(":
+            path_depth += 1
+        elif ch == ")":
+            if path_depth == 0:
+                coords_text = block[coords_start:k]
+                break
+            path_depth -= 1
+        k += 1
+
+    coord_matches = re.findall(r'[-]?\d+\.?\d*', coords_text)
+    points: list[tuple[float, float]] = []
+    for ci in range(0, len(coord_matches) - 1, 2):
+        try:
+            x = float(coord_matches[ci]) / resolution
+            y = -float(coord_matches[ci + 1]) / resolution  # Y negated
+            points.append((x, y))
+        except (ValueError, IndexError):
+            continue
+
+    if len(points) >= 2:
+        net_name = _find_net_name_in_block(block)
+        result.wires.append(SesWire(
+            net=net_name,
+            layer=layer_name,
+            width_mm=width_mm,
+            points=points,
+        ))
+
+
+def _parse_via_block(
+    block: str, resolution: float, result: SesParseResult
+) -> None:
+    """Parse a single (via ...) block from the wiring section.
+
+    Actual via instance format: (via "PADSTACK" X Y [SIZE DRILL] (net NAME N) ...)
+    Future-proof: (via F.Cu In1.Cu X Y SIZE DRILL ...)
+
+    Skips library/rule declarations: (via "Via[0-1]") or
+    (via "Via[0-1]" "Via[0-1]" default) — these have < 2 numeric tokens.
+    """
+    # Strip the outer (via ... ) parens to get inner content.
+    inner = block
+    if inner.startswith("("):
+        # Remove outermost paren pair.
+        inner = inner[1:inner.rfind(")")]
+
+    tokens = inner.split()
+    if not tokens or tokens[0] != "via":
+        return
+    tokens = tokens[1:]  # drop the "via" symbol
+
+    def _is_numeric(t: str) -> bool:
+        try:
+            float(t)
+            return True
+        except ValueError:
+            return False
+
+    numeric_tokens = [t for t in tokens if _is_numeric(t)]
+    non_numeric = [t for t in tokens if not _is_numeric(t)]
+
+    # Skip declarations with no coordinates.
+    if len(numeric_tokens) < 2:
+        return
+
+    x_str, y_str = numeric_tokens[0], numeric_tokens[1]
+    size_mm = 0.8
+    drill_mm = 0.4
+    if len(numeric_tokens) >= 4:
+        size_mm = float(numeric_tokens[2]) / resolution
+        drill_mm = float(numeric_tokens[3]) / resolution
+
+    cleaned = [t.strip('"') for t in non_numeric]
+    layer_tokens = [
+        t for t in cleaned
+        if "." in t and not t.startswith("Via[") and t != "default"
+    ]
+    padstack_tokens = [t for t in cleaned if t.startswith("Via[")]
+
+    if len(layer_tokens) >= 2:
+        from_layer, to_layer = layer_tokens[0], layer_tokens[1]
+    elif padstack_tokens:
+        from_layer, to_layer = _layers_from_padstack_name(padstack_tokens[0])
+    else:
+        from_layer, to_layer = "F.Cu", "B.Cu"
+
+    net_name = _find_net_name_in_block(block)
+    result.vias.append(SesVia(
+        net=net_name,
+        x_mm=float(x_str) / resolution,
+        y_mm=-float(y_str) / resolution,
+        size_mm=size_mm,
+        drill_mm=drill_mm,
+        from_layer=from_layer,
+        to_layer=to_layer,
+    ))
+
+
+def _parse_wiring_section(
+    ses_text: str, resolution: float, result: SesParseResult
+) -> None:
+    """Parse the (wiring ...) section of an SES file.
+
+    Freerouting v2.2.4 SES structure:
+      (wiring
+        (wire (polyline_path|path LAYER WIDTH x1 y1 x2 y2 ...) (net NAME N) ...)
+        (via "PADSTACK" X Y [SIZE DRILL] ... (net NAME N) ...)
+        ...
+      )
+
+    This is the authoritative location of routed wires and vias.
+    """
+    # Extract the (wiring ...) block by paren tracking.
+    wiring_start = re.search(r'\(wiring\b', ses_text)
+    if not wiring_start:
+        return
+    wiring_text = _extract_paren_block(ses_text, wiring_start.start())
+    if not wiring_text:
+        return
+
+    # Parse (wire ...) blocks.
+    for wm in re.finditer(r'\(wire\b', wiring_text):
+        wire_block = _extract_paren_block(wiring_text, wm.start())
+        if not wire_block:
+            continue
+        _parse_wire_block(wire_block, resolution, result)
+
+    # Parse (via ...) blocks — only actual via instances (>= 2 numeric tokens).
+    for vm in re.finditer(r'\(via\b', wiring_text):
+        via_block = _extract_paren_block(wiring_text, vm.start())
+        if not via_block:
+            continue
+        _parse_via_block(via_block, resolution, result)
+
+
+def _parse_net_nested_wires(
+    ses_text: str, resolution: float, result: SesParseResult
+) -> None:
+    """Legacy: parse wires nested inside (net ...) blocks (older SES format)."""
     net_pattern = re.compile(r'\(net\s+"([^"]+)"|\(net\s+(\S+)')
     i = 0
     n = len(ses_text)
@@ -455,6 +746,11 @@ def parse_ses(ses_text: str) -> SesParseResult:
                     points=points,
                 ))
 
+        # Note: via parsing for the actual Freerouting v2.2.4 format is handled
+        # in _parse_wiring_section (vias live in (wiring ...), not (net ...)).
+        # This legacy net-nested path only handles older SES fixtures where
+        # wires were nested inside net blocks.
+
         i = net_end + 1
 
     return result
@@ -496,15 +792,21 @@ def ses_to_kicad_sexpr(
     for via in ses_result.vias:
         if pcb_net_names is not None and via.net not in pcb_net_names:
             continue
+        # R-6 + WARN-2: route through bridge.ViaSegment.to_sexpr (single canonical
+        # emitter). Deletes the parallel f-string builder that hardcoded
+        # (layers "F.Cu" "B.Cu") — the R-6 multi-layer bug.
+        from kicad_agent.routing.bridge import ViaSegment
         u = str(uuid.uuid4())
-        lines.append(
-            f'  (via (at {via.x_mm:.6f} {via.y_mm:.6f}) '
-            f'(size {via.size_mm:.6f}) '
-            f'(drill {via.drill_mm:.6f}) '
-            f'(layers "F.Cu" "B.Cu") '
-            f'(net "{via.net}") '
-            f'(uuid "{u}"))'
+        via_seg = ViaSegment(
+            x=via.x_mm,
+            y=via.y_mm,
+            from_layer=via.from_layer,
+            to_layer=via.to_layer,
+            diameter=via.size_mm,
+            drill=via.drill_mm,
+            net=via.net,
         )
+        lines.append(via_seg.to_sexpr(uuid_tag=u))
 
     return "\n".join(lines) + "\n"
 
