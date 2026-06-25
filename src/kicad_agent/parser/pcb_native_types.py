@@ -241,11 +241,29 @@ class NativeGeneral:
 
 
 @dataclass
+class NativeStackupLayer:
+    """Single layer in a stackup: (layer "F.Cu" (type "copper")) or (layer "dielectric 1" (type "core")).
+
+    Phase 99 R-4: minimal typed representation for stackup-based via padstack
+    emission. Only `name` and `type` are consumed by dsn_generator (to distinguish
+    copper signal layers from dielectric cores). `thickness` is captured for
+    future use but not yet read by any consumer.
+    """
+
+    name: str = ""
+    type: str = ""
+    thickness: float = 0.0
+
+
+@dataclass
 class NativeStackup:
     """Board stackup definition: (setup (stackup ...)).
 
     Council CRITICAL-2: needed by spatial/layer_stackup.py (board.setup.stackup.layers).
-    Full stackup parsing deferred to future phase.
+    Phase 99 R-4: `layers` is now list[NativeStackupLayer] (typed). Downstream
+    consumers that previously treated `layers` as list[str] are updated; the
+    mutable-default `field(default_factory=list)` is preserved for backward compat
+    with any Phase 76 consumer still appending bare strings.
     """
 
     layers: list = field(default_factory=list)
@@ -323,6 +341,7 @@ __all__ = [
     "NativeBoardOutline",
     "NativeGeneral",
     "NativeStackup",
+    "NativeStackupLayer",
     "NativeSetup",
     "NativeBoard",
 ]

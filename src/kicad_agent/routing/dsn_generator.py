@@ -87,6 +87,7 @@ def generate_dsn(
             f"Invalid snap_angle: {snap_angle!r}. Must be one of {_VALID_SNAP_ANGLES}"
         )
 
+    _layers_were_default = layers is None
     if layers is None:
         layers = ["F.Cu", "B.Cu"]
 
@@ -95,6 +96,16 @@ def generate_dsn(
     board = NativeParser.parse_pcb_content(
         pcb_content, file_path=str(pcb_path) if pcb_path else ""
     )
+
+    # R-4: when caller used default layers but board has a richer stackup,
+    # extend the DSN layer list with inner copper layers so padstack shapes
+    # on In1.Cu/In2.Cu reference declared (layer ...) entries. Without this,
+    # Freerouting rejects blind/buried padstacks whose shapes land on undeclared
+    # layers. Only kicks in for the default path (explicit layers override).
+    if _layers_were_default:
+        copper = _copper_signal_layers(board, layers)
+        if len(copper) > len(layers):
+            layers = copper
 
     boundary = _extract_board_outline(pcb_content)
     if boundary is None:
@@ -179,12 +190,8 @@ def generate_dsn(
     # Library — via padstack + package images (with outlines) + SMD padstacks
     # + per-class via padstacks (H-2 fix, Task 2b)
     lines.append("  (library")
-    # Via padstack
-    lines.append(f'    (padstack "{_VIA_PADSTACK_NAME}"')
-    for layer in layers:
-        lines.append(f"      (shape (circle {layer} {pad_via_size_um}))")
-    lines.append("      (attach off)")
-    lines.append("    )")
+    # R-4: stackup-based via padstacks (THT always, blind/buried when 4+ copper layers).
+    _emit_via_padstacks(lines, board, layers, pad_via_size_um)
 
     # H-2 fix (Task 2b): per-class via padstacks emitted alongside (use_via ...).
     _emit_per_class_padstacks(lines, board, layers)
@@ -444,6 +451,82 @@ def _emit_zones(lines: list[str], board: NativeBoard) -> None:
                 f'    (keepout "{label}" (polygon {layer} 0 {poly_str}))'
             )
         # Category 3: placement-only keepout -> skip (C-1 fix).
+
+
+# ---------------------------------------------------------------------------
+# Stackup-based via padstacks (R-4, Task 1 Step C)
+# ---------------------------------------------------------------------------
+
+
+def _copper_signal_layers(board: NativeBoard, fallback_layers: list[str]) -> list[str]:
+    """R-4: return the ordered list of copper signal layers from the board stackup.
+
+    Reads board.setup.stackup.layers and filters to type == "copper" AND name
+    ends in ".Cu" (excludes copper-derived planes/mask layers that some KiCad
+    stackups annotate with type "copper"). Falls back to fallback_layers
+    (typically ["F.Cu", "B.Cu"]) when stackup is absent or has <2 copper entries.
+
+    The fallback also kicks in for 2-layer boards that omit explicit stackup
+    metadata (common for hobby boards) — in that case we cannot distinguish
+    blind/buried feasibility, so THT-only is the safe default.
+    """
+    if board.setup and board.setup.stackup and board.setup.stackup.layers:
+        copper = [
+            sl.name for sl in board.setup.stackup.layers
+            if getattr(sl, "type", "") == "copper"
+            and isinstance(sl.name, str)
+            and sl.name.endswith(".Cu")
+        ]
+        if len(copper) >= 2:
+            return copper
+    return list(fallback_layers)
+
+
+def _emit_via_padstacks(
+    lines: list[str],
+    board: NativeBoard,
+    layers: list[str],
+    default_size_um: int,
+) -> None:
+    """R-4: emit via padstacks based on board stackup (THT/blind/buried).
+
+    - THT via (Via[0-1]): always emitted, shapes on all copper layers.
+    - Blind via (Via[0-In1]): emitted only when stackup has >=4 copper layers.
+      Spans F.Cu + first inner copper layer.
+    - Buried via (Via[In1-In2]): emitted only when stackup has >=4 copper layers.
+      Spans first two inner copper layers.
+
+    H-2 fix: per-net-class via padstacks ((padstack "Via[NAME]" ...)) are emitted
+    by _emit_per_class_padstacks (Plan 99-01 Task 2b Step A2), NOT here.
+    This helper covers stackup-based padstacks only (THT/blind/buried).
+
+    H-1 fix: microvia padstacks are deferred (see 99-02-SUMMARY.md). Rationale:
+    microvias are rare in hobby boards, Freerouting v2.2.4 microvia support is
+    unverified, and no fixture exercises them.
+    """
+    copper_layers = _copper_signal_layers(board, layers)
+
+    # THT via (always emitted, spans all copper layers).
+    lines.append(f'    (padstack "{_VIA_PADSTACK_NAME}"')
+    for layer in copper_layers:
+        lines.append(f"      (shape (circle {layer} {default_size_um}))")
+    lines.append("      (attach off)")
+    lines.append("    )")
+
+    # Blind/buried padstacks (only if 4+ copper layers).
+    if len(copper_layers) >= 4:
+        # Via[0-In1] — blind from outer to first inner.
+        lines.append('    (padstack "Via[0-In1]"')
+        lines.append(f"      (shape (circle {copper_layers[0]} {default_size_um}))")
+        lines.append(f"      (shape (circle {copper_layers[1]} {default_size_um}))")
+        lines.append("      (attach off)")
+        lines.append("    )")
+        # Via[In1-In2] — buried between first two inner layers.
+        lines.append('    (padstack "Via[In1-In2]"')
+        lines.append(f"      (shape (circle {copper_layers[1]} {default_size_um}))")
+        lines.append(f"      (shape (circle {copper_layers[2]} {default_size_um}))")
+        lines.append("      (attach off)")
+        lines.append("    )")
 
 
 # ---------------------------------------------------------------------------

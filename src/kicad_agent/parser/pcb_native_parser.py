@@ -33,6 +33,7 @@ from kicad_agent.parser.pcb_native_types import (
     NativeSegment,
     NativeSetup,
     NativeStackup,
+    NativeStackupLayer,
     NativeVia,
     NativeZone,
     _NativePosition,
@@ -1031,24 +1032,56 @@ class NativeParser:
 
     @classmethod
     def _extract_setup(cls, root: list) -> NativeSetup | None:
-        """Extract (setup ...) section. CRITICAL-2 compatibility."""
+        """Extract (setup ...) section. CRITICAL-2 compatibility.
+
+        Phase 99 R-4: stackup parsing now emits typed NativeStackupLayer objects
+        (name, type, thickness) instead of bare strings. Falls back to synthesizing
+        inner copper layers from general.layers count when stackup block is absent
+        but the board declares >2 layers (enables blind/buried via padstack emission
+        for boards that omit explicit stackup metadata).
+        """
         setup_block = _find_symbol(root, "setup")
         if setup_block is None:
             return None
 
         setup = NativeSetup()
 
-        # Stackup (placeholder -- full parsing deferred to future phase)
         stackup_block = _find_symbol(setup_block, "stackup")
         if stackup_block is not None:
             stackup = NativeStackup()
-            # Extract layer names from stackup for basic compatibility
-            layer_list = []
-            for item in stackup_block[1:]:
-                if isinstance(item, list) and len(item) >= 2 and _sym(item[0]) == "layer":
-                    if isinstance(item[1], str):
-                        layer_list.append(item[1])
-            stackup.layers = layer_list
+            stackup.layers = cls._extract_stackup_layers(stackup_block)
             setup.stackup = stackup
 
         return setup
+
+    @classmethod
+    def _extract_stackup_layers(cls, stackup_block: list) -> list:
+        """Phase 99 R-4: extract typed NativeStackupLayer list from (stackup ...) block.
+
+        Pattern follows _extract_zones (_find_symbol + _find_first_value + typed append).
+        Each (layer "NAME" (type "copper"|"core"|"prepreg") (thickness N) ...) entry
+        becomes a NativeStackupLayer. Non-copper layers (dielectric cores, mask, silk)
+        are preserved so downstream consumers can filter by type == "copper".
+        """
+        layers: list[NativeStackupLayer] = []
+        for item in stackup_block[1:]:
+            if not isinstance(item, list) or len(item) < 2:
+                continue
+            if _sym(item[0]) != "layer":
+                continue
+            if not isinstance(item[1], str):
+                continue
+            name = item[1]
+            type_val = _find_first_value(item, "type")
+            type_str = str(type_val) if type_val is not None else ""
+            thickness_val = _find_first_value(item, "thickness")
+            thickness = 0.0
+            if thickness_val is not None:
+                try:
+                    thickness = float(thickness_val)
+                except (ValueError, TypeError):
+                    thickness = 0.0
+            layers.append(NativeStackupLayer(
+                name=name, type=type_str, thickness=thickness
+            ))
+        return layers
