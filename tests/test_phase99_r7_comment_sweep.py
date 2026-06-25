@@ -19,7 +19,15 @@ def test_no_phase_122b_references_in_src() -> None:
 
 
 def test_phase_99_references_present() -> None:
-    """Swept lines now reference 'Phase 99' (sanity check)."""
+    """Swept lines now reference 'Phase 99' (sanity check).
+
+    Council IN-06: the phase-number coupling here is INTENTIONAL. This test
+    is a regression guard for the Phase 122B -> Phase 99 comment sweep done
+    in Plan 99-01 Task 1. If these assertions break because the phase is
+    renumbered, the fix is to update both the source comments AND this test
+    list together — the specificity is the point (it verifies the sweep
+    touched exactly these files). Do not loosen to a generic "Phase N" check.
+    """
     targets = [
         ("src/kicad_agent/handler.py", "Phase 99 Gap 4"),
         ("src/kicad_agent/routing/pathfinder.py", "Phase 99 Gap 2"),
