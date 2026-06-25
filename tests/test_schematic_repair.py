@@ -1062,6 +1062,202 @@ class TestNetAwarePositionMatching:
                 assert math.isfinite(detail["position"][1])
 
 
+# ---------------------------------------------------------------------------
+# Phase 101-03 R-2 (P0-002): place_missing_units dedup bypass regression.
+#
+# Minimal TL072-style schematic built as a raw S-expression string so we have
+# full control over lib_symbols + component unit numbers and positions.
+# ---------------------------------------------------------------------------
+
+# TL072 lib_symbol with 3 units:
+#   _0_1 = graphic wrapper (no pins)
+#   _1_1 = op-amp A (output + 2 inputs)
+#   _3_1 = power unit (V+, V-)  -- has power_in pins, triggers single-unit guard
+_TL072_LIB_SYMBOL = '''      (symbol "Amplifier_Operational:TL072" (pin_names (offset 0.127)) (in_bom yes) (on_board yes)
+        (property "Reference" "U" (at 0 5.08 0) (show_name)
+          (effects (font (size 1.27 1.27)) (justify left))
+        )
+        (property "Value" "TL072" (at 0 -5.08 0) (show_name)
+          (effects (font (size 1.27 1.27)) (justify left))
+        )
+        (symbol "TL072_0_1"
+          (polyline (pts (xy -5.08 5.08) (xy 5.08 0) (xy -5.08 -5.08) (xy -5.08 5.08))
+            (stroke (width 0.254) (type default)) (fill (type background)))
+        )
+        (symbol "TL072_1_1"
+          (pin output line (at 7.62 0 180) (length 2.54)
+            (name "~" (effects (font (size 1.27 1.27))))
+            (number "1" (effects (font (size 1.27 1.27)))))
+          (pin input line (at -7.62 -2.54 0) (length 2.54)
+            (name "-" (effects (font (size 1.27 1.27))))
+            (number "2" (effects (font (size 1.27 1.27)))))
+          (pin input line (at -7.62 2.54 0) (length 2.54)
+            (name "+" (effects (font (size 1.27 1.27))))
+            (number "3" (effects (font (size 1.27 1.27)))))
+        )
+        (symbol "TL072_3_1"
+          (pin power_in line (at -2.54 -7.62 90) (length 3.81)
+            (name "V-" (effects (font (size 1.27 1.27))))
+            (number "4" (effects (font (size 1.27 1.27)))))
+          (pin power_in line (at -2.54 7.62 270) (length 3.81)
+            (name "V+" (effects (font (size 1.27 1.27))))
+            (number "8" (effects (font (size 1.27 1.27)))))
+        )
+      )'''
+
+
+def _make_tl072_component(ref: str, x: float, y: float, unit: int = 1, uuid_val: str = "") -> str:
+    """Build a single TL072 component S-expression at (x, y) with given unit."""
+    if not uuid_val:
+        uuid_val = ref.lower() + "-0000-0000-0000-" + "0" * 12
+    return f'''    (symbol (lib_id "Amplifier_Operational:TL072") (at {x:.4f} {y:.4f} 0) (unit {unit})
+      (in_bom yes) (on_board yes) (dnp no)
+      (uuid {uuid_val})
+      (property "Reference" "{ref}" (at {x + 5:.4f} {y - 5:.4f} 0) (show_name)
+        (effects (font (size 1.27 1.27))))
+      (property "Value" "TL072" (at {x + 5:.4f} {y:.4f} 0) (show_name)
+        (effects (font (size 1.27 1.27))))
+    )'''
+
+
+def _write_tl072_schematic(sch_path: Path, components: list[str], wires: list[str] | None = None) -> None:
+    """Write a minimal .kicad_sch file with TL072 lib_symbol + given components.
+
+    Args:
+        sch_path: Destination .kicad_sch path.
+        components: List of component S-expression strings.
+        wires: Optional list of wire S-expression strings. Wires placed near
+               multiple parents trigger the dedup bypass: _find_position_for_unit
+               returns the SAME wire-derived position for each parent.
+    """
+    body = "\n".join(components)
+    wire_block = "\n".join(wires) if wires else ""
+    content = f'''(kicad_sch
+  (version 20231120) (generator "eeschema") (generator_version "9.0")
+  (uuid 11111111-2222-3333-4444-555555555555)
+  (paper "A4")
+  (lib_symbols
+{_TL072_LIB_SYMBOL}
+  )
+  (symbol (lib_id "power:GND") (at 0 0 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no)
+    (uuid 00000000-0000-0000-0000-000000000001)
+    (property "Reference" "#PWR01" (at 0 0 0)
+      (effects (font (size 1.27 1.27)) hide)))
+{body}
+{wire_block}
+  (sheet_instances
+    (path "/" (page "1"))
+  )
+)'''
+    sch_path.write_text(content)
+
+
+def _make_wire(x1: float, y1: float, x2: float, y2: float) -> str:
+    """Build a wire S-expression from (x1,y1) to (x2,y2)."""
+    return f'''  (wire (pts (xy {x1:.4f} {y1:.4f}) (xy {x2:.4f} {y2:.4f}))
+    (stroke (width 0) (type default)))
+'''
+
+
+class TestPlaceMissingUnitsNoCollisions:
+    """Phase 101-03 R-2 (P0-002): place_missing_units must produce distinct positions.
+
+    Bug: dedup set (_occupied_positions) only ran in the fallback path; when
+    _find_position_for_unit returned a position, it bypassed the collision
+    check, so multiple parent instances (e.g., U30/U31/U32/U33) all received
+    the same position for unit C.
+    """
+
+    def test_place_missing_units_no_collisions(self):
+        """2 instances of TL072 (each missing unit C) get DISTINCT positions.
+
+        Bug trigger: a shared wire endpoint within max_distance=100mm of BOTH
+        parent components. _find_position_for_unit uses wire-endpoint voting,
+        so both parents resolve to the SAME wire-derived position. Without the
+        fix, this bypasses _occupied_positions and the two unit Cs collide.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sch_path = Path(tmpdir) / "test.kicad_sch"
+            comps = [
+                _make_tl072_component("U1", x=100.0, y=100.0, unit=1,
+                                      uuid_val="a0000000-0000-0000-0000-000000000001"),
+                _make_tl072_component("U2", x=100.0, y=120.0, unit=1,
+                                      uuid_val="b0000000-0000-0000-0000-000000000002"),
+            ]
+            # Two wires at y=102.38 and y=117.62 (15.24mm apart = 2x pin offset
+            # of 7.62mm). This causes pin 4 and pin 8 to vote for the SAME
+            # candidate position (112.5, 110.0) for both parents. Without the
+            # fix, _find_position_for_unit returns this same position for both
+            # U1 and U2, bypassing _occupied_positions.
+            wires = [
+                _make_wire(110.0, 102.38, 130.0, 102.38),
+                _make_wire(110.0, 117.62, 130.0, 117.62),
+            ]
+            _write_tl072_schematic(sch_path, comps, wires=wires)
+
+            result = parse_schematic(sch_path)
+            ir = SchematicIR(_parse_result=result)
+
+            output = place_missing_units(ir, sch_path, dry_run=True)
+
+            # Should place 2 units (one power unit C per parent)
+            positions = [tuple(d["position"]) for d in output["units_placed"]]
+            assert len(positions) >= 2, (
+                f"Expected at least 2 placed units, got {len(positions)}: {output}"
+            )
+            # CRITICAL ASSERTION: all positions must be distinct
+            unique_positions = set(positions)
+            assert len(unique_positions) == len(positions), (
+                f"Position collision! Got {len(positions)} placements but only "
+                f"{len(unique_positions)} unique positions. Positions: {positions}"
+            )
+
+    def test_place_missing_units_four_instances_distinct(self):
+        """4 instances of TL072 (backplane U30/U31/U32/U33 scenario) — 4 distinct.
+
+        Same bug trigger as test_place_missing_units_no_collisions, scaled to
+        4 parents with a shared wire endpoint within range of all of them.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sch_path = Path(tmpdir) / "test.kicad_sch"
+            comps = [
+                _make_tl072_component("U30", x=100.0, y=44.45, unit=1,
+                                      uuid_val="a0000030-0000-0000-0000-000000000030"),
+                _make_tl072_component("U31", x=100.0, y=74.45, unit=1,
+                                      uuid_val="a0000031-0000-0000-0000-000000000031"),
+                _make_tl072_component("U32", x=100.0, y=104.45, unit=1,
+                                      uuid_val="a0000032-0000-0000-0000-000000000032"),
+                _make_tl072_component("U33", x=100.0, y=134.45, unit=1,
+                                      uuid_val="a0000033-0000-0000-0000-000000000033"),
+            ]
+            # Two wires at y=81.83 and y=97.07 (15.24mm apart) centered around
+            # y=89.45 — the midpoint of all 4 parents. This causes pin 4 and
+            # pin 8 to vote for the SAME candidate position (117.5, 89.4) for
+            # all 4 parents. Without the fix, all 4 unit Cs collide there.
+            wires = [
+                _make_wire(115.0, 81.83, 140.0, 81.83),
+                _make_wire(115.0, 97.07, 140.0, 97.07),
+            ]
+            _write_tl072_schematic(sch_path, comps, wires=wires)
+
+            result = parse_schematic(sch_path)
+            ir = SchematicIR(_parse_result=result)
+
+            output = place_missing_units(ir, sch_path, dry_run=True)
+
+            positions = [tuple(d["position"]) for d in output["units_placed"]]
+            # Each of 4 TL072 instances should get a power unit placed
+            assert len(positions) >= 4, (
+                f"Expected >=4 placed units (one per parent), got {len(positions)}: {output}"
+            )
+            unique_positions = set(positions)
+            assert len(unique_positions) == len(positions), (
+                f"Position collision! Got {len(positions)} placements but only "
+                f"{len(unique_positions)} unique positions. Positions: {positions}"
+            )
+
+
 class TestResolveShortedNets:
     """Tests for connectivity-aware short resolution — Phase 67."""
 
