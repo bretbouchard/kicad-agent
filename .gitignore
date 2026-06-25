@@ -30,3 +30,6 @@ schema.json
 kicad_staging/
 training_data/
 training_output/
+# Freerouting output (generated DSN/SES during test runs)
+tests/fixtures/freerouting/
+tests/fixtures/*/freerouting/
