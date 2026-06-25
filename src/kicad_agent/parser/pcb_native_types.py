@@ -121,6 +121,12 @@ class NativeFootprint:
     ``MappingProxyType`` view (CR-01): readers work unchanged, writers raise
     ``TypeError``. The underlying storage is ``_properties_tuple`` of
     ``(key, value)`` pairs; mutation must go through ``dataclasses.replace``.
+
+    MD-04/IN-01: the MappingProxyType view is materialized ONCE in
+    ``__post_init__`` (via the frozen-safe ``object.__setattr__`` pattern)
+    and cached in ``_properties_view``. Previously every ``fp.properties``
+    access rebuilt the dict from the tuple — O(n) per access, noticeable
+    when Phase 98 strategies iterate thousands of footprints.
     """
 
     lib_id: str = ""
@@ -130,6 +136,25 @@ class NativeFootprint:
     layer: str = ""
     graphic_items: tuple = ()
     uuid: str = ""
+    # MD-04: cached view, populated in __post_init__. Defaults to an empty
+    # view so that any code path that bypasses __init__ still works.
+    _properties_view: MappingProxyType[str, str] = field(
+        default_factory=lambda: MappingProxyType({})
+    )
+
+    def __post_init__(self) -> None:
+        # MD-04: materialize the read-only view once. Frozen dataclasses
+        # cannot assign in __init__, so we use object.__setattr__.
+        # The view must always reflect _properties_tuple. We rebuild it
+        # whenever _properties_tuple is non-empty OR _properties_view is
+        # stale (empty while tuple is non-empty). dataclasses.replace copies
+        # both fields, so after a replace that changed _properties_tuple we
+        # must rebuild the view to stay consistent.
+        object.__setattr__(
+            self,
+            "_properties_view",
+            MappingProxyType(dict(self._properties_tuple)),
+        )
 
     @property
     def properties(self) -> MappingProxyType[str, str]:
@@ -138,8 +163,11 @@ class NativeFootprint:
         Readers (``fp.properties.get("Reference")``) work unchanged.
         Writers (``fp.properties["x"] = "y"``) raise ``TypeError`` — use
         ``dataclasses.replace`` to update.
+
+        MD-04: returns the cached view materialized in __post_init__ —
+        no dict rebuild on every access.
         """
-        return MappingProxyType(dict(self._properties_tuple))
+        return self._properties_view
 
 
 @dataclass(frozen=True)
