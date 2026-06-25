@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: Ready to execute
-stopped_at: Completed Phase 95 - Dual Knowledge Base Integration (Cognee + section injection).
-last_updated: "2026-06-25T06:07:39.199Z"
+status: Executing Phase 100 (Plan 01 complete)
+stopped_at: Completed Phase 100 Plan 01 — CR-01 NativeBoard immutability refactor (14 frozen dataclasses, all mutation sites migrated to dataclasses.replace).
+last_updated: "2026-06-25T07:00:00.000Z"
 last_activity: 2026-06-25
 progress:
   total_phases: 129
   completed_phases: 48
   total_plans: 269
-  completed_plans: 207
+  completed_plans: 208
   percent: 77
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 99 — freerouting-integration-hardening
+**Current focus:** Phase 100 — routingorchestrator-and-human-approval-loop
 Last activity: 2026-06-25
 
 ## Current Position
 
-Phase: 100
-Plan: Not started
+Phase: 100 (routingorchestrator-and-human-approval-loop) — EXECUTING
+Plan: 1 of 2
 **All milestones shipped (v1.0 through v4.1). 94 phases, 265 plans, 3300+ tests.**
 
 Last milestone: v4.1 Stage-Safe PCB Flow (Phases 85-94)
@@ -53,7 +53,7 @@ Prior milestones: v4.0 Hybrid Routing (80-84), v3.2 Gap Analysis (79), v3.1 Coun
 
 Council review: 4 findings fixed, all passing.
 
-Last activity: 2026-06-25 -- Phase 101 planning complete
+Last activity: 2026-06-25 -- Phase 100 execution started
 
 ### Phase 99: Freerouting Integration Hardening (in progress)
 
@@ -529,11 +529,11 @@ None.
 
 ## Deferred Items
 
-- **CR-01** (Critical, Council Exec Review 99): `NativeBoard` and 13 leaf dataclasses in `src/kicad_agent/parser/pcb_native_types.py` are mutable, violating project CRITICAL immutability rule (`~/.claude/rules/coding-style.md`). 14 dataclasses (`NativeNet`, `NativeNetClass`, `NativePad`, `NativeFootprint`, `NativeSegment`, `NativeVia`, `NativeZone`, `NativeGraphicItem`, `NativeBoardOutline`, `NativeGeneral`, `NativeStackupLayer`, `NativeStackup`, `NativeSetup`, `NativeBoard`) declared with bare `@dataclass` instead of `@dataclass(frozen=True)`. Latent aliasing bug at `pcb_ir.py:218-220` (WR-07): `PcbIR.remove_net` mutates `NativePad` in place via `pad.net_name = ""` / `pad.net_number = 0`. Resolution plan: (1) Convert all 14 dataclasses to `@dataclass(frozen=True)` — list fields must become `tuple[...]` or use `dataclasses.replace` at every append site; dict fields (`NativeFootprint.properties`) must become `MappingProxyType` or immutable `frozendict`. (2) Migrate 8 mutation sites to `dataclasses.replace()`: `PcbIR.add_net` (pcb_ir.py:193), `PcbIR.remove_net` (pcb_ir.py:214-227, rebuild footprints list + pads list + nets list via replace), `PcbIR.rename_net` (pcb_ir.py:243-254), `NativeParser._build_board` (pcb_native_parser.py:351-371, construct board once at end via single replace chain). (3) Update downstream consumers that mutate in place: `board_outline.py`, `pcb_ops.py`, `maze_generator.py` access `.pads`, `.nets`, `.properties` — audit for mutation patterns. (4) Run full native parser + IR + routing test suite (321 tests per 99-01 SUMMARY) to catch breakage. (5) The `properties: dict[str, str]` field on `NativeFootprint` is the hardest — kiutils consumers mutate it directly. Revisit in: Phase 100 (RoutingOrchestrator) or dedicated immutability phase. Priority: 1 (critical). Tags: council-deferred,immutability,phase-99,cr-01,wr-07.
+- **CR-01** (Critical, Council Exec Review 99): **RESOLVED 2026-06-25 (Phase 100 Plan 01).** All 14 NativeBoard dataclasses converted to `@dataclass(frozen=True)`; 16 list fields converted to tuple defaults; `NativeFootprint.properties` exposed as `MappingProxyType` read-only view; all native-path mutation sites in `pcb_ir.py` (`add_net`, `remove_net`, `rename_net`, `swap_footprint`) and `pcb_native_parser.py` (every extractor) migrated to `dataclasses.replace` / construct-once pattern. 8 new immutability tests + 357 existing regression tests pass (365 total). See `.planning/phases/100-routingorchestrator-and-human-approval-loop/100-01-SUMMARY.md`. Tags: council-deferred,immutability,phase-99,cr-01,wr-07.
 
-- **WR-07** (Medium, Council Exec Review 99): Subsumed by CR-01 deferral above. Same root cause (`PcbIR.remove_net` in-place pad mutation at `pcb_ir.py:218-220`). Fixed automatically when CR-01 Option A (frozen dataclasses + replace) is implemented. If CR-01 is addressed first via a narrower fix, WR-07 can be closed independently by replacing lines 218-220 with `dataclasses.replace(pad, net_name="", net_number=0)` and rebuilding the footprint's pads list + the board's footprints list. Revisit in: Phase 100. Priority: 2 (medium). Tags: council-deferred,immutability,phase-99,wr-07.
+- **WR-07** (Medium, Council Exec Review 99): **RESOLVED 2026-06-25 (subsumed by CR-01 closure above).** `PcbIR.remove_net` now rebuilds pads via `dataclasses.replace(pad, net_name="", net_number=0)` and rebuilds the footprint and board via replace chain. Tags: council-deferred,immutability,phase-99,wr-07.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 95 - Dual Knowledge Base Integration (Cognee + section injection).
-Resume with: Next phase planning or `/gsd-execute-phase`.
+Stopped at: Completed Phase 100 Plan 01 — CR-01 NativeBoard immutability refactor. Foundation ready for Plan 02 (RoutingOrchestrator) which depends on immutable board snapshots for rollback.
+Resume with: Phase 100 Plan 02 (RoutingOrchestrator) or next `/gsd-execute-phase`.

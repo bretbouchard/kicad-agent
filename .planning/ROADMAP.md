@@ -836,7 +836,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 100-01-PLAN.md — CR-01 immutability refactor (14 NativeBoard dataclasses frozen + 8 mutation sites migrated to dataclasses.replace)
+- [x] 100-01-PLAN.md — CR-01 immutability refactor (14 NativeBoard dataclasses frozen + all native-path mutation sites migrated to dataclasses.replace) — **COMPLETE 2026-06-25** (8 immutability tests + 357 regression tests pass)
 - [ ] 100-02-PLAN.md — RoutingOrchestrator + DeterministicStrategy + InteractiveRoutingSession Freerouting ingestion + audit trail + batch API (R-1 through R-7)
 
 ### Phase 101: Schematic Ops Bug Fixes
