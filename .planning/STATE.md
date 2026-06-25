@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: Executing Phase 101
-stopped_at: Completed Phase 101 Plan 03 — Fixed place_missing_units dedup bypass (P0-002 R-2) + place_no_connects_from_erc tolerance matching (P0-004 R-4). 4 TDD commits (2 RED + 2 GREEN), 4 new regression tests, 98 passed / 1 skipped (zero regression). Ready for Phase 101 Plan 04.
-last_updated: "2026-06-25T09:25:00.000Z"
+status: Phase 101 complete — ready for verification
+stopped_at: Completed Phase 101 Plan 04 — Fixed remove_dangling_wires criteria mismatch (P0-005 R-5). trust_erc parameter + ERC passthrough + Council H-1 dispatcher wiring. 2 TDD commits, 4 new tests, 132 passed / 1 skipped (zero regression). PHASE 101 COMPLETE — all 5 P0/P1 bugs closed.
+last_updated: "2026-06-25T09:30:00.000Z"
 last_activity: 2026-06-25
 progress:
   total_phases: 129
-  completed_phases: 49
+  completed_phases: 50
   total_plans: 269
-  completed_plans: 211
-  percent: 78
+  completed_plans: 213
+  percent: 79
 ---
 
 # Project State
@@ -26,8 +26,8 @@ Last activity: 2026-06-25
 
 ## Current Position
 
-Phase: 101 (schematic-ops-bug-fixes) — EXECUTING
-Plan: 3 of 4
+Phase: 101 (schematic-ops-bug-fixes) — COMPLETE (all 4 plans shipped)
+Plan: 4 of 4 (complete)
 **All milestones shipped (v1.0 through v4.1). 94 phases, 266 plans, 3300+ tests.**
 
 Last milestone: v4.1 Stage-Safe PCB Flow (Phases 85-94)
@@ -53,7 +53,7 @@ Prior milestones: v4.0 Hybrid Routing (80-84), v3.2 Gap Analysis (79), v3.1 Coun
 
 Council review: 4 findings fixed, all passing.
 
-Last activity: 2026-06-25 -- Phase 101 execution started
+Last activity: 2026-06-25
 
 ### Phase 101: Schematic Ops Bug Fixes (in progress)
 
@@ -70,10 +70,13 @@ Last activity: 2026-06-25 -- Phase 101 execution started
   - Rule 1 deviation: also fixed sibling sym.name bug at symbol_mismatch.py:141
     (_get_library_pin_signature — called by the op at line 79 BEFORE its own lookup,
     so the validation helper crashed first; same code path, same root cause)
+
   - kiutils Symbol class exposes libId (@property, "Device:R") and entryName (field, "R"),
     NOT name. Match clause: `sym.libId == lib_id or sym.entryName == symbol_name`
+
   - 2 new regression tests + 3 helpers in test_schematic_repair.py
     (TestUpdateSymbolsFromLibraryNoCrash: no_crash_on_mismatch + uses_entryName_for_matching)
+
   - Test 2 forces entryName branch via empty libraryNickname (defeats libId short-circuit)
   - 85/85 tests pass in test_schematic_repair.py, 4/4 symbol_mismatch tests, zero regression
 
@@ -84,22 +87,48 @@ Last activity: 2026-06-25 -- Phase 101 execution started
     parent components (U30/U31/U32/U33) when a shared wire endpoint was within
     max_distance=100mm of each parent, bypassing dedup. Backplane: +29 ERC violations
     per affected component.
+
   - R-2 Rule 1 deviation: also fixed dry_run mode not populating _occupied_positions.
     The .add() was at line 707 inside the non-dry_run placement branch; dry_run hit
     `continue` at line 679 before reaching it. Now records position immediately after
     dedup resolution (before dry_run check), covering both paths.
+
   - R-4: Added _lookup_pin_type_with_tolerance(x, y, pin_positions, tolerance) helper
     in repair_erc.py using per-axis abs() comparison within SNAP_TOLERANCE=0.01mm.
     Replaced pos_to_type.get(pos_key, "passive") exact dict lookup (round(x, 2) keys).
     Bug: pin at x=127.015 (key 127.02) and violation at x=127.014 (key 127.01) missed,
     defaulted to "passive", placed no_connect on power_in pin → no_connect_connected.
+
   - Removed dead pos_to_type dict (lines 229-232); nothing else reads it.
   - 4 new tests (2 per bug): TestPlaceMissingUnitsNoCollisions (2/4 instance scenarios
     with shared wire endpoints triggering voting convergence) +
     TestPlaceNoConnectsFromErcToleranceMatching (X-axis + Y-axis rounding boundaries).
+
   - 4 fixture helpers for raw S-expression TL072 schematics (lib_symbol + components + wires).
   - 98 passed / 1 skipped in affected files (was 94, +4 new, zero regression).
     128 passed in broader run including test_erc_auto_fix.py.
+
+- Plan 101-04: Fix remove_dangling_wires criteria mismatch (R-5 / P0-005) (COMPLETE)
+  - Added trust_erc: bool = True parameter to remove_dangling_wires in repair_wires.py.
+    When True (default), op augments geometric detection with ERC wire_dangling
+    violation positions — treats ERC as ground truth for electrical "dangling"
+    (wrong-type labels, crossings without junction) that geometric heuristics miss.
+  - Bug: op silently reported "0 wires removed" on sheets with dozens of ERC
+    wire_dangling violations because geometric criteria (endpoint has
+    pin/label/junction/2+ wires) missed wires ERC flags electrically. Blocked
+    Phase 127 wire cleanup effectiveness.
+  - Council H-1 fix: dispatcher handlers/schematic.py:_handle_remove_dangling_wires
+    now passes trust_erc=op.trust_erc. Without this, schema accepted trust_erc=False
+    but dispatcher silently dropped it (op contract was broken; default True masked it).
+  - ERC passthrough wrapped in try/except — malformed ERC output degrades to
+    geometric-only. extract_violation_positions lazy-imported inside if trust_erc:
+    block (avoids circular import, skips overhead when disabled).
+  - Geometric fallback preserved (union, not replacement) — Phase 123 Wave 2
+    success (143 violations removed via geometric path) retained.
+  - RemoveDanglingWiresOp schema gains trust_erc: bool = Field(default=True).
+  - 4 new tests: TestRemoveDanglingWiresTrustErc (erc_passthrough, geometric_fallback,
+    default_true, geometric_only_when_no_erc). 132 passed / 1 skipped across 3
+    affected test files (zero regression). PHASE 101 COMPLETE.
 
 ### Phase 99: Freerouting Integration Hardening (in progress)
 
@@ -569,6 +598,8 @@ Recent decisions affecting current work:
 - [v2.2-100]: UUID extraction uses bulk extract_uuids(content, file_type) then parent_index filtering (R3-L3)
 - [v2.2-100]: Per-net Freerouting completion attribution via SES parse (parse_ses), not just success flag — accurate baseline measurement
 - [v2.2-100]: SC-5 baseline test asserts >= 45% (lower bound only) — orchestrator combines A* + Freerouting so should meet or exceed Freerouting-alone baseline
+- [Phase 101-04]: trust_erc defaults True in remove_dangling_wires — ERC wire_dangling positions augment geometric criteria (union, not replacement), preserving Phase 123 Wave 2 success while fixing silent no-op on ERC-flagged patterns
+- [Phase 101-04]: Council H-1 fix — dispatcher handlers/schematic.py now passes trust_erc=op.trust_erc (schema accepted the field but dispatcher was silently dropping it)
 
 ### Pending Todos
 
@@ -581,6 +612,7 @@ Recent decisions affecting current work:
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260616-wqd | Build a validate_labels pre-flight check in kicad-agent | 2026-06-17 | ee47896 | [260616-wqd-build-a-validate-labels-pre-flight-check](./quick/260616-wqd-build-a-validate-labels-pre-flight-check/) |
+| Phase 101 P04 | 5m | 2 tasks | 4 files |
 
 ### Blockers/Concerns
 
@@ -594,8 +626,8 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 101 Plan 03 — Fixed place_missing_units dedup bypass (P0-002 R-2) + place_no_connects_from_erc tolerance matching (P0-004 R-4). 4 TDD commits (2 RED + 2 GREEN), 4 new regression tests, 98 passed / 1 skipped (zero regression). Ready for Phase 101 Plan 04.
-Resume with: Phase 101 Plan 04 (R-5 P0-005: remove_dangling_wires criteria alignment — accept ERC positions as ground truth, bypass geometric heuristics).
+Stopped at: Completed Phase 101 Plan 04 — Fixed remove_dangling_wires criteria mismatch (P0-005 R-5). Added trust_erc parameter (default True) with ERC wire_dangling position passthrough. Council H-1 dispatcher fix applied (trust_erc=op.trust_erc). 2 TDD commits (1 RED + 1 GREEN), 4 new tests, 132 passed / 1 skipped (zero regression). PHASE 101 COMPLETE — all 5 P0/P1 bugs closed.
+Resume with: Phase 101 verification (run /gsd-verify-work 101 for acceptance testing on analog-ecosystem backplane), then next milestone planning.
 
 ### Phase 100: RoutingOrchestrator and Human Approval Loop (complete)
 
