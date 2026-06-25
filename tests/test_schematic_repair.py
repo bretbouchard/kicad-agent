@@ -2234,3 +2234,200 @@ class TestUpdateSymbolsFromLibraryNoCrash:
                 f"skipped={result['skipped']}"
             )
 
+
+# ---------------------------------------------------------------------------
+# Phase 101 Plan 04: remove_dangling_wires trust_erc passthrough (P0-005 / R-5)
+# ---------------------------------------------------------------------------
+
+
+class TestRemoveDanglingWiresTrustErc:
+    """R-5 (P0-005): trust_erc parameter aligns op with KiCad ERC electrical definition.
+
+    When trust_erc=True (default), wires at ERC wire_dangling violation positions
+    are removed even if geometric criteria see them as "anchored" (e.g. endpoint
+    at a label position). Geometric fallback preserved when ERC reports nothing.
+    """
+
+    def _build_anchored_wire_ir(self):
+        """Build an IR where a wire endpoint lands on a label position.
+
+        Geometric criteria see this endpoint as "anchored" (label present),
+        so remove_dangling_wires(trust_erc=False) returns 0 removals.
+        KiCad ERC would flag this as wire_dangling (label of wrong type or
+        no electrical connection), so trust_erc=True must remove it.
+        """
+        ir = MagicMock()
+        wire = MagicMock()
+        p1 = MagicMock()
+        p1.X = 50.0
+        p1.Y = 30.0
+        p2 = MagicMock()
+        p2.X = 80.0
+        p2.Y = 30.0
+        wire.points = [p1, p2]
+        wire.uuid = "wire-anchored-1"
+        ir.schematic.graphicalItems = [wire]
+        # Endpoint (50.0, 30.0) lands on a label position -> geometric sees anchored
+        ir.get_pin_positions.return_value = []
+        ir.get_label_positions.return_value = [
+            {"name": "AUDIO_IN", "x": 50.0, "y": 30.0},
+        ]
+        ir.get_wire_endpoints.return_value = [
+            {"wire_index": 0, "start_x": 50.0, "start_y": 30.0,
+             "end_x": 80.0, "end_y": 30.0, "uuid": "wire-anchored-1"},
+        ]
+        ir.schematic.junctions = []
+        return ir
+
+    def _build_geometrically_dangling_ir(self):
+        """Build an IR where both wire endpoints are unanchored.
+
+        Geometric criteria flag this as dangling regardless of trust_erc.
+        """
+        ir = MagicMock()
+        wire = MagicMock()
+        p1 = MagicMock()
+        p1.X = 10.0
+        p1.Y = 10.0
+        p2 = MagicMock()
+        p2.X = 40.0
+        p2.Y = 10.0
+        wire.points = [p1, p2]
+        wire.uuid = "wire-dangling-1"
+        ir.schematic.graphicalItems = [wire]
+        ir.get_pin_positions.return_value = []
+        ir.get_label_positions.return_value = []
+        ir.get_wire_endpoints.return_value = [
+            {"wire_index": 0, "start_x": 10.0, "start_y": 10.0,
+             "end_x": 40.0, "end_y": 10.0, "uuid": "wire-dangling-1"},
+        ]
+        ir.schematic.junctions = []
+        return ir
+
+    def test_remove_dangling_wires_erc_passthrough(self):
+        """trust_erc=True removes wire at ERC wire_dangling position.
+
+        Wire endpoint lands on a label position (geometrically anchored),
+        but ERC reports wire_dangling at that endpoint. trust_erc=True must
+        remove the wire despite geometric criteria not flagging it.
+        """
+        from kicad_agent.ops.erc_parser import ViolationPosition
+        from kicad_agent.ops.repair_wires import remove_dangling_wires
+
+        ir = self._build_anchored_wire_ir()
+        mock_erc_positions = [
+            ViolationPosition(x=50.0, y=30.0, sheet="/", description="Wire dangling"),
+        ]
+
+        with patch(
+            "kicad_agent.ops.erc_parser.extract_violation_positions",
+            return_value=mock_erc_positions,
+        ):
+            result = remove_dangling_wires(
+                ir, Path("test.kicad_sch"), trust_erc=True, dry_run=True,
+            )
+
+        assert result["removed_count"] >= 1, (
+            f"trust_erc=True must remove wire at ERC wire_dangling position. "
+            f"Got removed_count={result['removed_count']}, details={result['details']}"
+        )
+        # Verify the ERC-passthrough removal is distinguishable in details
+        erc_sourced = [d for d in result["details"] if d.get("source") == "erc_passthrough"]
+        assert len(erc_sourced) >= 1, (
+            f"Expected at least 1 erc_passthrough-sourced removal, "
+            f"got details={result['details']}"
+        )
+
+    def test_remove_dangling_wires_geometric_fallback(self):
+        """trust_erc=False preserves geometric-only behavior.
+
+        Same fixture as erc_passthrough test, but trust_erc=False means
+        ERC positions are ignored. Geometric criteria see the label-anchored
+        endpoint as connected, so the wire is NOT removed.
+        """
+        from kicad_agent.ops.erc_parser import ViolationPosition
+        from kicad_agent.ops.repair_wires import remove_dangling_wires
+
+        ir = self._build_anchored_wire_ir()
+        mock_erc_positions = [
+            ViolationPosition(x=50.0, y=30.0, sheet="/", description="Wire dangling"),
+        ]
+
+        with patch(
+            "kicad_agent.ops.erc_parser.extract_violation_positions",
+            return_value=mock_erc_positions,
+        ):
+            result = remove_dangling_wires(
+                ir, Path("test.kicad_sch"), trust_erc=False, dry_run=True,
+            )
+
+        assert result["removed_count"] == 0, (
+            f"trust_erc=False must NOT remove geometrically-anchored wire. "
+            f"Got removed_count={result['removed_count']}, details={result['details']}"
+        )
+
+    def test_remove_dangling_wires_trust_erc_default_true(self):
+        """Default trust_erc is True (op aligns with ERC by default).
+
+        Reuses the erc_passthrough fixture: call without specifying trust_erc.
+        Default behavior must match trust_erc=True (ERC positions are used).
+        """
+        from kicad_agent.ops.erc_parser import ViolationPosition
+        from kicad_agent.ops.repair_wires import remove_dangling_wires
+
+        ir = self._build_anchored_wire_ir()
+        mock_erc_positions = [
+            ViolationPosition(x=50.0, y=30.0, sheet="/", description="Wire dangling"),
+        ]
+
+        with patch(
+            "kicad_agent.ops.erc_parser.extract_violation_positions",
+            return_value=mock_erc_positions,
+        ):
+            # NOTE: no trust_erc= kwarg — rely on default
+            result = remove_dangling_wires(ir, Path("test.kicad_sch"), dry_run=True)
+
+        assert result["removed_count"] >= 1, (
+            f"Default trust_erc must be True (ERC positions used). "
+            f"Got removed_count={result['removed_count']}, details={result['details']}"
+        )
+
+    def test_remove_dangling_wires_geometric_only_when_no_erc(self):
+        """Geometric fallback catches purely-geometric dangling when ERC is empty.
+
+        Wire with both endpoints unanchored (no pins, labels, junctions, or
+        2+ wire intersections). ERC reports no wire_dangling violations.
+        Geometric criteria must catch this wire regardless of trust_erc value.
+        """
+        from kicad_agent.ops.repair_wires import remove_dangling_wires
+
+        ir = self._build_geometrically_dangling_ir()
+
+        # ERC reports nothing — geometric path must still work
+        with patch(
+            "kicad_agent.ops.erc_parser.extract_violation_positions",
+            return_value=[],
+        ):
+            result_trust = remove_dangling_wires(
+                ir, Path("test.kicad_sch"), trust_erc=True, dry_run=True,
+            )
+
+        ir2 = self._build_geometrically_dangling_ir()
+        with patch(
+            "kicad_agent.ops.erc_parser.extract_violation_positions",
+            return_value=[],
+        ):
+            from kicad_agent.ops.repair_wires import remove_dangling_wires as rdw2
+            result_no_trust = rdw2(
+                ir2, Path("test.kicad_sch"), trust_erc=False, dry_run=True,
+            )
+
+        assert result_trust["removed_count"] >= 1, (
+            f"trust_erc=True with no ERC violations must still catch geometric dangling. "
+            f"Got removed_count={result_trust['removed_count']}"
+        )
+        assert result_no_trust["removed_count"] >= 1, (
+            f"trust_erc=False with no ERC violations must still catch geometric dangling. "
+            f"Got removed_count={result_no_trust['removed_count']}"
+        )
+
