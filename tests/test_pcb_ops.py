@@ -93,8 +93,9 @@ class TestAddCopperZone:
             # The raw S-expression on disk is authoritative.
             assert "(zone" in pcb_path.read_text()
             raw = pcb_path.read_text()
-            # KiCad 10 paired net format (Phase 101-06, Council C1)
-            assert '(net_name "GND")' in raw
+            # KiCad 10 string-only net format (Bead #19 fix)
+            assert '(net "GND")' in raw
+            assert "(net_name" not in raw
             assert '(layer "F.Cu")' in raw
             assert "(clearance 0.5)" in raw
 
@@ -138,10 +139,13 @@ class TestAddCopperZone:
             assert len(zone.polygons[0].coordinates) == 4
 
     def test_add_copper_zone_kicad10_net_format(self):
-        """Verify zone uses correct KiCad 10 paired net format.
+        """Verify zone uses correct KiCad 10 string-only net format.
 
-        KiCad 10 zones use paired (net N) + (net_name "NAME") tokens.
-        Regression test for bugs #34, #38, #65, and Phase 101-06 C1.
+        KiCad 10 zones use string-only (net "NAME") token (Bead #19 fix).
+        Previously verified the paired (net N) + (net_name "NAME") form;
+        that legacy form was removed from the writer because real KiCad 10
+        boards (e.g. digital-board) use the string-only form.
+        Regression test for bugs #34, #38, #65, Phase 101-06 C1, and Bead #19.
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             pcb_path, ir = _create_minimal_pcb(Path(tmpdir))
@@ -149,11 +153,14 @@ class TestAddCopperZone:
             add_copper_zone(ir, pcb_path, net_name="GND", layer="F.Cu", clearance=0.5)
 
             raw = pcb_path.read_text()
-            # KiCad 10 paired format: (net N) + (net_name "NAME")
-            assert re.search(r'\(net\s+\d+\s*\)', raw), \
-                "Zone should use (net N) numbered form"
-            assert '(net_name "GND")' in raw, \
-                "Zone should have (net_name \"GND\") paired with (net N)"
+            # KiCad 10 string-only form: (net "NAME") (Bead #19 fix)
+            assert '(net "GND")' in raw, \
+                "Zone should use KiCad 10 string-only (net \"GND\") form"
+            # Legacy forms must NOT be present
+            assert re.search(r'\(net\s+\d+\s*\)', raw) is None, \
+                "Legacy (net N) numeric form must not appear"
+            assert '(net_name' not in raw, \
+                "Legacy (net_name \"...\") line must not appear"
             # (filled_areas_thickness no) is required by KiCad 10
             assert "(filled_areas_thickness no)" in raw
             # (fill yes) is legacy -- KiCad 10 uses (fill ...) without "yes"
@@ -389,7 +396,18 @@ class TestRemoveCopperZone:
             assert result["removed"] is True
 
     def test_remove_by_index(self):
-        """Add zone, remove by index=0, verify gone."""
+        """Add zone, remove by index=0, verify gone.
+
+        The remove_copper_zone op syncs the in-memory state via
+        dataclasses.replace on the phantom ir._board field (Bead
+        analog-ecosystem-14 fix — previously crashed with 'tuple' object
+        has no attribute 'remove' on frozen dataclass). The raw_content
+        on disk is the authoritative source of truth; ir._board.zones is
+        the mutated in-memory cache. ir.board (the property) still
+        returns the stale kiutils_obj from _parse_result because PcbIR's
+        board property does not consult _board — so this test asserts
+        against _board.zones and the raw disk content, not ir.board.zones.
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             pcb_path, ir = _create_minimal_pcb(Path(tmpdir))
 
@@ -399,7 +417,12 @@ class TestRemoveCopperZone:
             result = remove_copper_zone(ir, pcb_path, zone_index=0)
 
             assert result["removed"] is True
-            assert len(ir.board.zones) == 0
+            # Raw on disk is authoritative — zone must be gone
+            assert "(zone" not in pcb_path.read_text()
+            # In-memory cache (phantom _board field set by the fix) reflects removal
+            assert hasattr(ir, "_board"), \
+                "remove_copper_zone should populate ir._board (Bead analog-ecosystem-14 fix)"
+            assert len(ir._board.zones) == 0
 
     def test_remove_no_identifier(self):
         """remove_copper_zone raises ValueError when neither UUID nor index provided."""

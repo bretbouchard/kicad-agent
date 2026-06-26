@@ -67,11 +67,12 @@ class TestBuildZoneSexpKiCad10:
             layer="F.Cu",
             polygon=[(0, 0), (50, 0), (50, 50), (0, 50)],
         )
-        # Required: paired (net N) + (net_name "NAME") (Phase 101-06, Council C1)
-        assert re.search(r'\(net\s+1\s*\)', result), \
-            "Zone must have (net 1) numbered form"
-        assert '(net_name "GND")' in result, \
-            "Zone must have (net_name \"GND\") paired with (net N)"
+        # KiCad 10 string-only net format: (net "NAME") — Bead #19 fix
+        # (legacy (net N) + (net_name "NAME") removed in favor of (net "NAME"))
+        assert '(net "GND")' in result, \
+            "Zone must use KiCad 10 string-only (net \"GND\") form"
+        assert "(net_name" not in result, \
+            "Legacy (net_name \"...\") line must not be emitted in KiCad 10"
         # Required: (filled_areas_thickness no) (KiCad 10 rule)
         assert "(filled_areas_thickness no)" in result
         # Required: (fill ...) without legacy "yes" argument
@@ -115,13 +116,16 @@ class TestBuildZoneSexpKiCad10:
         assert "(thermal_bridge_width" in result
 
     def test_zone_unconnected_net_zero_format(self):
-        """Unconnected zone uses (net 0) + (net_name \"\") pair."""
+        """Unconnected zone uses KiCad 10 string-only (net \"\") form."""
         result = PcbRawWriter.build_zone_sexp(
             net_number=0, net_name="", layer="F.Cu",
             polygon=[(0, 0), (10, 10)],
         )
-        assert "(net 0)" in result
-        assert '(net_name "")' in result
+        # KiCad 10 string-only net format (Bead #19 fix):
+        # empty net becomes (net "") — no (net_name "") line, no (net 0)
+        assert '(net "")' in result
+        assert "(net_name" not in result
+        assert "(net 0)" not in result
 
     def test_zone_priority_emitted_when_nonzero(self):
         """Priority token emitted only when > 0 (matches KiCad writer behavior)."""
@@ -336,8 +340,9 @@ class TestExistingOpsBackwardCompat:
 
         assert result["success"] is True
         content = pcb_path.read_text(encoding="utf-8")
-        # KiCad 10 zone markers
-        assert '(net_name "GND")' in content
+        # KiCad 10 string-only net format (Bead #19 fix)
+        assert '(net "GND")' in content
+        assert "(net_name" not in content
         assert "(filled_areas_thickness no)" in content
         assert "(pts" in content
         assert "(xy" in content
@@ -366,7 +371,9 @@ class TestExistingOpsBackwardCompat:
         assert result["success"] is True
         content = pcb_path.read_text(encoding="utf-8")
         assert "(keepout via)" in content
-        assert '(net_name "")' in content
+        # KiCad 10 string-only net format: empty net is (net "") (Bead #19 fix)
+        assert '(net "")' in content
+        assert "(net_name" not in content
         assert "(filled_areas_thickness no)" in content
 
 

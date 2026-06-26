@@ -101,9 +101,10 @@ class TestBuildZoneSexpr:
             layer="F.Cu",
             polygon=[(0, 0), (100, 0), (100, 100), (0, 100)],
         )
-        # KiCad 10 zone format: paired (net N) + (net_name "NAME") tokens
-        assert "(net 1)" in result
-        assert '(net_name "GND")' in result
+        # KiCad 10 string-only net format: (net "NAME") (Bead #19 fix)
+        assert '(net "GND")' in result
+        assert "(net_name" not in result  # legacy line removed
+        assert "(net 1)" not in result    # legacy numeric form removed
         assert '(layer "F.Cu")' in result
         assert "(xy 0 0)" in result
         assert "(xy 100 100)" in result
@@ -145,16 +146,24 @@ class TestBuildZoneSexpr:
         assert f'(uuid "{test_uuid}")' in result
 
     def test_paired_net_and_net_name_format(self):
-        """KiCad 10 zones use paired (net N) + (net_name "NAME") tokens."""
+        """KiCad 10 zones use string-only (net "NAME") token.
+
+        Previously verified the paired (net N) + (net_name "NAME") form.
+        Bead #19 fix switched the writer to KiCad 10 ground-truth string-only
+        (net "NAME") output (matches digital-board). This test now asserts
+        the new format while preserving the original intent (zone references
+        the correct net name).
+        """
         result = PcbRawWriter.build_zone_sexp(
             net_number=5,
             net_name="GND",
             layer="F.Cu",
             polygon=[(0, 0), (100, 100)],
         )
-        # Both tokens required (Phase 101-06, Council C1)
-        assert "(net 5)" in result
-        assert '(net_name "GND")' in result
+        # KiCad 10 string-only form (Bead #19 fix)
+        assert '(net "GND")' in result
+        assert "(net_name" not in result
+        assert "(net 5)" not in result
 
 
 class TestInsertZone:
@@ -371,8 +380,9 @@ class TestIntegrationWithRealPcb:
         result = PcbRawWriter.insert_zone(content, zone_sexp)
 
         assert '(zone' in result
-        # KiCad 10 paired net format (Phase 101-06)
-        assert '(net_name "GND")' in result
+        # KiCad 10 string-only net format (Bead #19 fix)
+        assert '(net "GND")' in result
+        assert "(net_name" not in result
         assert '(layer "F.Cu")' in result
         # UUID quoted (fixes #65)
         assert '(uuid "' in result
