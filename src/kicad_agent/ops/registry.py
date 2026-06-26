@@ -990,6 +990,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": ["kicad-cli"],
         "conflicts": [],
     },
+    "safe_sync_pcb_from_schematic": {
+        "category": "crossfile",
+        "description": "Non-destructive PCB sync from schematic — updates pad nets, lib_ids, adds missing footprints. Preserves routing, zones, placement (ae-26)",
+        "file_types": [".kicad_sch", ".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "multi_file",
+        "requires": ["kicad-cli"],
+        "conflicts": [],
+    },
     "repopulate_pcb_from_schematic": {
         "category": "crossfile",
         "description": "Re-populate a PCB with footprints from schematic netlist, auto-place, and assign nets",
