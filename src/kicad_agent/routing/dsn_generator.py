@@ -299,25 +299,41 @@ def _build_library_from_native(
             drill = pad.drill
             pad_layers = pad.layers or "F.Cu"
 
+            # Bead analog-ecosystem-27 fix: resolve pad layer to a DECLARED
+            # copper layer. Freerouting rejects shapes on undeclared layers
+            # (*.Cu wildcard, F.Paste, F.Mask). Strategy: take first token,
+            # if it's wildcard or not in declared layers, fall back to side-
+            # appropriate copper layer.
+            declared = set(layers)
+            front_layer = layers[0] if layers else "F.Cu"
+            back_layer = layers[-1] if layers else "B.Cu"
+            default_layer = front_layer if side == "front" else back_layer
+
+            tokens = pad_layers.split() if pad_layers else []
+            first_token = tokens[0] if tokens else default_layer
+
+            # Resolve to a declared copper layer
+            if first_token in declared:
+                dsn_layer = first_token
+            elif first_token in ("*.Cu", "*", "&1Cu", "*.CuB"):
+                # Wildcard — use side-appropriate layer
+                dsn_layer = default_layer
+            else:
+                # F.Paste, F.Mask, F.SilkS, B.Mask, etc. — not copper, use default
+                # Check if ANY declared copper layer is in tokens (multi-layer pad)
+                copper_token = next((t for t in tokens if t in declared), None)
+                if copper_token:
+                    dsn_layer = copper_token
+                else:
+                    dsn_layer = default_layer
+
             if drill > 0:
                 drill_um = int(drill * _MM_TO_UM)
                 ps_key = f"TH_{size_um}:{drill_um}_um"
                 attach = "off"
-                shapes = [(layer, size_um) for layer in layers]
+                # TH pads span all declared layers
+                shapes = [(layer, size_um) for layer in layers] if layers else [(default_layer, size_um)]
             else:
-                # Resolve pad layer to a specific DSN layer.
-                # Rule 1 fix (Phase 99-03): KiCad SMD pads carry a space-
-                # separated layer set like "F.Cu F.Paste F.Mask". DSN only
-                # cares about the copper layer for routing; the previous
-                # code used the full multi-layer string as dsn_layer, which
-                # embedded spaces into the padstack name AND into the
-                # (shape (circle LAYER SIZE)) emission. Freerouting then saw
-                # an unquoted multi-token padstack reference in (pin ...)
-                # and aborted with "Parse error". Take the first token only.
-                if pad_layers in ("*.Cu", "*"):
-                    dsn_layer = layers[0] if side == "front" else layers[-1]
-                else:
-                    dsn_layer = pad_layers.split()[0] if pad_layers else "F.Cu"
                 ps_key = f"SMD_{dsn_layer}_{size_um}_um"
                 attach = "on"
                 shapes = [(dsn_layer, size_um)]
