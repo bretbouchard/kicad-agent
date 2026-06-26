@@ -153,6 +153,62 @@ When building schematics programmatically, these rules prevent the most common a
 3. **Multi-pin connectors have non-sequential layouts.** Card_Edge_64P pins 33-64 ALL on right side, reuse Y positions from pins 1-32. Use lookup tables, never calculate.
 4. **Device:R/C have 3.81mm pin offsets** (not 2.54mm), placing connection points off-grid.
 
+## Routing Stack (v2.2 — Production Ready)
+
+The complete routing pipeline is available for multi-layer PCB routing:
+
+```
+User Intent JSON
+    ↓
+RoutingOrchestrator (src/kicad_agent/routing/orchestrator.py)
+    ├─ DeterministicStrategy (5-case dispatch: diff pair → power → high-pin → simple → default A*)
+    ├─ AiRoutingStrategy (src/kicad_agent/routing/ai_strategy.py — optional, Gemma 4 12B V2)
+    │   └─ KiCadVisionPipeline (src/kicad_agent/inference/vision_pipeline.py)
+    │   └─ StrategyValidator (src/kicad_agent/routing/strategy_validator.py — R-4 gate)
+    │   └─ Falls back to DeterministicStrategy on any failure (R-6)
+    ├─ Per-net dispatch: A* (simple) or Freerouting v2.2.4 (complex)
+    ├─ JSONL audit trail (src/kicad_agent/routing/audit.py — fsync durable)
+    └─ Rollback via PersistentUndoStack + UUID-based PcbRawWriter.delete_segment/delete_via
+```
+
+**Key commands:**
+```bash
+# Route a full board via orchestrator (batch API)
+/kicad-agent '{"op": "auto_route", "target_file": "board.kicad_pcb", "strategy": "freerouting"}'
+
+# Baseline metrics on 3 fixture boards
+python3 scripts/phase99_baseline.py --json
+
+# AI-guided routing eval (Phase 98)
+python3 scripts/phase98_eval.py --fixtures tests/fixtures/smd_test_board.kicad_pcb
+```
+
+**Key files:**
+- `src/kicad_agent/routing/orchestrator.py` — RoutingOrchestrator + route_board batch API
+- `src/kicad_agent/routing/strategy.py` — RoutingStrategy Protocol + DeterministicStrategy
+- `src/kicad_agent/routing/ai_strategy.py` — AiRoutingStrategy (Phase 98, Gemma 4 vision)
+- `src/kicad_agent/routing/strategy_validator.py` — R-4 validation gate
+- `src/kicad_agent/routing/audit.py` — JSONL audit trail
+- `src/kicad_agent/routing/dsn_generator.py` — NativeBoard-backed DSN generation (Phase 99)
+- `src/kicad_agent/routing/freerouting.py` — Freerouting subprocess wrapper + SES parser
+
+**Critical constraints:**
+- NativeBoard dataclasses are **frozen** (Phase 100 CR-01). Use `dataclasses.replace()`, never in-place mutation.
+- PCB writes use `atomic_write` from `kicad_agent.io.atomic_write`, never `kiutils.Board.to_file()`.
+- Freerouting JAR at `~/.kicad-agent/tools/freerouting.jar` (stock build `20f1a72`, newer than v2.2.4).
+
+## Schematic Ops (v2.2 — Bug Fixes + New Op)
+
+**safe_sync_pcb_from_schematic** (ae-26): Non-destructive PCB sync — updates pad nets, footprint lib_ids, adds missing footprints. Preserves routing, zones, placement by default. Equivalent to KiCad GUI's "Update PCB from Schematic".
+
+```bash
+/kicad-agent '{"op": "safe_sync_pcb_from_schematic", "target_file": "board.kicad_pcb", "target_files": ["board.kicad_pcb", "board.kicad_sch"]}'
+```
+
+**SchematicRawWriter** (`src/kicad_agent/ops/schematic_raw_writer.py`): Raw S-expression manipulation for KiCad 10 schematics. Replaces kiutils `to_file()` which corrupts KiCad 10 files. Used by `erc_auto_fix` (deprecated, raw S-expr rewrite complete).
+
+**Deprecated ops:** `erc_auto_fix` and `erc_auto_fix_hierarchical` emit DeprecationWarning. Use targeted individual ops instead (add_no_connect, place_no_connects_from_erc, remove_dangling_wires with trust_erc=True).
+
 ## Planning (MANDATORY)
 
 All implementation planning MUST go through GSD. Never use native plan mode for kicad-agent work.
@@ -181,10 +237,13 @@ src/kicad_agent/
   cli.py           — CLI entry point
   context.py       — Project context loading
   handler.py       — Operation dispatch
-  ops/             — 98 operation implementations
+  ops/             — 142 operation implementations
     executor.py    — Core operation executor
     schema*.py     — Pydantic operation schemas
     validation_gates.py — Pre/post validation
+    pcb_raw_writer.py — Raw S-expr PCB manipulation (segment/via/zone/footprint)
+    schematic_raw_writer.py — Raw S-expr schematic manipulation (Phase 101)
+    registry.py    — Op metadata + dependency/conflict tracking
   parser/          — S-expression parsing
   serializer/      — File serialization
   validation/      — ERC/DRC, format, spatial, structural checks
@@ -200,7 +259,17 @@ src/kicad_agent/
   spatial/         — Spatial reasoning utilities
   generation/      — Auto-generation tools
   placement/       — Component placement
-  routing/         — Auto-routing
+  routing/         — Auto-routing + Freerouting integration + AI strategy
+    orchestrator.py — RoutingOrchestrator + batch API + rollback
+    strategy.py     — RoutingStrategy Protocol + DeterministicStrategy
+    ai_strategy.py  — AiRoutingStrategy (Gemma 4 12B V2 vision)
+    strategy_validator.py — R-4 validation gate
+    strategy_prompts.py — Few-shot prompt builder
+    strategy_parser.py — Defensive JSON extractor
+    audit.py        — JSONL audit trail (fsync durable)
+    dsn_generator.py — NativeBoard-backed DSN generation
+    freerouting.py  — Freerouting subprocess + SES parser
+    FreerouteBatch.java — Java batch autorouter wrapper
   export/          — Export utilities
   crossfile/       — Cross-file reference tracking
 

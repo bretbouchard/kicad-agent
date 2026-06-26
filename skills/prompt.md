@@ -1629,11 +1629,14 @@ Net names reject whitespace-only strings. If a name is `"   "` (spaces only), th
 |-----------|-----------|-------------|------|
 | `query_connectivity` | pcb | Query PCB connectivity via NetGraph | RO |
 
-### Cross-file (1)
+### Cross-file (4)
 
 | Operation | File Types | Description | Mode |
 |-----------|-----------|-------------|------|
 | `propagate_symbol_change` | pcb, sch | Propagate a symbol/footprint library reference change across multiple files atomically | RW |
+| `update_pcb_from_schematic` | pcb, sch | Sync PCB footprints and netlist from schematic source of truth via kicad-cli netlist export | RW |
+| `safe_sync_pcb_from_schematic` | pcb, sch | Non-destructive PCB sync — updates pad nets, lib_ids, adds missing footprints. Preserves routing/zones/placement (ae-26) | RW |
+| `repopulate_pcb_from_schematic` | pcb, sch | Re-populate PCB with footprints from schematic netlist, auto-place, assign nets (destructive — strips routing) | RW |
 
 ### Readability (1)
 

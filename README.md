@@ -31,8 +31,13 @@ kicad-agent solves this with **constrained structural editing** — the AI emits
 - LTspice integration: .asc file parsing, simulation command injection, raw waveform analysis
 - ADI footprint library: Analog Devices symbol/footprint resolution with ZIP-based cache
 
-**v2.2 (latest):**
-- **Track & Via operations** -- 9 new PCB ops for manual copper routing: add_track, add_arc_track, add_via, delete_track, delete_via, move_track_endpoint, lock_track, lock_via, add_stitching_via_pattern (Phase 101, foundation for auto-route pipeline)
+**v2.2 (latest) — Complete-Ops Milestone:**
+- **Freerouting Integration Hardening** — NativeBoard-backed DSN generator with courtyard-accurate obstacles, per-net-class rules, 3-way zone classification, per-stackup via padstacks, 45° trace mode, SES multi-layer bridge (Phase 99)
+- **RoutingOrchestrator + Human Approval Loop** — Intelligent per-net dispatch (A* vs Freerouting), JSONL audit trail, UUID-based rollback, frozen NativeBoard dataclasses for immutable board snapshots (Phase 100)
+- **AI Routing Strategy Advisor** — Gemma 4 12B V2 vision LoRA generates routing strategy via RoutingStrategy Protocol. StrategyValidator rejects out-of-bounds coords, unknown nets, impossible layers. Graceful fallback to DeterministicStrategy (Phase 98)
+- **Schematic Ops Bug Fixes** — 5 P0/P1 bugs closed: update_symbols_from_library crash, place_missing_units collision, erc_auto_fix data loss (raw S-expr rewrite), place_no_connects wrong positions, remove_dangling_wires criteria mismatch (Phase 101)
+- **safe_sync_pcb_from_schematic** — Non-destructive PCB sync (ae-26): updates pad nets, lib_ids, adds missing footprints while preserving routing/zones/placement
+- **Track & Via operations** -- 9 new PCB ops for manual copper routing: add_track, add_arc_track, add_via, delete_track, delete_via, move_track_endpoint, lock_track, lock_via, add_stitching_via_pattern (Phase 101)
 
 **v2.1:**
 - **Component search MCP server** — search JLCPCB/EasyEDA components from any AI agent (anonymous, no API key)
