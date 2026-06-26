@@ -71,8 +71,18 @@ def test_r3_zero_zones_emits_no_keepout_or_plane() -> None:
     assert "(plane" not in dsn
 
 
-def test_r3_copper_pour_zone_emits_plane() -> None:
-    """Category 1: a zone with net_name set emits (plane "NET" ...)."""
+def test_r3_copper_pour_zone_skipped_after_bead_24() -> None:
+    """Category 1 (revised post-Bead-#24): copper-pour zones are SKIPPED entirely.
+
+    Original R-3 spec called for `(plane ...)` emission, but Bead #24 fix
+    (analog-ecosystem Phase 129) intentionally skips plane emission because
+    Freerouting rejects plane polygons due to layer declaration mismatches
+    in padstacks. Freerouting treats copper pours as routing obstacles via
+    pad clearances — no plane declarations needed for routing to succeed.
+
+    Test now asserts the new intended behavior: no (plane ...) emitted, no
+    (keepout ...) emitted (it's not a routing keepout, just a copper pour).
+    """
     pcb = """\
 (kicad_pcb
   (net 0 "")
@@ -94,8 +104,10 @@ def test_r3_copper_pour_zone_emits_plane() -> None:
 )
 """
     dsn = generate_dsn(pcb)
-    assert '(plane "GND"' in dsn, "Copper-pour zone with net_name must emit (plane ...)"
-    assert "(keepout" not in dsn
+    # Plane emission intentionally skipped per Bead #24
+    assert '(plane' not in dsn, "Plane emission disabled per Bead #24 (Freerouting rejects)"
+    # Also NOT a keepout — it's a copper pour, not a routing keepout
+    assert '(keepout' not in dsn, "Copper pour should not emit as keepout"
 
 
 def test_r3_routing_keepout_zone_emits_keepout() -> None:
