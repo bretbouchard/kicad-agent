@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import pytest
+from types import SimpleNamespace
+import dataclasses
 from pydantic import ValidationError
 
 
@@ -76,9 +78,10 @@ class TestSilkscreenClearanceEngine:
         from kicad_agent.validation.silkscreen_clearance import check_silkscreen_clearance
         from kicad_agent.parser.pcb_native_types import NativeBoard, NativeFootprint
 
-        fp = NativeFootprint(
+        fp = SimpleNamespace(
             properties={"Reference": "R1", "Value": "10k"},
             layer="F.Cu",
+            reference=None, value=None, pads=[],
         )
         # Mock reference with position far from copper.
         fp_ref = type("Ref", (), {
@@ -97,8 +100,7 @@ class TestSilkscreenClearanceEngine:
             })(),
         ]
 
-        board = NativeBoard()
-        board.footprints = [fp]
+        board = dataclasses.replace(NativeBoard(), footprints=(fp,))
         ir = _make_pcb_ir(board)
 
         result = check_silkscreen_clearance(ir, clearance_mm=0.15)
@@ -110,9 +112,10 @@ class TestSilkscreenClearanceEngine:
         from kicad_agent.validation.silkscreen_clearance import check_silkscreen_clearance
         from kicad_agent.parser.pcb_native_types import NativeBoard, NativeFootprint
 
-        fp = NativeFootprint(
+        fp = SimpleNamespace(
             properties={"Reference": "U1", "Value": "ATMega"},
             layer="F.Cu",
+            reference=None, value=None, pads=[],
         )
         # Reference at same position as pad.
         fp_ref = type("Ref", (), {
@@ -131,8 +134,7 @@ class TestSilkscreenClearanceEngine:
             })(),
         ]
 
-        board = NativeBoard()
-        board.footprints = [fp]
+        board = dataclasses.replace(NativeBoard(), footprints=(fp,))
         ir = _make_pcb_ir(board)
 
         result = check_silkscreen_clearance(ir, clearance_mm=0.15)
@@ -147,9 +149,10 @@ class TestSilkscreenClearanceEngine:
         from kicad_agent.validation.silkscreen_clearance import check_silkscreen_clearance
         from kicad_agent.parser.pcb_native_types import NativeBoard, NativeFootprint
 
-        fp = NativeFootprint(
+        fp = SimpleNamespace(
             properties={"Reference": "C1", "Value": "100nF"},
             layer="F.Cu",
+            reference=None, value=None, pads=[],
         )
         fp_ref = type("Ref", (), {
             "at": (5.0, 5.0),
@@ -167,8 +170,7 @@ class TestSilkscreenClearanceEngine:
             })(),
         ]
 
-        board = NativeBoard()
-        board.footprints = [fp]
+        board = dataclasses.replace(NativeBoard(), footprints=(fp,))
         ir = _make_pcb_ir(board)
 
         result = check_silkscreen_clearance(ir, clearance_mm=0.15)
