@@ -46,11 +46,10 @@ def _make_pcb_ir(board) -> "PcbIR":
 
 def _make_board_with_zones(zones):
     """Create a NativeBoard with the given zones."""
+    import dataclasses
     from kicad_agent.parser.pcb_native_types import NativeBoard
 
-    board = NativeBoard()
-    board.zones = list(zones)
-    return board
+    return dataclasses.replace(NativeBoard(), zones=tuple(zones))
 
 
 # ===================================================================
@@ -417,7 +416,8 @@ class TestAnalyzeSplitPlaneNoZones:
         from kicad_agent.validation.split_plane import analyze_split_plane
 
         board = _make_board_with_zones([])
-        board.zones = None  # type: ignore[assignment]
+        import dataclasses
+        board = dataclasses.replace(board, zones=None)
         ir = _make_pcb_ir(board)
         result = analyze_split_plane(ir, layer="GND")
         assert result.num_zones == 0

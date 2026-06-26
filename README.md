@@ -214,7 +214,7 @@ The skill routes natural language requests through the Python backend — Claude
 
 ## Operations Reference
 
-135 operations across 22 categories (including 9 new track/via ops):
+139 operations across 22 categories (including 9 new track/via ops + safe_sync_pcb_from_schematic):
 
 ### Component Operations
 
