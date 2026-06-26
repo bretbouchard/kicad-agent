@@ -2,8 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: Ready to plan
-stopped_at: Completed Phase 101 Plan 04 — Fixed remove_dangling_wires criteria mismatch (P0-005 R-5). Added trust_erc parameter (default True) with ERC wire_dangling position passthrough. Council H-1 dispatcher fix applied (trust_erc=op.trust_erc). 2 TDD commits (1 RED + 1 GREEN), 4 new tests, 132 passed / 1 skipped (zero regression). PHASE 101 COMPLETE — all 5 P0/P1 bugs closed.
+status: v2.2 Complete-Ops shipped — ready for next milestone
+stopped_at: v2.2 Complete-Ops milestone archived (Phases 98/99/100/101). 4 phases, 12 plans, 138 commits, 280+ tests green. Full Beads sync + Cognee knowledge graph built.
+# prior: Completed Phase 101 Plan 04 — Fixed remove_dangling_wires criteria mismatch (P0-005 R-5). Added trust_erc parameter (default True) with ERC wire_dangling position passthrough. Council H-1 dispatcher fix applied (trust_erc=op.trust_erc). 2 TDD commits (1 RED + 1 GREEN), 4 new tests, 132 passed / 1 skipped (zero regression). PHASE 101 COMPLETE — all 5 P0/P1 bugs closed.
 last_updated: "2026-06-25T18:17:42.075Z"
 last_activity: 2026-06-25
 progress:
@@ -633,7 +634,9 @@ None.
 
 - **WR-07** (Medium, Council Exec Review 99): **RESOLVED 2026-06-25 (subsumed by CR-01 closure above).** `PcbIR.remove_net` now rebuilds pads via `dataclasses.replace(pad, net_name="", net_number=0)` and rebuilds the footprint and board via replace chain. Tags: council-deferred,immutability,phase-99,wr-07.
 
-- **Out-of-scope finding (2026-06-25, surfaced during Phase 101 regression check)**: `generate_bom` is registered as a readonly op (`src/kicad_agent/ops/registry.py:1221`) but missing from query handler dispatch (`_SCHEMATIC_QUERY_HANDLERS` / `_QUERY_HANDLERS` / `_GATE_HANDLERS`). Test failure: `tests/test_schematic_query_dispatch.py::TestReadonlyCoverage::test_schematic_readonly_ops_have_query_handler`. Pre-existing — not caused by Phase 101 (verified by stashing Phase 101 changes; failure persists on master). Resolution: either add `generate_bom` to `_QUERY_HANDLERS` or remove the readonly classification. Likely belongs in `_QUERY_HANDLERS` since it has a BOM handler at `src/kicad_agent/ops/handlers/pcb_bom.py:381`.
+- **Out-of-scope finding (2026-06-25, surfaced during Phase 101 regression check)**: **RESOLVED 2026-06-25 (Phase 101 followup).** `generate_bom` is registered as a readonly op (`src/kicad_agent/ops/registry.py:1221`) but missing from query handler dispatch. Fix: added `_handle_generate_bom` wrapper in `schematic_query.py` that delegates to existing handler in `pcb_bom.py`. Test now passes (9/9 in `test_schematic_query_dispatch.py`). Commit: e9113fe.
+
+- **MD-02 (Medium, Council Exec Review 101 — out-of-scope Bead)**: `tests/test_place_no_connects_power_aware.py:314, 359, 419, 467` patch `kicad_agent.ops.repair.NetPositionIndex` but `repair_erc.py:17` binds the class directly (`from kicad_agent.schematic_routing.net_extractor import NetPositionIndex`). The patch targets the wrong namespace. Tests pass only because `NetPositionIndex.from_file()` raises on minimal test schematics, hitting the `except: net_index = None` branch. If a future change makes `from_file()` succeed on minimal fixtures, the patch would silently fail. **Resolution:** Change patch target from `kicad_agent.ops.repair.NetPositionIndex` to `kicad_agent.ops.repair_erc.NetPositionIndex` at lines 314, 359, 419, 467. Pre-existing issue — NOT introduced by Phase 101. Out-of-scope per bureaucracy §7. Labels: `out-of-scope,test-reliability`. Priority: 2.
 
 ## Session Continuity
 

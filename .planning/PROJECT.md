@@ -70,6 +70,20 @@ If the AI can't produce structurally valid KiCad files through the tool layer, n
 
 **Previous:** v3.0 Full-Stack EDA shipped 2026-06-01. All 54 phases across 10 milestones complete.
 
+## Current State
+
+**Shipped:** v2.2 Complete-Ops (2026-06-26)
+
+Complete routing stack production-ready:
+- **Phase 99** Freerouting Integration Hardening — NativeBoard-backed DSN, courtyard obstacles, net classes, zones, via padstacks, SES multi-layer bridge. SC-3 DRC PASS.
+- **Phase 100** RoutingOrchestrator + Human Approval Loop — Intelligent dispatch (A* vs Freerouting), JSONL audit trail, UUID-based rollback. Closed CR-01 immutability refactor (14 frozen dataclasses).
+- **Phase 98** AI Routing Strategy Advisor — Gemma 4 12B V2 vision LoRA via RoutingStrategy Protocol. StrategyValidator + R-6 graceful fallback. Real model verified.
+- **Phase 101** Schematic Ops Bug Fixes — 5 P0/P1 bugs closed for analog-ecosystem backplane cleanup (update_symbols crash, place_missing_units collision, erc_auto_fix data loss, place_no_connects positions, remove_dangling_wires criteria).
+
+**Stats:** 4 phases, 12 plans, 138 commits, 145 files changed, 29K+ insertions, 270+ tests added, 280+ green. All 4 Council exec reviews APPROVED. 18 follow-up findings resolved.
+
+**Next milestone:** TBD via `/gsd-new-milestone`
+
 ## Previous Milestone: v2.3 mcp-server
 
 **Goal:** Expose all 57 kicad-agent operations as MCP tools so any AI agent (Claude, Cursor, etc.) can invoke KiCad file edits directly.
@@ -125,4 +139,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-25 — Phase 99 Freerouting Integration Hardening complete (NativeBoard-backed DSN, R-1 through R-7, Council APPROVE Round 4)*
+*Last updated: 2026-06-26 — v2.2 Complete-Ops milestone shipped. Routing stack production-ready (Phases 98/99/100/101).*

@@ -806,53 +806,13 @@ Plans:
 - [x] 97-03-PLAN.md -- Dataset merge CLI + adapter metadata registry (D-01, D-03, D-05, D-13, D-14, D-15)
 - [x] 97-04-PLAN.md -- Adapter verification script + full pipeline checkpoint (D-16, D-17, D-18)
 
-### Phase 98: AI Routing Strategy Advisor (Reframed)
+### v2.2 Complete-Ops — SHIPPED 2026-06-26
 
-**Goal:** Use trained Gemma 4 12B V2 vision LoRA to generate routing strategy — net priorities, layer assignments, keepout suggestions — consumed by the Phase 100 orchestrator as `RoutingStrategy` inputs. Strategy-to-constraints translator, validation gate, eval harness vs. deterministic baseline.
-**Requirements**: R-1 KiCadVisionPipeline wired into RoutingOrchestrator via RoutingStrategy interface; R-2 Strategy prompt emits structured JSON (net_priorities, layer_hints, keepouts, routing_notes); R-3 Strategy-to-constraints translator; R-4 Validation gate (reject out-of-bounds, unknown nets, impossible layers); R-5 Eval harness (AI-guided vs Phase 100 baseline: completion rate, via count, trace length, DRC); R-6 Graceful degradation to deterministic fallback
-**Depends on:** Phase 99, Phase 100
-**Plans:** 3/3 plans complete
+**Phases:** 98 (AI Routing Strategy), 99 (Freerouting Integration Hardening), 100 (RoutingOrchestrator + Human Approval Loop), 101 (Schematic Ops Bug Fixes)
+**Plans:** 12/12 complete | **Tests:** 270+ added, 280+ green | **Council:** 4/4 APPROVED
+**Full archive:** [`milestones/v2.2-ROADMAP.md`](milestones/v2.2-ROADMAP.md)
 
-Plans:
-- [x] 98-01-PLAN.md — AiRoutingStrategy + prompt builder (few-shot JSON) + defensive JSON extractor (R-1, R-2, R-3)
-- [x] 98-02-PLAN.md — StrategyValidator (coordinate/net/layer gates) + R-6 fallback wiring to DeterministicStrategy (R-4, R-6)
-- [x] 98-03-PLAN.md — Eval harness CLI comparing AI vs deterministic on 3 fixtures + SC-1 through SC-5 evaluators (R-5)
-
-### Phase 99: Freerouting Integration Hardening
-
-**Goal:** Make Freerouting the reliable multi-layer routing backend by importing full board context (footprints, net classes, zones, via rules) from `.kicad_pcb` and validating output against DRC. Replaces the conceptual "Phase 122B" — multi-layer graph routing is already implemented (graph.py:156-247); this phase closes the real gaps.
-**Requirements**: R-1 Footprint courtyard+pad obstacles from .kicad_pcb into DSN; R-2 Net class propagation (trace width, via std, clearance); R-3 Copper zones + keepouts as routing rules; R-4 Via type config (THT/blind/buried/microvia) from stackup; R-5 45° trace mode; R-6 Freerouting output → TrackSegment/ViaSegment bridge verified multilayer; R-7 Sweep "Phase 122B" code comments → "Phase 99"
-**Depends on:** (standalone — uses existing freerouting.py, dsn_generator.py, FreerouteBatch.java)
-**Plans:** 3/3 plans complete
-
-Plans:
-- [x] 99-01-PLAN.md — DSN generator refactor: R-1 footprints, R-2 net classes, R-3 zones, R-5 snap_angle, R-7 comment sweep
-- [x] 99-02-PLAN.md — R-4 via padstacks per stackup + R-6 SES multi-layer via bridge verification
-- [x] 99-03-PLAN.md — SC-3 e2e DRC validation + SC-4 baseline metrics + SC-5 45° vs Manhattan comparison
-
-### Phase 100: RoutingOrchestrator and Human Approval Loop
-
-**Goal:** Intelligent dispatcher that routes each net through the right backend (in-house A* for simple, Freerouting for complex) with a human approval gate over the result. Builds on existing InteractiveRoutingSession and MultiPassRouter. Includes CR-01 immutability refactor (deferred from Phase 99 Council Exec Review §7.7).
-**Requirements**: R-1 RoutingOrchestrator with RoutingStrategy interface (deterministic policies now, AI pluggable in Phase 98); R-2 Per-net dispatch (net class, pin count, density, diff-pair → router selection); R-3 InteractiveRoutingSession extended for Freerouting output; R-4 Rollback via PersistentUndoStack; R-5 Audit trail (net, router, strategy, result, timestamp); R-6 Deterministic fallback policy; R-7 Batch orchestration API; CR-01 NativeBoard immutability refactor (14 frozen dataclasses + 8 mutation sites migrated to dataclasses.replace)
-**Depends on:** Phase 99
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 100-01-PLAN.md — CR-01 immutability refactor (14 NativeBoard dataclasses frozen + all native-path mutation sites migrated to dataclasses.replace) — **COMPLETE 2026-06-25** (8 immutability tests + 357 regression tests pass)
-- [x] 100-02-PLAN.md — RoutingOrchestrator + DeterministicStrategy + InteractiveRoutingSession Freerouting ingestion + audit trail + batch API (R-1 through R-7) — **COMPLETE 2026-06-25** (66 Phase 100 tests + 357 regression tests pass)
-
-### Phase 101: Schematic Ops Bug Fixes
-
-**Goal:** Close 5 P0/P1 schematic ops bugs blocking analog-ecosystem backplane cleanup (BUGS/P0-001 through P0-005). Three of five share a common root cause: position calculation without proper KiCad 10 transform handling. One is a simple attribute access bug. One requires deprecation + raw S-expr rewrite to prevent data loss.
-**Requirements**: R-1 P0-001 `update_symbols_from_library` crash (Symbol.name attribute access — quick fix); R-2 P0-002 `place_missing_units` position collision (dedup logic for multi-unit components); R-3 P0-003 `erc_auto_fix` data loss (deprecate + raw S-expr rewrite, NOT kiutils re-serialization); R-4 P0-004 `place_no_connects_from_erc` wrong positions (apply symbol rotation transform); R-5 P0-005 `remove_dangling_wires` criteria mismatch (align with KiCad ERC electrical definition)
-**Depends on:** (standalone — fixes existing ops, no new infrastructure)
-**Plans:** 4/4 plans complete
-
-Plans:
-- [x] 101-01-PLAN.md — R-3: Deprecate erc_auto_fix + erc_auto_fix_hierarchical (add `deprecated` field to OpMeta, mark both ops, emit DeprecationWarning) — COMPLETE 2026-06-25
-- [x] 101-02-PLAN.md — R-1: Fix update_symbols_from_library crash (sym.name → sym.entryName, 2 sites: repair_components.py + symbol_mismatch.py) — COMPLETE 2026-06-25
-- [x] 101-03-PLAN.md — R-2 + R-4: Fix position transform bugs (place_missing_units dedup bypass + place_no_connects_from_erc tolerance matching) — COMPLETE 2026-06-25
-- [x] 101-04-PLAN.md — R-5: Fix remove_dangling_wires criteria alignment (trust_erc parameter + ERC wire_dangling passthrough)
+Complete routing stack production-ready: Freerouting backend (P99) → orchestrator + approval (P100) → AI strategy advisor (P98). Plus 5 P0/P1 schematic ops bugs fixed for analog-ecosystem backplane cleanup (P101). Closed §7.7-deferred CR-01 immutability refactor. All 18 Council follow-up findings resolved.
 
 ---
 
