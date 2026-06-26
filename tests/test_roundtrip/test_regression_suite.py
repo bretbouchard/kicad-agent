@@ -17,7 +17,9 @@ FIXTURE_DIR = Path(__file__).parent.parent / "fixtures"
 # Synthetic test fixtures not suitable for roundtrip validation.
 # smd_test_board is a minimal board for auto-routing unit tests — its element
 # ordering differs from real KiCad output, causing UUID reinjector mismatches.
-_SKIP_FILES = {"smd_test_board.kicad_pcb"}
+# phase99_synthetic_4layer is a hand-crafted DSN test fixture (Phase 99 R-3/R-4)
+# with minimal structure — not a real KiCad-exported file.
+_SKIP_FILES = {"smd_test_board.kicad_pcb", "phase99_synthetic_4layer_mixedsignal.kicad_pcb"}
 
 
 # ---------------------------------------------------------------------------

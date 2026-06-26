@@ -23,7 +23,7 @@ class TestRegistryCompleteness:
     def test_registry_has_98_operations(self) -> None:
         # Phase 101-06: 141 ops (was 124 -- two new aliases added:
         # delete_copper_zone and add_zone_keepout, plus prior phase additions)
-        assert len(OPERATION_REGISTRY) == 141
+        assert len(OPERATION_REGISTRY) == 142
 
     def test_validate_registry_completeness_passes(self) -> None:
         result = validate_registry_completeness()
@@ -135,6 +135,7 @@ class TestQueryFunctions:
             "run_gate_check",
             "get_constraints",
             "export_positions",
+            "generate_bom",
         }
         assert readonly_types == expected_readonly
         assert len(readonly) == len(expected_readonly)
@@ -213,6 +214,7 @@ class TestQueryFunctions:
             "remove_copper_zone",
             "remove_keepout_area",
             "remove_dangling_wires",
+            "remove_dangling_tracks",
             "propagate_symbol_change",
         }
         assert op_types == expected

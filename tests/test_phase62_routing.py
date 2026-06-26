@@ -157,7 +157,7 @@ class TestNetIds:
     """Verify TrackSegment and ViaSegment use correct net IDs."""
 
     def test_track_segment_with_net_id(self) -> None:
-        """TrackSegment with net_id=5 produces (net 5 "VCC")."""
+        """TrackSegment with net_id=5 produces (net "VCC")."""
         seg = TrackSegment(
             start_x=0.0, start_y=0.0,
             end_x=10.0, end_y=10.0,
@@ -165,7 +165,7 @@ class TestNetIds:
             net="VCC", net_id=5,
         )
         sexpr = seg.to_sexpr()
-        assert '(net 5 "VCC")' in sexpr
+        assert '(net "VCC")' in sexpr
         assert "(net 0" not in sexpr
 
     def test_track_segment_default_net_id_zero(self) -> None:
@@ -177,10 +177,10 @@ class TestNetIds:
             net="GND",
         )
         sexpr = seg.to_sexpr()
-        assert '(net 0 "GND")' in sexpr
+        assert '(net "GND")' in sexpr
 
     def test_via_segment_with_net_id(self) -> None:
-        """ViaSegment with net_id=3 produces (net 3 "SDA")."""
+        """ViaSegment with net_id=3 produces (net "SDA")."""
         via = ViaSegment(
             x=5.0, y=5.0,
             from_layer="F.Cu", to_layer="B.Cu",
@@ -188,7 +188,7 @@ class TestNetIds:
             net="SDA", net_id=3,
         )
         sexpr = via.to_sexpr()
-        assert '(net 3 "SDA")' in sexpr
+        assert '(net "SDA")' in sexpr
 
     def test_via_segment_default_net_id_zero(self) -> None:
         """ViaSegment without net_id defaults to 0."""
@@ -199,7 +199,7 @@ class TestNetIds:
             net="SCL",
         )
         sexpr = via.to_sexpr()
-        assert '(net 0 "SCL")' in sexpr
+        assert '(net "SCL")' in sexpr
 
     def test_track_segment_no_net(self) -> None:
         """TrackSegment with empty net omits net field."""
