@@ -1268,6 +1268,8 @@ def _handle_auto_place(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     for fp in ir.footprints:
         props = getattr(fp, "properties", {})
         ref = props.get("Reference", "") if isinstance(props, dict) else getattr(fp, "reference", "")
+        if not ref:
+            continue  # Bead #29 fix: skip components with empty Reference (power symbols, mechanical)
         if op.component_refs and ref not in op.component_refs:
             continue
         if op.fixed_refs and ref in op.fixed_refs:
