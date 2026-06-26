@@ -178,6 +178,10 @@ class ViaSegment:
             # Bead #27b fix: KiCad 10 string-only (net "NAME") format.
             parts.append(f'    (net "{self.net}")')
         if uuid_tag:
+            # M-4 fix: KiCad 10 requires QUOTED UUIDs.
+            parts.append(f'    (uuid "{uuid_tag}")')
+        parts.append("  )")
+        return "\n".join(parts)
 
 
 def route_to_segments_multilayer(
