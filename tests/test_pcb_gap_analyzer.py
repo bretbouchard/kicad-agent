@@ -281,12 +281,12 @@ class TestNamingDetection:
             ]
             footprints.append(NativeFootprint(
                 lib_id="test:FP",
-                properties={"Reference": ref, "Value": "X"},
-                pads=pads,
+                _properties_tuple=(("Reference", ref), ("Value", "X")),
+                pads=tuple(pads),
             ))
         return NativeBoard(
-            nets=[NativeNet(number=net_number, name=net_name)],
-            footprints=footprints, general=NativeGeneral(),
+            nets=(NativeNet(number=net_number, name=net_name),),
+            footprints=tuple(footprints), general=NativeGeneral(),
         )
 
     def test_detects_auto_named_net(self):

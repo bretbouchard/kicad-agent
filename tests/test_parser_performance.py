@@ -352,7 +352,7 @@ class TestParserStress:
         """Parser handles empty content safely."""
         board = NativeParser.parse_pcb_content("")
         assert board is not None
-        assert board.footprints == []
+        assert board.footprints == ()
 
     def test_whitespace_only_safe(self):
         """Parser handles whitespace-only content safely."""

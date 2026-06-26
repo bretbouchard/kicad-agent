@@ -147,6 +147,11 @@ _CATEGORY_DEFAULTS: dict[str, list[tuple[str, str | None]]] = {
     "query": [
         ("kicad_agent_reference.md", "Electrical connections between sheets"),
     ],
+    # Manufacturing operations
+    "manufacturing": [
+        ("pcb_editor_reference.md", "Design rules checking"),
+        ("pcb_editor_reference.md", "Net classes"),
+    ],
 }
 
 # ---------------------------------------------------------------------------

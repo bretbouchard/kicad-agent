@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+import dataclasses
 from pydantic import ValidationError
 
 
@@ -121,7 +122,7 @@ class TestExtractNetPath:
             "start": type("P", (), {"x": 5.0, "y": 5.0})(),
             "end": type("P", (), {"x": 15.0, "y": 5.0})(),
         })()
-        board.segments = [seg1, seg2, seg3]
+        board = dataclasses.replace(board, segments=(seg1, seg2, seg3))
 
         ir = _make_pcb_ir(board)
 
