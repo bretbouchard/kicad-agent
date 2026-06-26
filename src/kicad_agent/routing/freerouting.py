@@ -312,14 +312,14 @@ def route_with_freerouting(
             cmd,
             capture_output=True,
             text=True,
-            timeout=600,  # 10 minute timeout
+            timeout=1800,  # 30 minute timeout (Bead #28b: was 600s, too short for 4-layer analog-board with 122 unrouted nets)
         )
     except subprocess.TimeoutExpired:
         return FreeroutingResult(
             success=False,
             ses_path=ses_path,
             dsn_path=dsn_path,
-            stderr="Freerouting timed out after 600s",
+            stderr="Freerouting timed out after 1800s",
             used_freerouting=True,
         )
 
