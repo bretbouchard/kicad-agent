@@ -1004,10 +1004,14 @@ def _handle_route_diff_pair(op: Any, ir: PcbIR, file_path: Path) -> dict[str, An
     )
 
     # Route the differential pair.
+    # Bead analog-ecosystem-16 fix: route_differential_pair takes positional
+    # source_pos/source_neg/target_pos/target_neg + kwarg net_name_pos/net_name_neg.
+    # Previous call used non-existent src_p/src_n/tgt_p/tgt_n kwargs.
     dp_result = route_differential_pair(
         graph,
-        src_p=pos_pins[0], src_n=neg_pins[0],
-        tgt_p=pos_pins[-1], tgt_n=neg_pins[-1],
+        pos_pins[0], neg_pins[0], pos_pins[-1], neg_pins[-1],
+        net_name_pos=op.net_positive,
+        net_name_neg=op.net_negative,
         target_spacing_mm=op.spacing_mm,
         max_length_mismatch_mm=op.max_length_mismatch_mm,
     )

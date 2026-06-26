@@ -261,14 +261,21 @@ def remove_copper_zone(
     new_content = raw[:trim_start] + raw[end:]
     ir.commit_raw_content(new_content)
 
-    # Best-effort: also drop from in-memory board if present
+    # In-memory zone sync: NativeBoard.zones is a frozen tuple, so use
+    # dataclasses.replace (Bead analog-ecosystem-14 fix — previously crashed
+    # with 'tuple' object has no attribute 'remove' on frozen dataclass).
+    # The raw_content mutation above is the source of truth; this in-memory
+    # update keeps the IR cache coherent without forcing a re-parse.
+    import dataclasses
     if zone_uuid is not None:
-        target = next((z for z in ir.board.zones if z.tstamp == zone_uuid), None)
-        if target is not None:
-            ir.board.zones.remove(target)
+        new_zones = tuple(z for z in ir.board.zones if z.tstamp != zone_uuid)
     else:
-        if zone_index < len(ir.board.zones):
-            ir.board.zones.pop(zone_index)
+        zone_list = list(ir.board.zones)
+        if zone_index < len(zone_list):
+            zone_list.pop(zone_index)
+        new_zones = tuple(zone_list)
+    if len(new_zones) != len(ir.board.zones):
+        ir._board = dataclasses.replace(ir.board, zones=new_zones)
 
     ir._record_mutation("remove_copper_zone", {"zone_uuid": identifier})
 
@@ -580,8 +587,7 @@ def add_keepout_area(
     )
 
     zone_sexp = f"""  (zone
-    (net 0)
-    (net_name "")
+    (net "")
     (layer "{layer}")
     (uuid "{keepout_uuid}")
     (hatch edge 0.5)

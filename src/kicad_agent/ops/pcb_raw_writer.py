@@ -118,19 +118,13 @@ class PcbRawWriter:
             f"(xy {x:g} {y:g})" for x, y in polygon
         )
 
-        # KiCad 10 zone net format (Phase 101-06, Council C1):
-        # Zones require BOTH (net N) and (net_name "NAME") tokens, verified
-        # against real KiCad 10 boards (version 20260206) and KiCad 9 boards
-        # (version 20250125). The earlier "(net "name")" name-only form was
-        # wrong -- it breaks kicad-cli parsing on both versions. Both versions
-        # also require (filled_areas_thickness no) and (fill ...) without the
-        # legacy "yes" argument.
-        if net_name:
-            net_line = f'(net {net_number})'
-            net_name_line = f'(net_name "{net_name}")'
-        else:
-            net_line = '(net 0)'
-            net_name_line = '(net_name "")'
+        # KiCad 10 zone net format (Bead analog-ecosystem-19 fix):
+        # Real KiCad 10 boards (version 20260206) use string-only (net "NAME").
+        # The legacy (net N)(net_name "NAME") form was WRONG — it caused
+        # kicad-cli 'Failed to load board' on analog-board during Phase 129.
+        # Verified against working digital-board which uses (net "GND").
+        # For empty net_name (keepouts), emit (net "") — KiCad accepts this.
+        net_line = f'(net "{net_name}")'
 
         # UUID quoted per KiCad S-expression format
         uuid_line = f'(uuid "{uuid}")'
@@ -142,7 +136,6 @@ class PcbRawWriter:
         parts = [
             '  (zone',
             f'    {net_line}',
-            f'    {net_name_line}',
             f'    (layer "{layer}")',
             f'    {uuid_line}',
             '    (hatch edge 0.5)',
