@@ -248,8 +248,15 @@ def generate_dsn(
     for net_name, pins in sorted(nets.items()):
         if not net_name or not pins:
             continue
+        # Bead #28 fix: sanitize net name — KiCad 10 escapes '/' in pin names
+        # as '{slash}' which produces non-ANSI chars Freerouting rejects.
+        # Replace '{slash}' with '_' for DSN purposes (purely cosmetic, the
+        # net identity is preserved).
+        safe_net = net_name.replace("{slash}", "_").replace("{", "_").replace("}", "_")
+        # Doubled-quote escaping per DSN spec
+        safe_net = safe_net.replace('"', '""')
         pins_str = " ".join(pins)
-        lines.append(f'    (net "{net_name}"')
+        lines.append(f'    (net "{safe_net}"')
         lines.append(f"      (pins {pins_str})")
         lines.append("    )")
     lines.append("  )")  # end network
@@ -671,7 +678,14 @@ def _extract_nets_from_board(board: NativeBoard) -> dict[str, list[str]]:
     """Extract net connectivity as {net_name: [ref-pad, ...]} from NativeBoard.
 
     Iterates footprints -> pads -> net_name. Deduplicates pin references.
+
+    Bead #28 fix: sanitize '{slash}' escape and bare '{' '}' chars from
+    net names + pin references. KiCad 10 escapes '/' as '{slash}' in pin
+    names which produces non-ANSI chars Freerouting rejects.
     """
+    def _sanitize(s: str) -> str:
+        return s.replace("{slash}", "_").replace("{", "_").replace("}", "_")
+
     nets: dict[str, set[str]] = {}
     for fp in board.footprints:
         ref = fp.properties.get("Reference", "")
@@ -679,8 +693,10 @@ def _extract_nets_from_board(board: NativeBoard) -> dict[str, list[str]]:
             continue
         for pad in fp.pads:
             if pad.net_name:
-                pin_ref = f"{ref}-{pad.number}"
-                nets.setdefault(pad.net_name, set()).add(pin_ref)
+                safe_net = _sanitize(pad.net_name)
+                safe_pad_num = _sanitize(pad.number)
+                pin_ref = f"{ref}-{safe_pad_num}"
+                nets.setdefault(safe_net, set()).add(pin_ref)
     return {name: sorted(pins) for name, pins in nets.items()}
 
 
