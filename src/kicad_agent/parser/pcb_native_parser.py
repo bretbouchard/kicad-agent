@@ -889,7 +889,11 @@ class NativeParser:
                     net_number = net_num
                     net = net_num  # CRITICAL-2 compatibility
                 except (ValueError, TypeError):
-                    pass
+                    # Bead analog-ecosystem-24 fix: KiCad 10 string-only format
+                    # (net "NAME") has the name at index [1] as a string, no number.
+                    if isinstance(net_block[1], str):
+                        net_name = net_block[1]
+                        netName = net_block[1]
                 if len(net_block) >= 3 and isinstance(net_block[2], str):
                     net_name = net_block[2]
                     netName = net_block[2]  # CRITICAL-2 compatibility

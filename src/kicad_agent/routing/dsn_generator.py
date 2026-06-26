@@ -435,10 +435,17 @@ def _graphic_points(g: NativeGraphicItem) -> list[tuple[float, float]]:
 def _emit_zones(lines: list[str], board: NativeBoard) -> None:
     """R-3: emit copper zones as (plane ...) or (keepout ...) per C-1 classification.
 
-    Category 1 (copper pour, net_name != ""): emit (plane "NET" (layer L) (polygon ...)).
+    Category 1 (copper pour, net_name != ""): SKIP plane emission.
+        Bead analog-ecosystem-24 fix: previously emitted (plane "NET" (layer L) (polygon ...))
+        but Freerouting's DSN parser NPEs on plane_info.area = null when the zone polygon
+        extends even slightly outside the board boundary (which happens routinely because
+        _get_board_bbox_points and _extract_board_outline use different parsing paths).
+        Freerouting treats copper pours as routing obstacles implicitly via pad clearances,
+        so plane emission is not required for routing to succeed. The plane construct in
+        Specctra DSN is for power-plane routing algorithms which Freerouting does not
+        perform on this board.
     Category 2 (routing keepout, is_routing_keepout): emit (keepout "NAME" (polygon ...)).
-    Category 3 (placement-only keepout): SKIP — Freerouting does not place footprints,
-        so emitting a routing keepout would be the old binary-logic bug (C-1 fix).
+    Category 3 (placement-only keepout): SKIP — Freerouting does not place footprints.
     """
     for zone in board.zones:
         poly_um = [
@@ -451,14 +458,9 @@ def _emit_zones(lines: list[str], board: NativeBoard) -> None:
 
         net_name = zone.net_name or getattr(zone, "netName", "")
         if net_name:
-            # Category 1: copper pour -> plane. Multi-layer -> one per layer.
-            target_layers = zone.layers if zone.layers else [zone.layer or "F.Cu"]
-            for layer in target_layers:
-                if not layer:
-                    continue
-                lines.append(
-                    f'    (plane "{net_name}" (layer {layer}) (polygon 0 {poly_str}))'
-                )
+            # Category 1: copper pour -> SKIP plane emission (Bead #24 fix).
+            # Freerouting routes around copper pours via pad clearances.
+            continue
         elif getattr(zone, "is_routing_keepout", False):
             # Category 2: routing keepout (tracks or vias not_allowed).
             label = f"ZONE_{zone.uuid[:8]}" if zone.uuid else f"ZONE_{id(zone) & 0xFFFFFFFF:08x}"

@@ -78,8 +78,10 @@ def add_copper_zone(
             net_number = new_net.number
 
     # Determine outline points
+    # Bead analog-ecosystem-24: margin=0.0 to keep zone within board boundary
+    # (was 1.0 which caused Freerouting DSN parser NPE on plane_info.area)
     if outline_points is None:
-        points = _get_board_bbox_points(board, margin=1.0)
+        points = _get_board_bbox_points(board, margin=0.0)
     else:
         points = outline_points
 
@@ -378,15 +380,21 @@ def assign_net_class(
     }
 
 
-def _get_board_bbox_points(board: Board, margin: float = 1.0) -> list[tuple[float, float]]:
+def _get_board_bbox_points(board: Board, margin: float = 0.0) -> list[tuple[float, float]]:
     """Get board bounding box outline points with margin.
 
     Scans Edge.Cuts graphic items to find the bounding box. Falls back
     to (0,0)-(100,100) if no outline exists.
 
+    Bead analog-ecosystem-24 fix: default margin changed from 1.0 to 0.0.
+    Zones extending beyond board boundary cause Freerouting DSN parser NPE
+    (plane_info.area = null). The 1.0mm margin pushed zone polygons outside
+    the board outline, which Specctra DSN rejects. Use 0.0 margin by default
+    so zones stay within the Edge.Cuts bounding box.
+
     Args:
         board: kiutils Board object.
-        margin: Margin to add around the bounding box in mm.
+        margin: Margin to add around the bounding box in mm (default 0.0).
 
     Returns:
         List of 4 (x, y) tuples forming a rectangle.
