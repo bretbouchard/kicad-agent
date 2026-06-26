@@ -62,7 +62,9 @@ class TrackSegment:
             f"    (layer \"{self.layer}\")",
         ]
         if self.net:
-            parts.append(f'    (net {self.net_id} "{self.net}")')
+            # Bead #27b fix: KiCad 10 string-only (net "NAME") format.
+            # Legacy (net N "NAME") form breaks kicad-cli pcb load.
+            parts.append(f'    (net "{self.net}")')
         if uuid_tag:
             # M-4 fix: KiCad 10 requires QUOTED UUIDs (verified in real fixtures:
             # (uuid "00000000-0000-0000-0000-0000551afce5")). Unquoted form is
@@ -173,14 +175,9 @@ class ViaSegment:
             f'    (layers "{self.from_layer}" "{self.to_layer}")',
         ]
         if self.net:
-            parts.append(f'    (net {self.net_id} "{self.net}")')
+            # Bead #27b fix: KiCad 10 string-only (net "NAME") format.
+            parts.append(f'    (net "{self.net}")')
         if uuid_tag:
-            # M-4 fix: KiCad 10 requires QUOTED UUIDs (verified in real fixtures:
-            # (uuid "00000000-0000-0000-0000-0000551afce5")). Unquoted form is
-            # rejected by kicad-cli pcb drc parse phase.
-            parts.append(f'    (uuid "{uuid_tag}")')
-        parts.append("  )")
-        return "\n".join(parts)
 
 
 def route_to_segments_multilayer(
