@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: v2.2 Complete-Ops shipped — ready for next milestone
-stopped_at: v2.2 Complete-Ops milestone archived (Phases 98/99/100/101). 4 phases, 12 plans, 138 commits, 280+ tests green. Full Beads sync + Cognee knowledge graph built.
-# prior: Completed Phase 101 Plan 04 — Fixed remove_dangling_wires criteria mismatch (P0-005 R-5). Added trust_erc parameter (default True) with ERC wire_dangling position passthrough. Council H-1 dispatcher fix applied (trust_erc=op.trust_erc). 2 TDD commits (1 RED + 1 GREEN), 4 new tests, 132 passed / 1 skipped (zero regression). PHASE 101 COMPLETE — all 5 P0/P1 bugs closed.
-last_updated: "2026-06-25T18:17:42.075Z"
-last_activity: 2026-06-25
+status: Ready to execute
+stopped_at: Completed Phase 101 Plan 04 — Fixed remove_dangling_wires criteria mismatch (P0-005 R-5). Added trust_erc parameter (default True) with ERC wire_dangling position passthrough. Council H-1 dispatcher fix applied (trust_erc=op.trust_erc). 2 TDD commits (1 RED + 1 GREEN), 4 new tests, 132 passed / 1 skipped (zero regression). PHASE 101 COMPLETE — all 5 P0/P1 bugs closed.
+last_updated: "2026-06-29T22:41:51.418Z"
+last_activity: 2026-06-29
 progress:
-  total_phases: 129
+  total_phases: 130
   completed_phases: 51
-  total_plans: 272
-  completed_plans: 216
+  total_plans: 275
+  completed_plans: 217
   percent: 79
 ---
 
@@ -22,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 98 — ai-routing-strategy-advisor
-Last activity: 2026-06-25
+**Current focus:** Phase 102 — Safe Annotate — non-destructive refdes renumbering
+Last activity: 2026-06-29
 
 ## Current Position
 
-Phase: 99
-Plan: Not started
+Phase: 102 (Safe Annotate — non-destructive refdes renumbering) — EXECUTING
+Plan: 2 of 3
 **All milestones shipped (v1.0 through v4.1). 94 phases, 266 plans, 3300+ tests.**
 
 Last milestone: v4.1 Stage-Safe PCB Flow (Phases 85-94)
@@ -54,7 +53,7 @@ Prior milestones: v4.0 Hybrid Routing (80-84), v3.2 Gap Analysis (79), v3.1 Coun
 
 Council review: 4 findings fixed, all passing.
 
-Last activity: 2026-06-25 -- Phase 98 execution started
+Last activity: 2026-06-29
 
 ### Phase 101: Schematic Ops Bug Fixes (in progress)
 
@@ -463,6 +462,7 @@ Last activity: 2026-06-25 -- Phase 98 execution started
 - Phase 99 added: Freerouting Integration Hardening — replaces conceptual Phase 122B; closes real multi-layer gaps (footprint obstacles, net classes, zones, via types, 45° traces). Multi-layer graph scaffolding already exists in graph.py:156-247
 - Phase 100 added: RoutingOrchestrator and Human Approval Loop — dispatcher routes nets to A* vs Freerouting, defines RoutingStrategy interface that Phase 98 plugs into, extends InteractiveRoutingSession for Freerouting output
 - Phase 101 added: Schematic Ops Bug Fixes — close 5 P0/P1 bugs (P0-001 through P0-005) from analog-ecosystem backplane cleanup. BUGS/ reports source.
+- Phase 102 added: Safe Annotate — non-destructive refdes renumbering. Implements `safe_annotate` op mirroring `safe_sync_pcb_from_schematic` raw S-expr edit pattern (never kiutils). Closes FEATURE-008 / unblocks analog-ecosystem Phase 145. Existing `annotate` op forbidden (P0-006).
 
 ### v4.1 Stage-Safe PCB Flow (Phases 85-94)
 
@@ -610,6 +610,9 @@ Recent decisions affecting current work:
 - [v2.2-100]: SC-5 baseline test asserts >= 45% (lower bound only) — orchestrator combines A* + Freerouting so should meet or exceed Freerouting-alone baseline
 - [Phase 101-04]: trust_erc defaults True in remove_dangling_wires — ERC wire_dangling positions augment geometric criteria (union, not replacement), preserving Phase 123 Wave 2 success while fixing silent no-op on ERC-flagged patterns
 - [Phase 101-04]: Council H-1 fix — dispatcher handlers/schematic.py now passes trust_erc=op.trust_erc (schema accepted the field but dispatcher was silently dropping it)
+- [Phase 102]: Phase 102-01: H-02 Option A applied — all 5 fixtures omit (instances ...) blocks. KiCad netlist exporter reads refdes from (reference ...) inside instances; if inherited from template, Plan 02 handler would edit (property Reference ...) while leaving stale (reference ...) — silent partial-annotation identical to P0-006. Option B (handler co-edits instances) DEFERRED-TO-NAMED-TARGET — trigger: Phase 145 manual verification on analog-board.kicad_sch fails.
+- [Phase 102]: Phase 102-01: Multi-sheet root fixture has ZERO placed component symbols (only 2 sheet blocks) — ensures TC-5 root sheet guard fires correctly (has children + no own components = root sheet).
+- [Phase 102]: Phase 102-01: TC-6 stub documents function-scoped AST grep per Council H-01 — uses inspect.getsource(_handle_safe_annotate) mirroring tests/test_safe_sync_pcb_from_schematic.py:74-88, NOT whole-module walk that would false-positive if any future sibling handler legitimately uses to_file().
 
 ### Pending Todos
 
@@ -623,6 +626,7 @@ Recent decisions affecting current work:
 |---|-------------|------|--------|-----------|
 | 260616-wqd | Build a validate_labels pre-flight check in kicad-agent | 2026-06-17 | ee47896 | [260616-wqd-build-a-validate-labels-pre-flight-check](./quick/260616-wqd-build-a-validate-labels-pre-flight-check/) |
 | Phase 101 P04 | 5m | 2 tasks | 4 files |
+| Phase 102 P01 | 5min | 2 tasks | 6 files |
 
 ### Blockers/Concerns
 
