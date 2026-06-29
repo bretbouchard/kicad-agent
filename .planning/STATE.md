@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
 status: Ready to execute
-stopped_at: Completed Phase 101 Plan 04 — Fixed remove_dangling_wires criteria mismatch (P0-005 R-5). Added trust_erc parameter (default True) with ERC wire_dangling position passthrough. Council H-1 dispatcher fix applied (trust_erc=op.trust_erc). 2 TDD commits (1 RED + 1 GREEN), 4 new tests, 132 passed / 1 skipped (zero regression). PHASE 101 COMPLETE — all 5 P0/P1 bugs closed.
-last_updated: "2026-06-29T22:41:51.418Z"
+stopped_at: Completed Phase 102 Plan 02 — Implemented safe_annotate op end-to-end (schema + SELF_SERIALIZING_OPS + registry + raw-edit handler). 6 tests GREEN (TC-1, 2, 5, 6, 7, 8), TC-3/4 remain for Plan 03. 3 atomic commits. Rule 1 bug fixed (UUID regex matched both KiCad 10 unquoted and legacy quoted forms). Zero regression (12/12 sibling safe_sync tests pass).
+last_updated: "2026-06-29T22:57:00.000Z"
 last_activity: 2026-06-29
 progress:
   total_phases: 130
   completed_phases: 51
   total_plans: 275
-  completed_plans: 217
+  completed_plans: 218
   percent: 79
 ---
 
@@ -27,8 +27,8 @@ Last activity: 2026-06-29
 ## Current Position
 
 Phase: 102 (Safe Annotate — non-destructive refdes renumbering) — EXECUTING
-Plan: 2 of 3
-**All milestones shipped (v1.0 through v4.1). 94 phases, 266 plans, 3300+ tests.**
+Plan: 3 of 3 (next: Plan 03 — multi-sheet integration tests TC-3/TC-4 + docs + deprecation warning)
+**All milestones shipped (v1.0 through v4.1). 94 phases, 267 plans, 3311+ tests.**
 
 Last milestone: v4.1 Stage-Safe PCB Flow (Phases 85-94)
 
@@ -54,6 +54,29 @@ Prior milestones: v4.0 Hybrid Routing (80-84), v3.2 Gap Analysis (79), v3.1 Coun
 Council review: 4 findings fixed, all passing.
 
 Last activity: 2026-06-29
+
+### Phase 102: Safe Annotate (in progress)
+
+- Plan 102-01: Test infrastructure + 5 KiCad 10 fixtures (COMPLETE)
+  - 8 RED test stubs (TC-1..TC-8) in tests/test_safe_annotate.py
+  - 5 fixtures under tests/fixtures/safe_annotate/ (single-sheet + 3-sheet hierarchy)
+  - H-02 INVARIANT: zero (instances ...) blocks across all fixtures
+  - H-02 Option B (handler co-edits instances) DEFERRED-TO-NAMED-TARGET
+
+- Plan 102-02: Core op implementation (COMPLETE)
+  - safe_annotate op fully functional for current_sheet scope and dry_run
+  - SchematicRawWriter.replace_reference_property (UUID-targeted raw Reference value replacement)
+  - SafeAnnotateOp Pydantic schema (6 fields, LOCKED defaults)
+  - SELF_SERIALIZING_OPS membership (bypasses kiutils serialize_schematic) with M-01 inline comment
+  - Root sheet guard with LOCKED error message
+  - Function-scoped AST grep proof (H-01): zero to_file Call nodes in _handle_safe_annotate
+  - M-02 lazy import (validate_paren_balance inside handler body)
+  - M-03 tie-break docstring (_build_rename_plan documents all 3 order options)
+  - Rule 1 bug fixed: UUID regex matches both KiCad 10 unquoted and legacy quoted forms
+  - TC-1, 2, 5, 6, 7, 8 GREEN (6 tests); TC-3, TC-4 remain RED (Plan 03)
+  - 5 new unit tests in test_schematic_raw_writer.py
+  - 12/12 sibling safe_sync tests pass (zero regression)
+  - 3 atomic commits: 33b9b997 (raw writer method), 82dd9cb1 (schema+registry+self-serializing), b8be12bb (handler+tests)
 
 ### Phase 101: Schematic Ops Bug Fixes (in progress)
 
@@ -613,6 +636,9 @@ Recent decisions affecting current work:
 - [Phase 102]: Phase 102-01: H-02 Option A applied — all 5 fixtures omit (instances ...) blocks. KiCad netlist exporter reads refdes from (reference ...) inside instances; if inherited from template, Plan 02 handler would edit (property Reference ...) while leaving stale (reference ...) — silent partial-annotation identical to P0-006. Option B (handler co-edits instances) DEFERRED-TO-NAMED-TARGET — trigger: Phase 145 manual verification on analog-board.kicad_sch fails.
 - [Phase 102]: Phase 102-01: Multi-sheet root fixture has ZERO placed component symbols (only 2 sheet blocks) — ensures TC-5 root sheet guard fires correctly (has children + no own components = root sheet).
 - [Phase 102]: Phase 102-01: TC-6 stub documents function-scoped AST grep per Council H-01 — uses inspect.getsource(_handle_safe_annotate) mirroring tests/test_safe_sync_pcb_from_schematic.py:74-88, NOT whole-module walk that would false-positive if any future sibling handler legitimately uses to_file().
+- [Phase 102]: Phase 102-02: safe_annotate registered in SELF_SERIALIZING_OPS (single_file scope) — different dispatch path from safe_sync_pcb_from_schematic which uses CROSS_FILE_OP_TYPES (multi-file scope). Both bypass serialize_schematic but via different mechanisms matching their file-scope semantics.
+- [Phase 102]: Phase 102-02: UUID regex accepts both KiCad 10 unquoted (uuid abc-123) AND legacy quoted (uuid "abc-123") forms via \"?...\"? optional-quote pattern. Applied to both _extract_symbols_with_refs and SchematicRawWriter.replace_reference_property. Original plan regex assumed quoted form only — Rule 1 bug fixed during execution.
+- [Phase 102]: Phase 102-02: Test invocation uses OperationExecutor(base_dir=tmp_path) + Operation.model_validate({"root": {...}}) + executor.execute(op). target_file is relative basename inside tmp_path (path confinement check rejects absolute paths). Mirrors tests/test_modify_property.py:266-282.
 
 ### Pending Todos
 
@@ -626,6 +652,7 @@ Recent decisions affecting current work:
 |---|-------------|------|--------|-----------|
 | 260616-wqd | Build a validate_labels pre-flight check in kicad-agent | 2026-06-17 | ee47896 | [260616-wqd-build-a-validate-labels-pre-flight-check](./quick/260616-wqd-build-a-validate-labels-pre-flight-check/) |
 | Phase 101 P04 | 5m | 2 tasks | 4 files |
+| Phase 102 P02 | 9m | 3 tasks | 8 files |
 | Phase 102 P01 | 5min | 2 tasks | 6 files |
 
 ### Blockers/Concerns
@@ -644,8 +671,8 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 101 Plan 04 — Fixed remove_dangling_wires criteria mismatch (P0-005 R-5). Added trust_erc parameter (default True) with ERC wire_dangling position passthrough. Council H-1 dispatcher fix applied (trust_erc=op.trust_erc). 2 TDD commits (1 RED + 1 GREEN), 4 new tests, 132 passed / 1 skipped (zero regression). PHASE 101 COMPLETE — all 5 P0/P1 bugs closed.
-Resume with: Phase 101 verification (run /gsd-verify-work 101 for acceptance testing on analog-ecosystem backplane), then next milestone planning.
+Stopped at: Completed Phase 102 Plan 02 — Implemented safe_annotate op end-to-end (schema + SELF_SERIALIZING_OPS + registry + raw-edit handler). 6 tests GREEN (TC-1, 2, 5, 6, 7, 8), TC-3/4 remain for Plan 03. 3 atomic commits. Rule 1 bug fixed (UUID regex matched both KiCad 10 unquoted and legacy quoted forms). Zero regression (12/12 sibling safe_sync tests pass).
+Resume with: Phase 102 Plan 03 (multi-sheet integration tests TC-3/TC-4 with kicad-cli, API docs at docs/api/safe_annotate.md, DeprecationWarning on forbidden annotate op).
 
 ### Phase 100: RoutingOrchestrator and Human Approval Loop (complete)
 
