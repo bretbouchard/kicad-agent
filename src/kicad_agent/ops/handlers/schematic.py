@@ -255,10 +255,28 @@ def _handle_safe_annotate(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
             if not validate_paren_balance(new_raw):
                 raise RuntimeError(f"Paren imbalance after refdes edit on {sheet_path_str}")
 
-    # ---- WRITE (atomic_write per sheet, skip unchanged for idempotency) ----
-    for sheet_path_str, new_raw in new_contents.items():
-        if new_raw != original_contents[sheet_path_str]:
-            atomic_write(Path(sheet_path_str), new_raw)
+    # ---- WRITE (multi-sheet atomic transaction — CR-01 fix) ----
+    # The executor's Transaction already protects root_path (target_file).
+    # Sub-sheets need their own atomic coordination: all sub-sheets commit
+    # together or all rollback. The root is written separately (executor-
+    # protected) to avoid double-locking the same file.
+    root_str = str(root_path)
+    changed_subs = [
+        Path(p) for p, raw in new_contents.items()
+        if raw != original_contents[p] and p != root_str
+    ]
+    if changed_subs:
+        from kicad_agent.crossfile.atomic import AtomicOperation
+        with AtomicOperation(changed_subs) as atomic:
+            for sub_path in changed_subs:
+                atomic_write(sub_path, new_contents[str(sub_path)])
+            if new_contents.get(root_str, original_contents[root_str]) != original_contents[root_str]:
+                atomic_write(root_path, new_contents[root_str])
+            result = atomic.commit()
+            if not result.success:
+                raise RuntimeError(f"safe_annotate atomic commit failed: {result.error}")
+    elif new_contents.get(root_str, original_contents[root_str]) != original_contents[root_str]:
+        atomic_write(root_path, new_contents[root_str])
 
     # ---- RESPONSE ----
     renamed = [r for r in rename_plan if r["old_ref"] != r["new_ref"]]
