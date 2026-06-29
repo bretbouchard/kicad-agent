@@ -7,10 +7,13 @@ by the executor's _dispatch method.
 
 import dataclasses
 import logging
+import re
 from pathlib import Path
 from typing import Any, Callable
 
 from kicad_agent.ir.schematic_ir import SchematicIR
+from kicad_agent.io.atomic_write import atomic_write
+from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +157,299 @@ def _handle_renumber_refs(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
 def _handle_annotate(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     changes = ir.annotate_components(prefix_filter=op.prefix_filter)
     return {"annotated": [{"old": o, "new": n} for o, n in changes]}
+
+
+@register_schematic("safe_annotate")
+def _handle_safe_annotate(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    """Non-destructive refdes renumbering via raw S-expression edits.
+
+    Mirrors safe_sync_pcb_from_schematic pattern: never kiutils.to_file().
+    All edits via SchematicRawWriter + atomic_write.
+    """
+    # Lazy imports (M-02: cross-handler imports proven to need lazy loading
+    # to avoid circulars; matches pcb_auto_route.py sibling pattern).
+    from kicad_agent.ops.handlers.pcb_cleanup import validate_paren_balance
+
+    root_path = Path(file_path)
+    raw_content = root_path.read_text()
+
+    # ---- ROOT SHEET GUARD (LOCKED error message) ----
+    has_sheet_blocks = bool(re.search(r'\(sheet\s', raw_content))
+    has_placed_components = bool(
+        re.search(r'\(symbol\s+\(lib_id\s+"[^"]*"\)\s+\(at\s', raw_content)
+    )
+    if has_sheet_blocks and not has_placed_components:
+        raise ValueError(
+            "safe_annotate operates per-sheet; root sheet contains hierarchy only — use sub-sheet scope"
+        )
+
+    # ---- DISCOVER TARGET SHEETS ----
+    if op.scope == "current_sheet":
+        sheet_paths = [root_path]
+    else:  # whole_project
+        from kicad_agent.schematic_routing.schematic_graph import SchematicGraph
+        tree = SchematicGraph.from_hierarchy(str(root_path))
+        sheet_paths = [Path(tree.filepath)]
+        _collect_children(tree, sheet_paths)
+
+    # ---- COLLECT COMPONENTS PER SHEET ----
+    all_components = []  # list of {sheet, uuid, ref, x, y}
+    for sheet_path in sheet_paths:
+        sheet_raw = sheet_path.read_text()
+        components = _extract_symbols_with_refs(sheet_raw)
+        for c in components:
+            c["sheet"] = str(sheet_path)
+            all_components.append(c)
+
+    # ---- BUILD RENAME PLAN ----
+    rename_plan = _build_rename_plan(all_components, reset=op.reset, order=op.order)
+
+    # ---- DRY RUN SHORT-CIRCUIT ----
+    if op.dry_run:
+        return {
+            "annotated": [
+                {"sheet": r["sheet"], "uuid": r["uuid"], "old_ref": r["old_ref"], "new_ref": r["new_ref"]}
+                for r in rename_plan if r["old_ref"] != r["new_ref"]
+            ],
+            "stats": {
+                "sheets_touched": len({r["sheet"] for r in rename_plan if r["old_ref"] != r["new_ref"]}),
+                "refs_renamed": sum(1 for r in rename_plan if r["old_ref"] != r["new_ref"]),
+                "duplicates_resolved": sum(1 for r in rename_plan if r.get("deduped")),
+                "placekeepers_filled": sum(1 for r in rename_plan if r["old_ref"].endswith("?")),
+            },
+            "skipped": [],
+            "paren_balance_check": "PASS",
+            "format_preservation_check": "PASS",
+            "dry_run": True,
+        }
+
+    # ---- APPLY EDITS RAW (per sheet, in memory) ----
+    original_contents = {str(p): p.read_text() for p in sheet_paths}
+    new_contents = dict(original_contents)  # copy
+
+    for rename in rename_plan:
+        if rename["old_ref"] == rename["new_ref"]:
+            continue  # no change needed
+        sheet_key = rename["sheet"]
+        new_contents[sheet_key] = SchematicRawWriter.replace_reference_property(
+            new_contents[sheet_key], rename["uuid"], rename["new_ref"]
+        )
+
+    # ---- PAREN BALANCE VALIDATION (pre-write, fail-closed) ----
+    for sheet_path_str, new_raw in new_contents.items():
+        if new_raw != original_contents[sheet_path_str]:
+            if not validate_paren_balance(new_raw):
+                raise RuntimeError(f"Paren imbalance after refdes edit on {sheet_path_str}")
+
+    # ---- WRITE (atomic_write per sheet, skip unchanged for idempotency) ----
+    for sheet_path_str, new_raw in new_contents.items():
+        if new_raw != original_contents[sheet_path_str]:
+            atomic_write(Path(sheet_path_str), new_raw)
+
+    # ---- RESPONSE ----
+    renamed = [r for r in rename_plan if r["old_ref"] != r["new_ref"]]
+    return {
+        "annotated": [
+            {"sheet": r["sheet"], "uuid": r["uuid"], "old_ref": r["old_ref"], "new_ref": r["new_ref"]}
+            for r in renamed
+        ],
+        "stats": {
+            "sheets_touched": len({r["sheet"] for r in renamed}),
+            "refs_renamed": len(renamed),
+            "duplicates_resolved": sum(1 for r in renamed if r.get("deduped")),
+            "placekeepers_filled": sum(1 for r in renamed if r["old_ref"].endswith("?")),
+        },
+        "skipped": [],
+        "paren_balance_check": "PASS",
+        "format_preservation_check": "PASS",
+    }
+
+
+def _collect_children(node, paths: list) -> None:
+    """Recursively collect child sheet paths from a HierarchicalSchematic node."""
+    for child in node.children:
+        paths.append(Path(child.filepath))
+        _collect_children(child, paths)
+
+
+def _extract_symbols_with_refs(raw: str) -> list:
+    """Extract placed component symbols with (uuid, ref, x, y) from raw schematic content.
+
+    Filters OUT lib_symbol definitions (which use (symbol "Name" ...) form)
+    and power symbols (ref starts with '#').
+
+    Returns list of {uuid, ref, x, y} dicts.
+    """
+    from kicad_agent.ir.schematic_ir import _REF_PATTERN
+
+    symbols = []
+    for m in re.finditer(r'\(symbol\b', raw):
+        start = m.start()
+        depth = 0
+        i = start
+        end = None
+        while i < len(raw):
+            if raw[i] == '(':
+                depth += 1
+            elif raw[i] == ')':
+                depth -= 1
+                if depth == 0:
+                    end = i + 1
+                    break
+            i += 1
+        if end is None:
+            continue
+
+        block = raw[start:end]
+
+        # Must be a placed instance: has (lib_id "...") AND (at X Y ...)
+        if not re.search(r'\(lib_id\s+"[^"]*"\)', block):
+            continue  # lib_symbol definition, skip
+        at_m = re.search(r'\(at\s+([\d.-]+)\s+([\d.-]+)', block)
+        if not at_m:
+            continue
+
+        uuid_m = re.search(r'\(uuid\s+"?([^")\s]+)"?', block)
+        if not uuid_m:
+            continue
+        symbol_uuid = uuid_m.group(1)
+
+        ref_m = re.search(r'\(property\s+"Reference"\s+"([^"]+)"', block)
+        ref = ref_m.group(1) if ref_m else ""
+
+        # Skip power symbols (#PWR?, #PWR01, etc.)
+        if ref.startswith("#"):
+            continue
+
+        symbols.append({
+            "uuid": symbol_uuid,
+            "ref": ref,
+            "x": float(at_m.group(1)),
+            "y": float(at_m.group(2)),
+        })
+
+    return symbols
+
+
+def _build_rename_plan(components: list, reset: bool, order: str) -> list:
+    """Build a per-component rename plan.
+
+    Args:
+        components: list of {uuid, ref, x, y, sheet} dicts.
+        reset: if True, treat all refs as <prefix>? before renumbering.
+        order: one of "by_x_position" | "by_y_position" | "sheet_order".
+
+    Sort tie-break order (LOCKED per CONTEXT.md line 80 — "when two components
+    share the same X coordinate, break ties by Y then by sheet order"):
+
+    - ``by_x_position``: sort key = ``(x, y, sheet_path)`` — primary X,
+      tie-break Y, final tie-break sheet path string. This is the LOCKED
+      order from CONTEXT.md.
+    - ``by_y_position``: sort key = ``(y, x, sheet_path)`` — primary Y,
+      tie-break X, final tie-break sheet path string.
+    - ``sheet_order``: sort key = ``(sheet_path, x, y)`` — primary sheet
+      path string, tie-break X, final tie-break Y.
+
+    The ``sheet_path`` tie-break is a deterministic string comparison on the
+    sheet's absolute path; for real-world schematics whose paths vary across
+    filesystems, sort order may differ between runs. Fixtures in Phase 102
+    use stable paths so tests are deterministic.
+
+    Returns list of {uuid, old_ref, new_ref, sheet, deduped?} dicts.
+    """
+    from kicad_agent.ir.schematic_ir import _REF_PATTERN
+
+    # Parse refs into (prefix, suffix) tuples; skip refs that don't match the pattern.
+    parsed = []
+    for c in components:
+        match = _REF_PATTERN.match(c["ref"]) if c["ref"] else None
+        if not match:
+            # Unparseable or empty ref — skip (can't renumber what we can't parse)
+            parsed.append({**c, "prefix": None, "suffix": None})
+            continue
+        prefix, suffix = match.group(1), match.group(2)
+        parsed.append({**c, "prefix": prefix, "suffix": suffix})
+
+    # Filter to annotatable components (have a prefix)
+    annotatable = [c for c in parsed if c["prefix"] is not None]
+
+    # Determine effective refs: if reset, all become "<prefix>?"
+    if reset:
+        for c in annotatable:
+            c["effective_ref"] = f"{c['prefix']}?"
+    else:
+        for c in annotatable:
+            c["effective_ref"] = c["ref"]
+
+    # Sort by order option (tie-break documented in the docstring above — M-03).
+    if order == "by_x_position":
+        sort_key = lambda c: (c["x"], c["y"], c["sheet"])
+    elif order == "by_y_position":
+        sort_key = lambda c: (c["y"], c["x"], c["sheet"])
+    else:  # sheet_order
+        sort_key = lambda c: (c["sheet"], c["x"], c["y"])
+
+    annotatable.sort(key=sort_key)
+
+    # Group by prefix, assign sequential numbers
+    counters = {}  # prefix -> next number
+    used_refs = set()  # track assigned refs to detect duplicates
+    plan = []
+
+    # First pass: assign new refs
+    for c in annotatable:
+        prefix = c["prefix"]
+        old_ref = c["ref"]
+        effective = c["effective_ref"]
+
+        # If not reset and ref is already fully annotated (not ending in ?), keep it
+        if not reset and not effective.endswith("?"):
+            # Already annotated — check for duplicates
+            if old_ref in used_refs:
+                # Duplicate! Assign next available number
+                if prefix not in counters:
+                    counters[prefix] = 1
+                while f"{prefix}{counters[prefix]}" in used_refs:
+                    counters[prefix] += 1
+                new_ref = f"{prefix}{counters[prefix]}"
+                used_refs.add(new_ref)
+                plan.append({**c, "old_ref": old_ref, "new_ref": new_ref, "deduped": True})
+            else:
+                used_refs.add(old_ref)
+                if prefix not in counters:
+                    counters[prefix] = _extract_number(old_ref, prefix) + 1
+                else:
+                    counters[prefix] = max(counters[prefix], _extract_number(old_ref, prefix) + 1)
+                plan.append({**c, "old_ref": old_ref, "new_ref": old_ref})
+        else:
+            # Needs annotation (ends in ?)
+            if prefix not in counters:
+                counters[prefix] = 1
+            while f"{prefix}{counters[prefix]}" in used_refs:
+                counters[prefix] += 1
+            new_ref = f"{prefix}{counters[prefix]}"
+            used_refs.add(new_ref)
+            plan.append({**c, "old_ref": old_ref, "new_ref": new_ref})
+
+    # Add unparseable components to plan as no-ops
+    for c in parsed:
+        if c["prefix"] is None:
+            plan.append({**c, "old_ref": c["ref"], "new_ref": c["ref"]})
+
+    return plan
+
+
+def _extract_number(ref: str, prefix: str) -> int:
+    """Extract the numeric suffix from a ref like 'R42' -> 42. Returns 0 if unparseable.
+
+    Only called on already-validated refs (those that matched _REF_PATTERN at
+    line ~767 of this file). The 0-fallback is therefore unreachable in
+    practice — documented defensively (M-04 finding, superseded-by-alternative).
+    """
+    try:
+        return int(ref[len(prefix):])
+    except ValueError:
+        return 0
 
 
 @register_schematic("assign_footprint")

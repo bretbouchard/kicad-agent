@@ -469,7 +469,9 @@ class SchematicRawWriter:
             raise ValueError(f"new_ref contains illegal double quote: {new_ref!r}")
 
         safe_uuid = re.escape(symbol_uuid)
-        uuid_pattern = re.compile(rf'\(uuid\s+"{safe_uuid}"')
+        # KiCad 10 uses unquoted UUIDs: (uuid abc-123); older format quotes them.
+        # Match both forms.
+        uuid_pattern = re.compile(rf'\(uuid\s+"?{safe_uuid}"?')
 
         # Find the (symbol ...) block containing the target UUID.
         # Iterate over all (symbol starts, depth-track to block close, check UUID.
