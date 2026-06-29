@@ -184,7 +184,12 @@ def _handle_safe_annotate(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
     # to avoid circulars; matches pcb_auto_route.py sibling pattern).
     from kicad_agent.ops.handlers.pcb_cleanup import validate_paren_balance
 
-    root_path = Path(file_path)
+    # Resolve symlinks/relative paths up front so root_path matches the keys
+    # in new_contents/original_contents (which are populated from the same
+    # resolved path via SchematicGraph.from_hierarchy). Without this, a
+    # target_file passed in symlink form (e.g. /var vs /private/var on macOS)
+    # would miss the dict lookup and KeyError on the write path.
+    root_path = Path(file_path).resolve()
     raw_content = root_path.read_text()
 
     # ---- ROOT SHEET GUARD (LOCKED error message) ----
