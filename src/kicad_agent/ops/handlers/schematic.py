@@ -280,11 +280,13 @@ def _handle_safe_annotate(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
         with AtomicOperation(changed_subs) as atomic:
             for sub_path in changed_subs:
                 atomic_write(sub_path, new_contents[str(sub_path)])
-            if new_contents.get(root_str, original_contents[root_str]) != original_contents[root_str]:
-                atomic_write(root_path, new_contents[root_str])
             result = atomic.commit()
             if not result.success:
                 raise RuntimeError(f"safe_annotate atomic commit failed: {result.error}")
+            # R2-02: root writes AFTER sub-sheets commit succeeds, so a commit
+            # failure rolls back sub-sheets without leaving root half-written.
+            if new_contents.get(root_str, original_contents[root_str]) != original_contents[root_str]:
+                atomic_write(root_path, new_contents[root_str])
     elif new_contents.get(root_str, original_contents[root_str]) != original_contents[root_str]:
         atomic_write(root_path, new_contents[root_str])
 
