@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: Ready to execute
-stopped_at: Completed Phase 102 Plan 02 — Implemented safe_annotate op end-to-end (schema + SELF_SERIALIZING_OPS + registry + raw-edit handler). 6 tests GREEN (TC-1, 2, 5, 6, 7, 8), TC-3/4 remain for Plan 03. 3 atomic commits. Rule 1 bug fixed (UUID regex matched both KiCad 10 unquoted and legacy quoted forms). Zero regression (12/12 sibling safe_sync tests pass).
-last_updated: "2026-06-29T22:57:00.000Z"
+status: Phase 102 EXECUTION COMPLETE — ready for /gsd-verify-work
+stopped_at: Completed Phase 102 Plan 03 — All 8 safe_annotate tests GREEN (TC-3 cross-sheet dedup + TC-4 P0-006 regression). API docs published (docs/api/safe_annotate.md). P0-006 formally closed (RESOLVED callout, DELIVERED). Forbidden annotate op emits DeprecationWarning. 2 Rule 1 handler fixes (scope-conditional root sheet guard + reset-mode dedup detection). 2 atomic commits. Zero regression (17/17 sibling tests pass).
+last_updated: "2026-06-29T23:06:00.000Z"
 last_activity: 2026-06-29
 progress:
   total_phases: 130
@@ -26,8 +26,8 @@ Last activity: 2026-06-29
 
 ## Current Position
 
-Phase: 102 (Safe Annotate — non-destructive refdes renumbering) — EXECUTING
-Plan: 3 of 3 (next: Plan 03 — multi-sheet integration tests TC-3/TC-4 + docs + deprecation warning)
+Phase: 102 (Safe Annotate — non-destructive refdes renumbering) — EXECUTION COMPLETE
+Plan: 3 of 3 (all plans complete — ready for /gsd-verify-work)
 **All milestones shipped (v1.0 through v4.1). 94 phases, 267 plans, 3311+ tests.**
 
 Last milestone: v4.1 Stage-Safe PCB Flow (Phases 85-94)
@@ -76,7 +76,16 @@ Last activity: 2026-06-29
   - TC-1, 2, 5, 6, 7, 8 GREEN (6 tests); TC-3, TC-4 remain RED (Plan 03)
   - 5 new unit tests in test_schematic_raw_writer.py
   - 12/12 sibling safe_sync tests pass (zero regression)
-  - 3 atomic commits: 33b9b997 (raw writer method), 82dd9cb1 (schema+registry+self-serializing), b8be12bb (handler+tests)
+- Plan 102-03: Multi-sheet integration tests + docs + deprecation (COMPLETE)
+  - TC-3 (cross-sheet dedup) GREEN: 3-file fixture, whole_project+reset, duplicates_resolved >= 1, paren balance, kicad-cli parses
+  - TC-4 (P0-006 regression) GREEN: total_changed_lines <= refs_renamed * 4 + 4 (P0-006 was 2314 lines)
+  - Rule 1 fix: root sheet guard refined to scope-conditional (only current_sheet triggers; whole_project walks children)
+  - Rule 1 fix: reset-mode dedup detection via pre-pass Counter on original refs (was reporting duplicates_resolved=0)
+  - docs/api/safe_annotate.md published: 6-field schema, 3 examples, error cases, validation summary (L-04: generic paths)
+  - BUGS/P0-006 formally closed: RESOLVED callout, item 3 DELIVERED, Workaround leads with safe_annotate
+  - _handle_annotate emits DeprecationWarning at entry pointing to safe_annotate + P0-006
+  - 2 atomic commits: 6832ef09 (TC-3/TC-4 + Rule 1 fixes), 39d85ff8 (docs + BUGS + deprecation)
+  - PHASE 102 EXECUTION COMPLETE — ready for /gsd-verify-work
 
 ### Phase 101: Schematic Ops Bug Fixes (in progress)
 
@@ -639,6 +648,10 @@ Recent decisions affecting current work:
 - [Phase 102]: Phase 102-02: safe_annotate registered in SELF_SERIALIZING_OPS (single_file scope) — different dispatch path from safe_sync_pcb_from_schematic which uses CROSS_FILE_OP_TYPES (multi-file scope). Both bypass serialize_schematic but via different mechanisms matching their file-scope semantics.
 - [Phase 102]: Phase 102-02: UUID regex accepts both KiCad 10 unquoted (uuid abc-123) AND legacy quoted (uuid "abc-123") forms via \"?...\"? optional-quote pattern. Applied to both _extract_symbols_with_refs and SchematicRawWriter.replace_reference_property. Original plan regex assumed quoted form only — Rule 1 bug fixed during execution.
 - [Phase 102]: Phase 102-02: Test invocation uses OperationExecutor(base_dir=tmp_path) + Operation.model_validate({"root": {...}}) + executor.execute(op). target_file is relative basename inside tmp_path (path confinement check rejects absolute paths). Mirrors tests/test_modify_property.py:266-282.
+- [Phase 102]: Phase 102-03: Root sheet guard refined to scope-conditional — `if op.scope == "current_sheet" and has_sheet_blocks and not has_placed_components`. Was unconditional, blocked whole_project walks on roots (TC-3). Rule 1 bug.
+- [Phase 102]: Phase 102-03: Reset-mode dedup detection via pre-pass Counter on original refs. Under reset=True, all refs become `<prefix>?` and enter annotation branch — bypassing non-reset dedup path. Pre-pass counts original refs; subsequent owners (after sort) marked deduped=True so stats.duplicates_resolved is correct. Rule 1 bug.
+- [Phase 102]: Phase 102-03: DeprecationWarning on _handle_annotate mirrors erc_auto_fix.py:255-262 pattern — stacklevel=2, message references P0-006 + safe_annotate docs, fires BEFORE any file mutation.
+- [Phase 102]: Phase 102-03: H-03 success criteria applied — "proven on minimal multi-sheet fixtures; full real-world validation deferred to Phase 145 manual verification per VALIDATION.md line 69" (Option b from Council Gate 1).
 
 ### Pending Todos
 
@@ -653,6 +666,7 @@ Recent decisions affecting current work:
 | 260616-wqd | Build a validate_labels pre-flight check in kicad-agent | 2026-06-17 | ee47896 | [260616-wqd-build-a-validate-labels-pre-flight-check](./quick/260616-wqd-build-a-validate-labels-pre-flight-check/) |
 | Phase 101 P04 | 5m | 2 tasks | 4 files |
 | Phase 102 P02 | 9m | 3 tasks | 8 files |
+| Phase 102 P03 | 3m | 2 tasks | 5 files |
 | Phase 102 P01 | 5min | 2 tasks | 6 files |
 
 ### Blockers/Concerns
@@ -671,8 +685,8 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 102 Plan 02 — Implemented safe_annotate op end-to-end (schema + SELF_SERIALIZING_OPS + registry + raw-edit handler). 6 tests GREEN (TC-1, 2, 5, 6, 7, 8), TC-3/4 remain for Plan 03. 3 atomic commits. Rule 1 bug fixed (UUID regex matched both KiCad 10 unquoted and legacy quoted forms). Zero regression (12/12 sibling safe_sync tests pass).
-Resume with: Phase 102 Plan 03 (multi-sheet integration tests TC-3/TC-4 with kicad-cli, API docs at docs/api/safe_annotate.md, DeprecationWarning on forbidden annotate op).
+Stopped at: Completed Phase 102 Plan 03 — All 8 safe_annotate tests GREEN (TC-3 cross-sheet dedup + TC-4 P0-006 regression). API docs published (docs/api/safe_annotate.md). P0-006 formally closed. Forbidden annotate op emits DeprecationWarning. 2 Rule 1 handler fixes. 2 atomic commits. Zero regression (17/17 sibling tests pass).
+Resume with: /gsd-verify-work 102 (user acceptance testing), then Council Gate 2 (Execution Review).
 
 ### Phase 100: RoutingOrchestrator and Human Approval Loop (complete)
 
