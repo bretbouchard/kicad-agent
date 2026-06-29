@@ -170,38 +170,150 @@ def instantiate_footprint(
     layer: str = "F.Cu",
     pad_nets: dict[str, str] | None = None,
 ) -> str:
-    """Construct a clean PCB (footprint ...) block from .kicad_mod library content.
+    """Construct a PCB (footprint ...) block from .kicad_mod library content.
 
-    Extracts pad definitions from the .kicad_mod and constructs a fresh
-    footprint block with correct PCB attributes (layer, uuid, at, properties).
+    Transforms the .kicad_mod in-place to preserve full library fidelity
+    (descr, tags, attr, model, geometry) rather than reconstructing from
+    scratch. This avoids kicad-cli DRC 'lib_footprint_mismatch' warnings
+    that occur when the PCB footprint block differs from the library version.
+
+    Transformations applied:
+    1. Replace the opening (footprint "NAME" ...) header to use lib_id
+    2. Inject (uuid ...) after the (layer ...) line
+    3. Inject (at X Y ANGLE) after the uuid
+    4. Replace the Reference property value with the component ref + uuid
+    5. Replace the Value property value with the component value + uuid
+    6. Inject pad nets into each pad block
+    7. Re-indent the block for PCB context (2-space base indent)
     """
     fp_uuid = str(uuid.uuid4())
     ref_uuid = str(uuid.uuid4())
     val_uuid = str(uuid.uuid4())
     pad_nets = pad_nets or {}
 
-    pads = _extract_pad_blocks(fp_content)
+    # Work on a copy of the library content
+    content = fp_content
 
-    block = f'  (footprint "{lib_id}"\n'
-    block += f'    (layer "{layer}")\n'
-    block += f'    (uuid "{fp_uuid}")\n'
-    block += f'    (at {x} {y} {angle})\n'
-    block += f'    (property "Reference" "{ref}" (at 0 -5 0) (layer "F.SilkS") (uuid "{ref_uuid}")\n'
-    block += f'      (effects (font (size 1 1) (thickness 0.15)))\n'
-    block += f'    )\n'
-    block += f'    (property "Value" "{value}" (at 0 5 0) (layer "F.Fab") (uuid "{val_uuid}")\n'
-    block += f'      (effects (font (size 1 1) (thickness 0.15)))\n'
-    block += f'    )\n'
+    # 1. Replace the footprint name in the opening line with the full lib_id
+    #    .kicad_mod opens with (footprint "FP_NAME" ...) where FP_NAME is just
+    #    the footprint name without the library prefix. PCB needs the full lib_id.
+    content = re.sub(
+        r'^(\(\s*footprint\s+)"[^"]*"',
+        lambda m: f'{m.group(1)}"{lib_id}"',
+        content,
+        count=1,
+    )
 
+    # 2. Inject (uuid ...) and (at ...) after the (layer ...) line
+    layer_pattern = re.compile(
+        r'(\(\s*layer\s+"[^"]*"\s*\))',
+        re.MULTILINE,
+    )
+    uuid_at_block = (
+        f'\\1\n'
+        f'\t(uuid "{fp_uuid}")\n'
+        f'\t(at {x} {y} {angle})'
+    )
+    content = layer_pattern.sub(uuid_at_block, content, count=1)
+
+    # 3. Replace Reference property value and add uuid
+    #    Library form: (property "Reference" "REF**" ...) — replace "REF**" with ref
+    #    and inject (uuid "...") before the closing paren of the property block.
+    content = _replace_property_value(content, "Reference", ref, ref_uuid)
+
+    # 4. Replace Value property value and add uuid
+    #    Library form: (property "Value" "FP_NAME" ...) — replace with component value
+    content = _replace_property_value(content, "Value", value, val_uuid)
+
+    # 5. Inject pad nets
+    pads = _extract_pad_blocks(content)
     for pad_block in pads:
         pad_num = pad_block["number"]
-        pad_raw = pad_block["raw"]
         if pad_num in pad_nets:
-            pad_raw = _add_net_to_pad(pad_raw, pad_nets[pad_num])
-        block += f"    {pad_raw}\n"
+            old_raw = pad_block["raw"]
+            new_raw = _add_net_to_pad(old_raw, pad_nets[pad_num])
+            content = content.replace(old_raw, new_raw, 1)
 
-    block += "  )"
-    return block
+    # 6. Re-indent: library uses tab indent; PCB needs 2-space base indent.
+    #    Strategy: strip leading whitespace from each line, then prepend 2 spaces.
+    lines = content.rstrip().split("\n")
+    # First line is "(footprint ...)" — indent 2 spaces
+    # All other lines: strip existing indent, add 4 spaces (2 for footprint block + 2 for content)
+    indented_lines = []
+    for i, line in enumerate(lines):
+        if i == 0:
+            indented_lines.append("  " + line.strip())
+        else:
+            stripped = line.lstrip()
+            if stripped:
+                indented_lines.append("    " + stripped)
+            else:
+                indented_lines.append("")
+    return "\n".join(indented_lines)
+
+
+def _replace_property_value(
+    content: str, prop_name: str, new_value: str, prop_uuid: str
+) -> str:
+    """Replace a property's value and inject a uuid into its block.
+
+    Library .kicad_mod properties look like:
+        (property "Reference" "REF**"
+            (at ...)
+            (layer ...)
+            ...
+        )
+    PCB needs:
+        (property "Reference" "<ref>"
+            (at ...)
+            (layer ...)
+            (uuid "<uuid>")
+            ...
+        )
+    """
+    # Find the (property "NAME" "OLD_VALUE" ...) and replace OLD_VALUE
+    # The value is the second quoted string after the property name.
+    pattern = re.compile(
+        r'(\(\s*property\s+"' + re.escape(prop_name) + r'"\s+)"[^"]*"',
+    )
+    content = pattern.sub(rf'\1"{new_value}"', content, count=1)
+
+    # Now inject (uuid "...") into this property block.
+    # Find the property block and add uuid before its closing paren.
+    # Match the full property block by tracking parens from the property start.
+    prop_start_pattern = re.compile(
+        r'\(\s*property\s+"' + re.escape(prop_name) + r'"',
+    )
+    match = prop_start_pattern.search(content)
+    if not match:
+        return content
+
+    start = match.start()
+    depth = 0
+    end = None
+    for i in range(start, len(content)):
+        if content[i] == "(":
+            depth += 1
+        elif content[i] == ")":
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+    if end is None:
+        return content
+
+    # Find the last non-whitespace before the closing paren
+    block = content[start:end + 1]
+    block_stripped = block.rstrip()
+    last_paren = block_stripped.rfind(")")
+    if last_paren <= 0:
+        return content
+    new_block = (
+        block_stripped[:last_paren]
+        + f'\n\t\t(uuid "{prop_uuid}")\n\t'
+        + block_stripped[last_paren:]
+    )
+    return content[:start] + new_block + content[end + 1:]
 
 
 def _extract_pad_blocks(fp_content: str) -> list[dict]:
