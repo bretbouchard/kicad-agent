@@ -18,6 +18,108 @@ from xml.etree import ElementTree as ET
 logger = logging.getLogger(__name__)
 
 
+# Pin-name → pad-number mapping for footprints whose library symbols use
+# alphanumeric pin names (B/C/E for transistors) but whose .kicad_mod pads are
+# numbered 1/2/3. Derived from the original analog-board.kicad_pcb cross-
+# reference (Phase 144 Wave 5): Q4 pad 2 carries net Q4C which the netlist
+# maps to pin E, confirming SOT-23 B=1, E=2, C=3 (JEDEC TO-236).
+#
+# Keys are footprint lib_id prefixes. When a pin name isn't found in the
+# table, the caller logs a warning and skips the pad (preserves old behavior
+# for numeric pin names which pass through unchanged).
+_PIN_TO_PAD_MAP: dict[str, dict[str, str]] = {
+    # SOT-23 NPN/PNP — JEDEC TO-236 Var AB
+    # NPN (Q_NPN): B=1, E=2, C=3
+    # PNP (Q_PNP): B=1, E=2, C=3 (same footprint, different symbol polarity)
+    "Package_TO_SOT_SMD:SOT-23": {"B": "1", "E": "2", "C": "3"},
+    # SOT-223-3 with tab as pin 2 — B=1, C=2 (tab=collector), E=3
+    "Package_TO_SOT_SMD:SOT-223-3_TabPin2": {"B": "1", "C": "2", "E": "3"},
+    # SOT-223-3 with tab as pin 1 — C=1 (tab), B=2, E=3 (less common variant)
+    "Package_TO_SOT_SMD:SOT-223-3_TabPin1": {"C": "1", "B": "2", "E": "3"},
+    # Through-hole TO-92 — B=1, C=2, E=3 (common JEDEC assignment)
+    "Package_TO_SOT_THT:TO-92_Inline": {"B": "1", "C": "2", "E": "3"},
+    "Package_TO_SOT_THT:TO-92_Horizontal1": {"B": "1", "C": "2", "E": "3"},
+}
+
+
+def map_alphanumeric_pin_to_pad(pin_name: str, footprint_lib_id: str) -> str | None:
+    """Map an alphanumeric pin name (B/C/E) to a numeric pad number.
+
+    KiCad transistor symbols (Q_NPN, Q_PNP) export pin numbers as B, C, E.
+    The corresponding footprints (SOT-23, SOT-223) have pads numbered 1, 2, 3.
+    Without this mapping, populate_pcb_from_netlist silently skips these pads.
+
+    Args:
+        pin_name: Pin name/number from netlist (e.g. "B", "E", "C", or "1").
+        footprint_lib_id: Full footprint library ID (e.g. "Package_TO_SOT_SMD:SOT-23").
+
+    Returns:
+        Pad number string, or None if no mapping exists.
+        Numeric pin names pass through unchanged.
+    """
+    # Numeric pin names pass through (common case for resistors, caps, ICs)
+    if pin_name.isdigit():
+        return pin_name
+
+    # Look up the footprint in the mapping table
+    footprint_map = _PIN_TO_PAD_MAP.get(footprint_lib_id)
+    if footprint_map is None:
+        logger.warning(
+            "No alphanumeric pin mapping for footprint %s (pin %s) — skipping",
+            footprint_lib_id,
+            pin_name,
+        )
+        return None
+
+    pad_num = footprint_map.get(pin_name)
+    if pad_num is None:
+        logger.warning(
+            "Pin %s not in mapping table for %s — skipping",
+            pin_name,
+            footprint_lib_id,
+        )
+        return None
+
+    return pad_num
+
+
+def dedupe_pad_nets_multi_unit(
+    raw_pad_nets: dict[str, list[str]],
+) -> dict[str, str]:
+    """Deduplicate net assignments for multi-unit components.
+
+    KiCad exports one net entry per (unit, pin) pair. For a multi-unit component
+    like CD4066 (5 units A-E), unused units emit `unconnected-(REF-PadN)` entries
+    that APPEND to the net blocks. The naive populate loop assigns the last
+    matching entry, so phantom unconnected- entries overwrite real nets.
+
+    This function prefers real nets over `unconnected-` entries when both exist.
+    If only `unconnected-` entries are present (genuinely unused pin), keeps the
+    last one.
+
+    Args:
+        raw_pad_nets: Dict of {pad_name: [net_name, ...]} with duplicates.
+
+    Returns:
+        Dict of {pad_name: single_net_name} with conflicts resolved.
+    """
+    result: dict[str, str] = {}
+    for pad_name, net_list in raw_pad_nets.items():
+        if not net_list:
+            continue
+        # Separate real nets from phantom unconnected- entries
+        real_nets = [n for n in net_list if not n.startswith("unconnected-")]
+        unconnected_nets = [n for n in net_list if n.startswith("unconnected-")]
+
+        if real_nets:
+            # Prefer the first real net (deterministic)
+            result[pad_name] = real_nets[0]
+        elif unconnected_nets:
+            # Genuinely unused pin — keep last unconnected entry
+            result[pad_name] = unconnected_nets[-1]
+    return result
+
+
 def parse_netlist_xml(netlist_path: Path) -> list[dict]:
     """Parse KiCad S-expression or XML netlist → list of component dicts.
 
@@ -70,11 +172,17 @@ def _parse_netlist_sexpr(content: str) -> list[dict]:
             logger.warning("Component %s has no footprint, skipping", ref)
             continue
 
-        pad_nets: dict[str, str] = {}
+        # Collect ALL net entries per pad (multi-unit dedup)
+        # KiCad multi-unit components (e.g. CD4066 with 5 units) emit duplicate
+        # `unconnected-(REF-PadN)` entries from unused units. Without dedup,
+        # these phantom entries overwrite real net assignments.
+        raw_pad_nets: dict[str, list[str]] = {}
         for net_name, nodes in net_to_pads.items():
             for n_ref, n_pin in nodes:
                 if n_ref == ref:
-                    pad_nets[n_pin] = net_name
+                    raw_pad_nets.setdefault(n_pin, []).append(net_name)
+
+        pad_nets = dedupe_pad_nets_multi_unit(raw_pad_nets)
 
         components.append({
             "ref": ref,
@@ -120,12 +228,17 @@ def _parse_netlist_xml(content: str, netlist_path: Path) -> list[dict]:
             logger.warning("Component %s has no footprint, skipping", ref)
             continue
 
-        # Collect nets for this component's pads
-        pad_nets: dict[str, str] = {}
+        # Collect ALL net entries per pad (multi-unit dedup)
+        # KiCad multi-unit components (e.g. CD4066 with 5 units) emit duplicate
+        # `unconnected-(REF-PadN)` entries from unused units. Without dedup,
+        # these phantom entries overwrite real net assignments.
+        raw_pad_nets: dict[str, list[str]] = {}
         for net_name, nodes in net_to_pads.items():
             for c_ref, c_pad in nodes:
                 if c_ref == ref:
-                    pad_nets[c_pad] = net_name
+                    raw_pad_nets.setdefault(c_pad, []).append(net_name)
+
+        pad_nets = dedupe_pad_nets_multi_unit(raw_pad_nets)
 
         components.append({
             "ref": ref,
@@ -226,12 +339,27 @@ def instantiate_footprint(
     content = _replace_property_value(content, "Value", value, val_uuid)
 
     # 5. Inject pad nets
+    #    pad_nets keys are netlist pin names (e.g. "1", "2", or "B", "E", "C").
+    #    Map each pin name to its PCB pad number via the alphanumeric table
+    #    (Phase 144 Wave 5 fix: transistors use B/C/E in netlist but 1/2/3 in footprint).
     pads = _extract_pad_blocks(content)
+    pad_num_to_net: dict[str, str] = {}
+    for pin_name, net_name in pad_nets.items():
+        resolved_pad = map_alphanumeric_pin_to_pad(pin_name, lib_id)
+        if resolved_pad is None:
+            logger.warning(
+                "Could not map pin '%s' on %s — pad will have no net",
+                pin_name,
+                lib_id,
+            )
+            continue
+        pad_num_to_net[resolved_pad] = net_name
+
     for pad_block in pads:
         pad_num = pad_block["number"]
-        if pad_num in pad_nets:
+        if pad_num in pad_num_to_net:
             old_raw = pad_block["raw"]
-            new_raw = _add_net_to_pad(old_raw, pad_nets[pad_num])
+            new_raw = _add_net_to_pad(old_raw, pad_num_to_net[pad_num])
             content = content.replace(old_raw, new_raw, 1)
 
     # 6. Re-indent: library uses tab indent; PCB needs 2-space base indent.

@@ -14,6 +14,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from kicad_agent.crossfile.pcb_populate import (
     _add_net_to_pad,
     _replace_property_value,
+    dedupe_pad_nets_multi_unit,
+    map_alphanumeric_pin_to_pad,
     instantiate_footprint,
 )
 
@@ -199,3 +201,176 @@ def test_replace_property_value_adds_uuid_to_block():
     # The uuid must be INSIDE the property block (before the closing paren)
     prop_block = result[result.index("(property"):result.rindex(")") + 1]
     assert '(uuid "dead-beef")' in prop_block
+
+
+# ---------------------------------------------------------------------------
+# Patch P3: alphanumeric pin name → numeric pad number mapping
+# ---------------------------------------------------------------------------
+# KiCad Q_NPN/Q_PNP symbols use pin names B/C/E. SOT-23 and SOT-223 footprints
+# use numeric pad numbers 1/2/3. Without a mapping, populate silently skips
+# these pads, leaving transistors unrouted.
+# Verified mapping (Phase 144 Wave 5, from original analog-board.kicad_pcb
+# cross-reference): SOT-23 B=1, E=2, C=3 (JEDEC TO-236).
+
+
+def test_map_alphanumeric_pin_sot23_bce_to_123():
+    """SOT-23 NPN transistor: B->1, E->2, C->3.
+    Patch P3 (Phase 144 Wave 5). Derived from analog-board.kicad_pcb Q4
+    where pin E -> net Q4C and pad 2 carries Q4C."""
+    assert map_alphanumeric_pin_to_pad("B", "Package_TO_SOT_SMD:SOT-23") == "1"
+    assert map_alphanumeric_pin_to_pad("E", "Package_TO_SOT_SMD:SOT-23") == "2"
+    assert map_alphanumeric_pin_to_pad("C", "Package_TO_SOT_SMD:SOT-23") == "3"
+
+
+def test_map_alphanumeric_pin_sot223_bce_to_123():
+    """SOT-223-3_TabPin2 NPN: B->1, C->2(tab), E->3.
+    Patch P3 (Phase 144 Wave 5)."""
+    assert map_alphanumeric_pin_to_pad("B", "Package_TO_SOT_SMD:SOT-223-3_TabPin2") == "1"
+    assert map_alphanumeric_pin_to_pad("C", "Package_TO_SOT_SMD:SOT-223-3_TabPin2") == "2"
+    assert map_alphanumeric_pin_to_pad("E", "Package_TO_SOT_SMD:SOT-223-3_TabPin2") == "3"
+
+
+def test_map_alphanumeric_pin_numeric_passthrough():
+    """Numeric pin names pass through unchanged (no mapping needed).
+    Patch P3 (Phase 144 Wave 5)."""
+    assert map_alphanumeric_pin_to_pad("1", "Package_TO_SOT_SMD:SOT-23") == "1"
+    assert map_alphanumeric_pin_to_pad("2", "Resistor_SMD:R_0805_2012Metric") == "2"
+    assert map_alphanumeric_pin_to_pad("14", "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm") == "14"
+
+
+def test_map_alphanumeric_pin_unknown_returns_none():
+    """Unknown alphanumeric pins (no mapping available) return None.
+    Caller should log a warning and skip the pad rather than crash.
+    Patch P3 (Phase 144 Wave 5)."""
+    assert map_alphanumeric_pin_to_pad("X", "Package_TO_SOT_SMD:SOT-23") is None
+    assert map_alphanumeric_pin_to_pad("A", "Some_Unknown:Footprint") is None
+
+
+def test_instantiate_footprint_maps_alphanumeric_pins_sot23():
+    """instantiate_footprint must assign nets to SOT-23 pads when pad_nets
+    uses B/C/E keys. Without P3, the pads would be silently skipped.
+    Patch P3 (Phase 144 Wave 5)."""
+    # SOT-23-like fixture with 3 numeric pads
+    sot23_fixture = '''(footprint "SOT-23"
+\t(version 20260206)
+\t(layer "F.Cu")
+\t(property "Reference" "REF**"
+\t\t(at 0 -2.4 0)
+\t\t(layer "F.SilkS")
+\t)
+\t(property "Value" "SOT-23"
+\t\t(at 0 2.4 0)
+\t\t(layer "F.Fab")
+\t)
+\t(attr smd)
+\t(pad "1" smd roundrect
+\t\t(at -0.95 -0.95)
+\t\t(size 1.475 0.6)
+\t\t(layers "F.Cu" "F.Mask" "F.Paste")
+\t)
+\t(pad "2" smd roundrect
+\t\t(at -0.95 0.95)
+\t\t(size 1.475 0.6)
+\t\t(layers "F.Cu" "F.Mask" "F.Paste")
+\t)
+\t(pad "3" smd roundrect
+\t\t(at 0.95 0)
+\t\t(size 1.475 0.6)
+\t\t(layers "F.Cu" "F.Mask" "F.Paste")
+\t)
+)
+'''
+    result = instantiate_footprint(
+        fp_content=sot23_fixture,
+        lib_id="Package_TO_SOT_SMD:SOT-23",
+        ref="Q1",
+        value="BC847C",
+        x=50.0,
+        y=60.0,
+        pad_nets={"B": "BASE_NET", "E": "EMITTER_NET", "C": "COLLECTOR_NET"},
+    )
+    # Pad 1 = B, Pad 2 = E, Pad 3 = C
+    assert '(net "BASE_NET")' in result, f"Pad 1 (B) net missing: {result}"
+    assert '(net "EMITTER_NET")' in result, f"Pad 2 (E) net missing: {result}"
+    assert '(net "COLLECTOR_NET")' in result, f"Pad 3 (C) net missing: {result}"
+
+
+# ---------------------------------------------------------------------------
+# Patch P4: multi-unit netlist deduplication
+# ---------------------------------------------------------------------------
+# Components like CD4066 export 5 unit instances (A-E) to the netlist.
+# Unused units emit `unconnected-(U8-PadN)` entries which are APPENDED to the
+# net blocks. The naive populate loop assigns the last matching entry to each
+# pad, so phantom unconnected- entries overwrite real nets.
+# Fix: prefer real nets over `unconnected-` entries when both exist.
+
+
+def test_dedupe_pad_nets_prefers_real_over_unconnected():
+    """When a pad has both a real net and unconnected- entries, keep the real net.
+    Patch P4 (Phase 144 Wave 5). U8 CD4066 case: pad 1 has both
+    /Preamp Stage/FB_AC and unconnected-(U8-Pad1) entries."""
+    raw_pad_nets = {
+        "1": [
+            "/Preamp Stage/FB_AC",
+            "unconnected-(U8-Pad1)",
+            "unconnected-(U8-Pad1)_1",
+            "unconnected-(U8-Pad1)_2",
+        ],
+        "2": [
+            "/Preamp Stage/GAIN_SW",
+            "unconnected-(U8-Pad2)",
+            "unconnected-(U8-Pad2)_1",
+        ],
+        "13": [
+            "/Preamp Stage/U8_CTRL",
+            "unconnected-(U8-Pad13)",
+        ],
+        "14": ["+9V"],
+        "7": ["+9V"],
+    }
+    result = dedupe_pad_nets_multi_unit(raw_pad_nets)
+    assert result["1"] == "/Preamp Stage/FB_AC", f"Real net overwritten by phantom: {result['1']}"
+    assert result["2"] == "/Preamp Stage/GAIN_SW"
+    assert result["13"] == "/Preamp Stage/U8_CTRL"
+    assert result["14"] == "+9V"
+    assert result["7"] == "+9V"
+
+
+def test_dedupe_pad_nets_keeps_unconnected_when_only_option():
+    """When a pad has ONLY unconnected- entries (truly unused), keep the last one.
+    Patch P4 (Phase 144 Wave 5). This is the correct behavior for genuinely
+    unused pins on multi-unit ICs."""
+    raw_pad_nets = {
+        "3": [
+            "unconnected-(U8-Pad3)",
+            "unconnected-(U8-Pad3)_1",
+        ],
+        "4": ["unconnected-(U8-Pad4)"],
+    }
+    result = dedupe_pad_nets_multi_unit(raw_pad_nets)
+    # These pads are genuinely unused — no real net to assign
+    assert result["3"] == "unconnected-(U8-Pad3)_1"
+    assert result["4"] == "unconnected-(U8-Pad4)"
+
+
+def test_dedupe_pad_nets_single_entry_passthrough():
+    """Pads with a single net entry pass through as the resolved net.
+    Patch P4 (Phase 144 Wave 5). Input is {pad: [net]}, output is {pad: net}."""
+    raw_pad_nets = {
+        "1": ["GND"],
+        "2": ["+3V3"],
+        "3": ["SIG_IN"],
+    }
+    result = dedupe_pad_nets_multi_unit(raw_pad_nets)
+    assert result == {"1": "GND", "2": "+3V3", "3": "SIG_IN"}
+
+
+def test_dedupe_pad_nets_multiple_real_nets_keeps_first():
+    """When a pad has multiple REAL net entries (shouldn't happen in a valid
+    netlist, but defensive), keep the first one rather than crashing.
+    Patch P4 (Phase 144 Wave 5)."""
+    raw_pad_nets = {
+        "1": ["NET_A", "NET_B", "unconnected-(X-Pad1)"],
+    }
+    result = dedupe_pad_nets_multi_unit(raw_pad_nets)
+    assert result["1"] == "NET_A"
