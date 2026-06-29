@@ -19,6 +19,10 @@ logger = logging.getLogger(__name__)
 
 _SCHEMATIC_HANDLERS: dict[str, Callable] = {}
 
+# Power symbols (#PWR?, #PWR01, #GND01, etc.) are graphical-only — they have no
+# refdes to renumber and must be skipped during annotation (EXEC-01).
+_POWER_SYMBOL_PREFIX = "#"
+
 
 def register_schematic(op_type: str) -> Callable:
     """Decorator to register a schematic operation handler."""
@@ -222,7 +226,13 @@ def _handle_safe_annotate(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
     if op.dry_run:
         return {
             "annotated": [
-                {"sheet": r["sheet"], "uuid": r["uuid"], "old_ref": r["old_ref"], "new_ref": r["new_ref"]}
+                {
+                    "sheet": r["sheet"],
+                    "uuid": r["uuid"],
+                    "old_ref": r["old_ref"],
+                    "new_ref": r["new_ref"],
+                    **({"note": "cross-sheet duplicate renamed"} if r.get("deduped") else {}),
+                }
                 for r in rename_plan if r["old_ref"] != r["new_ref"]
             ],
             "stats": {
@@ -282,7 +292,13 @@ def _handle_safe_annotate(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
     renamed = [r for r in rename_plan if r["old_ref"] != r["new_ref"]]
     return {
         "annotated": [
-            {"sheet": r["sheet"], "uuid": r["uuid"], "old_ref": r["old_ref"], "new_ref": r["new_ref"]}
+            {
+                "sheet": r["sheet"],
+                "uuid": r["uuid"],
+                "old_ref": r["old_ref"],
+                "new_ref": r["new_ref"],
+                **({"note": "cross-sheet duplicate renamed"} if r.get("deduped") else {}),
+            }
             for r in renamed
         ],
         "stats": {
@@ -350,7 +366,7 @@ def _extract_symbols_with_refs(raw: str) -> list:
         ref = ref_m.group(1) if ref_m else ""
 
         # Skip power symbols (#PWR?, #PWR01, etc.)
-        if ref.startswith("#"):
+        if ref.startswith(_POWER_SYMBOL_PREFIX):
             continue
 
         symbols.append({
@@ -371,8 +387,11 @@ def _build_rename_plan(components: list, reset: bool, order: str) -> list:
         reset: if True, treat all refs as <prefix>? before renumbering.
         order: one of "by_x_position" | "by_y_position" | "sheet_order".
 
-    Sort tie-break order (LOCKED per CONTEXT.md line 80 — "when two components
-    share the same X coordinate, break ties by Y then by sheet order"):
+    Sort tie-break order (LOCKED per CONTEXT.md "Claude's Discretion" — "when
+    two components share the same X coordinate, break ties by Y then by sheet
+    order"). EXEC-03 (deferred to Phase 145): sheet_path is absolute today,
+    making the tie-break non-deterministic across machines; a future phase may
+    switch to sheet UUID for stable BOMs.
 
     - ``by_x_position``: sort key = ``(x, y, sheet_path)`` — primary X,
       tie-break Y, final tie-break sheet path string. This is the LOCKED
@@ -501,9 +520,10 @@ def _build_rename_plan(components: list, reset: bool, order: str) -> list:
 def _extract_number(ref: str, prefix: str) -> int:
     """Extract the numeric suffix from a ref like 'R42' -> 42. Returns 0 if unparseable.
 
-    Only called on already-validated refs (those that matched _REF_PATTERN at
-    line ~767 of this file). The 0-fallback is therefore unreachable in
-    practice — documented defensively (M-04 finding, superseded-by-alternative).
+    Only called on already-validated refs (those that matched ``_REF_PATTERN``
+    in ``_build_rename_plan``). The 0-fallback is therefore unreachable in
+    practice — documented defensively (M-04 finding, superseded-by-alternative;
+    EXEC-04 adds test coverage for the defensive path).
     """
     try:
         return int(ref[len(prefix):])

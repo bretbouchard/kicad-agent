@@ -304,3 +304,94 @@ def test_safe_annotate_registered():
     op = SafeAnnotateOp(target_file="test.kicad_sch")
     assert op.op_type == "safe_annotate"
     assert op.scope == "whole_project"
+
+
+# ---- EXEC-01: Power symbols skipped (Council Gate 2) ----
+def test_power_symbols_are_skipped(tmp_path):
+    """Power symbols (#PWR?, #PWR01, #GND01) must not be renamed.
+
+    EXEC-01: the _POWER_SYMBOL_PREFIX filter at extraction time is load-bearing.
+    A schematic with a #PWR? symbol and an R? component should only annotate R?,
+    never touch the power symbol.
+    """
+    dst = tmp_path / "test.kicad_sch"
+    fixture = FIXTURES / "single_sheet_unannotated.kicad_sch"
+    shutil.copy(fixture, dst)
+    content = dst.read_text()
+
+    # Inject a power symbol block before the closing (sheet) paren
+    power_block = '''  (symbol (lib_id "power:GND") (at 50 50 0)
+    (in_bom yes) (on_board yes)
+    (property "Reference" "#PWR01") (property "Value" "GND")
+    (property "Footprint" "")
+    (uuid "power-uuid-1234")
+  )
+'''
+    injected = content.replace("  (symbol_instances", power_block + "  (symbol_instances")
+    dst.write_text(injected)
+
+    result = _execute_op({
+        "op_type": "safe_annotate",
+        "target_file": "test.kicad_sch",
+        "scope": "current_sheet",
+    }, base_dir=tmp_path)
+
+    annotated = result.get("details", {}).get("annotated", [])
+    power_renamed = [r for r in annotated if r["old_ref"].startswith("#")]
+    assert not power_renamed, (
+        f"Power symbol was renamed (should be skipped): {power_renamed}"
+    )
+
+
+# ---- EXEC-04: _extract_number defensive fallback (Council Gate 2) ----
+def test_extract_number_fallback_returns_zero_on_garbage():
+    """_extract_number returns 0 for unparseable suffixes (defensive, normally unreachable).
+
+    EXEC-04: the fallback is unreachable in practice (upstream _REF_PATTERN
+    filters garbage), but the defensive return-0 path must be covered.
+    """
+    from kicad_agent.ops.handlers.schematic import _extract_number
+
+    assert _extract_number("R42", "R") == 42
+    assert _extract_number("C7", "C") == 7
+    # Defensive: garbage suffix returns 0 (not a crash)
+    assert _extract_number("R???", "R") == 0
+    assert _extract_number("R", "R") == 0
+
+
+# ---- EXEC-05: reset=False resolves existing duplicates (Council Gate 2) ----
+def test_reset_false_resolves_duplicates(tmp_path):
+    """Dedup must work even when reset=False (don't renumber everything).
+
+    EXEC-05: the realistic case is a schematic that ALREADY has duplicates
+    (R1 on two sheets) where the user wants to resolve the conflict WITHOUT
+    resetting all refs to ?. The op should rename the duplicate, not skip it.
+    """
+    for fname in [
+        "multi_sheet_root.kicad_sch",
+        "multi_sheet_child_a.kicad_sch",
+        "multi_sheet_child_b.kicad_sch",
+    ]:
+        shutil.copy(FIXTURES / fname, tmp_path / fname)
+
+    result = _execute_op(
+        {
+            "op_type": "safe_annotate",
+            "target_file": "multi_sheet_root.kicad_sch",
+            "scope": "whole_project",
+            "reset": False,  # the key difference from TC-3
+        },
+        base_dir=tmp_path,
+    )
+
+    stats = result.get("details", {}).get("stats", {})
+    annotated = result.get("details", {}).get("annotated", [])
+
+    # Duplicate resolution must still fire when reset=False
+    renamed_r1 = [
+        r for r in annotated if r["old_ref"] == "R1" and r["new_ref"] != "R1"
+    ]
+    assert len(renamed_r1) >= 1, (
+        f"reset=False should still resolve R1 duplicates, got annotated={annotated}"
+    )
+    assert stats.get("duplicates_resolved", 0) >= 1
