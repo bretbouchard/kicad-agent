@@ -436,3 +436,80 @@ class SchematicRawWriter:
         for mutation in mutations:
             content = SchematicRawWriter.apply_mutation(content, mutation)
         return content
+
+    # ------------------------------------------------------------------
+    # Reference property replacement (Phase 102: safe_annotate)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def replace_reference_property(content: str, symbol_uuid: str, new_ref: str) -> str:
+        """Replace the Reference property value on a specific symbol by UUID.
+
+        Locates the ``(symbol ...)`` block containing ``(uuid "SYMBOL_UUID")``,
+        then within that block replaces the value of
+        ``(property "Reference" "OLD")`` with new_ref. Preserves every other
+        byte (whitespace, indentation, effects blocks, all other symbols).
+
+        Args:
+            content: Raw S-expression schematic content.
+            symbol_uuid: The UUID of the target placed symbol (NOT a
+                lib_symbol UUID).
+            new_ref: The new reference value (e.g. "R1", "C42").
+
+        Returns:
+            Content with the targeted Reference value replaced. Returns
+            content unchanged if the UUID or Reference property is not found
+            (no-op, no silent corruption).
+
+        Raises:
+            ValueError: If new_ref contains a double quote that would break
+                S-expression syntax.
+        """
+        if '"' in new_ref:
+            raise ValueError(f"new_ref contains illegal double quote: {new_ref!r}")
+
+        safe_uuid = re.escape(symbol_uuid)
+        uuid_pattern = re.compile(rf'\(uuid\s+"{safe_uuid}"')
+
+        # Find the (symbol ...) block containing the target UUID.
+        # Iterate over all (symbol starts, depth-track to block close, check UUID.
+        symbol_starts = [m.start() for m in re.finditer(r'\(symbol\b', content)]
+        target_block_start = None
+        target_block_end = None
+
+        for start in symbol_starts:
+            depth = 0
+            i = start
+            block_end = None
+            while i < len(content):
+                if content[i] == '(':
+                    depth += 1
+                elif content[i] == ')':
+                    depth -= 1
+                    if depth == 0:
+                        block_end = i + 1
+                        break
+                i += 1
+            if block_end is None:
+                continue  # malformed — skip
+
+            block = content[start:block_end]
+            if uuid_pattern.search(block):
+                target_block_start = start
+                target_block_end = block_end
+                break
+
+        if target_block_start is None:
+            return content  # symbol not found — no-op
+
+        # Within the block, replace (property "Reference" "OLD") value.
+        # Match exactly: (property "Reference" "OLD_VAL"
+        # Preserve everything after the value (at, effects, closing parens).
+        block = content[target_block_start:target_block_end]
+        prop_pattern = re.compile(r'(\(property\s+"Reference"\s+)"[^"]*"')
+        new_block, n = prop_pattern.subn(rf'\1"{new_ref}"', block, count=1)
+
+        if n == 0:
+            return content  # no Reference property in this block — no-op
+
+        return content[:target_block_start] + new_block + content[target_block_end:]
