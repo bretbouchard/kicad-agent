@@ -816,6 +816,18 @@ Complete routing stack production-ready: Freerouting backend (P99) → orchestra
 
 ---
 
+### Phase 102: Safe Annotate — non-destructive refdes renumbering
+
+**Goal:** Ship a `safe_annotate` op that renumbers reference designators on KiCad 10 schematics via raw S-expression edits (never kiutils re-serialization), replacing the forbidden `annotate` op (P0-006). Deduplicates cross-sheet refs, preserves formatting byte-for-byte outside targeted property lines, validates paren balance, refuses root sheets.
+**Requirements**: TC-1 through TC-8 (5 LOCKED test cases from CONTEXT.md + 3 supporting tests; no REQ-IDs — feature-driven from FEATURE-008)
+**Depends on:** Phase 101
+**Plans:** 3 plans
+
+Plans:
+- [ ] 102-01-PLAN.md — Test infrastructure: 8 RED test stubs (TC-1..TC-8) + 5 KiCad 10 fixtures (single-sheet + multi-sheet project) (TC-1, TC-2, TC-3, TC-4, TC-5, TC-6, TC-7, TC-8)
+- [ ] 102-02-PLAN.md — Core op: SchematicRawWriter.replace_reference_property + SafeAnnotateOp schema + _handle_safe_annotate handler (root guard, scope dispatch, rename plan, raw edits) + SELF_SERIALIZING_OPS registration; makes TC-1, 2, 5, 6, 7, 8 GREEN (TC-1, TC-2, TC-5, TC-6, TC-7, TC-8)
+- [ ] 102-03-PLAN.md — Integration tests (TC-3 cross-sheet dedup, TC-4 P0-006 regression diff assertion) + docs/api/safe_annotate.md + BUGS/P0-006 update + annotate DeprecationWarning (TC-3, TC-4)
+
 ---
 
 <details>
