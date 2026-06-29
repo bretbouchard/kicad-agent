@@ -189,6 +189,7 @@ from kicad_agent.ops._schema_reference import (  # noqa: E402
     RenumberRefsOp,
     ValidateRefsOp,
     AnnotateOp,
+    SafeAnnotateOp,
     CrossRefCheckOp,
 )
 from kicad_agent.ops._schema_footprint import (  # noqa: E402
@@ -315,6 +316,7 @@ from kicad_agent.ops._schema_crossfile import (  # noqa: E402
     PropagateSymbolChangeOp,
     UpdatePcbFromSchematicOp,
     RepopulatePcbFromSchematicOp,
+    SafeSyncPcbFromSchematicOp,
     RebuildPcbNetsOp,
 )
 from kicad_agent.ops._schema_schematic_routing import (  # noqa: E402
@@ -393,6 +395,7 @@ class Operation(BaseModel):
         | RenumberRefsOp
         | ValidateRefsOp
         | AnnotateOp
+        | SafeAnnotateOp
         | CrossRefCheckOp
         | AssignFootprintOp
         | SwapFootprintOp
@@ -487,6 +490,7 @@ class Operation(BaseModel):
         | ReviewSchematicOp
         | UpdatePcbFromSchematicOp
         | RepopulatePcbFromSchematicOp
+        | SafeSyncPcbFromSchematicOp
         | RebuildPcbNetsOp
         | RouteDiffPairOp
         | MatchLengthsOp
@@ -562,6 +566,7 @@ __all__ = [
     "RenumberRefsOp",
     "ValidateRefsOp",
     "AnnotateOp",
+    "SafeAnnotateOp",
     "CrossRefCheckOp",
     # Footprint ops
     "AssignFootprintOp",
@@ -677,6 +682,7 @@ __all__ = [
     "PropagateSymbolChangeOp",
     "UpdatePcbFromSchematicOp",
     "RepopulatePcbFromSchematicOp",
+    "SafeSyncPcbFromSchematicOp",
     "RebuildPcbNetsOp",
     # Schematic routing ops
     "ResolvePinPositionsOp",

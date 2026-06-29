@@ -153,6 +153,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "safe_annotate": {
+        "category": "reference",
+        "description": "Non-destructive refdes renumbering via raw S-expr edits (never kiutils re-serialization). Replaces forbidden annotate op (P0-006).",
+        "file_types": [".kicad_sch"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
     "cross_ref_check": {
         "category": "reference",
         "description": "Verify all symbol libIds resolve to entries in the embedded libSymbols",

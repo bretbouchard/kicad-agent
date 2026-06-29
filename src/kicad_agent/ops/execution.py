@@ -111,7 +111,13 @@ logger = logging.getLogger(__name__)
 # Op-type classification sets
 CROSS_FILE_OP_TYPES = {"propagate_symbol_change", "update_pcb_from_schematic", "safe_sync_pcb_from_schematic", "repopulate_pcb_from_schematic", "rebuild_pcb_nets"}
 CREATE_OP_TYPES = {"create_schematic", "create_pcb", "create_project", "create_symbol", "create_footprint"}
-SELF_SERIALIZING_OPS = frozenset({"erc_auto_fix_hierarchical", "convert_kicad6_to_10"})
+# Ops that manage their own file I/O via raw S-expr edits (must bypass
+# serialize_schematic() to avoid kiutils re-serialization on KiCad 10 files).
+# safe_annotate (Phase 102): MUST bypass serialize_schematic() to avoid
+#   kiutils re-serialization (P0-006). Edits via SchematicRawWriter.
+#   Note: safe_sync_pcb_from_schematic uses CROSS_FILE_OP_TYPES above instead
+#   (different dispatch path — it's multi-file, safe_annotate is single_file).
+SELF_SERIALIZING_OPS = frozenset({"erc_auto_fix_hierarchical", "convert_kicad6_to_10", "safe_annotate"})
 
 # Pre-analysis gate: shared instance (stateless, safe to reuse)
 _PRE_ANALYSIS_GATE = None
