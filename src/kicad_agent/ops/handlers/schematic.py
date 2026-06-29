@@ -174,11 +174,15 @@ def _handle_safe_annotate(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
     raw_content = root_path.read_text()
 
     # ---- ROOT SHEET GUARD (LOCKED error message) ----
+    # Fires ONLY when the caller asks for current_sheet annotation on a root
+    # (which contains only hierarchy blocks — nothing to annotate). For
+    # whole_project scope, the root sheet is the entry point: the handler
+    # walks the sub-sheets below and annotates them.
     has_sheet_blocks = bool(re.search(r'\(sheet\s', raw_content))
     has_placed_components = bool(
         re.search(r'\(symbol\s+\(lib_id\s+"[^"]*"\)\s+\(at\s', raw_content)
     )
-    if has_sheet_blocks and not has_placed_components:
+    if op.scope == "current_sheet" and has_sheet_blocks and not has_placed_components:
         raise ValueError(
             "safe_annotate operates per-sheet; root sheet contains hierarchy only — use sub-sheet scope"
         )
@@ -391,6 +395,19 @@ def _build_rename_plan(components: list, reset: bool, order: str) -> list:
 
     annotatable.sort(key=sort_key)
 
+    # Pre-pass: detect cross-component duplicates among original refs.
+    # A ref is a "duplicate" if 2+ annotatable components share the same
+    # original ref string (e.g., two R1's on different sheets). When we
+    # renumber, only ONE component may keep the ref — all others get a
+    # new number and are marked deduped so stats.duplicates_resolved counts
+    # them. This is the cross-sheet dedup contract (CONTEXT.md test 3).
+    from collections import Counter
+    ref_counts = Counter(c["ref"] for c in annotatable if c["ref"])
+    original_dup_refs = {r for r, n in ref_counts.items() if n > 1 and not r.endswith("?")}
+    # The FIRST component (in sort order) that owns a duplicate ref keeps it;
+    # subsequent owners are dedupes.
+    dedupe_owner_seen: set[str] = set()
+
     # Group by prefix, assign sequential numbers
     counters = {}  # prefix -> next number
     used_refs = set()  # track assigned refs to detect duplicates
@@ -422,14 +439,28 @@ def _build_rename_plan(components: list, reset: bool, order: str) -> list:
                     counters[prefix] = max(counters[prefix], _extract_number(old_ref, prefix) + 1)
                 plan.append({**c, "old_ref": old_ref, "new_ref": old_ref})
         else:
-            # Needs annotation (ends in ?)
+            # Needs annotation (ends in ? — either originally R? or reset stripped to R?)
             if prefix not in counters:
                 counters[prefix] = 1
             while f"{prefix}{counters[prefix]}" in used_refs:
                 counters[prefix] += 1
             new_ref = f"{prefix}{counters[prefix]}"
             used_refs.add(new_ref)
-            plan.append({**c, "old_ref": old_ref, "new_ref": new_ref})
+
+            # Detect dedup under reset mode: if the original ref was a
+            # duplicate AND this is not the first owner in sort order, then
+            # this rename resolves a cross-component duplicate.
+            is_dedupe = False
+            if reset and old_ref in original_dup_refs:
+                if old_ref in dedupe_owner_seen:
+                    is_dedupe = True
+                else:
+                    dedupe_owner_seen.add(old_ref)
+
+            entry = {**c, "old_ref": old_ref, "new_ref": new_ref}
+            if is_dedupe:
+                entry["deduped"] = True
+            plan.append(entry)
 
     # Add unparseable components to plan as no-ops
     for c in parsed:

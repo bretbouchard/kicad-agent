@@ -83,14 +83,157 @@ def test_single_rename_current_sheet(tmp_path):
 
 # ---- TC-3: Cross-sheet dedup (LOCKED) ----
 def test_cross_sheet_dedup_whole_project(tmp_path):
-    """2 sheets each with R1 + whole_project + reset -> one renamed, paren balance preserved."""
-    raise NotImplementedError("Plan 03: integration test with multi-sheet fixtures")
+    """2 sheets each with R1 + whole_project + reset -> one renamed, paren balance preserved.
+
+    H-03 (Council Gate 1): proven on minimal multi-sheet fixtures (2 sheets, 2 duplicate
+    refs). Full real-world validation (47+ cross-sheet duplicates across 16 sub-sheets)
+    is deferred to Phase 145 manual verification per VALIDATION.md line 69.
+    """
+    # Copy the 3-file multi-sheet project to tmpdir
+    for fname in [
+        "multi_sheet_root.kicad_sch",
+        "multi_sheet_child_a.kicad_sch",
+        "multi_sheet_child_b.kicad_sch",
+    ]:
+        shutil.copy(FIXTURES / fname, tmp_path / fname)
+
+    root_file = tmp_path / "multi_sheet_root.kicad_sch"
+    original_root = root_file.read_text()
+    original_child_a = (tmp_path / "multi_sheet_child_a.kicad_sch").read_text()
+    original_child_b = (tmp_path / "multi_sheet_child_b.kicad_sch").read_text()
+
+    result = _execute_op(
+        {
+            "op_type": "safe_annotate",
+            "target_file": "multi_sheet_root.kicad_sch",
+            "scope": "whole_project",
+            "reset": True,
+        },
+        base_dir=tmp_path,
+    )
+
+    details = result.get("details", {})
+    stats = details.get("stats", {})
+    annotated = details.get("annotated", [])
+
+    # (a) At least one duplicate resolved (one of the two R1 symbols renamed)
+    assert stats.get("duplicates_resolved", 0) >= 1, (
+        f"Expected duplicates_resolved >= 1, got stats={stats}"
+    )
+
+    # (b) At least one annotated entry with old_ref="R1" and new_ref != "R1"
+    renamed_r1 = [
+        r for r in annotated if r["old_ref"] == "R1" and r["new_ref"] != "R1"
+    ]
+    assert len(renamed_r1) >= 1, (
+        f"Expected at least 1 R1 rename, got annotated={annotated}"
+    )
+
+    # (c) Both child files still exist and are paren-balanced
+    for child in [
+        "multi_sheet_child_a.kicad_sch",
+        "multi_sheet_child_b.kicad_sch",
+    ]:
+        content = (tmp_path / child).read_text()
+        assert content.count("(") == content.count(")"), (
+            f"{child}: paren imbalance after dedup"
+        )
+
+    # (d) Root file is NOT mutated (it has no components — only sheet blocks)
+    assert root_file.read_text() == original_root, (
+        "Root file mutated by whole_project annotate (should be unchanged — root has no components)"
+    )
+
+    # (e) If kicad-cli is available, confirm the children still parse cleanly.
+    # Exit code 0 or 1 (ERC violations) is fine; we just need the file to PARSE.
+    # Exit code > 1 indicates a parse failure (the P0-006 corruption pattern).
+    if shutil.which("kicad-cli"):
+        import subprocess
+
+        for child in [
+            "multi_sheet_child_a.kicad_sch",
+            "multi_sheet_child_b.kicad_sch",
+        ]:
+            proc = subprocess.run(
+                ["kicad-cli", "sch", "erc", str(tmp_path / child)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            assert proc.returncode <= 1, (
+                f"kicad-cli sch erc failed to parse {child}: rc={proc.returncode}, "
+                f"stderr={proc.stderr[:500]}"
+            )
 
 
 # ---- TC-4: P0-006 regression (LOCKED) ----
 def test_p0_006_regression_no_reserialization(tmp_path):
-    """Diff line count approx= refs renamed, NOT approx= file size."""
-    raise NotImplementedError("Plan 03: diff assertion test")
+    """Diff line count approx= refs renamed, NOT approx= file size (the P0-006 regression).
+
+    P0-006 reproduction on mcu.kicad_sch: 1183 ins / 1131 del = 2314 changed lines
+    while reporting annotated:[]. safe_annotate should produce ~2 lines per renamed
+    ref (1 deletion + 1 addition per ref), bounded by refs_renamed * 4 + 4.
+
+    T-102-03-01 (mitigate): if kiutils re-serialization sneaks back in (e.g.,
+    SELF_SERIALIZING_OPS membership accidentally removed), this bound explodes.
+    """
+    # Copy the 3-file multi-sheet project to tmpdir
+    files = [
+        "multi_sheet_root.kicad_sch",
+        "multi_sheet_child_a.kicad_sch",
+        "multi_sheet_child_b.kicad_sch",
+    ]
+    for fname in files:
+        shutil.copy(FIXTURES / fname, tmp_path / fname)
+
+    snapshots = {f: (tmp_path / f).read_text() for f in files}
+
+    root_file = tmp_path / "multi_sheet_root.kicad_sch"
+    result = _execute_op(
+        {
+            "op_type": "safe_annotate",
+            "target_file": "multi_sheet_root.kicad_sch",
+            "scope": "whole_project",
+            "reset": True,
+        },
+        base_dir=tmp_path,
+    )
+
+    details = result.get("details", {})
+    stats = details.get("stats", {})
+    refs_renamed = stats.get("refs_renamed", 0)
+    assert refs_renamed >= 1, (
+        f"Expected refs_renamed >= 1, got stats={stats}"
+    )
+
+    # For each file, count changed lines in the diff
+    total_changed_lines = 0
+    per_file_changed = {}
+    for fname in files:
+        old = snapshots[fname].splitlines(keepends=True)
+        new = (tmp_path / fname).read_text().splitlines(keepends=True)
+        diff = list(difflib.unified_diff(old, new, n=0, lineterm=""))
+        # Count + and - lines (excluding +++/--- headers)
+        changed = [
+            line
+            for line in diff
+            if line.startswith(("+", "-")) and not line.startswith(("+++", "---"))
+        ]
+        per_file_changed[fname] = len(changed)
+        total_changed_lines += len(changed)
+
+    # P0-006 produced 1183 ins / 1131 del = 2314 changed lines on a similar file.
+    # safe_annotate should produce ~2 lines per renamed ref (+ the old line, + the new line).
+    # For our fixtures with 2 refs renamed, expect <= ~10 changed lines total.
+    # Allow generous upper bound: refs_renamed * 4 + 4 (safety margin per SI Rick's analysis).
+    upper_bound = refs_renamed * 4 + 4
+    assert total_changed_lines <= upper_bound, (
+        f"P0-006 REGRESSION: diff has {total_changed_lines} changed lines "
+        f"({per_file_changed}), expected <= {upper_bound} "
+        f"(refs_renamed={refs_renamed}). "
+        f"This suggests kiutils re-serialization occurred. "
+        f"Check SELF_SERIALIZING_OPS membership and AST grep for to_file calls."
+    )
 
 
 # ---- TC-5: Root sheet guard (LOCKED) ----
