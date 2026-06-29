@@ -155,6 +155,16 @@ def _handle_renumber_refs(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
 
 @register_schematic("annotate")
 def _handle_annotate(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    import warnings
+
+    warnings.warn(
+        "annotate is DEPRECATED (P0-006). It corrupts KiCad 10 schematics via kiutils "
+        "re-serialization. Use the 'safe_annotate' op instead, which performs raw "
+        "S-expression edits. See BUGS/P0-006-annotate-corrupts-files.md and "
+        "docs/api/safe_annotate.md.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     changes = ir.annotate_components(prefix_filter=op.prefix_filter)
     return {"annotated": [{"old": o, "new": n} for o, n in changes]}
 
