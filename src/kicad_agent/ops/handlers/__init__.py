@@ -11,17 +11,19 @@ from .pcb_fill_zones import _FILL_ZONES_HANDLERS, register_fill_zones
 from .pcb_cleanup import _CLEANUP_HANDLERS, register_cleanup
 from .pcb_auto_route import _AUTO_ROUTE_HANDLERS, register_auto_route
 from .pcb_bom import _BOM_HANDLERS, register_bom
+from .pcb_stitch import _STITCH_HANDLERS, register_stitch
 from .project import _PROJECT_HANDLERS, register_project
 from .create import _CREATE_HANDLERS, register_create
 from .query import _QUERY_HANDLERS, register_query
 from .crossfile import _CROSSFILE_HANDLERS, register_crossfile
 from .gate_handlers import _GATE_HANDLERS, register_gate_handler
 
-# Merge fill_zones, cleanup, auto_route, and bom handlers into PCB handlers at import time
+# Merge fill_zones, cleanup, auto_route, bom, and stitch handlers into PCB handlers at import time
 _PCB_HANDLERS.update(_FILL_ZONES_HANDLERS)
 _PCB_HANDLERS.update(_CLEANUP_HANDLERS)
 _PCB_HANDLERS.update(_AUTO_ROUTE_HANDLERS)
 _PCB_HANDLERS.update(_BOM_HANDLERS)
+_PCB_HANDLERS.update(_STITCH_HANDLERS)
 
 __all__ = [
     "_SCHEMATIC_HANDLERS",
@@ -38,6 +40,8 @@ __all__ = [
     "register_auto_route",
     "_BOM_HANDLERS",
     "register_bom",
+    "_STITCH_HANDLERS",
+    "register_stitch",
     "_PROJECT_HANDLERS",
     "register_project",
     "_CREATE_HANDLERS",

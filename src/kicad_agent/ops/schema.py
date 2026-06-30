@@ -263,6 +263,7 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
     LockTrackOp,
     LockViaOp,
     AddStitchingViaPatternOp,
+    StitchPowerNetsOp,
     PlaceComponentOp,
 )
 from kicad_agent.ops._schema_placement import (  # noqa: E402
@@ -512,6 +513,7 @@ class Operation(BaseModel):
         | LockTrackOp
         | LockViaOp
         | AddStitchingViaPatternOp
+        | StitchPowerNetsOp
         | PlaceComponentOp
         | AnalyzeGapsOp
         | FillGapsOp
@@ -609,6 +611,7 @@ __all__ = [
     "LockTrackOp",
     "LockViaOp",
     "AddStitchingViaPatternOp",
+    "StitchPowerNetsOp",
     "PlaceComponentOp",
     "ModifyNetClassOp",
     "RemoveNetClassOp",

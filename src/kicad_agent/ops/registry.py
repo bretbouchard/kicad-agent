@@ -1326,6 +1326,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "stitch_power_nets": {
+        "category": "pcb",
+        "description": "DRC-aware via stitching: places vias for unconnected power pads only at positions that clear existing copper",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
     "place_component": {
         "category": "pcb",
         "description": "Place a component (footprint) on a PCB -- parametric SMD library for 0402/0603/0805 caps and resistors",

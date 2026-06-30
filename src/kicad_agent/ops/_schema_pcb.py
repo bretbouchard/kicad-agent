@@ -1037,6 +1037,47 @@ class AddStitchingViaPatternOp(BaseModel):
     )
 
 
+class StitchPowerNetsOp(BaseModel):
+    """DRC-aware via stitching for power-net completion (ae-37).
+
+    Unlike ``add_via`` / ``add_stitching_via_pattern`` which insert blindly,
+    this op runs DRC first, finds unconnected power-pad pairs, and places
+    vias ONLY at positions that clear all existing copper (pads, tracks,
+    vias). Closes the gap between power pads on signal layers and power
+    planes on inner layers.
+
+    Attributes:
+        op_type: Discriminator literal ``"stitch_power_nets"``.
+        target_file: Relative path to the target KiCad PCB file.
+        nets: Power nets to stitch. Empty = auto-detect (GND, +3V3, +9V,
+            -9V, +5V, +12V, GNDA).
+        via_size: Via pad diameter in mm (default 0.6, JLC 4-layer floor).
+        via_drill: Via drill diameter in mm (default 0.3).
+        clearance: Minimum clearance from via edge to existing copper in mm.
+        max_vias: Safety cap on total vias placed (default 500).
+        candidate_count: Number of candidate positions to sample per
+            unconnected pair (default 10). Higher = more thorough but slower.
+    """
+
+    op_type: Literal["stitch_power_nets"] = "stitch_power_nets"
+    target_file: TargetFile
+    nets: list[str] = Field(
+        default_factory=list,
+        description="Power nets to stitch (empty = auto-detect common power rails)",
+    )
+    via_size: float = Field(default=0.6, gt=0.01, description="Via pad diameter in mm")
+    via_drill: float = Field(default=0.3, gt=0.01, description="Via drill diameter in mm")
+    clearance: float = Field(
+        default=0.5, gt=0.01,
+        description="Minimum clearance from via edge to existing copper (mm)",
+    )
+    max_vias: int = Field(default=500, ge=1, le=5000, description="Safety cap on vias placed")
+    candidate_count: int = Field(
+        default=10, ge=3, le=50,
+        description="Candidate positions to sample per unconnected pair",
+    )
+
+
 class PlaceComponentOp(BaseModel):
     """Place a component (footprint) on a PCB (Phase 101-05).
 
