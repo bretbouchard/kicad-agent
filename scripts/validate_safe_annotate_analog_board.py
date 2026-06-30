@@ -1,5 +1,9 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.11
 """H-03: Validate safe_annotate against real-world analog-board.kicad_sch.
+
+Invoke via: python3.11 scripts/validate_safe_annotate_analog_board.py
+(or .venv/bin/python if installed). System python3 (3.9) cannot import
+kicad_agent — the project requires Python 3.10+ for PEP 604 unions.
 
 Operates on a COPY in tmp — never touches the live analog-ecosystem repo
 (which is currently dirty with uncommitted files). Self-cleaning via
