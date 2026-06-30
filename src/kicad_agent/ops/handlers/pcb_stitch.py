@@ -177,21 +177,24 @@ def extract_copper_obstacles(pcb_text: str) -> list[dict]:
         sin_r = math.sin(rot_rad)
 
         # Pads within this footprint
+        # Format: (pad "N" smd roundrect\n\t\t(at X Y)\n\t\t(size DX DY)...)
+        # The pad type can be followed by optional shape (roundrect/thruhole)
+        # then whitespace (including newlines/tabs) before (at).
         for pad_m in re.finditer(
-            r'\(pad\s+"[^"]*"\s+(\w+)\s+\(at\s+([\d.eE+-]+)\s+([\d.eE+-]+)',
+            r'\(pad\s+"[^"]*"\s+\w+(?:\s+\w+)?\s+\(at\s+([\d.eE+-]+)\s+([\d.eE+-]+)',
             block,
         ):
-            pad_type = pad_m.group(1)
-            pad_rx = float(pad_m.group(2))  # relative to footprint
-            pad_ry = float(pad_m.group(3))
+            pad_rx = float(pad_m.group(1))  # relative to footprint
+            pad_ry = float(pad_m.group(2))
 
             # Apply footprint rotation
             abs_x = fp_x + pad_rx * cos_r - pad_ry * sin_r
             abs_y = fp_y + pad_rx * sin_r + pad_ry * cos_r
 
-            # Get pad size
+            # Get pad size (search forward from pad position, up to 400 chars
+            # to span multi-line blocks with tabs/newlines)
             size_m = re.search(
-                r'\(size\s+([\d.eE+-]+)\s+([\d.eE+-]+)', block[pad_m.end():pad_m.end()+200]
+                r'\(size\s+([\d.eE+-]+)\s+([\d.eE+-]+)', block[pad_m.end():pad_m.end()+400]
             )
             if size_m:
                 dx = float(size_m.group(1)) / 2.0
@@ -199,8 +202,8 @@ def extract_copper_obstacles(pcb_text: str) -> list[dict]:
             else:
                 dx = dy = 0.3  # default pad half-size
 
-            # Get pad net (if any)
-            net_m = re.search(r'\(net\s+"([^"]+)"', block[pad_m.end():pad_m.end()+400])
+            # Get pad net (if any) — may be 400+ chars after pad in multi-line blocks
+            net_m = re.search(r'\(net\s+"([^"]+)"', block[pad_m.end():pad_m.end()+600])
             pad_net = net_m.group(1) if net_m else None
 
             obstacles.append({
@@ -213,12 +216,14 @@ def extract_copper_obstacles(pcb_text: str) -> list[dict]:
             })
 
     # Parse tracks (segments)
-    # Format: (segment (start X Y) (end X Y) (width W) ... (net "NAME") ...)
+    # Format (multi-line with tabs):
+    #   (segment\n\t\t(start X Y)\n\t\t(end X Y)\n\t\t(width W)\n\t\t(layer "...")\n\t\t(net "NAME")...)
+    # Use [\s\S] instead of [^)] to match across newlines between fields.
     for seg_m in re.finditer(
         r'\(segment\s+\(start\s+([\d.eE+-]+)\s+([\d.eE+-]+)\)\s+'
         r'\(end\s+([\d.eE+-]+)\s+([\d.eE+-]+)\)\s+'
         r'\(width\s+([\d.eE+-]+)\)'
-        r'[^)]*?\(net\s+"([^"]+)"\)',
+        r'.*?\(net\s+"([^"]+)"\)',
         pcb_text, re.DOTALL,
     ):
         x1, y1 = float(seg_m.group(1)), float(seg_m.group(2))
@@ -234,10 +239,11 @@ def extract_copper_obstacles(pcb_text: str) -> list[dict]:
         })
 
     # Parse vias
-    # Format: (via (at X Y) (size S) ... (net "NAME") ...)
+    # Format (multi-line with tabs):
+    #   (via\n\t\t(at X Y)\n\t\t(size S)\n\t\t(drill D)\n\t\t(layers "...")\n\t\t(net "NAME")...)
     for via_m in re.finditer(
         r'\(via\s+\(at\s+([\d.eE+-]+)\s+([\d.eE+-]+)\)\s+\(size\s+([\d.eE+-]+)\)'
-        r'[^)]*?\(net\s+"([^"]+)"\)',
+        r'.*?\(net\s+"([^"]+)"\)',
         pcb_text, re.DOTALL,
     ):
         obstacles.append({
