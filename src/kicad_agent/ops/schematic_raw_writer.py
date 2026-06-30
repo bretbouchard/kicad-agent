@@ -515,3 +515,113 @@ class SchematicRawWriter:
             return content  # no Reference property in this block — no-op
 
         return content[:target_block_start] + new_block + content[target_block_end:]
+
+    @staticmethod
+    def replace_instances_reference(content: str, symbol_uuid: str, new_ref: str) -> str:
+        """Replace the ``(reference ...)`` value inside an ``(instances ...)`` block.
+
+        H-02 Option B (Phase 102.1): real-world KiCad 10 schematics contain
+        ``(instances (project "..." (path "/" (reference "OLD") (unit N))))``
+        blocks inside each ``(symbol ...)``. The netlist exporter reads the
+        reference designator from here, NOT from ``(property "Reference" ...)``.
+        Without co-editing this block, safe_annotate renames the property but
+        the exported netlist still shows the old ref → silent partial
+        annotation on real schematics (analog-board has 5-46 instances blocks
+        per sheet).
+
+        Locates the ``(symbol ...)`` block containing ``(uuid "SYMBOL_UUID")``,
+        then within that block finds the ``(instances ...)`` sub-block and
+        replaces its ``(reference "OLD")`` value with new_ref via string
+        slicing (NOT regex with user content as replacement — LO-05 defense).
+
+        Args:
+            content: Raw S-expression schematic content.
+            symbol_uuid: The UUID of the target placed symbol.
+            new_ref: The new reference value (e.g. "R1", "C42").
+
+        Returns:
+            Content with the targeted instances reference replaced. Returns
+            content unchanged if the UUID, instances block, or reference is
+            not found (no-op — backward compat with Phase 102 fixtures that
+            intentionally omit instances blocks).
+
+        Raises:
+            ValueError: If new_ref contains a double quote.
+        """
+        if '"' in new_ref:
+            raise ValueError(f"new_ref contains illegal double quote: {new_ref!r}")
+
+        safe_uuid = re.escape(symbol_uuid)
+        # Match both KiCad 10 unquoted and legacy quoted UUID forms.
+        uuid_pattern = re.compile(rf'\(uuid\s+"?{safe_uuid}"?')
+
+        # Find the (symbol ...) block containing the target UUID.
+        symbol_starts = [m.start() for m in re.finditer(r'\(symbol\b', content)]
+        target_block_start = None
+        target_block_end = None
+
+        for start in symbol_starts:
+            depth = 0
+            i = start
+            block_end = None
+            while i < len(content):
+                if content[i] == '(':
+                    depth += 1
+                elif content[i] == ')':
+                    depth -= 1
+                    if depth == 0:
+                        block_end = i + 1
+                        break
+                i += 1
+            if block_end is None:
+                continue
+
+            block = content[start:block_end]
+            if uuid_pattern.search(block):
+                target_block_start = start
+                target_block_end = block_end
+                break
+
+        if target_block_start is None:
+            return content  # symbol not found — no-op
+
+        block = content[target_block_start:target_block_end]
+
+        # Find the (instances ...) sub-block via paren-balanced extraction.
+        inst_match = re.search(r'\(instances\b', block)
+        if inst_match is None:
+            return content  # no instances block — no-op (backward compat)
+
+        inst_start = inst_match.start()
+        depth = 0
+        i = inst_start
+        inst_end = None
+        while i < len(block):
+            if block[i] == '(':
+                depth += 1
+            elif block[i] == ')':
+                depth -= 1
+                if depth == 0:
+                    inst_end = i + 1
+                    break
+            i += 1
+        if inst_end is None:
+            return content  # malformed instances block — no-op (fail safe)
+
+        instances_block = block[inst_start:inst_end]
+
+        # Within (instances ...), locate (reference "OLD") and replace with
+        # (reference "NEW") via string slicing. We do NOT use re.sub with the
+        # old reference as part of a replacement string — the old reference is
+        # discarded after locating it; only the new_ref (which we control,
+        # e.g. "R42") is interpolated. LO-05 hardening: this prevents
+        # adversarial reference values from acting as regex/shell payloads.
+        ref_pattern = re.compile(r'(\(reference\s+)"[^"]*"')
+        new_instances, n = ref_pattern.subn(rf'\1"{new_ref}"', instances_block, count=1)
+
+        if n == 0:
+            return content  # no reference in instances block — no-op
+
+        new_block = block[:inst_start] + new_instances + block[inst_end:]
+        return content[:target_block_start] + new_block + content[target_block_end:]
+

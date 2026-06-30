@@ -290,7 +290,16 @@ def _handle_safe_annotate(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
         if rename["old_ref"] == rename["new_ref"]:
             continue  # no change needed
         sheet_key = rename["sheet"]
+        # H-02 Option B (Phase 102.1): co-edit BOTH the (property "Reference")
+        # AND the (instances ... (reference ...)) blocks. Real-world KiCad 10
+        # schematics have instances blocks that the netlist exporter reads from;
+        # editing only the property leaves the netlist stale. Both methods are
+        # idempotent no-ops if the target block is absent (backward compat with
+        # Phase 102 fixtures that intentionally omit instances blocks).
         new_contents[sheet_key] = SchematicRawWriter.replace_reference_property(
+            new_contents[sheet_key], rename["uuid"], rename["new_ref"]
+        )
+        new_contents[sheet_key] = SchematicRawWriter.replace_instances_reference(
             new_contents[sheet_key], rename["uuid"], rename["new_ref"]
         )
 

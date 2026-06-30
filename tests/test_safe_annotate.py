@@ -485,3 +485,105 @@ def test_sort_tie_break_uses_sheet_uuid(tmp_path):
         f"EXEC-03 vacuous: no renames occurred. stats={stats_a}"
     )
 
+
+# ---- H-02 Option B: instances block co-edit (Phase 102.1) ----
+def test_instances_block_co_edited(tmp_path):
+    """safe_annotate updates BOTH (property "Reference") AND (instances reference).
+
+    H-02 Option B (Phase 102.1): real-world KiCad 10 schematics contain
+    (instances (project "..." (path "/" (reference "OLD") (unit N)))) blocks.
+    The netlist exporter reads the refdes from here. Without co-editing,
+    safe_annotate renames the property but the netlist still shows the old
+    ref → silent partial annotation.
+
+    Fixture with_instances.kicad_sch has ONE R1 symbol with an instances block.
+    With reset:true, safe_annotate renumbers R1 → R1 (same) but the test also
+    forces a rename by having TWO R1's — no, simpler: reset:true alone renames
+    R1 -> R1 (counter starts at 1). To force an actual rename we use a fixture
+    whose ref starts higher. Actually the simplest: reset:true on a single R1
+    produces R1 (no change). So we add a second component with R5 to force
+    renumbering via reset.
+
+    Simpler approach: the fixture has R1. We run reset:true. The single
+    resistor gets renumbered R1 -> R1 (no change). That doesn't test the edit.
+    So instead we craft the test to verify the instances block is updated
+    WHEN a rename happens. We achieve a rename by copying the fixture, then
+    manually running reset which renumbers the single R1 to R1 (stable).
+    That's a no-op rename. To force a real rename we need 2+ components.
+
+    Final approach: load fixture (1 R1), pre-edit it to R5, then run
+    reset:true -> R5 becomes R1 (real rename). Verify both property AND
+    instances reference updated to R1.
+    """
+    src = FIXTURES / "with_instances.kicad_sch"
+    dst = tmp_path / "test.kicad_sch"
+    shutil.copy(src, dst)
+
+    # Pre-edit: change both the property AND instances reference from R1 to R5
+    # so that reset:true produces a real rename (R5 -> R1), exercising the
+    # co-edit path.
+    content = dst.read_text()
+    content = content.replace('(property "Reference" "R1"', '(property "Reference" "R5"')
+    content = content.replace('(reference "R1")', '(reference "R5")')
+    dst.write_text(content)
+
+    # Sanity: the pre-edit took effect.
+    pre = dst.read_text()
+    assert '(property "Reference" "R5"' in pre, "Pre-edit property failed"
+    assert '(reference "R5")' in pre, "Pre-edit instances reference failed"
+
+    # Run safe_annotate with reset:true. R5 -> R1 (the counter starts at 1
+    # for the R prefix under reset, and this is the only R in the schematic).
+    result = _execute_op(
+        {
+            "op_type": "safe_annotate",
+            "target_file": "test.kicad_sch",
+            "scope": "current_sheet",
+            "reset": True,
+        },
+        base_dir=tmp_path,
+    )
+
+    annotated = result.get("details", {}).get("annotated", [])
+    stats = result.get("details", {}).get("stats", {})
+
+    # A rename must have occurred (R5 -> R1).
+    assert stats.get("refs_renamed", 0) >= 1, (
+        f"H-02 vacuous: no rename occurred. stats={stats}, annotated={annotated}"
+    )
+
+    # The annotated entry should show old_ref=R5, new_ref=R1.
+    renamed = [r for r in annotated if r["old_ref"] == "R5" and r["new_ref"] == "R1"]
+    assert len(renamed) == 1, (
+        f"Expected R5->R1 rename, got annotated={annotated}"
+    )
+
+    # H-02 CORE ASSERTION: read the output file and verify BOTH locations
+    # reflect the new ref (R1), and the old ref (R5) is gone from both.
+    out = dst.read_text()
+
+    # (property "Reference" "R1") must be present
+    assert '(property "Reference" "R1"' in out, (
+        f"H-02 FAIL: (property \"Reference\" \"R1\") not found in output"
+    )
+    # (reference "R1") inside instances must be present
+    assert '(reference "R1")' in out, (
+        f"H-02 FAIL: (reference \"R1\") not found in instances block"
+    )
+
+    # The OLD ref R5 must be GONE from both locations.
+    assert '(property "Reference" "R5"' not in out, (
+        f"H-02 FAIL: stale (property \"Reference\" \"R5\") still present "
+        f"— property edit did not apply"
+    )
+    assert '(reference "R5")' not in out, (
+        f"H-02 FAIL: stale (reference \"R5\") still present in instances "
+        f"— instances co-edit did not apply (the H-02 bug)"
+    )
+
+    # Paren balance must be preserved.
+    assert out.count("(") == out.count(")"), (
+        f"H-02 FAIL: paren imbalance after instances co-edit"
+    )
+
+
