@@ -616,8 +616,12 @@ class SchematicRawWriter:
         # discarded after locating it; only the new_ref (which we control,
         # e.g. "R42") is interpolated. LO-05 hardening: this prevents
         # adversarial reference values from acting as regex/shell payloads.
+        # WR-01 fix: NO count=1 — update ALL (reference ...) entries in the
+        # instances block. Multi-board projects have one (reference ...) per
+        # board per symbol; all must share the refdes. count=1 would leave
+        # stale references on the 2nd+ board, silently corrupting netlists.
         ref_pattern = re.compile(r'(\(reference\s+)"[^"]*"')
-        new_instances, n = ref_pattern.subn(rf'\1"{new_ref}"', instances_block, count=1)
+        new_instances, n = ref_pattern.subn(rf'\1"{new_ref}"', instances_block)
 
         if n == 0:
             return content  # no reference in instances block — no-op

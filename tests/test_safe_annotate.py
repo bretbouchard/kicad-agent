@@ -486,6 +486,66 @@ def test_sort_tie_break_uses_sheet_uuid(tmp_path):
     )
 
 
+def test_sort_tie_break_uses_sheet_uuid_not_path():
+    """DIRECT test: sort tie-break uses sheet_uuid, not sheet_path.
+
+    WR-02 fix (Phase 102.1 code review): the integration test above is
+    vacuous because the fixture filenames sort in the same order as their
+    UUIDs (child_a < child_b by both path AND uuid). This unit test
+    constructs components where PATH ORDER IS INVERTED from UUID order,
+    proving the sort picks by UUID (stable across machines) not path
+    (varies by machine/layout).
+
+    With the OLD sheet_path tie-break, the winner would be the component
+    on sheet_path "/zzz_first.kicad_sch" (wait — no: "/aaa_..." sorts first).
+    Let me be precise:
+      - Component P has sheet="/aaa_path.kicad_sch", uuid="zzz-uuid"
+      - Component Q has sheet="/zzz_path.kicad_sch", uuid="aaa-uuid"
+      - Both at identical (x, y)
+    OLD code (path tie-break): P wins ("/aaa_..." < "/zzz_...")
+    NEW code (uuid tie-break): Q wins ("aaa-uuid" < "zzz-uuid")
+    """
+    from kicad_agent.ops.handlers.schematic import _build_rename_plan
+
+    components = [
+        {
+            "uuid": "sym-p-uuid",
+            "ref": "R?",
+            "x": 50.0,
+            "y": 50.0,
+            "sheet": "/aaa_path.kicad_sch",   # sorts FIRST by path
+            "sheet_uuid": "zzzz-p-sheet-uuid",  # but LAST by uuid
+        },
+        {
+            "uuid": "sym-q-uuid",
+            "ref": "R?",
+            "x": 50.0,
+            "y": 50.0,
+            "sheet": "/zzz_path.kicad_sch",   # sorts LAST by path
+            "sheet_uuid": "aaaa-q-sheet-uuid",  # but FIRST by uuid
+        },
+    ]
+
+    plan = _build_rename_plan(components, reset=True, order="by_x_position")
+
+    # Both get renamed (R? -> R1, R? -> R2). The question is WHO gets R1.
+    r1_entry = next(r for r in plan if r["new_ref"] == "R1")
+    r2_entry = next(r for r in plan if r["new_ref"] == "R2")
+
+    # EXEC-03 PASS: the component with the alphabetically-first UUID wins R1.
+    # That's Q (uuid "aaaa-q-sheet-uuid"), NOT P (uuid "zzzz-p-sheet-uuid").
+    # If the sort used sheet_path, P would win ("/aaa_..." < "/zzz_...").
+    assert r1_entry["uuid"] == "sym-q-uuid", (
+        f"EXEC-03 FAIL: R1 assigned to {r1_entry['uuid']} (expected sym-q-uuid "
+        f"with first-UUID). Sort may be using sheet_path instead of sheet_uuid. "
+        f"Plan: {[(r['uuid'], r['new_ref']) for r in plan]}"
+    )
+    assert r2_entry["uuid"] == "sym-p-uuid", (
+        f"EXEC-03 FAIL: R2 assigned to {r2_entry['uuid']} (expected sym-p-uuid). "
+        f"Plan: {[(r['uuid'], r['new_ref']) for r in plan]}"
+    )
+
+
 # ---- H-02 Option B: instances block co-edit (Phase 102.1) ----
 def test_instances_block_co_edited(tmp_path):
     """safe_annotate updates BOTH (property "Reference") AND (instances reference).
