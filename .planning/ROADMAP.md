@@ -821,12 +821,26 @@ Complete routing stack production-ready: Freerouting backend (P99) → orchestra
 **Goal:** Ship a `safe_annotate` op that renumbers reference designators on KiCad 10 schematics via raw S-expression edits (never kiutils re-serialization), replacing the forbidden `annotate` op (P0-006). Deduplicates cross-sheet refs, preserves formatting byte-for-byte outside targeted property lines, validates paren balance, refuses root sheets.
 **Requirements**: TC-1 through TC-8 (5 LOCKED test cases from CONTEXT.md + 3 supporting tests; no REQ-IDs — feature-driven from FEATURE-008)
 **Depends on:** Phase 101
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 102-01-PLAN.md — Test infrastructure: 8 RED test stubs (TC-1..TC-8) + 5 KiCad 10 fixtures (single-sheet + multi-sheet project) (TC-1, TC-2, TC-3, TC-4, TC-5, TC-6, TC-7, TC-8)
 - [x] 102-02-PLAN.md — Core op: SchematicRawWriter.replace_reference_property + SafeAnnotateOp schema + _handle_safe_annotate handler (root guard, scope dispatch, rename plan, raw edits) + SELF_SERIALIZING_OPS registration; makes TC-1, 2, 5, 6, 7, 8 GREEN (TC-1, TC-2, TC-5, TC-6, TC-7, TC-8)
 - [x] 102-03-PLAN.md — Integration tests (TC-3 cross-sheet dedup, TC-4 P0-006 regression diff assertion) + docs/api/safe_annotate.md + BUGS/P0-006 update + annotate DeprecationWarning (TC-3, TC-4) — COMPLETE 2026-06-29 (2 commits, 5 files, 3m)
+
+---
+
+### Phase 102.1: Close Phase 102 Deferred Work (INSERTED)
+
+**Goal:** Resolve the 3 items deferred from Phase 102 per the four-state taxonomy: (1) EXEC-03 — switch `_build_rename_plan` sort tie-break from absolute sheet path to sheet UUID for deterministic BOMs across machines; (2) H-02 Option B — handler co-edits `(instances ...)` blocks when renaming refdes so the netlist exporter sees updated references on real-world schematics; (3) H-03 — real-world validation against `analog-ecosystem/hardware/network-io/channel-strip/analog-board.kicad_sch` (47+ cross-sheet duplicates, 16 sub-sheets) confirming GNDA rail present in exported netlist after `safe_annotate`.
+**Requirements**: EXEC-03, H-02 Option B, H-03 (all documented in ROADMAP ## Deferred → Phase 102 Findings)
+**Depends on:** Phase 102
+**Plans:** 1 plan (1 complete)
+
+Plans:
+- [x] 102.1-01-PLAN.md — Close deferred work: EXEC-03 sort UUID + H-02 instances co-edit + H-03 real-world validation (COMPLETE 2026-06-29)
+
+---
 
 ---
 
@@ -1730,5 +1744,7 @@ Deferred work awaiting trigger conditions or future milestones. The SessionStart
 
 ### Phase 102 Findings
 
-- [ ] **H-02 Option B: Handler co-edits `(instances ...)` blocks for real-world schematics** — Trigger: Phase 145 manual verification on `analog-board.kicad_sch` fails (GNDA rail still collapses after `safe_annotate`) OR a real-world schematic with `(instances ...)` blocks is tested against `safe_annotate`. Readiness signal: Phase 145 manual verification execution; if netlist exporter still produces collapsed nets after safe_annotate, this is the missing piece. Resolution state: DEFERRED-TO-NAMED-TARGET (per four-state taxonomy §7). Deferred: 2026-06-29. Plan 102-01 applied Option A (fixtures omit instances); Option B extends the Plan 02 handler to also update `(reference "OLD")` inside `(instances (project ... (path "/" (reference "OLD") (unit 1))))` blocks when the property is renamed.
-- [ ] **H-03: Real-world multi-sheet validation at scale (47+ cross-sheet duplicates across 16 sub-sheets)** — Trigger: Phase 145 manual verification on `analog-board.kicad_sch` per VALIDATION.md line 69. Readiness signal: Phase 145 execution. Plan 102-03 applied Option (b) — minimal fixtures (2 sheets, 2 duplicate refs) prove the MECHANISM; full scale validation deferred. Resolution state: DEFERRED-TO-NAMED-TARGET (per four-state taxonomy §7). Deferred: 2026-06-29. Phase 102 success criteria reflects this: "proven on minimal multi-sheet fixtures; full real-world validation deferred."
+- [x] **H-02 Option B: Handler co-edits `(instances ...)` blocks for real-world schematics** — RESOLVED 2026-06-29 (Phase 102.1 Plan 01). `SchematicRawWriter.replace_instances_reference` added; `_handle_safe_annotate` calls both `replace_reference_property` AND `replace_instances_reference` per rename. No-op when instances block absent (backward compat). Commit: 1677f790.
+- [x] **H-03: Real-world multi-sheet validation at scale (47+ cross-sheet duplicates across 16 sub-sheets)** — RESOLVED 2026-06-29 (Phase 102.1 Plan 01). Validation script `scripts/validate_safe_annotate_analog_board.py` runs safe_annotate end-to-end on the real 16-sheet analog-board project. Result: 218 nets, GNDA 39 nodes, GND 100 nodes — netlist healthy. The 47 cross-sheet duplicates from FEATURE-008 were already resolved in the source repo; safe_annotate runs cleanly with no regression. Commit: 55793419.
+- [x] **EXEC-03: Sort tie-break non-determinism across machines** — RESOLVED 2026-06-29 (Phase 102.1 Plan 01). `_build_rename_plan` sort keys switched from `sheet_path` (absolute, varies across machines) to `sheet_uuid` (KiCad-embedded, stable). Root UUID via `_extract_root_sheet_uuid`; sub-sheet UUIDs via `SheetRef.uuid` (CR-01 regex fix accepts unquoted KiCad 10 UUIDs). Regression test `test_sort_tie_break_uses_sheet_uuid` verifies determinism across 2 base dirs. Commit: 3dd19532.
+
