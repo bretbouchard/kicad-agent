@@ -22,11 +22,13 @@ from kicad_agent.schematic_routing.schematic_graph import (
     PinPosition,
     Pos,
     SchematicGraph,
+    SheetRef,
     Wire,
     _find_lib_symbols_range,
     _parse_junctions,
     _parse_labels,
     _parse_no_connects,
+    _parse_sheet_refs,
     _parse_wires,
     _round_pos,
 )
@@ -346,3 +348,72 @@ class TestSheetPinParsing:
         labels = _parse_labels("(wire (pts (xy 10 20) (xy 30 40)))")
         sheet_pin_labels = [l for l in labels if l.label_type == "hierarchical"]
         assert len(sheet_pin_labels) == 0
+
+
+class TestSheetRefUuidParsing:
+    """Tests for CR-01 (Phase 102.1): _parse_sheet_refs accepts both KiCad 10
+    unquoted UUIDs and legacy quoted UUIDs. Without this, SheetRef.uuid is
+    empty for all KiCad 10 fixtures, breaking EXEC-03 sort tie-break."""
+
+    def test_unquoted_uuid_extracted_kicad10(self) -> None:
+        """KiCad 10 form (uuid aaaa-...) is parsed, not returned as empty."""
+        body = """
+        (sheet (at 100 100) (size 50 20)
+          (uuid bbbbbbbb-0001-0000-0000-000000000001)
+          (property "Sheetname" "Child A" (at 100 97.5 0))
+          (property "Sheetfile" "child_a.kicad_sch" (at 100 125 0))
+        )
+        """
+        refs = _parse_sheet_refs(body)
+        assert len(refs) == 1
+        assert refs[0].uuid == "bbbbbbbb-0001-0000-0000-000000000001"
+        assert refs[0].name == "Child A"
+        assert refs[0].filepath == "child_a.kicad_sch"
+
+    def test_quoted_uuid_extracted_legacy(self) -> None:
+        """Legacy quoted form (uuid "aaaa-...") still works (backward compat)."""
+        body = """
+        (sheet (at 100 100) (size 50 20)
+          (uuid "cccccccc-0002-0000-0000-000000000002")
+          (property "Sheetname" "Child B" (at 100 97.5 0))
+          (property "Sheetfile" "child_b.kicad_sch" (at 100 125 0))
+        )
+        """
+        refs = _parse_sheet_refs(body)
+        assert len(refs) == 1
+        assert refs[0].uuid == "cccccccc-0002-0000-0000-000000000002"
+
+    def test_no_uuid_returns_empty_string(self) -> None:
+        """Sheet block without a UUID returns empty string (no crash)."""
+        body = """
+        (sheet (at 100 100) (size 50 20)
+          (property "Sheetname" "Orphan" (at 100 97.5 0))
+          (property "Sheetfile" "orphan.kicad_sch" (at 100 125 0))
+        )
+        """
+        refs = _parse_sheet_refs(body)
+        assert len(refs) == 1
+        assert refs[0].uuid == ""
+
+    def test_multiple_sheets_each_get_own_uuid(self) -> None:
+        """Two sheets in a root file each get their own UUID (not shared)."""
+        body = """
+        (sheet (at 100 100) (size 50 20)
+          (uuid dddddddd-0001-0000-0000-000000000001)
+          (property "Sheetname" "First" (at 100 97.5 0))
+          (property "Sheetfile" "first.kicad_sch" (at 100 125 0))
+        )
+        (sheet (at 200 100) (size 50 20)
+          (uuid dddddddd-0002-0000-0000-000000000002)
+          (property "Sheetname" "Second" (at 200 97.5 0))
+          (property "Sheetfile" "second.kicad_sch" (at 200 125 0))
+        )
+        """
+        refs = _parse_sheet_refs(body)
+        assert len(refs) == 2
+        uuids = {r.uuid for r in refs}
+        assert uuids == {
+            "dddddddd-0001-0000-0000-000000000001",
+            "dddddddd-0002-0000-0000-000000000002",
+        }
+

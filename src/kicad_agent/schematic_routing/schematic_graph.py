@@ -733,8 +733,11 @@ def _parse_sheet_refs(body: str) -> list[SheetRef]:
         if size_m:
             size = (float(size_m.group(1)), float(size_m.group(2)))
 
-        # Extract uuid
-        uuid_m = re.search(r'\(uuid\s+"([^"]+)"', block)
+        # Extract uuid. KiCad 10 uses unquoted UUIDs: (uuid aaaa-...);
+        # older format quotes them: (uuid "aaaa-..."). Match both forms
+        # (mirrors replace_reference_property at schematic_raw_writer.py:474
+        # and _extract_symbols_with_refs at handlers/schematic.py:367).
+        uuid_m = re.search(r'\(uuid\s+"?([^")\s]+)"?', block)
         uuid = uuid_m.group(1) if uuid_m else ""
 
         # Extract Sheetname
