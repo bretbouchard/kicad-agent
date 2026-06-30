@@ -207,21 +207,51 @@ def _handle_safe_annotate(op: Any, ir: SchematicIR, file_path: Path) -> dict[str
         )
 
     # ---- DISCOVER TARGET SHEETS ----
+    # Build a sheet_path -> sheet_uuid map for EXEC-03 sort tie-break.
+    # The root sheet UUID comes from _extract_root_sheet_uuid (header-level);
+    # sub-sheet UUIDs come from SheetRef.uuid populated by from_hierarchy
+    # (CR-01 fix in schematic_graph.py:737 accepts KiCad 10 unquoted UUIDs).
+    sheet_path_to_uuid: dict[str, str] = {}
+
     if op.scope == "current_sheet":
         sheet_paths = [root_path]
+        sheet_path_to_uuid[str(root_path)] = _extract_root_sheet_uuid(root_path.read_text())
     else:  # whole_project
         from kicad_agent.schematic_routing.schematic_graph import SchematicGraph
         tree = SchematicGraph.from_hierarchy(str(root_path))
         sheet_paths = [Path(tree.filepath)]
         _collect_children(tree, sheet_paths)
 
+        # Root sheet UUID from the root file header.
+        root_uuid = _extract_root_sheet_uuid(Path(tree.filepath).read_text())
+        sheet_path_to_uuid[str(tree.filepath)] = root_uuid
+
+        # Sub-sheet UUIDs from SheetRef.uuid (populated by _parse_sheet_refs).
+        # Walk the tree depth-first; each child's filepath keys its UUID.
+        def _index_sub_sheet_uuids(node) -> None:
+            for child in node.children:
+                # Find the SheetRef matching this child's filepath.
+                child_filename = Path(child.filepath).name
+                matching_ref = None
+                for ref in node.sheet_refs:
+                    if ref.filepath == child_filename:
+                        matching_ref = ref
+                        break
+                if matching_ref is not None:
+                    sheet_path_to_uuid[str(child.filepath)] = matching_ref.uuid
+                _index_sub_sheet_uuids(child)
+
+        _index_sub_sheet_uuids(tree)
+
     # ---- COLLECT COMPONENTS PER SHEET ----
-    all_components = []  # list of {sheet, uuid, ref, x, y}
+    all_components = []  # list of {sheet, sheet_uuid, uuid, ref, x, y}
     for sheet_path in sheet_paths:
         sheet_raw = sheet_path.read_text()
         components = _extract_symbols_with_refs(sheet_raw)
+        sheet_uuid = sheet_path_to_uuid.get(str(sheet_path), "")
         for c in components:
             c["sheet"] = str(sheet_path)
+            c["sheet_uuid"] = sheet_uuid
             all_components.append(c)
 
     # ---- BUILD RENAME PLAN ----
@@ -327,6 +357,29 @@ def _collect_children(node, paths: list) -> None:
         _collect_children(child, paths)
 
 
+def _extract_root_sheet_uuid(raw: str) -> str:
+    """Extract the top-level sheet UUID from a root .kicad_sch file.
+
+    Anchored to the ``(uuid ...)`` that appears BEFORE the first ``(symbol``
+    or ``(lib_symbols`` block — avoids picking up UUIDs nested in title
+    blocks, sheet blocks, or placed-component symbol blocks.
+
+    KiCad 10 uses unquoted UUID form ``(uuid aaaa-...)`` at the file header;
+    older format quotes them ``(uuid "aaaa-...")``. Both forms are matched.
+
+    Returns empty string if no top-level UUID is found.
+    """
+    header_end = len(raw)
+    for marker in ("(symbol", "(lib_symbols"):
+        idx = raw.find(marker)
+        if idx != -1:
+            header_end = min(header_end, idx)
+    header = raw[:header_end]
+    m = re.search(r'\(uuid\s+"?([0-9a-f-]+)"?\)', header)
+    return m.group(1) if m else ""
+
+
+
 def _extract_symbols_with_refs(raw: str) -> list:
     """Extract placed component symbols with (uuid, ref, x, y) from raw schematic content.
 
@@ -390,30 +443,32 @@ def _build_rename_plan(components: list, reset: bool, order: str) -> list:
     """Build a per-component rename plan.
 
     Args:
-        components: list of {uuid, ref, x, y, sheet} dicts.
+        components: list of {uuid, ref, x, y, sheet, sheet_uuid} dicts.
         reset: if True, treat all refs as <prefix>? before renumbering.
         order: one of "by_x_position" | "by_y_position" | "sheet_order".
 
     Sort tie-break order (LOCKED per CONTEXT.md "Claude's Discretion" — "when
     two components share the same X coordinate, break ties by Y then by sheet
-    order"). EXEC-03 (deferred to Phase 145): sheet_path is absolute today,
-    making the tie-break non-deterministic across machines; a future phase may
-    switch to sheet UUID for stable BOMs.
+    order"). The final tie-break uses ``sheet_uuid`` (EXEC-03, Phase 102.1):
+    KiCad-generated UUIDs are stable across machines, so the same project
+    produces identical refdes assignments regardless of the absolute
+    filesystem path it lives under.
 
-    - ``by_x_position``: sort key = ``(x, y, sheet_path)`` — primary X,
-      tie-break Y, final tie-break sheet path string. This is the LOCKED
-      order from CONTEXT.md.
-    - ``by_y_position``: sort key = ``(y, x, sheet_path)`` — primary Y,
-      tie-break X, final tie-break sheet path string.
-    - ``sheet_order``: sort key = ``(sheet_path, x, y)`` — primary sheet
-      path string, tie-break X, final tie-break Y.
+    - ``by_x_position``: sort key = ``(x, y, sheet_uuid)`` — primary X,
+      tie-break Y, final tie-break sheet UUID. This is the LOCKED order
+      from CONTEXT.md.
+    - ``by_y_position``: sort key = ``(y, x, sheet_uuid)`` — primary Y,
+      tie-break X, final tie-break sheet UUID.
+    - ``sheet_order``: sort key = ``(sheet_uuid, x, y)`` — primary sheet
+      UUID, tie-break X, final tie-break Y.
 
-    The ``sheet_path`` tie-break is a deterministic string comparison on the
-    sheet's absolute path; for real-world schematics whose paths vary across
-    filesystems, sort order may differ between runs. Fixtures in Phase 102
-    use stable paths so tests are deterministic.
+    The ``sheet_uuid`` tie-break is a deterministic string comparison on the
+    KiCad-embedded sheet UUID. For schematics where a sheet has no header
+    UUID (rare — legacy or hand-edited files), the tie-break degenerates to
+    an empty string comparison for that sheet; this is no worse than the
+    pre-EXEC-03 ``sheet_path`` behavior and is documented for completeness.
 
-    Returns list of {uuid, old_ref, new_ref, sheet, deduped?} dicts.
+    Returns list of {uuid, old_ref, new_ref, sheet, sheet_uuid, deduped?} dicts.
     """
     from kicad_agent.ir.schematic_ir import _REF_PATTERN
 
@@ -440,12 +495,14 @@ def _build_rename_plan(components: list, reset: bool, order: str) -> list:
             c["effective_ref"] = c["ref"]
 
     # Sort by order option (tie-break documented in the docstring above — M-03).
+    # EXEC-03 (Phase 102.1): final tie-break uses sheet_uuid (stable across
+    # machines) rather than sheet_path (absolute, varies across filesystems).
     if order == "by_x_position":
-        sort_key = lambda c: (c["x"], c["y"], c["sheet"])
+        sort_key = lambda c: (c["x"], c["y"], c.get("sheet_uuid", ""))
     elif order == "by_y_position":
-        sort_key = lambda c: (c["y"], c["x"], c["sheet"])
+        sort_key = lambda c: (c["y"], c["x"], c.get("sheet_uuid", ""))
     else:  # sheet_order
-        sort_key = lambda c: (c["sheet"], c["x"], c["y"])
+        sort_key = lambda c: (c.get("sheet_uuid", ""), c["x"], c["y"])
 
     annotatable.sort(key=sort_key)
 

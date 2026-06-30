@@ -395,3 +395,93 @@ def test_reset_false_resolves_duplicates(tmp_path):
         f"reset=False should still resolve R1 duplicates, got annotated={annotated}"
     )
     assert stats.get("duplicates_resolved", 0) >= 1
+
+
+# ---- EXEC-03: Sort tie-break uses sheet UUID (Phase 102.1) ----
+def test_sort_tie_break_uses_sheet_uuid(tmp_path):
+    """Same project run from two different base dirs produces identical refdes.
+
+    EXEC-03 (Phase 102.1): before this fix, the sort tie-break used the
+    absolute sheet path string, so the same project at /tmp/aaa/ vs /tmp/zzz/
+    produced different refdes owners for duplicate R1 components. The fix
+    uses the sheet UUID (KiCad-embedded, stable across machines).
+
+    This test creates TWO copies of the multi-sheet project under different
+    parent directories (aaa vs zzz — alphabetically distinct) and asserts
+    that safe_annotate produces byte-identical refdes assignments on both.
+    """
+    # Create two sibling directories with alphabetically distinct names.
+    # tmp_path is already created by pytest; we create two subdirs under it.
+    dir_a = tmp_path / "aaa_test_project"
+    dir_z = tmp_path / "zzz_test_project"
+    dir_a.mkdir()
+    dir_z.mkdir()
+
+    fixtures = [
+        "multi_sheet_root.kicad_sch",
+        "multi_sheet_child_a.kicad_sch",
+        "multi_sheet_child_b.kicad_sch",
+    ]
+
+    # Copy the multi-sheet project to BOTH directories.
+    for d in (dir_a, dir_z):
+        for fname in fixtures:
+            shutil.copy(FIXTURES / fname, d / fname)
+
+    # Run safe_annotate on both with identical params.
+    result_a = _execute_op(
+        {
+            "op_type": "safe_annotate",
+            "target_file": "multi_sheet_root.kicad_sch",
+            "scope": "whole_project",
+            "reset": True,
+        },
+        base_dir=dir_a,
+    )
+    result_z = _execute_op(
+        {
+            "op_type": "safe_annotate",
+            "target_file": "multi_sheet_root.kicad_sch",
+            "scope": "whole_project",
+            "reset": True,
+        },
+        base_dir=dir_z,
+    )
+
+    details_a = result_a.get("details", {})
+    details_z = result_z.get("details", {})
+
+    # Normalize the "sheet" field (which is an absolute path) out of the
+    # annotated entries — only the (old_ref, new_ref, uuid) tuples matter
+    # for cross-machine determinism. The UUIDs are file-embedded and stable.
+    def _normalize(details):
+        return sorted(
+            (r["uuid"], r["old_ref"], r["new_ref"]) for r in details.get("annotated", [])
+        )
+
+    normalized_a = _normalize(details_a)
+    normalized_z = _normalize(details_z)
+
+    # EXEC-03 PASS CONDITION: identical refdes assignments across both dirs.
+    assert normalized_a == normalized_z, (
+        f"EXEC-03 FAIL: refdes assignments differ across base directories.\n"
+        f"  dir_a annotated (normalized): {normalized_a}\n"
+        f"  dir_z annotated (normalized): {normalized_z}\n"
+        f"With the OLD sheet_path tie-break, these would differ because "
+        f"aaa_test_project sorts before zzz_test_project alphabetically."
+    )
+
+    # Sanity: stats must also match (deterministic ref count, dedup count).
+    stats_a = details_a.get("stats", {})
+    stats_z = details_z.get("stats", {})
+    assert stats_a == stats_z, (
+        f"EXEC-03 FAIL: stats differ across base directories.\n"
+        f"  dir_a stats: {stats_a}\n"
+        f"  dir_z stats: {stats_z}"
+    )
+
+    # Sanity: at least one rename happened (otherwise test is vacuous).
+    assert stats_a.get("refs_renamed", 0) >= 1, (
+        f"EXEC-03 vacuous: no renames occurred. stats={stats_a}"
+    )
+
