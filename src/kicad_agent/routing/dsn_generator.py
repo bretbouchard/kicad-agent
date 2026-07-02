@@ -261,8 +261,114 @@ def generate_dsn(
         lines.append("    )")
     lines.append("  )")  # end network
 
+    # C-02: emit (wiring ...) section with locked pre-routed nets.
+    # Reads existing (segment ...)/(via ...) from PCB, converts to DSN
+    # (wire ...)/(via ...) with (type fix) so Freerouting preserves them.
+    wiring = _emit_wiring_section(pcb_content, board)
+    if wiring:
+        lines.append(wiring)
+
     lines.append(")")  # end pcb
     return "\n".join(lines) + "\n"
+
+
+# ---------------------------------------------------------------------------
+# C-02: Wiring section emitter (Phase 105 — Freerouting locked nets)
+# ---------------------------------------------------------------------------
+
+# Regex patterns for extracting KiCad segments and vias from raw PCB content.
+# KiCad 10 segment format: (segment (start X Y) (end X Y) (width W) (layer "L") (net N "NAME") (uuid "U"))
+_SEGMENT_RE = re.compile(
+    r'\(segment\s+'
+    r'\(start\s+([-0-9.]+)\s+([-0-9.]+)\)\s+'
+    r'\(end\s+([-0-9.]+)\s+([-0-9.]+)\)\s+'
+    r'\(width\s+([-0-9.]+)\)\s+'
+    r'\(layer\s+"([^"]+)"\)\s+'
+    r'\(net\s+\d+\s+"([^"]+)"\)',
+    re.DOTALL,
+)
+
+# KiCad 10 via format: (via (at X Y) (size S) (drill D) (layers "L1" "L2") (net N "NAME") (uuid "U"))
+_VIA_RE = re.compile(
+    r'\(via\s+'
+    r'\(at\s+([-0-9.]+)\s+([-0-9.]+)\)\s+'
+    r'\(size\s+([-0-9.]+)\)\s+'
+    r'\(drill\s+([-0-9.]+)\)\s+'
+    r'\(layers\s+"([^"]+)"\s+"([^"]+)"\)\s+'
+    r'\(net\s+\d+\s+"([^"]+)"\)',
+    re.DOTALL,
+)
+
+
+def _emit_wiring_section(
+    pcb_content: str,
+    board: NativeBoard,
+    locked_nets: set[str] | None = None,
+) -> str:
+    """Emit a Specctra ``(wiring ...)`` section from existing PCB tracks.
+
+    C-02 (Phase 105): converts KiCad ``(segment ...)`` and ``(via ...)``
+    to Specctra ``(wire ...)`` and ``(via ...)`` with ``(type fix)`` so
+    Freerouting treats them as locked (verified by R-1 test).
+
+    Args:
+        pcb_content: Raw PCB S-expression content.
+        board: Parsed NativeBoard (unused currently, reserved for layer mapping).
+        locked_nets: If provided, only emit wires for nets in this set.
+            If None, emit all existing tracks as fixed.
+
+    Returns:
+        DSN ``(wiring ...)`` block string, or empty string if no tracks exist.
+    """
+    wires: list[str] = []
+
+    # Extract segments → DSN wires.
+    for m in _SEGMENT_RE.finditer(pcb_content):
+        sx_mm, sy_mm = float(m.group(1)), float(m.group(2))
+        ex_mm, ey_mm = float(m.group(3)), float(m.group(4))
+        width_mm = float(m.group(5))
+        layer = m.group(6)
+        net = m.group(7)
+
+        if locked_nets is not None and net not in locked_nets:
+            continue
+
+        # Convert mm → um (DSN resolution is um × 10, but Freerouting uses raw um).
+        sx_um = int(sx_mm * _MM_TO_UM)
+        sy_um = int(sy_mm * _MM_TO_UM)
+        ex_um = int(ex_mm * _MM_TO_UM)
+        ey_um = int(ey_mm * _MM_TO_UM)
+        width_um = int(width_mm * _MM_TO_UM)
+
+        wires.append(
+            f'    (wire (path {layer} {width_um} {sx_um} {sy_um} {ex_um} {ey_um}) '
+            f'(net "{net}") (type fix))'
+        )
+
+    # Extract vias → DSN vias.
+    for m in _VIA_RE.finditer(pcb_content):
+        x_mm, y_mm = float(m.group(1)), float(m.group(2))
+        size_mm = float(m.group(3))
+        drill_mm = float(m.group(4))
+        layer1 = m.group(5)
+        layer2 = m.group(6)
+        net = m.group(7)
+
+        if locked_nets is not None and net not in locked_nets:
+            continue
+
+        x_um = int(x_mm * _MM_TO_UM)
+        y_um = int(y_mm * _MM_TO_UM)
+
+        wires.append(
+            f'    (via {_VIA_PADSTACK_NAME} {x_um} {y_um} '
+            f'(net "{net}") (type fix))'
+        )
+
+    if not wires:
+        return ""
+
+    return "  (wiring\n" + "\n".join(wires) + "\n  )"
 
 
 # ---------------------------------------------------------------------------
