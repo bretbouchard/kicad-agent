@@ -63,6 +63,11 @@ class NetRouteResult:
         via_count: Number of vias in the route.
         dispatch_reason: Why this router was chosen (for audit).
         notes: Free-text notes (e.g., fallback reason).
+        dead_end_point: Phase 103 — (x, y) of the nearest-reached node on
+            failure. None for successes. Carries RouteFailure data to audit.
+        target_point: Phase 103 — (x, y) of the target pin. None if N/A.
+        failure_type: Phase 103 — "no_path" | "blocked_source" | etc.
+        reachable_count: Phase 103 — nodes reachable from source at failure.
     """
 
     net_name: str
@@ -72,6 +77,11 @@ class NetRouteResult:
     via_count: int
     dispatch_reason: str
     notes: str = ""
+    # Phase 103 failure-location fields.
+    dead_end_point: tuple[float, float] | None = None
+    target_point: tuple[float, float] | None = None
+    failure_type: str = ""
+    reachable_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -325,6 +335,11 @@ class RoutingOrchestrator:
                 drc_clean=False,  # not checked at this stage
                 notes=drc_notes,
                 strategy_notes=strategy_result.routing_notes,
+                # Phase 103: pass failure-location data to audit trail.
+                dead_end_point=nr.dead_end_point,
+                target_point=nr.target_point,
+                failure_type=nr.failure_type,
+                reachable_count=nr.reachable_count,
             ))
 
         # 8. Push post-route snapshot (R3-L2: explicit op_type).
@@ -391,7 +406,7 @@ class RoutingOrchestrator:
             target = (pins[-1].x, pins[-1].y)
             route_result = route_net(graph, source, target, net_name)
 
-            if route_result is not None and route_result.success:
+            if route_result:
                 results[net_name] = NetRouteResult(
                     net_name=net_name,
                     router_used=RouterBackend.ASTAR,
@@ -401,13 +416,19 @@ class RoutingOrchestrator:
                     dispatch_reason="astar:default",
                 )
             else:
+                # Phase 103: route_result is a RouteFailure carrying the dead-end.
+                dispatch = f"astar:{route_result.failure_type}"
                 results[net_name] = NetRouteResult(
                     net_name=net_name,
                     router_used=RouterBackend.ASTAR,
                     success=False,
                     route_length_mm=0.0,
                     via_count=0,
-                    dispatch_reason="astar:no_path_found",
+                    dispatch_reason=dispatch,
+                    dead_end_point=route_result.dead_end_point,
+                    target_point=route_result.target_point,
+                    failure_type=route_result.failure_type,
+                    reachable_count=route_result.reachable_count,
                 )
         return results
 

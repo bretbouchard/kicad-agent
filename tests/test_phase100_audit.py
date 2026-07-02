@@ -35,6 +35,10 @@ def _make_entry(
     dispatch_reason: str = "default astar",
     strategy: str = "deterministic",
     strategy_notes: str = "",
+    dead_end_point: tuple[float, float] | None = None,
+    target_point: tuple[float, float] | None = None,
+    failure_type: str = "",
+    reachable_count: int = 0,
 ) -> RoutingAuditEntry:
     return RoutingAuditEntry(
         timestamp="2026-06-25T00:00:00+00:00",
@@ -48,6 +52,10 @@ def _make_entry(
         drc_clean=drc_clean,
         notes=notes,
         strategy_notes=strategy_notes,
+        dead_end_point=dead_end_point,
+        target_point=target_point,
+        failure_type=failure_type,
+        reachable_count=reachable_count,
     )
 
 
@@ -76,6 +84,11 @@ class TestRoutingAuditEntryFrozen:
             "drc_clean",
             "notes",
             "strategy_notes",
+            # Phase 103: failure-location fields (optional, backward-compat).
+            "dead_end_point",
+            "target_point",
+            "failure_type",
+            "reachable_count",
         }
 
 
@@ -140,6 +153,72 @@ class TestQueryByNet:
         results = log.query_by_net("VCC")
         assert len(results) == 1
         assert results[0].router_used == RouterBackend.FREEROUTING
+
+
+# ---------------------------------------------------------------------------
+# Phase 103: failure-location round-trip
+# ---------------------------------------------------------------------------
+
+
+class TestPhase103FailureLocation:
+    """Phase 103: dead_end_point and failure_type survive JSONL round-trip."""
+
+    def test_failure_fields_round_trip(self, tmp_path) -> None:
+        log = RoutingAuditLog(tmp_path / "audit.jsonl")
+        entry = _make_entry(
+            net_name="FAILED_NET",
+            result="failed",
+            dead_end_point=(12.5, 34.7),
+            target_point=(80.0, 90.0),
+            failure_type="no_path",
+            reachable_count=1542,
+        )
+        log.append(entry)
+        results = log.query_by_net("FAILED_NET")
+        assert len(results) == 1
+        r = results[0]
+        assert r.dead_end_point == (12.5, 34.7)
+        assert r.target_point == (80.0, 90.0)
+        assert r.failure_type == "no_path"
+        assert r.reachable_count == 1542
+
+    def test_success_entries_omit_failure_fields(self, tmp_path) -> None:
+        """Success entries don't pollute JSONL with empty failure fields."""
+        log = RoutingAuditLog(tmp_path / "audit.jsonl")
+        log.append(_make_entry(net_name="OK_NET", result="success"))
+        content = (tmp_path / "audit.jsonl").read_text(encoding="utf-8")
+        data = json.loads(content.strip())
+        # Success entries should not contain failure-location keys.
+        assert "dead_end_point" not in data
+        assert "target_point" not in data
+        assert "failure_type" not in data
+        assert "reachable_count" not in data
+
+    def test_backward_compat_old_entries_without_failure_fields(self, tmp_path) -> None:
+        """Pre-Phase-103 audit lines (no failure fields) still parse."""
+        audit_path = tmp_path / "audit.jsonl"
+        old_line = json.dumps({
+            "timestamp": "2026-01-01T00:00:00+00:00",
+            "net_name": "OLD_NET",
+            "router_used": "astar",
+            "strategy": "DeterministicStrategy",
+            "dispatch_reason": "astar:no_path_found",
+            "result": "failed",
+            "route_length_mm": 0.0,
+            "via_count": 0,
+            "drc_clean": False,
+            "notes": "",
+            "strategy_notes": "",
+        })
+        audit_path.write_text(old_line + "\n", encoding="utf-8")
+        log = RoutingAuditLog(audit_path)
+        results = log.query_by_net("OLD_NET")
+        assert len(results) == 1
+        r = results[0]
+        assert r.dead_end_point is None
+        assert r.target_point is None
+        assert r.failure_type == ""
+        assert r.reachable_count == 0
 
 
 # ---------------------------------------------------------------------------

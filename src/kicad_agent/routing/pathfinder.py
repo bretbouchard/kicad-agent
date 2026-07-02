@@ -3,13 +3,24 @@
 Provides route_net (single net) and route_all_nets (batch) functions
 using networkx.astar_path with a Euclidean distance heuristic.
 
-Results are immutable RouteResult frozen dataclasses.
+Results are immutable RouteResult (success) or RouteFailure (blocked)
+frozen dataclasses, sharing a RouteOutcome base. RouteOutcome is truthy
+on success and falsy on failure, so call sites migrate from ``if result
+is None`` to ``if not result`` (one token change per site).
+
+Phase 103 (C-01): route_net returns RouteResult | RouteFailure instead of
+RouteResult | None. On failure, the true router frontier is recovered via
+single_source_dijkstra_path_length so the dead-end point is preserved for
+blocker diagnosis (Phase 104).
 
 Usage:
     from kicad_agent.routing.pathfinder import route_net, route_all_nets
 
     result = route_net(graph, (0, 0), (10, 10), "VCC")
-    results = route_all_nets(graph, {"VCC": [(0,0), (10,10)], "GND": [(5,5), (15,15)]})
+    if result:                          # success
+        path = result.path
+    else:                               # RouteFailure
+        dead_end = result.dead_end_point
 """
 
 from __future__ import annotations
@@ -20,9 +31,24 @@ from dataclasses import dataclass
 from kicad_agent.routing.graph import RoutingGraph
 
 
+class RouteOutcome:
+    """Shared base for routing results. Truthy if success, falsy if failure.
+
+    Phase 103 C-01: enables ``if result is None`` → ``if not result``
+    migration with one-token churn per call site (11 sites across 6 files).
+    """
+
+    @property
+    def is_success(self) -> bool:  # pragma: no cover — overridden by subclasses
+        raise NotImplementedError
+
+    def __bool__(self) -> bool:
+        return self.is_success
+
+
 @dataclass(frozen=True)
-class RouteResult:
-    """Immutable result of routing a single net.
+class RouteResult(RouteOutcome):
+    """Immutable result of a successful route.
 
     Attributes:
         net_name: Name of the routed net.
@@ -35,6 +61,42 @@ class RouteResult:
     path: tuple[tuple[float, float], ...] | tuple[tuple[float, float, str], ...]
     length_mm: float
     success: bool
+
+    @property
+    def is_success(self) -> bool:
+        return self.success
+
+
+@dataclass(frozen=True)
+class RouteFailure(RouteOutcome):
+    """Immutable result of a failed route, carrying the router frontier.
+
+    Phase 103: captures the true dead-end point so Phase 104 (blocker
+    diagnosis) can look from the dead end's perspective.
+
+    Attributes:
+        net_name: Name of the net that failed.
+        source_point: (x, y) of the source pin in mm.
+        target_point: (x, y) of the target pin in mm.
+        dead_end_point: (x, y) of the nearest-reached node to the target.
+            Recovered via single_source_dijkstra_path_length after
+            NetworkXNoPath — the true router frontier, not a guess.
+        reachable_count: Number of nodes reachable from source. Small
+            values indicate a tightly enclosed source; large values with
+            failure indicate the target is isolated.
+        failure_type: "no_path" | "blocked_source" | "blocked_target".
+    """
+
+    net_name: str
+    source_point: tuple[float, float]
+    target_point: tuple[float, float]
+    dead_end_point: tuple[float, float]
+    reachable_count: int
+    failure_type: str
+
+    @property
+    def is_success(self) -> bool:
+        return False
 
 
 def _euclidean_heuristic(u: tuple[float, ...], v: tuple[float, ...]) -> float:
@@ -65,7 +127,7 @@ def route_net(
     source: tuple[float, float] | tuple[float, float, str],
     target: tuple[float, float] | tuple[float, float, str],
     net_name: str,
-) -> RouteResult | None:
+) -> RouteResult | RouteFailure:
     """Route a single net from source to target using A* pathfinding.
 
     Args:
@@ -75,10 +137,16 @@ def route_net(
         net_name: Name of the net being routed.
 
     Returns:
-        RouteResult with the path, or None if no path exists (blocked
-        source or target, or no route found).
+        RouteResult (truthy) with the path on success, or RouteFailure
+        (falsy) if no path exists. RouteFailure carries the true dead-end
+        point — the nearest-reached node to the target — recovered via
+        single_source_dijkstra_path_length after NetworkXNoPath.
     """
     import networkx as nx
+
+    # Extract 2D source/target for RouteFailure coordinates.
+    src_xy: tuple[float, float] = (source[0], source[1])
+    tgt_xy: tuple[float, float] = (target[0], target[1])
 
     # Detect whether graph has 3D nodes.
     is_3d = any(len(n) == 3 for n in graph.graph.nodes)
@@ -95,8 +163,21 @@ def route_net(
         src_node = graph.snap_to_node(source[0], source[1])
         tgt_node = graph.snap_to_node(target[0], target[1])
 
-    if src_node is None or tgt_node is None:
-        return None
+    if src_node is None and tgt_node is None:
+        return RouteFailure(
+            net_name=net_name, source_point=src_xy, target_point=tgt_xy,
+            dead_end_point=src_xy, reachable_count=0, failure_type="blocked_source",
+        )
+    if src_node is None:
+        return RouteFailure(
+            net_name=net_name, source_point=src_xy, target_point=tgt_xy,
+            dead_end_point=src_xy, reachable_count=0, failure_type="blocked_source",
+        )
+    if tgt_node is None:
+        return RouteFailure(
+            net_name=net_name, source_point=src_xy, target_point=tgt_xy,
+            dead_end_point=src_xy, reachable_count=1, failure_type="blocked_target",
+        )
 
     try:
         path = nx.astar_path(
@@ -107,7 +188,12 @@ def route_net(
             weight="weight",
         )
     except nx.NetworkXNoPath:
-        return None
+        # Phase 103: recover the true router frontier.
+        # single_source_dijkstra_path_length gives all DRC-weighted reachable
+        # nodes from source. Pick the one nearest the target as the dead-end.
+        return _build_frontier_failure(
+            graph, net_name, src_xy, tgt_xy, src_node, tgt_node
+        )
 
     length = _path_length(path)
     return RouteResult(
@@ -115,6 +201,55 @@ def route_net(
         path=tuple(path),
         length_mm=round(length, 4),
         success=True,
+    )
+
+
+def _build_frontier_failure(
+    graph: RoutingGraph,
+    net_name: str,
+    src_xy: tuple[float, float],
+    tgt_xy: tuple[float, float],
+    src_node: tuple,
+    tgt_node: tuple,
+) -> RouteFailure:
+    """Recover the true router frontier after NetworkXNoPath.
+
+    Runs single_source_dijkstra_path_length to get all DRC-weighted reachable
+    nodes from source, then selects the nearest-reached node to the target as
+    the dead-end point. This is the same complexity class as the failed A*
+    (O(V+E)), bounded by max_nodes.
+    """
+    import networkx as nx
+
+    try:
+        reachable = nx.single_source_dijkstra_path_length(
+            graph.graph, src_node, weight="weight"
+        )
+    except Exception:
+        # If even single-source fails (shouldn't happen — src_node exists),
+        # fall back to source position as the dead-end.
+        return RouteFailure(
+            net_name=net_name, source_point=src_xy, target_point=tgt_xy,
+            dead_end_point=src_xy, reachable_count=0, failure_type="no_path",
+        )
+
+    if not reachable:
+        return RouteFailure(
+            net_name=net_name, source_point=src_xy, target_point=tgt_xy,
+            dead_end_point=src_xy, reachable_count=0, failure_type="no_path",
+        )
+
+    # Find the reachable node closest to the target (the "how far did we get").
+    nearest_node = min(reachable, key=lambda n: _euclidean_heuristic(n[:2], tgt_xy))
+    dead_end = (nearest_node[0], nearest_node[1])
+
+    return RouteFailure(
+        net_name=net_name,
+        source_point=src_xy,
+        target_point=tgt_xy,
+        dead_end_point=dead_end,
+        reachable_count=len(reachable),
+        failure_type="no_path",
     )
 
 
@@ -137,7 +272,8 @@ def route_all_nets(
 
     Returns:
         Dict mapping net names to RouteResult objects. Only includes nets
-        that were successfully routed (or attempted but failed).
+        that were successfully routed. Failed nets are omitted (callers
+        can diff against the input netlist to find failures).
     """
     # Filter to nets with >= 2 pins and compute estimated distance.
     routable: list[tuple[str, float, list[tuple[float, float]]]] = []
@@ -162,13 +298,13 @@ def route_all_nets(
         if len(pins) == 2:
             # Two-pin net: existing fast path
             result = route_net(graph, pins[0], pins[-1], net_name)
-            if result is not None:
+            if result:
                 results[net_name] = result
                 graph.mark_path_as_obstacle(result.path)
         else:
             # Multi-pin net: sequential nearest-neighbor Steiner tree (H-7)
             multi_result = _route_multi_pin_net(graph, net_name, pins)
-            if multi_result is not None:
+            if multi_result:
                 results[net_name] = multi_result
 
     return results
@@ -192,7 +328,7 @@ def _route_multi_pin_net(
     graph: RoutingGraph,
     net_name: str,
     pins: list[tuple[float, float]],
-) -> RouteResult | None:
+) -> RouteResult | RouteFailure:
     """Route a multi-pin net using nearest-neighbor heuristic (H-7).
 
     For each unrouted pin, finds the single nearest already-routed position
@@ -203,6 +339,7 @@ def _route_multi_pin_net(
     routed_positions = {pins[0]}
     unrouted = set(pins[1:])
     all_paths: list[tuple] = []
+    last_failure: RouteFailure | None = None
 
     while unrouted:
         # Find the unrouted pin closest to any routed position
@@ -216,7 +353,7 @@ def _route_multi_pin_net(
         nearest = _nearest_routed_position(best_pin, routed_positions)
         result = route_net(graph, nearest, best_pin, net_name)
 
-        if result is None or not result.success:
+        if not result:
             # Fallback: try all routed positions (rare, for blocked paths)
             found = False
             for alt_routed in sorted(
@@ -226,10 +363,12 @@ def _route_multi_pin_net(
                 if alt_routed == nearest:
                     continue
                 result = route_net(graph, alt_routed, best_pin, net_name)
-                if result is not None and result.success:
+                if result:
                     found = True
                     break
             if not found:
+                if isinstance(result, RouteFailure):
+                    last_failure = result
                 break  # Cannot reach this pin
 
         all_paths.append(result.path)
@@ -238,7 +377,17 @@ def _route_multi_pin_net(
         graph.mark_path_as_obstacle(result.path)
 
     if not all_paths:
-        return None
+        if last_failure is not None:
+            return last_failure
+        # Degenerate: pins but nothing routed (source blocked).
+        return RouteFailure(
+            net_name=net_name,
+            source_point=pins[0],
+            target_point=pins[-1],
+            dead_end_point=pins[0],
+            reachable_count=0,
+            failure_type="blocked_source",
+        )
 
     # Merge sub-paths into a single path for the result
     merged = list(all_paths[0])

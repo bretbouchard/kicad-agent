@@ -51,6 +51,15 @@ class RoutingAuditEntry:
             ME-05). Persisted to JSONL so the audit trail can reconstruct
             whether AI contributed or fell back — previously this prefix
             only landed in the in-memory result and Python logger.warning.
+        dead_end_point: Phase 103 — (x, y) of the nearest-reached node to
+            the target on failure. None for successes or unknown failures.
+            The true router frontier, recovered via
+            single_source_dijkstra_path_length. Feeds Phase 104 diagnosis.
+        target_point: Phase 103 — (x, y) of the target pin. None if N/A.
+        failure_type: Phase 103 — "no_path" | "blocked_source" |
+            "blocked_target". Empty string for successes.
+        reachable_count: Phase 103 — number of graph nodes reachable from
+            source at failure. 0 for successes or unknown failures.
     """
 
     timestamp: str
@@ -64,6 +73,11 @@ class RoutingAuditEntry:
     drc_clean: bool
     notes: str
     strategy_notes: str = ""
+    # Phase 103 failure-location fields (optional for backward compat).
+    dead_end_point: tuple[float, float] | None = None
+    target_point: tuple[float, float] | None = None
+    failure_type: str = ""
+    reachable_count: int = 0
 
 
 def _entry_to_dict(entry: RoutingAuditEntry) -> dict:
@@ -71,8 +85,11 @@ def _entry_to_dict(entry: RoutingAuditEntry) -> dict:
 
     RouterBackend (a str Enum) is converted to its string value so the
     JSON line contains "astar"/"freerouting" rather than an enum object.
+
+    Phase 103 failure-location fields are included only when populated
+    (non-default), keeping the JSONL compact for success entries.
     """
-    return {
+    d = {
         "timestamp": entry.timestamp,
         "net_name": entry.net_name,
         "router_used": entry.router_used.value,
@@ -85,6 +102,16 @@ def _entry_to_dict(entry: RoutingAuditEntry) -> dict:
         "notes": entry.notes,
         "strategy_notes": entry.strategy_notes,
     }
+    # Phase 103: include failure-location fields only when populated.
+    if entry.dead_end_point is not None:
+        d["dead_end_point"] = list(entry.dead_end_point)
+    if entry.target_point is not None:
+        d["target_point"] = list(entry.target_point)
+    if entry.failure_type:
+        d["failure_type"] = entry.failure_type
+    if entry.reachable_count:
+        d["reachable_count"] = entry.reachable_count
+    return d
 
 
 def _dict_to_entry(data: dict) -> RoutingAuditEntry:
@@ -94,6 +121,8 @@ def _dict_to_entry(data: dict) -> RoutingAuditEntry:
 
     strategy_notes is optional (defaults to "") for backward compatibility
     with audit lines written before the H-1 / ME-05 fix added the field.
+    Phase 103 failure-location fields are optional for backward compat with
+    audit lines written before Phase 103.
     """
     router_str = data.get("router_used", "")
     try:
@@ -106,6 +135,13 @@ def _dict_to_entry(data: dict) -> RoutingAuditEntry:
             router_str,
         )
         router_used = RouterBackend.ASTAR
+
+    # Phase 103: parse failure-location fields if present.
+    dep = data.get("dead_end_point")
+    tp = data.get("target_point")
+    dead_end_point = tuple(dep) if isinstance(dep, (list, tuple)) else None
+    target_point = tuple(tp) if isinstance(tp, (list, tuple)) else None
+
     return RoutingAuditEntry(
         timestamp=data.get("timestamp", ""),
         net_name=data.get("net_name", ""),
@@ -118,6 +154,10 @@ def _dict_to_entry(data: dict) -> RoutingAuditEntry:
         drc_clean=bool(data.get("drc_clean", False)),
         notes=data.get("notes", ""),
         strategy_notes=data.get("strategy_notes", ""),
+        dead_end_point=dead_end_point,
+        target_point=target_point,
+        failure_type=data.get("failure_type", ""),
+        reachable_count=int(data.get("reachable_count", 0)),
     )
 
 

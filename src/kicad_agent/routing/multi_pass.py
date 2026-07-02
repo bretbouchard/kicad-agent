@@ -26,6 +26,7 @@ from typing import Any
 
 from kicad_agent.routing.graph import RoutingGraph
 from kicad_agent.routing.pathfinder import (
+    RouteFailure,
     RouteResult,
     build_routing_graph,
     route_all_nets,
@@ -44,16 +45,21 @@ class NetPassHistory:
     routed: bool = False
 
     def record_attempt(
-        self, pass_num: int, result: RouteResult | None, strategy: str
+        self, pass_num: int, result: RouteResult | RouteFailure | None, strategy: str
     ) -> None:
-        """Record a routing attempt for this net."""
+        """Record a routing attempt for this net.
+
+        Phase 103: result can now be RouteFailure (falsy) instead of None.
+        Both falsy outcomes are treated as unsuccessful attempts.
+        """
+        is_success = result is not None and result
         self.attempts.append({
             "pass": pass_num,
             "strategy": strategy,
-            "success": result is not None and result.success,
+            "success": is_success,
             "length_mm": result.length_mm if result else None,
         })
-        if result is not None and result.success:
+        if is_success:
             if self.best_result is None or result.length_mm < self.best_result.length_mm:
                 self.best_result = result
             self.routed = True
@@ -143,7 +149,7 @@ class MultiPassRouter:
             if len(pins) < 2:
                 continue
             result = route_net(graph, pins[0], pins[-1], net_name)
-            if result is not None and result.success:
+            if result:
                 results[net_name] = result
         return results
 

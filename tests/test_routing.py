@@ -25,6 +25,7 @@ from kicad_agent.routing.interactive import (
     SuggestionStatus,
 )
 from kicad_agent.routing.pathfinder import (
+    RouteFailure,
     RouteResult,
     build_routing_graph,
     route_all_nets,
@@ -248,10 +249,12 @@ class TestPathfinding:
             constraints=RoutingConstraints(grid_resolution_mm=1.0),
         )
         result = route_net(graph, (2, 2), (15, 15), "BLOCKED")
-        assert result is None
+        # Phase 103: route_net returns RouteFailure (falsy) instead of None.
+        assert not result
+        assert isinstance(result, RouteFailure)
 
     def test_route_blocked_target_returns_none(self) -> None:
-        """Blocked target (inside obstacle) returns None."""
+        """Blocked target (inside obstacle) returns RouteFailure."""
         obstacle = SpatialBox(15, 15, 20, 20, "zone", "Z1")
         graph = RoutingGraph(
             board_bounds=(0, 0, 20, 20),
@@ -259,10 +262,11 @@ class TestPathfinding:
             constraints=RoutingConstraints(grid_resolution_mm=1.0),
         )
         result = route_net(graph, (0, 0), (17, 17), "BLOCKED")
-        assert result is None
+        assert not result
+        assert isinstance(result, RouteFailure)
 
     def test_route_no_path_returns_none(self) -> None:
-        """Completely separated areas return None."""
+        """Completely separated areas return RouteFailure with dead-end point."""
         # Wall spanning entire board height.
         wall = SpatialBox(10, 0, 11, 20, "keepout", "WALL")
         graph = RoutingGraph(
@@ -270,14 +274,25 @@ class TestPathfinding:
             obstacles=[wall],
             constraints=RoutingConstraints(grid_resolution_mm=1.0),
         )
-        # If the wall blocks all paths, route_net returns None.
+        # If the wall blocks all paths, route_net returns RouteFailure.
         # Note: with clearance enforcement, nodes near the wall edges
         # may also be removed, potentially creating a true barrier.
         # If some path exists, the test still passes (just gets a path).
         result = route_net(graph, (0, 10), (19, 10), "CUT")
-        # Result is either None or a valid detour -- both are acceptable.
-        if result is not None:
+        # Result is either RouteFailure or a valid detour -- both acceptable.
+        if result:
             assert result.success
+        else:
+            # Phase 103: verify the dead-end point is the nearest-reached node.
+            assert isinstance(result, RouteFailure)
+            assert result.failure_type == "no_path"
+            # Dead-end must be on the source side of the wall (x <= 10).
+            # A node may exist right at the wall edge due to clearance rules.
+            assert result.dead_end_point[0] <= 10
+            # Target is at (19, 10); dead-end can't reach it.
+            assert result.dead_end_point[0] < 19
+            # Reachable count > 0 (source has a component).
+            assert result.reachable_count > 0
 
 
 # ---------------------------------------------------------------------------

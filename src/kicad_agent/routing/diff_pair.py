@@ -277,7 +277,7 @@ def route_differential_pair(
     """
     # Route positive net.
     result_pos = route_net(graph, source_pos, target_pos, net_name_pos)
-    if result_pos is None:
+    if not result_pos:
         return DiffPairResult(
             net_positive=(),
             net_negative=(),
@@ -290,7 +290,7 @@ def route_differential_pair(
 
     # Route negative net.
     result_neg = route_net(graph, source_neg, target_neg, net_name_neg)
-    if result_neg is None:
+    if not result_neg:
         return DiffPairResult(
             net_positive=(),
             net_negative=(),

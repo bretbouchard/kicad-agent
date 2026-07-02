@@ -579,6 +579,7 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     )
     from kicad_agent.routing.constraints import RoutingConstraints
     from kicad_agent.routing.pathfinder import (
+        RouteFailure,
         RouteResult,
         build_routing_graph,
         route_all_nets,
@@ -746,6 +747,8 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
 
     results: dict[str, RouteResult] = {}
     failed_nets: list[str] = []
+    # Phase 103: failure-location data for diagnostic/audit (dead-end points).
+    failure_details: dict[str, dict] = {}
 
     # Phase 99 Gap 4: max_iterations retry loop.
     # First pass uses the base graph at 0.25mm grid. Each retry rebuilds
@@ -808,7 +811,7 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
                 # Multi-pin net: sequential nearest-neighbor Steiner tree.
                 result = route_all_nets(current_graph, {net_name: pins}).get(net_name)
 
-            if result is not None and result.success:
+            if result:
                 results[net_name] = result
                 current_graph.mark_path_as_obstacle(
                     result.path, clearance=current_constraints.trace_width_mm,
@@ -816,8 +819,17 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
                 if net_name in failed_nets:
                     failed_nets.remove(net_name)
             else:
+                # Phase 103: result is None (multi-pin miss) or RouteFailure.
                 if net_name not in failed_nets:
                     failed_nets.append(net_name)
+                # Capture failure-location data for diagnostic/audit.
+                if isinstance(result, RouteFailure):
+                    failure_details[net_name] = {
+                        "dead_end_point": result.dead_end_point,
+                        "target_point": result.target_point,
+                        "failure_type": result.failure_type,
+                        "reachable_count": result.reachable_count,
+                    }
 
         if not failed_nets:
             break  # all routed — done
@@ -903,6 +915,8 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
         "segments": segment_count,
         "vias": via_count,
         "failed_nets": failed_nets,
+        # Phase 103: per-failed-net dead-end points for diagnosis.
+        "failure_details": failure_details,
         "skipped_power_nets": sorted(_power_nets),
         "obstacles": len(obstacles),
         "strategy": "astar",

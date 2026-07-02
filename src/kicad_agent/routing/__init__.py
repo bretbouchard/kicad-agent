@@ -4,6 +4,8 @@ Provides:
     - RoutingConstraints: Frozen dataclass of design-rule parameters.
     - RoutingGraph: Grid-based routing graph with DRC-aware edge costs.
     - RouteResult: Frozen dataclass for a routed net path.
+    - RouteFailure: Phase 103 — frozen dataclass for a failed route (carries
+      the true dead-end point for diagnosis).
     - DiffPairResult: Frozen dataclass for differential pair routing.
     - SuggestionStatus: Enum for routing suggestion lifecycle.
     - RoutingSuggestion: Mutable suggestion with approve/reject status.
@@ -12,6 +14,9 @@ Provides:
     - route_net: A* pathfinding for a single net.
     - route_all_nets: Batch routing for multiple nets (shortest first).
     - route_differential_pair: Differential pair routing with length matching.
+    - BlockerDiagnostician: Phase 104 — reverse-perspective blocker diagnosis.
+    - BlockerDiagnosis: Phase 104 — per-failed-net blocker report.
+    - diagnose_routing_failures: Phase 104 — standalone diagnostic function.
     - TrackSegment: KiCad PCB track segment dataclass.
     - ViaSegment: KiCad via segment dataclass.
     - ImpedanceResult: IPC-2141 impedance solve result.
@@ -22,6 +27,12 @@ Provides:
 
 from kicad_agent.routing.bridge import TrackSegment, ViaSegment
 from kicad_agent.routing.constraints import RoutingConstraints
+from kicad_agent.routing.diagnostician import (
+    Blocker,
+    BlockerDiagnosis,
+    BlockerDiagnostician,
+    diagnose_routing_failures,
+)
 from kicad_agent.routing.diff_pair import DiffPairResult, route_differential_pair
 from kicad_agent.routing.graph import RoutingGraph
 from kicad_agent.routing.impedance import ImpedanceResult, solve_trace_width
@@ -32,6 +43,7 @@ from kicad_agent.routing.interactive import (
 )
 from kicad_agent.routing.length_matching import LengthMatchResult, add_sawtooth_matching
 from kicad_agent.routing.pathfinder import (
+    RouteFailure,
     RouteResult,
     build_routing_graph,
     route_all_nets,
@@ -42,6 +54,7 @@ __all__ = [
     "RoutingConstraints",
     "RoutingGraph",
     "RouteResult",
+    "RouteFailure",
     "DiffPairResult",
     "SuggestionStatus",
     "RoutingSuggestion",
@@ -50,6 +63,10 @@ __all__ = [
     "route_net",
     "route_all_nets",
     "route_differential_pair",
+    "Blocker",
+    "BlockerDiagnosis",
+    "BlockerDiagnostician",
+    "diagnose_routing_failures",
     "TrackSegment",
     "ViaSegment",
     "ImpedanceResult",
