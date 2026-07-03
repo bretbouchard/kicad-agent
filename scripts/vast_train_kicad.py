@@ -123,16 +123,29 @@ class Gemma4VisionCollator:
             pil_image = ex["images"][0] if ex["images"] else None
             if pil_image is not None and pil_image.mode != "RGB":
                 pil_image = pil_image.convert("RGB")
+            # Phase 106: text-only diagnostic rows have empty images.
+            # Generate a small white placeholder AND ensure the chat template
+            # includes an <|image|> token to match. Without the token, the
+            # processor raises "0 image tokens, 1 image" mismatch.
+            if pil_image is None:
+                from PIL import Image
+                pil_image = Image.new("RGB", (224, 224), (255, 255, 255))
             images.append(pil_image)
 
             template_messages = []
-            for msg in ex["messages"]:
+            for i, msg in enumerate(ex["messages"]):
                 template_content = []
+                has_image_part = False
                 for part in msg.get("content", []):
                     if part.get("type") == "image":
                         template_content.append({"type": "image", "url": pil_image})
+                        has_image_part = True
                     elif part.get("type") == "text":
                         template_content.append({"type": "text", "text": part["text"]})
+                # If this is the first user message and no image part was present,
+                # inject one so the placeholder image has a matching token.
+                if not has_image_part and i == 0 and msg["role"] == "user":
+                    template_content.insert(0, {"type": "image", "url": pil_image})
                 template_messages.append({"role": msg["role"], "content": template_content})
 
             text = self.processor.apply_chat_template(
