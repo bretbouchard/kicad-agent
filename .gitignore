@@ -37,3 +37,6 @@ tests/fixtures/*/freerouting/
 *.lck
 ~$*
 .kicad_agent.lock
+
+# Model output (adapters, checkpoints) — stored on /Volumes/Storage
+output/
