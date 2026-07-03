@@ -33,6 +33,7 @@ from kicad_agent.routing.diagnostician import (
     BlockerDiagnostician,
     diagnose_routing_failures,
 )
+from kicad_agent.routing.diagnostician_model import BlockerDiagnosticianModel
 from kicad_agent.routing.diff_pair import DiffPairResult, route_differential_pair
 from kicad_agent.routing.graph import RoutingGraph
 from kicad_agent.routing.impedance import ImpedanceResult, solve_trace_width
@@ -66,6 +67,7 @@ __all__ = [
     "Blocker",
     "BlockerDiagnosis",
     "BlockerDiagnostician",
+    "BlockerDiagnosticianModel",
     "diagnose_routing_failures",
     "TrackSegment",
     "ViaSegment",

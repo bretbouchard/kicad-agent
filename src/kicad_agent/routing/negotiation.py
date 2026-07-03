@@ -90,6 +90,7 @@ class NegotiationLoop:
         constraints: RoutingConstraints | None = None,
         max_rounds: int = _DEFAULT_MAX_ROUNDS,
         board_raw_content: str | None = None,
+        diagnostician: Any = None,
     ) -> None:
         """Initialize the negotiation loop.
 
@@ -100,6 +101,11 @@ class NegotiationLoop:
             constraints: Routing constraints.
             max_rounds: Maximum negotiation rounds (default 8).
             board_raw_content: Raw PCB content for locked-footprint detection.
+            diagnostician: Phase 106 — optional pluggable diagnostician.
+                If provided (e.g. BlockerDiagnosticianModel), used instead of
+                the deterministic BlockerDiagnostician. Must implement
+                diagnose(failure: RouteFailure) -> BlockerDiagnosis.
+                Default None → deterministic (zero regression).
         """
         self._board_bounds = board_bounds
         self._obstacles = list(obstacles)
@@ -107,6 +113,8 @@ class NegotiationLoop:
         self._constraints = constraints or RoutingConstraints()
         self._max_rounds = max_rounds
         self._raw_content = board_raw_content
+        # Phase 106: pluggable diagnostician (model-based or deterministic).
+        self._diagnostician = diagnostician
 
         # F-06: persistent congestion map (graph_node → historical cost).
         # Monotonic — only increases. This is PathFinder's convergence guarantee.
@@ -147,14 +155,20 @@ class NegotiationLoop:
                 break
 
             # Diagnose failures.
-            diag = BlockerDiagnostician(
-                board_bounds=self._board_bounds,
-                obstacles=active_obstacles,
-                constraints=self._constraints,
-                board_raw_content=self._raw_content,
-            )
-            for net_name, failure in failed.items():
-                diagnoses[net_name] = diag.diagnose(failure)
+            # Phase 106: use injected diagnostician (model-based) if provided,
+            # otherwise fall back to deterministic BlockerDiagnostician.
+            if self._diagnostician is not None:
+                for net_name, failure in failed.items():
+                    diagnoses[net_name] = self._diagnostician.diagnose(failure)
+            else:
+                diag = BlockerDiagnostician(
+                    board_bounds=self._board_bounds,
+                    obstacles=active_obstacles,
+                    constraints=self._constraints,
+                    board_raw_content=self._raw_content,
+                )
+                for net_name, failure in failed.items():
+                    diagnoses[net_name] = diag.diagnose(failure)
 
             # Check for SOFT_OTHER blockers — rip them up for next round.
             ripped_this_round = self._process_diagnoses(diagnoses)
@@ -374,6 +388,7 @@ def negotiate_route(
     constraints: RoutingConstraints | None = None,
     max_rounds: int = _DEFAULT_MAX_ROUNDS,
     board_raw_content: str | None = None,
+    diagnostician: Any = None,
 ) -> NegotiationResult:
     """Standalone negotiation loop — convenience function.
 
@@ -384,6 +399,7 @@ def negotiate_route(
         constraints: Routing constraints.
         max_rounds: Maximum negotiation rounds (default 8).
         board_raw_content: Raw PCB content for locked-footprint detection.
+        diagnostician: Phase 106 — optional pluggable diagnostician.
 
     Returns:
         NegotiationResult with final routing state.
@@ -395,5 +411,6 @@ def negotiate_route(
         constraints=constraints,
         max_rounds=max_rounds,
         board_raw_content=board_raw_content,
+        diagnostician=diagnostician,
     )
     return loop.run()
