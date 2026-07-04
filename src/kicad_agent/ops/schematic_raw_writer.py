@@ -413,6 +413,14 @@ class SchematicRawWriter:
                 pass  # Wire removal handled by caller with full endpoints
             return content
 
+        elif op == "move_symbol":
+            # HIGH-4 (Council Gate 1): the dispatcher reads mutation.get("op").
+            # Using "kind" instead silently no-ops (Test 10 regression guard).
+            ref = mutation.get("ref", "")
+            new_x = float(mutation.get("new_x", 0.0))
+            new_y = float(mutation.get("new_y", 0.0))
+            return SchematicRawWriter._move_symbol_by_ref(content, ref, new_x, new_y)
+
         elif op in ("snap_to_grid", "repair_wire_snap"):
             # Coordinate mutations are applied to the kiutils obj in memory.
             # For raw S-expr, these are no-ops here — the caller must handle
@@ -628,4 +636,112 @@ class SchematicRawWriter:
 
         new_block = block[:inst_start] + new_instances + block[inst_end:]
         return content[:target_block_start] + new_block + content[target_block_end:]
+
+    # ------------------------------------------------------------------
+    # move_symbol by Reference (Phase 108 Plan 02 — autolayout placement)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _move_symbol_by_ref(
+        content: str,
+        ref: str,
+        new_x: float,
+        new_y: float,
+    ) -> str:
+        """Replace the (at X Y [R]) of the placed symbol whose Reference == ref.
+
+        T-108-05 mitigation (LO-05): the ref is re.escape'd before being
+        interpolated into the regex — adversarial ref strings cannot act as
+        regex payloads. The Reference value match is anchored with leading
+        and trailing whitespace via \\s+ to avoid prefix collisions (R1 vs R10).
+
+        Locates the (symbol ...) block whose (property "Reference" "<ref>")
+        sub-block matches, then within that block replaces the *first*
+        (at X Y [R]) S-expression with (at <new_x> <new_y> [R]). Preserves
+        the optional rotation field. Preserves every other byte.
+
+        Args:
+            content: Raw .kicad_sch S-expression text.
+            ref: Component reference designator (e.g. "R1", "U21").
+            new_x: New X coordinate in mm.
+            new_y: New Y coordinate in mm.
+
+        Returns:
+            Content with the targeted (at X Y) replaced. Returns content
+            unchanged if the ref is not found (defensive — no silent
+            corruption).
+
+        Raises:
+            ValueError: If multiple distinct symbol blocks share the same
+                Reference (ambiguous match — refuse to guess which to move).
+        """
+        if not ref:
+            return content  # no ref supplied — no-op (defensive)
+
+        # Find every (symbol ...) start; depth-walk to its closing paren.
+        # For each block, check whether it contains
+        # (property "Reference" "<ref>"). Collect matches.
+        safe_ref = re.escape(ref)
+        ref_pattern = re.compile(
+            rf'\(property\s+"Reference"\s+"{safe_ref}"'
+        )
+
+        symbol_starts = [m.start() for m in re.finditer(r'\(symbol\b', content)]
+        matches: list[tuple[int, int]] = []  # list of (block_start, block_end)
+
+        for start in symbol_starts:
+            depth = 0
+            i = start
+            block_end = None
+            while i < len(content):
+                if content[i] == '(':
+                    depth += 1
+                elif content[i] == ')':
+                    depth -= 1
+                    if depth == 0:
+                        block_end = i + 1
+                        break
+                i += 1
+            if block_end is None:
+                continue  # malformed — skip
+
+            block = content[start:block_end]
+            if ref_pattern.search(block):
+                matches.append((start, block_end))
+
+        if len(matches) == 0:
+            return content  # ref not found — no-op (defensive)
+        if len(matches) > 1:
+            raise ValueError(
+                f"Ambiguous move_symbol: {len(matches)} symbol blocks share "
+                f"Reference {ref!r} — refuse to guess which to move"
+            )
+
+        block_start, block_end = matches[0]
+        block = content[block_start:block_end]
+
+        # Within the block, find the FIRST (at X Y [R]) S-expression.
+        # KiCad symbol blocks always place (at ...) immediately after (lib_id ...),
+        # so the first (at ...) is the symbol transform — not a nested pin or
+        # property at-coordinate. Replace its coordinates while preserving the
+        # optional rotation field.
+        at_pattern = re.compile(
+            r'\(at\s+([-0-9.]+)\s+([-0-9.]+)(\s+([-0-9.]+))?\)'
+        )
+        match = at_pattern.search(block)
+        if match is None:
+            return content  # no (at ...) in block — no-op (defensive)
+
+        rotation = match.group(4)
+        if rotation is not None:
+            new_at = f'(at {new_x} {new_y} {rotation})'
+        else:
+            new_at = f'(at {new_x} {new_y})'
+
+        # Replace just this single match (count=1 — never touch nested at's).
+        new_block, n = at_pattern.subn(lambda _: new_at, block, count=1)
+        if n == 0:
+            return content  # defensive — should never happen since match was found
+
+        return content[:block_start] + new_block + content[block_end:]
 

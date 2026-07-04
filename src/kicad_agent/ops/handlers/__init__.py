@@ -18,6 +18,10 @@ from .query import _QUERY_HANDLERS, register_query
 from .crossfile import _CROSSFILE_HANDLERS, register_crossfile
 from .gate_handlers import _GATE_HANDLERS, register_gate_handler
 
+# Phase 108 Plan 02 — autolayout handlers register themselves on import
+# (decorate with @register_schematic). Import the module to trigger registration.
+from . import autolayout as _autolayout_module  # noqa: F401
+
 # Merge fill_zones, cleanup, auto_route, bom, and stitch handlers into PCB handlers at import time
 _PCB_HANDLERS.update(_FILL_ZONES_HANDLERS)
 _PCB_HANDLERS.update(_CLEANUP_HANDLERS)
