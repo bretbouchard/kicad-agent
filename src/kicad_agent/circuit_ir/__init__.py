@@ -76,6 +76,10 @@ from kicad_agent.circuit_ir.skidl_circuit import build_circuit  # noqa: E402
 from kicad_agent.circuit_ir.converter import KiCadToSkidlConverter  # noqa: E402
 from kicad_agent.circuit_ir.emitter import SkidlEmitter  # noqa: E402
 from kicad_agent.circuit_ir.parts_mapper import PartsMapper  # noqa: E402
+from kicad_agent.circuit_ir.symbol_resolver import resolve_lib_symbol, get_pin_names  # noqa: E402
+from kicad_agent.circuit_ir.skidl_emitter import emit_build_py  # noqa: E402
+from kicad_agent.circuit_ir.hierarchy_flattener import flatten_to_circuit_ir  # noqa: E402
+from kicad_agent.circuit_ir.skidl_to_kicad import circuit_to_kicad_sch  # noqa: E402
 
 __all__ = [
     "CircuitIR",
@@ -83,6 +87,11 @@ __all__ = [
     "NetDescriptor",
     "PinRef",
     "build_circuit",
+    "emit_build_py",
+    "resolve_lib_symbol",
+    "get_pin_names",
+    "flatten_to_circuit_ir",
+    "circuit_to_kicad_sch",
     "KiCadToSkidlConverter",
     "SkidlEmitter",
     "PartsMapper",
