@@ -848,6 +848,19 @@ def _handle_place_missing_units(op: Any, ir: SchematicIR, file_path: Path) -> di
     )
 
 
+@register_schematic("place_and_wire_power_units")
+def _handle_place_and_wire_power_units(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    from kicad_agent.ops.repair_components import place_and_wire_power_units
+    return place_and_wire_power_units(
+        ir, file_path,
+        references=op.references,
+        offset_x=op.offset_x,
+        offset_y=op.offset_y,
+        rail_overrides=op.rail_overrides,
+        dry_run=op.dry_run,
+    )
+
+
 @register_schematic("remove_dangling_wires")
 def _handle_remove_dangling_wires(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.repair_wires import remove_dangling_wires
@@ -1032,4 +1045,27 @@ def _handle_regenerate_wiring(op: Any, ir: SchematicIR, file_path: Path) -> dict
         "removed": result["removed"],
         "generated": result["generated"],
         "notes": result.get("notes", []),
+    }
+
+
+@register_schematic("convert_from_skidl")
+def _handle_convert_from_skidl(op: Any, ir: Any, file_path: Path) -> dict[str, Any]:
+    """Phase 156 C-03: Build a .kicad_sch from a SKIDL build_*.py program.
+
+    Executes the SKIDL script to build a circuit, then generates a
+    .kicad_sch via raw S-expression emission (pitfall #7 — not kiutils).
+    Self-serializing: writes raw S-expr, bypasses kiutils.
+    """
+    from kicad_agent.circuit_ir.skidl_to_kicad import skidl_to_kicad_sch
+
+    source = Path(op.source)
+    out_path = Path(op.target_file)
+
+    result_path = skidl_to_kicad_sch(source, out_path)
+
+    return {
+        "op_type": "convert_from_skidl",
+        "source": str(source),
+        "output": str(result_path),
+        "source_type": getattr(op, "source_type", "skidl"),
     }

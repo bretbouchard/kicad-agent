@@ -117,7 +117,21 @@ CREATE_OP_TYPES = {"create_schematic", "create_pcb", "create_project", "create_s
 #   kiutils re-serialization (P0-006). Edits via SchematicRawWriter.
 #   Note: safe_sync_pcb_from_schematic uses CROSS_FILE_OP_TYPES above instead
 #   (different dispatch path — it's multi-file, safe_annotate is single_file).
-SELF_SERIALIZING_OPS = frozenset({"erc_auto_fix_hierarchical", "convert_kicad6_to_10", "safe_annotate"})
+# Phase 108 autolayout ops (D-1 fix): place_components_sch, route_wires_sch,
+#   apply_labels_sch, auto_layout_sch all write via SchematicRawWriter +
+#   atomic_write (P101-INV-01). Without this, the executor's
+#   serialize_schematic() clobbers their raw writes with a kiutils
+#   serialization of the stale parse_result captured BEFORE the handler ran.
+SELF_SERIALIZING_OPS = frozenset({
+    "erc_auto_fix_hierarchical",
+    "convert_kicad6_to_10",
+    "safe_annotate",
+    "place_components_sch",
+    "route_wires_sch",
+    "apply_labels_sch",
+    "auto_layout_sch",
+    "convert_from_skidl",  # Phase 156 C-03: writes raw S-expr, not via kiutils
+})
 
 # Pre-analysis gate: shared instance (stateless, safe to reuse)
 _PRE_ANALYSIS_GATE = None

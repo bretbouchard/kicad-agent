@@ -291,7 +291,7 @@ from kicad_agent.ops._schema_gate import (  # noqa: E402
     RunGateCheckOp,
     GateStatusOp,
 )
-from kicad_agent.ops._schema_circuit_ir import ConvertToSkidlOp  # noqa: E402
+from kicad_agent.ops._schema_circuit_ir import ConvertToSkidlOp, ConvertFromSkidlOp  # noqa: E402
 from kicad_agent.ops._schema_create import (  # noqa: E402
     CreateSchematicOp,
     CreatePcbOp,
@@ -432,6 +432,7 @@ class Operation(BaseModel):
         | ValidateHlabelsOp
         | ConvertKicad6To10Op
         | ConvertToSkidlOp
+        | ConvertFromSkidlOp
         | SnapToGridOp
         | AddPowerFlagOp
         | RebuildRootSheetOp
@@ -679,6 +680,7 @@ __all__ = [
     "RepairSchematicOp",
     "ConvertKicad6To10Op",
     "ConvertToSkidlOp",
+    "ConvertFromSkidlOp",
     "SnapToGridOp",
     "AddPowerFlagOp",
     "RebuildRootSheetOp",
