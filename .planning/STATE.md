@@ -1,13 +1,13 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: Complete-Ops
+milestone: v5.0
+milestone_name: Skidl-Native Design Pipeline
 status: Ready to plan
-stopped_at: Phase 107 research deliverable complete; awaiting Council Gate 1 plan review before /gsd-discuss-phase 108
-last_updated: "2026-07-04T00:40:41.161Z"
+stopped_at: Milestone v5.0 Skidl-Native Design Pipeline roadmap created (Phases 156-160); awaiting /gsd-discuss-phase 156 (SKIDL Converter)
+last_updated: "2026-07-04T01:15:00.000Z"
 last_activity: 2026-07-04
 progress:
-  total_phases: 132
+  total_phases: 137
   completed_phases: 54
   total_plans: 277
   completed_plans: 221
@@ -21,479 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 103-105 Routing Overhaul (core complete), C-02 DSN emitter + Phase 106 in progress
+**Current focus:** Milestone v5.0 Skidl-Native Design Pipeline — roadmap planned (Phases 156-160), ready to plan Phase 156
 Last activity: 2026-07-04
 
 ## Current Position
 
-Phase: 240
-Plan: Not started
-**All milestones shipped (v1.0 through v4.1). 95 phases, 268 plans, 3317+ tests.**
-
-Last milestone: v4.1 Stage-Safe PCB Flow (Phases 85-94)
-
-### Phase 107: Schematic Legibility — Standards Research and Gap Audit (COMPLETE — pending Council Gate 1)
-
-- Plan 107-01: Phase closure — ROADMAP placeholders + STATE update + SUMMARY (COMPLETE)
-  - 107-RESEARCH.md (699 lines) — IEEE 315, ANSI Y32.2, IEC 60617, H&H standards + repo gap audit + Sugiyama hybrid architecture recommendation
-  - 107-CONTEXT.md — 4 locked decisions (D-01 research-only, D-02 hybrid Python+YAML conventions, D-03 human-expert SRS parity within 0.10, D-04 real+synthetic training data)
-  - 107-DISCUSSION-LOG.md — decision audit trail
-  - 107-VALIDATION.md — research-phase validation strategy (file existence + grep checks, no test suite)
-  - 107-SUMMARY.md — phase summary with implementation roadmap for 108-111
-  - ROADMAP.md updated: Phases 108 (Deterministic Autolayout Engine), 109 (AI Legibility Critic), 110 (GRPO Legibility Reward Signal), 111 (Convention Library) inserted as placeholders
-  - Zero source code changes (D-01 honored). Zero new tests. Zero library modifications.
-  - Next: Council Gate 1 plan review, then `/gsd-discuss-phase 108` for implementation kickoff
-
-- Phase 85: Gate Architecture (DesignStage, GateResult, GateRunner)
-- Phase 86: Schematic Intent Completeness (footprint, pin-map, metadata checks)
-- Phase 87: Schematic-to-PCB Transfer Contract (TransferContract, PadNetAssigner)
-- Phase 88: Constraint Capture & Propagation (electrical/mechanical/fab)
-- Phase 89: Placement Readiness Gate (6 sub-checks)
-- Phase 90: Routing Readiness & Quality Gate (pre/post-route)
-- Phase 91: Manufacturing Readiness Gate (DRC/DFM/BOM)
-- Phase 92: AI Boundary & Repair Loop (Proposal model, RepairLoop)
-- Phase 93: Golden E2E Boards (6 fixture boards)
-- Phase 94: Docs & UX (stage-gate docs, status CLI)
-
-Prior milestones: v4.0 Hybrid Routing (80-84), v3.2 Gap Analysis (79), v3.1 Council Remediation (60-76), v3.0 Full-Stack EDA (50-54), v2.5 Benchmark (41-44), v2.4 Schematic Intelligence (38-40)
-
-- Phase 50: Constraint Propagation (81 tests)
-- Phase 51: PCB Spatial Intelligence (51 tests)
-- Phase 52: Layout-Aware Placement (41 tests)
-- Phase 53: PCB DRC Intelligence (56 tests)
-- Phase 54: Design for Manufacturing (62 tests)
-
-Council review: 4 findings fixed, all passing.
-
-Last activity: 2026-07-04 -- Phase 107 planning complete
-
-### Phase 102.1: Close Phase 102 Deferred Work (COMPLETE)
-
-- Plan 102.1-01: EXEC-03 + H-02 + H-03 + CR-01 prerequisite (COMPLETE)
-  - CR-01 prerequisite: patched _parse_sheet_refs regex to accept unquoted
-    KiCad 10 UUIDs (was quoted-only); SheetRef.uuid now non-empty for all
-    fixtures. 4 unit tests in TestSheetRefUuidParsing. Commit: ccf7f450
-
-  - EXEC-03: _build_rename_plan sort keys switched from sheet_path (absolute,
-    varies across machines) to sheet_uuid (KiCad-embedded, stable). Root UUID
-    via _extract_root_sheet_uuid; sub-sheet UUIDs via SheetRef.uuid. Regression
-    test test_sort_tie_break_uses_sheet_uuid verifies determinism across 2
-    alphabetically-distinct base dirs. Commit: 3dd19532
-
-  - H-02 Option B: SchematicRawWriter.replace_instances_reference method added
-    (paren-balanced extraction, no-op when absent, LO-05 re.escape discipline).
-    _handle_safe_annotate calls both replace_reference_property AND
-    replace_instances_reference per rename. New fixture with_instances.kicad_sch
-    with unquoted KiCad 10 UUID and instances block. Regression test
-    test_instances_block_co_edited verifies both locations updated. Commit: 1677f790
-
-  - H-03: scripts/validate_safe_annotate_analog_board.py — copies 16-sheet
-    analog-board to tmp, runs safe_annotate end-to-end, exports netlists.
-    Result: 218 nets, GNDA 39 nodes, GND 100 nodes (healthy). The 47 cross-sheet
-    duplicates from FEATURE-008 were already resolved in source repo.
-    Source repo dirty-count unchanged (5 before, 5 after). Commit: 55793419
-
-  - 75/75 tests pass across affected suites (safe_annotate, safe_sync,
-    raw_writer, schematic_graph). Zero regression. Zero new kiutils.to_file() calls.
-
-### Phase 102: Safe Annotate (in progress)
-
-- Plan 102-01: Test infrastructure + 5 KiCad 10 fixtures (COMPLETE)
-  - 8 RED test stubs (TC-1..TC-8) in tests/test_safe_annotate.py
-  - 5 fixtures under tests/fixtures/safe_annotate/ (single-sheet + 3-sheet hierarchy)
-  - H-02 INVARIANT: zero (instances ...) blocks across all fixtures
-  - H-02 Option B (handler co-edits instances) DEFERRED-TO-NAMED-TARGET
-
-- Plan 102-02: Core op implementation (COMPLETE)
-  - safe_annotate op fully functional for current_sheet scope and dry_run
-  - SchematicRawWriter.replace_reference_property (UUID-targeted raw Reference value replacement)
-  - SafeAnnotateOp Pydantic schema (6 fields, LOCKED defaults)
-  - SELF_SERIALIZING_OPS membership (bypasses kiutils serialize_schematic) with M-01 inline comment
-  - Root sheet guard with LOCKED error message
-  - Function-scoped AST grep proof (H-01): zero to_file Call nodes in _handle_safe_annotate
-  - M-02 lazy import (validate_paren_balance inside handler body)
-  - M-03 tie-break docstring (_build_rename_plan documents all 3 order options)
-  - Rule 1 bug fixed: UUID regex matches both KiCad 10 unquoted and legacy quoted forms
-  - TC-1, 2, 5, 6, 7, 8 GREEN (6 tests); TC-3, TC-4 remain RED (Plan 03)
-  - 5 new unit tests in test_schematic_raw_writer.py
-  - 12/12 sibling safe_sync tests pass (zero regression)
-- Plan 102-03: Multi-sheet integration tests + docs + deprecation (COMPLETE)
-  - TC-3 (cross-sheet dedup) GREEN: 3-file fixture, whole_project+reset, duplicates_resolved >= 1, paren balance, kicad-cli parses
-  - TC-4 (P0-006 regression) GREEN: total_changed_lines <= refs_renamed * 4 + 4 (P0-006 was 2314 lines)
-  - Rule 1 fix: root sheet guard refined to scope-conditional (only current_sheet triggers; whole_project walks children)
-  - Rule 1 fix: reset-mode dedup detection via pre-pass Counter on original refs (was reporting duplicates_resolved=0)
-  - docs/api/safe_annotate.md published: 6-field schema, 3 examples, error cases, validation summary (L-04: generic paths)
-  - BUGS/P0-006 formally closed: RESOLVED callout, item 3 DELIVERED, Workaround leads with safe_annotate
-  - _handle_annotate emits DeprecationWarning at entry pointing to safe_annotate + P0-006
-  - 2 atomic commits: 6832ef09 (TC-3/TC-4 + Rule 1 fixes), 39d85ff8 (docs + BUGS + deprecation)
-  - PHASE 102 EXECUTION COMPLETE — ready for /gsd-verify-work
-
-### Phase 101: Schematic Ops Bug Fixes (in progress)
-
-- Plan 101-01: Deprecate erc_auto_fix ops (R-3 / P0-003) (COMPLETE)
-  - Added `deprecated: bool = False` field to OpMeta Pydantic model
-  - Marked erc_auto_fix + erc_auto_fix_hierarchical as deprecated=True in _RAW_CATALOG
-  - Runtime DeprecationWarning at both handler entry points (stacklevel=2)
-  - Warning fires BEFORE any file mutation; references P0-003 + alternative ops
-  - 6 new tests (4 registry/field + 2 warning emission), zero regression on 92 sibling tests
-  - Per CONTEXT.md D-2: deprecation ONLY this phase; raw S-expr rewrite deferred
-
-- Plan 101-02: Fix update_symbols_from_library crash (R-1 / P0-001) (COMPLETE)
-  - Replaced sym.name with sym.entryName at repair_components.py:152 (op's own lookup)
-  - Rule 1 deviation: also fixed sibling sym.name bug at symbol_mismatch.py:141
-    (_get_library_pin_signature — called by the op at line 79 BEFORE its own lookup,
-    so the validation helper crashed first; same code path, same root cause)
-
-  - kiutils Symbol class exposes libId (@property, "Device:R") and entryName (field, "R"),
-    NOT name. Match clause: `sym.libId == lib_id or sym.entryName == symbol_name`
-
-  - 2 new regression tests + 3 helpers in test_schematic_repair.py
-    (TestUpdateSymbolsFromLibraryNoCrash: no_crash_on_mismatch + uses_entryName_for_matching)
-
-  - Test 2 forces entryName branch via empty libraryNickname (defeats libId short-circuit)
-  - 85/85 tests pass in test_schematic_repair.py, 4/4 symbol_mismatch tests, zero regression
-
-- Plan 101-03: Fix place_missing_units collisions + place_no_connects_from_erc wrong positions (R-2 P0-002 + R-4 P0-004) (COMPLETE)
-  - R-2: Moved _occupied_positions dedup while-loop OUTSIDE the `if pos is None:` block
-    in place_missing_units so it applies to ALL position sources (was only fallback).
-    Bug: _find_position_for_unit returned the same wire-derived position for multiple
-    parent components (U30/U31/U32/U33) when a shared wire endpoint was within
-    max_distance=100mm of each parent, bypassing dedup. Backplane: +29 ERC violations
-    per affected component.
-
-  - R-2 Rule 1 deviation: also fixed dry_run mode not populating _occupied_positions.
-    The .add() was at line 707 inside the non-dry_run placement branch; dry_run hit
-    `continue` at line 679 before reaching it. Now records position immediately after
-    dedup resolution (before dry_run check), covering both paths.
-
-  - R-4: Added _lookup_pin_type_with_tolerance(x, y, pin_positions, tolerance) helper
-    in repair_erc.py using per-axis abs() comparison within SNAP_TOLERANCE=0.01mm.
-    Replaced pos_to_type.get(pos_key, "passive") exact dict lookup (round(x, 2) keys).
-    Bug: pin at x=127.015 (key 127.02) and violation at x=127.014 (key 127.01) missed,
-    defaulted to "passive", placed no_connect on power_in pin → no_connect_connected.
-
-  - Removed dead pos_to_type dict (lines 229-232); nothing else reads it.
-  - 4 new tests (2 per bug): TestPlaceMissingUnitsNoCollisions (2/4 instance scenarios
-    with shared wire endpoints triggering voting convergence) +
-    TestPlaceNoConnectsFromErcToleranceMatching (X-axis + Y-axis rounding boundaries).
-
-  - 4 fixture helpers for raw S-expression TL072 schematics (lib_symbol + components + wires).
-  - 98 passed / 1 skipped in affected files (was 94, +4 new, zero regression).
-    128 passed in broader run including test_erc_auto_fix.py.
-
-- Plan 101-04: Fix remove_dangling_wires criteria mismatch (R-5 / P0-005) (COMPLETE)
-  - Added trust_erc: bool = True parameter to remove_dangling_wires in repair_wires.py.
-    When True (default), op augments geometric detection with ERC wire_dangling
-    violation positions — treats ERC as ground truth for electrical "dangling"
-    (wrong-type labels, crossings without junction) that geometric heuristics miss.
-
-  - Bug: op silently reported "0 wires removed" on sheets with dozens of ERC
-    wire_dangling violations because geometric criteria (endpoint has
-    pin/label/junction/2+ wires) missed wires ERC flags electrically. Blocked
-    Phase 127 wire cleanup effectiveness.
-
-  - Council H-1 fix: dispatcher handlers/schematic.py:_handle_remove_dangling_wires
-    now passes trust_erc=op.trust_erc. Without this, schema accepted trust_erc=False
-    but dispatcher silently dropped it (op contract was broken; default True masked it).
-
-  - ERC passthrough wrapped in try/except — malformed ERC output degrades to
-    geometric-only. extract_violation_positions lazy-imported inside if trust_erc:
-    block (avoids circular import, skips overhead when disabled).
-
-  - Geometric fallback preserved (union, not replacement) — Phase 123 Wave 2
-    success (143 violations removed via geometric path) retained.
-
-  - RemoveDanglingWiresOp schema gains trust_erc: bool = Field(default=True).
-  - 4 new tests: TestRemoveDanglingWiresTrustErc (erc_passthrough, geometric_fallback,
-    default_true, geometric_only_when_no_erc). 132 passed / 1 skipped across 3
-    affected test files (zero regression). PHASE 101 COMPLETE.
-
-### Phase 99: Freerouting Integration Hardening (in progress)
-
-- Plan 99-01: DSN generator NativeBoard refactor + R-1/R-2/R-3/R-5/R-7 (COMPLETE)
-  - NativeBoard-backed DSN generation replaces regex extraction
-  - Courtyard-accurate footprint outlines (R-1) with rotation-aware AABB
-  - Per-net-class rules with self-contained per-class via padstacks (R-2 + H-2)
-  - 3-way zone classification: plane / routing-keepout / placement-only-skip (R-3 + C-1)
-  - 45° trace mode via (control (snap_angle ...)) (R-5)
-  - snap_angle threaded through export_dsn + route_with_freerouting (BLOCKER-1)
-  - 22 new tests across 7 files
-
-- Plan 99-02: Via padstacks per stackup + SES multi-layer bridge (R-4, R-6) (COMPLETE)
-  - NativeStackupLayer type + _extract_stackup_layers helper (R-4 stackup typing)
-  - Stackup-based via padstacks: THT always, blind+buried when 4+ copper layers (R-4)
-  - parse_ses rewritten for actual Freerouting v2.2.4 (wiring ...) section format (R-6)
-  - Via layers derived from padstack name (Via[0-In1] -> F.Cu/In1.Cu)
-  - ses_to_kicad_sexpr routes through ViaSegment.to_sexpr (WARN-2 canonical emitter)
-  - Reference SES captured from Freerouting v2.2.4 on Arduino_Mega (H-3)
-  - Rule 1 fixes: empty pad number, FreerouteBatch scoring NPE, unquoted UUID (KiCad 10)
-  - M-4 smoke test: kicad-cli pcb drc accepts quoted UUID via (exit 0)
-  - 18 new tests across 4 files + reference SES fixture
-
-- Plan 99-03: SC-3/SC-4/SC-5 validation + baseline metrics (COMPLETE)
-  - SC-3 PASS: Freerouting-routed smd_test_board passes kicad-cli pcb drc (0 unconnected)
-  - SC-4: Baseline metrics for 3 fixtures (smd_test_board 50% completion DRC PASS, RaspberryPi-uHAT 3.2%, synthetic 4-layer)
-  - SC-5 xfail: Freerouting v2.2.4 ignores DSN snap_angle in batch mode (documented limitation)
-  - scripts/phase99_baseline.py CLI with --json for Phase 100 dispatch
-  - Synthetic 4-layer fixture: 4 copper layers, 2 net classes (Power/Signal), 2 zones
-  - 6 Rule 1/3 fixes: DSN class doubling, SMD padstack spaces, net name regex, SES resolution divisor, Y-negation, FreerouteBatch snap_angle
-  - smd_test_board fixture fixed (was DRC-unloadable: nets in setup, missing B.Cu)
-  - 5 new tests across 2 files + baseline script + synthetic fixture
-
-### Phase 95: Dual Knowledge Base Integration (v2.2)
-
-- Cognee ingestion script (`ingest_cognee.py`) outputs JSON MCP command payloads for 4 KiCad reference docs
-- KnowledgeManager core (`knowledge.py`) with H2 section chunking, per-operation doc mapping (all 117 registry ops)
-- CORE_RULES injected as trusted system instructions (not sanitized), doc-sourced content sanitized
-- Token budget enforcement: per-section 800 + combined 2000 tokens via tiktoken
-- KnowledgeManager wired into TextIntentParser, TextErrorFixer, InferenceWrapper, CLI
-- `--no-knowledge` CLI flag disables knowledge injection
-- Thread-safe singleton with double-checked locking
-- 73 new tests (47 knowledge + 26 cognee ingestion), all passing
-- Council: APPROVE after 2 rounds (9 findings fixed: 3 HIGH, 4 MEDIUM, 2 LOW)
-
-### Phase 62: Routing Correctness (v3.1)
-
-- Plan 62-01: STRtree spatial index for snap_to_node (H-6) (COMPLETE)
-  - Per-layer STRtree indexes with lazy rebuild via _node_index_dirty flag
-  - O(log n) nearest-neighbor lookup replacing O(n) linear scan
-  - 5 new tests in TestSpatialIndexSnap
-
-- Plan 62-02: Multi-pin Steiner tree routing (H-7) (COMPLETE)
-  - Sequential nearest-neighbor heuristic for 3+ pin nets
-  - route_all_nets dispatches 2-pin and multi-pin nets separately
-  - 4 new tests in TestMultiPinRouting
-
-- Plan 62-03: Fix hardcoded net number 0 (H-8, H-9) (COMPLETE)
-  - net_id field on TrackSegment/ViaSegment with net_id_map propagation
-  - S-expression format: (net {id} "{name}") with proper KiCad net IDs
-  - 5 new tests in TestNetIds
-
-- Plan 62-04: Clearance corridor in mark_path_as_obstacle (H-10) (COMPLETE)
-  - _mark_clearance_corridor() uses STRtree for O(W * log N) edge proximity scan
-  - _point_to_segment_distance() helper for edge distance checks
-  - 7 new tests in TestClearanceCorridor + TestPointToSegmentDistance
-
-### Phase 65: Architecture Refactor (v3.1)
-
-- Plan 65-01: Split executor.py (H-18) (COMPLETE)
-  - executor.py reduced from 1032 to 800 lines via batch_executor.py extraction
-  - execute_batch method extracted to ops/batch_executor.py (297 lines)
-  - OperationExecutor.execute_batch delegates to batch_executor.execute_batch()
-  - Test patches updated from ops.executor to ops.batch_executor
-  - 12/12 batch executor tests pass
-
-- Plan 65-03: Split topology_graph.py (H-20) (COMPLETE)
-  - topology_graph.py reduced from 950 to 197 lines (data types + constants)
-  - TopologyBuilder class extracted to analysis/topology_builder.py (788 lines)
-  - TopologyBuilder re-exported from topology_graph.py for backward compat
-  - 116/116 topology tests pass
-
-- Plan 65-04: Fix Medium Findings M-1 through M-12 (COMPLETE)
-  - All 12 MEDIUM findings already fixed in prior phases (verified by existing tests)
-  - M-6 test bug fixed: replaced MagicMock with real Shapely geometry for STRtree
-  - 22/22 Phase 65 architecture tests pass
-
-### Phase 70: Post-Repair Verification (v3.1)
-
-- Plan 70-01: PersistentUndoStack Test Suite (UNDO-06) (COMPLETE)
-  - 15 comprehensive tests: persistence, LIFO order, multi-file isolation, max_size pruning, manifest corruption, missing entry files, atomic writes, prune, clear, path traversal, concurrent access, redo not persisted, post_mtime preserved, empty project dir, fallback to in-memory
-  - All 15 tests pass (0.57s total)
-  - Rule 1 fix: added missing `Any` import in persistent_undo.py
-
-- Plan 70-02: CLI Undo/Redo Commands + Gitignore (UNDO-07, UNDO-08) (COMPLETE)
-  - `kicad-agent undo [file] [-p project-dir]` and `kicad-agent redo [file] [-p project-dir]` subcommands
-  - Automatic .gitignore entry for `.kicad-agent/` via _ensure_gitignore() in PersistentUndoStack.__init__()
-  - 8 tests: undo no history, undo with history, redo after undo, undo specific file, gitignore created/no-duplicate/append, subprocess undo
-  - All 8 tests pass
-
-### Phase 71: Tool Awareness Registry (v3.1)
-
-- Plan 71-01: Pin-to-Net Mapping Test Suite (PINMAP-01, PINMAP-02) (COMPLETE)
-  - 24 tests (5 new) covering all safety gates: wire connectivity, existing labels, dry_run, no_connect, reference filter, multi-instance, label type
-  - Extended backplane profile completeness to validate all 10 ICs
-  - All 24 tests pass (0.22s)
-
-- Plan 71-02: Extended IC Profiles & Integration Test (PINMAP-03) (COMPLETE)
-  - 20 integration tests: backplane completeness, channel-strip validation, power domain differences, auto-merge, JSON override, power pin enforcement
-  - Validated RP2350B, NE5532, CD4066, CD4060, LM358 profiles correct
-  - Confirmed NE5532 +/-12V (backplane) vs +/-15V (channel-strip) power domains
-  - All 20 tests pass (0.23s combined)
-
-### Phase 72: Read-Only Dispatch & MCP Annotations (v3.1)
-
-- Plan 72-01: Verify Schematic Query Dispatch Path (COMPLETE)
-  - 9 tests confirming _execute_schematic_query parse-only path works correctly
-  - Verified 19 schematic query handlers skip Transaction/serialize
-  - Verified all 25 registry readonly ops have proper dispatch handlers
-  - No code changes needed (path already implemented in prior phases)
-
-- Plan 72-02: Auto-Derive MCP Read-Only Annotations (COMPLETE)
-  - Replaced manual _READ_ONLY_OPS frozenset (20 ops) with auto-derived set from registry (25 ops)
-  - Replaced manual _DESTRUCTIVE_OPS frozenset (8 ops) with auto-derived set from registry (13 ops)
-  - 5 previously missing readonly ops now annotated: analyze_split_plane, infer_connectivity, list_design_rules, list_lib_entries, list_net_classes
-  - Bidirectional consistency test ensures registry and MCP annotations stay in sync
-
-### Phase 74: Executor Refactor & Schema Organization (v3.1)
-
-- Plan 74-01: Split executor handlers into modules (COMPLETE)
-  - executor.py reduced from 800 to 287 lines (coordinator only)
-  - New execution.py (640 lines) with all file-type execution functions as standalone functions
-  - batch_executor.py updated to use standalone functions from execution.py
-  - Backward-compatible re-exports preserved (handler registries, constants, dispatch functions)
-  - All 55 directly affected tests pass with updated patches
-
-- Plan 74-02: Reorganize miscategorized schema operations (COMPLETE)
-  - Schema classes already moved in prior phase (verified in _schema_repair.py docstring)
-  - Updated 6 OPERATION_REGISTRY entries from stale "repair" category to correct categories
-  - swap_symbol -> component, update_symbols_from_library -> library, convert_kicad6_to_10 -> create
-  - add_power_flag -> wire, rebuild_root_sheet -> sheet, place_net_labels -> routing
-
-### Phase 73: Workflow Templates & Dependency Graph (v3.1)
-
-- Plan 73-01: Operation Dependency Validation (COMPLETE)
-  - Added `validate_conflicts()` to registry for detecting conflicting op sequences
-  - Integrated `validate_dependencies()` and `validate_conflicts()` into `execute_batch()`
-  - Added multi_file scope rejection in batch executor (generic, not name-based)
-  - Filled missing metadata: `repair_schematic` requires `parse_erc` and conflicts with `remove_component`
-  - `batch_connect` also requires `detect_routing_collisions` for correct batch ordering
-  - 6 new batch dependency tests, 5 new registry conflict/dependency tests
-
-- Plan 73-02: Workflow Templates as MCP Meta-Tools (COMPLETE)
-  - 8 predefined workflow templates: fix_erc_errors, wire_schematic, add_component_full, repair_schematic, pcb_setup, design_review, full_pcb_layout, convert_legacy_schematic
-  - Exposed `list_workflows` and `get_workflow` as read-only MCP meta-tools
-  - All workflows validated against registry dependency chains and conflict checks
-  - 6 new MCP dispatch tests for workflow tools
-  - Meta-tool count updated from 7 to 9
-
-### Phase 64: CLI/UX Polish (v3.1)
-
-- Plan 64-01: Fix Route Crash on Paths Outside CWD (H-15) (COMPLETE)
-  - try/except ValueError wrapping relative_to(Path.cwd()) in _handle_route
-  - Falls back to absolute path when PCB file is outside CWD
-  - 3 new tests in TestRoutePathOutsideCwd
-
-- Plan 64-02: Add Top-Level Help with Subcommand Listing (H-16) (COMPLETE)
-  - _SUBCOMMAND_DESCRIPTIONS dict with all 16 subcommands
-  - _print_help() function with formatted subcommand table
-  - main() routes --help/-h/no-args to help before subcommand dispatch
-  - 5 new tests in TestTopLevelHelp
-
-- Plan 64-03: Fix Component-Search Help (H-17) (COMPLETE)
-  - argparse.parse_args() intercepts --help/-h before MCP import
-  - MCP server never starts when --help is requested
-  - 3 new tests in TestComponentSearchHelp
-
-### Phase 63: Training Integrity (v3.1)
-
-- Plan 63-01: Fix GitHub Token Handling (H-11) (COMPLETE)
-  - _resolve_github_token() with regex validation for all 5 GitHub token prefixes
-  - Environment variable fallback (GITHUB_TOKEN), explicit param takes precedence
-  - SEC-1: error messages hide actual token content
-  - 15 new tests in TestResolveGitHubToken
-
-- Plan 63-02: Fix Parallel Seed Offset (H-12) (COMPLETE)
-  - Per-worker seed offsets with 1M spacing: seed_base + worker_id * _SEED_SPACING
-  - Overlap assertion raises ValueError for misconfiguration
-  - 4 new tests in TestParallelSeedOffset
-
-- Plan 63-03: Fix Unseeded Random in train_step (H-13) (COMPLETE)
-  - GRPOTrainer._step_counter initialized to 0, incremented per step
-  - RNG seeded with config.seed + _step_counter for deterministic training
-  - GRPOConfig.seed defaults to 42
-  - 6 new tests in TestGRPOSeededRandom
-
-- Plan 63-04: Fix Self-Referential Best-of-N (H-14) (COMPLETE)
-  - _independent_score() uses format + step count heuristics (no model self-ref)
-  - generate() accepts optional reference_model for external neural scoring
-  - 50/50 heuristic/neural blend when reference model provided
-  - 12 new tests in TestIndependentScore + TestRewardModelGenerate
-
-### Phase 61: Security Hardening (v3.1)
-
-- Plan 61-01: Replace eval() with safe AST parser (C-1) (COMPLETE)
-  - Replaced eval() in circuit_templates.py with AST-walking predicate evaluator
-  - Supports comparison, arithmetic, boolean operators; rejects imports/calls/attribute access
-  - 12 new tests in TestSafePredicateEvaluator
-
-- Plan 61-02: Upload content validation (H-1) (COMPLETE)
-  - Added _validate_content() checking file bytes against KiCad S-expression signatures
-  - Rejects non-KiCad content declared as KiCad types; allows empty templates
-  - 6 new tests in TestUploadContentValidation
-
-- Plan 61-03: Public network binding warning (H-2) (COMPLETE)
-  - Added stderr warning when playground binds to 0.0.0.0 or ::
-  - 2 new tests in TestPublicBindingWarning
-
-- Plan 61-04: Repo name validation (H-3) (COMPLETE)
-  - Added _REPO_NAME_RE regex and validation in BulkFetcher._repo_dir()
-  - Rejects path traversal, Unicode separators, oversized names
-  - 7 new tests in TestRepoNameValidation
-
-- Plan 61-05: Runtime security tests (H-4) (COMPLETE)
-  - Converted inspect.getsource() tests to runtime OperationExecutor.execute() tests
-  - All 19 security hardening tests + 27 Phase 61 tests passing
-
-### Phase 60: Test Infrastructure (v3.1)
-
-- Plan 60-01: Fix stale test constants T-1 through T-5 (COMPLETE)
-  - Created tests/helpers/counts.py with dynamic count_op_classes(), count_schema_files(), count_operation_tools()
-  - Refactored test_slc_compliance.py, test_code_quality.py, test_edit_server.py to use shared helpers
-  - All 5 hardcoded constants eliminated; counts derive from source
-
-- Plan 60-02: Fix autouse API key fixture H-5 (COMPLETE)
-  - Verified autouse=True already removed from conftest_llm.py
-  - Created test_fixture_isolation.py with regression tests (positive/negative verification)
-  - 2 new tests, 114 total Phase 60 tests passing
-
-### Phase 76: Native KiCad 10 PCB Parser (v3.1)
-
-- Plan 76-01: NativeBoard dataclass types and sexpdata-based parser (COMPLETE)
-  - 13 mutable dataclasses + _NativePosition NamedTuple in pcb_native_types.py
-  - NativeParser with parse_pcb()/parse_pcb_content() and depth pre-scan (CRITICAL-1)
-  - Kiutils-compatible properties: graphicItems, traceItems, layers, zone.tstamp/net/netName/minThickness
-  - 6 graphic item types (line/arc/circle/rect/poly/curve), np_thru_hole pad type, pinfunction/pintype
-  - 68 tests, all passing. Zero kiutils imports, zero new dependencies.
-
-- Plan 76-02: Wire NativeParser into PcbIR and executor (COMPLETE)
-  - PcbIR.from_native() creates NativeBoard-backed IR without UUID map requirement
-  - _is_native branching in all 8 mutation/query methods (add_net, remove_net, rename_net, swap_footprint, get_net_pads, get_footprint_pads, get_board_bounds, extract_netlist)
-  - Executor dual-parser: native for reads, kiutils for serialization (zero regression)
-  - _try_native_parse() with Exception catch per CRITICAL-1
-  - 41 integration tests, all passing. 73 total (adapter + pcb_ops + handler), zero regression.
-
-  - Code review fixes (3 HIGH findings addressed):
-    - HIGH-1: update_footprint_from_library() native path (was only mutation method missing _is_native branch)
-    - HIGH-2: External consumers (extractor, graph_builder, spatial_drc) duck-typed for tuple positions
-    - HIGH-3: CacheEntry stores native_board; cache hits preserve native parser benefit
-    - 185 total tests passing after fixes, zero regression
-
-### Phase 75: Pre-Analysis Gate & Context Intelligence (v3.1)
-
-- Plan 75-01: PreAnalysisGate, executor wiring, context upgrade (COMPLETE, retroactive)
-  - PreAnalysisGate with overlap detection, collision zones, pin resolution, wire collision check
-  - Tiered enforcement: blockers prevent execution, warnings log but proceed
-  - render_component_intelligence() with per-component pin maps, connectivity, power nets
-  - Wired into executor._execute_schematic() and execute_batch() validation loop
-  - 32 new tests, all passing. No new dependencies.
-
-### Phase 47: Circuit Intent Inference
-
-- Plan 47-01: IntentInference, DesignIntent schemas (COMPLETE)
-  - IntentInferrer with 15 ordered intent rules (THAT4301, NE5532, CD4066, CD4060, LM358, etc.)
-  - DesignIntent and SubcircuitIntent Pydantic schemas with validation
-  - DesignGoal enum with 9 categories
-  - Signal flow generation with arrow notation: "Input -> VCA -> Output"
-  - InferenceResult frozen dataclass with rule_matched and timing
-  - 27 TDD tests, 244 total analysis tests pass
-
-- Plan 47-02: DesignReviewer, design review engine (COMPLETE)
-  - DesignReviewer with 5 deterministic template-based review checks
-  - DesignFinding and DesignReview Pydantic schemas with auto-computed summary
-  - ReviewSeverity (INFO, SUGGESTION, WARNING, CRITICAL) and ReviewCategory enums
-  - Bypass cap detection, feedback compensation, power decoupling, input protection
-  - Intent-aware severity escalation (CRITICAL for audio ICs)
-  - 15 TDD tests, 143 total analysis tests pass
+Phase: 156 (SKIDL Converter) — not started (roadmap defined)
+Plan: —
+Status: Roadmap defined; ready to plan Phase 156
+Last activity: 2026-07-04 — Milestone v5.0 Skidl-Native Design Pipeline roadmap created (Phases 156-160)
 
 ## Previous Milestone (v3.0 Full-Stack EDA)
 
@@ -542,6 +78,11 @@ Last activity: 2026-07-04 -- Phase 107 planning complete
 - Phase 109 added: AI Legibility Critic — vision-model critic on autolayout output, scored against Phase 48.5 SRS. Model choice (Claude vision vs Gemma 4 12B V2 vs both with R-4) deferred to discuss-phase. Depends on Phase 108.
 - Phase 110 added: GRPO Legibility Reward Signal — legibility term added to existing training/grpo.py. SFT path: real schematics (discover_100k.py). GRPO path: synthetic (training/generator.py). Depends on Phase 109.
 - Phase 111 added: Convention Library — IEEE 315 + H&H as Python dataclasses (D-02 canonical core) + YAML overrides via Phase 48 RuleConfigLoader. New `Convention` ABC mirrors `DesignRule` ABC. Depends on Phase 107 (parallel-eligible with 108).
+- Phase 156 added: SKIDL Converter — bidirectional KiCad↔SKIDL bridge. Builds the missing KiCad→SKIDL read-back path (SchematicIR + extract_nets → skidl.Circuit) and makes SKIDL→KiCad a first-class op. SKIDL becomes the canonical IR for all circuit operations (SchGen Code-L1 validation: 82% valid circuits vs 32% raw KiCad). Depends on Phases 108-111.
+- Phase 157 added: Floor Planner — declarative YAML floor-plan spec (`.floorplan.yaml`) compiled by `apply_floor_plan` into existing `LayoutAwarePlacer` vectors. Post-populate, pre-Quilter stage. Depends on Phase 156 (module-aware hierarchy metadata).
+- Phase 158 added: SPICE Pipeline — headless ngspice testbench pipeline (AC/transient/noise/THD) with structured JSON results as reward signal. Zero new deps (ngspice 45.2, spicelib, skidl+InSpice installed). Independent of Phase 156 (parallel-eligible).
+- Phase 159 added: AI Training Data — 71K repos → SKIDL + NL SFT pairs; placement→routing quality pairs; SPICE pre/post-route delta as reward signal. Qwen text + Gemma vision adapters. Depends on Phases 156, 157, 158.
+- Phase 160 added: NL Circuit Generation — fine-tuned LLM generates SKIDL from NL → ERC → SPICE → floor plan → PCB → Quilter. Full pipeline to manufacturing (SchGen/pcbGPT stop at schematic). Depends on Phase 159.
 
 ### v4.1 Stage-Safe PCB Flow (Phases 85-94)
 
@@ -563,6 +104,26 @@ Planned phases:
 Total: 14 plans across 10 phases.
 
 Priority: Start with Phases 85-87 (gate architecture + schematic intent + transfer contract) per document recommendation.
+
+### v5.0 Skidl-Native Design Pipeline (Phases 156-160) — CURRENT
+
+**Goal:** Build a bidirectional KiCad↔SKIDL bridge, floor planner, SPICE simulation pipeline, and AI training data generator. SKIDL becomes the canonical IR for all circuit operations. Enables natural language → circuit → simulation → floor plan → PCB → routing → manufacturing.
+
+Planned phases (numbering continues from analog-ecosystem cross-repo for clarity):
+
+- Phase 156: SKIDL Converter (10 reqs: CONV-01..10) — bidirectional KiCad↔SKIDL bridge; builds missing KiCad→SKIDL read-back. Depends on Phases 108-111.
+- Phase 157: Floor Planner (9 reqs: FLOOR-01..09) — YAML `.floorplan.yaml` spec → `apply_floor_plan` lowering into LayoutAwarePlacer. Depends on 156.
+- Phase 158: SPICE Pipeline (11 reqs: SPICE-01..11) — headless ngspice testbench (AC/tran/noise/THD) → JSON reward signal. Independent (parallel with 156).
+- Phase 159: AI Training Data (7 reqs: TRAIN-01..07) — 71K repos → SKIDL+NL pairs; SPICE delta as reward. Depends on 156, 157, 158.
+- Phase 160: NL Circuit Generation (5 reqs: NLGEN-01..05) — NL → SKIDL → ERC → SPICE → PCB → Quilter. Depends on 159.
+
+Total: 5 phases, 42 requirements. Dependency graph: 156→157; 158 parallel; 159←{156,157,158}; 160←159.
+
+Research basis: `STACK-SKIDL.md`, `ARCHITECTURE-FLOORPLAN.md`, `STACK-SPICE.md`.
+
+Priority: Phase 156 (SKIDL Converter) and Phase 158 (SPICE Pipeline) can start in parallel — 156 is the keystone IR, 158 is independent. 157 follows 156. 159 follows all three. 160 is the capstone.
+
+Key decisions (from PROJECT.md): SKIDL is the IR (SchGen Code-L1); two-model architecture (Qwen text + Gemma vision); SPICE results as reward signal (analog sub-circuits only); floor planner encodes engineering knowledge; full pipeline to manufacturing.
 
 ### Decisions
 
@@ -736,8 +297,8 @@ None.
 
 ## Session Continuity
 
-Stopped at: Phase 107 research deliverable complete; awaiting Council Gate 1 plan review before /gsd-discuss-phase 108
-Resume with: Council Gate 1 plan review on 107-PLAN.md. On approval, /gsd-discuss-phase 108 (Deterministic Autolayout Engine).
+Stopped at: Milestone v5.0 Skidl-Native Design Pipeline roadmap created (Phases 156-160)
+Resume with: /gsd-discuss-phase 156 (SKIDL Converter). Phase 158 (SPICE Pipeline) is independent and can be planned/discussed in parallel.
 
 ### Phase 100: RoutingOrchestrator and Human Approval Loop (complete)
 

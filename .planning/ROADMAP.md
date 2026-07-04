@@ -20,6 +20,7 @@ Build an AI-safe KiCad structural editing tool across multiple milestones. First
 - **v4.0 Hybrid Routing Intelligence** - Phases 80-84 (shipped 2026-06-20)
 - **v4.1 Stage-Safe PCB Flow** - Phases 85-94 (shipped 2026-06-20)
 - **v5.0 Vast.ai Training & External Storage** - Phases 96-97 (shipped 2026-06-20)
+- **v5.0 Skidl-Native Design Pipeline** - Phases 156-160 (planned)
 
 ## Phases
 
@@ -1871,6 +1872,82 @@ Plans:
 - [ ] 111-01-PLAN.md — Wave 1: Convention ABC + Violation + LayoutView + YAML loader + dual JSON/markdown serializers (parallel-eligible with Phase 108)
 - [ ] 111-02-PLAN.md — Wave 2: v1 catalog (Phase 48.5 readability adapters + 4-9 new conventions from Phase 108 violation data) + ConventionEngine
 - [ ] 111-03-PLAN.md — Wave 3: `kicad-agent check-conventions` CLI + Phase 108 autolayout integration (conventions as placement constraints)
+
+---
+
+### v5.0 Skidl-Native Design Pipeline (PLANNED — Phases 156-160)
+
+**Milestone Goal:** Build a bidirectional KiCad↔SKIDL bridge, floor planner, SPICE simulation pipeline, and AI training data generator. Enables: natural language → circuit → simulation → floor plan → PCB → routing → manufacturing. SKIDL becomes the canonical intermediate representation (IR) for all circuit operations — validated by the SchGen paper's Code-L1 representation ablation (82% valid circuits vs 32% for raw KiCad files).
+
+**Phase numbering:** 156-160, continuing from analog-ecosystem cross-repo numbering for clarity.
+
+**Dependency graph:** 156 (SKIDL Converter) → 157 (Floor Planner); 158 (SPICE Pipeline) runs independent/parallel to 156; 159 (AI Training Data) depends on 156 + 157 + 158; 160 (NL Circuit Generation) depends on 159.
+
+**Research basis:** `STACK-SKIDL.md` (SchGen L1/L2/L3, 8 pitfalls), `ARCHITECTURE-FLOORPLAN.md` (YAML floor-plan spec + lowering pass), `STACK-SPICE.md` (ngspice 45.2 testbench pipeline, 0 new deps).
+
+**Key decisions:**
+- SKIDL is the IR for all circuit operations (SchGen Code-L1: pin-name-based wiring)
+- Two-model architecture: Qwen text (circuit generation) + Gemma vision (routing)
+- SPICE results as reward signal for AI training (analog sub-circuits only)
+- Floor planner encodes engineering knowledge into YAML spec → existing engine vectors
+- Full pipeline advantage: SchGen/pcbGPT stop at schematic, we go to manufacturing
+
+---
+
+### Phase 156: SKIDL Converter
+**Goal**: Bidirectional KiCad↔SKIDL bridge. Build the KiCad→SKIDL read-back path (the one direction that does not exist) by composing `SchematicIR` + `extract_nets`, then make the SKIDL→KiCad path (proven in analog-ecosystem) a first-class kicad-agent op. SKIDL becomes the canonical IR for all downstream circuit operations (floor planning, SPICE, training data).
+**Depends on**: Phases 108-111 (autolayout + conventions provide the schematic generation foundation)
+**Requirements**: CONV-01, CONV-02, CONV-03, CONV-04, CONV-05, CONV-06, CONV-07, CONV-08, CONV-09, CONV-10
+**Success Criteria** (what must be TRUE):
+  1. `convert_to_skidl` op reads any `.kicad_sch` → generates a `build_*.py` SKIDL program reproducing components + nets (pin-name-based wiring, the Code-L1 pattern)
+  2. Both L1 (pin-level, exact) and L2 (component-level, training-data-friendly) representations are emitted per the SchGen ablation
+  3. Multi-unit symbols (NE5532 A/B/C, RP2350B), power symbols (as Net assignments), and hierarchical sheets (recursive flatten) convert correctly — all 3 high-risk pitfalls (STACK-SKIDL #1, #2, #3) handled
+  4. Bidirectional: SKIDL Circuit → valid `.kicad_sch` via the existing gen_schematic pipeline (with the 5 `populate_pcb_from_netlist` parser fixes ported to the source)
+  5. Converting the ADSR (35 parts) yields a SKIDL circuit whose ERC result matches the original; converting the backplane (16 sheets, 94 parts) preserves the hierarchical structure
+
+### Phase 157: Floor Planner
+**Goal**: A declarative YAML floor-plan spec (`.floorplan.yaml`) that captures design intent — functional zones, locked anchors, keepouts, decoupling pairs, power isolation, ground-pour prep, multi-strip replication — and a lowering pass that compiles it into the existing `LayoutAwarePlacer` vectors (`fixed_positions` + `keepout_zones` + `constraints`). Applied as a post-populate, pre-Quilter stage so the autorouter starts from an engineering-aware configuration instead of blind grid packing.
+**Depends on**: Phase 156 (SKIDL Circuit provides module-aware hierarchy metadata for zone-aware placement)
+**Requirements**: FLOOR-01, FLOOR-02, FLOOR-03, FLOOR-04, FLOOR-05, FLOOR-06, FLOOR-07, FLOOR-08, FLOOR-09
+**Success Criteria** (what must be TRUE):
+  1. A `FloorPlanSpec` Pydantic model + YAML loader validates the spec (zones, pre_placed, keepout_zones, constraints, replicate, ground_pour) and fails closed on invalid configs (zone coverage, board bounds, replicate-count vs 500-component cap)
+  2. `gen_pcb.py` reads the placement spec and places components in functional zones via `apply_floor_plan`, lowering the spec into the existing `LayoutAwarePlacer` (not a parallel engine)
+  3. Connectors pre-place at board edges, mounting holes at corners (both locked for Quilter via `(locked)` tokens), and keepout zones emit as `gr_poly` objects Quilter respects as Placement Regions
+  4. Ground-pour prep emits KiCad `zone` blocks (F.Cu/B.Cu, GND, excluded over the noisy switcher) and decoupling caps place within max distance of their IC; multi-strip replication expands a single template across N channels
+  5. The mono blade routed WITH a floor plan scores higher placement quality (HPWL/congestion) than WITHOUT — floor plan improves Quilter routing quality
+
+### Phase 158: SPICE Pipeline
+**Goal**: A headless, scriptable ngspice simulation pipeline that turns a SKIDL Circuit into validated electrical behavior — AC (gain/BW/phase), transient (step response), noise (input/output floor), and THD — with structured JSON results that serve as a reward signal for AI training. Zero new dependencies (ngspice 45.2, spicelib, skidl+InSpice all installed). Replaces the LTspice-only module's "can write `.asc` but can't run a sim" gap.
+**Depends on**: Nothing in v5.0 (independent of Phase 156; can run in parallel) — runs on any SKIDL Circuit
+**Requirements**: SPICE-01, SPICE-02, SPICE-03, SPICE-04, SPICE-05, SPICE-06, SPICE-07, SPICE-08, SPICE-09, SPICE-10, SPICE-11
+**Success Criteria** (what must be TRUE):
+  1. A SKIDL Circuit exports to an ngspice deck via `generate_netlist(tool="spice")` (→ InSpice `Circuit`) and runs headless with `ngspice -b deck.cir -r out.raw` — no human in the loop
+  2. Curated SPICE models for NE5532, THAT340, DG413, TL072, LM358 are in a `models/` registry; AK4619VN is explicitly `UNSIMULATABLE` (delta-sigma codec) and substituted with an ideal source at its analog pins
+  3. Four testbench generators (AC, transient, noise, THD) each emit a `.cir` deck; noise uses the `.control/write` idiom (vectors don't reach `-r` raw otherwise) and THD parses from the `.log` (different output channel than AC/transient)
+  4. A result parser converts ngspice `.raw` (via generalized `read_raw` with `dialect="ngspice"`) + `.log` → structured JSON (gain_db, bandwidth_3db, noise_floor, THD%), with regression baselines stored for comparison
+  5. Simulating the mono blade preamp verifies +18 dB gain and BW > 100 kHz against spec targets, and parasitic injection (trace R/L/C from the routed PCB → re-simulate) measures post-route degradation as the reward delta
+
+### Phase 159: AI Training Data
+**Goal**: Turn the SKIDL converter, floor planner, and SPICE pipeline into a training data factory: convert 71K crawled KiCad repos → SKIDL Python + natural-language descriptions (SFT pairs), capture placement→routing quality pairs from Quilter, and use SPICE pre-route vs post-route delta as a physical reward signal that geometry-only signals cannot provide. Two adapters — Qwen text for circuit generation, Gemma vision for routing — consume the output.
+**Depends on**: Phase 156 (SKIDL converter for the 71K repos), Phase 157 (floor planner for placement pairs), Phase 158 (SPICE for the reward signal)
+**Requirements**: TRAIN-01, TRAIN-02, TRAIN-03, TRAIN-04, TRAIN-05, TRAIN-06, TRAIN-07
+**Success Criteria** (what must be TRUE):
+  1. 71K crawled KiCad repos convert to SKIDL Python code via the Phase 156 converter (batch, parallelizable)
+  2. Natural-language descriptions are generated per circuit (SFT pairs: NL → SKIDL), and placement→routing-quality pairs are captured from Quilter results
+  3. SPICE degradation (pre-route vs post-route simulation delta) feeds the existing `BoardChainReward` as a new physical `sim_score` term alongside format/quality/accuracy — closed-form parasitics (ms-scale) for in-loop RL
+  4. Qwen text adapter trains on circuit generation (SKIDL is pure text) and Gemma vision adapter trains on routing with placement context (enhancing the existing Phase 98 model)
+  5. Training data format matches the existing `generate_gap_training_data.py` output so it drops into the existing GRPO/SFT pipeline without conversion
+
+### Phase 160: NL Circuit Generation
+**Goal**: The capstone end-to-end pipeline — a fine-tuned LLM takes a natural-language circuit request and generates SKIDL Python, which then flows through ERC → SPICE → floor plan → PCB → Quilter routing → manufacturing. This is the full pipeline advantage over SchGen/pcbGPT (which stop at schematic): natural language all the way to a manufacturable board.
+**Depends on**: Phase 159 (trained Qwen + Gemma adapters)
+**Requirements**: NLGEN-01, NLGEN-02, NLGEN-03, NLGEN-04, NLGEN-05
+**Success Criteria** (what must be TRUE):
+  1. A fine-tuned LLM (Qwen text adapter from Phase 159) generates valid SKIDL Python from a natural-language description
+  2. Generated SKIDL passes the ERC validation gate (0 errors) before proceeding
+  3. Generated SKIDL passes the SPICE validation gate (circuit meets spec targets — e.g., +18 dB gain) before proceeding
+  4. The full pipeline runs unattended: NL → SKIDL → ERC → SPICE → floor plan → PCB → Quilter routing
+  5. The canonical test — "I need a preamp with +18 dB gain and -128 dBu EIN" — generates a working circuit that clears every gate
 
 ---
 
