@@ -25,8 +25,11 @@ the Phase 110 eval harness. To run real-model integration tests::
 from __future__ import annotations
 
 import dataclasses
+import io
 import json
 from typing import Any
+
+from PIL import Image
 
 import pytest
 from pydantic import ValidationError
@@ -113,6 +116,11 @@ def _valid_response_json(confidence: float = 0.9, srs: float = 0.75) -> str:
         ],
         "confidence": confidence,
     })
+
+
+def _fake_pil_image() -> Image.Image:
+    """Build a tiny real PIL image — _encode_image_for_claude needs .save()."""
+    return Image.new("RGB", (4, 4), color="white")
 
 
 # ---------------------------------------------------------------------------
@@ -496,7 +504,7 @@ class TestClaudeCriticSuccess:
     def test_returns_valid_result(self) -> None:
         client = FakeClaudeClient(_valid_response_json(confidence=0.85))
         critic = ClaudeLegibilityCritic(client)
-        result = critic.critique(image=object(), file_path="board.kicad_sch")
+        result = critic.critique(image=_fake_pil_image(), file_path="board.kicad_sch")
         assert result.model_used == "claude"
         assert result.confidence > 0.0
         assert set(result.factors.keys()) == {"density", "clarity", "spacing", "organization"}
@@ -509,7 +517,7 @@ class TestClaudeCriticR6:
             pass
         client = FakeClaudeClient(FakeAPIError("API error"))
         critic = ClaudeLegibilityCritic(client)
-        result = critic.critique(image=object())
+        result = critic.critique(image=_fake_pil_image())
         assert result.model_used == "none"
         assert result.confidence == 0.0
 
@@ -520,7 +528,7 @@ class TestClaudeLO04Reuse:
         raw = '{"suggestions": [{"text": "x=50", "x": 50}]}'
         client = FakeClaudeClient(raw)
         critic = ClaudeLegibilityCritic(client)
-        result = critic.critique(image=object())
+        result = critic.critique(image=_fake_pil_image())
         assert result.model_used == "none"
 
 
@@ -533,7 +541,7 @@ class TestHybridGemmaFirst:
             gemma=GemmaLegibilityCritic(pipeline),
             claude=ClaudeLegibilityCritic(client),
         )
-        result = hybrid.critique(image=object())
+        result = hybrid.critique(image=_fake_pil_image())
         assert result.model_used == "gemma4"
         assert client.call_count == 0
 
@@ -547,7 +555,7 @@ class TestR4LowConfidence:
             gemma=GemmaLegibilityCritic(pipeline),
             claude=ClaudeLegibilityCritic(client),
         )
-        result = hybrid.critique(image=object())
+        result = hybrid.critique(image=_fake_pil_image())
         assert result.model_used == "claude"
         assert client.call_count == 1
 
@@ -561,7 +569,7 @@ class TestR4UncertainBand:
             gemma=GemmaLegibilityCritic(pipeline),
             claude=ClaudeLegibilityCritic(client),
         )
-        result = hybrid.critique(image=object())
+        result = hybrid.critique(image=_fake_pil_image())
         assert result.model_used == "claude"
 
 
@@ -575,7 +583,7 @@ class TestClaudeOnly:
             claude=ClaudeLegibilityCritic(client),
             claude_only=True,
         )
-        result = hybrid.critique(image=object())
+        result = hybrid.critique(image=_fake_pil_image())
         assert result.model_used == "claude"
         assert pipeline.call_count == 0
 
@@ -590,7 +598,7 @@ class TestGemmaOnly:
             claude=ClaudeLegibilityCritic(client),
             gemma_only=True,
         )
-        result = hybrid.critique(image=object())
+        result = hybrid.critique(image=_fake_pil_image())
         assert result.model_used == "gemma4"
         assert client.call_count == 0
 
@@ -604,7 +612,7 @@ class TestDoubleR6Fallback:
             gemma=GemmaLegibilityCritic(pipeline),
             claude=ClaudeLegibilityCritic(client),
         )
-        result = hybrid.critique(image=object())
+        result = hybrid.critique(image=_fake_pil_image())
         assert result.model_used == "none"
         assert result.confidence == 0.0
 
@@ -621,7 +629,7 @@ class TestTunableThresholds:
             uncertain_band=(0.3, 0.6),
         )
         # confidence 0.8 < 0.85 → triggers Claude
-        result = hybrid.critique(image=object())
+        result = hybrid.critique(image=_fake_pil_image())
         assert result.model_used == "claude"
 
     def test_defaults_match_context(self) -> None:
