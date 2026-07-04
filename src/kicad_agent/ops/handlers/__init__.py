@@ -14,6 +14,7 @@ from .pcb_bom import _BOM_HANDLERS, register_bom
 from .pcb_stitch import _STITCH_HANDLERS, register_stitch
 from .project import _PROJECT_HANDLERS, register_project
 from .create import _CREATE_HANDLERS, register_create
+from .circuit_ir import _CIRCUIT_IR_HANDLERS, register_circuit_ir
 from .query import _QUERY_HANDLERS, register_query
 from .crossfile import _CROSSFILE_HANDLERS, register_crossfile
 from .gate_handlers import _GATE_HANDLERS, register_gate_handler
@@ -49,7 +50,9 @@ __all__ = [
     "_PROJECT_HANDLERS",
     "register_project",
     "_CREATE_HANDLERS",
+    "_CIRCUIT_IR_HANDLERS",
     "register_create",
+    "register_circuit_ir",
     "_QUERY_HANDLERS",
     "register_query",
     "_CROSSFILE_HANDLERS",

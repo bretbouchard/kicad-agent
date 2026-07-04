@@ -49,6 +49,7 @@ from kicad_agent.ops.handlers import (  # noqa: F401
     _PCB_HANDLERS,
     _PROJECT_HANDLERS,
     _CREATE_HANDLERS,
+    _CIRCUIT_IR_HANDLERS,
     _QUERY_HANDLERS,
     _CROSSFILE_HANDLERS,
 )

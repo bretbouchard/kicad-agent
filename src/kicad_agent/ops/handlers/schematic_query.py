@@ -273,3 +273,25 @@ def _handle_critique_sch(op: Any, ir: SchematicIR, file_path: Path) -> dict[str,
     """
     from kicad_agent.ops.handlers.critique import handle_critique_sch
     return handle_critique_sch(op, ir, file_path)
+
+
+@register_schematic_query("convert_to_skidl")
+def _handle_convert_to_skidl(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    """Convert a KiCad schematic to SKIDL Python code (read-only query)."""
+    from kicad_agent.circuit_ir import KiCadToSkidlConverter
+    
+    converter = KiCadToSkidlConverter()
+    level = getattr(op, "level", "L1")
+    output_file = getattr(op, "output_file", None)
+    
+    code = converter.convert(file_path, output_file, level=level)
+    
+    return {
+        "op_type": "convert_to_skidl",
+        "file": str(file_path),
+        "level": level,
+        "output_lines": code.count("\n"),
+        "output_file": output_file,
+        "power_nets": sorted(converter.power_nets),
+        "code_length": len(code),
+    }

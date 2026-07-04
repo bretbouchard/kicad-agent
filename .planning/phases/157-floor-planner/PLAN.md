@@ -15,6 +15,7 @@
 2. **Own the source-of-truth; emit KiCad-native artifacts.** KiCad has no native "rooms/floor-plan" concept (confirmed in research Q2). The YAML spec is the *only* place this intent lives. It lowers into `(locked)` tokens + keepout `gr_poly`/`zone` objects that *are* KiCad-native.
 3. **Fail closed.** On any validation error, `apply_floor_plan` returns the raw PCB unmodified + a violations list, so `gen_pcb.py` falls back to grid placement rather than producing a malformed board.
 4. **Each wave is independently shippable and reversible.** Delete the `.floorplan.yaml` → original grid placement (zero behavior change).
+5. **Contextual placement rules capture implicit knowledge (Bead kicad-agent-24).** The `placement_rules` section captures the "stupid requirements" — edge affinity, EMI avoidance, decoupling proximity, orientation, region membership. Each rule carries a `rationale` field (the "why") that becomes training data for Phase 159. Rules lower into SA objective penalties (soft) or placement-gate failures (hard), and into routing keepouts for the negotiation loop (Phase 105).
 
 ### Critical constraint from research (Q3)
 
@@ -143,6 +144,57 @@ constraints:
     net_class_name: "mains"
     confidence: 0.9
     source_rule: floorplan_yaml
+
+# --- Contextual placement rules (Bead kicad-agent-24) ---
+# Capture the "stupid requirements" — implicit design knowledge not in the schematic.
+# Each rule carries a rationale (the "why") — this becomes training data for AI (Phase 159).
+placement_rules:
+  # Edge affinity: component must be on/near the board edge
+  - subject_ref: J1
+    rule_type: edge_affinity
+    target: edge
+    edge_sides: [bottom]         # must be on bottom edge
+    max_mm: 3.0                  # within 3mm of the edge
+    priority: hard               # gate-enforced (fail-closed)
+    rationale: "Blade connector must be accessible from enclosure slot"
+
+  # Avoid: two components must not be near each other (EMI, noise coupling)
+  - subject_ref: U_PRE          # preamp (sensitive analog)
+    rule_type: avoid
+    target: U_REG               # switching regulator
+    min_mm: 25.0
+    priority: hard
+    rationale: "EMI from switching regulator coupling to analog front-end degrades SNR"
+
+  # Approach: two components must be near each other (decoupling, signal integrity)
+  - subject_ref: C_PRE_100N     # decoupling cap
+    rule_type: approach
+    target: U_PRE               # the IC it decouples
+    max_mm: 5.0
+    priority: hard
+    rationale: "Decoupling inductance — cap must be close to IC power pin"
+
+  # Orientation: component must face a specific direction
+  - subject_ref: LED_PWR
+    rule_type: orientation
+    target: fixed
+    orientation_deg: 0          # faces up (visible from top)
+    priority: hard
+    rationale: "Power LED must be visible from above the enclosure"
+
+  # Region: component must be in a named zone (generalizes zone_partition)
+  - subject_ref: U_VCA
+    rule_type: region
+    target: preamp              # must be in the preamp zone (defined above)
+    priority: soft              # SA penalty
+    rationale: "VCA belongs in the analog signal chain"
+
+  # Alignment: group of components must be aligned
+  - subject_ref: [CH1_OUT, CH2_OUT, CH3_OUT]
+    rule_type: alignment
+    target: row                 # same Y coordinate
+    priority: soft
+    rationale: "Channel output connectors should be visually aligned"
 
 # --- Multi-strip replication (NEW construct) ---
 # Two supported forms — see Wave 5. Form B (netlist-driven) is production default.
