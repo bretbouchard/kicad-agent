@@ -215,6 +215,11 @@ from kicad_agent.ops._schema_remove import (  # noqa: E402
     RemoveJunctionOp,
     RemoveNoConnectOp,
 )
+from kicad_agent.ops._schema_autolayout import (  # noqa: E402
+    PlaceComponentsSchOp,
+    RouteWiresSchOp,
+    ApplyLabelsSchOp,
+)
 from kicad_agent.ops._schema_query import (  # noqa: E402
     QueryConnectivityOp,
 )
@@ -532,7 +537,10 @@ class Operation(BaseModel):
         | GateStatusOp
         | UpdateFromSchematicOp
         | SetConstraintsOp
-        | GetConstraintsOp,
+        | GetConstraintsOp
+        | PlaceComponentsSchOp
+        | RouteWiresSchOp
+        | ApplyLabelsSchOp,
         Field(discriminator="op_type"),
     ]
 
@@ -732,6 +740,10 @@ __all__ = [
     # Constraint ops
     "SetConstraintsOp",
     "GetConstraintsOp",
+    # Phase 108 autolayout ops (D-04)
+    "PlaceComponentsSchOp",
+    "RouteWiresSchOp",
+    "ApplyLabelsSchOp",
     # Union and helpers
     "Operation",
     "get_operation_schema",

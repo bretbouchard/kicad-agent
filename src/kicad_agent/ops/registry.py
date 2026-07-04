@@ -1353,6 +1353,34 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    # Phase 108 Plan 02 — Autolayout ops (D-04: place/route/label)
+    "place_components_sch": {
+        "category": "autolayout",
+        "description": "Sugiyama-based component placement (D-04). Writes new (x,y) per component via raw S-expr.",
+        "file_types": [".kicad_sch"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
+    "route_wires_sch": {
+        "category": "autolayout",
+        "description": "Collision-aware wire routing between placed components (D-04). Reuses Phase 38 wire_router.",
+        "file_types": [".kicad_sch"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
+    "apply_labels_sch": {
+        "category": "autolayout",
+        "description": "Net label generation at pin body positions (D-04). Phase 38: labels are primary connection.",
+        "file_types": [".kicad_sch"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
 }
 
 OPERATION_REGISTRY: dict[str, OpMeta] = {
