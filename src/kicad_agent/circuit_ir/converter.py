@@ -93,7 +93,6 @@ class KiCadToSkidlConverter:
         after_lib = content[lib_end:]
         
         # Match lib_id + Reference + Value + Footprint
-        # Schematic format: (symbol (lib_id "...") ... (property "Reference" "..." ...) (property "Value" "..." ...) (property "Footprint" "..." ...)
         lib_ids = re.findall(r'\(lib_id "([^"]+)"', after_lib)
         refs = re.findall(r'\(property "Reference" "([^"]+)"', after_lib)
         values = re.findall(r'\(property "Value" "([^"]*)"', after_lib)
@@ -105,15 +104,11 @@ class KiCadToSkidlConverter:
             value = values[i]
             footprint = footprints[i]
             
-            # Skip power flag references
-            if ref.startswith("#PWR") or ref.startswith("#FLG"):
-                continue
-            
-            # Map to SKIDL representation
-            mapped = self.mapper.map(lib_id, value, footprint)
+            # Map to SKIDL representation (pass reference for power detection)
+            mapped = self.mapper.map(lib_id, value, footprint, reference=ref)
             
             if mapped.strategy == "power":
-                self.power_nets.add(value)
+                self.power_nets.add(mapped.value)
                 continue
             
             components.append({

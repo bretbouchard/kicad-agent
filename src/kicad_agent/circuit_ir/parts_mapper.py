@@ -28,6 +28,8 @@ class MappedPart:
 KNOWN_WRAPPERS = {
     # lib_id prefix → wrapper name
     "Amplifier_Operational:NE5532": "NE5532",
+    "Amplifier_Operational:TL072": "NE5532",
+    "Amplifier_Operational:TL074": "TL074",
     "Analog_Switch:DG413": "DG413",
     "Interface_Expansion:MCP23017": "MCP23017",
     "Interface_Expansion:MCP23008": "MCP23008",
@@ -35,16 +37,26 @@ KNOWN_WRAPPERS = {
     "Analog_DAC:MCP4728": "MCP4728",
     "MCU_RaspberryPi:RP2350": "RP2350B",
     "MCU_RaspberryPi:RP2040": "RP2040",
+    "rp2350b:RP2350B": "RP2350B",
+    "rp2350:RP2350": "RP2350B",
     "Interface_Ethernet:W5500": "W5500",
     "Memory_Flash:W25Q16": "W25Q16",
     "Power_Protection:USBLC6": "USBLC6",
     "Regulator_Linear:AMS1117": "AMS1117",
+    "ams1117-3v3:AMS1117-3.3": "AMS1117",
     "Regulator_Linear:AP2112": "AP2112",
     "Regulator_Switching:TPS54202": "TPS54202",
     "Regulator_Switching:TPS65131": "TPS65131",
     "Regulator_Switching:LT3580": "LT3580",
     "Regulator_Switching:MP1584": "MP1584EN",
     "Isolator:EL817": "EL817",
+    "mcp4728:MCP4728": "MCP4728",
+    "mcp3008:MCP3008": None,  # No wrapper — connector mode
+    "74xx:SN74HC14N": None,   # No wrapper — connector mode
+    "7805:L7805": None,       # No wrapper — connector mode
+    "Transistor_BJT:2N3904": "NPN_switch",
+    "Transistor_BJT:BC847": "NPN_transistor",
+    "Transistor_BJT:BC857": "PNP_transistor",
 }
 
 # Generic passives that skidl handles directly
@@ -63,32 +75,32 @@ GENERIC_PARTS = {
     "Device:R_Potentiometer": {"skidl_lib": "Device", "skidl_name": "R_Potentiometer", "pins": 3},
 }
 
-# Power symbols (become Net assignments, not parts)
-POWER_SYMBOLS = {
-    "power:GND", "power:GNDA", "power:AGND", "power:DGND",
-    "power:+3V3", "power:+5V", "power:+12V", "power:-12V",
-    "power:+15V", "power:-15V", "power:+24V", "power:VBUS",
-    "power:PWR_FLAG",
-}
+# Power symbols — detected by prefix match on the lib_id
+# In KiCad schematics, power symbols have lib_id like "power:GND", "power:+3V3"
+POWER_PREFIX = "power:"
+
+# Also detect by reference designator pattern (#PWRxxx, #FLGxxx)
+POWER_REF_PATTERN = "#PWR"
 
 
 class PartsMapper:
     """Maps KiCad library IDs to SKIDL part representations."""
 
     def map(self, lib_id: str, value: str, footprint: str,
-            pin_count: int = 0) -> MappedPart:
+            pin_count: int = 0, reference: str = "") -> MappedPart:
         """Map a KiCad lib_id to a SKIDL part strategy."""
         
-        # Check power symbols first
-        for pwr in POWER_SYMBOLS:
-            if lib_id.startswith(pwr):
-                return MappedPart(
-                    strategy="power",
-                    lib_id=lib_id,
-                    value=value,
-                    footprint="",
-                    notes=f"Power symbol → Net('{value}')"
-                )
+        # Check power symbols: lib_id starts with "power:" or reference starts with #PWR/#FLG
+        if lib_id.startswith(POWER_PREFIX) or reference.startswith("#PWR") or reference.startswith("#FLG"):
+            # The net name is the value (GND, +3V3, +12V, etc.)
+            net_name = value if value else lib_id.split(":")[-1]
+            return MappedPart(
+                strategy="power",
+                lib_id=lib_id,
+                value=net_name,
+                footprint="",
+                notes=f"Power symbol → Net('{net_name}')"
+            )
         
         # Check known wrappers
         for prefix, wrapper in KNOWN_WRAPPERS.items():

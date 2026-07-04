@@ -99,7 +99,11 @@ class SkidlEmitter:
         mapped = comp["mapped"]
         
         if mapped.strategy == "wrapper":
-            return f'{ref} = {mapped.wrapper_name}(ckt, "{ref}")  # {value}'
+            if mapped.wrapper_name and mapped.wrapper_name != "None":
+                return f'{ref} = {mapped.wrapper_name}(ckt, "{ref}")  # {value}'
+            else:
+                # Wrapper is None — fall through to connector mode
+                pass
         elif mapped.strategy == "generic":
             fp_str = f', footprint="{footprint}"' if footprint else ''
             val_str = f'value="{value}"' if value else ''
