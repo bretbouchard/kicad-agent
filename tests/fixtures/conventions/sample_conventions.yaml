@@ -1,0 +1,7 @@
+conventions:
+  SCHEMATIC_OVERLAP_01:
+    enabled: false
+    thresholds:
+      iou_threshold: 0.05
+  SIGNAL_FLOW_DIRECTION_01:
+    enabled: true
