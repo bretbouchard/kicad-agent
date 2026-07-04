@@ -21,6 +21,10 @@ HARD CONSTRAINTS:
   model_used="none" and confidence=0.0.
 - Phase 101 P101-INV-01: NEVER kiutils.Schematic.to_file(). Read-only op —
   no file mutation at all.
+- LO-08 (Phase 109 Gate 2 finding, fixed in Phase 110 Plan 01 Task 0):
+  max_tokens=2048 bound on every Claude create_message call. Prevents
+  unbounded verbose responses from consuming token budget and triggering
+  pathological brace-matching in parse_legibility_json.
 
 Integration Testing
 -------------------
@@ -508,7 +512,17 @@ class ClaudeLegibilityCritic:
 
     R-6: on ANY failure, returns CritiqueResult with model_used='none'.
     NEVER raises.
+
+    LO-08 (Phase 109 Gate 2 finding, fixed in Phase 110 Plan 01 Task 0):
+    max_tokens=2048 bound on every create_message call. The bound is a
+    class-level constant so it can be inspected and overridden in tests.
     """
+
+    # LO-08: documents the max_tokens bound. 2048 tokens is generous for the
+    # JSON shape (max ~10 suggestions * ~30 tokens + ~200 tokens of scoring
+    # JSON). A verbose Claude response that rambles for 50K tokens would
+    # trigger pathological O(n) brace-matching in parse_legibility_json.
+    _MAX_TOKENS: int = 2048
 
     def __init__(self, client: "LLMClient") -> None:
         self._client = client
@@ -539,7 +553,11 @@ class ClaudeLegibilityCritic:
                     ],
                 },
             ]
-            response = self._client.create_message(messages=messages)
+            # LO-08: bound max_tokens on every create_message call.
+            response = self._client.create_message(
+                messages=messages,
+                max_tokens=self._MAX_TOKENS,
+            )
             raw = _extract_claude_text(response)
             parsed = parse_legibility_json(raw)
             latency_ms = int((time.monotonic() - start) * 1000)
