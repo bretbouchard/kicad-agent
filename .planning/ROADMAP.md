@@ -1822,46 +1822,55 @@ Plans:
 **Goal:** Build Sugiyama-framework-based autolayout engine on existing `schematic_routing/` primitives (~6,000 LOC from Phase 38: SchematicGraph, wire_router, power_unit_placer, net_namer, net_resolver, netlist_parser). Output passes Phase 48.5 SchematicReadabilityScorer within 0.10 SRS of human-expert baseline on Phase 93 golden boards (D-03). New `auto_layout_sch` op registers in `src/kicad_agent/ops/registry.py`.
 **Requirements**: TBD (deferred to /gsd-discuss-phase 108)
 **Depends on:** Phase 107
-**Plans:** 0 plans
+**Plans:** 4/4 plans created
 
 Plans:
-- [ ] TBD (run /gsd-discuss-phase 108 then /gsd-plan-phase 108 to break down)
+- [ ] 108-01-PLAN.md — Sugiyama 5-stage algorithm core (networkx, no Graphviz) — Wave 1
+- [ ] 108-02-PLAN.md — Three low-level ops: place_components_sch, route_wires_sch, apply_labels_sch — Wave 2
+- [ ] 108-03-PLAN.md — auto_layout_sch orchestrator + HierarchicalSheetSplitter (D-02) — Wave 3
+- [ ] 108-04-PLAN.md — D-03 SRS verification within 0.10 of human-expert baseline — Wave 4
 
 ---
 
 ### Phase 109: AI Legibility Critic
 
-**Goal:** Vision-model legibility critic scoring autolayout output against existing SRS (Phase 48.5 SchematicReadabilityScorer). Candidate models: Claude vision (Phase 48.5) vs Gemma 4 12B V2 (Phase 98 KiCadVisionPipeline) vs both with R-4 validation fallback. Model selection deferred to /gsd-discuss-phase 109 based on Phase 108 latency budget.
-**Requirements**: TBD (deferred to /gsd-discuss-phase 109)
+**Goal:** Hybrid AI legibility critic (Gemma 4 12B V2 primary + Claude vision R-4 fallback) scoring schematic readability via Phase 48.5 SRS signal. CritiqueResult (overall_srs + 4 factor scores + relative suggestions) is the contract for Phase 110 GRPO. Separate `critique_sch` op (D-04) — decoupled from `auto_layout_sch` so users can run, compare, and A/B test independently.
+**Requirements**: LEG-02 (AI critic returns structured suggestions, not coordinates — Phase 107 LO-04)
 **Depends on:** Phase 108
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd-discuss-phase 109 then /gsd-plan-phase 109 to break down)
+- [ ] 109-01-PLAN.md — CritiqueResult schema + GemmaLegibilityCritic + ClaudeLegibilityCritic + HybridLegibilityCritic R-4 gate + critique_sch op + CLI
 
 ---
 
 ### Phase 110: GRPO Legibility Reward Signal
 
 **Goal:** Add legibility term to existing GRPO reward (Phase 98 pattern) using SRS delta as signal. SFT data path: real schematics from KiCad crawler (scripts/discover_100k.py, 100k+ boards) + SRS labels. GRPO data path: synthetic variations from `training/generator.py`. Wires into existing `training/grpo.py` (D-04).
-**Requirements**: TBD (deferred to /gsd-discuss-phase 110)
+**Requirements**: D-01 (weighted sum + caps), D-02 (real SFT + synthetic GRPO), D-03 (20% legibility weight), D-04 (3 anti-hack caps)
 **Depends on:** Phase 109
-**Plans:** 0 plans
+**Plans:** 5/5 plans
 
 Plans:
-- [ ] TBD (run /gsd-discuss-phase 110 then /gsd-plan-phase 110 to break down)
+- [ ] 110-01-PLAN.md — LegibilityReward class + 3 D-04 anti-hack caps (unit-tested in isolation)
+- [ ] 110-02-PLAN.md — SFT data pipeline: score real schematics with Phase 48.5 SRS → JSONL
+- [ ] 110-03-PLAN.md — GRPO data pipeline: generator variations + jitter → reward deltas
+- [ ] 110-04-PLAN.md — GRPO loop integration: 3-term reward (40/40/20) wired into grpo.py
+- [ ] 110-05-PLAN.md — Vast.ai training run: SIGTERM + B2 checkpoint + LoRA adapter output
 
 ---
 
 ### Phase 111: Convention Library
 
-**Goal:** Encode IEEE 315 / Horowitz & Hill / KiCad conventions per D-02 hybrid format — Python dataclasses for canonical core (type-safe, testable), YAML for project/house-style overrides loaded via existing Phase 48 RuleConfigLoader. New `Convention` base class mirrors Phase 48 `DesignRule` ABC; concrete subclasses in `src/kicad_agent/conventions/`.
-**Requirements**: TBD (deferred to /gsd-discuss-phase 111)
-**Depends on:** Phase 107
-**Plans:** 0 plans
+**Goal:** Encode IEEE 315 / Horowitz & Hill / KiCad conventions per D-02 hybrid format — Python dataclasses for canonical core (type-safe, testable), YAML for project/house-style overrides loaded via existing Phase 48 RuleConfigLoader. New `Convention` base class mirrors Phase 48 `DesignRule` ABC; concrete subclasses in `src/kicad_agent/conventions/`. Convention ABC has both check() and apply() methods (D-03); Violation model emits both JSON and markdown (D-04); v1 catalog is data-driven from Phase 108 autolayout violation data (D-01).
+**Requirements**: CONV-INFRA-01..04, CONV-CATALOG-01..03, CONV-CLI-01, CONV-AUTOLAYOUT-01 (defined in 111-CONTEXT.md In scope)
+**Depends on:** Phase 107; Plans 02-03 also depend on Phase 108 (violation data + autolayout integration)
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd-discuss-phase 111 then /gsd-plan-phase 111 to break down)
+- [ ] 111-01-PLAN.md — Wave 1: Convention ABC + Violation + LayoutView + YAML loader + dual JSON/markdown serializers (parallel-eligible with Phase 108)
+- [ ] 111-02-PLAN.md — Wave 2: v1 catalog (Phase 48.5 readability adapters + 4-9 new conventions from Phase 108 violation data) + ConventionEngine
+- [ ] 111-03-PLAN.md — Wave 3: `kicad-agent check-conventions` CLI + Phase 108 autolayout integration (conventions as placement constraints)
 
 ---
 
