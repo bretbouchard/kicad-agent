@@ -23,7 +23,7 @@
 | SPICE-09 | Regression baselines (store JSON for comparison) | 3 | Task 9 |
 | SPICE-10 | Test: simulate mono blade preamp → +18dB, BW > 100kHz | 4 | Task 11 |
 | SPICE-11 | Parasitic injection: PCB trace parasitics → re-simulate | 4 | Task 10 |
-| (bonus) | SimRewardAdapter for AI training (→ Phase 159 TRAIN-04) | 4 | Task 12 |
+| (bonus) | SpiceDegradationScorer for AI training (→ Phase 159 TRAIN-04) | 4 | Task 12 |
 
 ---
 
@@ -68,7 +68,7 @@ src/kicad_agent/spice/
     └── README.md            # provenance, license, version for each model file
 
 src/kicad_agent/training/
-└── sim_reward_adapter.py    # ~200 lines — SimRewardAdapter mirroring LegibilityRewardAdapter
+└── spice_degradation_scorer.py    # ~200 lines — SpiceDegradationScorer mirroring LegibilityRewardAdapter
 
 tests/
 ├── test_spice_raw_reader.py
@@ -81,7 +81,7 @@ tests/
 ├── test_spice_metrics.py
 ├── test_spice_baselines.py
 ├── test_spice_parasitics.py
-├── test_sim_reward_adapter.py
+├── test_spice_degradation_scorer.py
 └── test_mono_blade_preamp_sim.py   # integration test (SPICE-10)
 ```
 
@@ -376,7 +376,7 @@ Each wave's tasks are independent enough to run in parallel within the wave; wav
 - `converged` is `True` when returncode == 0 AND no "TRAN: time step too small" / "timestep too small" / "GMIN stepping failed" / "singular matrix" errors in the log.
 - Timeout configurable (default 30s per run; Monte Carlo runs share the per-run limit).
 - For Monte Carlo: `run_monte_carlo(base_deck, override_dicts, output_dir)` spawns N independent ngspice processes (parallelizable via `concurrent.futures.ProcessPoolExecutor`), each with `-D` overrides, returns a list of `RunResult`.
-- ngspice binary is discovered via `NGspiceSimulator._spice_exe_paths` (spicelib) or falls back to `/usr/local/bin/ngspice`.
+- ngspice binary is discovered via `NGspiceSimulator._spice_exe_paths` (spicelib) or falls back to `ngspice (discovered via shutil.which)`.
 
 **Action:**
 1. Create `spice/ngspice_runner.py`:
@@ -590,13 +590,13 @@ Each wave's tasks are independent enough to run in parallel within the wave; wav
 
 ---
 
-#### Task 12: SimRewardAdapter (→ Phase 159 TRAIN-04)
+#### Task 12: SpiceDegradationScorer (→ Phase 159 TRAIN-04)
 
 **Requirements:** (bonus — bridges to Phase 159 TRAIN-04: SPICE degradation as reward signal)
-**Files:** `src/kicad_agent/training/sim_reward_adapter.py`, `tests/test_sim_reward_adapter.py`
+**Files:** `src/kicad_agent/training/spice_degradation_scorer.py`, `tests/test_spice_degradation_scorer.py`
 
 **Behavior (tests):**
-- `SimRewardAdapter` mirrors `LegibilityRewardAdapter` (frozen dataclass, `from_config()` classmethod, `compute()` method).
+- `SpiceDegradationScorer` mirrors `LegibilityRewardAdapter` (frozen dataclass, `from_config()` classmethod, `compute()` method).
 - `compute(pre_route_result, post_route_result)` → `SimRewardSignal` with per-component reward terms:
   - `reward_noise = clip(1 - (EIN_post - EIN_pre) / delta_max, 0, 1)` — noise degradation
   - `reward_gain = clip(1 - |gain_post - gain_pre| / tol, 0, 1)` — gain stability
@@ -607,7 +607,7 @@ Each wave's tasks are independent enough to run in parallel within the wave; wav
 - `from_config(config)` parses a `training.sim_reward` block from config.json (weights, tolerances, spec targets).
 
 **Action:**
-1. Create `training/sim_reward_adapter.py` following the `LegibilityRewardAdapter` pattern:
+1. Create `training/spice_degradation_scorer.py` following the `LegibilityRewardAdapter` pattern:
    ```python
    @dataclass(frozen=True)
    class SimRewardWeights:
@@ -620,7 +620,7 @@ Each wave's tasks are independent enough to run in parallel within the wave; wav
            if abs(total - 1.0) > 1e-6: raise ValueError(...)
 
    @dataclass(frozen=True)
-   class SimRewardAdapter:
+   class SpiceDegradationScorer:
        weights: SimRewardWeights = field(default_factory=SimRewardWeights)
        spec_targets: SpecTargets = field(default_factory=SpecTargets)  # from CIRCUIT-DESIGN.md
        delta_max_ein_db: float = 6.0   # max acceptable EIN degradation
@@ -634,14 +634,14 @@ Each wave's tasks are independent enough to run in parallel within the wave; wav
            # compute per-term rewards, combine via weights
 
        @classmethod
-       def from_config(cls, config: Mapping) -> "SimRewardAdapter": ...
+       def from_config(cls, config: Mapping) -> "SpiceDegradationScorer": ...
    ```
 2. **Spec targets** (from CIRCUIT-DESIGN.md, verified): EIN ≈ -128 dBu (§4.3), gain +18dB (§4.3), THD 0.5-2% windowed (§7), EQ ±18dB (§8), rail noise <50µVrms (§9.3).
 3. The adapter is **pure compute** — it takes result objects (from Wave 3) and returns reward terms. It does NOT run simulations itself (the caller — GRPO rollout — does that via the runner). This separation mirrors how `LegibilityRewardAdapter` takes `CritiqueResult` rather than calling the critic.
 4. **Integration with BoardChainReward (Phase 159):** the `sim_score` folds into `BoardChainReward` as a new component alongside `format_score`/`quality_score`/`accuracy_score`. This wiring is Phase 159's job; Phase 158 only ships the adapter.
 
 **Done when:**
-- SimRewardAdapter computes reward terms from pre/post route results
+- SpiceDegradationScorer computes reward terms from pre/post route results
 - Convergence failure → penalty reward (not zero)
 - Weights validated to sum to 1.0
 - Spec targets match CIRCUIT-DESIGN.md
@@ -697,7 +697,7 @@ Wave 3 (deps Wave 2):
 
 Wave 4 (deps Waves 1-3):
   spice/parasitics       ← routing/impedance, spatial/pcb_model, netlist_exporter
-  training/sim_reward_adapter ← spice/result_schema, spice/metrics, spice/parasitics
+  training/spice_degradation_scorer ← spice/result_schema, spice/metrics, spice/parasitics
 ```
 
 `ltspice/__init__.py` re-exports `read_raw` from `spice/` (backward compat). No v2.0 caller breaks.
@@ -714,7 +714,7 @@ spice = [
 ]
 ```
 
-`spicelib>=1.5.1` is already a core dependency (line 24 of pyproject.toml). No new solver binary — ngspice is installed system-wide (`/usr/local/bin/ngspice`). Document the ngspice requirement in the README (not a pip dependency — it's a system binary).
+`spicelib>=1.5.1` is already a core dependency (line 24 of pyproject.toml). No new solver binary — ngspice is installed system-wide (`ngspice (discovered via shutil.which)`). Document the ngspice requirement in the README (not a pip dependency — it's a system binary).
 
 ---
 
@@ -764,7 +764,7 @@ Wave 3 (sequential after Wave 2):
 Wave 4 (sequential after Wave 3):
   Task 10: parasitics.py (closed-form trace R/L/C)
   Task 11: test_mono_blade_preamp_sim.py (SPICE-10 integration)
-  Task 12: sim_reward_adapter.py (→ Phase 159)
+  Task 12: spice_degradation_scorer.py (→ Phase 159)
 ```
 
 **Total:** 12 tasks, 4 waves, ~1,900 lines new code + 5 curated `.lib` files + 12 test files + integration test. Zero new dependencies.

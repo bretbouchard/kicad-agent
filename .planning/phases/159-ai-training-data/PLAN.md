@@ -41,7 +41,7 @@ These decisions extend the LOCKED decisions from Phases 156 and 158. Do not re-l
 - **D-159-1: SKIDL L2 is the NL→SKIDL training target.** SchGen's ablation shows L1 (pin-name + relative) beats L2/L3 on netlist accuracy, but L2 (component-level) is more compact and learnable for an LLM to *generate*. SKIDL's `part["PIN_NAME"] += net` is already the pin-name-based wiring SchGen proved critical (the L2→L3 collapse). We train Qwen to emit L2 SKIDL; ERC (Phase 160) is the correctness gate, not representation purity.
 - **D-159-2: NL description = topology-derived structured summary + optional README enrichment.** No crawled repo ships a clean NL prompt. We derive NL from the circuit itself: detected sub-circuits (via Phase 46 `Subcircuit` detection — e.g. "non-inverting op-amp gain stage", "RC low-pass filter"), dominant IC count, inferred function ("16-channel microphone preamp array"). Where `README.md` exists in the repo, its first paragraph is appended as `author_description`. This produces varied, topology-grounded NL rather than templated boilerplate.
 - **D-159-3: Placement pairs come from Quilter, scored by RES.** TRAIN-03 is placement→routing-quality pairs. We take each SKIDL circuit → floor-planned PCB (Phase 157) → Quilter route → `compute_routing_quality` (RES score from `routing_quality.py`). The pair is `(placement_spec_or_render, RES_score)`. This trains Gemma vision to predict routing quality from a placement image — directly enhancing the Phase 98 model with placement context.
-- **D-159-4: `sim_score` extends `BoardChainReward`, does not replace it.** Phase 158's `SimRewardAdapter` (mirroring `LegibilityRewardAdapter`) computes the SPICE degradation term. The combined reward becomes a weighted sum: existing `0.2*fmt + 0.3*qual + 0.5*acc` gains an optional `sim_score` term weighted by whether the circuit is analog-simulatable (digital circuits get `sim_score=0.5` neutral, honoring SchGen's boundary). See Task 5.
+- **D-159-4: `sim_score` extends `BoardChainReward`, does not replace it.** Phase 158's `SimAwareRewardCombiner` (mirroring `LegibilityRewardAdapter`) computes the SPICE degradation term. The combined reward becomes a weighted sum: existing `0.2*fmt + 0.3*qual + 0.5*acc` gains an optional `sim_score` term weighted by whether the circuit is analog-simulatable (digital circuits get `sim_score=0.5` neutral, honoring SchGen's boundary). See Task 5.
 - **D-159-5: Format parity with `generate_gap_training_data.py` is the drop-in contract.** TRAIN-07 is explicit: output must match the existing Gemma ChatML JSONL schema (`messages`, `text`, `task_type`, `source`). The Qwen output matches `sft/converter.py`'s `ChatMLSample` (`messages` tuple, `source`, `source_id`). No conversion step between Phase 159 output and the existing GRPO/SFT pipeline — it drops in directly.
 
 ---
@@ -56,7 +56,7 @@ src/kicad_agent/training_data/
 ├── sft_pair_builder.py      # ~200 lines — (NL, SKIDL) → ChatML JSONL, Qwen format (TRAIN-02, TRAIN-07)
 ├── placement_pair_builder.py # ~250 lines — SKIDL → floor plan → Quilter → (render, RES) pairs (TRAIN-03)
 ├── vision_pair_builder.py   # ~180 lines — placement/RES pairs → Gemma ChatML + rendered images (TRAIN-03, TRAIN-06, TRAIN-07)
-├── sim_reward_adapter.py    # ~200 lines — SPICE DegradationReport → sim_score (TRAIN-04)
+├── sim_aware_reward_combiner.py    # ~200 lines — SPICE DegradationReport → sim_score (TRAIN-04)
 └── corpus_qa.py             # ~150 lines — spot-check report, complexity-bucket sampling (TRAIN-02 quality)
 
 scripts/
@@ -91,7 +91,7 @@ scripts/
 | GRPO loop | `grpo.py`, `grpo_trainer.py` | `training/grpo.py` |
 | Reward-into-GRPO bridge pattern | `LegibilityRewardAdapter` | `training/legibility_reward_adapter.py` |
 | SPICE degradation report | `DegradationReport` | `spice/parasitics.py` (Phase 158) |
-| SPICE sim reward adapter | `SimRewardAdapter` | `spice/sim_reward_adapter.py` (Phase 158 Task 12) |
+| SPICE sim reward adapter | `SimAwareRewardCombiner` | `spice/sim_aware_reward_combiner.py` (Phase 158 Task 12) |
 | Board chain reward | `BoardChainReward`, `score_board_chain()` | `training/board_reward.py` |
 
 ---
@@ -229,7 +229,7 @@ Generate the SKIDL Python code for this circuit.
 
 **Goal:** Two physical-grounded data products: placement→routing-quality pairs (for Gemma vision) and SPICE degradation reward signal (for GRPO).
 
-**Files:** `training_data/placement_pair_builder.py`, `training_data/vision_pair_builder.py`, `training_data/sim_reward_adapter.py`, `tests/test_placement_pairs.py`, `tests/test_sim_reward_adapter.py`
+**Files:** `training_data/placement_pair_builder.py`, `training_data/vision_pair_builder.py`, `training_data/sim_aware_reward_combiner.py`, `tests/test_placement_pairs.py`, `tests/test_sim_aware_reward_combiner.py`
 
 ### Task 4: Placement → routing quality pairs (TRAIN-03)
 
@@ -267,7 +267,7 @@ def build_placement_pairs(
 
 ### Task 5: SPICE degradation as reward signal (TRAIN-04)
 
-`sim_reward_adapter.py` bridges Phase 158's `DegradationReport` into the existing `BoardChainReward`. It mirrors `LegibilityRewardAdapter` exactly (the proven reward-into-GRPO pattern):
+`sim_aware_reward_combiner.py` bridges Phase 158's `DegradationReport` into the existing `BoardChainReward`. It mirrors `LegibilityRewardAdapter` exactly (the proven reward-into-GRPO pattern):
 
 ```python
 @dataclass(frozen=True)
@@ -280,7 +280,7 @@ class SimRewardWeights:
     # validated: sum == 1.0
 
 @dataclass(frozen=True)
-class SimRewardAdapter:
+class SimAwareRewardCombiner:
     """Bridges Phase 158 DegradationReport into BoardChainReward (TRAIN-04).
 
     Honors the SchGen boundary: sim_score is only meaningful for analog
@@ -313,10 +313,10 @@ class SimRewardAdapter:
 
 **Reward computation:** the `DegradationReport` (Phase 158 `parasitics.py`) gives per-metric deltas (`gain_delta_db`, `noise_delta_db`, `thd_delta_percent`, `bw_delta_hz`). `compute_sim_score` normalizes these against spec tolerances (e.g. gain delta < 0.5 dB = 1.0; > 3 dB = 0.0) and takes the min (worst-metric-wins, since one detuned node fails the circuit). This is the *physical* signal: a placement that routes cleanly (high RES) but detunes a high-impedance node (high gain delta) gets penalized — something RES alone cannot detect.
 
-**Integration into GRPO:** the `BoardChainReward` (Phase 9, `board_reward.py`) currently computes `0.2*fmt + 0.3*qual + 0.5*acc`. `SimRewardAdapter.combine` produces the new reward with the `sim` term. The adapter plugs into `grpo.py`'s reward hook exactly as `LegibilityRewardAdapter` does (via `from_config()`).
+**Integration into GRPO:** the `BoardChainReward` (Phase 9, `board_reward.py`) currently computes `0.2*fmt + 0.3*qual + 0.5*acc`. `SimAwareRewardCombiner.combine` produces the new reward with the `sim` term. The adapter plugs into `grpo.py`'s reward hook exactly as `LegibilityRewardAdapter` does (via `from_config()`).
 
 **Acceptance (TRAIN-04):**
-- `SimRewardAdapter` is a drop-in: `combine()` returns a value in [-1, 1] matching `BoardChainReward.total_reward` range.
+- `SimAwareRewardCombiner` is a drop-in: `combine()` returns a value in [-1, 1] matching `BoardChainReward.total_reward` range.
 - Analog circuits with high parasitic degradation score lower than the same circuit with low degradation (the signal is real).
 - Non-simulatable circuits (AK4619VN, MCUs) get the neutral 0.5 — no crash, no reward distortion.
 
@@ -340,7 +340,7 @@ SKIDL is pure text — Qwen needs no vision. The adapter trains via the existing
 - **Dataset:** Wave 2 SFT pairs (`sft_pair_builder.py` output, Qwen ChatML format).
 - **LoRA config:** existing defaults (`r=16, alpha=32, target_modules=[q,k,v,o]_proj`).
 - **System prompt (new):** `SYSTEM_PROMPT_CIRCUIT_GEN` — "You are a circuit design assistant. Given a natural-language description, generate SKIDL Python code that builds the circuit. Use pin-name-based wiring (part['PIN'] += net). Output only valid Python."
-- **Optional GRPO:** after SFT, run GRPO with `SimRewardAdapter` (Task 5) to optimize for circuits that not only parse but simulate within spec. This is the RL step that closes the loop on TRAIN-04.
+- **Optional GRPO:** after SFT, run GRPO with `SimAwareRewardCombiner` (Task 5) to optimize for circuits that not only parse but simulate within spec. This is the RL step that closes the loop on TRAIN-04.
 
 **Vast.ai launch:** `scripts/run_159_training.py` delegates to `scripts/vast_train_kicad.py` (Phase 97) for the GPU run, with a config pointing at the Qwen dataset + `training_configs/159/qwen_circuit.yaml`.
 
@@ -380,7 +380,7 @@ Qwen ChatML JSONL (train/val)                            │   DegradationReport
         │                                                │   (pre vs post-route sim delta)
         ▼  [Wave 4: Qwen SFT/GRPO — TRAIN-05]           │        │
 Qwen text adapter (circuit generation)                  │        ▼
-                                                        │  [Wave 3: sim_reward_adapter.py — TRAIN-04]
+                                                        │  [Wave 3: sim_aware_reward_combiner.py — TRAIN-04]
 ~50K SKIDL L2 .py ──► floor plan (P157) ──► PCB ──► Quilter ─► RES score
                                         │                       │      │
                                         ▼                       │      ▼
@@ -418,6 +418,19 @@ Qwen text adapter (circuit generation)                  │        ▼
 |---|---|
 | 1. 71K repos convert to SKIDL (batch, parallelizable) | Wave 1 Task 1 — `build_skidl_corpus()` |
 | 2. NL descriptions per circuit (SFT pairs) + placement→routing pairs from Quilter | Wave 2 Task 2 (NL) + Wave 3 Task 4 (placement pairs) |
-| 3. SPICE degradation feeds `BoardChainReward` as `sim_score` | Wave 3 Task 5 — `SimRewardAdapter` |
+| 3. SPICE degradation feeds `BoardChainReward` as `sim_score` | Wave 3 Task 5 — `SimAwareRewardCombiner` |
 | 4. Qwen text adapter (circuit gen) + Gemma vision adapter (routing, enhanced Phase 98) | Wave 4 Tasks 6 + 7 |
 | 5. Format matches `generate_gap_training_data.py` | Wave 1 Task 3 — format parity contract + test |
+
+
+### COUNCIL FIX P0-2: Quilter Batch Capability Spike
+
+**Finding:** TRAIN-03 assumes 10K Quilter runs. Quilter is a cloud service (upload/download round-trip). At 30s each = 83 hours wall time.
+
+**Resolution:** Add a Wave 0 spike to verify Quilter batch capability:
+- Wave 0 Task 0.1: Test Quilter API for headless batch submission (API key, rate limits, concurrency)
+- If batch works: proceed with 10K circuits at ~100 concurrent
+- If batch fails: fall back to PlacementScorer (HPWL/congestion) as routing-quality proxy for bulk, reserve Quilter for 200-circuit held-out validation slice
+- Either way is defensible; the current "10K Quilter runs" assumption must be verified before committing
+
+**Fallback metric:** PlacementScorer produces a 0..1 routing difficulty score from placement alone (no Quilter needed). This is sufficient for contrastive floor-plan evaluation (same circuit, with/without floor plan → score delta). Quilter validation confirms the proxy correlates with actual routing completion.
