@@ -277,21 +277,36 @@ def _handle_critique_sch(op: Any, ir: SchematicIR, file_path: Path) -> dict[str,
 
 @register_schematic_query("convert_to_skidl")
 def _handle_convert_to_skidl(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    """Convert a KiCad schematic to SKIDL Python code (read-only query)."""
-    from kicad_agent.circuit_ir import KiCadToSkidlConverter
-    
-    converter = KiCadToSkidlConverter()
-    level = getattr(op, "level", "L1")
-    output_file = getattr(op, "output_file", None)
-    
-    code = converter.convert(file_path, output_file, level=level)
-    
+    """Convert a KiCad schematic to SKIDL Python code (read-only query).
+
+    Phase 156 C-01: Uses build_circuit() (the tested path) instead of the
+    legacy KiCadToSkidlConverter that shelled out to the CLI via subprocess.
+    """
+    from kicad_agent.circuit_ir import build_circuit, emit_build_py
+
+    # Use the tested build_circuit pipeline.
+    circuit, circuit_ir = build_circuit(file_path)
+    level = getattr(op, "representation", getattr(op, "level", "L1"))
+
+    # Emit the build_*.py code.
+    code = emit_build_py(circuit_ir, mode=level)
+
+    # Optionally write to disk.
+    output_dir = getattr(op, "output_dir", None)
+    output_file = None
+    if output_dir:
+        out_path = Path(output_dir) / f"build_{file_path.stem}.py"
+        emit_build_py(circuit_ir, mode=level, out_path=out_path)
+        output_file = str(out_path)
+
     return {
         "op_type": "convert_to_skidl",
         "file": str(file_path),
-        "level": level,
+        "representation": level,
+        "parts": len(circuit_ir.parts),
+        "nets": len(circuit_ir.nets),
+        "diagnostics": list(circuit_ir.diagnostics),
         "output_lines": code.count("\n"),
-        "output_file": output_file,
-        "power_nets": sorted(converter.power_nets),
         "code_length": len(code),
+        "output_file": output_file,
     }
