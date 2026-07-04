@@ -25,9 +25,11 @@ from kicad_agent.schematic_autolayout.sugiyama import (
     DEFAULT_LAYER_SPACING_MM,
     DEFAULT_NODE_SPACING_MM,
     LayoutResult,
+    SugiyamaLayout,
 )
 
 __all__ = [
+    "SugiyamaLayout",
     "LayoutResult",
     "LayoutGraph",
     "LayoutNode",
