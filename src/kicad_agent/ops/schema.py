@@ -219,6 +219,7 @@ from kicad_agent.ops._schema_autolayout import (  # noqa: E402
     PlaceComponentsSchOp,
     RouteWiresSchOp,
     ApplyLabelsSchOp,
+    AutoLayoutSchOp,
 )
 from kicad_agent.ops._schema_query import (  # noqa: E402
     QueryConnectivityOp,
@@ -540,7 +541,8 @@ class Operation(BaseModel):
         | GetConstraintsOp
         | PlaceComponentsSchOp
         | RouteWiresSchOp
-        | ApplyLabelsSchOp,
+        | ApplyLabelsSchOp
+        | AutoLayoutSchOp,
         Field(discriminator="op_type"),
     ]
 
@@ -744,6 +746,7 @@ __all__ = [
     "PlaceComponentsSchOp",
     "RouteWiresSchOp",
     "ApplyLabelsSchOp",
+    "AutoLayoutSchOp",
     # Union and helpers
     "Operation",
     "get_operation_schema",

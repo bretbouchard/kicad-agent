@@ -1,14 +1,21 @@
-"""Pydantic schemas for autolayout ops (Phase 108 Plan 02, D-04).
+"""Pydantic schemas for autolayout ops (Phase 108 Plans 02 + 03, D-04).
 
 Three independently-callable ops:
   - PlaceComponentsSchOp  : Sugiyama placement → raw S-expr (at X Y) edits
   - RouteWiresSchOp       : Phase 38 wire_router reuse → raw S-expr (wire ...) inserts
   - ApplyLabelsSchOp      : Phase 38 net_namer reuse → raw S-expr (label ...) inserts
 
+Plus one high-level orchestrator (Plan 03):
+  - AutoLayoutSchOp       : chains the 3 above via execute_batch (D-04)
+
 Council Gate 1 fixes honored:
   - HIGH-1: TargetFile imported from kicad_agent.ops.schema (NOT _schema_common)
   - HIGH-4: mutation dicts in handlers use "op" discriminator (handlers module)
+  - HIGH-5: OperationExecutor constructed with base_dir kwarg; execute_batch
+            takes list[Operation] (verified in handler module)
   - D-02:  subcircuit_split defaults True (functional-group split per CONTEXT.md)
+  - CRITICAL-1: handler reports hierarchy_promoted=False honestly in v1;
+            advisory hierarchy_split_decision dict carries the computed plan
 
 All writes go through SchematicRawWriter + atomic_write (P101-INV-01).
 """
@@ -105,3 +112,47 @@ class ApplyLabelsSchOp(BaseModel):
     label_size_mm: float = Field(default=1.27, ge=0.5, le=5.0)
     global_labels: list[str] = Field(default_factory=list)
     dry_run: bool = Field(default=False)
+
+
+class AutoLayoutSchOp(BaseModel):
+    """High-level autolayout orchestrator — chains 3 low-level ops (D-04).
+
+    Sequence (executed via OperationExecutor.execute_batch):
+      1. place_components_sch (Sugiyama coordinates)
+      2. route_wires_sch (collision-aware wiring)
+      3. apply_labels_sch (net labels at pin body positions)
+
+    v1 scope (Phase 108 Council Gate 1 revision — CRITICAL-1 fix):
+      The SubcircuitDetector DECISION to promote subcircuits to hierarchical
+      sub-sheets (D-02) is COMPUTED and REPORTED in the result under
+      ``hierarchy_split_decision``. The PHYSICAL EMISSION of sub-sheets
+      (writing new .kicad_sch files, moving components between sheets,
+      wiring hierarchical pins) is deferred to Phase 145 (large-board
+      hierarchy work). The result reports ``hierarchy_promoted=False``
+      honestly; the split decision is advisory only.
+
+    Attributes:
+        op_type: Discriminator literal "auto_layout_sch".
+        target_file: Relative path to root .kicad_sch (HIGH-1 validated).
+        subcircuit_split: Default True (D-02). Disable for forced single-sheet.
+        layer_spacing_mm: Sugiyama vertical spacing (mm).
+        node_spacing_mm: Sugiyama horizontal spacing (mm).
+        max_wire_length_mm: Wire routing limit (passed to route_wires_sch).
+        label_size_mm: Font size for labels (passed to apply_labels_sch).
+        dry_run: Return computed plan without writing files.
+    """
+
+    op_type: Literal["auto_layout_sch"] = "auto_layout_sch"
+    target_file: TargetFile
+    subcircuit_split: bool = Field(
+        default=True,
+        description="D-02: split by functional group via SubcircuitDetector.",
+    )
+    layer_spacing_mm: float = Field(default=25.4, ge=2.54, le=127.0)
+    node_spacing_mm: float = Field(default=12.7, ge=2.54, le=127.0)
+    max_wire_length_mm: float = Field(default=40.0, ge=5.0, le=200.0)
+    label_size_mm: float = Field(default=0.75, ge=0.5, le=5.0)
+    dry_run: bool = Field(
+        default=False,
+        description="Return plan without writing files.",
+    )

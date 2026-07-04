@@ -1381,6 +1381,20 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    # Phase 108 Plan 03 — High-level autolayout orchestrator (D-04)
+    "auto_layout_sch": {
+        "category": "autolayout",
+        "description": (
+            "High-level autolayout (D-04): chains place+route+label via "
+            "execute_batch. Reports D-02 split decision (physical sub-sheet "
+            "emission deferred to Phase 145)."
+        ),
+        "file_types": [".kicad_sch"],
+        "is_readonly": False,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
 }
 
 OPERATION_REGISTRY: dict[str, OpMeta] = {

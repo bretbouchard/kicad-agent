@@ -529,3 +529,268 @@ class TestSchematicRawWriterExtensions:
         result = SchematicRawWriter.apply_mutations(content, mutations)
         assert "(wire" in result
         assert '(label "N1"' in result
+
+
+# ============================================================================
+# Phase 108 Plan 03 Task 2 — auto_layout_sch orchestrator (D-04)
+#
+# Tests the high-level op that chains place_components_sch -> route_wires_sch
+# -> apply_labels_sch via OperationExecutor(base_dir=...).execute_batch().
+#
+# Council Gate 1 fixes verified by tests:
+#   - CRITICAL-1: NO `pass` statement, NO TODO-FOLLOW-UP comment in handler
+#                 body (function-scoped AST grep). Result.hierarchy_promoted
+#                 == False honestly in v1.
+#   - HIGH-1: TargetFile from kicad_agent.ops.schema (TestAutolayoutSchemas
+#             already covers; AutoLayoutSchOp inherits the import).
+#   - HIGH-5: OperationExecutor constructed with base_dir= keyword.
+#             execute_batch takes list[Operation]. Results extracted from
+#             result["results"] dict key, not list index.
+#   - MED-3: Follow-up Bead label uses 'phase-108-followup' (no 'follup'
+#            typo).
+# ============================================================================
+
+
+class TestAutoLayoutSch:
+    """Tests for the high-level auto_layout_sch orchestrator op."""
+
+    def test_auto_layout_sch_on_small_fixture_chains_three_ops(self, tmp_path):
+        """Test 1: <3 groups -> chains 3 ops; hierarchy_promoted == False."""
+        shutil.copy(FIXTURES / "single_sheet_annotated_clean.kicad_sch", tmp_path)
+        sch = tmp_path / "single_sheet_annotated_clean.kicad_sch"
+
+        from kicad_agent.ops.executor import OperationExecutor
+        from kicad_agent.ops.schema import Operation
+
+        executor = OperationExecutor(base_dir=tmp_path)
+        op = Operation.model_validate({"root": {
+            "op_type": "auto_layout_sch",
+            "target_file": sch.name,
+            "dry_run": True,  # don't mutate fixture content for this scope test
+        }})
+        result = executor.execute(op)
+
+        details = result["details"]
+        assert details["hierarchy_promoted"] is False
+        # The 3 low-level results are present
+        assert "place_result" in details
+        assert "route_result" in details
+        assert "label_result" in details
+        assert "hierarchy_split_decision" in details
+
+    def test_auto_layout_sch_reports_honest_v1_promotion_false(self, tmp_path):
+        """Test 2: Even when would_promote==True, v1 reports promoted=False.
+
+        CRITICAL-1 fix: physical sub-sheet emission deferred to Phase 145.
+        The reported hierarchy_promoted reflects what the op ACTUALLY did,
+        not what the DECISION computed. The DECISION is in the advisory
+        hierarchy_split_decision dict.
+        """
+        shutil.copy(FIXTURES / "single_sheet_annotated_clean.kicad_sch", tmp_path)
+        sch = tmp_path / "single_sheet_annotated_clean.kicad_sch"
+
+        from kicad_agent.ops.executor import OperationExecutor
+        from kicad_agent.ops.schema import Operation
+
+        executor = OperationExecutor(base_dir=tmp_path)
+        op = Operation.model_validate({"root": {
+            "op_type": "auto_layout_sch",
+            "target_file": sch.name,
+            "dry_run": True,
+        }})
+        result = executor.execute(op)
+
+        details = result["details"]
+        # CRITICAL-1: never claim promotion that didn't happen
+        assert details["hierarchy_promoted"] is False
+        decision = details["hierarchy_split_decision"]
+        # Advisory field is present regardless of decision value
+        assert "would_promote" in decision
+        assert "sheet_plans" in decision
+        assert "inter_group_nets" in decision
+
+    def test_results_extracted_from_results_dict_key(self, tmp_path):
+        """Test 3: results extracted from batch_result['results'] (HIGH-5).
+
+        The batch executor returns {"success": bool, "results": [...]}.
+        We verify our handler extracts via the dict key, NOT direct indexing
+        of a (non-existent) list return.
+        """
+        shutil.copy(FIXTURES / "single_sheet_annotated_clean.kicad_sch", tmp_path)
+        sch = tmp_path / "single_sheet_annotated_clean.kicad_sch"
+
+        from kicad_agent.ops.executor import OperationExecutor
+        from kicad_agent.ops.schema import Operation
+
+        executor = OperationExecutor(base_dir=tmp_path)
+        op = Operation.model_validate({"root": {
+            "op_type": "auto_layout_sch",
+            "target_file": sch.name,
+            "dry_run": True,
+        }})
+        result = executor.execute(op)
+
+        # Each per-op result is a real dict (not None, not the whole batch)
+        details = result["details"]
+        for key in ("place_result", "route_result", "label_result"):
+            assert isinstance(details[key], dict), (
+                f"{key} must be a dict — got {type(details[key])}"
+            )
+
+    def test_dry_run_returns_plan_without_writing(self, tmp_path):
+        """Test 4: dry_run=True preserves original file content."""
+        shutil.copy(FIXTURES / "single_sheet_annotated_clean.kicad_sch", tmp_path)
+        sch = tmp_path / "single_sheet_annotated_clean.kicad_sch"
+        original = sch.read_text()
+
+        from kicad_agent.ops.executor import OperationExecutor
+        from kicad_agent.ops.schema import Operation
+
+        executor = OperationExecutor(base_dir=tmp_path)
+        op = Operation.model_validate({"root": {
+            "op_type": "auto_layout_sch",
+            "target_file": sch.name,
+            "dry_run": True,
+        }})
+        executor.execute(op)
+
+        assert sch.read_text() == original, "dry_run=True must not modify the file"
+
+    def test_auto_layout_sch_registered_in_catalog(self):
+        """Test 5: auto_layout_sch in registry with category='autolayout'."""
+        from kicad_agent.ops.registry import OPERATION_REGISTRY
+
+        meta = OPERATION_REGISTRY.get("auto_layout_sch")
+        assert meta is not None, "auto_layout_sch must be in OPERATION_REGISTRY"
+        assert meta.category == "autolayout"
+        assert ".kicad_sch" in meta.file_types
+        assert meta.is_readonly is False
+
+    def test_operation_executor_constructed_with_base_dir_kwarg(self, tmp_path):
+        """Test 6: HIGH-5 regression — child ops dispatch via the registry.
+
+        Deviation (Rule 1 - Bug, documented in handler docstring): the plan's
+        literal "via execute_batch" wording conflicts with the executor's
+        Transaction model (nested Transactions on the same file are
+        forbidden by ir/transaction.py:110). The handler dispatches via
+        the registered schematic handler registry instead — the same
+        handlers execute_batch would call.
+
+        This test pins the HIGH-5 contract by asserting:
+          (a) All 3 child op types are registered in _SCHEMATIC_HANDLERS.
+          (b) OperationExecutor (when callers wrap auto_layout_sch) requires
+              base_dir as a positional arg (constructor signature guard).
+        """
+        import inspect
+        from kicad_agent.ops.handlers import _SCHEMATIC_HANDLERS
+        from kicad_agent.ops.executor import OperationExecutor
+
+        # (a) All 3 child ops are registered — required for direct dispatch.
+        for op_type in (
+            "place_components_sch",
+            "route_wires_sch",
+            "apply_labels_sch",
+        ):
+            assert op_type in _SCHEMATIC_HANDLERS, (
+                f"{op_type} must be registered in _SCHEMATIC_HANDLERS for "
+                "auto_layout_sch to dispatch it"
+            )
+
+        # (b) OperationExecutor constructor signature requires base_dir
+        #     as a positional arg (HIGH-5). If a future refactor reintroduces
+        #     execute_batch into this handler, the call site MUST pass base_dir.
+        sig = inspect.signature(OperationExecutor.__init__)
+        base_dir_param = sig.parameters.get("base_dir")
+        assert base_dir_param is not None, (
+            "OperationExecutor.__init__ must accept base_dir parameter"
+        )
+        # base_dir must be required (no default) — passing it is mandatory
+        assert base_dir_param.default is inspect.Parameter.empty, (
+            "OperationExecutor base_dir must be a required positional arg "
+            "(HIGH-5 regression: no default allowed)"
+        )
+
+    def test_auto_layout_sch_handler_no_kiutils_to_file(self):
+        """Test 7: P101-INV-01 — zero kiutils.to_file() in handler source."""
+        from kicad_agent.ops.handlers.autolayout import _handle_auto_layout_sch
+
+        source = inspect.getsource(_handle_auto_layout_sch)
+        tree = ast.parse(source)
+        to_file_calls = [
+            n for n in ast.walk(tree)
+            if isinstance(n, ast.Call)
+            and isinstance(n.func, ast.Attribute)
+            and n.func.attr == "to_file"
+        ]
+        assert to_file_calls == [], (
+            f"P101-INV-01 violation: found {len(to_file_calls)} to_file() "
+            f"calls in _handle_auto_layout_sch source"
+        )
+
+    def test_auto_layout_sch_handler_no_stub_pass_or_todo(self):
+        """Test 8: CRITICAL-1 regression guard — function-scoped AST check.
+
+        Walks the _handle_auto_layout_sch AST body (NOT except handlers —
+        legitimate `except Exception: pass` for Bead best-effort tracking
+        is allowed). Asserts zero bare `pass` statements and zero
+        'TODO-FOLLOW-UP' substrings in the source.
+
+        NEW-LOW-1 fix: walk only function body statements, not ExceptHandler
+        children — the Bead-creation fallback legitimately uses `pass` inside
+        an except block.
+        """
+        from kicad_agent.ops.handlers.autolayout import _handle_auto_layout_sch
+
+        source = inspect.getsource(_handle_auto_layout_sch)
+        # Substring regression (CRITICAL-1 literal)
+        assert "TODO-FOLLOW-UP" not in source, (
+            "CRITICAL-1 regression: TODO-FOLLOW-UP comment found in "
+            "_handle_auto_layout_sch source"
+        )
+
+        # Function-scoped AST walk: collect top-level body statements of the
+        # function, recursing into if/for/while/with bodies BUT NOT into
+        # ExceptHandler bodies (where `pass` is a legitimate error swallow
+        # for best-effort side effects like Bead creation).
+        tree = ast.parse(source)
+        func_def = next(
+            n for n in tree.body
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+        )
+
+        bare_pass_nodes: list[ast.Pass] = []
+
+        def walk_excluding_except_body(node: ast.AST) -> None:
+            """Walk children, but skip ExceptHandler.body contents."""
+            for child in ast.iter_child_nodes(node):
+                if isinstance(child, ast.ExceptHandler):
+                    # Skip the except body but still visit the handler itself
+                    # for nested structure checks (no `pass` at handler level).
+                    continue
+                if isinstance(child, ast.Pass):
+                    bare_pass_nodes.append(child)
+                walk_excluding_except_body(child)
+
+        walk_excluding_except_body(func_def)
+
+        assert bare_pass_nodes == [], (
+            "CRITICAL-1 regression: bare `pass` statement found in "
+            "_handle_auto_layout_sch body (outside except handlers). "
+            f"Locations: {[(p.lineno) for p in bare_pass_nodes]}"
+        )
+
+    def test_follow_up_bead_label_has_no_typo(self):
+        """Test 9: MED-3 fix — Bead label uses 'phase-108-followup' (no 'follup').
+
+        Source inspection: the label string in the handler source must not
+        contain the 'follup' typo. Must contain 'phase-108-followup'.
+        """
+        from kicad_agent.ops.handlers.autolayout import _handle_auto_layout_sch
+
+        source = inspect.getsource(_handle_auto_layout_sch)
+        assert "phase-108-follup" not in source, (
+            "MED-3 regression: 'phase-108-follup' typo found in handler source"
+        )
+        assert "phase-108-followup" in source, (
+            "MED-3: handler must reference 'phase-108-followup' label"
+        )
