@@ -1878,6 +1878,16 @@ Plans:
 
 Deferred work awaiting trigger conditions or future milestones. The SessionStart hook displays this section automatically.
 
+### Phase 111 Findings
+
+- [ ] **P1-R2-1: IEEE315_PIN_ORIENTATION_01 TRANSFORM semantics** — Trigger: Phase 115 lands. Signal: `SchematicRawWriter._move_symbol_by_ref` honors `angle` argument (currently preserves existing rotation via regex group(4) at line 754-757, ignores caller-supplied angle). Readiness: `dataclasses.replace`-snapped orientation in `apply()` becomes round-trippable to disk. v1 demoted to read-only (apply = identity) per Council Gate 1 Round 2 finding — writer cannot round-trip orientation changes. Source: `src/kicad_agent/conventions/catalog/pin_orientation.py:21`. Deferred: 2026-07-04.
+
+### Phase 110 Findings
+
+- [ ] **M-110-E1: Pickle deserialization trust boundary in vastai_checkpoint_resumer** — `pickle.loads(payload)` at `vastai_checkpoint_resumer.py:219, 238` is arbitrary-code-execution if B2 bucket write access is compromised. Mitigation: B2 write access restricted to operator. Trigger: Phase 111+ ML security hardening. Signal: switch to `safetensors` or HMAC-signed payloads. Deferred: 2026-07-04.
+- [ ] **LO-110-E2: b2sdk delete_file_version(file_id=None) may orphan .tmp files** — Production B2 cleanup path may not match b2sdk v2 API. Non-fatal (caught by try/except), but may leave `.tmp` orphans in B2 bucket. Trigger: Phase 111+ B2 lifecycle task. Signal: operator monitors B2 bucket size during 40-hour training run. Deferred: 2026-07-04.
+- [ ] **LO-110-12: `getattr(sample, "sample_id", id(sample))` falls back to non-deterministic id(sample)** — Cross-run reproducibility for debugging could suffer if MazeSample lacks sample_id. Mitigation: MazeSample always has sample_id in practice (Plan 04 line 137). Trigger: Phase 111+ if reproducibility surfaces as debug issue. Deferred: 2026-07-04.
+
 ### Phase 108 Findings
 
 - [ ] **D-1: SELF_SERIALIZING_OPS missing autolayout ops** — OperationExecutor.execute() clobbers autolayout handler writes via stale serialize_schematic() at execution.py:391. Workaround: verification script dispatches handlers directly. Proper fix: add 4 autolayout ops (place_components_sch, route_wires_sch, apply_labels_sch, auto_layout_sch) to SELF_SERIALIZING_OPS set. Trigger: Phase 109 hotfix or earlier. Deferred: 2026-07-03.
