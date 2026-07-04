@@ -11,7 +11,7 @@
     "verifier": true,
     "nyquist_validation": true,
     "auto_advance": true,
-    "_auto_chain_active": true
+    "_auto_chain_active": false
   },
   "project": {
     "type": "tool",
@@ -22,5 +22,25 @@
   },
   "graphify": {
     "enabled": true
+  },
+  "training": {
+    "reward_weights": {
+      "correctness": 0.40,
+      "completeness": 0.40,
+      "legibility": 0.20
+    },
+    "completeness_source": "none",
+    "legibility_factor_weights": {
+      "density": 0.25,
+      "clarity": 0.25,
+      "spacing": 0.25,
+      "organization": 0.25
+    },
+    "anti_hack": {
+      "compactness_threshold_ratio": 2.0,
+      "crossings_floor_min": 1,
+      "crossings_floor_multiplier": 0.3,
+      "alignment_jitter_mm": 0.1
+    }
   }
 }

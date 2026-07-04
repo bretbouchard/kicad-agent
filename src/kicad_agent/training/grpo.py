@@ -74,6 +74,7 @@ class AdvantageWeightedTrainer:
         reward_model: Any,
         ref_model: Any,
         config: AdvantageWeightedConfig | None = None,
+        legibility_adapter: Any = None,
     ):
         """Initialize advantage-weighted trainer.
 
@@ -82,39 +83,138 @@ class AdvantageWeightedTrainer:
             reward_model: The reward model being trained.
             ref_model: Accepted for API compat; not used.
             config: Training configuration.
+            legibility_adapter: Optional LegibilityRewardAdapter (Plan 04).
+                When None, the trainer preserves pre-Phase-110 behavior
+                (reward = (format + quality + accuracy) / 3). When provided,
+                compute_group_rewards consults the post-rollout critique
+                registry (keyed by sample_id) and applies the multi-objective
+                D-03 combine. Backward compatible.
         """
         self.policy_model = policy_model
         self.reward_model = reward_model
         self.ref_model = ref_model
         self.config = config or AdvantageWeightedConfig()
         self._step_counter: int = 0
+        # Phase 110 Plan 04: legibility adapter + post-rollout critique registry.
+        # CR-110-03: critique is a SEPARATE post-rollout step keyed by sample_id,
+        # NOT an attribute on MazeSample (maze samples are abstract puzzles).
+        self.legibility_adapter = legibility_adapter
+        self._critique_registry: dict[int, tuple[Any, Any]] = {}
+        # HI-110-05: layout_result registry populated by future Plan 05 script
+        # when LayoutResult is available per sample (completeness_source="layout_result").
+        self._layout_result_registry: dict[int, Any] = {}
+
+    def register_critique(
+        self,
+        sample_id: int,
+        critique: Any,
+        cap_inputs: Any,
+    ) -> None:
+        """CR-110-03: register a post-rollout critique for a sample_id.
+
+        Called after rollout, before compute_group_rewards. Decouples maze
+        routing rollout from legibility scoring — maze samples don't carry
+        critiques as attributes.
+        """
+        self._critique_registry[sample_id] = (critique, cap_inputs)
+
+    def clear_critique_registry(self) -> None:
+        """Test isolation helper. Empties the critique registry."""
+        self._critique_registry.clear()
+
+    def register_layout_result(self, sample_id: int, layout_result: Any) -> None:
+        """Populate the layout_result registry (HI-110-05 completeness_source='layout_result')."""
+        self._layout_result_registry[sample_id] = layout_result
 
     def compute_group_rewards(
         self,
         chain_groups: list[list[str]],
         samples: list,
     ) -> list[list[float]]:
-        """Score each chain using the reward model.
+        """Score each chain using the reward model + optional legibility adapter.
 
         Args:
             chain_groups: List of groups, each containing group_size chain texts.
-            samples: Corresponding MazeSample objects.
+            samples: Corresponding MazeSample objects (sample_id is read via getattr).
 
         Returns:
             List of reward lists, one per group.
+
+        Phase 110 Plan 04 D-03 wiring:
+          - When legibility_adapter is None: pre-Phase-110 behavior preserved
+            (reward = (format + quality + accuracy) / 3).
+          - When adapter is set and a critique is registered for the sample_id:
+            reward = combine(correctness, completeness, legibility) where
+            legibility is computed via the adapter from the critique + cap_inputs.
+          - When adapter is set but no critique is registered: legibility
+            collapses to 0, reward = correctness only (logged at debug).
         """
         from kicad_agent.training.reward_model import predict_reward
 
         all_rewards: list[list[float]] = []
         for group, sample in zip(chain_groups, samples):
             group_rewards: list[float] = []
+            sample_id = getattr(sample, "sample_id", id(sample))
+            critique_data = self._critique_registry.get(sample_id)
+
             for chain_text in group:
                 pred = predict_reward(self.reward_model, chain_text)
-                # Combined reward from all three scores
-                reward = (pred.format_score + pred.quality_score + pred.accuracy_score) / 3.0
+                correctness = (pred.format_score + pred.quality_score + pred.accuracy_score) / 3.0
+
+                if self.legibility_adapter is not None and critique_data is not None:
+                    critique, cap_inputs = critique_data
+                    legibility = self.legibility_adapter.compute_legibility(critique, cap_inputs)
+                    # HI-110-05: explicit completeness source
+                    completeness = self._resolve_completeness(sample)
+                    reward = self.legibility_adapter.combine(correctness, completeness, legibility)
+                    logger.info(
+                        "reward_decomposition sample_id=%s correctness=%.4f completeness=%.4f legibility=%.4f total=%.4f",
+                        sample_id,
+                        correctness,
+                        completeness if completeness is not None else -1.0,
+                        legibility,
+                        reward,
+                    )
+                elif self.legibility_adapter is not None and critique_data is None:
+                    # CR-110-03: no critique registered — legibility=0, fold to correctness only
+                    reward = correctness
+                    logger.debug(
+                        "sample_id=%s has no critique — legibility=0, reward=correctness only",
+                        sample_id,
+                    )
+                else:
+                    reward = correctness  # backward compat — pre-Phase-110 behavior
+
                 group_rewards.append(reward)
             all_rewards.append(group_rewards)
         return all_rewards
+
+    def _resolve_completeness(self, sample: Any) -> float | None:
+        """HI-110-05: explicit completeness source.
+
+        Default 'none' returns None (combine() folds weight into correctness).
+        'layout_result' returns len(layout.positions) / expected_count if a
+        LayoutResult has been registered for this sample.
+        'fixed_value' returns a fixed constant (debug only).
+        """
+        if self.legibility_adapter is None:
+            return None
+        source = getattr(self.legibility_adapter, "completeness_source", "none")
+        if source == "none":
+            return None
+        if source == "fixed_value":
+            return float(getattr(self.legibility_adapter, "completeness_fixed_value", 0.5))
+        if source == "layout_result":
+            sample_id = getattr(sample, "sample_id", id(sample))
+            layout = self._layout_result_registry.get(sample_id)
+            if layout is None:
+                return None
+            expected = getattr(sample, "expected_component_count", None)
+            if not expected:
+                return None
+            return min(len(layout.positions) / float(expected), 1.0)
+        logger.warning("unknown completeness_source=%s — treating as none", source)
+        return None
 
     def compute_group_advantages(
         self,
