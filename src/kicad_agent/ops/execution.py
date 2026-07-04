@@ -110,7 +110,7 @@ logger = logging.getLogger(__name__)
 
 # Op-type classification sets
 CROSS_FILE_OP_TYPES = {"propagate_symbol_change", "update_pcb_from_schematic", "safe_sync_pcb_from_schematic", "repopulate_pcb_from_schematic", "rebuild_pcb_nets"}
-CREATE_OP_TYPES = {"create_schematic", "create_pcb", "create_project", "create_symbol", "create_footprint"}
+CREATE_OP_TYPES = {"create_schematic", "create_pcb", "create_project", "create_symbol", "create_footprint", "convert_from_skidl"}
 # Ops that manage their own file I/O via raw S-expr edits (must bypass
 # serialize_schematic() to avoid kiutils re-serialization on KiCad 10 files).
 # safe_annotate (Phase 102): MUST bypass serialize_schematic() to avoid

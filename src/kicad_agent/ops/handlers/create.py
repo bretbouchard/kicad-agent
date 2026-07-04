@@ -48,3 +48,23 @@ def _handle_create_symbol(op: Any, file_path: Path) -> dict[str, Any]:
 def _handle_create_footprint(op: Any, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.create_file import create_footprint
     return create_footprint(op, file_path)
+
+
+@register_create("convert_from_skidl")
+def _handle_convert_from_skidl(op: Any, file_path: Path) -> dict[str, Any]:
+    """Phase 156 C-03/REG-2: Build a .kicad_sch from a SKIDL program.
+
+    Registered as a CREATE op because it creates a new file (bypasses
+    the existence check in the executor). Writes raw S-expr.
+    """
+    from kicad_agent.circuit_ir.skidl_to_kicad import skidl_to_kicad_sch
+
+    source = Path(op.source)
+    result_path = skidl_to_kicad_sch(source, file_path)
+
+    return {
+        "op_type": "convert_from_skidl",
+        "source": str(source),
+        "output": str(result_path),
+        "source_type": getattr(op, "source_type", "skidl"),
+    }

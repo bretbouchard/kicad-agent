@@ -1046,26 +1046,3 @@ def _handle_regenerate_wiring(op: Any, ir: SchematicIR, file_path: Path) -> dict
         "generated": result["generated"],
         "notes": result.get("notes", []),
     }
-
-
-@register_schematic("convert_from_skidl")
-def _handle_convert_from_skidl(op: Any, ir: Any, file_path: Path) -> dict[str, Any]:
-    """Phase 156 C-03: Build a .kicad_sch from a SKIDL build_*.py program.
-
-    Executes the SKIDL script to build a circuit, then generates a
-    .kicad_sch via raw S-expression emission (pitfall #7 — not kiutils).
-    Self-serializing: writes raw S-expr, bypasses kiutils.
-    """
-    from kicad_agent.circuit_ir.skidl_to_kicad import skidl_to_kicad_sch
-
-    source = Path(op.source)
-    out_path = Path(op.target_file)
-
-    result_path = skidl_to_kicad_sch(source, out_path)
-
-    return {
-        "op_type": "convert_from_skidl",
-        "source": str(source),
-        "output": str(result_path),
-        "source_type": getattr(op, "source_type", "skidl"),
-    }
