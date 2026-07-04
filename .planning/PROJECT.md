@@ -121,6 +121,32 @@ Complete routing stack production-ready:
 | Cognee ingestion as standalone script | Separation of concerns: ingestion is infra, KnowledgeManager is runtime | Valid |
 | Thread-safe singleton for KnowledgeManager | InferenceWrapper uses ThreadPoolExecutor; concurrent access requires locking | Valid |
 
+
+## Current Milestone: v5.0 Skidl-Native Design Pipeline
+
+**Goal:** Build a bidirectional KiCad↔SKIDL bridge, floor planner, SPICE simulation pipeline, and AI training data generator. Enables: natural language → circuit → simulation → floor plan → PCB → routing → manufacturing.
+
+**What this adds:**
+- SKIDL converter (read any .kicad_sch → Python code, and back)
+- Floor planning (placement spec → zoned PCB, not blind placement)
+- SPICE validation (ngspice simulation as circuit quality gate)
+- Training data generation (SKIDL + NL pairs from 71K repos)
+- Natural-language circuit generation (LLM → SKIDL → KiCad)
+
+**Target phases:** 156-160 (continues from analog-ecosystem numbering for cross-repo clarity)
+
+**Key decisions:**
+- SKIDL is the intermediate representation for all circuit operations (validated by Microsoft SchGen paper)
+- Two-model architecture: Qwen text model for circuit generation, Gemma vision model for routing
+- SPICE results as reward signal for AI training (not just DRC pass/fail)
+- Floor planner encodes engineering knowledge (signal flow zones, decoupling proximity, power isolation)
+- Full pipeline advantage: SchGen/pcbGPT stop at schematic, we go to manufacturing
+
+**Dependencies:**
+- Phases 108-111 (autolayout + conventions) provide the schematic generation foundation
+- Analog-ecosystem boards (mono blade, base board, ADSR, etc.) are the proving ground
+- jlcparts database (5GB) provides manufacturing-ready part numbers
+
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
