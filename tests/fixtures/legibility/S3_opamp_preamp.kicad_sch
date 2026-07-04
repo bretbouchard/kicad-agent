@@ -1,0 +1,493 @@
+(kicad_sch (version 20241129) (generator "kicad-agent")
+  (paper "A4")
+  (lib_symbols
+    (symbol "Amplifier_Operational:LM358"
+		(pin_names
+			(offset 0.127)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "U"
+			(at 0 5.08 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "LM2904"
+			(at 0 -5.08 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" "http://www.ti.com/lit/ds/symlink/lm358.pdf"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Dual Operational Amplifiers, DIP-8/SOIC-8/TSSOP-8/VSSOP-8"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_locked" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "dual opamp"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_fp_filters" "SOIC*3.9x4.9mm*P1.27mm* DIP*W7.62mm* TO*99* OnSemi*Micro8* TSSOP*3x3mm*P0.65mm* TSSOP*4.4x3mm*P0.65mm* MSOP*3x3mm*P0.65mm* SSOP*3.9x4.9mm*P0.635mm* LFCSP*2x2mm*P0.5mm* *SIP* SOIC*5.3x6.2mm*P1.27mm*"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "LM358_1_1"
+			(polyline
+				(pts
+					(xy -5.08 5.08) (xy 5.08 0) (xy -5.08 -5.08) (xy -5.08 5.08)
+				)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type background)
+				)
+			)
+			(pin output line
+				(at 7.62 0 180)
+				(length 2.54)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin input line
+				(at -7.62 -2.54 0)
+				(length 2.54)
+				(name "-"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin input line
+				(at -7.62 2.54 0)
+				(length 2.54)
+				(name "+"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "3"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(symbol "LM358_2_1"
+			(polyline
+				(pts
+					(xy -5.08 5.08) (xy 5.08 0) (xy -5.08 -5.08) (xy -5.08 5.08)
+				)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type background)
+				)
+			)
+			(pin input line
+				(at -7.62 2.54 0)
+				(length 2.54)
+				(name "+"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "5"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin input line
+				(at -7.62 -2.54 0)
+				(length 2.54)
+				(name "-"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "6"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin output line
+				(at 7.62 0 180)
+				(length 2.54)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "7"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(symbol "LM358_3_1"
+			(pin power_in line
+				(at -2.54 -7.62 90)
+				(length 3.81)
+				(name "V-"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "4"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin power_in line
+				(at -2.54 7.62 270)
+				(length 3.81)
+				(name "V+"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "8"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+    (symbol "Device:R"
+		(pin_numbers
+			(hide yes)
+		)
+		(pin_names
+			(offset 0)
+		)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(duplicate_pin_numbers_are_jumpers no)
+		(property "Reference" "R"
+			(at 2.032 0 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "R"
+			(at 0 0 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at -1.778 0 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_keywords" "R res resistor"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "ki_fp_filters" "R_*"
+			(at 0 0 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(hide yes)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(symbol "R_0_1"
+			(rectangle
+				(start -1.016 -2.54)
+				(end 1.016 2.54)
+				(stroke
+					(width 0.254)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+		(symbol "R_1_1"
+			(pin passive line
+				(at 0 3.81 270)
+				(length 1.27)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "1"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 0 -3.81 90)
+				(length 1.27)
+				(name ""
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "2"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+		)
+		(embedded_fonts no)
+	)
+  )
+  (wire (pts (xy 75.40 53.81) (xy 57.62 53.81))
+  )
+  (wire (pts (xy 57.62 53.81) (xy 57.62 50.00))
+  )
+  (wire (pts (xy 100.80 53.81) (xy 47.46 53.81))
+  )
+  (wire (pts (xy 47.46 53.81) (xy 47.46 57.62))
+  )
+  (wire (pts (xy 42.38 52.54) (xy 75.40 52.54))
+  )
+  (wire (pts (xy 75.40 52.54) (xy 75.40 46.19))
+  )
+  (wire (pts (xy 75.40 46.19) (xy 100.80 46.19))
+  )
+  (label "VIN" (at 42.38 47.46 0))
+  (label "VOUT" (at 75.40 53.81 0))
+  (label "VCC" (at 47.46 42.38 0))
+  (label "GND" (at 100.80 53.81 0))
+  (label "N$1" (at 42.38 52.54 0))
+  (symbol (lib_id "Amplifier_Operational:LM358") (at 50.00 50.00 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no)
+    (uuid 9606f288-2cf9-c1e3-80b6-7756bd90ab55)
+    (property "Reference" "U1" (at 52.00 50.00 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "LM358" (at 52.00 52.00 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "" (at 50.00 50.00 0) (effects (font (size 1.27 1.27)) hide))
+      (pin "1" (uuid 5d2cda63-d796-93e8-575b-7b15b0a75101))
+      (pin "2" (uuid c1d3f806-3af0-2fcf-0c8d-c93849ece60c))
+      (pin "3" (uuid 76870777-5abc-adb9-a377-2ad44291cb1f))
+      (pin "5" (uuid 730ae697-bc11-9c4d-697f-b8ab637cb102))
+      (pin "6" (uuid cd2b536d-3ea1-502f-8bef-2f77b0f22aee))
+      (pin "7" (uuid 8ccc677f-7e2a-4cea-0447-aa7e0cbcf500))
+      (pin "4" (uuid f551e96b-1070-886f-0306-7bfd4c0bc897))
+      (pin "8" (uuid d80dfb92-604b-4968-0dc2-80dfd619f0f4))
+      (instances
+        (project "skidl_generated"
+          (path "/616890fa-3271-c691-acba-26e31e3c573b"
+            (reference "U1") (unit 1)
+          )
+        )
+      )
+  )
+  (symbol (lib_id "Device:R") (at 75.40 50.00 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no)
+    (uuid 6af98a0b-3c32-ca67-6717-d1ddb262c1a7)
+    (property "Reference" "R1" (at 77.40 50.00 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "10k" (at 77.40 52.00 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "" (at 75.40 50.00 0) (effects (font (size 1.27 1.27)) hide))
+      (pin "1" (uuid 849fe4d2-3a29-ee2a-8518-2ab7238efbb8))
+      (pin "2" (uuid 38ba20e4-2cd7-5697-318a-7acbc2900626))
+      (instances
+        (project "skidl_generated"
+          (path "/616890fa-3271-c691-acba-26e31e3c573b"
+            (reference "R1") (unit 1)
+          )
+        )
+      )
+  )
+  (symbol (lib_id "Device:R") (at 100.80 50.00 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no)
+    (uuid 7c02e0c9-2e2d-3415-7986-e1ff2acf6c33)
+    (property "Reference" "R2" (at 102.80 50.00 0) (effects (font (size 1.27 1.27))))
+    (property "Value" "100k" (at 102.80 52.00 0) (effects (font (size 1.27 1.27))))
+    (property "Footprint" "" (at 100.80 50.00 0) (effects (font (size 1.27 1.27)) hide))
+      (pin "1" (uuid 7bdee875-2edf-3a16-c18c-ee5faf16468e))
+      (pin "2" (uuid 58bbf9da-e2e6-7ac9-5d06-4098e0714542))
+      (instances
+        (project "skidl_generated"
+          (path "/616890fa-3271-c691-acba-26e31e3c573b"
+            (reference "R2") (unit 1)
+          )
+        )
+      )
+  )
+  (sheet_instances
+    (path "/" (page "1"))
+  )
+)
