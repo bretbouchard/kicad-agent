@@ -58,17 +58,32 @@ def run_simulation(
             timeout=_NGSPICE_TIMEOUT,
         )
         log_output = result.stdout + result.stderr
+        # Also read the ngspice log file (measurement output goes there).
+        if log_path.exists():
+            log_output += "\n" + log_path.read_text(encoding="utf-8", errors="ignore")
         elapsed = time.time() - t0
 
         if result.returncode != 0:
             logger.warning("ngspice exited %d for %s", result.returncode, circuit_name)
 
-        # Parse results.
+        # Parse results. If ngspice exited non-zero, mark analyses as failed.
         analysis_results: list[AnalysisResult] = []
+        sim_failed = result.returncode != 0
         for atype_str in analyses:
             try:
                 atype = AnalysisType(atype_str)
                 ar = _parse_analysis(atype, log_output)
+                if sim_failed:
+                    ar = AnalysisResult(
+                        analysis_type=atype,
+                        traces=ar.traces,
+                        gain_db=ar.gain_db,
+                        bandwidth_hz=ar.bandwidth_hz,
+                        noise_floor_v_sqrt_hz=ar.noise_floor_v_sqrt_hz,
+                        thd_percent=ar.thd_percent,
+                        passed=False,
+                        error_message=f"ngspice exited {result.returncode}",
+                    )
                 analysis_results.append(ar)
             except ValueError:
                 logger.debug("Unknown analysis type: %s", atype_str)
@@ -130,26 +145,47 @@ def _parse_analysis(
 
 
 def _parse_ac(log: str) -> AnalysisResult:
-    """Parse AC analysis results from ngspice log."""
+    """Parse AC analysis results from ngspice log.
+
+    Handles both .MEAS format (gain_db = -1.7e-04 dB) and
+    control-block meas format (gain_db = -1.714492e-04 at= ...).
+    """
     import re
 
     gain_db = None
-    # Look for gain in dB pattern.
-    gain_match = re.search(r"gain.*?=\s*([-\d.]+)\s*dB", log, re.IGNORECASE)
+    # Match "gain_db = <number>" from ngspice meas output.
+    gain_match = re.search(r"gain_db\s*=\s*([-\d.eE+]+)", log, re.IGNORECASE)
     if gain_match:
-        gain_db = float(gain_match.group(1))
+        try:
+            gain_db = float(gain_match.group(1))
+        except ValueError:
+            pass
+    # Fallback: older format with explicit dB unit.
+    if gain_db is None:
+        gain_match = re.search(r"gain.*?=\s*([-\d.]+)\s*dB", log, re.IGNORECASE)
+        if gain_match:
+            gain_db = float(gain_match.group(1))
 
     bandwidth = None
-    bw_match = re.search(r"bandwidth.*?=\s*([\d.eE+-]+)\s*Hz", log, re.IGNORECASE)
+    # Match "bw_3db = <number>" from control-block meas output.
+    bw_match = re.search(r"bw_3db\s*=\s*([\d.eE+-]+)", log, re.IGNORECASE)
     if bw_match:
-        bandwidth = float(bw_match.group(1))
+        try:
+            bandwidth = float(bw_match.group(1))
+        except ValueError:
+            pass
+    # Fallback: older "bandwidth" format.
+    if bandwidth is None:
+        bw_match = re.search(r"bandwidth.*?=\s*([\d.eE+-]+)\s*Hz", log, re.IGNORECASE)
+        if bw_match:
+            bandwidth = float(bw_match.group(1))
 
     return AnalysisResult(
         analysis_type=AnalysisType.AC,
         traces=(),
         gain_db=gain_db,
         bandwidth_hz=bandwidth,
-        passed="error" not in log.lower(),
+        passed="fatal error" not in log.lower(),
     )
 
 

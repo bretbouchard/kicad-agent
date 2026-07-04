@@ -40,12 +40,17 @@ VAC_IN {input_node} 0 DC 0 AC 1
 * AC analysis: {freq_start:.1f}Hz to {freq_stop:.0f}Hz
 .AC DEC {points_per_decade} {freq_start} {freq_stop}
 
-* Measure gain
-.MEAS AC gain_db MAX vdb({output_node})
-* Measure bandwidth (-3dB point)
-.MEAS AC bandwidth WHEN vdb({output_node})='gain_db-3' FALL=1
-
-.PRINT AC vdb({output_node}) vp({output_node})
+* Control block: compute gain and bandwidth from AC results
+* ngspice's .MEASURE WHEN clause cannot reference prior measurement
+* results, so we use the control language to compute the -3dB threshold.
+.CONTROL
+run
+let gain_vector = vdb({output_node})
+let gain_max = maximum(gain_vector)
+let threshold = gain_max - 3.0
+meas ac gain_db MAX gain_vector
+meas ac bw_3db when gain_vector=threshold fall=1
+.ENDC
 
 .END
 """

@@ -63,7 +63,8 @@ class TestTestbenchGenerators:
         cir = generate_ac_testbench(self._SIMPLE_NETLIST)
         assert ".AC" in cir
         assert "VAC_IN" in cir
-        assert ".MEAS AC gain_db" in cir
+        assert "gain_db" in cir  # gain measurement present
+        assert "bw_3db" in cir or "bandwidth" in cir.lower()
 
     def test_tran_testbench(self) -> None:
         cir = generate_tran_testbench(self._SIMPLE_NETLIST)
@@ -85,10 +86,18 @@ class TestTestbenchGenerators:
 
 
 class TestSimulationRunner:
-    """ngspice runner — real simulation on a simple RC filter."""
+    """ngspice runner — real simulation on a simple RC filter.
 
-    def test_runs_simple_rc_filter(self) -> None:
-        """Run ngspice on a simple RC lowpass filter."""
+    BLK-1 regression: these tests MUST assert on actual ngspice output.
+    No guards that skip assertions when results are empty.
+    """
+
+    def test_ac_simulation_produces_gain(self) -> None:
+        """BLK-1 regression: AC sim must produce a non-None gain_db.
+
+        A simple RC lowpass (R=1k, C=1uF) has ~0dB gain at DC.
+        fc = 1/(2πRC) ≈ 159Hz.
+        """
         cir = generate_ac_testbench(
             netlist="R1 in out 1000\nC1 out 0 1u",
             input_node="in",
@@ -96,11 +105,33 @@ class TestSimulationRunner:
         )
         result = run_simulation(cir, "rc_filter", analyses=["ac"])
         assert isinstance(result, SimulationResult)
-        # ngspice should be installed and return a result.
-        if result.analyses:
-            ac = result.get_analysis(AnalysisType.AC)
-            if ac:
-                assert isinstance(ac, AnalysisResult)
+        assert len(result.analyses) > 0, "No analysis results returned"
+
+        ac = result.get_analysis(AnalysisType.AC)
+        assert ac is not None, "No AC analysis in results"
+        assert ac.passed, f"AC analysis failed: {ac.error_message}"
+        assert ac.gain_db is not None, "gain_db is None — ngspice produced no gain measurement"
+        # RC filter at DC should be ~0dB (within 1dB).
+        assert -1.5 < ac.gain_db < 1.5, f"Expected ~0dB gain, got {ac.gain_db}dB"
+
+    def test_ac_simulation_produces_bandwidth(self) -> None:
+        """BLK-1 regression: AC sim must produce a non-None bandwidth.
+
+        fc = 1/(2π·1000·1e-6) ≈ 159Hz.
+        """
+        cir = generate_ac_testbench(
+            netlist="R1 in out 1000\nC1 out 0 1u",
+            input_node="in",
+            output_node="out",
+        )
+        result = run_simulation(cir, "rc_bw", analyses=["ac"])
+        ac = result.get_analysis(AnalysisType.AC)
+        assert ac is not None
+        assert ac.bandwidth_hz is not None, "bandwidth_hz is None — -3dB point not found"
+        # Bandwidth should be ~159Hz (within 20%).
+        assert 120 < ac.bandwidth_hz < 200, (
+            f"Expected ~159Hz bandwidth, got {ac.bandwidth_hz}Hz"
+        )
 
 
 class TestDegradation:
