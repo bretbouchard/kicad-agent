@@ -421,6 +421,17 @@ class SchematicRawWriter:
             new_y = float(mutation.get("new_y", 0.0))
             return SchematicRawWriter._move_symbol_by_ref(content, ref, new_x, new_y)
 
+        elif op == "move_symbol_by_uuid":
+            # Phase 108 Task 2: parking pass for unannotated symbols (R?/C?)
+            # that share a Reference and cannot be moved by ref. UUID-keyed
+            # for unambiguous targeting.
+            symbol_uuid = mutation.get("uuid", "")
+            new_x = float(mutation.get("new_x", 0.0))
+            new_y = float(mutation.get("new_y", 0.0))
+            return SchematicRawWriter._move_symbol_by_uuid(
+                content, symbol_uuid, new_x, new_y,
+            )
+
         elif op == "insert_wire":
             # HIGH-4 (Council Gate 1): discriminator key is "op" (NEVER "kind").
             points = mutation.get("points", [])
@@ -762,6 +773,72 @@ class SchematicRawWriter:
             return content  # defensive — should never happen since match was found
 
         return content[:block_start] + new_block + content[block_end:]
+
+    @staticmethod
+    def _move_symbol_by_uuid(
+        content: str,
+        symbol_uuid: str,
+        new_x: float,
+        new_y: float,
+    ) -> str:
+        """Replace the (at X Y [R]) of the symbol block with the given uuid.
+
+        Phase 108 Task 2: the on-page autolayout guarantee needs to move
+        unannotated symbols (e.g.
+```
+R?` shared by 129 stacked resistors on
+        the corrupt Arduino_Mega fixture). ``_move_symbol_by_ref`` refuses
+        ambiguous matches; this UUID-keyed variant targets one block
+        unambiguously by its ``(uuid "...")`` property.
+
+        Used only by the autolayout parking pass — public move op stays
+        ref-keyed (the executor's public contract).
+        """
+        if not symbol_uuid:
+            return content
+        safe_uuid = re.escape(symbol_uuid)
+        # KiCad's (uuid ...) is UNQUOTED: (uuid 00000000-0000-...) — not "...".
+        uuid_pattern = re.compile(rf'\(uuid\s+{safe_uuid}\)')
+
+        symbol_starts = [
+            m.start() for m in re.finditer(r'\(symbol\s+\(lib_id\b', content)
+        ]
+        for start in symbol_starts:
+            depth = 0
+            i = start
+            block_end = None
+            while i < len(content):
+                if content[i] == '(':
+                    depth += 1
+                elif content[i] == ')':
+                    depth -= 1
+                    if depth == 0:
+                        block_end = i + 1
+                        break
+                i += 1
+            if block_end is None:
+                continue
+            block = content[start:block_end]
+            if not uuid_pattern.search(block):
+                continue
+
+            # Found the unique block. Replace its first (at X Y [R]).
+            at_pattern = re.compile(
+                r'\(at\s+([-0-9.]+)\s+([-0-9.]+)(\s+([-0-9.]+))?\)'
+            )
+            match = at_pattern.search(block)
+            if match is None:
+                return content
+            rotation = match.group(4)
+            new_at = (
+                f'(at {new_x} {new_y} {rotation})'
+                if rotation is not None
+                else f'(at {new_x} {new_y})'
+            )
+            new_block, _ = at_pattern.subn(lambda _: new_at, block, count=1)
+            return content[:start] + new_block + content[block_end:]
+
+        return content  # uuid not found — no-op (defensive)
 
     # ------------------------------------------------------------------
     # insert_wire / insert_label (Phase 108 Plan 02 — autolayout routing)

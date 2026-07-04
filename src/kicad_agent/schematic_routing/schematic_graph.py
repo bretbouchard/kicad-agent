@@ -514,11 +514,17 @@ def _parse_symbol_pins(body: str, lib_symbols: dict[str, list[tuple]]) -> list[P
     unit_index = _build_unit_index(lib_symbols)
 
     for sym_match in re.finditer(
-        r'\(symbol\s+\(lib_id\s+"([^"]+)"\)\s+\(at\s+([\d.]+)\s+([\d.]+)\s+([\d.-]+)\)',
+        # Rotation is OPTIONAL in KiCad: (at X Y) defaults to 0 degrees.
+        # D-5 fix: previously required \s+([\d.-]+) which made no-rotation
+        # symbols (like Arduino_Mega J1 at (at 100.0 200.0)) invisible to
+        # the topology builder + pin extractor.
+        r'\(symbol\s+\(lib_id\s+"([^"]+)"\)\s+\(at\s+([\d.]+)\s+([\d.]+)(?:\s+([\d.-]+))?\)',
         body,
     ):
         lib_id = sym_match.group(1)
-        sx, sy, sa = float(sym_match.group(2)), float(sym_match.group(3)), float(sym_match.group(4))
+        sx, sy = float(sym_match.group(2)), float(sym_match.group(3))
+        # Default rotation 0 when the optional 4th group is absent.
+        sa = float(sym_match.group(4)) if sym_match.group(4) is not None else 0.0
 
         # Get reference designator from the same symbol block
         sym_start = sym_match.start()
@@ -591,7 +597,9 @@ def _parse_symbol_refs(body: str) -> dict[str, str]:
     """Parse symbol reference → lib_id mapping."""
     refs = {}
     for sym_match in re.finditer(
-        r'\(symbol\s+\(lib_id\s+"([^"]+)"\)\s+\(at\s+[\d.]+\s+[\d.]+\s+[\d.-]+\)',
+        # D-5 fix: rotation is optional. Previously required 3-number (at X Y R),
+        # making no-rotation symbols invisible (Arduino_Mega J1 at (at 100.0 200.0)).
+        r'\(symbol\s+\(lib_id\s+"([^"]+)"\)\s+\(at\s+[\d.]+\s+[\d.]+(?:\s+[\d.-]+)?\)',
         body,
     ):
         lib_id = sym_match.group(1)

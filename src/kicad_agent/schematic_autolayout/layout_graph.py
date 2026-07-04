@@ -7,7 +7,12 @@ ready for the 5-stage Sugiyama algorithm (Task 2).
 KiCad coordinate gotchas (from MEMORY.md + Phase 38 finding):
   - KICAD_GRID_MM = 2.54     (default schematic grid)
   - RC_PIN_OFFSET_MM = 3.81  (Device:R/C pin1->pin2 distance)
-  - Schematic Y is INVERTED (handled in stage 5 coordinate assignment)
+  - KiCad SCHEMATIC coordinates are screen-style (Y increases DOWNWARD,
+    like SVG/PNG) — NOT Cartesian. So ``y = layer * layer_spacing`` with
+    layer 0 at the top is correct as-is. The earlier docstring claim
+    "Y is INVERTED (handled in stage 5)" was inaccurate — no inversion
+    is needed or applied. (KiCad PCB coordinates ARE Cartesian/Y-up,
+    but schematic coordinates are not. D-6 correction.)
   - Pin (at X Y) = wire connection point, NOT pin graphic tip
 
 D-01 (108-CONTEXT.md): Pure Python + networkx 3.1. No Graphviz.

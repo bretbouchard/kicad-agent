@@ -447,6 +447,77 @@ class SugiyamaLayout:
             positions[node] = LayoutCoordinate(x=float(x), y=float(y))
         return positions
 
+    def fit_to_page(
+        self,
+        positions: dict[str, tuple[float, float] | LayoutCoordinate],
+        page_width_mm: float,
+        page_height_mm: float,
+        margin_mm: float,
+    ) -> dict[str, LayoutCoordinate]:
+        """Scale + translate positions so every coord lands on the page.
+
+        Pure post-process pass — the engine was missing this from day one
+        (Phase 108 Task 2 finding). ``assign_coordinates`` grows coords
+        unbounded; without fit-to-page a multi-subcircuit board blows past
+        A4 width and components render off the printable page.
+
+        Pipeline:
+          1. Compute the current bounding box over all coords.
+          2. If the bbox exceeds the usable area (page minus 2*margin),
+             apply a uniform ``scale <= 1.0`` about the bbox center so the
+             whole graph fits. We NEVER enlarge (scale > 1) — that would
+             amplify sparsity into a giant sprawl.
+          3. Translate so ``bbox_min -> (margin, margin)``.
+          4. Re-snap every coord to the KiCad grid.
+
+        Args:
+            positions: ``{ref: (x, y) or LayoutCoordinate}`` from
+                ``assign_coordinates`` or the orchestrator's per-subcircuit
+                offset pass. Accepts tuples (handler path) and
+                ``LayoutCoordinate`` (engine path) uniformly.
+            page_width_mm / page_height_mm: Paper dimensions (landscape).
+            margin_mm: Reserved page edge (title block + borders).
+
+        Returns:
+            New dict ``{ref: LayoutCoordinate}``. The input is not mutated.
+            If ``positions`` is empty, returns an empty dict unchanged.
+        """
+        if not positions:
+            return {}
+
+        # Accept both (x, y) tuples and LayoutCoordinate NamedTuples.
+        raw = {
+            ref: (float(c[0]), float(c[1])) for ref, c in positions.items()
+        }
+        xs = [c[0] for c in raw.values()]
+        ys = [c[1] for c in raw.values()]
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+
+        usable_w = max(page_width_mm - 2.0 * margin_mm, self.grid_mm)
+        usable_h = max(page_height_mm - 2.0 * margin_mm, self.grid_mm)
+        bbox_w = max(max_x - min_x, self.grid_mm)
+        bbox_h = max(max_y - min_y, self.grid_mm)
+
+        # Uniform scale: never enlarge (cap at 1.0), only shrink to fit.
+        scale = min(usable_w / bbox_w, usable_h / bbox_h, 1.0)
+
+        # Scale about bbox center, then translate so min lands at margin.
+        cx = (min_x + max_x) / 2.0
+        cy = (min_y + max_y) / 2.0
+        offset_x = margin_mm - (cx - bbox_w * scale / 2.0)
+        offset_y = margin_mm - (cy - bbox_h * scale / 2.0)
+
+        fitted: dict[str, LayoutCoordinate] = {}
+        # Snap can push a coord half a grid past the page bounds — clamp.
+        x_max = page_width_mm - margin_mm
+        y_max = page_height_mm - margin_mm
+        for ref, (x, y) in raw.items():
+            new_x = min(self._snap_to_grid((x - cx) * scale + cx + offset_x), x_max)
+            new_y = min(self._snap_to_grid((y - cy) * scale + cy + offset_y), y_max)
+            fitted[ref] = LayoutCoordinate(x=new_x, y=new_y)
+        return fitted
+
     # ------------------------------------------------------------------
     # Helpers (test-facing and internal)
     # ------------------------------------------------------------------

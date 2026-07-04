@@ -554,6 +554,14 @@ class TopologyBuilder:
                     for j in range(i + 1, len(non_power)):
                         r1, p1 = non_power[i]
                         r2, p2 = non_power[j]
+                        # D-2 fix: skip intra-component edges (same ref, different
+                        # pins). A net connecting two pins of the SAME component
+                        # (e.g. RaspberryPi-uHAT C1 with both pins on Net_41 —
+                        # a decoupling cap pattern) is not an inter-component
+                        # connection and would create a self-loop in the layout
+                        # graph, tripping LayoutGraph's adversarial guard.
+                        if r1 == r2:
+                            continue
                         direction = "bidirectional"
                         if classification == NetClassification.POWER:
                             direction = "power"

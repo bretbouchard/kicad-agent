@@ -5,12 +5,13 @@ stages producing grid-snapped coordinates for every component on a
 per-subcircuit basis.
 
 Public API:
-    SugiyamaLayout       — 5-stage layout algorithm
+    SugiyamaLayout       — 5-stage layout algorithm + fit_to_page
     LayoutResult         — frozen result container
     LayoutGraph          — frozen graph + CircuitTopology adapter
     LayoutNode           — frozen node (component)
     LayoutEdge           — frozen edge (signal connection)
     LayoutCoordinate     — frozen (x, y) NamedTuple
+    paper_sizes          — KiCad page dimensions + raw-content parser
 """
 
 from kicad_agent.schematic_autolayout.layout_graph import (
@@ -27,6 +28,7 @@ from kicad_agent.schematic_autolayout.sugiyama import (
     LayoutResult,
     SugiyamaLayout,
 )
+from kicad_agent.schematic_autolayout import paper_sizes
 
 __all__ = [
     "SugiyamaLayout",
@@ -39,4 +41,5 @@ __all__ = [
     "RC_PIN_OFFSET_MM",
     "DEFAULT_LAYER_SPACING_MM",
     "DEFAULT_NODE_SPACING_MM",
+    "paper_sizes",
 ]
