@@ -22,6 +22,7 @@ from kicad_agent.floorplan.lower import (
     evaluate_rule_penalty,
     total_penalty,
 )
+from kicad_agent.floorplan.applier import apply_floor_plan, FloorPlanResult
 
 __all__ = [
     "FloorPlanSpec",
@@ -35,4 +36,6 @@ __all__ = [
     "lower_floor_plan",
     "evaluate_rule_penalty",
     "total_penalty",
+    "apply_floor_plan",
+    "FloorPlanResult",
 ]
