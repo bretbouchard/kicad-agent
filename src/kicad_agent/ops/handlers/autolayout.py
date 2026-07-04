@@ -771,9 +771,38 @@ def _handle_auto_layout_sch(op: Any, ir: Any, file_path: Path) -> dict[str, Any]
         RouteWiresSchOp,
         ApplyLabelsSchOp,
     )
+    from kicad_agent.schematic_autolayout.symbol_normalizer import (
+        normalize_placed_symbols,
+    )
 
     target_rel = Path(file_path).name
-    child_op_models = [
+    child_op_models: list[Any] = []
+
+    # Step 0 (annotate=True default): normalize placed symbols BEFORE
+    # placement. This repairs the malformations KiCad 10 rejects:
+    #   - Missing (dnp no), (instances ...), pin UUID blocks
+    #   - Empty (property "Value" "")
+    #   - Missing rotation on (at X Y) -> (at X Y 0)
+    #   - Wildcard R?/C? references -> unique R1/R2/...
+    # Normalizing first means every symbol enters the topology graph
+    # uniquely and flows cleanly through Sugiyama placement + fit_to_page.
+    # Idempotent: well-formed symbols pass through unchanged.
+    annotate_stats = None
+    if op.annotate and not op.dry_run:
+        root_path_obj = Path(file_path).resolve()
+        raw = root_path_obj.read_text()
+        normalized, stats = normalize_placed_symbols(raw)
+        if normalized != raw:
+            from kicad_agent.io.atomic_write import atomic_write
+            atomic_write(root_path_obj, normalized)
+        annotate_stats = {
+            "symbols_normalized": stats.symbols_normalized,
+            "wildcards_annotated": stats.wildcards_annotated,
+            "rotation_fixes": stats.rotation_fixes,
+            "instances_added": stats.instances_added,
+        }
+
+    child_op_models.extend([
         PlaceComponentsSchOp(
             op_type="place_components_sch",
             target_file=target_rel,
@@ -794,7 +823,7 @@ def _handle_auto_layout_sch(op: Any, ir: Any, file_path: Path) -> dict[str, Any]
             label_size_mm=op.label_size_mm,
             dry_run=op.dry_run,
         ),
-    ]
+    ])
 
     # Dispatch each child op via its registered handler.
     per_op_results: list[dict[str, Any]] = []
@@ -808,6 +837,8 @@ def _handle_auto_layout_sch(op: Any, ir: Any, file_path: Path) -> dict[str, Any]
         result = handler(child_op_model, ir, file_path)
         per_op_results.append(result)
 
+    # Index offsets: normalization is inline (not a dispatched op), so the
+    # child_op_models list is always [place, route, label].
     place_result = per_op_results[0]
     route_result = per_op_results[1]
     label_result = per_op_results[2]
@@ -859,6 +890,7 @@ def _handle_auto_layout_sch(op: Any, ir: Any, file_path: Path) -> dict[str, Any]
     #    goes in the advisory hierarchy_split_decision dict (not the
     #    promoted flag).
     return {
+        "annotate_stats": annotate_stats,
         "place_result": place_result,
         "route_result": route_result,
         "label_result": label_result,

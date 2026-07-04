@@ -115,9 +115,16 @@ class ApplyLabelsSchOp(BaseModel):
 
 
 class AutoLayoutSchOp(BaseModel):
-    """High-level autolayout orchestrator — chains 3 low-level ops (D-04).
+    """High-level autolayout orchestrator — chains 4 low-level ops (D-04).
 
     Sequence (executed via OperationExecutor.execute_batch):
+      0. safe_annotate (optional, default True) — renumber all R?/C?/U?
+         wildcards to unique R1/R2/... BEFORE placement. This is critical:
+         unannotated symbols share the same Reference property, so the
+         raw writer's ambiguity guard refuses to move them by ref, and
+         KiCad 10 may reject the output as malformed. Annotating first
+         means every symbol enters the topology graph uniquely, gets a
+         proper Sugiyama position, and lands cleanly on the page.
       1. place_components_sch (Sugiyama coordinates)
       2. route_wires_sch (collision-aware wiring)
       3. apply_labels_sch (net labels at pin body positions)
@@ -135,6 +142,9 @@ class AutoLayoutSchOp(BaseModel):
         op_type: Discriminator literal "auto_layout_sch".
         target_file: Relative path to root .kicad_sch (HIGH-1 validated).
         subcircuit_split: Default True (D-02). Disable for forced single-sheet.
+        annotate: Default True. Run safe_annotate (step 0) before placement
+            to give every symbol a unique Reference. Disable only when the
+            input is known to be fully annotated.
         layer_spacing_mm: Sugiyama vertical spacing (mm).
         node_spacing_mm: Sugiyama horizontal spacing (mm).
         max_wire_length_mm: Wire routing limit (passed to route_wires_sch).
@@ -147,6 +157,14 @@ class AutoLayoutSchOp(BaseModel):
     subcircuit_split: bool = Field(
         default=True,
         description="D-02: split by functional group via SubcircuitDetector.",
+    )
+    annotate: bool = Field(
+        default=True,
+        description=(
+            "Run safe_annotate before placement so every symbol has a unique "
+            "Reference (R1, R2, ... instead of R?, R?). Required for clean "
+            "placement on boards with unannotated symbols."
+        ),
     )
     layer_spacing_mm: float = Field(default=25.4, ge=2.54, le=127.0)
     node_spacing_mm: float = Field(default=12.7, ge=2.54, le=127.0)
