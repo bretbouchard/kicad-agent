@@ -292,10 +292,13 @@ def _handle_convert_to_skidl(op: Any, ir: SchematicIR, file_path: Path) -> dict[
     code = emit_build_py(circuit_ir, mode=level)
 
     # Optionally write to disk.
-    output_dir = getattr(op, "output_dir", None)
+    # Schema field is 'output_file' — fix field drift from prior 'output_dir'.
+    output_file_val = getattr(op, "output_file", None) or getattr(op, "output_dir", None)
     output_file = None
-    if output_dir:
-        out_path = Path(output_dir) / f"build_{file_path.stem}.py"
+    if output_file_val:
+        out_path = Path(output_file_val)
+        if out_path.is_dir():
+            out_path = out_path / f"build_{file_path.stem}.py"
         emit_build_py(circuit_ir, mode=level, out_path=out_path)
         output_file = str(out_path)
 
