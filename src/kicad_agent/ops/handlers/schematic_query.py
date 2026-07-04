@@ -261,3 +261,15 @@ def _handle_generate_bom(op: Any, ir: SchematicIR, file_path: Path) -> dict[str,
     """
     from kicad_agent.ops.handlers.pcb_bom import _handle_generate_bom as _bom_handler
     return _bom_handler(op, ir, file_path)
+
+
+@register_schematic_query("critique_sch")
+def _handle_critique_sch(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    """Handle critique_sch — AI legibility critic (read-only, D-04 separate op).
+
+    Phase 109: Gemma 4 primary + Claude R-4 fallback. Routes through
+    execute_schematic_query (no Transaction, no serialize). The handler
+    implementation lives in handlers/critique.py.
+    """
+    from kicad_agent.ops.handlers.critique import handle_critique_sch
+    return handle_critique_sch(op, ir, file_path)

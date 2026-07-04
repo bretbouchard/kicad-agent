@@ -1191,6 +1191,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "critique_sch": {
+        "category": "readability",
+        "description": "AI legibility critic — Gemma primary + Claude R-4 fallback. Scores density/clarity/spacing/organization.",
+        "file_types": [".kicad_sch"],
+        "is_readonly": True,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
     "run_gate_check": {
         "category": "gate",
         "description": "Run a named design stage gate check (read-only, no side effects)",

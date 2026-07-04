@@ -301,6 +301,7 @@ from kicad_agent.ops._schema_repair import (  # noqa: E402
     FixShortedNetsOp,
     FixPinTypeMismatchesOp,
     PlaceMissingUnitsOp,
+    PlaceAndWirePowerUnitsOp,
     RemoveDanglingWiresOp,
     BreakWireShortsOp,
     ResolveShortedNetsOp,
@@ -350,6 +351,9 @@ from kicad_agent.ops._schema_erc_smart import (  # noqa: E402
 )
 from kicad_agent.ops._schema_readability import (  # noqa: E402
     ReviewSchematicOp,
+)
+from kicad_agent.ops._schema_critique import (  # noqa: E402
+    CritiqueSchOp,
 )
 from kicad_agent.ops._schema_gap import (  # noqa: E402
     AnalyzeGapsOp,
@@ -458,6 +462,7 @@ class Operation(BaseModel):
         | FixPinTypeMismatchesOp
         | FixNetShortOp
         | PlaceMissingUnitsOp
+        | PlaceAndWirePowerUnitsOp
         | RemoveDanglingWiresOp
         | BreakWireShortsOp
         | ResolveShortedNetsOp
@@ -489,6 +494,7 @@ class Operation(BaseModel):
         | ClassifyViolationsOp
         | DiagnoseViolationsOp
         | ReviewSchematicOp
+        | CritiqueSchOp
         | UpdatePcbFromSchematicOp
         | RepopulatePcbFromSchematicOp
         | SafeSyncPcbFromSchematicOp
@@ -669,6 +675,7 @@ __all__ = [
     "FixPinTypeMismatchesOp",
     "FixNetShortOp",
     "PlaceMissingUnitsOp",
+    "PlaceAndWirePowerUnitsOp",
     "RemoveDanglingWiresOp",
     "BreakWireShortsOp",
     "ResolveShortedNetsOp",
@@ -711,6 +718,7 @@ __all__ = [
     "DiagnoseViolationsOp",
     # Readability ops
     "ReviewSchematicOp",
+    "CritiqueSchOp",
     # Gap analysis ops
     "AnalyzeGapsOp",
     "FillGapsOp",

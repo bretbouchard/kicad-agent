@@ -35,7 +35,7 @@ from kicad_agent.handler import format_result, handle_operation, validate_operat
 from kicad_agent.logging_config import configure_logging
 from kicad_agent.ops.schema import get_operation_schema
 
-_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "pre-pcb-gate", "gate", "demo", "playground", "dfm", "undo", "redo", "workflow"}
+_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "pre-pcb-gate", "gate", "demo", "playground", "dfm", "undo", "redo", "workflow", "critique"}
 
 _SUBCOMMAND_DESCRIPTIONS = {
     "collect": "Collect real-world KiCad training data from GitHub.",
@@ -49,6 +49,7 @@ _SUBCOMMAND_DESCRIPTIONS = {
     "ai-stats": "Show local-first AI intervention metrics and training gaps.",
     "design-rules": "Run domain-specific design rules against a KiCad schematic.",
     "review-schematic": "Review a schematic for readability and spatial quality.",
+    "critique": "AI legibility critic — score schematic readability (Gemma + Claude hybrid).",
     "pre-pcb-gate": "Run the hard schematic readiness gate before PCB layout.",
     "gate": "Run design stage gates (gate run <name> | gate status).",
     "demo": "Generate, validate, and render a schematic in one command.",
@@ -698,6 +699,84 @@ def _handle_review_schematic(argv: list[str]) -> None:
     sys.exit(exit_code)
 
 
+def _handle_critique(argv: list[str]) -> None:
+    """Handle the 'critique' subcommand -- AI legibility critic on a schematic."""
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent critique",
+        description="AI legibility critic — Gemma primary + Claude R-4 fallback.",
+    )
+    parser.add_argument("schematic", type=Path, help="Path to .kicad_sch file")
+    parser.add_argument("--gemma-only", action="store_true",
+                        help="Skip Claude fallback")
+    parser.add_argument("--claude-only", action="store_true",
+                        help="Skip Gemma, use Claude directly (debug)")
+    parser.add_argument("--no-suggestions", action="store_true",
+                        help="Omit suggestions (fast batch scoring)")
+    parser.add_argument("--json", action="store_true",
+                        help="Output JSON (default: human-readable table)")
+    parser.add_argument("-p", "--project-dir", type=Path, default=None,
+                        help="Project directory (default: cwd)")
+    args = parser.parse_args(argv)
+
+    if not args.schematic.exists():
+        print(f"Error: schematic not found: {args.schematic}", file=sys.stderr)
+        sys.exit(1)
+    if args.schematic.suffix != ".kicad_sch":
+        print(
+            f"Error: expected .kicad_sch file, got {args.schematic.suffix}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # Build CritiqueSchOp JSON and dispatch through handle_operation
+    op_json = {
+        "root": {
+            "op_type": "critique_sch",
+            "target_file": str(args.schematic),
+            "gemma_only": args.gemma_only,
+            "claude_only": args.claude_only,
+            "include_suggestions": not args.no_suggestions,
+        }
+    }
+
+    project_dir = args.project_dir if args.project_dir else Path.cwd()
+    result = handle_operation(op_json, project_dir=project_dir)
+
+    details = result.get("details", result)
+    if args.json:
+        print(json.dumps(details, indent=2))
+    else:
+        _print_critique_table(details)
+
+
+def _print_critique_table(details: dict) -> None:
+    """Print a human-readable summary of a CritiqueResult."""
+    model = details.get("model_used", "unknown")
+    srs = details.get("overall_srs", 0.0)
+    confidence = details.get("confidence", 0.0)
+    factors = details.get("factors", {})
+    suggestions = details.get("suggestions", [])
+
+    print(f"Model:    {model}")
+    print(f"SRS:      {srs:.3f}  (confidence: {confidence:.2f})")
+    print()
+    print("Factors:")
+    for name in ("density", "clarity", "spacing", "organization"):
+        score = factors.get(name, 0.0)
+        bar = "#" * int(score * 20)
+        print(f"  {name:<13} {score:.3f} {bar}")
+    print()
+    if suggestions:
+        print(f"Suggestions ({len(suggestions)}):")
+        for s in suggestions:
+            sev = s.get("severity", "suggestion")
+            text = s.get("text", "")
+            cat = s.get("category", "")
+            print(f"  [{sev:>10}] ({cat}) {text}")
+    else:
+        print("No suggestions.")
+
+
 def _handle_pre_pcb_gate(argv: list[str]) -> None:
     """Handle the 'pre-pcb-gate' subcommand -- hard schematic readiness gate."""
     parser = argparse.ArgumentParser(
@@ -1138,6 +1217,8 @@ def main(argv: list[str] | None = None) -> None:
             _handle_dfm(subcmd_argv)
         elif subcmd == "review-schematic":
             _handle_review_schematic(subcmd_argv)
+        elif subcmd == "critique":
+            _handle_critique(subcmd_argv)
         elif subcmd == "pre-pcb-gate":
             _handle_pre_pcb_gate(subcmd_argv)
         elif subcmd == "gate":
