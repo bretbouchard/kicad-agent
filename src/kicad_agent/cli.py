@@ -35,7 +35,7 @@ from kicad_agent.handler import format_result, handle_operation, validate_operat
 from kicad_agent.logging_config import configure_logging
 from kicad_agent.ops.schema import get_operation_schema
 
-_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "pre-pcb-gate", "gate", "demo", "playground", "dfm", "undo", "redo", "workflow", "critique"}
+_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "pre-pcb-gate", "gate", "demo", "playground", "dfm", "undo", "redo", "workflow", "critique", "check-conventions"}
 
 _SUBCOMMAND_DESCRIPTIONS = {
     "collect": "Collect real-world KiCad training data from GitHub.",
@@ -58,6 +58,7 @@ _SUBCOMMAND_DESCRIPTIONS = {
     "undo": "Undo the last kicad-agent operation on a file.",
     "redo": "Redo the most recently undone operation.",
     "workflow": "Run a named workflow (e.g. route-and-fill) on a KiCad file.",
+    "check-conventions": "Run IEEE 315 / H&H conventions against a KiCad schematic.",
 }
 
 
@@ -661,6 +662,29 @@ def _handle_design_rules(argv: list[str]) -> None:
     sys.exit(exit_code)
 
 
+def _handle_check_conventions(argv: list[str]) -> None:
+    """Handle the 'check-conventions' subcommand -- run Phase 111 convention catalog."""
+    from kicad_agent.cli.check_conventions_cmd import (
+        register_parser,
+        check_conventions_command,
+    )
+
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent check-conventions",
+        description="Run IEEE 315 / H&H conventions against a KiCad schematic.",
+    )
+    subparsers = parser.add_subparsers()
+    register_parser(subparsers)
+
+    args = parser.parse_args(argv)
+    if not hasattr(args, "func"):
+        parser.print_help()
+        sys.exit(2)
+
+    exit_code = check_conventions_command(args)
+    sys.exit(exit_code)
+
+
 def _handle_dfm(argv: list[str]) -> None:
     """Handle the 'dfm' subcommand -- run DFM analysis on a PCB."""
     from kicad_agent.dfm.cli import register_dfm_parser, dfm_command
@@ -1213,6 +1237,8 @@ def main(argv: list[str] | None = None) -> None:
             _handle_ai_stats(subcmd_argv)
         elif subcmd == "design-rules":
             _handle_design_rules(subcmd_argv)
+        elif subcmd == "check-conventions":
+            _handle_check_conventions(subcmd_argv)
         elif subcmd == "dfm":
             _handle_dfm(subcmd_argv)
         elif subcmd == "review-schematic":

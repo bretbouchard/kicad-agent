@@ -18,3 +18,5 @@ _spec.loader.exec_module(_cli_impl)  # type: ignore[union-attr]
 # Re-export main and other public names
 main = _cli_impl.main
 _handle_gate = _cli_impl._handle_gate
+_SUBCOMMANDS = _cli_impl._SUBCOMMANDS
+_SUBCOMMAND_DESCRIPTIONS = _cli_impl._SUBCOMMAND_DESCRIPTIONS
