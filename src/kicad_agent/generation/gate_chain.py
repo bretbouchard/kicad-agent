@@ -187,29 +187,116 @@ def _gate_erc(skidl_code: str) -> GateResult:
 
 
 def _gate_spice(skidl_code: str, spec_targets: dict[str, float]) -> GateResult:
-    """Gate 3: SPICE spec verification (if targets exist)."""
-    # For now, just verify the circuit can generate a netlist.
+    """Gate 3: SPICE spec verification.
+
+    BLK-3 fix: Actually runs ngspice simulation and compares measured
+    values against spec_targets. No longer a stub.
+    """
+    import tempfile
+    from pathlib import Path
+
     try:
-        exec_globals: dict = {}
-        exec(skidl_code, exec_globals)
-        build_fn = exec_globals.get("build_board")
-        if build_fn:
-            circuit = build_fn()
-            # Check if simulatable.
-            from kicad_agent.spice import is_simulatable
-            for part in circuit.parts:
-                lib_id = f"{part.lib}:{part.name}" if hasattr(part, "lib") else ""
-                if lib_id and not is_simulatable(lib_id):
-                    return GateResult(
-                        GateName.SPICE, GateStatus.SKIPPED,
-                        f"Contains unsimulatable part: {lib_id} — skipping SPICE"
-                    )
+        # Execute the SKIDL code in a subprocess for safety.
+        import subprocess, sys
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write(skidl_code)
+            f.write('\nimport pickle\n')
+            f.write('c = build_board()\n')
+            f.write(f'pickle.dump(c, open("{f.name}.pkl", "wb"))\n')
+            script_path = f.name
+
+        result = subprocess.run(
+            [sys.executable, script_path],
+            capture_output=True, text=True, timeout=30,
+        )
+        Path(script_path).unlink(missing_ok=True)
+
+        if result.returncode != 0:
+            Path(f"{script_path}.pkl").unlink(missing_ok=True)
+            return GateResult(
+                GateName.SPICE, GateStatus.FAILED,
+                f"SKIDL execution failed: {result.stderr[:200]}"
+            )
+
+        import pickle
+        circuit = pickle.load(open(f"{script_path}.pkl", "rb"))
+        Path(f"{script_path}.pkl").unlink(missing_ok=True)
+
+        # Check simulatability.
+        from kicad_agent.spice import is_simulatable, get_all_models
+        for part in circuit.parts:
+            lib_id = f"{part.lib}:{part.name}" if hasattr(part, "lib") else ""
+            if lib_id and not is_simulatable(lib_id):
+                return GateResult(
+                    GateName.SPICE, GateStatus.SKIPPED,
+                    f"Contains unsimulatable part: {lib_id} — skipping SPICE gate"
+                )
+
+        # Generate netlist from the circuit.
+        try:
+            import tempfile as tf
+            netlist_file = tf.NamedTemporaryFile(suffix=".net", delete=False, mode="w")
+            netlist_file.close()
+            circuit.generate_netlist(file_=netlist_file.name)
+            netlist_text = Path(netlist_file.name).read_text()
+            Path(netlist_file.name).unlink(missing_ok=True)
+        except Exception as e:
+            return GateResult(
+                GateName.SPICE, GateStatus.SKIPPED,
+                f"Netlist generation failed: {e} — skipping SPICE gate"
+            )
+
+        # Add SPICE models to the netlist.
+        models = get_all_models()
+        full_netlist = models + "\n" + netlist_text
+
+        # Run AC simulation.
+        from kicad_agent.spice.testbench import generate_ac_testbench
+        from kicad_agent.spice.ngspice_runner import run_simulation
+        from kicad_agent.spice import AnalysisType
+
+        cir = generate_ac_testbench(full_netlist, input_node="in", output_node="out")
+        sim_result = run_simulation(cir, "spec_check", analyses=["ac"])
+        ac = sim_result.get_analysis(AnalysisType.AC)
+
+        if ac is None or not ac.passed:
+            return GateResult(
+                GateName.SPICE, GateStatus.SKIPPED,
+                "SPICE simulation did not produce AC results — skipping spec gate"
+            )
+
+        # Compare measured values to spec targets.
+        violations = []
+        if "gain_db" in spec_targets and ac.gain_db is not None:
+            target = spec_targets["gain_db"]
+            if ac.gain_db < target - 3.0:  # 3dB tolerance
+                violations.append(
+                    f"gain: measured {ac.gain_db:.1f}dB, target {target:.1f}dB"
+                )
+
+        if "bandwidth_hz" in spec_targets and ac.bandwidth_hz is not None:
+            target = spec_targets["bandwidth_hz"]
+            if ac.bandwidth_hz < target * 0.5:  # 50% tolerance
+                violations.append(
+                    f"bandwidth: measured {ac.bandwidth_hz:.0f}Hz, target {target:.0f}Hz"
+                )
+
+        if violations:
+            return GateResult(
+                GateName.SPICE, GateStatus.FAILED,
+                f"SPICE spec violations: {'; '.join(violations)}",
+                {"gain_db": ac.gain_db, "bandwidth_hz": ac.bandwidth_hz,
+                 "spec_targets": spec_targets}
+            )
+
         return GateResult(
             GateName.SPICE, GateStatus.PASSED,
-            "All parts simulatable (full SPICE verification requires testbench)"
+            f"SPICE spec verified (gain={ac.gain_db}dB, bw={ac.bandwidth_hz}Hz)",
+            {"gain_db": ac.gain_db, "bandwidth_hz": ac.bandwidth_hz}
         )
+
     except Exception as e:
-        return GateResult(GateName.SPICE, GateStatus.SKIPPED, f"SPICE gate skipped: {e}")
+        return GateResult(GateName.SPICE, GateStatus.SKIPPED, f"SPICE gate error: {e}")
 
 
 def _gate_floorplan(skidl_code: str, output_dir: Path | str) -> GateResult:
