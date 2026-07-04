@@ -421,6 +421,24 @@ class SchematicRawWriter:
             new_y = float(mutation.get("new_y", 0.0))
             return SchematicRawWriter._move_symbol_by_ref(content, ref, new_x, new_y)
 
+        elif op == "insert_wire":
+            # HIGH-4 (Council Gate 1): discriminator key is "op" (NEVER "kind").
+            points = mutation.get("points", [])
+            net_name = mutation.get("net_name", "")
+            return SchematicRawWriter._insert_wire_sexp(content, points, net_name)
+
+        elif op == "insert_label":
+            # HIGH-4 (Council Gate 1): discriminator key is "op" (NEVER "kind").
+            net_name = mutation.get("net_name", "")
+            x = float(mutation.get("x", 0.0))
+            y = float(mutation.get("y", 0.0))
+            size = float(mutation.get("size", 1.27))
+            is_global = bool(mutation.get("is_global", False))
+            label_uuid = mutation.get("uuid", "")
+            return SchematicRawWriter._insert_label_sexp(
+                content, net_name, x, y, size, is_global, label_uuid,
+            )
+
         elif op in ("snap_to_grid", "repair_wire_snap"):
             # Coordinate mutations are applied to the kiutils obj in memory.
             # For raw S-expr, these are no-ops here — the caller must handle
@@ -744,4 +762,104 @@ class SchematicRawWriter:
             return content  # defensive — should never happen since match was found
 
         return content[:block_start] + new_block + content[block_end:]
+
+    # ------------------------------------------------------------------
+    # insert_wire / insert_label (Phase 108 Plan 02 — autolayout routing)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _insert_wire_sexp(
+        content: str,
+        points: list[tuple[float, float]],
+        net_name: str = "",
+    ) -> str:
+        """Insert a (wire (pts ...)) S-expression before the top-level close.
+
+        Phase 38 verified format (KiCad 10):
+            (wire (pts (xy X1 Y1) (xy X2 Y2))
+              (stroke (width 0) (type default))
+              (uuid "..."))
+
+        For 2-point wires this is a single segment. For >2 points we emit
+        a multi-point (pts ...) list (KiCad 10 supports this natively).
+
+        Args:
+            content: Raw .kicad_sch S-expression text.
+            points: List of (x, y) tuples (≥2 points).
+            net_name: Optional net name (metadata only — wires don't carry
+                net names in the S-expression; labels do).
+
+        Returns:
+            Content with the wire S-expr inserted. Returns content unchanged
+            if points has fewer than 2 entries (defensive).
+        """
+        if len(points) < 2:
+            return content
+
+        pts_str = " ".join(f"(xy {x} {y})" for x, y in points)
+        uid = str(uuid.uuid4())
+        wire_sexp = (
+            f'  (wire (pts {pts_str})\n'
+            f'    (stroke (width 0) (type default))\n'
+            f'    (uuid "{uid}"))\n'
+        )
+        last_close = content.rfind(")")
+        if last_close == -1:
+            return content
+        return content[:last_close] + wire_sexp + content[last_close:]
+
+    @staticmethod
+    def _insert_label_sexp(
+        content: str,
+        net_name: str,
+        x: float,
+        y: float,
+        size: float = 1.27,
+        is_global: bool = False,
+        label_uuid: str = "",
+    ) -> str:
+        """Insert a (label ...) or (global_label ...) S-expression.
+
+        Phase 38 verified format (KiCad 10):
+            (label "NAME" (at X Y 0)
+              (effects (font (size SIZE SIZE)))
+              (uuid "..."))
+        For global labels, the leading token is "global_label" with the same
+        shape (plus additional fields like (shape "input") which we emit as
+        a sensible default "input").
+
+        Args:
+            content: Raw .kicad_sch S-expression text.
+            net_name: Label text (the net name).
+            x, y: Label position in mm.
+            size: Font size in mm (KiCad default 1.27).
+            is_global: True → emit (global_label ...), False → (label ...).
+            label_uuid: UUID string. Generated if empty.
+
+        Returns:
+            Content with the label S-expr inserted.
+        """
+        if not label_uuid:
+            label_uuid = str(uuid.uuid4())
+
+        # Sanitize net_name: KiCad label strings cannot contain double quotes
+        # or backslashes. Strip them defensively (T-108-05 mitigation).
+        safe_name = net_name.replace('"', '').replace('\\', '')
+
+        if is_global:
+            label_sexp = (
+                f'  (global_label "{safe_name}" (shape input) (at {x} {y} 0)\n'
+                f'    (effects (font (size {size} {size})))\n'
+                f'    (uuid "{label_uuid}"))\n'
+            )
+        else:
+            label_sexp = (
+                f'  (label "{safe_name}" (at {x} {y} 0)\n'
+                f'    (effects (font (size {size} {size})))\n'
+                f'    (uuid "{label_uuid}"))\n'
+            )
+        last_close = content.rfind(")")
+        if last_close == -1:
+            return content
+        return content[:last_close] + label_sexp + content[last_close:]
 
