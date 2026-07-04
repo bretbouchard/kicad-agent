@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Complete-Ops
-status: Phase 102.1 Complete
-stopped_at: Completed Phase 102.1 Plan 01 — All 3 deferred items closed (EXEC-03 sort UUID tie-break, H-02 instances co-edit, H-03 real-world validation). CR-01 prerequisite patched (_parse_sheet_refs accepts unquoted KiCad 10 UUIDs). 4 atomic commits. 75/75 tests pass across affected suites. Zero regression. analog-board validation: 218 nets, GNDA 39 nodes (healthy).
-last_updated: "2026-06-30T00:28:00.000Z"
-last_activity: 2026-06-30
+status: Ready to plan
+stopped_at: Phase 107 research deliverable complete; awaiting Council Gate 1 plan review before /gsd-discuss-phase 108
+last_updated: "2026-07-04T00:40:41.161Z"
+last_activity: 2026-07-04
 progress:
-  total_phases: 131
-  completed_phases: 53
-  total_plans: 276
-  completed_plans: 220
+  total_phases: 132
+  completed_phases: 54
+  total_plans: 277
+  completed_plans: 221
   percent: 80
 ---
 
@@ -21,16 +21,28 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 102.1 — Close Phase 102 Deferred Work
-Last activity: 2026-06-30
+**Current focus:** Phase 103-105 Routing Overhaul (core complete), C-02 DSN emitter + Phase 106 in progress
+Last activity: 2026-07-04
 
 ## Current Position
 
-Phase: 102.1 (Close Phase 102 Deferred Work) — COMPLETE
-Plan: 1 of 1 (complete)
+Phase: 240
+Plan: Not started
 **All milestones shipped (v1.0 through v4.1). 95 phases, 268 plans, 3317+ tests.**
 
 Last milestone: v4.1 Stage-Safe PCB Flow (Phases 85-94)
+
+### Phase 107: Schematic Legibility — Standards Research and Gap Audit (COMPLETE — pending Council Gate 1)
+
+- Plan 107-01: Phase closure — ROADMAP placeholders + STATE update + SUMMARY (COMPLETE)
+  - 107-RESEARCH.md (699 lines) — IEEE 315, ANSI Y32.2, IEC 60617, H&H standards + repo gap audit + Sugiyama hybrid architecture recommendation
+  - 107-CONTEXT.md — 4 locked decisions (D-01 research-only, D-02 hybrid Python+YAML conventions, D-03 human-expert SRS parity within 0.10, D-04 real+synthetic training data)
+  - 107-DISCUSSION-LOG.md — decision audit trail
+  - 107-VALIDATION.md — research-phase validation strategy (file existence + grep checks, no test suite)
+  - 107-SUMMARY.md — phase summary with implementation roadmap for 108-111
+  - ROADMAP.md updated: Phases 108 (Deterministic Autolayout Engine), 109 (AI Legibility Critic), 110 (GRPO Legibility Reward Signal), 111 (Convention Library) inserted as placeholders
+  - Zero source code changes (D-01 honored). Zero new tests. Zero library modifications.
+  - Next: Council Gate 1 plan review, then `/gsd-discuss-phase 108` for implementation kickoff
 
 - Phase 85: Gate Architecture (DesignStage, GateResult, GateRunner)
 - Phase 86: Schematic Intent Completeness (footprint, pin-map, metadata checks)
@@ -53,7 +65,7 @@ Prior milestones: v4.0 Hybrid Routing (80-84), v3.2 Gap Analysis (79), v3.1 Coun
 
 Council review: 4 findings fixed, all passing.
 
-Last activity: 2026-06-30 -- Phase 102.1 execution complete (all 3 deferred items closed)
+Last activity: 2026-07-04 -- Phase 107 planning complete
 
 ### Phase 102.1: Close Phase 102 Deferred Work (COMPLETE)
 
@@ -61,22 +73,26 @@ Last activity: 2026-06-30 -- Phase 102.1 execution complete (all 3 deferred item
   - CR-01 prerequisite: patched _parse_sheet_refs regex to accept unquoted
     KiCad 10 UUIDs (was quoted-only); SheetRef.uuid now non-empty for all
     fixtures. 4 unit tests in TestSheetRefUuidParsing. Commit: ccf7f450
+
   - EXEC-03: _build_rename_plan sort keys switched from sheet_path (absolute,
     varies across machines) to sheet_uuid (KiCad-embedded, stable). Root UUID
     via _extract_root_sheet_uuid; sub-sheet UUIDs via SheetRef.uuid. Regression
     test test_sort_tie_break_uses_sheet_uuid verifies determinism across 2
     alphabetically-distinct base dirs. Commit: 3dd19532
+
   - H-02 Option B: SchematicRawWriter.replace_instances_reference method added
     (paren-balanced extraction, no-op when absent, LO-05 re.escape discipline).
     _handle_safe_annotate calls both replace_reference_property AND
     replace_instances_reference per rename. New fixture with_instances.kicad_sch
     with unquoted KiCad 10 UUID and instances block. Regression test
     test_instances_block_co_edited verifies both locations updated. Commit: 1677f790
+
   - H-03: scripts/validate_safe_annotate_analog_board.py — copies 16-sheet
     analog-board to tmp, runs safe_annotate end-to-end, exports netlists.
     Result: 218 nets, GNDA 39 nodes, GND 100 nodes (healthy). The 47 cross-sheet
     duplicates from FEATURE-008 were already resolved in source repo.
     Source repo dirty-count unchanged (5 before, 5 after). Commit: 55793419
+
   - 75/75 tests pass across affected suites (safe_annotate, safe_sync,
     raw_writer, schematic_graph). Zero regression. Zero new kiutils.to_file() calls.
 
@@ -495,7 +511,7 @@ Last activity: 2026-06-30 -- Phase 102.1 execution complete (all 3 deferred item
 
 **Velocity:**
 
-- Total plans completed: 167
+- Total plans completed: 169
 - Average duration: 5 min
 - Total execution time: 6.5 hours
 
@@ -521,6 +537,11 @@ Last activity: 2026-06-30 -- Phase 102.1 execution complete (all 3 deferred item
 - Phase 101 added: Schematic Ops Bug Fixes — close 5 P0/P1 bugs (P0-001 through P0-005) from analog-ecosystem backplane cleanup. BUGS/ reports source.
 - Phase 102 added: Safe Annotate — non-destructive refdes renumbering. Implements `safe_annotate` op mirroring `safe_sync_pcb_from_schematic` raw S-expr edit pattern (never kiutils). Closes FEATURE-008 / unblocks analog-ecosystem Phase 145. Existing `annotate` op forbidden (P0-006).
 - Phase 102.1 inserted after Phase 102: Close deferred work — EXEC-03 sort tie-break UUID, H-02 instances co-edit, H-03 real-world validation (URGENT — user-directed closure per four-state taxonomy)
+- Phase 107 added: Schematic Legibility — Standards Research and Gap Audit. Industry standards research (IEEE 315, ANSI Y32.2, IEC 60617, signal-flow conventions, Horowitz & Hill, hierarchical design) + repo gap audit for best-in-class autolayout. Hybrid approach (deterministic engine + AI critic) preferred per v2.2 routing lessons. Current training lacks legibility objective. Phase 103-106 already in roadmap from routing overhaul — gsd-sdk saw filesystem only (no dirs for 103-106), so manually renumbered to 107 to avoid collision.
+- Phase 108 added: Deterministic Autolayout Engine — Sugiyama-framework engine on Phase 38 schematic_routing primitives (~6,000 LOC). New `auto_layout_sch` op. Verification: SRS within 0.10 of human expert on Phase 93 golden boards (D-03). Depends on Phase 107.
+- Phase 109 added: AI Legibility Critic — vision-model critic on autolayout output, scored against Phase 48.5 SRS. Model choice (Claude vision vs Gemma 4 12B V2 vs both with R-4) deferred to discuss-phase. Depends on Phase 108.
+- Phase 110 added: GRPO Legibility Reward Signal — legibility term added to existing training/grpo.py. SFT path: real schematics (discover_100k.py). GRPO path: synthetic (training/generator.py). Depends on Phase 109.
+- Phase 111 added: Convention Library — IEEE 315 + H&H as Python dataclasses (D-02 canonical core) + YAML overrides via Phase 48 RuleConfigLoader. New `Convention` ABC mirrors `DesignRule` ABC. Depends on Phase 107 (parallel-eligible with 108).
 
 ### v4.1 Stage-Safe PCB Flow (Phases 85-94)
 
@@ -715,8 +736,8 @@ None.
 
 ## Session Continuity
 
-Stopped at: Completed Phase 102.1 Plan 01 — All 3 deferred items closed (EXEC-03 sort UUID tie-break, H-02 instances co-edit, H-03 real-world validation). CR-01 prerequisite patched. 4 atomic commits. 75/75 tests pass. Zero regression. analog-board validation: 218 nets, GNDA 39 nodes.
-Resume with: /gsd-verify-work 102.1 (user acceptance testing), then Council Gate 2 (Execution Review).
+Stopped at: Phase 107 research deliverable complete; awaiting Council Gate 1 plan review before /gsd-discuss-phase 108
+Resume with: Council Gate 1 plan review on 107-PLAN.md. On approval, /gsd-discuss-phase 108 (Deterministic Autolayout Engine).
 
 ### Phase 100: RoutingOrchestrator and Human Approval Loop (complete)
 

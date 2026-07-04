@@ -835,7 +835,7 @@ Plans:
 **Goal:** Resolve the 3 items deferred from Phase 102 per the four-state taxonomy: (1) EXEC-03 — switch `_build_rename_plan` sort tie-break from absolute sheet path to sheet UUID for deterministic BOMs across machines; (2) H-02 Option B — handler co-edits `(instances ...)` blocks when renaming refdes so the netlist exporter sees updated references on real-world schematics; (3) H-03 — real-world validation against `analog-ecosystem/hardware/network-io/channel-strip/analog-board.kicad_sch` (47+ cross-sheet duplicates, 16 sub-sheets) confirming GNDA rail present in exported netlist after `safe_annotate`.
 **Requirements**: EXEC-03, H-02 Option B, H-03 (all documented in ROADMAP ## Deferred → Phase 102 Findings)
 **Depends on:** Phase 102
-**Plans:** 1 plan (1 complete)
+**Plans:** 1/1 plans complete
 
 Plans:
 - [x] 102.1-01-PLAN.md — Close deferred work: EXEC-03 sort UUID + H-02 instances co-edit + H-03 real-world validation (COMPLETE 2026-06-29)
@@ -1737,6 +1737,133 @@ Plans:
   2. Training datasets at `/Volumes/Storage/models/kicad-agent/datasets/`
   3. InferenceWrapper references adapters from external storage
   4. No trained models stored on local SSD (symlinks or path config)
+
+### Phase 103: Foundation — Routing Signal Capture (COMPLETE)
+
+**Goal:** Stop throwing away the dead end. Make every routing failure carry typed, located, attributable data.
+
+**Status:** COMPLETE (2026-07-02). Commit on master.
+
+**Deliverables:**
+- `RouteFailure` dataclass (`routing/pathfinder.py`): `route_net` returns `RouteResult | RouteFailure` instead of `None`. On `NetworkXNoPath`, recovers the true router frontier via `single_source_dijkstra_path_length` — the nearest-reached node to target as `dead_end_point`.
+- `RouteOutcome` `__bool__` pattern (C-01): shared base, truthy on success/falsy on failure. All 11 call sites in 6 files migrated (`is None` → truthy/falsy).
+- `RoutingAuditEntry` enriched with `dead_end_point`, `target_point`, `failure_type`, `reachable_count` (backward-compatible with pre-103 audit lines).
+- `NetRouteResult` (orchestrator) + `_handle_auto_route` (production) wired to emit failure-location data.
+- Backplane PCB vendored as dense-board test fixture (F-10).
+
+**Tests:** 146 routing tests (3 extended for dead-end assertions), 3 new audit round-trip tests. Zero regressions.
+
+---
+
+### Phase 104: Diagnosis — Reverse-Perspective Blocker Classifier (COMPLETE)
+
+**Goal:** "Look from the dead end's perspective, find the blocker, classify it."
+
+**Status:** COMPLETE (2026-07-02). Commit on master.
+
+**Deliverables:**
+- `BlockerDiagnostician` (`routing/diagnostician.py`, new): shadow casting from dead_end toward target, causality test per candidate (remove obstacle → does path open?), classification into SOFT_OTHER / SOFT_OWN / HARD_COMPONENT / HARD_FIXED.
+- `Blocker` + `BlockerDiagnosis` dataclasses (operational signal AND training label).
+- Component movability heuristic (F-07): precedence locked > connector-prefix > edge-proximity > movable. `(locked yes)` greppable from raw content (no parser change).
+- Top-5 causal test cap (F-05): `_MAX_CAUSALITY_TESTS = 5`.
+- `diagnose_routing_failures` standalone function + registered in `routing/__init__.py`.
+
+**Tests:** 16 tests — 3-wall maze HARD_FIXED, causal blocker property test, non-causal exclusion, top-5 cap, movability (connector/MH/edge/locked/centered/precedence), SOFT_OTHER vs SOFT_OWN, multi-failure.
+
+---
+
+### Phase 105: Negotiation — Closed-Loop Rip-Up and Reroute (CORE COMPLETE)
+
+**Goal:** PathFinder-style rip-up-and-reroute with Freerouting as executor and escalating congestion cost for convergence.
+
+**Status:** CORE COMPLETE (2026-07-02). C-02 DSN wiring emitter IN PROGRESS.
+
+**Deliverables (done):**
+- `NegotiationLoop` (`routing/negotiation.py`, new): rip-up-and-reroute with monotonic congestion cost (PathFinder convergence guarantee, R-7). F-06: loop owns persistent mutable-weight graph instance.
+- Stall detection (2 rounds no improvement → early exit).
+- SOFT_OTHER blocker rip-up drives targeted re-routing.
+- `negotiate_route` standalone function.
+
+**R-1 resolved (pre-commit):** `tests/test_phase105_type_fix_honored.py` empirically verifies Freerouting honors `(type fix)` and `(type protect)` (4/4 tests pass).
+
+**Tests:** 8 tests — convergence (simple, crossing nets), termination (max_rounds, stall), congestion monotonicity, result structure, diagnosis population.
+
+**Remaining (C-02):** DSN `(wiring ...)` section emitter for Freerouting-as-executor per-round locking. Net-new emitter code in `dsn_generator.py` + round-trip fidelity test. IN PROGRESS.
+
+---
+
+### Phase 106: Model Repoint — Placement-Advisor (NOT STARTED)
+
+**Goal:** Repoint the Gemma 4 12B vision model from low-value strategy-dispatch to high-value blocker diagnosis + component-nudge recommendation.
+
+**Status:** NOT STARTED. Prep work IN PROGRESS.
+
+**Prerequisites (council conditions):**
+- C-03: Model checkpoint must be committed/reproducible (currently on `/Volumes/Storage`, unmounted external drive).
+- SFT data: harvest from Phase 104 diagnostic output on real boards.
+- Q4 council guidance: start with SFT on harvested traces, defer GRPO/reward loop.
+
+**Plan:** See `plans/routing-overhaul-phases-103-106.md` §5 Phase 106.
+
+### Phase 107: Schematic Legibility — Standards Research and Gap Audit
+
+**Goal:** Industry standards research (IEEE 315, ANSI Y32.2, IEC 60617, Horowitz & Hill, signal-flow conventions) plus repo gap audit for best-in-class schematic autolayout. Hybrid approach (deterministic engine + AI critic) preferred per v2.2 routing lessons. Phase is RESEARCH ONLY — no source code, no MVP, no tests. Deliverables: 107-RESEARCH.md (699 lines), 107-CONTEXT.md (D-01..D-04 locked), 107-DISCUSSION-LOG.md, 107-VALIDATION.md, 107-SUMMARY.md.
+**Requirements**: RESEARCH-DELIV, CONTEXT-DELIV, ROADMAP-UPDATE, STATE-UPDATE
+**Depends on:** Phase 106
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 107-01-PLAN.md — Phase closure: ROADMAP placeholders for 108-111, STATE.md update, 107-SUMMARY.md
+
+---
+
+### Phase 108: Deterministic Autolayout Engine
+
+**Goal:** Build Sugiyama-framework-based autolayout engine on existing `schematic_routing/` primitives (~6,000 LOC from Phase 38: SchematicGraph, wire_router, power_unit_placer, net_namer, net_resolver, netlist_parser). Output passes Phase 48.5 SchematicReadabilityScorer within 0.10 SRS of human-expert baseline on Phase 93 golden boards (D-03). New `auto_layout_sch` op registers in `src/kicad_agent/ops/registry.py`.
+**Requirements**: TBD (deferred to /gsd-discuss-phase 108)
+**Depends on:** Phase 107
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-discuss-phase 108 then /gsd-plan-phase 108 to break down)
+
+---
+
+### Phase 109: AI Legibility Critic
+
+**Goal:** Vision-model legibility critic scoring autolayout output against existing SRS (Phase 48.5 SchematicReadabilityScorer). Candidate models: Claude vision (Phase 48.5) vs Gemma 4 12B V2 (Phase 98 KiCadVisionPipeline) vs both with R-4 validation fallback. Model selection deferred to /gsd-discuss-phase 109 based on Phase 108 latency budget.
+**Requirements**: TBD (deferred to /gsd-discuss-phase 109)
+**Depends on:** Phase 108
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-discuss-phase 109 then /gsd-plan-phase 109 to break down)
+
+---
+
+### Phase 110: GRPO Legibility Reward Signal
+
+**Goal:** Add legibility term to existing GRPO reward (Phase 98 pattern) using SRS delta as signal. SFT data path: real schematics from KiCad crawler (scripts/discover_100k.py, 100k+ boards) + SRS labels. GRPO data path: synthetic variations from `training/generator.py`. Wires into existing `training/grpo.py` (D-04).
+**Requirements**: TBD (deferred to /gsd-discuss-phase 110)
+**Depends on:** Phase 109
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-discuss-phase 110 then /gsd-plan-phase 110 to break down)
+
+---
+
+### Phase 111: Convention Library
+
+**Goal:** Encode IEEE 315 / Horowitz & Hill / KiCad conventions per D-02 hybrid format — Python dataclasses for canonical core (type-safe, testable), YAML for project/house-style overrides loaded via existing Phase 48 RuleConfigLoader. New `Convention` base class mirrors Phase 48 `DesignRule` ABC; concrete subclasses in `src/kicad_agent/conventions/`.
+**Requirements**: TBD (deferred to /gsd-discuss-phase 111)
+**Depends on:** Phase 107
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-discuss-phase 111 then /gsd-plan-phase 111 to break down)
+
+---
 
 ## Deferred
 
