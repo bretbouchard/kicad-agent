@@ -54,28 +54,97 @@ _SCH_TEMPLATE = """(kicad_sch (version 20241129) (generator "kicad-agent")
 """
 
 
-def _extract_pin_offsets(lib_id: str) -> dict[str, tuple[float, float]]:
-    """Extract pin number → (x_offset, y_offset) from a symbol definition.
+def _detect_units(lib_id: str) -> dict[int, list[str]]:
+    """Detect multi-unit structure from a symbol library definition.
 
-    Pin offsets are relative to the symbol origin. When the symbol is placed
-    at (X, Y), the pin's absolute position is (X + dx, Y + dy).
+    Returns:
+        Dict mapping unit_number → list of pin numbers in that unit.
+        For single-unit symbols, returns {1: [all_pins]}.
     """
-    offsets: dict[str, tuple[float, float]] = {}
     try:
         raw = resolve_lib_symbol(lib_id)
     except (ValueError, FileNotFoundError):
-        return offsets
+        return {}
 
-    # Find each (pin ... block and extract its (at X Y ROT) and (number "...").
-    for pin_match in re.finditer(r'\(pin\s+\w+\s+\w+', raw):
-        start = pin_match.start()
-        block = _extract_balanced_block(raw, start)
-        at_match = re.search(r'\(at\s+([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\)', block)
-        num_match = re.search(r'\(number\s+"([^"]*)"', block)
+    # Find sub-symbols like "NAME_1_1", "NAME_2_1", etc.
+    # The pattern is <lib_basename>_<unit>_<convert>.
+    base_name = lib_id.split(":")[-1] if ":" in lib_id else lib_id
+    unit_pattern = re.compile(rf'\(symbol\s+"{re.escape(base_name)}_(\d+)_(\d+)"')
+    matches = unit_pattern.findall(raw)
+    if not matches:
+        return {}
+
+    units: dict[int, list[str]] = {}
+    for unit_num_str, _convert in matches:
+        unit_num = int(unit_num_str)
+        # Extract the pins for this unit.
+        unit_full = f"{base_name}_{unit_num_str}_{_convert}"
+        m = re.search(rf'\(symbol\s+"{re.escape(unit_full)}"', raw)
+        if m:
+            start = m.start()
+            depth = 0
+            block = ""
+            for i in range(start, len(raw)):
+                if raw[i] == "(":
+                    depth += 1
+                elif raw[i] == ")":
+                    depth -= 1
+                    if depth == 0:
+                        block = raw[start:i + 1]
+                        break
+            pin_nums = re.findall(r'\(number\s+"([^"]*)"', block)
+            units[unit_num] = pin_nums
+
+    return units
+
+
+def _extract_pin_offsets_for_unit(lib_id: str, unit_num: int) -> dict[str, tuple[float, float]]:
+    """Extract pin offsets for a specific unit of a multi-unit symbol."""
+    try:
+        raw = resolve_lib_symbol(lib_id)
+    except (ValueError, FileNotFoundError):
+        return {}
+
+    base_name = lib_id.split(":")[-1] if ":" in lib_id else lib_id
+
+    # For unit 1, pins are in <base>_1_1; for unit N, in <base>_N_1.
+    # For the top-level symbol definition (no sub-unit), all pins are listed.
+    if unit_num == 1:
+        # Try sub-unit first, then fall back to top-level.
+        sub_unit = f"{base_name}_1_1"
+        m = re.search(rf'\(symbol\s+"{re.escape(sub_unit)}"', raw)
+        if m:
+            return _extract_pin_offsets_from_block(raw, m.start())
+    elif unit_num > 1:
+        sub_unit = f"{base_name}_{unit_num}_1"
+        m = re.search(rf'\(symbol\s+"{re.escape(sub_unit)}"', raw)
+        if m:
+            return _extract_pin_offsets_from_block(raw, m.start())
+
+    # Fallback: top-level symbol (all pins).
+    m = re.search(rf'\(symbol\s+"{re.escape(lib_id)}"', raw)
+    if m:
+        return _extract_pin_offsets_from_block(raw, m.start())
+    return {}
+
+
+def _extract_pin_offsets_from_block(raw: str, start: int) -> dict[str, tuple[float, float]]:
+    """Extract pin offsets from a specific block start position."""
+    block = _extract_balanced_block(raw, start)
+    offsets: dict[str, tuple[float, float]] = {}
+    for pin_match in re.finditer(r'\(pin\s+\w+\s+\w+', block):
+        pstart = pin_match.start()
+        pblock = _extract_balanced_block(block, pstart)
+        at_match = re.search(r'\(at\s+([\d.\-]+)\s+([\d.\-]+)', pblock)
+        num_match = re.search(r'\(number\s+"([^"]*)"', pblock)
         if at_match and num_match:
-            dx, dy = float(at_match.group(1)), float(at_match.group(2))
-            offsets[num_match.group(1)] = (dx, dy)
+            offsets[num_match.group(1)] = (float(at_match.group(1)), float(at_match.group(2)))
     return offsets
+
+
+def _extract_pin_offsets(lib_id: str) -> dict[str, tuple[float, float]]:
+    """Extract pin offsets for unit 1 of a symbol (backward compat wrapper)."""
+    return _extract_pin_offsets_for_unit(lib_id, 1)
 
 
 def _extract_balanced_block(content: str, start: int) -> str:
@@ -123,15 +192,18 @@ def circuit_to_kicad_sch(
     *,
     place: bool = True,
     emit_wires: bool = True,
+    use_sugiyama: bool = True,
 ) -> Path:
     """Generate a .kicad_sch from a skidl.Circuit.
 
     Args:
         circuit: A skidl.Circuit object.
         out_path: Output file path.
-        place: If True, place components on a grid (default).
+        place: If True, place components (default).
         emit_wires: If True, emit (wire ...) blocks from circuit.nets (default).
             This produces an electrically complete schematic that passes ERC.
+        use_sugiyama: If True, use Sugiyama topology-aware layout instead of
+            a dumb grid (default). Produces signal-flow-hierarchical placement.
 
     Returns:
         Path to the written file.
@@ -157,11 +229,7 @@ def circuit_to_kicad_sch(
         except (ValueError, FileNotFoundError) as e:
             logger.warning("Could not resolve %s: %s", lib_id, e)
 
-    # Place components on a grid. Use generous spacing for legibility.
-    col, row = 0, 0
-    col_spacing = 25.4  # 10 grid units
-    row_spacing = 25.4
-    max_cols = 6
+    # Place components using Sugiyama topology-aware layout (or grid fallback).
     sch_uuid = _uuid_from_str("schematic_root")
 
     # Track placement positions and pin absolute positions for wire emission.
@@ -169,19 +237,40 @@ def circuit_to_kicad_sch(
     # pin_abs[ref][pin_num] = (abs_x, abs_y)
     pin_abs: dict[str, dict[str, tuple[float, float]]] = {}
 
+    if place and use_sugiyama:
+        # Sugiyama topology-aware placement: components grouped by signal
+        # flow into layers (sources at top, sinks at bottom).
+        try:
+            from kicad_agent.circuit_ir.topology_from_skidl import compute_sugiyama_positions
+            sugiyama_positions = compute_sugiyama_positions(circuit)
+        except Exception as e:
+            logger.warning("Sugiyama layout failed (%s), falling back to grid", e)
+            sugiyama_positions = {}
+    else:
+        sugiyama_positions = {}
+
+    col, row = 0, 0
+    col_spacing = 25.4  # 10 grid units
+    row_spacing = 25.4
+    max_cols = 6
+
     symbol_blocks: list[str] = []
     for i, part in enumerate(circuit.parts):
+        ref = getattr(part, "ref", f"U{i}")
         if place:
-            x = (col % max_cols) * col_spacing + 50
-            y = (row * row_spacing) + 50
-            col += 1
-            if col >= max_cols:
-                col = 0
-                row += 1
+            if ref in sugiyama_positions:
+                x, y = sugiyama_positions[ref]
+            else:
+                # Grid fallback for parts not in the Sugiyama result.
+                x = (col % max_cols) * col_spacing + 50
+                y = (row * row_spacing) + 150  # Below Sugiyama layout
+                col += 1
+                if col >= max_cols:
+                    col = 0
+                    row += 1
         else:
             x, y = 50.0 + i * col_spacing, 50.0
 
-        ref = getattr(part, "ref", f"U{i}")
         value = getattr(part, "value", "") or ""
         value_safe = value.replace("\\", "\\\\").replace('"', '\\"')
         lib_id = _part_lib_id(part)
@@ -195,6 +284,11 @@ def circuit_to_kicad_sch(
         # absolute schematic coordinates positive Y = DOWN. So pin absolute
         # Y = part_Y - pin_rel_Y (subtract, not add). X is unaffected.
         # See MEMORY.md: "abs_Y = comp_Y - pin_rel_Y"
+        #
+        # For multi-unit symbols (e.g. LM358 with units A/B/C), we emit a
+        # single symbol block with unit=1 but include ALL pins from ALL units.
+        # This avoids the "missing_power_pin" ERC error (unit C unplaced) while
+        # keeping the pin_abs mapping consistent for wire emission.
         offsets = pin_offsets_cache.get(lib_id, {})
         pin_abs[ref] = {}
         for pin_num, (dx, dy) in offsets.items():
