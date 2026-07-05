@@ -68,6 +68,10 @@ def _handle_place_components_sch(op: Any, ir: Any, file_path: Path) -> dict[str,
     # Lazy imports (avoid circulars — matches safe_annotate pattern)
     from kicad_agent.schematic_autolayout import SugiyamaLayout, LayoutGraph
     from kicad_agent.schematic_autolayout import paper_sizes
+    from kicad_agent.schematic_autolayout.layout_planner import (
+        PageRegion, plan_group_regions, plan_parking_region,
+        scale_to_region, park_in_region,
+    )
     from kicad_agent.schematic_routing.schematic_graph import SchematicGraph
     from kicad_agent.analysis.topology_builder import TopologyBuilder
     from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
@@ -91,8 +95,6 @@ def _handle_place_components_sch(op: Any, ir: Any, file_path: Path) -> dict[str,
         if sc.center_component:
             subcircuit_map[sc.center_component] = sc.subcircuit_id
     # Components not in any detected subcircuit → singleton group.
-    # SubcircuitDetector returns [] for fixtures without ICs (single resistor,
-    # single cap, etc.) — every component gets its own Solo_<ref> group here.
     for node in topology.nodes:
         if node.ref not in subcircuit_map:
             subcircuit_map[node.ref] = f"Solo_{node.ref}"
@@ -103,62 +105,115 @@ def _handle_place_components_sch(op: Any, ir: Any, file_path: Path) -> dict[str,
         node_spacing_mm=op.node_spacing_mm,
     )
 
-    # 2. Run layout per-subcircuit if subcircuit_split, else whole graph
-    positions: dict[str, tuple[float, float]] = {}
-    if op.subcircuit_split and len(graph.subcircuit_ids) > 1:
-        x_offset = 0.0
-        for sc_id in graph.subcircuit_ids:
-            subgraph = graph.subgraph_for(sc_id)
-            if len(subgraph.nodes) == 0:
-                continue
-            result = layout.layout(subgraph)
-            for ref, coord in result.positions.items():
-                positions[ref] = (coord.x + x_offset, coord.y)
-            # Advance x_offset past this group's rightmost component + margin
-            max_x = max(c[0] for c in positions.values()) if positions else 0.0
-            x_offset = max_x + op.node_spacing_mm * 2  # 2 grid gaps between groups
-    else:
-        if len(graph.nodes) > 0:
-            result = layout.layout(graph)
-            for ref, coord in result.positions.items():
-                positions[ref] = (coord.x, coord.y)
-
-    # 3. fit_to_page — Task 2 on-page guarantee.
-    #    Previously coordinates grew unbounded; multi-group boards exceeded
-    #    A4 width (297mm) and components rendered off the printable page.
     paper = paper_sizes.parse_paper_from_sch(raw_content)
     page_w, page_h = paper_sizes.paper_dims_mm(paper)
     margin = paper_sizes.USABLE_PAGE_MARGIN_MM
-    fitted = layout.fit_to_page(positions, page_w, page_h, margin)
-    positions = {ref: (c.x, c.y) for ref, c in fitted.items()}
 
-    # 4. Park loose components (Task 2 fix).
-    #    Components in the file but NOT in the topology graph were previously
-    #    left at their original (potentially corrupt) positions. Arduino_Mega
-    #    has 137 such components — 125 stacked at (50,30) + outliers at
-    #    (5000,5000). Park them in a sorted grid below the Sugiyama layout.
-    #    Ambiguous refs (R?/C? shared by many symbols) are moved by UUID
-    #    via SchematicRawWriter._move_symbol_by_uuid so every symbol lands
-    #    on-page even on pre-corrupted fixtures.
+    # 2. Plan disjoint page regions for each subcircuit group.
+    #    Phase 108 Task 2 revision: the original flow ran Sugiyama per group
+    #    with an x_offset, then called fit_to_page on the UNION — which
+    #    collapsed every group back to (margin, margin). The planner assigns
+    #    each group its own page region up front so groups never overlap.
+    sc_ids = list(graph.subcircuit_ids) if op.subcircuit_split else []
+    if not sc_ids and len(graph.nodes) > 0:
+        sc_ids = ["__whole__"]  # single-group fallback
+
+    # Run Sugiyama per group, collect raw (pre-region) positions per group.
+    group_raw_positions: dict[str, dict[str, tuple[float, float]]] = {}
+    for sc_id in sc_ids:
+        subgraph = graph.subgraph_for(sc_id) if sc_id != "__whole__" else graph
+        if len(subgraph.nodes) == 0:
+            group_raw_positions[sc_id] = {}
+            continue
+        result = layout.layout(subgraph)
+        group_raw_positions[sc_id] = {
+            ref: (coord.x, coord.y) for ref, coord in result.positions.items()
+        }
+
+    # Reserve the parking region BEFORE planning group regions so we know
+    # how many loose components need space. Loose = in file but not topology.
+    placed_refs = set()
+    for positions_dict in group_raw_positions.values():
+        placed_refs.update(positions_dict.keys())
+    loose_refs_all = _scan_all_refs(raw_content) - placed_refs
+    parking_count = len(loose_refs_all)
+
+    # Compute how much vertical space parking needs so we can shrink the
+    # group area accordingly. Parking is a grid: cols = page_width / spacing,
+    # rows = ceil(parking_count / cols).
+    import math
+    usable_w = page_w - 2.0 * margin
+    park_cols = max(int(usable_w // layout.node_spacing_mm), 1)
+    park_rows = math.ceil(parking_count / park_cols) if parking_count > 0 else 0
+    # Parking needs: rows * spacing + 1 spacer row above. Cap at half the
+    # usable height so groups always get at least 50% of the page.
+    usable_h = page_h - 2.0 * margin
+    parking_h = min(
+        (park_rows + 1) * layout.node_spacing_mm,
+        usable_h / 2.0,
+    )
+    # Group area = usable area minus parking strip at the bottom.
+    group_area_h = usable_h - parking_h if parking_count > 0 else usable_h
+    group_area_top = margin + group_area_h
+
+    # Plan group regions over the REDUCED area (above the parking strip).
+    group_regions = plan_group_regions(
+        len([s for s in sc_ids if group_raw_positions.get(s)]),
+        page_w, group_area_top, margin,
+    )
+
+    # 3. Scale each group's Sugiyama coords into its assigned region.
+    positions: dict[str, tuple[float, float]] = {}
+    region_iter = iter(group_regions)
+    for sc_id in sc_ids:
+        raw_positions = group_raw_positions.get(sc_id, {})
+        if not raw_positions:
+            continue
+        try:
+            region = next(region_iter)
+        except StopIteration:
+            break  # more non-empty groups than regions — shouldn't happen
+        scaled = scale_to_region(raw_positions, region, layout._snap_to_grid)
+        positions.update(scaled)
+
+    # 4. Park loose components in a region below all placed groups.
+    #    Phase 108 Task 2 revision: parking at the page midpoint collided
+    #    with placed groups (whose bottoms vary by group layout). The
+    #    planner reserves the actual space below the lowest placed group.
     components_parked = 0
     components_unparked_ambiguous = 0
-    parking_positions = _park_loose_components(
-        sg, set(positions.keys()), raw_content, layout, paper, page_w, page_h, margin,
-    )
-    ambiguous_refs = _find_ambiguous_refs(raw_content, set(parking_positions.keys()))
-    # Non-ambiguous loose refs → park by ref via the normal move_symbol path.
-    for ref, (x, y) in parking_positions.items():
-        if ref in ambiguous_refs:
-            continue
-        positions[ref] = (x, y)
-        components_parked += 1
-    # Ambiguous loose refs → extract every symbol block UUID sharing that
-    # ref and emit UUID-keyed moves so each one gets a unique on-page spot.
-    uuid_mutations, ambiguous_count = _park_ambiguous_by_uuid(
-        raw_content, ambiguous_refs, positions, layout, page_w, page_h, margin,
-    )
-    # uuid_mutations carry their own (uuid, x, y); merge into the mutation list.
-    components_parked += ambiguous_count
+    uuid_mutations: list[dict[str, Any]] = []
+
+    if parking_count > 0:
+        # Parking region was reserved during planning — use it directly.
+        # Starts at group_area_top (1 spacer row below the group area),
+        # extends to page_h - margin.
+        parking_region = PageRegion(
+            x_min=margin,
+            y_min=group_area_top,
+            x_max=page_w - margin,
+            y_max=page_h - margin,
+        )
+        # Split loose refs into unique vs ambiguous (multi-instance).
+        ambiguous_refs = _find_ambiguous_refs(raw_content, loose_refs_all)
+        unique_loose = [r for r in loose_refs_all if r not in ambiguous_refs]
+
+        if unique_loose:
+            parked = park_in_region(
+                unique_loose, parking_region,
+                layout._snap_to_grid, layout.node_spacing_mm,
+            )
+            positions.update(parked)
+            components_parked += len(parked)
+
+        # Ambiguous refs (R? shared by N symbols) → UUID-keyed moves so
+        # each instance gets its own parking spot.
+        if ambiguous_refs:
+            uuid_mutations, ambiguous_count = _park_ambiguous_by_uuid_v2(
+                raw_content, ambiguous_refs, parking_region,
+                layout._snap_to_grid, layout.node_spacing_mm,
+            )
+            components_parked += ambiguous_count
 
     # 5. Build mutation list.
     # HIGH-4 fix (Council Gate 1): discriminator key is "op" — the dispatcher
@@ -208,43 +263,14 @@ def _handle_place_components_sch(op: Any, ir: Any, file_path: Path) -> dict[str,
     }
 
 
-def _park_loose_components(
-    sg: Any,
-    placed_refs: set[str],
-    raw_content: str,
-    layout: Any,
-    paper: str,
-    page_w: float,
-    page_h: float,
-    margin: float,
-) -> dict[str, tuple[float, float]]:
-    """Lay out components NOT in the topology graph on-page in a sorted grid.
+def _scan_all_refs(raw_content: str) -> set[str]:
+    """Scan every placed (symbol (lib_id ...)) block and return its Reference.
 
-    "Loose" = symbol refs present in the file but not in ``placed_refs``.
-    These are components the Sugiyama engine never touched (decoupling caps,
-    test points, mechanicals, or — on corrupt fixtures — 125 stacked
-    passives). Previously they carried forward at whatever (potentially
-    off-page) position the fixture had.
-
-    Strategy:
-      - Reserve a parking strip below the Sugiyama layout (y > placed_max_y).
-      - Sort loose refs by designator (R1, R2, ..., C1, C2, ...) for stability.
-      - Lay out in a grid with ``node_spacing_mm`` columns; wrap when the
-        strip fills the usable width.
-      - fit_to_page the parking strip if it would overflow the page bottom.
-      - Returns ``{ref: (x, y)}`` for every loose component — empty if none.
-
-    Note: we scan raw_content directly rather than relying on
-    ``sg.ref_to_libid`` because the graph parser's regex requires a rotation
-    field (3-number ``(at X Y R)``), missing symbols without rotation like
-    Arduino_Mega's J1 at ``(at 100.0 200.0)``. The raw scan sees all placed
-    symbols regardless of rotation presence.
+    Catches symbols the topology builder misses (no-rotation symbols,
+    power flags, ambiguous wildcards). Used to identify loose components
+    that need parking.
     """
     import re
-
-    # Scan raw_content for placed (symbol (lib_id ...)) blocks and extract
-    # their Reference property. This catches symbols the graph parser misses
-    # (no-rotation symbols, malformed instances).
     placed_pattern = re.compile(r'\(symbol\s+\(lib_id\s+"[^"]+"\)')
     ref_pattern = re.compile(r'\(property\s+"Reference"\s+"([^"]+)"')
     all_refs: set[str] = set()
@@ -264,61 +290,154 @@ def _park_loose_components(
             continue
         ref_m = ref_pattern.search(raw_content[block_start:block_end])
         if ref_m:
-            ref = ref_m.group(1)
-            # Include # power flags (e.g. #PWR01) — they need on-page
-            # parking too. Previously skipped, which left corrupt-fixture
-            # power symbols at off-page coordinates (uHAT GND at y=190.5).
-            all_refs.add(ref)
+            all_refs.add(ref_m.group(1))
+    return all_refs
 
-    loose_refs = [r for r in all_refs if r not in placed_refs]
-    if not loose_refs:
-        return {}
 
-    # Sort by designator prefix then numeric index (R10 after R2, not before).
-    def _ref_key(ref: str) -> tuple[str, int]:
-        match = re.match(r"([A-Za-z]+)(\d+)", ref)
-        if match:
-            return (match.group(1), int(match.group(2)))
-        return (ref, 0)
+def _clear_legacy_wires_and_labels(raw_content: str) -> str:
+    """Remove existing wires, labels, junctions, and no_connects from a schematic.
 
-    loose_refs.sort(key=_ref_key)
+    Phase 108 Task 2: when auto_layout_sch moves components to new positions,
+    existing wires (which reference old pin coordinates) become invalid —
+    they point to empty space or wrong pins. Existing labels are similarly
+    positioned at old pin body coordinates. Leaving them creates visual
+    chaos on the autolaid schematic.
 
-    # Park below the Sugiyama layout. We don't have the fitted positions
-    # here, so use the page midpoint as a safe lower bound (fit_to_page
-    # guarantees placed comps are in [margin, page_h - margin]).
-    placed_max_y = (page_h + margin) / 2.0
+    The route_wires_sch and apply_labels_sch handlers re-emit fresh wires
+    and labels at the NEW pin positions, so connectivity is preserved
+    through net labels (Phase 38 finding: labels are the primary connection
+    mechanism in KiCad 10).
 
-    # Grid layout in the parking strip.
-    usable_w = page_w - 2.0 * margin
-    cols = max(int(usable_w // layout.node_spacing_mm), 1)
-    parking: dict[str, tuple[float, float]] = {}
-    for i, ref in enumerate(loose_refs):
+    This strips:
+      - ``(wire (pts (xy X1 Y1) (xy X2 Y2)) ...)`` blocks
+      - ``(label "..." ...)`` and ``(global_label "..." ...)`` blocks
+      - ``(junction (at X Y) ...)`` blocks (wire junctions — meaningless
+        once wires are removed)
+      - ``(no_connect (at X Y) ...)`` blocks
+
+    Does NOT touch: symbols, lib_symbols, sheet blocks, title_block, paper.
+    Idempotent: re-running on a cleared schematic is a no-op.
+    """
+    import re
+
+    def _strip_top_level_blocks(content: str, opener_regex: str) -> str:
+        """Remove every top-level (opener ...) block from content."""
+        result = []
+        pos = 0
+        for m in re.finditer(opener_regex, content):
+            # Only strip if this is at the top level (preceded by whitespace
+            # at the start of a line, not nested inside another block).
+            # Heuristic: the line starts with optional whitespace then `(`.
+            line_start = content.rfind('\n', 0, m.start()) + 1
+            prefix = content[line_start:m.start()]
+            if prefix.strip() != '':
+                continue  # not top-level — skip
+            # Walk to matching close paren.
+            depth = 0
+            i = m.start()
+            while i < len(content):
+                if content[i] == '(':
+                    depth += 1
+                elif content[i] == ')':
+                    depth -= 1
+                    if depth == 0:
+                        # Include trailing newline if present
+                        end = i + 1
+                        if end < len(content) and content[end] == '\n':
+                            end += 1
+                        result.append(content[pos:m.start()])
+                        pos = end
+                        break
+                i += 1
+        result.append(content[pos:])
+        return ''.join(result)
+
+    # Strip in order. Each pass walks the output of the previous.
+    content = _strip_top_level_blocks(raw_content, r'\(wire\s+\(pts\b')
+    content = _strip_top_level_blocks(content, r'\(label\s+')
+    content = _strip_top_level_blocks(content, r'\(global_label\s+')
+    content = _strip_top_level_blocks(content, r'\(hierarchical_label\s+')
+    content = _strip_top_level_blocks(content, r'\(junction\s+\(at\b')
+    content = _strip_top_level_blocks(content, r'\(no_connect\s+\(at\b')
+    return content
+
+
+def _park_ambiguous_by_uuid_v2(
+    raw_content: str,
+    ambiguous_refs: set[str],
+    region: Any,  # PageRegion
+    snap_fn,
+    node_spacing_mm: float,
+) -> tuple[list[dict[str, Any]], int]:
+    """Park ambiguous-ref symbols by UUID into a specific page region.
+
+    Phase 108 Task 2 revision of ``_park_ambiguous_by_uuid``: takes a
+    ``PageRegion`` instead of computing its own parking strip from
+    ``placed_positions``. This keeps parking in the region the planner
+    reserved, so it never collides with placed groups.
+    """
+    import re
+
+    if not ambiguous_refs:
+        return [], 0
+
+    ref_pattern = re.compile(r'\(property\s+"Reference"\s+"([^"]+)"')
+    uuid_pattern = re.compile(r'\(uuid\s+([0-9a-fA-F-]+)\)')
+
+    targets: list[tuple[str, str]] = []  # (uuid, ref)
+    symbol_starts = [
+        m.start() for m in re.finditer(r'\(symbol\s+\(lib_id\b', raw_content)
+    ]
+    for start in symbol_starts:
+        depth = 0
+        i = start
+        block_end = None
+        while i < len(raw_content):
+            if raw_content[i] == '(':
+                depth += 1
+            elif raw_content[i] == ')':
+                depth -= 1
+                if depth == 0:
+                    block_end = i + 1
+                    break
+            i += 1
+        if block_end is None:
+            continue
+        block = raw_content[start:block_end]
+        ref_match = ref_pattern.search(block)
+        if ref_match is None:
+            continue
+        ref = ref_match.group(1)
+        if ref not in ambiguous_refs:
+            continue
+        uuid_match = uuid_pattern.search(block)
+        if uuid_match is None:
+            continue
+        targets.append((uuid_match.group(1), ref))
+
+    if not targets:
+        return [], 0
+
+    # Lay out the UUIDs in the region using the same grid logic as park_in_region.
+    usable_w = max(region.width, node_spacing_mm)
+    cols = max(int(usable_w // node_spacing_mm), 1)
+    spacing_x = region.width / cols
+
+    mutations: list[dict[str, Any]] = []
+    for i, (symbol_uuid, _ref) in enumerate(targets):
         row, col = divmod(i, cols)
-        x = layout._snap_to_grid(margin + col * layout.node_spacing_mm)
-        y = layout._snap_to_grid(placed_max_y + row * layout.node_spacing_mm)
-        parking[ref] = (x, y)
+        x = snap_fn(region.x_min + col * spacing_x + node_spacing_mm / 2.0)
+        y = snap_fn(region.y_min + row * node_spacing_mm + node_spacing_mm / 2.0)
+        x = min(x, region.x_max)
+        y = min(y, region.y_max)
+        mutations.append({
+            "op": "move_symbol_by_uuid",
+            "uuid": symbol_uuid,
+            "new_x": x,
+            "new_y": y,
+        })
 
-    # If the parking grid overflows the page bottom, scale + translate
-    # just the parking strip to fit the remaining vertical space.
-    max_park_y = max(y for _, y in parking.values())
-    usable_h = page_h - margin - placed_max_y
-    if max_park_y > page_h - margin and usable_h > layout.node_spacing_mm:
-        parking = {
-            ref: (x, layout._snap_to_grid(
-                placed_max_y + (y - placed_max_y) * (usable_h / (max_park_y - placed_max_y))
-            ))
-            for ref, (x, y) in parking.items()
-        }
-
-    # Final safety clamp: snapping can push a scaled coord half a grid
-    # past the page bounds. Never emit an off-page parking coord.
-    x_max = page_w - margin
-    y_max = page_h - margin
-    parking = {
-        ref: (min(x, x_max), min(y, y_max)) for ref, (x, y) in parking.items()
-    }
-
-    return parking
+    return mutations, len(mutations)
 
 
 def _find_ambiguous_refs(raw_content: str, refs: set[str]) -> set[str]:
@@ -358,108 +477,22 @@ def _park_ambiguous_by_uuid(
     page_h: float,
     margin: float,
 ) -> tuple[list[dict[str, Any]], int]:
-    """Park symbols sharing an ambiguous ref by UUID (Task 2 fix).
+    """DEPRECATED: use _park_ambiguous_by_uuid_v2 (region-based).
 
-    Scans ``raw_content`` for ``(symbol ... (uuid "...") ...)`` blocks
-    whose Reference property matches any ref in ``ambiguous_refs``.
-    Assigns each a unique parking spot in the strip below the placed
-    components and emits ``move_symbol_by_uuid`` mutations.
-
-    Returns ``(mutations, count)`` so the caller can extend its mutation
-    list and increment its parked counter.
+    Retained for backward compatibility with any external callers. The v2
+    variant takes a PageRegion instead of computing its own strip, which
+    keeps parking in the planner-reserved region.
     """
-    import re
-
-    if not ambiguous_refs:
-        return [], 0
-
-    # Find the y-extent of already-placed components to park BELOW them
-    # (not at them — collision avoidance). Add one row of breathing room.
+    # Reconstruct a pseudo-region from placed_positions to delegate to v2.
+    from kicad_agent.schematic_autolayout.layout_planner import PageRegion
     placed_max_y = (
         max(y for _, y in placed_positions.values()) if placed_positions else margin
+    ) + layout.node_spacing_mm
+    region = PageRegion(margin, placed_max_y, page_w - margin, page_h - margin)
+    return _park_ambiguous_by_uuid_v2(
+        raw_content, ambiguous_refs, region,
+        layout._snap_to_grid, layout.node_spacing_mm,
     )
-    placed_max_y += layout.node_spacing_mm  # one row below the placed comps
-
-    # Walk every placed (symbol (lib_id ...) ...) block, capture (uuid, ref)
-    # pairs for the ambiguous refs. We match placed instances only —
-    # lib_symbol definitions also start with (symbol but have no lib_id and
-    # no top-level uuid, so they would produce false matches.
-    ref_pattern = re.compile(r'\(property\s+"Reference"\s+"([^"]+)"')
-    # KiCad's (uuid ...) is UNQUOTED: (uuid 00000000-0000-...) — not "...".
-    uuid_pattern = re.compile(r'\(uuid\s+([0-9a-fA-F-]+)\)')
-
-    targets: list[tuple[str, str]] = []  # (uuid, ref)
-    # PLACED symbols: (symbol (lib_id "...") (at X Y) ...) — distinct from
-    # library definitions inside (lib_symbols ...) which start with
-    # (symbol "lib_id:name" (pin_names ...) ...).
-    symbol_starts = [
-        m.start() for m in re.finditer(r'\(symbol\s+\(lib_id\b', raw_content)
-    ]
-    for start in symbol_starts:
-        depth = 0
-        i = start
-        block_end = None
-        while i < len(raw_content):
-            if raw_content[i] == '(':
-                depth += 1
-            elif raw_content[i] == ')':
-                depth -= 1
-                if depth == 0:
-                    block_end = i + 1
-                    break
-            i += 1
-        if block_end is None:
-            continue
-        block = raw_content[start:block_end]
-        ref_match = ref_pattern.search(block)
-        if ref_match is None:
-            continue
-        ref = ref_match.group(1)
-        if ref not in ambiguous_refs:
-            continue
-        uuid_match = uuid_pattern.search(block)
-        if uuid_match is None:
-            continue
-        targets.append((uuid_match.group(1), ref))
-
-    if not targets:
-        return [], 0
-
-    # Grid layout for the ambiguous symbols (more numerous than the unique
-    # loose refs, so we use the full page width below placed_max_y).
-    usable_w = page_w - 2.0 * margin
-    cols = max(int(usable_w // layout.node_spacing_mm), 1)
-    mutations: list[dict[str, Any]] = []
-    for i, (symbol_uuid, _ref) in enumerate(targets):
-        row, col = divmod(i, cols)
-        x = layout._snap_to_grid(margin + col * layout.node_spacing_mm)
-        y = layout._snap_to_grid(placed_max_y + row * layout.node_spacing_mm)
-        mutations.append({
-            "op": "move_symbol_by_uuid",
-            "uuid": symbol_uuid,
-            "new_x": x,
-            "new_y": y,
-        })
-
-    # Scale the parking strip if it overflows the page bottom.
-    max_park_y = max(m["new_y"] for m in mutations)
-    usable_h = page_h - margin - placed_max_y
-    if max_park_y > page_h - margin and usable_h > layout.node_spacing_mm:
-        scale = usable_h / (max_park_y - placed_max_y)
-        for m in mutations:
-            m["new_y"] = layout._snap_to_grid(
-                placed_max_y + (m["new_y"] - placed_max_y) * scale
-            )
-
-    # Final safety clamp: never let a parked Y exceed the page bounds.
-    # Snapping can push a scaled coord half a grid past the boundary.
-    y_max = page_h - margin
-    x_max = page_w - margin
-    for m in mutations:
-        m["new_x"] = min(m["new_x"], x_max)
-        m["new_y"] = min(m["new_y"], y_max)
-
-    return mutations, len(mutations)
 
 
 def _is_global_net(net_name: str, user_globals: list[str]) -> bool:
@@ -520,13 +553,45 @@ def _handle_route_wires_sch(op: Any, ir: Any, file_path: Path) -> dict[str, Any]
     wires_skipped = 0
 
     # For each pair of pins on different refs within max_wire_length_mm,
-    # emit a wire. This is a simple O(pins^2) sweep — fine for v1 fixture
-    # boards (the Wave 3 orchestrator will route per-subcircuit, bounded).
+    # emit a wire — but ONLY if they share a net. The original code emitted
+    # wires between ANY two nearby pins regardless of net membership, which
+    # created spurious wires between unrelated pins and a dense visual mesh.
+    # Phase 108 Task 2 fix: resolve each pin's net via the label/wire index
+    # and only wire pins that are actually connected.
+    #
+    # SchematicGraph stores _label_pos_index (pos -> Label) and
+    # _pin_pos_index (pos -> PinPosition). A pin is "on a net" if there's
+    # a label at its position (label-anchored net) or a wire endpoint
+    # touching it. We use the label index as the primary net signal since
+    # Phase 38 established labels as the primary connection mechanism.
+    def _pin_net(pin_pos) -> str | None:
+        # Check if a label sits at this pin's position → that label's name
+        # is the net. Rounded-position lookup matches the index built in
+        # SchematicGraph._build_pin_pos_index.
+        rounded = (round(pin_pos[0], 2), round(pin_pos[1], 2))
+        # Check a small neighborhood (round-trip tolerance).
+        for dx in (-0.01, 0.0, 0.01):
+            for dy in (-0.01, 0.0, 0.01):
+                key = (rounded[0] + dx, rounded[1] + dy)
+                label = sg._label_pos_index.get(key)
+                if label is not None:
+                    return label.name
+        return None
+
     all_pins = list(sg.pins)
     for i, p1 in enumerate(all_pins):
+        net1 = _pin_net(p1.position)
         for p2 in all_pins[i + 1:]:
             if p1.ref == p2.ref:
                 continue  # intra-component — no wire needed
+            # Only wire pins that share a net. If neither pin has a label
+            # at its position we can't confirm a net — skip (labels provide
+            # connectivity for those runs per Phase 38 finding).
+            if net1 is None:
+                continue
+            net2 = _pin_net(p2.position)
+            if net2 != net1:
+                continue  # different nets — never wire them together
             dx = p2.position[0] - p1.position[0]
             dy = p2.position[1] - p1.position[1]
             distance = (dx * dx + dy * dy) ** 0.5
@@ -801,6 +866,16 @@ def _handle_auto_layout_sch(op: Any, ir: Any, file_path: Path) -> dict[str, Any]
             "rotation_fixes": stats.rotation_fixes,
             "instances_added": stats.instances_added,
         }
+
+        # Clear legacy wires + labels BEFORE placement. Existing wires reference
+        # old pin positions that become invalid once we move components — leaving
+        # them in place produces visual chaos (wires going to empty space,
+        # labels stacked on top of new components). route_wires_sch and
+        # apply_labels_sch re-emit fresh ones at the new pin positions.
+        cleared = _clear_legacy_wires_and_labels(normalized if normalized != raw else raw)
+        if cleared != (normalized if normalized != raw else raw):
+            from kicad_agent.io.atomic_write import atomic_write
+            atomic_write(root_path_obj, cleared)
 
     child_op_models.extend([
         PlaceComponentsSchOp(
