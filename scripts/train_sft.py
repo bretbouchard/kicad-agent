@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""Supervised Fine-Tuning (SFT) of Qwen2.5-1.5B-Instruct on PCB reasoning chains.
+"""Supervised Fine-Tuning (SFT) of Gemma 4 12B-it on PCB reasoning chains.
 
-Uses LoRA (rank=16, alpha=32) for efficient fine-tuning on consumer hardware.
+Uses LoRA (rank=64, alpha=128) for efficient fine-tuning. The primary
+training path is mlx-vlm for vision LoRA (see train_kicad_vision.py and
+vast_train_kicad.py). This script handles text-only SFT for reasoning
+chain fine-tuning.
+
 Training runs on MPS (Apple Silicon) or CUDA.
 
 Data: training_output/sft_data/train.jsonl (ChatML format)
@@ -131,7 +135,7 @@ class JsonDataset(torch.utils.data.Dataset):
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="SFT training on PCB reasoning chains")
-    parser.add_argument("--model-name", default="Qwen/Qwen2.5-1.5B-Instruct")
+    parser.add_argument("--model-name", default="google/gemma-4-12b-it")
     parser.add_argument("--data-dir", type=Path, default=Path("training_output/sft_data"))
     parser.add_argument("--output-dir", type=Path, default=Path("training_output/sft"))
     parser.add_argument("--n-epochs", type=int, default=3)
