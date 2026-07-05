@@ -44,6 +44,12 @@ from kicad_agent.ops.handlers.schematic import register_schematic
 # -> autolayout.py -> executor.py). Tests that need to patch the constructor
 # patch `kicad_agent.ops.executor.OperationExecutor` at the source module.
 
+# Phase 108 Task 2 stash: orchestrator captures the pin→net map BEFORE
+# clearing wires + moving components, then route_wires_sch reads it back.
+# Pydantic op models don't accept arbitrary attrs cleanly, so this
+# module-global carries the map across the orchestrator→handler boundary.
+_PRE_ROUTE_PIN_NETS: dict[tuple[str, str], str] | None = None
+
 
 @register_schematic("place_components_sch")
 def _handle_place_components_sch(op: Any, ir: Any, file_path: Path) -> dict[str, Any]:
@@ -263,6 +269,54 @@ def _handle_place_components_sch(op: Any, ir: Any, file_path: Path) -> dict[str,
     }
 
 
+def _capture_pin_net_map(graph) -> dict[tuple[str, str], str]:
+    """Build a (ref, pin_number) → net_name map by BFS-walking wires to labels.
+
+    Phase 108 Task 2: this runs BEFORE the orchestrator clears wires + moves
+    components. The returned map is stashed as a module-global so
+    route_wires_sch can use it after placement without re-reading the
+    (now-mutated) wire graph.
+    """
+    adj: dict[tuple[float, float], set[tuple[float, float]]] = {}
+    for wire in graph.wires:
+        s = (round(wire.start[0], 2), round(wire.start[1], 2))
+        e = (round(wire.end[0], 2), round(wire.end[1], 2))
+        adj.setdefault(s, set()).add(e)
+        adj.setdefault(e, set()).add(s)
+
+    label_at: dict[tuple[float, float], str] = {}
+    for pos, label in graph._label_pos_index.items():
+        label_at[(round(pos[0], 2), round(pos[1], 2))] = label.name
+
+    def _bfs_label(start: tuple[float, float]) -> str | None:
+        seen = {start}
+        queue = [start]
+        while queue:
+            pos = queue.pop(0)
+            if pos in label_at:
+                return label_at[pos]
+            for neighbor in adj.get(pos, ()):
+                if neighbor not in seen:
+                    seen.add(neighbor)
+                    queue.append(neighbor)
+        return None
+
+    net_map: dict[tuple[str, str], str] = {}
+    for pin in graph.pins:
+        # Try BOTH the pin tip (position) and the pin body — wires connect
+        # to one or the other depending on the symbol (R/C bodies use the
+        # body position, ICs use the pin tip). Walking from either gets us
+        # into the wire adjacency graph.
+        tip = (round(pin.position[0], 2), round(pin.position[1], 2))
+        body = (round(pin.body_position[0], 2), round(pin.body_position[1], 2))
+        net = _bfs_label(tip)
+        if net is None:
+            net = _bfs_label(body)
+        if net is not None:
+            net_map[(pin.ref, pin.pin_number)] = net
+    return net_map
+
+
 def _scan_all_refs(raw_content: str) -> set[str]:
     """Scan every placed (symbol (lib_id ...)) block and return its Reference.
 
@@ -294,28 +348,27 @@ def _scan_all_refs(raw_content: str) -> set[str]:
     return all_refs
 
 
-def _clear_legacy_wires_and_labels(raw_content: str) -> str:
-    """Remove existing wires, labels, junctions, and no_connects from a schematic.
+def _clear_legacy_wires(raw_content: str) -> str:
+    """Remove existing wires, junctions, and no_connects from a schematic.
 
     Phase 108 Task 2: when auto_layout_sch moves components to new positions,
     existing wires (which reference old pin coordinates) become invalid —
-    they point to empty space or wrong pins. Existing labels are similarly
-    positioned at old pin body coordinates. Leaving them creates visual
+    they point to empty space or wrong pins. Leaving them produces visual
     chaos on the autolaid schematic.
 
-    The route_wires_sch and apply_labels_sch handlers re-emit fresh wires
-    and labels at the NEW pin positions, so connectivity is preserved
-    through net labels (Phase 38 finding: labels are the primary connection
-    mechanism in KiCad 10).
+    LABELS are deliberately preserved — they define the nets. Phase 38
+    finding: labels are the primary connection mechanism in KiCad 10. The
+    apply_labels_sch handler adds fresh labels at NEW pin body positions
+    alongside the originals.
 
     This strips:
       - ``(wire (pts (xy X1 Y1) (xy X2 Y2)) ...)`` blocks
-      - ``(label "..." ...)`` and ``(global_label "..." ...)`` blocks
       - ``(junction (at X Y) ...)`` blocks (wire junctions — meaningless
         once wires are removed)
       - ``(no_connect (at X Y) ...)`` blocks
 
-    Does NOT touch: symbols, lib_symbols, sheet blocks, title_block, paper.
+    Does NOT touch: symbols, lib_symbols, labels, global_labels, sheet
+    blocks, title_block, paper.
     Idempotent: re-running on a cleared schematic is a no-op.
     """
     import re
@@ -325,14 +378,10 @@ def _clear_legacy_wires_and_labels(raw_content: str) -> str:
         result = []
         pos = 0
         for m in re.finditer(opener_regex, content):
-            # Only strip if this is at the top level (preceded by whitespace
-            # at the start of a line, not nested inside another block).
-            # Heuristic: the line starts with optional whitespace then `(`.
             line_start = content.rfind('\n', 0, m.start()) + 1
             prefix = content[line_start:m.start()]
             if prefix.strip() != '':
                 continue  # not top-level — skip
-            # Walk to matching close paren.
             depth = 0
             i = m.start()
             while i < len(content):
@@ -341,7 +390,6 @@ def _clear_legacy_wires_and_labels(raw_content: str) -> str:
                 elif content[i] == ')':
                     depth -= 1
                     if depth == 0:
-                        # Include trailing newline if present
                         end = i + 1
                         if end < len(content) and content[end] == '\n':
                             end += 1
@@ -352,11 +400,7 @@ def _clear_legacy_wires_and_labels(raw_content: str) -> str:
         result.append(content[pos:])
         return ''.join(result)
 
-    # Strip in order. Each pass walks the output of the previous.
     content = _strip_top_level_blocks(raw_content, r'\(wire\s+\(pts\b')
-    content = _strip_top_level_blocks(content, r'\(label\s+')
-    content = _strip_top_level_blocks(content, r'\(global_label\s+')
-    content = _strip_top_level_blocks(content, r'\(hierarchical_label\s+')
     content = _strip_top_level_blocks(content, r'\(junction\s+\(at\b')
     content = _strip_top_level_blocks(content, r'\(no_connect\s+\(at\b')
     return content
@@ -556,40 +600,24 @@ def _handle_route_wires_sch(op: Any, ir: Any, file_path: Path) -> dict[str, Any]
     # emit a wire — but ONLY if they share a net. The original code emitted
     # wires between ANY two nearby pins regardless of net membership, which
     # created spurious wires between unrelated pins and a dense visual mesh.
-    # Phase 108 Task 2 fix: resolve each pin's net via the label/wire index
-    # and only wire pins that are actually connected.
-    #
-    # SchematicGraph stores _label_pos_index (pos -> Label) and
-    # _pin_pos_index (pos -> PinPosition). A pin is "on a net" if there's
-    # a label at its position (label-anchored net) or a wire endpoint
-    # touching it. We use the label index as the primary net signal since
-    # Phase 38 established labels as the primary connection mechanism.
-    def _pin_net(pin_pos) -> str | None:
-        # Check if a label sits at this pin's position → that label's name
-        # is the net. Rounded-position lookup matches the index built in
-        # SchematicGraph._build_pin_pos_index.
-        rounded = (round(pin_pos[0], 2), round(pin_pos[1], 2))
-        # Check a small neighborhood (round-trip tolerance).
-        for dx in (-0.01, 0.0, 0.01):
-            for dy in (-0.01, 0.0, 0.01):
-                key = (rounded[0] + dx, rounded[1] + dy)
-                label = sg._label_pos_index.get(key)
-                if label is not None:
-                    return label.name
-        return None
+    # Phase 108 Task 2 fix: use the pre-captured pin→net map (captured by
+    # the orchestrator BEFORE wires were cleared + components moved).
+    # Falling back to a fresh capture handles the standalone-call path
+    # (route_wires_sch called directly without the orchestrator).
+    if _PRE_ROUTE_PIN_NETS is not None:
+        pin_nets = _PRE_ROUTE_PIN_NETS
+    else:
+        pin_nets = _capture_pin_net_map(sg)
 
     all_pins = list(sg.pins)
     for i, p1 in enumerate(all_pins):
-        net1 = _pin_net(p1.position)
+        net1 = pin_nets.get((p1.ref, p1.pin_number))
+        if net1 is None:
+            continue  # pin has no net — skip
         for p2 in all_pins[i + 1:]:
             if p1.ref == p2.ref:
-                continue  # intra-component — no wire needed
-            # Only wire pins that share a net. If neither pin has a label
-            # at its position we can't confirm a net — skip (labels provide
-            # connectivity for those runs per Phase 38 finding).
-            if net1 is None:
                 continue
-            net2 = _pin_net(p2.position)
+            net2 = pin_nets.get((p2.ref, p2.pin_number))
             if net2 != net1:
                 continue  # different nets — never wire them together
             dx = p2.position[0] - p1.position[0]
@@ -676,7 +704,12 @@ def _handle_apply_labels_sch(op: Any, ir: Any, file_path: Path) -> dict[str, Any
     naming = suggest_net_names(str(root_path))
     suggestions = naming.get("suggestions", [])
 
-    # Build one label per suggested net name, placed at the first pin's body
+    # Build one label per suggested net name, placed at the pin body
+    # position of EACH pin on the net. Phase 108 Task 2 fix: the original
+    # code placed every label at pins[0].body_position, which stacked all
+    # labels on one connector when the net's first pin was J1.1. Now each
+    # label sits at the body of ITS first pin — so J1.7's GPIO6 label
+    # lands at J1.7's body, not J1.1's body.
     mutations: list[dict[str, Any]] = []
     labels_global = 0
     labels_local = 0
@@ -687,25 +720,28 @@ def _handle_apply_labels_sch(op: Any, ir: Any, file_path: Path) -> dict[str, Any
         pins = sugg.get("pins", [])
         if not pins:
             continue
-        # First pin's body_position (component body — not the wire endpoint)
+        # Use THIS net's first pin's WIRE-CONNECTION position (pin tip), not
+        # body position. Phase 108 Task 2 fix: body positions cluster around
+        # the component center — for a 40-pin connector, all 40 pin bodies
+        # land near the connector center, stacking 40 labels on top of each
+        # other. The pin tip (position) spreads along the connector edge,
+        # so each label sits next to its own pin.
         first_pin = pins[0]
         pin_pos = pin_lookup.get(
             (first_pin.get("ref", ""), first_pin.get("pin_number", ""))
         )
         if pin_pos is None:
             continue
-        body_x, body_y = pin_pos.body_position
-        # Task 2 fix: clamp to page bounds so corrupt pin positions on
-        # pre-corrupted fixtures don't carry labels off-page or stack them
-        # on top of legitimate components.
-        body_x = min(max(body_x, x_min), x_max)
-        body_y = min(max(body_y, y_min), y_max)
+        tip_x, tip_y = pin_pos.position
+        # Clamp to page bounds.
+        tip_x = min(max(tip_x, x_min), x_max)
+        tip_y = min(max(tip_y, y_min), y_max)
         is_global = _is_global_net(net_name, op.global_labels)
         mutations.append({
             "op": "insert_label",
             "net_name": net_name,
-            "x": body_x,
-            "y": body_y,
+            "x": tip_x,
+            "y": tip_y,
             "size": op.label_size_mm,
             "is_global": is_global,
             "uuid": str(uuid_module.uuid4()),
@@ -809,6 +845,16 @@ def _handle_auto_layout_sch(op: Any, ir: Any, file_path: Path) -> dict[str, Any]
     detector = SubcircuitDetector()
     subcircuits = detector.detect(topology)
 
+    # 1.5 Capture the pin→net map BEFORE any placement mutation. Phase 108
+    # Task 2 fix: the orchestrator clears legacy wires + labels may move
+    # during placement. Capturing the net structure upfront lets
+    # route_wires_sch correctly wire components that share a net even when
+    # the original wires/labels no longer match the post-placement pin
+    # coordinates. Stashed as module-global because Pydantic op models
+    # don't accept arbitrary attrs cleanly.
+    global _PRE_ROUTE_PIN_NETS
+    _PRE_ROUTE_PIN_NETS = _capture_pin_net_map(sg)
+
     if op.subcircuit_split:
         splitter = HierarchicalSheetSplitter()
         split_result = splitter.split(subcircuits, str(root_path))
@@ -867,12 +913,14 @@ def _handle_auto_layout_sch(op: Any, ir: Any, file_path: Path) -> dict[str, Any]
             "instances_added": stats.instances_added,
         }
 
-        # Clear legacy wires + labels BEFORE placement. Existing wires reference
-        # old pin positions that become invalid once we move components — leaving
-        # them in place produces visual chaos (wires going to empty space,
-        # labels stacked on top of new components). route_wires_sch and
-        # apply_labels_sch re-emit fresh ones at the new pin positions.
-        cleared = _clear_legacy_wires_and_labels(normalized if normalized != raw else raw)
+        # Clear legacy wires BEFORE placement. Existing wires reference old pin
+        # positions that become invalid once we move components — leaving them
+        # produces visual chaos (wires going to empty space). Labels stay
+        # because they define the nets (Phase 38: labels are the primary
+        # connection mechanism in KiCad 10). route_wires_sch re-emits fresh
+        # wires at the new pin positions; apply_labels_sch adds new labels at
+        # new pin body positions (the originals remain as global net anchors).
+        cleared = _clear_legacy_wires(normalized if normalized != raw else raw)
         if cleared != (normalized if normalized != raw else raw):
             from kicad_agent.io.atomic_write import atomic_write
             atomic_write(root_path_obj, cleared)
