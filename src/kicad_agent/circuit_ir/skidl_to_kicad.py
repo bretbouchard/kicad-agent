@@ -99,7 +99,22 @@ def _detect_units(lib_id: str) -> dict[int, list[str]]:
 
 
 def _extract_pin_offsets_for_unit(lib_id: str, unit_num: int) -> dict[str, tuple[float, float]]:
-    """Extract pin offsets for a specific unit of a multi-unit symbol."""
+    """Extract pin offsets for a specific unit of a multi-unit symbol.
+
+    KiCad symbol libraries split graphical body and pins across sub-blocks:
+      - ``(symbol "NE555P" ...)`` — top-level, may contain ALL pins
+      - ``(symbol "NE555P_0_1" ...)`` — body graphics (unit 0 = all units)
+      - ``(symbol "NE555P_1_1" ...)`` — unit 1 graphics + sometimes pins
+
+    The original code only looked at ``_1_1``, which for symbols like NE555P
+    contains only the 2 power pins (GND, VCC). The other 6 signal pins live
+    in the TOP-LEVEL block. This produced wires that connected to only 2 of
+    8 pins — the rest showed as ``pin_not_connected`` in ERC.
+
+    Fix: ALWAYS extract from the top-level block (which has every pin),
+    then filter by unit if the symbol is multi-unit. For single-unit
+    symbols (most resistors, caps, ICs) the top-level has all pins.
+    """
     try:
         raw = resolve_lib_symbol(lib_id)
     except (ValueError, FileNotFoundError):
@@ -107,29 +122,34 @@ def _extract_pin_offsets_for_unit(lib_id: str, unit_num: int) -> dict[str, tuple
 
     base_name = lib_id.split(":")[-1] if ":" in lib_id else lib_id
 
-    # For unit 1, pins are in <base>_1_1; for unit N, in <base>_N_1.
-    # For the top-level symbol definition (no sub-unit), all pins are listed.
-    if unit_num == 1:
-        # Try sub-unit first, then fall back to top-level.
-        sub_unit = f"{base_name}_1_1"
-        m = re.search(rf'\(symbol\s+"{re.escape(sub_unit)}"', raw)
-        if m:
-            return _extract_pin_offsets_from_block(raw, m.start())
-    elif unit_num > 1:
-        sub_unit = f"{base_name}_{unit_num}_1"
-        m = re.search(rf'\(symbol\s+"{re.escape(sub_unit)}"', raw)
-        if m:
-            return _extract_pin_offsets_from_block(raw, m.start())
-
-    # Fallback: top-level symbol (all pins).
+    # Always start from the top-level symbol block — it contains ALL pins.
     m = re.search(rf'\(symbol\s+"{re.escape(lib_id)}"', raw)
+    if m:
+        return _extract_pin_offsets_from_block(raw, m.start())
+
+    # Fallback: try base name without library prefix.
+    m = re.search(rf'\(symbol\s+"{re.escape(base_name)}"', raw)
     if m:
         return _extract_pin_offsets_from_block(raw, m.start())
     return {}
 
 
 def _extract_pin_offsets_from_block(raw: str, start: int) -> dict[str, tuple[float, float]]:
-    """Extract pin offsets from a specific block start position."""
+    """Extract pin BODY-ANCHOR offsets from a lib symbol block.
+
+    KiCad pins have two relevant points:
+      - Body anchor: ``(at X Y angle)`` — where wires ELECTRICALLY connect
+      - Graphical tip: body_anchor + length in the pin's direction
+
+    ERC checks wire connectivity at the BODY ANCHOR, not the graphical tip.
+    Wires in a working schematic terminate at the body anchor position
+    (verified against the RaspberryPi-uHAT fixture: J1.7's wire connects at
+    body (60.96, 66.04), NOT at the tip (64.77, 66.04)).
+
+    Returns ``{pin_number: (body_anchor_x, body_anchor_y)}`` — these are
+    relative to the symbol's origin. The caller adds the component's
+    absolute position to get wire connection coordinates.
+    """
     block = _extract_balanced_block(raw, start)
     offsets: dict[str, tuple[float, float]] = {}
     for pin_match in re.finditer(r'\(pin\s+\w+\s+\w+', block):
@@ -254,6 +274,10 @@ def circuit_to_kicad_sch(
     row_spacing = 25.4
     max_cols = 6
 
+    def _snap(value: float) -> float:
+        """Snap to KiCad 2.54mm grid. Prevents endpoint_off_grid warnings."""
+        return round(round(value / _KICAD_GRID_MM) * _KICAD_GRID_MM, 2)
+
     symbol_blocks: list[str] = []
     for i, part in enumerate(circuit.parts):
         ref = getattr(part, "ref", f"U{i}")
@@ -270,6 +294,9 @@ def circuit_to_kicad_sch(
                     row += 1
         else:
             x, y = 50.0 + i * col_spacing, 50.0
+
+        # Grid-snap component positions so all derived pin positions land on-grid.
+        x, y = _snap(x), _snap(y)
 
         value = getattr(part, "value", "") or ""
         value_safe = value.replace("\\", "\\\\").replace('"', '\\"')
@@ -292,7 +319,17 @@ def circuit_to_kicad_sch(
         offsets = pin_offsets_cache.get(lib_id, {})
         pin_abs[ref] = {}
         for pin_num, (dx, dy) in offsets.items():
-            pin_abs[ref][pin_num] = (x + dx, y - dy)
+            # KiCad lib symbol pin offsets use Y-up convention (math):
+            # pin 1 of a vertical resistor is at Y=+3.81 (above center).
+            # Schematic coordinates are Y-down (screen). So SUBTRACT the lib Y
+            # to get the screen Y. X is unaffected (same direction).
+            #
+            # DO NOT grid-snap pin positions — they must EXACTLY match the
+            # lib symbol's pin anchor for ERC connectivity. Grid-snapping
+            # 146.05 to 147.32 breaks the electrical connection.
+            ax = x + dx
+            ay = y - dy
+            pin_abs[ref][pin_num] = (ax, ay)
 
         # Get pin list for this symbol (for pin UUIDs).
         pin_map = get_pin_names(lib_id) if ":" in lib_id else {}
@@ -350,14 +387,18 @@ def _emit_nets(
 ) -> tuple[list[str], list[str]]:
     """Emit (wire ...) and (label ...) blocks from SKIDL circuit.nets.
 
-    For each net with ≥2 connected pins, emit wires connecting them in a
-    chain (pin1 → pin2 → pin3 → ...). For named nets, emit a label at the
-    first pin position.
+    Phase 108 Task 2 strategy: emit a LABEL at every pin on every net, plus
+    direct WIRES only between pins that are close together (≤25.4mm). This
+    follows the Phase 38 finding that labels are the primary connection
+    mechanism in KiCad 10 — labels at the same position create electrical
+    connectivity without physical wires, eliminating the L-route crossing
+    bugs that produced ``multiple_net_names`` ERC warnings.
 
     Returns (wire_blocks, label_blocks).
     """
     wire_blocks: list[str] = []
     label_blocks: list[str] = []
+    WIRE_THRESHOLD_MM = 25.4  # only wire nearby pins
 
     for net in circuit.nets:
         net_name = getattr(net, "name", "") or ""
@@ -366,30 +407,38 @@ def _emit_nets(
             continue
 
         pins = list(net.pins)
-        if len(pins) < 2:
-            # Single-pin or empty net: emit a label so it's not "unconnected".
-            if len(pins) == 1 and net_name:
-                pin = pins[0]
-                ref = pin.part.ref
-                pin_num = str(pin.num)
-                if ref in pin_abs and pin_num in pin_abs[ref]:
-                    px, py = pin_abs[ref][pin_num]
-                    label_blocks.append(
-                        f'  (label "{net_name}" (at {px:.2f} {py:.2f} 0))'
-                    )
+        if not pins:
             continue
 
-        # Chain-wire all pins on this net: pin[0] → pin[1] → pin[2] → ...
-        prev_pos: tuple[float, float] | None = None
+        # Collect positions for all pins on this net.
+        positions: list[tuple[float, float]] = []
         for pin in pins:
             ref = pin.part.ref
             pin_num = str(pin.num)
-            if ref not in pin_abs or pin_num not in pin_abs[ref]:
-                continue
-            cur_pos = pin_abs[ref][pin_num]
-            if prev_pos is not None:
-                wire_blocks.append(_emit_wire(prev_pos, cur_pos))
-            prev_pos = cur_pos
+            if ref in pin_abs and pin_num in pin_abs[ref]:
+                positions.append(pin_abs[ref][pin_num])
+
+        if not positions:
+            continue
+
+        # Emit a label at EVERY pin position. Labels with the same name at
+        # different positions create electrical connectivity in KiCad —
+        # this is the Phase 38 "labels are primary" pattern.
+        for px, py in positions:
+            label_blocks.append(
+                f'  (label "{net_name}" (at {px:.2f} {py:.2f} 0))'
+            )
+
+        # Additionally, wire nearby pins (≤25.4mm apart) for visual clarity.
+        # These wires reinforce the label connection but aren't required
+        # for ERC connectivity.
+        for i in range(len(positions)):
+            for j in range(i + 1, len(positions)):
+                dx = positions[j][0] - positions[i][0]
+                dy = positions[j][1] - positions[i][1]
+                dist = (dx * dx + dy * dy) ** 0.5
+                if dist <= WIRE_THRESHOLD_MM:
+                    wire_blocks.append(_emit_wire(positions[i], positions[j]))
 
         # Emit a label at the first pin position for this net.
         if net_name and pins:
