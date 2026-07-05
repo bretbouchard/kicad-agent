@@ -704,12 +704,13 @@ def _handle_apply_labels_sch(op: Any, ir: Any, file_path: Path) -> dict[str, Any
     naming = suggest_net_names(str(root_path))
     suggestions = naming.get("suggestions", [])
 
-    # Build one label per suggested net name, placed at the pin body
-    # position of EACH pin on the net. Phase 108 Task 2 fix: the original
-    # code placed every label at pins[0].body_position, which stacked all
-    # labels on one connector when the net's first pin was J1.1. Now each
-    # label sits at the body of ITS first pin — so J1.7's GPIO6 label
-    # lands at J1.7's body, not J1.1's body.
+    # Phase 108 Task 2 fix: only emit labels for REAL nets — nets with 2+
+    # connected pins. The net_namer generates a "J1_Pin_N" suggestion for
+    # every single pin even when it has no connection; emitting those as
+    # labels clutters the page with hundreds of meaningless labels (the
+    # Arduino_Mega fixture has 86 such suggestions for its 129 unconnected
+    # resistors). A net with 0 or 1 pin isn't a connection — it's just a
+    # pin sitting alone. Skip it.
     mutations: list[dict[str, Any]] = []
     labels_global = 0
     labels_local = 0
@@ -718,8 +719,8 @@ def _handle_apply_labels_sch(op: Any, ir: Any, file_path: Path) -> dict[str, Any
         if not net_name:
             continue
         pins = sugg.get("pins", [])
-        if not pins:
-            continue
+        if len(pins) < 2:
+            continue  # not a real net — single-pin or no-pin "net"
         # Use THIS net's first pin's WIRE-CONNECTION position (pin tip), not
         # body position. Phase 108 Task 2 fix: body positions cluster around
         # the component center — for a 40-pin connector, all 40 pin bodies
