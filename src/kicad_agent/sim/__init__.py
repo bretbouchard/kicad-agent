@@ -7,6 +7,7 @@ from kicad_agent.sim.eurorack import build_preamp_circuit, circuit_to_spice_netl
 from kicad_agent.sim.dataframe import to_dataframe, study_to_dataframe
 from kicad_agent.sim.bom import circuit_to_bom_markdown
 from kicad_agent.sim.plot import plot_bode
+from kicad_agent.sim.optimizer import objective, optimize_preamp
 
 __all__ = [
     "build_preamp_circuit",
@@ -15,4 +16,6 @@ __all__ = [
     "study_to_dataframe",
     "circuit_to_bom_markdown",
     "plot_bode",
+    "objective",
+    "optimize_preamp",
 ]
