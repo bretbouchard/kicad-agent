@@ -171,3 +171,25 @@ class TestDegradation:
         deg = compute_degradation(pre, post)
         assert deg.gain_delta_db == -3.0
         assert deg.sim_score < 1.0
+
+
+class Test2N3904Model:
+    """Phase 204: 2N3904 Gummel-Poon model in registry."""
+
+    def test_2n3904_model_present(self) -> None:
+        model = get_model("2N3904")
+        assert model is not None
+        assert ".MODEL 2N3904 NPN" in model
+
+    def test_2n3904_case_insensitive(self) -> None:
+        assert get_model("2n3904") is not None
+        assert get_model("Q_NPN_2N3904") is not None  # skidl ref like Q1[2N3904]
+
+    def test_2n3904_is_simulatable(self) -> None:
+        assert is_simulatable("2N3904") is True
+
+    def test_2n3904_gummel_poon_params(self) -> None:
+        model = get_model("2N3904")
+        assert model is not None
+        for param in ["Is=", "Bf=", "Vaf=", "Cjc=", "Cje=", "Tf=", "Tr="]:
+            assert param in model, f"Missing Gummel-Poon param {param}"
