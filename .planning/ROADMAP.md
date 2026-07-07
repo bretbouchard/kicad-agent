@@ -25,9 +25,9 @@
 - [ ] **Phase 177: CloudKit Sync** — Automatic Mac↔iPhone sync, LWW conflict resolution with prompts
 - [ ] **Phase 178: Time-Travel Engine** — Event replay, snapshot materialization, diff visualization
 - [ ] **Phase 179: Decision Timeline UI** — Visual timeline with chapter segmentation, filters
-- [ ] **Phase 180: Event Sourcing** — Complete append-only journal, query performance optimization
+- [ ] **Phase 180: Event Sourcing** — Complete append-only journal, query optimization, event compaction
 - [ ] **Phase 181: SKIDL Compiler** — Conversation state → SKIDL IR (depends on v5.0 Track F)
-- [ ] **Phase 182: KiCad Generator** — SKIDL → .kicad_sch/.kicad_pcb files with validation
+- [ ] **Phase 182: KiCad Generator** — SKIDL → .kicad_sch/.kicad_pcb files with validation gates
 - [ ] **Phase 183: Generative Pipeline** — Full transform orchestration with caching and hash verification
 - [ ] **Phase 184: Hash Gold Master Tests** — Deterministic generation verification, 10-run tests
 - [ ] **Phase 185: Generative Correctness** — SPICE validation, ERC/DRC enforcement, escalation on failure
@@ -257,7 +257,10 @@
 4. Keyboard navigation works for all UI flows (tab, space, enter)
 5. Reduce Motion and Reduce Transparency preferences respected
 
-**Plans:** TBD
+**Plans:** 1 plan
+
+**Plan List:**
+- [ ] 171-01-PLAN.md — Build Liquid Glass UI Shell (toolbar, window management, visual language tokens, 4-variant snapshot tests)
 
 **UI hint:** yes
 
@@ -278,7 +281,10 @@
 4. Each pipeline step shows status icon (pending/running/verified/failed) and duration
 5. Failed steps show error context and retry option
 
-**Plans:** TBD
+**Plans:** 1 plan
+
+**Plan List:**
+- [ ] 172-01-PLAN.md — Build Inline Rendering (SVG schematic preview, PNG PCB renders, live pipeline step bar with progress events, failure recovery UI, 4-variant snapshot tests)
 
 **UI hint:** yes
 
@@ -299,7 +305,10 @@
 4. User can tap any roadmap phase to see detail (goal, requirements, success criteria)
 5. User can edit a previous message and re-submit (forks conversation)
 
-**Plans:** TBD
+**Plans:** 1 plan
+
+**Plan List:**
+- [ ] 173-01-PLAN.md — Build GSD Conversation Engine (5-phase UI: questioning, spec, roadmap, execute, verify; LLM-driven spec/roadmap generation; conversation forking; 4-variant snapshot tests)
 
 **UI hint:** yes
 
@@ -320,7 +329,10 @@
 4. Obdurate Runtime verification failures surfaced as user decisions
 5. Completion summary card shows renders, exports, decisions made when phase ships
 
-**Plans:** TBD
+**Plans:** 1 plan
+
+**Plan List:**
+- [ ] 174-01-PLAN.md — Build Approval Gates UI (approve/reject/show-me actions, gate detail drill-down with full context, Obdurate Runtime integration, completion summary card, 4-variant snapshot tests)
 
 **UI hint:** yes
 
@@ -341,7 +353,10 @@
 4. User can attach images (reference schematics, photos) to messages
 5. User sees cost estimate and model badge per assistant message
 
-**Plans:** TBD
+**Plans:** 1 plan
+
+**Plan List:**
+- [ ] 175-01-PLAN.md — Build Chat Interface (message streaming, image attachments, conversation list with search, cost tracking, inline artifact rendering, 4-variant snapshot tests)
 
 **UI hint:** yes
 
@@ -448,7 +463,7 @@
 
 ### Phase 181: SKIDL Compiler
 
-**Goal:** Conversation state → SKIDL IR (depends on v5.0 SKIDL work landing)
+**Goal:** Conversation state → SKIDL IR (depends on v5.0 Track F)
 
 **Depends on:** Phase 180, v5.0 Track F completion (BLOCKED until v5.0 lands)
 
@@ -893,11 +908,11 @@
 | 168. Python MCP Server | 0/3 | Not started | - |
 | 169. Obdurate Runtime | 0/4 | Not started | - |
 | 170. Verification Loop Integration | 0/3 | Not started | - |
-| 171. Liquid Glass UI Shell | 0/3 | Not started | - |
-| 172. Inline Rendering | 0/3 | Not started | - |
-| 173. GSD Conversation Engine | 0/4 | Not started | - |
-| 174. Approval Gates UI | 0/3 | Not started | - |
-| 175. Chat Interface | 0/4 | Not started | - |
+| 171. Liquid Glass UI Shell | 1/1 | **Planned** | - |
+| 172. Inline Rendering | 1/1 | **Planned** | - |
+| 173. GSD Conversation Engine | 1/1 | **Planned** | - |
+| 174. Approval Gates UI | 1/1 | **Planned** | - |
+| 175. Chat Interface | 1/1 | **Planned** | - |
 | 176. SwiftData Models | 0/3 | Not started | - |
 | 177. CloudKit Sync | 0/3 | Not started | - |
 | 178. Time-Travel Engine | 0/4 | Not started | - |
@@ -926,7 +941,7 @@
 | 201. A11y by Default | 0/3 | Not started | - |
 | 202. iPhone Companion | 0/4 | Not started | - |
 
-**Total:** 42 phases, 132 requirements mapped, 100% coverage
+**Total:** 42 phases, 132 requirements mapped, 100% coverage, **5 plans written for phases 171-175**
 
 ---
 
@@ -939,7 +954,7 @@
 **Track E: Memory (Phases 176-180)** — SwiftData models, CloudKit sync, Time-Travel, Decision Timeline, Event Sourcing
 **Track F: Generative (Phases 181-185)** — SKIDL compiler, KiCad generator, Generative Pipeline, Hash Gold Master Tests, Generative Correctness
 **Track G: Collaboration (Phases 186-190)** — Project Genealogy, Group Activities, CKShare invitations, Collaboration UI, iCloud Drive Bundle
-**Track H: Quality (Phases 191-202)** — swift-testing, Snapshot tests, Property-based tests, Mutation testing, A11y, UI Automation, Performance, Concurrency, Python daemon tests, CI gates, iPhone Companion
+**Track H: Quality (Phases 191-202)** — swift-testing, Snapshot tests, Property-based tests, Mutation tests, A11y, UI Automation, Performance, Concurrency, Python daemon tests, CI gates, iPhone Companion
 
 **Critical Path:** A → B → C → D → E → F → G (Quality H runs in parallel)
 
@@ -965,6 +980,10 @@
 - Phase 169 depends on Phase 168 (Obdurate needs MCP server)
 - Phase 170 depends on Phase 169 (Verification needs Obdurate)
 - Phase 173 depends on Phase 170 (GSD needs verification gates)
+- Phase 171 depends on Phase 161 (UI shell needs app foundation)
+- Phase 172 depends on Phase 163 (inline rendering needs kicad-cli)
+- Phase 174 depends on Phase 173 (gates need GSD engine)
+- Phase 175 depends on Phase 171 (chat needs UI shell)
 - Phase 176 depends on Phase 171 (SwiftData needs UI shell)
 - Phase 177 depends on Phase 176 (CloudKit needs models)
 - Phase 178 depends on Phase 177 (Time-travel needs CloudKit)
@@ -982,4 +1001,4 @@
 
 ---
 
-**Last updated:** 2026-07-07 — v6.0 roadmap defined, 42 phases, 132 requirements mapped, 100% coverage
+**Last updated:** 2026-07-07 — v6.0 roadmap updated, phases 171-175 planned with 5 plans total
