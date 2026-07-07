@@ -122,16 +122,18 @@ Complete routing stack production-ready:
 | Thread-safe singleton for KnowledgeManager | InferenceWrapper uses ThreadPoolExecutor; concurrent access requires locking | Valid |
 
 
-## Current Milestone: v5.0 Skidl-Native Design Pipeline
+## Previous Milestone: v5.0 Skidl-Native Design Pipeline (Absorbed into v6.0)
 
 **Goal:** Build a bidirectional KiCad↔SKIDL bridge, floor planner, SPICE simulation pipeline, and AI training data generator. Enables: natural language → circuit → simulation → floor plan → PCB → routing → manufacturing.
 
-**What this adds:**
-- SKIDL converter (read any .kicad_sch → Python code, and back)
-- Floor planning (placement spec → zoned PCB, not blind placement)
-- SPICE validation (ngspice simulation as circuit quality gate)
-- Training data generation (SKIDL + NL pairs from 71K repos)
-- Natural-language circuit generation (LLM → SKIDL → KiCad)
+**Status (2026-07-07):** Roadmap defined (Phases 156-160), but unshipped. Absorbed into v6.0 as inputs to the generative transform pipeline. SKIDL becomes the canonical IR consumed by the v6.0 Mac app's conversation-coupled generative layer. SKIDL/SPICE/training work continues but as part of v6.0's Track F (Generative).
+
+**What this adds (now feeds v6.0):**
+- SKIDL converter (read any .kicad_sch → Python code, and back) — consumed by v6.0 generative pipeline
+- Floor planning (placement spec → zoned PCB, not blind placement) — inputs to v6.0 PCB generation
+- SPICE validation (ngspice simulation as circuit quality gate) — quality gate in v6.0 verification loop
+- Training data generation (SKIDL + NL pairs from 71K repos) — fine-tunes for v6.0 MLXProvider
+- Natural-language circuit generation (LLM → SKIDL → KiCad) — v6.0 GSD Conversation Engine consumes this
 
 **Target phases:** 156-160 (continues from analog-ecosystem numbering for cross-repo clarity)
 
@@ -146,6 +148,53 @@ Complete routing stack production-ready:
 - Phases 108-111 (autolayout + conventions) provide the schematic generation foundation
 - Analog-ecosystem boards (mono blade, base board, ADSR, etc.) are the proving ground
 - jlcparts database (5GB) provides manufacturing-ready part numbers
+
+## Current Milestone: v6.0 KiCad Agent — The Closed Box
+
+**Goal:** Ship a native Mac+iPhone app that delivers closed-box conversational hardware design — user types intent, app does the rest, with generative schematics/PCBs coupled to conversation state, event-sourced memory with project genealogy, Apple-native real-time collaboration, zero infrastructure, and militant 100% test coverage.
+
+**What this adds (8 tracks, 42 phases, ~25-26 weeks):**
+
+- **Track A — Foundation:** macOS 26+ SwiftUI app shell (Liquid Glass), bundled Python daemon (PyInstaller subprocess), bundled kicad-cli + minimal libs
+- **Track B — Models:** `KiCadModelProvider` protocol wrapping Swift AI SDK + FoundationModels + MLX-Swift. BYOK with Keychain storage. Provider router (task-aware, cost-aware, privacy-aware). HF Hub model downloads (zero dev infra).
+- **Track C — Governance:** stdio MCP daemon (no HTTP by default), Python daemon exposes 142+ ops as MCP tools, Obdurate Runtime wraps executor (state machine, op journal, verification gates, escalation ladder, four-state resolution).
+- **Track D — UI Surfaces:** inline schematic (SVG) / PCB (PNG) rendering, live pipeline view, GSD Conversation Engine (questioning → spec → roadmap → execute → verify, all visual), approval gates UI.
+- **Track E — Memory:** SwiftData + CloudKit (auto-sync Mac↔iPhone), event-sourced decisions/values, Decision Timeline UI, time-travel (snapshot any point, scrub, diff, restore), run-on conversations with chapter segmentation.
+- **Track F — Generative:** Conversation state IS source of truth. `.kicad_sch` and `.kicad_pcb` are derived artifacts (regenerable from journal). Hash-based gold master tests on generation. Couples v5.0 SKIDL/SPICE/training work into runtime.
+- **Track G — Collaboration:** Project genealogy (family tree, branches, false starts, snapshots), `.kicadagent` iCloud Drive bundle, CKShare for collaborator invitations, Group Activities v1 (live sessions, 4-participant cap).
+- **Track H — Quality:** swift-testing framework, SwiftCheck property-based testing, 4-variant snapshot tests per view (light/dark/XXXL/high-contrast), mull-xcode mutation testing (>90% score), a11y by default (SwiftLint custom rules), 100% line+branch coverage enforced in CI gate, gold master on generative outputs.
+
+**Key decisions (locked 2026-07-07):**
+- **macOS 26+ required** (FoundationModels dependency, clean break)
+- **Daemon: app-spawned subprocess** (not LaunchAgent)
+- **stdio MCP** for in-app daemon (no HTTP by default); HTTP MCP opt-in for external clients (Claude Code, Cursor)
+- **MLX-Swift direct** (in-process, Metal-accelerated, no mlx-server)
+- **Bundle FoundationModels default** (free, built-in); HF Hub for power-user fine-tunes (zero infra)
+- **iCloud Keychain sync: on by default** (opt-out); device-local fallback always available
+- **External HTTP MCP: off by default** (opt-in)
+- **Files: iCloud Drive** (`.kicadagent` bundle document type)
+- **Default collaborator permission: view** (user explicitly upgrades)
+- **Conflict resolution: LWW with prompts** for value changes
+- **Forked projects: include full conversation history**
+- **Group Activities: v1, 4-participant cap** (raise later if needed)
+- **Snapshots: hybrid** (auto on decisions, manual anytime)
+- **Pure BYOK** — no proxy, no developer AI bill liability
+- **Generative source of truth** — conversation state IS source, KiCad files are derived (compiler model: source vs binary)
+- **Militant testing** — swift-testing, 100% line+branch, 4 snapshot variants, hash gold master, mutation >90%, pytest+100%+mutation on Python daemon
+- **Mac+iPhone SLC v1** — Windows/web deferred to v7+
+
+**Target phases:** 161-202 (continues from v5.0 phase 160)
+
+**Critical path:** Foundation (A) → Models (B) → Governance (C) → UI Surfaces (D) → Memory (E) → Generative (F) → Collaboration (G). Quality (H) runs parallel from phase 0.
+
+**Biggest risks:** Track E (event-sourced memory + time-travel) and Track F (generative transform correctness). Both are differentiators — if they fail, the app is just another chat UI.
+
+**Dependencies:**
+- Existing kicad-agent Python library (142 ops) — bundled as daemon
+- Existing Obdurate Runtime design (extending `routing/audit.py` app-wide)
+- v5.0 SKIDL/SPICE/training work — feeds Track F generative pipeline
+- Existing routing stack (Phases 98-101) — exposed via MCP tools
+- Apple ecosystem: FoundationModels, CloudKit, CKShare, Group Activities, iCloud Drive, MLX-Swift, Swift AI SDK
 
 ## Evolution
 
@@ -165,4 +214,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-26 — v2.2 Complete-Ops milestone shipped. Routing stack production-ready (Phases 98/99/100/101).*
+*Last updated: 2026-07-07 — v6.0 KiCad Agent — The Closed Box milestone started. v5.0 Skidl-Native absorbed as Track F inputs.*

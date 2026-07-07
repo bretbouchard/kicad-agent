@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.0
-milestone_name: Skidl-Native Design Pipeline
-status: Ready to plan
-stopped_at: Milestone v5.0 Skidl-Native Design Pipeline roadmap created (Phases 156-160); awaiting /gsd-discuss-phase 156 (SKIDL Converter)
-last_updated: "2026-07-04T01:15:00.000Z"
-last_activity: 2026-07-04
+milestone: v6.0
+milestone_name: KiCad Agent — The Closed Box
+status: Defining requirements
+stopped_at: Milestone v6.0 KiCad Agent — The Closed Box started; spawning researchers for Stack/Features/Architecture/Pitfalls
+last_updated: "2026-07-07T00:00:00.000Z"
+last_activity: 2026-07-07
 progress:
   total_phases: 137
   completed_phases: 54
@@ -18,18 +18,28 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-01)
+See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Milestone v5.0 Skidl-Native Design Pipeline — roadmap planned (Phases 156-160), ready to plan Phase 156
-Last activity: 2026-07-04
+**Current focus:** v6.0 milestone kickoff — Native Mac+iPhone app "The Closed Box". Spawning parallel researchers before requirements definition.
+Last activity: 2026-07-07
 
 ## Current Position
 
-Phase: 156 (SKIDL Converter) — not started (roadmap defined)
+Phase: Not started (defining requirements for v6.0)
 Plan: —
-Status: Roadmap defined; ready to plan Phase 156
-Last activity: 2026-07-04 — Milestone v5.0 Skidl-Native Design Pipeline roadmap created (Phases 156-160)
+Status: Milestone v6.0 (KiCad Agent — The Closed Box) started. v5.0 Skidl-Native (Phases 156-160, unshipped) absorbed as Track F inputs. Researchers spawning for Stack, Features, Architecture, Pitfalls. Requirements next.
+Last activity: 2026-07-07 — Milestone v6.0 started, summary confirmed by user
+
+## Backlog (next milestone)
+
+Phase 108 (Deterministic Autolayout Engine) — Plan 04 Task 2 still IN REVIEW on branch `phase-108-task2-on-page-guarantee`. Iteration-2 PDFs rendered, awaiting human approval. Geometric gate passes (off_page=0, max_stack≤1, 154/154 tests). Will continue post-v6.0 setup or be resumed in parallel.
+
+Phases 156-160 (v5.0 Skidl-Native) — Absorbed into v6.0 Track F (Generative). Work continues as part of Mac app's generative pipeline rather than standalone library milestone.
+
+## Backlog (next milestone)
+
+Phase 156 (SKIDL Converter) — not started (roadmap defined). Deferred until Phase 108 Task 2 approved + Council Gate 2 passes.
 
 ## Previous Milestone (v3.0 Full-Stack EDA)
 
@@ -138,6 +148,10 @@ Recent decisions affecting current work:
 - [Phase 101-03]: place_no_connects_from_erc pin-type lookup uses _lookup_pin_type_with_tolerance helper (per-axis abs() within SNAP_TOLERANCE=0.01mm) replacing exact round(x, 2) dict keys. Removed dead pos_to_type dict. Default "passive" preserved for backward compat.
 - [Phase 101-02]: update_symbols_from_library crash fixed via sym.entryName (not sym.name) at 2 sites — repair_components.py:152 (op's lookup) + symbol_mismatch.py:141 (Rule 1: sibling bug in _get_library_pin_signature on same code path, called by op at line 79 before its own lookup)
 - [Phase 101-01]: erc_auto_fix + erc_auto_fix_hierarchical DEPRECATED via OpMeta field + runtime warning (not removed) — prevents ongoing KiCad 10 data-loss while raw S-expr rewrite is deferred
+- [Phase 159, 2026-07-05]: SchGen→SKIDL conversion COMPLETED — pulled MS SchGen dataset (8,420 examples), AST-converted to SKIDL SFT pairs at /Volumes/Storage/schgen/converted/schgen_skidl_sft_filtered.jsonl (8,396 after filtering 24 empties). Critical insight: union-find on (sym,pin) not sym alone.
+- [Phase 159, 2026-07-05]: Architecture PIVOT — original "two adapters (Qwen text + Gemma vision)" plan replaced with ONE Gemma 4 12B multimodal adapter trained on NL→SKIDL text + schematic/PCB images via instruction-tuning. User directive: "it should know them all".
+- [Phase 159, 2026-07-05]: L1 vs L2 mode correction — PLAN.md said "L2 is the training representation" but L2 emits nets as comments. Switched to L1 mode which emits real `Net("name") += Part["pin"]` code.
+- [Phase 159, 2026-07-05]: Batch SKIDL corpus build RUNNING — 6,637 KiCad repos → 8,032 schematics → capped at 800. Output: /Volumes/Storage/schgen/our_corpus/. Next: build_unified_dataset.py → Vast.ai launch.
 - [v4.1]: Stage-safe flow shifts from "file-safe editing" to "stage-safe design" — every design transition has a deterministic gate
 - [v4.1]: Phases 85-87 prioritized — biggest current weakness is gap between safe KiCad files and real schematic-to-PCB transfer
 - [v4.1]: LLM output is advisory; deterministic gates decide whether proposals can mutate files
