@@ -357,23 +357,23 @@ When pitfalls occur despite prevention, how to recover.
 
 ## Pitfall-to-Phase Mapping
 
-How roadmap phases should address these pitfalls.
+How roadmap phases should address these pitfalls. **Corrected per Council Gate 1 review (2026-07-07).**
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| **PyInstaller dylib signing** | Track A Phase 161 | `codesign -dv` on clean machine, no "code signature invalid" in logs |
-| **stdio MCP deadlock** | Track C Phase 169 | Stress test 100 RPC calls in 10 seconds, zero hangs |
-| **FoundationModels unavailable** | Track B Phase 163 | Run on Intel Mac or with availability stub, fallback to MLX-Swift |
-| **SwiftData migration loss** | Track E Phase 173 | Two-device migration test (Phone v1.0, Mac v1.1, verify sync) |
-| **Generative hash instability** | Track F Phase 183 | 10-run determinism test, all hashes identical |
+| **PyInstaller dylib signing** | Track A Phase 162 | `codesign -dv` on clean machine, no "code signature invalid" in logs |
+| **stdio MCP deadlock** | Track C Phase 167 | Stress test 100 RPC calls in 10 seconds, zero hangs |
+| **FoundationModels unavailable** | Track B Phase 164 | Run on Intel Mac or with availability stub, fallback to MLX-Swift |
+| **SwiftData migration loss** | Track E Phase 177 | Two-device migration test (Phone v1.0, Mac v1.1, verify sync) |
+| **Generative hash instability** | Track F Phase 184 (10-run test) + Phase 183 (gold master) | 10-run determinism test, all hashes identical |
 | **iCloud bundle corruption** | Track G Phase 190 | Simultaneous edit Mac + iPhone, verify atomic bundle replace |
-| **MLX-Swift OOM** | Track B Phase 165 | Run on 8GB M1 MacBook Air, 4B model loads without swap |
-| **App Store GPL rejection** | Track A Phase 162 | TestFlight submission passes, external kicad-cli install documented |
-| **CKShare permission edge cases** | Track G Phase 192 | Permission downgrade test (editor → viewer, verify edit disabled) |
-| **Group Activities state desync** | Track G Phase 191 | 2-device rapid edit test, verify message ordering |
-| **SwiftData query slowdown** | Track E Phase 175 | Load 100K events, Decision Timeline < 2 seconds |
-| **Snapshot test fragility** | Track H Phase 199 | Run 4-variant snapshot test 10x, zero flakes |
-| **A11y gaps** | Track H Phase 200 | VoiceOver + Dynamic Type XXXL on all views |
+| **MLX-Swift OOM** | Track B Phase 164 (Task 3: VRAM detection) | Run on 8GB M1 MacBook Air, 4B model loads without swap |
+| **App Store GPL rejection** | Track A Phase 163 | TestFlight submission passes, external kicad-cli install documented |
+| **CKShare permission edge cases** | Track G Phase 188 | Permission downgrade test (editor → viewer, verify edit disabled) |
+| **Group Activities state desync** | Track G Phase 187 | 2-device rapid edit test, verify message ordering |
+| **SwiftData query slowdown** | Track E Phase 178 + Phase 180 | Load 100K events, Decision Timeline < 2 seconds |
+| **Snapshot test fragility** | Track H Phase 192 | Run 4-variant snapshot test 10x, zero flakes |
+| **A11y gaps** | Track H Phase 201 | VoiceOver + Dynamic Type XXXL on all views |
 
 ## Sources
 

@@ -1,7 +1,7 @@
 # ROADMAP — v6.0 KiCad Agent: The Closed Box
 
 **Milestone:** v6.0 KiCad Agent — The Closed Box
-**Target Phases:** 161-202 (42 phases)
+**Target Phases:** 161-203 (43 phases)
 **Status:** Roadmap defined, ready for phase planning
 
 ## Phases
@@ -723,8 +723,9 @@
 | 200. CI Coverage Gates | 0/3 | Not started | - |
 | 201. A11y by Default | 1/1 | **Planned** | - |
 | 202. iPhone Companion | 1/1 | **Planned** | - |
+| 203. Build & Ship Automation (Fastlane) | 1/1 | **Planned** | - |
 
-**Total:** 42 phases, 132 requirements mapped, 100% coverage, **7 plans written for phases 171-175, 201-202**
+**Total:** 43 phases, 138 requirements mapped, 100% coverage, **7 plans written for phases 171-175, 201-203**
 
 ---
 
@@ -738,18 +739,21 @@
 **Track F: Generative (Phases 181-185)** — SKIDL compiler, KiCad generator, Generative Pipeline, Hash Gold Master Tests, Generative Correctness
 **Track G: Collaboration (Phases 186-190)** — Project Genealogy, Group Activities, CKShare invitations, Collaboration UI, iCloud Drive Bundle
 **Track H: Quality (Phases 191-202)** — swift-testing, Snapshot tests, Property-based tests, Mutation tests, A11y, UI Automation, Performance, Concurrency, Python daemon tests, CI gates, iPhone Companion
+**Track I: Build & Ship (Phase 203)** — Fastlane build automation, TestFlight distribution, App Store submission
 
 **Critical Path:** A → B → C → D → E → F → G (Quality H runs in parallel)
 
 **Pitfall Addressed by Phase:**
 - Phase 162: PyInstaller dylib signing (Pitfall 1)
-- Phase 163: App Store GPL compliance (Pitfall 9)
-- Phase 164: FoundationModels unavailability (Pitfall 3)
 - Phase 167: stdio MCP buffering deadlock (Pitfall 2)
+- Phase 164: FoundationModels unavailability (Pitfall 3)
 - Phase 177: SwiftData CloudKit migration loss (Pitfall 4)
-- Phase 183: Generative hash instability (Pitfall 5)
+- Phase 184: Generative hash instability (Pitfall 5)
 - Phase 190: iCloud Drive bundle corruption (Pitfall 6)
-- Phase 197: MLX-Swift Metal memory pressure (Pitfall 7)
+- Phase 164 (Task 3): MLX-Swift Metal memory pressure (Pitfall 7)
+- Phase 178 + Phase 180: SwiftData query performance (Pitfall 8)
+- Phase 163: App Store GPL compliance (Pitfall 9)
+- Phase 188: CKShare participant permissions (Pitfall 10)
 
 ---
 
