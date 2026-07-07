@@ -6,8 +6,8 @@
 
 ## Phases
 
-- [ ] **Phase 161: App Shell Foundation** — macOS 27+ SwiftUI app with Liquid Glass visual language
-- [ ] **Phase 162: Python Daemon Bundling** — PyInstaller binary, code-signed, app-spawned subprocess
+- [x] **Phase 161: App Shell Foundation** — macOS 27+ SwiftUI app with Liquid Glass visual language ✅ 2026-07-07
+- [x] **Phase 162: Python Daemon Bundling** — PyInstaller binary, code-signed, app-spawned subprocess ✅ 2026-07-07
 - [ ] **Phase 163: KiCad CLI Integration** — External kicad-cli detection, App Store GPL compliance
 - [ ] **Phase 164: LLM Provider Protocol** — FoundationModels, HF Hub, MLX-Swift abstraction
 - [ ] **Phase 165: Provider Router** — Task-aware, cost-aware, privacy-aware model routing
@@ -786,6 +786,61 @@
 - Track E (Memory) can start in parallel with Track D (UI) after Track C (Governance)
 - Track G (Collaboration) can start in parallel with Track F (Generative) after Track E (Memory)
 
+### Phase 158: SPICE Pipeline — ngspice integration (COMPLETE, retroactively closed 2026-07-07)
+
+**Goal:** Headless, scriptable ngspice simulation pipeline: SKIDL netlist → ngspice → structured typed results. Foundation for AI training reward signals (Phase 159) and Phase 204 closed-box optimization.
+**Requirements:** Reward signal for Phase 159 TRAIN-04 (pre-route vs post-route degradation)
+**Depends on:** Phase 156 (SKIDL Converter provides CircuitIR)
+**Plans:** 0 (shipped without formal PLAN.md — retroactive SUMMARY.md written 2026-07-07)
+**Status:** ✅ Complete — shipped 2026-07-04 (`08c5e7a9`, `46ed4b3b`)
+
+**Shipped:**
+- `src/kicad_agent/spice/` (5 files, ~20 KB): `types.py`, `ngspice_runner.py`, `testbench.py`, `model_registry.py`, `degradation.py`
+- `tests/spice/test_spice.py`: 14/16 passing (2 failures are environment-only — require ngspice CLI install)
+- Public API: `run_simulation`, `generate_*_testbench`, `compute_degradation`, `is_simulatable`, `get_model`
+- Testbench support: AC, TRAN, NOISE, THD analyses
+- SPICE macromodels: NE5532, TL072, LM358 (simplified)
+- `UNSIMULATABLE` registry: RP2350B, AK4619VN, RP2040, W5500, MCP23017, MCP23008
+
+**Did NOT deliver (deferred to Phase 204):** Optuna integration, pytest fixtures, pandas adapter, spicelib SimRunner upgrade, end-to-end closed-box demo.
+
 ---
 
-**Last updated:** 2026-07-07 — v6.0 roadmap updated, phases 171-175, 201-202 planned with 7 plans total
+### Phase 204: Closed-Box Simulation Pipeline v1 — Eurorack Magic Proof
+
+**Goal:** Build the optimization + testing + dataframe + demo layer ON TOP of Phase 158's `src/kicad_agent/spice/` foundation. Prove the closed-box magic end-to-end on a Eurorack input preamp canonical example: "give me a 20 dB preamp" → Optuna sweeps E12 resistor values → ngspice verifies → pytest asserts → Bode PNG + BOM markdown emit. Closes the three broken links in the v6.0 "Closed Box" vision.
+**Requirements:** Gap-fill — SPICE execution layer exists (Phase 158) but circuit optimization, hardware-as-code tests, and DataFrame analysis are missing. Strategic competitor pressure (tscircuit) demands matching zero-friction magic for analog circuits.
+**Depends on:** Phase 158 (uses `kicad_agent.spice.run_simulation`, `generate_ac_testbench`, `SimulationResult` types)
+**Plans:** 4 plans
+
+**Canonical example:** Eurorack input preamp — single NPN common-emitter (2N3904), ±12 V rails, audio bandwidth (20 Hz–20 kHz), target 20 dB gain, ~1M input impedance. Optuna optimizes R1/R2/Rc/Re over E12 series.
+
+**Deliverables:**
+- `src/kicad_agent/sim/optimizer.py` — Optuna sweep loop, E12/E24 resistor constraints, Pareto front support, sqlite persistence
+- `src/kicad_agent/sim/dataframe.py` — pandas DataFrame adapter for `SimulationResult` (one column per net, sweep-aware)
+- `src/kicad_agent/sim/skidl_bridge.py` — SKiDL Circuit → `ngspice_runner.run_simulation()` adapter (reuses 158 foundation)
+- `tests/sim/conftest.py` — pytest fixtures: `eurorack_preamp` builds + sims once per session
+- `tests/sim/test_eurorack_preamp.py` — first hardware-as-code test: `assert gain_db >= target_db - 3`
+- `scripts/demo_closed_box.py` — end-to-end magic demo
+
+**Infrastructure:**
+- `brew install ngspice` (macOS) / `apt install ngspice` (Linux) — document in README + CLAUDE.md
+- pyproject.toml: add `pandas>=2.0`, `matplotlib>=3.7`, `optuna>=4.5`
+- CLAUDE.md tool inventory: spicelib SimRunner patterns, ngspice patterns
+
+**Acceptance:**
+- `python3 scripts/demo_closed_box.py` produces: chosen R values, gain within 3 dB of target, `bode.png`, `bom.md`, all in <60 s on Apple Silicon
+- `pytest tests/sim/` passes with the gain assertion
+- Bode plot shows expected −3 dB frequency
+- Phase 158's 2 currently-failing tests now pass (ngspice installed)
+- No manual SPICE netlist writing — closed-box from intent to verified hardware
+
+Plans:
+- [ ] 204-01-PLAN.md — Foundation: pyproject sim extras, 2N3904 model, tests/sim/ package (Wave 0)
+- [ ] 204-02-PLAN.md — Core sim layer: eurorack.py (circuit_to_spice_netlist), dataframe.py, bom.py, plot.py (Wave 1)
+- [ ] 204-03-PLAN.md — Optimizer: Optuna GPSampler objective + optimize_preamp() (Wave 2)
+- [ ] 204-04-PLAN.md — End-to-end demo script + README/CLAUDE.md docs + .gitignore (Wave 3)
+
+---
+
+**Last updated:** 2026-07-07 — Phase 204 planned with 4 plans (Wave 0-3)

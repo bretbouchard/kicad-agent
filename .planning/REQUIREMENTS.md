@@ -10,9 +10,9 @@
 
 - [x] **APP-01**: User can launch the app on macOS 27+ and see a Liquid Glass chat interface within 2 seconds. *If daemon fails to spawn within 5s, app shows recovery UI with retry/quit options (no silent hang).* ✅ Phase 161
 - [x] **APP-02**: User can install the app from the Mac App Store without warnings or sandbox violations. *If App Store submission is rejected, fallback distribution path is notarized direct download from website.* ✅ Phase 161 (source ready; signing in Phase 203)
-- [ ] **APP-03**: App bundles the Python daemon (PyInstaller binary) inside the .app package and spawns it as a subprocess on launch. *Daemon binary checksum verified on launch; corrupt binary triggers re-download prompt.*
+- [x] **APP-03**: App bundles the Python daemon (PyInstaller binary) inside the .app package and spawns it as a subprocess on launch. *Daemon binary checksum verified on launch; corrupt binary triggers re-download prompt.* ✅ Phase 162
 - [ ] **APP-04**: App detects missing external KiCad install and guides user to install KiCad 10+ (one-time setup). *App cannot start main workflow without KiCad; shows dedicated onboarding screen with one-tap install link.*
-- [ ] **APP-05**: App gracefully shuts down daemon on app quit (no orphan processes). *Daemon shutdown has 5-second timeout; hung daemon is force-killed with audit-log entry.*
+- [x] **APP-05**: App gracefully shuts down daemon on app quit (no orphan processes). *Daemon shutdown has 5-second timeout; hung daemon is force-killed with audit-log entry.* ✅ Phase 162
 - [x] **APP-06**: User can have multiple projects open in separate windows ✅ Phase 161
 - [x] **APP-07**: App respects system appearance (dark/light) and Dynamic Type ✅ Phase 161
 
@@ -63,12 +63,12 @@
 
 ### DAEMON — Python Daemon & stdio MCP
 
-- [ ] **DAEM-01**: App spawns bundled Python daemon as subprocess on launch. *On app wake, daemon health checked; if dead, silent restart with audit-log entry.*
-- [ ] **DAEM-02**: Swift app communicates with daemon via stdio MCP transport (no HTTP, no ports). *Daemon stdout forced unbuffered (PYTHONUNBUFFERED=1); 30s watchdog kills hung daemon.*
+- [x] **DAEM-01**: App spawns bundled Python daemon as subprocess on launch. *On app wake, daemon health checked; if dead, silent restart with audit-log entry.* ✅ Phase 162
+- [ ] **DAEM-02**: Swift app communicates with daemon via stdio MCP transport (no HTTP, no ports). *Daemon stdout forced unbuffered (PYTHONUNBUFFERED=1); 30s watchdog kills hung daemon.* ✅ Phase 162 (env + watchdog; full MCP lands Phase 167)
 - [ ] **DAEM-03**: Daemon exposes every kicad-agent op (142+) as an MCP tool, auto-registered from ops registry
 - [ ] **DAEM-04**: Adding a new op to the Python registry automatically exposes it as an MCP tool (zero glue)
-- [ ] **DAEM-05**: Daemon survives app sleep/wake cycles (no daemon restart needed). *On app wake, daemon health checked; silent restart if dead.*
-- [ ] **DAEM-06**: Daemon crashes trigger automatic restart with audit-log entry. *Crash loop detection (5 crashes in 60s) halts auto-restart and shows recovery UI.*
+- [x] **DAEM-05**: Daemon survives app sleep/wake cycles (no daemon restart needed). *On app wake, daemon health checked; silent restart if dead.* ✅ Phase 162
+- [x] **DAEM-06**: Daemon crashes trigger automatic restart with audit-log entry. *Crash loop detection (5 crashes in 60s) halts auto-restart and shows recovery UI.* ✅ Phase 162
 - [ ] **DAEM-07**: User can opt-in to external HTTP MCP server (for Claude Code/Cursor/scripts) via Settings toggle (default off)
 - [ ] **DAEM-08**: External HTTP MCP requires auth token (regenerable, shown via QR for pairing). *Suspicious usage patterns (10x failed auth) auto-revoke token + notify user.*
 

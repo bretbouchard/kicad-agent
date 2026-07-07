@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v6.0
-milestone_name: KiCad Agent — The Closed Box
-status: Phase 161 complete — App Shell Foundation shipped
-stopped_at: Phase 161 Plan 01 complete; ready for Phase 162 (Python Daemon Bundling)
-last_updated: "2026-07-07T17:47:06.000Z"
+milestone_name: milestone
+status: executing
+stopped_at: Milestone v5.0 Skidl-Native Design Pipeline roadmap created (Phases 156-160)
+last_updated: "2026-07-07T23:33:09.401Z"
 last_activity: 2026-07-07
 progress:
-  total_phases: 137
-  completed_phases: 55
-  total_plans: 277
-  completed_plans: 222
-  percent: 80
+  total_phases: 32
+  completed_phases: 2
+  total_plans: 34
+  completed_plans: 2
+  percent: 6
 ---
 
 # Project State
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 161 complete — macOS 27+ SwiftUI Liquid Glass app shell shipped at `macos-app/`. Ready for Phase 162 (Python Daemon Bundling).
-Last activity: 2026-07-07 — Phase 161 app shell foundation complete
+**Current focus:** Phase 204 — Closed-Box Simulation Pipeline v1 — Eurorack Magic Proof
+Last activity: 2026-07-07
 
 ## Current Position
 
-Phase: 161 complete
-Plan: 01 complete
-Status: macOS 27+ SwiftUI app shell shipped. Native Liquid Glass chat interface with multi-window support, SwiftData persistence, daemon lifecycle state machine, 12 passing tests. Binary verified minos 27.0. Ready for Phase 162 (Python Daemon Bundling).
-Last activity: 2026-07-07 — Phase 161 app shell foundation complete
+Phase: 204 (Closed-Box Simulation Pipeline v1 — Eurorack Magic Proof) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 204
+Last activity: 2026-07-07 -- Phase 204 execution started
 
 ## Phase 161 — App Shell Foundation (SHIPPED 2026-07-07)
 
@@ -40,6 +40,7 @@ Last activity: 2026-07-07 — Phase 161 app shell foundation complete
 **Commit:** c064ecd1
 
 **Architecture decisions:**
+
 - SPM over .xcodeproj (simpler, macOS 27+ compatible)
 - SwiftUI App protocol (no AppDelegate legacy)
 - SwiftData in-memory now (Track E adds CloudKit)
@@ -50,6 +51,38 @@ Last activity: 2026-07-07 — Phase 161 app shell foundation complete
 **Deviations:** `.macOS(.v27)` unavailable in SPM on Xcode 26.5 → fixed via unsafeFlags `-target arm64-apple-macosx27.0`. Binary ABI target verified `minos 27.0`.
 
 See: `.planning/phases/161-app-shell-foundation/161-01-SUMMARY.md`
+
+## Phase 162 — Python Daemon Bundling (SHIPPED 2026-07-07)
+
+**Files:** 17 created, 2 modified, 3,427 LOC added
+**Build:** PyInstaller binary builds + runs, `swift build` clean
+**Tests:** 97/97 Python tests passing (0.47s) + 23/23 Swift tests passing
+**Binary:** 82MB arm64 Mach-O, all dylibs code-signed (Pitfall 1 prevention)
+**Commit:** 041b4095
+
+**What shipped:**
+- Bundled Python daemon speaking JSON-RPC 2.0 over stdio
+- 4 focused modules: protocol.py, handlers.py, audit_log.py, daemon_entry.py
+- ProcessManager.swift (482 LOC) + DaemonMessenger.swift (216 LOC) — Swift integration
+- DaemonSupervisor wired to real ProcessManager (removes Phase 161 stub)
+- 151 kicad-agent operations exposed via list_operations
+- All stupid-proof augmentations: APP-03 checksum, APP-05 SIGTERM→SIGKILL, DAEM-01/05 wake health check, DAEM-02 unbuffered stdout + 30s watchdog, DAEM-06 crash-loop halt
+
+**Architecture decisions:**
+- Module split per project rule (MANY SMALL FILES > FEW LARGE FILES) — 386 LOC monolith → 4 files of 163-295 LOC
+- Ad-hoc codesigning for dev; Fastlane match (Phase 203) supplies production identity
+- PyInstaller one-folder COLLECT mode — faster cold start than one-file
+- audit_log default sink is stderr; Phase 168 wires per-project file for cross-process durability
+- Health method alias: both 'health' and 'health_check' resolve to same handler
+- ProcessManager dev-mode fallback: `.venv/bin/python -u daemon_entry.py` for fast iteration
+
+**Deviations:**
+- [Rule 1 Bug] OPERATIONS → OPERATION_REGISTRY (handlers.py tolerates both)
+- [Rule 2 Missing] Module split for testability (per project coding-style rule)
+- [Rule 2 Missing] PyInstaller hidden imports for new modules
+- [Rule 3 Blocking] Stale git index.lock removed
+
+See: `.planning/phases/162-python-daemon-bundling/162-01-SUMMARY.md`
 
 ## Backlog (next milestone)
 
@@ -111,8 +144,10 @@ Phase 156 (SKIDL Converter) — not started (roadmap defined). Deferred until Ph
 - Phase 156 added: SKIDL Converter — bidirectional KiCad↔SKIDL bridge. Builds the missing KiCad→SKIDL read-back path (SchematicIR + extract_nets → skidl.Circuit) and makes SKIDL→KiCad a first-class op. SKIDL becomes the canonical IR for all circuit operations (SchGen Code-L1 validation: 82% valid circuits vs 32% raw KiCad). Depends on Phases 108-111.
 - Phase 157 added: Floor Planner — declarative YAML floor-plan spec (`.floorplan.yaml`) compiled by `apply_floor_plan` into existing `LayoutAwarePlacer` vectors. Post-populate, pre-Quilter stage. Depends on Phase 156 (module-aware hierarchy metadata).
 - Phase 158 added: SPICE Pipeline — headless ngspice testbench pipeline (AC/transient/noise/THD) with structured JSON results as reward signal. Zero new deps (ngspice 45.2, spicelib, skidl+InSpice installed). Independent of Phase 156 (parallel-eligible).
+- Phase 158 SHIPPED 2026-07-04 (commits 08c5e7a9, 46ed4b3b) — 5 files in src/kicad_agent/spice/, 14/16 tests passing (2 failures are ngspice-not-installed environment only). Retroactively closed 2026-07-07 with SUMMARY.md after audit revealed phase never got directory or formal tracking.
 - Phase 159 added: AI Training Data — 71K repos → SKIDL + NL SFT pairs; placement→routing quality pairs; SPICE pre/post-route delta as reward signal. Qwen text + Gemma vision adapters. Depends on Phases 156, 157, 158.
 - Phase 160 added: NL Circuit Generation — fine-tuned LLM generates SKIDL from NL → ERC → SPICE → floor plan → PCB → Quilter. Full pipeline to manufacturing (SchGen/pcbGPT stop at schematic). Depends on Phase 159.
+- Phase 204 added: Closed-Box Simulation Pipeline v1 — SKiDL → spicelib SimRunner → Optuna sweep → pytest assertions → pandas DataFrames, proven end-to-end on common-emitter BJT amplifier auto-sized for target gain. Closes the three broken links in the v6.0 "Closed Box" vision (SPICE execution, circuit optimization, hardware-as-code tests). Uses existing spicelib 1.5.1 (NOT PySpice — dead project) + Optuna 4.5+ GPSampler + ngspice CLI subprocess.
 
 ### v4.1 Stage-Safe PCB Flow (Phases 85-94)
 
