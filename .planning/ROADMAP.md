@@ -48,6 +48,7 @@
 - [ ] **Phase 200: CI Coverage Gates** — Build fails if <100% coverage, automated quality enforcement
 - [ ] **Phase 201: A11y by Default** — SwiftLint custom rules, a11y audit in CI, block PR if violations
 - [ ] **Phase 202: iPhone Companion** — LAN pairing, offline queue, cost tracking, read-only mode
+- [ ] **Phase 203: Build & Ship Automation (Fastlane)** — Fastlane lanes for build/test/sign/ship, match code signing, pilot TestFlight, deliver App Store, snapshot screenshots, build_daemon lane for PyInstaller
 
 ## Phase Details
 

@@ -152,6 +152,8 @@ Complete routing stack production-ready:
 **Verified:** 2026-07-07 — local `main` is 89 commits ahead of `origin/main`. No upstream updates pending. Already on latest.
 **Version file:** `~/.claude/get-shit-done/VERSION`
 
+**Build Stack:** Fastlane (single build/test/sign/ship pipeline). All builds via `gym`, tests via `scan`, screenshots via `snapshot`, code signing via `match` (private git repo), TestFlight via `pilot`, App Store via `deliver`. PyInstaller binary built via `build_daemon` lane. Phase 203 (parallel-executable from Phase 161) sets up the full stack. CI invokes Fastlane lanes — no bespoke xcodebuild scripts.
+
 All v6.0 phase planning, execution, Council gates, and verification loops run against this GSD version. If upgrading GSD mid-milestone, run `/gsd-update` and re-verify phase plans against new behavior.
 
 ## Key Decisions

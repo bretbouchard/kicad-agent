@@ -187,6 +187,12 @@
 - [ ] **TEST-10**: Concurrency tests with ThreadSanitizer (no data races)
 - [ ] **TEST-11**: Python daemon has same standard: pytest + 100% + mutation testing
 - [ ] **TEST-12**: Nightly stress tests (10-hour daemon run, multi-account CloudKit, multi-session Group Activities)
+- [ ] **TEST-13**: All build/archive/sign/test/ship automation goes through **Fastlane** (no manual Xcode clicks, no bespoke shell scripts wrapping xcodebuild)
+- [ ] **TEST-14**: Code signing managed by **Fastlane match** (certs + profiles in a private git repo, synced across all developer devices and CI)
+- [ ] **TEST-15**: TestFlight beta distribution via **Fastlane pilot** (every merge to main ships a TestFlight build, internal testers notified automatically)
+- [ ] **TEST-16**: App Store submission via **Fastlane deliver** (metadata in Fastlane metadata repo, screenshots from `snapshot`, submission is one command)
+- [ ] **TEST-17**: Pre-submission validation via **Fastlane precheck** (catches App Store rejection risks in CI before merge, never at submission time)
+- [ ] **TEST-18**: PyInstaller binary build orchestrated by Fastlane lane `build_daemon` (Python + Swift builds unified in one `fastlane build_all` lane)
 
 ### GOV — Obdurate Runtime
 
@@ -236,8 +242,8 @@
 
 ---
 
-**Requirement count:** 132 requirements across 17 categories (all stupid-proof audited 2026-07-07 — see `.planning/research/v6/STUPID-PROOF-AUDIT.md`)
+**Requirement count:** 138 requirements across 17 categories (all stupid-proof audited 2026-07-07 — see `.planning/research/v6/STUPID-PROOF-AUDIT.md`)
 
-**Categories:** APP (7), CHAT (8), GSD (8), PIPE (5), MOD (12), DAEM (8), MEM (10), TT (7), GEN (7), GENOUT (8), COLLAB (10), LIVE (7), FILE (6), IPH (10), A11Y (9), TEST (12), GOV (11)
+**Categories:** APP (7), CHAT (8), GSD (8), PIPE (5), MOD (12), DAEM (8), MEM (10), TT (7), GEN (7), GENOUT (8), COLLAB (10), LIVE (7), FILE (6), IPH (10), A11Y (9), TEST (18), GOV (11)
 
 **Stupid-Proof Audit (2026-07-07):** 86 PASS, 46 AUGMENTED (clauses added inline above), 0 FAIL. Every requirement now answers both questions: (1) how does it prevent user-stupid harm? (2) how does it achieve magic-stupid flow?
