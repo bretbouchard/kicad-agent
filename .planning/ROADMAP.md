@@ -65,7 +65,7 @@
 3. App respects system appearance (dark/light mode) and Dynamic Type scaling
 4. App installs from Mac App Store without warnings or sandbox violations
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 **UI hint:** yes
 
@@ -86,7 +86,7 @@
 4. App gracefully shuts down daemon on quit (no orphan processes)
 5. PyInstaller dylibs are code-signed and pass clean-machine test (Pitfall 1 prevention)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -105,7 +105,7 @@
 4. Review notes document KiCad 10+ external install requirement
 5. User can opt-in to external HTTP MCP server with auth token (default off)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -124,7 +124,7 @@
 4. User can drag-drop .mlx model files to import custom fine-tunes
 5. FoundationModels availability check runs at app launch (not device model detection)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -143,7 +143,7 @@
 4. App shows token usage and cost estimate per assistant message
 5. Router falls back to FoundationModels when user lacks cloud API keys
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -162,7 +162,7 @@
 4. App never proxies API calls (pure BYOK, developer has zero AI cost liability)
 5. Keychain sync disabled shows warning: "You'll lose keys on device swap"
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -181,7 +181,7 @@
 4. App survives daemon restart (no leaked pipes, reconnection transparent)
 5. Watchdog timer kills and restarts daemon if no stdout response in 30 seconds
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -200,7 +200,7 @@
 4. Pydantic schemas auto-convert to JSON Schema for Tool inputSchema
 5. All 142 ops callable via MCP with correct schema validation
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -219,7 +219,7 @@
 4. Escalation ladder auto-triggers on failures (T1→T2→T3→T4)
 5. Drift detection warns on out-of-scope files (requirement_id required)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -238,7 +238,7 @@
 4. ERC/DRC gates must pass before KiCad files marked valid
 5. Verification failures surfaced as user decisions (not silent failures)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -260,7 +260,7 @@
 **Plans:** 1 plan
 
 **Plan List:**
-- [ ] 171-01-PLAN.md — Build Liquid Glass UI Shell (toolbar, window management, visual language tokens, 4-variant snapshot tests)
+- [x] 171-01-PLAN.md — 01
 
 **UI hint:** yes
 
@@ -284,7 +284,7 @@
 **Plans:** 1 plan
 
 **Plan List:**
-- [ ] 172-01-PLAN.md — Build Inline Rendering (SVG schematic preview, PNG PCB renders, live pipeline step bar with progress events, failure recovery UI, 4-variant snapshot tests)
+- [x] 172-01-PLAN.md — 01
 
 **UI hint:** yes
 
@@ -308,7 +308,7 @@
 **Plans:** 1 plan
 
 **Plan List:**
-- [ ] 173-01-PLAN.md — Build GSD Conversation Engine (5-phase UI: questioning, spec, roadmap, execute, verify; LLM-driven spec/roadmap generation; conversation forking; 4-variant snapshot tests)
+- [x] 173-01-PLAN.md — 01
 
 **UI hint:** yes
 
@@ -332,7 +332,7 @@
 **Plans:** 1 plan
 
 **Plan List:**
-- [ ] 174-01-PLAN.md — Build Approval Gates UI (approve/reject/show-me actions, gate detail drill-down with full context, Obdurate Runtime integration, completion summary card, 4-variant snapshot tests)
+- [x] 174-01-PLAN.md — 01
 
 **UI hint:** yes
 
@@ -356,7 +356,7 @@
 **Plans:** 1 plan
 
 **Plan List:**
-- [ ] 175-01-PLAN.md — Build Chat Interface (message streaming, image attachments, conversation list with search, cost tracking, inline artifact rendering, 4-variant snapshot tests)
+- [x] 175-01-PLAN.md — 01
 
 **UI hint:** yes
 
@@ -377,7 +377,7 @@
 4. Values are event-sourced (every change tracked with old/new value and reason)
 5. SwiftData schema frozen early (v6.0.0) for CloudKit stability (Pitfall 4 prevention)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -396,7 +396,7 @@
 4. Two-device migration test passes (Phone v1.0, Mac v1.1, verify sync, Pitfall 4 prevention)
 5. CloudKit sync never auto-migrates schema (explicit VersionedSchema only)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -415,7 +415,7 @@
 4. User can compare two points (diff view showing values, decisions, conversation changes)
 5. User can restore to any snapshot (preserves history, creates restoration event)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 **UI hint:** yes
 
@@ -436,7 +436,7 @@
 4. Timeline loads < 2 seconds with 100K events (Pitfall 8 prevention)
 5. User can filter timeline by decision type, date range, participant
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 **UI hint:** yes
 
@@ -457,7 +457,7 @@
 4. Event compaction archives old events to separate store (active events < 100K)
 5. SwiftData query tests pass with 100K event dataset (Pitfall 8 prevention)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -476,7 +476,7 @@
 4. SKIDL compiler integration depends on v5.0 Phase 156 (SKIDL Converter) completion
 5. Phase BLOCKED until v5.0 Track F completes (hard dependency)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -495,7 +495,7 @@
 4. Generator failures trigger Obdurate escalation (T1 retry → T2 strategy → T3 human)
 5. Generated files are deterministic (same SKIDL produces same KiCad files)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -514,7 +514,7 @@
 4. User can regenerate files from any snapshot (time-travel + generative combined)
 5. Pipeline caches derived artifacts (hash → artifact, invalidate on upstream change)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -533,7 +533,7 @@
 4. Collections sorted before hashing (canonical JSON stored in event journal)
 5. CI fails if generative output hash drifts from gold master fixture
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -552,7 +552,7 @@
 4. Escalation surfaces failures as user decisions (not silent failures)
 5. SPICE results used as reward signal for training (v5.0 Phase 159 integration)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -571,7 +571,7 @@
 4. User can branch from any project (creates child with parent reference)
 5. User can branch from any snapshot (creates child at point in time)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 **UI hint:** yes
 
@@ -592,7 +592,7 @@
 4. Session ends cleanly when initiator leaves (or hands off to participant)
 5. Conversation events sync live (messages, decisions, value changes appear instantly)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 **UI hint:** yes
 
@@ -613,7 +613,7 @@
 4. Collaborator accepts invite via universal link, project appears in app
 5. Owner can revoke access at any time
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 **UI hint:** yes
 
@@ -634,7 +634,7 @@
 4. User sees activity feed ("Alice added decision X", "Bob approved gate Y")
 5. Participants see cursor positions and selections in real-time
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 **UI hint:** yes
 
@@ -655,7 +655,7 @@
 4. Bundle writes atomic via NSFileCoordinator (Pitfall 6 prevention)
 5. Simultaneous edit Mac+iPhone test passes (atomic bundle replace, Pitfall 6 prevention)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -674,7 +674,7 @@
 4. Coverage reports generated per PR (diff coverage + absolute coverage)
 5. CI gate blocks merge if coverage drops below 100%
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -693,7 +693,7 @@
 4. High contrast variant passes a11y audit (WCAG AA 4.5:1 minimum)
 5. Dynamic Type XXXL works without clipping (scales up to .accessibilityExtraExtraExtraLarge)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -712,7 +712,7 @@
 4. Fuzzer tests verify hash stability (same inputs always produce same hash)
 5. Property tests verify CloudKit sync invariants (LWW resolution never loses data)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -731,7 +731,7 @@
 4. Killed mutants reported per PR (show what tests caught what bugs)
 5. Mutation score trends tracked over time (detect quality regression)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -750,7 +750,7 @@
 4. Keyboard-only flows work (tab navigation, space/enter activate)
 5. Color contrast meets WCAG AA (4.5:1 minimum, verified by a11y audit)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -769,7 +769,7 @@
 4. UI tests verify collaboration flows (invite collaborator, accept invite, edit permissions)
 5. XCUITest passes on physical devices (Group Activities requires real devices, Pitfall 10 prevention)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -788,7 +788,7 @@
 4. Decision Timeline loads < 2 seconds with 100K events (Pitfall 8 prevention)
 5. MLX-Swift VRAM detected at startup, 4B model loads without swap on 8GB devices (Pitfall 7 prevention)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -807,7 +807,7 @@
 4. Concurrency tests verify Group Activities message ordering (no race conditions)
 5. CI gate blocks merge if ThreadSanitizer detects any data race
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -826,7 +826,7 @@
 4. Python tests cover all 142 ops (executor, MCP server, verification gates)
 5. Mutation score trends tracked (detect Python quality regression)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -845,7 +845,7 @@
 4. CI gate fails build if ThreadSanitizer detects any data race
 5. CI gate fails build if snapshot tests flake (10-run verification)
 
-**Plans:** TBD
+**Plans:** 1 plan
 
 ---
 
@@ -864,7 +864,10 @@
 4. Dynamic Type works up to .accessibilityExtraExtraExtraLarge (verified by snapshot tests)
 5. Reduce Motion and Reduce Transparency preferences respected (verified by UI tests)
 
-**Plans:** TBD
+**Plans:** 1 plan
+
+**Plan List:**
+- [x] 201-01-PLAN.md — 01
 
 ---
 
@@ -888,7 +891,10 @@
 9. iPhone can use FoundationModels for trivial offline questions
 10. iPhone shows cost tracking (read-only, costs incurred by Mac daemon)
 
-**Plans:** TBD
+**Plans:** 1 plan
+
+**Plan List:**
+- [x] 202-01-PLAN.md — 01
 
 **UI hint:** yes
 
@@ -938,10 +944,10 @@
 | 198. Concurrency Testing | 0/3 | Not started | - |
 | 199. Python Daemon Testing | 0/3 | Not started | - |
 | 200. CI Coverage Gates | 0/3 | Not started | - |
-| 201. A11y by Default | 0/3 | Not started | - |
-| 202. iPhone Companion | 0/4 | Not started | - |
+| 201. A11y by Default | 1/1 | **Planned** | - |
+| 202. iPhone Companion | 1/1 | **Planned** | - |
 
-**Total:** 42 phases, 132 requirements mapped, 100% coverage, **5 plans written for phases 171-175**
+**Total:** 42 phases, 132 requirements mapped, 100% coverage, **7 plans written for phases 171-175, 201-202**
 
 ---
 
@@ -1001,4 +1007,4 @@
 
 ---
 
-**Last updated:** 2026-07-07 — v6.0 roadmap updated, phases 171-175 planned with 5 plans total
+**Last updated:** 2026-07-07 — v6.0 roadmap updated, phases 171-175, 201-202 planned with 7 plans total
