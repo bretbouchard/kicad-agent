@@ -1,0 +1,12 @@
+[mcp_servers.headroom]
+command = "headroom"
+args = [
+    "mcp",
+    "serve",
+]
+
+[mcp_servers.headroom.env]
+HEADROOM_PROXY_URL = "http://127.0.0.1:8787"
+
+[features]
+hooks = true
