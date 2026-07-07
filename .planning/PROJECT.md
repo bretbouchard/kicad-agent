@@ -12,6 +12,46 @@ The LLM never touches raw S-expressions. It emits structured intents (JSON opera
 
 If the AI can't produce structurally valid KiCad files through the tool layer, nothing else matters.
 
+## Core Principles
+
+### SLC — Simple, Lovable, Complete
+
+No workarounds. No stubs. No "good enough" temporary fixes. Every feature ships complete, polished, and delightful. (See `~/.claude/CLAUDE.md` for full SLC doctrine.)
+
+### Stupid-Proof (both flavors, flawlessly)
+
+Hardware design is hard. The app should not be. Two flavors, both required:
+
+**Flavor 1 — User-Stupid (guardrails, prevents harm):**
+- Every destructive action requires confirmation with clear preview of what changes
+- Every action is undoable for at least the session (PersistentUndoStack, op journal)
+- Never silent data loss — LWW conflicts prompt the user, never silently overwrite
+- Validation gates everywhere (pre-op + post-op + Obdurate verification)
+- Graceful degradation: FoundationModels falls back to MLX falls back to cloud; daemon crashes auto-restart; network drops queue messages
+- Irreversible actions (delete project, abandon branch) require typing the name
+- Errors always have a recovery path, never a dead end
+
+**Flavor 2 — Magic-Stupid (zero friction, "it just works"):**
+- One-tap setup: download app, sign in, start designing (FoundationModels built-in, no key required)
+- Auto-detect + auto-fix: missing KiCad install → guided setup; missing API key → settings deep-link; daemon crash → silent restart
+- Sensible defaults so good that users never want to change them
+- Auto-pairing via iCloud Keychain (Mac + iPhone, zero config)
+- Auto-sync via CloudKit (no settings, no toggle, just works)
+- Zero config files, zero CLI for end users, zero infrastructure
+- Approvals feel weightless — one tap, clear context, immediate continuation
+
+**The art:** make the guardrails feel weightless. Undo is one keystroke (⌘Z). Confirmations are rare and meaningful (not nagging). Defaults are so good users never open Settings. The app feels like a creative partner, not a compliance officer.
+
+**Verification:** Every requirement (132 REQ-IDs) must answer two questions:
+1. *How does this prevent user-stupid harm?* (If it can cause harm, what's the guardrail?)
+2. *How does this achieve magic-stupid flow?* (If it requires config, what's the sensible default?)
+
+Requirements that fail either question are not v1.0-ready.
+
+### Ponytail (Lazy Senior Dev Mode)
+
+Always active. Before writing code, climb the YAGNI ladder: does this need to exist? Stdlib? Native platform? Installed dep? One line? Minimum code? Mark simplifications with `ponytail:` comments. Never simplify security, error handling, or input validation.
+
 ## Requirements
 
 ### Validated
@@ -104,6 +144,15 @@ Complete routing stack production-ready:
 - **AI Interface**: JSON operation schema, never raw text — **Why**: Prevents file corruption
 - **Validation**: Every edit must pass ERC/DRC before commit — **Why**: Catch errors before they compound
 - **Architecture**: LLM → intent → AST mutation → serializer → validated file — **Why**: Deterministic, diffable, testable, repairable
+
+## Tooling Baseline
+
+**GSD Version:** 1.37.1 (local authoritative version, dev reference)
+**Source:** `~/.claude/get-shit-done/` (Bret's fork of `claude_settings`)
+**Verified:** 2026-07-07 — local `main` is 89 commits ahead of `origin/main`. No upstream updates pending. Already on latest.
+**Version file:** `~/.claude/get-shit-done/VERSION`
+
+All v6.0 phase planning, execution, Council gates, and verification loops run against this GSD version. If upgrading GSD mid-milestone, run `/gsd-update` and re-verify phase plans against new behavior.
 
 ## Key Decisions
 
@@ -214,4 +263,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-07 — v6.0 KiCad Agent — The Closed Box milestone started. v5.0 Skidl-Native absorbed as Track F inputs.*
+*Last updated: 2026-07-07 — v6.0 KiCad Agent — The Closed Box milestone started. Stupid-Proof principle + SLC + Ponytail locked as Core Principles. GSD 1.37.1 baseline. v5.0 Skidl-Native absorbed as Track F inputs.*
