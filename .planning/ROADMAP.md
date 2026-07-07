@@ -573,6 +573,9 @@
 
 **Plans:** 1 plan
 
+**Plan List:**
+- [x] 186-01-PLAN.md — Build project genealogy system (SwiftData models, branch/fork operations, family tree UI with graph visualization)
+
 **UI hint:** yes
 
 ---
@@ -593,6 +596,9 @@
 5. Conversation events sync live (messages, decisions, value changes appear instantly)
 
 **Plans:** 1 plan
+
+**Plan List:**
+- [x] 187-01-PLAN.md — Build Group Activities v1 (session lifecycle, 4-participant cap, event sync, auto-reconnect, auto-handoff)
 
 **UI hint:** yes
 
@@ -615,6 +621,9 @@
 
 **Plans:** 1 plan
 
+**Plan List:**
+- [x] 188-01-PLAN.md — Build CKShare invitation system (Share Sheet, permission management, Apple ID sign-in, expired link handling, revocation)
+
 **UI hint:** yes
 
 ---
@@ -635,6 +644,9 @@
 5. Participants see cursor positions and selections in real-time
 
 **Plans:** 1 plan
+
+**Plan List:**
+- [x] 189-01-PLAN.md — Build collaboration UI (shared project view, activity feed, LWW conflict resolution, cursor sync stub)
 
 **UI hint:** yes
 
@@ -657,244 +669,8 @@
 
 **Plans:** 1 plan
 
----
-
-### Phase 191: swift-testing Framework
-
-**Goal:** Unit tests with 100% line+branch coverage enforcement
-
-**Depends on:** Phase 161 (runs in parallel with all tracks)
-
-**Requirements:** TEST-01, TEST-02
-
-**Success Criteria** (what must be TRUE):
-1. All new code uses swift-testing framework (XCTest only for legacy XCUITest)
-2. 100% line + branch coverage enforced in CI (build fails if below)
-3. Swift tests cover all UI views, models, providers, daemon communication
-4. Coverage reports generated per PR (diff coverage + absolute coverage)
-5. CI gate blocks merge if coverage drops below 100%
-
-**Plans:** 1 plan
-
----
-
-### Phase 192: Snapshot Testing
-
-**Goal:** 4-variant tests (light/dark/XXXL/high-contrast), frozen time fixtures
-
-**Depends on:** Phase 191
-
-**Requirements:** TEST-03, A11Y-05, A11Y-07
-
-**Success Criteria** (what must be TRUE):
-1. Every SwiftUI view has 4 snapshot variants (light, dark, Dynamic Type XXXL, high contrast)
-2. Snapshot tests use frozen time fixtures (prevent flakiness from dates, Pitfall 8 prevention)
-3. Snapshot tests run 10x with zero flakes (anti-flake verification)
-4. High contrast variant passes a11y audit (WCAG AA 4.5:1 minimum)
-5. Dynamic Type XXXL works without clipping (scales up to .accessibilityExtraExtraExtraLarge)
-
-**Plans:** 1 plan
-
----
-
-### Phase 193: Property-Based Testing
-
-**Goal:** SwiftCheck for invariants, fuzz testing
-
-**Depends on:** Phase 192
-
-**Requirements:** TEST-04
-
-**Success Criteria** (what must be TRUE):
-1. Property-based tests verify state machine invariants (GSD transitions never invalid)
-2. SwiftCheck fuzzer tests op journal encoding (all valid ops encode/decode correctly)
-3. Property tests verify event sourcing invariants (replay produces same state)
-4. Fuzzer tests verify hash stability (same inputs always produce same hash)
-5. Property tests verify CloudKit sync invariants (LWW resolution never loses data)
-
-**Plans:** 1 plan
-
----
-
-### Phase 194: Mutation Testing
-
-**Goal:** mull-xcode, >90% score enforced in CI
-
-**Depends on:** Phase 193
-
-**Requirements:** TEST-05
-
-**Success Criteria** (what must be TRUE):
-1. Mutation testing via mull-xcode with score >90% required to merge
-2. CI gate blocks merge if mutation score drops below 90%
-3. Mutation tests cover critical paths (daemon communication, state machine, verification gates)
-4. Killed mutants reported per PR (show what tests caught what bugs)
-5. Mutation score trends tracked over time (detect quality regression)
-
-**Plans:** 1 plan
-
----
-
-### Phase 195: Accessibility Testing
-
-**Goal:** VoiceOver, Dynamic Type XXXL, keyboard-only flows, a11y audit
-
-**Depends on:** Phase 192
-
-**Requirements:** A11Y-01, A11Y-02, A11Y-04, A11Y-08, A11Y-09, TEST-08
-
-**Success Criteria** (what must be TRUE):
-1. Every interactive UI element has .accessibilityLabel
-2. Every meaningful action has .accessibilityHint
-3. VoiceOver reads every element correctly (verified via XCUITest)
-4. Keyboard-only flows work (tab navigation, space/enter activate)
-5. Color contrast meets WCAG AA (4.5:1 minimum, verified by a11y audit)
-
-**Plans:** 1 plan
-
----
-
-### Phase 196: UI Automation
-
-**Goal:** XCUITest for primary flows, approval gates, time-travel
-
-**Depends on:** Phase 195
-
-**Requirements:** TEST-07
-
-**Success Criteria** (what must be TRUE):
-1. XCUITest covers primary flows (new project, conversation, approval gates, time-travel)
-2. UI automation tests approval gates (approve/reject/show-me actions)
-3. XCUITest verifies time-travel UI (scrub timeline, restore snapshot, diff view)
-4. UI tests verify collaboration flows (invite collaborator, accept invite, edit permissions)
-5. XCUITest passes on physical devices (Group Activities requires real devices, Pitfall 10 prevention)
-
-**Plans:** 1 plan
-
----
-
-### Phase 197: Performance Testing
-
-**Goal:** Latency, memory, regression detection
-
-**Depends on:** Phase 196
-
-**Requirements:** TEST-09
-
-**Success Criteria** (what must be TRUE):
-1. Performance tests measure latency (daemon spawn, op execution, pipeline steps)
-2. Memory tests detect leaks (daemon memory stable over 10-hour run)
-3. Regression tests detect slowdowns (latency regressions block merge)
-4. Decision Timeline loads < 2 seconds with 100K events (Pitfall 8 prevention)
-5. MLX-Swift VRAM detected at startup, 4B model loads without swap on 8GB devices (Pitfall 7 prevention)
-
-**Plans:** 1 plan
-
----
-
-### Phase 198: Concurrency Testing
-
-**Goal:** ThreadSanitizer, no data races allowed
-
-**Depends on:** Phase 197
-
-**Requirements:** TEST-10
-
-**Success Criteria** (what must be TRUE):
-1. ThreadSanitizer runs in CI for all tests (zero data races allowed)
-2. Concurrency tests verify SwiftData thread safety (parallel reads/writes)
-3. Concurrency tests verify daemon Process thread safety (spawn/kill/restart)
-4. Concurrency tests verify Group Activities message ordering (no race conditions)
-5. CI gate blocks merge if ThreadSanitizer detects any data race
-
-**Plans:** 1 plan
-
----
-
-### Phase 199: Python Daemon Testing
-
-**Goal:** pytest, 100% coverage, mutation testing on Python daemon
-
-**Depends on:** Phase 194
-
-**Requirements:** TEST-11
-
-**Success Criteria** (what must be TRUE):
-1. Python daemon has pytest tests with 100% coverage enforced
-2. Mutation testing on Python daemon (mutmut or similar) with >90% score
-3. stdio MCP tests verify buffering prevention (100 rapid RPC calls, Pitfall 2 prevention)
-4. Python tests cover all 142 ops (executor, MCP server, verification gates)
-5. Mutation score trends tracked (detect Python quality regression)
-
-**Plans:** 1 plan
-
----
-
-### Phase 200: CI Coverage Gates
-
-**Goal:** Build fails if <100% coverage, automated quality enforcement
-
-**Depends on:** Phase 199
-
-**Requirements:** TEST-02
-
-**Success Criteria** (what must be TRUE):
-1. CI gate fails build if Swift coverage <100% (line + branch)
-2. CI gate fails build if Python daemon coverage <100%
-3. CI gate fails build if mutation score <90% (Swift via mull-xcode, Python via mutmut)
-4. CI gate fails build if ThreadSanitizer detects any data race
-5. CI gate fails build if snapshot tests flake (10-run verification)
-
-**Plans:** 1 plan
-
----
-
-### Phase 201: A11y by Default
-
-**Goal:** SwiftLint custom rules, a11y audit in CI, block PR if violations
-
-**Depends on:** Phase 195
-
-**Requirements:** A11Y-03, A11Y-06, A11Y-09
-
-**Success Criteria** (what must be TRUE):
-1. SwiftLint custom rules block PR if Button lacks accessibilityLabel
-2. a11y audit runs in CI (VoiceOver simulation, keyboard-only flows)
-3. CI gate fails build if a11y violations found (missing labels, hints)
-4. Dynamic Type works up to .accessibilityExtraExtraExtraLarge (verified by snapshot tests)
-5. Reduce Motion and Reduce Transparency preferences respected (verified by UI tests)
-
-**Plans:** 1 plan
-
 **Plan List:**
-- [x] 201-01-PLAN.md — 01
-
----
-
-### Phase 202: iPhone Companion
-
-**Goal:** LAN pairing, offline queue, cost tracking, read-only mode when Mac unavailable
-
-**Depends on:** Phase 177
-
-**Requirements:** IPH-01, IPH-02, IPH-03, IPH-04, IPH-05, IPH-06, IPH-07, IPH-08, IPH-09, IPH-10
-
-**Success Criteria** (what must be TRUE):
-1. iPhone app shows same conversation as Mac (CloudKit sync)
-2. iPhone pairs with user's Mac automatically via iCloud Keychain (zero-config)
-3. iPhone discovers Mac on LAN via Bonjour (`_kicadagent._tcp`)
-4. iPhone sends messages to Mac daemon over encrypted TCP
-5. iPhone renders schematics (SVG) and PCBs (PNG) streamed from Mac
-6. iPhone can approve gates from anywhere (when Mac reachable on LAN)
-7. iPhone queues messages when Mac not reachable ("will send when Mac available")
-8. iPhone shows banner when Mac disconnected (read-only mode)
-9. iPhone can use FoundationModels for trivial offline questions
-10. iPhone shows cost tracking (read-only, costs incurred by Mac daemon)
-
-**Plans:** 1 plan
-
-**Plan List:**
-- [x] 202-01-PLAN.md — 01
+- [x] 190-01-PLAN.md — Build iCloud Drive bundle system (.kicadagent document type, atomic writes, corrupt bundle repair, macOS Versions API, zip export)
 
 **UI hint:** yes
 
