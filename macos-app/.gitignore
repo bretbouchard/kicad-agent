@@ -8,3 +8,9 @@ DerivedData/
 xcuserdata/
 *.log
 build/
+
+# Phase 162 — PyInstaller daemon artifacts
+daemon/build/
+daemon/dist/
+daemon/*.spec.bak
+

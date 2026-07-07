@@ -1,0 +1,18 @@
+# Python dependencies bundled into the kicad-agent daemon by PyInstaller.
+#
+# Phase 162 — Python Daemon Bundling.
+#
+# Pin to the versions present in the project's .venv so the frozen bundle
+# is reproducible. Upgrade intentionally — PyInstaller sometimes has trouble
+# across major version bumps of these libraries.
+#
+# The kicad_agent library itself is NOT listed here; it is bundled from
+# ../../src/ via the spec file's pathex + hiddenimports.
+
+kiutils==1.4.8
+sexpdata==1.0.0
+pydantic==2.13.4
+networkx==3.6.1
+
+# Build-time only (not shipped in the bundle):
+# pyinstaller==6.21.0
