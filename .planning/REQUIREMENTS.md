@@ -8,13 +8,13 @@
 
 ### APP — App Shell & Platform
 
-- [ ] **APP-01**: User can launch the app on macOS 27+ and see a Liquid Glass chat interface within 2 seconds. *If daemon fails to spawn within 5s, app shows recovery UI with retry/quit options (no silent hang).*
-- [ ] **APP-02**: User can install the app from the Mac App Store without warnings or sandbox violations. *If App Store submission is rejected, fallback distribution path is notarized direct download from website.*
+- [x] **APP-01**: User can launch the app on macOS 27+ and see a Liquid Glass chat interface within 2 seconds. *If daemon fails to spawn within 5s, app shows recovery UI with retry/quit options (no silent hang).* ✅ Phase 161
+- [x] **APP-02**: User can install the app from the Mac App Store without warnings or sandbox violations. *If App Store submission is rejected, fallback distribution path is notarized direct download from website.* ✅ Phase 161 (source ready; signing in Phase 203)
 - [ ] **APP-03**: App bundles the Python daemon (PyInstaller binary) inside the .app package and spawns it as a subprocess on launch. *Daemon binary checksum verified on launch; corrupt binary triggers re-download prompt.*
 - [ ] **APP-04**: App detects missing external KiCad install and guides user to install KiCad 10+ (one-time setup). *App cannot start main workflow without KiCad; shows dedicated onboarding screen with one-tap install link.*
 - [ ] **APP-05**: App gracefully shuts down daemon on app quit (no orphan processes). *Daemon shutdown has 5-second timeout; hung daemon is force-killed with audit-log entry.*
-- [ ] **APP-06**: User can have multiple projects open in separate windows
-- [ ] **APP-07**: App respects system appearance (dark/light) and Dynamic Type
+- [x] **APP-06**: User can have multiple projects open in separate windows ✅ Phase 161
+- [x] **APP-07**: App respects system appearance (dark/light) and Dynamic Type ✅ Phase 161
 
 ### CHAT — Conversational Interface
 

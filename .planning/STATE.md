@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: KiCad Agent — The Closed Box
-status: Defining requirements
-stopped_at: Milestone v6.0 KiCad Agent — The Closed Box started; spawning researchers for Stack/Features/Architecture/Pitfalls
-last_updated: "2026-07-07T00:00:00.000Z"
+status: Phase 161 complete — App Shell Foundation shipped
+stopped_at: Phase 161 Plan 01 complete; ready for Phase 162 (Python Daemon Bundling)
+last_updated: "2026-07-07T17:47:06.000Z"
 last_activity: 2026-07-07
 progress:
   total_phases: 137
-  completed_phases: 54
+  completed_phases: 55
   total_plans: 277
-  completed_plans: 221
+  completed_plans: 222
   percent: 80
 ---
 
@@ -21,15 +21,35 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** v6.0 milestone kickoff — Native Mac+iPhone app "The Closed Box". Spawning parallel researchers before requirements definition.
-Last activity: 2026-07-07
+**Current focus:** Phase 161 complete — macOS 27+ SwiftUI Liquid Glass app shell shipped at `macos-app/`. Ready for Phase 162 (Python Daemon Bundling).
+Last activity: 2026-07-07 — Phase 161 app shell foundation complete
 
 ## Current Position
 
-Phase: Not started (defining requirements for v6.0)
-Plan: —
-Status: Milestone v6.0 (KiCad Agent — The Closed Box) started. v5.0 Skidl-Native (Phases 156-160, unshipped) absorbed as Track F inputs. Researchers spawning for Stack, Features, Architecture, Pitfalls. Requirements next.
-Last activity: 2026-07-07 — Milestone v6.0 started, summary confirmed by user
+Phase: 161 complete
+Plan: 01 complete
+Status: macOS 27+ SwiftUI app shell shipped. Native Liquid Glass chat interface with multi-window support, SwiftData persistence, daemon lifecycle state machine, 12 passing tests. Binary verified minos 27.0. Ready for Phase 162 (Python Daemon Bundling).
+Last activity: 2026-07-07 — Phase 161 app shell foundation complete
+
+## Phase 161 — App Shell Foundation (SHIPPED 2026-07-07)
+
+**Files:** 17 created, 1,525 LOC
+**Build:** `swift build` clean, zero warnings
+**Tests:** 12/12 passing in 3 suites
+**Deployment:** macOS 27.0 (verified via `otool LC_BUILD_VERSION minos 27.0`)
+**Commit:** c064ecd1
+
+**Architecture decisions:**
+- SPM over .xcodeproj (simpler, macOS 27+ compatible)
+- SwiftUI App protocol (no AppDelegate legacy)
+- SwiftData in-memory now (Track E adds CloudKit)
+- DaemonSupervisor `@MainActor @Observable` state machine (Phase 162 wires real spawn)
+- swift-testing framework (TEST-01)
+- Liquid Glass via `.background(.regularMaterial)` — `.glassEffect()` deferred to SDK 27
+
+**Deviations:** `.macOS(.v27)` unavailable in SPM on Xcode 26.5 → fixed via unsafeFlags `-target arm64-apple-macosx27.0`. Binary ABI target verified `minos 27.0`.
+
+See: `.planning/phases/161-app-shell-foundation/161-01-SUMMARY.md`
 
 ## Backlog (next milestone)
 

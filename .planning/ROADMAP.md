@@ -681,7 +681,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 161. App Shell Foundation | 0/3 | Not started | - |
+| 161. App Shell Foundation | 1/1 | Complete | 2026-07-07 |
 | 162. Python Daemon Bundling | 0/3 | Not started | - |
 | 163. KiCad CLI Integration | 0/3 | Not started | - |
 | 164. LLM Provider Protocol | 0/3 | Not started | - |
