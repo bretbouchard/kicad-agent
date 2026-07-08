@@ -277,12 +277,13 @@ final class MCPClient {
 
     /// Run an op call through the full Obdurate Runtime pipeline:
     ///
-    ///   IntentGate → DriftDetector → WorkflowStateMachine → MCPClient.call
+    ///   IntentGate → DriftDetector → WorkflowStateMachine → VerificationLoop
     ///   → OpJournal.append → AutoLearner.store → EscalationLadder
     ///
-    /// On any gate rejection or transport failure, the call is journaled
-    /// with `result_status="rejected"` or `"failed"` and the appropriate
-    /// error is thrown.
+    /// Phase 170: VerificationLoop now wraps execute + pre/post gates +
+    /// rollback (GOV-03, GOV-04, GOV-05). On pre-op block the call is
+    /// journaled with `result_status="rejected"`. On post-op failure the
+    /// loop auto-rolls-back and the journal records `result_status="rolled_back"`.
     ///
     /// - Parameters:
     ///   - method: JSON-RPC method (e.g. "kicad.add_component" or "tools/call").
@@ -353,50 +354,101 @@ final class MCPClient {
             throw GovernedCallError.escalationHalted(tier: tier, taskKey: opName)
         }
 
-        // 5. MCPClient.call — the actual transport.
+        // 5. VerificationLoop — checkpoint → pre-op → execute → post-op → rollback
+        //    Replaces the prior direct call() invocation. The loop captures
+        //    snapshots, validates intent matches op (GOV-03), runs ERC/DRC
+        //    (GOV-04), and auto-rolls-back on failure (GOV-05).
         let opId = UUID().uuidString
         let phase = governance.stateMachine.state.rawValue
-        var resultStatus = "success"
-        var resultSummary = ""
-        var verificationPassed: Bool? = nil
+        let outcome = await governance.verificationLoop.run(
+            intent: validated,
+            args: callParams
+        ) { [weak self] in
+            guard let self else {
+                throw MCPError.notConnected
+            }
+            let raw = try await self.callRaw(method, params: callParams)
+            return (result: AnyCodable(raw),
+                    summary: "completed")
+        }
 
-        let started = Date()
-        let value: T
-        do {
-            value = try await call(method, params: callParams, as: type)
-            resultSummary = "completed"
-        } catch {
+        // 6. Translate outcome → journal entry + escalation + learning.
+        let resultStatus: String
+        let resultSummary: String
+        let verificationPassed: Bool?
+
+        switch outcome.status {
+        case .passed:
+            resultStatus = "success"
+            resultSummary = "verification=passed pre=\(outcome.preOp.decision.rawValue)"
+            verificationPassed = true
+        case .indeterminate:
+            resultStatus = "success"
+            resultSummary = "verification=indeterminate pre=\(outcome.preOp.decision.rawValue)"
+            verificationPassed = nil
+        case .blocked:
+            // Pre-op rejected — journal as rejection.
+            try? journalRejection(governance: governance, intent: validated,
+                                  actor: actor,
+                                  reason: "pre-op blocked: \(outcome.preOp.reasons.joined(separator: "; "))")
+            throw GovernedCallError.intentRejected(
+                .malformedIntent("pre-op gate blocked execution"))
+        case .executionFailed:
             resultStatus = "failed"
-            resultSummary = String(describing: error).prefix(200).description
-            // 5b. Journal the failure first so it's durable.
-            _ = try? journal(governance: governance, opId: opId, intent: validated,
-                         actor: actor, phase: phase, status: resultStatus,
-                         summary: resultSummary, verification: verificationPassed)
-            // 6. Escalate.
+            resultSummary = "execute threw"
+            verificationPassed = nil
             _ = governance.escalation.recordFailure(
                 taskKey: opName, severity: .high, details: [resultSummary])
-            // 7. Auto-learn the failure.
             try? governance.learner.storeFailureMessage(
                 op: opName, requirementId: validated.requirementId,
                 error: resultSummary)
-            _ = started   // suppress unused warning if compiler complains
-            throw error
+            throw MCPError.transport(message: "verification loop: execute failed for op \(opId)")
+        case .failed:
+            resultStatus = "rolled_back"
+            let rolled = outcome.restore?.affectedCount ?? 0
+            resultSummary = "verification=failed rolled_back_files=\(rolled)"
+            verificationPassed = false
+            _ = governance.escalation.recordFailure(
+                taskKey: opName, severity: .high,
+                details: outcome.postOp?.failures ?? [])
+            try? governance.learner.storeFailureMessage(
+                op: opName, requirementId: validated.requirementId,
+                error: outcome.postOp?.failures.joined(separator: "; ") ?? "verification failed")
         }
 
-        // 6. Success — journal + learn + reset escalation.
-        verificationPassed = true
-        let entry = try? journal(governance: governance, opId: opId, intent: validated,
-                                  actor: actor, phase: phase, status: resultStatus,
-                                  summary: resultSummary, verification: verificationPassed)
-        governance.escalation.recordSuccess(taskKey: opName)
-        try? governance.learner.storeSuccessPattern(
-            op: opName, requirementId: validated.requirementId,
-            summary: "\(opName) → \(resultSummary)")
+        // 7. Journal the outcome.
+        let entry = try? journalExtended(
+            governance: governance, opId: opId, intent: validated,
+            actor: actor, phase: phase, status: resultStatus,
+            summary: resultSummary, verification: verificationPassed,
+            outcome: outcome)
+
+        if outcome.status == .passed || outcome.status == .indeterminate {
+            governance.escalation.recordSuccess(taskKey: opName)
+            try? governance.learner.storeSuccessPattern(
+                op: opName, requirementId: validated.requirementId,
+                summary: "\(opName) → \(resultSummary)")
+        }
 
         guard let entry else {
-            // Journal write failed — surface as transport error.
             throw MCPError.transport(message: "journal write failed for op \(opId)")
         }
+
+        // Decode the op result into the requested type for the caller.
+        // The loop stored the raw result as AnyCodable; re-serialize → decode.
+        let value: T
+        if let outcomeRaw = outcome.result {
+            do {
+                let data = try JSONEncoder().encode(outcomeRaw)
+                value = try JSONDecoder().decode(T.self, from: data)
+            } catch {
+                throw MCPError.decodingFailed(message: "\(error)")
+            }
+        } else {
+            throw MCPError.decodingFailed(
+                message: "verification outcome had no result (status=\(outcome.status.rawValue))")
+        }
+
         return GovernedCallResult(value: value, journalEntry: entry, intent: validated)
     }
 
@@ -518,6 +570,37 @@ final class MCPClient {
         )
         try governance.journal.append(entry)
         return entry
+    }
+
+    /// Phase 170: Journal helper that records the verification outcome
+    /// (checkpoint id, pre/post decisions, restore summary, stage timings)
+    /// in the result_summary field. Keeps the journal schema stable while
+    /// adding rich verification context for audit.
+    @discardableResult
+    private func journalExtended(
+        governance: Governance, opId: String, intent: IntentResult,
+        actor: String, phase: String, status: String,
+        summary: String, verification: Bool?,
+        outcome: VerificationOutcome
+    ) throws -> OpJournalEntry {
+        var enriched = summary
+        if let checkpointId = outcome.checkpointId, !checkpointId.isEmpty {
+            enriched += " snapshot=\(checkpointId.prefix(8))"
+        }
+        if let restore = outcome.restore {
+            enriched += " restored=\(restore.restored) removed=\(restore.removed)"
+        }
+        if !outcome.stageTimingsMs.isEmpty {
+            let timing = outcome.stageTimingsMs
+                .sorted { $0.key < $1.key }
+                .map { "\($0.key)=\($0.value)" }
+                .joined(separator: ",")
+            enriched += " timings[\(timing)]"
+        }
+        return try journal(
+            governance: governance, opId: opId, intent: intent,
+            actor: actor, phase: phase, status: status,
+            summary: enriched, verification: verification)
     }
 
     /// Append a journal entry for a rejected call (gate failure).

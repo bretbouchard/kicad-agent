@@ -63,7 +63,11 @@ enum GovernedCallError: Error, LocalizedError, Equatable {
 
 /// Holds the shared governance components. Injected into MCPClient via
 /// the environment. The default singleton wires up production instances.
-final class Governance: @unchecked Sendable {
+///
+/// `@MainActor` because Phase 170's VerificationLoop + gates share
+/// MCPClient's MainActor isolation.
+@MainActor
+final class Governance {
 
     let stateMachine: WorkflowStateMachine
     let intentGate: IntentGate
@@ -71,19 +75,22 @@ final class Governance: @unchecked Sendable {
     let journal: OpJournal
     let learner: AutoLearner
     let escalation: EscalationLadder
+    let verificationLoop: VerificationLoop
 
     init(stateMachine: WorkflowStateMachine = WorkflowStateMachine(),
                 intentGate: IntentGate = IntentGate(),
                 driftDetector: DriftDetector = DriftDetector(),
                 journal: OpJournal = OpJournal(),
                 learner: AutoLearner = AutoLearner(),
-                escalation: EscalationLadder = EscalationLadder()) {
+                escalation: EscalationLadder = EscalationLadder(),
+                verificationLoop: VerificationLoop = VerificationLoop()) {
         self.stateMachine = stateMachine
         self.intentGate = intentGate
         self.driftDetector = driftDetector
         self.journal = journal
         self.learner = learner
         self.escalation = escalation
+        self.verificationLoop = verificationLoop
     }
 
     /// Default shared instance — used by app code.

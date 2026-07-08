@@ -29,6 +29,12 @@ Phase 167 adds (per MCP spec — modelcontextprotocol.io/specification):
 
 Phase 168 adds the full execute/<op> dispatch surface.
 
+Phase 170 adds verification handlers (GOV-03, GOV-04, GOV-05):
+    kicad.pre_check    — pre-op intent + file-type validation
+    kicad.post_check   — post-op ERC/DRC + structured result
+    kicad.snapshot     — capture file snapshot for rollback
+    kicad.restore      — restore files from a prior snapshot
+
 Handler signature: (params: Any, ctx: HandlerContext) -> Any
     params: JSON-decoded params object from the request (may be dict or None)
     ctx:    Shared context — executor, audit logger, shutdown flag
@@ -45,9 +51,11 @@ import secrets
 import shutil
 import subprocess
 import time
+from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
 from protocol import RpcError, INVALID_PARAMS
+from snapshot import Snapshot, SnapshotError
 
 if TYPE_CHECKING:  # pragma: no cover — type-only imports
     from audit_log import AuditLogger
@@ -520,6 +528,452 @@ def tools_call(params: Any, ctx: HandlerContext) -> dict[str, Any]:
 
 
 # =============================================================================
+# Phase 170 — Verification handlers (GOV-03, GOV-04, GOV-05)
+# =============================================================================
+#
+# These handlers wrap the existing Python validation_gates.py infrastructure
+# for Swift consumption via MCP. The Swift VerificationLoop drives them:
+#
+#   1. kicad.snapshot   → Snapshot files before op executes (GOV-05)
+#   2. kicad.pre_check  → Validate op + args against registry (GOV-03)
+#   3. <op executes via tools/call>
+#   4. kicad.post_check → Run ERC/DRC on affected files (GOV-04)
+#   5. kicad.restore    → On post_check failure, restore snapshot (GOV-05)
+#
+# All four return structured dicts so the Swift side can render a
+# VerificationOutcome with full stage history.
+
+# File type → suffix mapping. Mirrors IntentGate catalog.
+_KICAD_FILE_SUFFIXES = {
+    "kicad_sch": ".kicad_sch",
+    "kicad_pcb": ".kicad_pcb",
+    "kicad_sym": ".kicad_sym",
+    "kicad_mod": ".kicad_mod",
+    "kicad_pro": ".kicad_pro",
+    "kicad_dru": ".kicad_dru",
+    "kicad_prj": ".kicad_prj",
+}
+
+
+def kicad_pre_check(params: Any, ctx: HandlerContext) -> dict[str, Any]:
+    """Pre-op verification gate (GOV-03).
+
+    Validates that the op:
+      - Exists in the registry
+      - Target file types match allowed types for the op
+      - Required arguments are present
+
+    Params:
+        {"op_type": "add_component",
+         "args": {"target_file": "board.kicad_sch", ...}}
+
+    Returns:
+        {"decision": "allow" | "warn" | "block",
+         "reasons": [str, ...],
+         "op_type": str,
+         "checks": {"op_known": bool, "file_type_ok": bool, "args_present": bool}}
+
+    The Swift side maps decisions: allow → execute, warn → execute+journal,
+    block → reject the call.
+    """
+    params = require_dict(params, "kicad.pre_check")
+    op_type = require_field(params, "op_type", "kicad.pre_check")
+    if not isinstance(op_type, str):
+        raise RpcError(INVALID_PARAMS, "kicad.pre_check: 'op_type' must be a string")
+    args = params.get("args", {})
+    if args is None:
+        args = {}
+    if not isinstance(args, dict):
+        raise RpcError(INVALID_PARAMS, "kicad.pre_check: 'args' must be an object")
+
+    checks: dict[str, bool] = {
+        "op_known": True,
+        "file_type_ok": True,
+        "args_present": True,
+    }
+    reasons: list[str] = []
+
+    # 1. Op known?
+    registered = set(_registered_operations())
+    if op_type not in registered:
+        checks["op_known"] = False
+        reasons.append(f"unknown op_type '{op_type}'")
+
+    # 2. Target file type matches op category.
+    target_file = args.get("target_file") or args.get("target_files")
+    files_to_check: list[str] = []
+    if isinstance(target_file, str):
+        files_to_check = [target_file]
+    elif isinstance(target_file, list):
+        files_to_check = [str(f) for f in target_file if isinstance(f, str)]
+    if files_to_check:
+        # Path traversal check (T-170-01 mitigation).
+        for f in files_to_check:
+            if ".." in Path(f).parts:
+                checks["file_type_ok"] = False
+                reasons.append(f"refused path with '..' segment: {f}")
+                break
+        # File-type check: only kicad-native suffixes allowed.
+        if checks["file_type_ok"]:
+            for f in files_to_check:
+                suffix = Path(f).suffix.lower()
+                if suffix and suffix not in _KICAD_FILE_SUFFIXES.values():
+                    checks["file_type_ok"] = False
+                    reasons.append(
+                        f"target_file '{f}' has unsupported suffix '{suffix}' "
+                        f"(expected one of {sorted(set(_KICAD_FILE_SUFFIXES.values()))})"
+                    )
+                    break
+
+    # 3. Required args present (target_file or target_files for mutating ops).
+    readonly_ops = {
+        "query_components", "query_nets", "query_drc", "query_erc",
+        "generate_bom", "parse_erc", "list_operations", "list_lib_symbols",
+        "kicad_cli_check", "health_check", "ping",
+    }
+    if op_type not in readonly_ops and not target_file:
+        # Some ops legitimately take target_files plural; check args_present.
+        if not args.get("target_files"):
+            checks["args_present"] = False
+            reasons.append(
+                f"mutating op '{op_type}' requires target_file or target_files"
+            )
+
+    # Decision: block if any check failed.
+    if all(checks.values()):
+        decision = "allow"
+    elif checks["op_known"] and checks["file_type_ok"]:
+        # Soft fail (missing arg on a mutating op that the executor might
+        # accept for other reasons) — warn but allow.
+        decision = "warn"
+    else:
+        decision = "block"
+
+    if ctx.audit is not None:
+        ctx.audit.log_event(
+            "pre_check",
+            op_type=op_type,
+            decision=decision,
+            reasons=reasons,
+        )
+
+    return {
+        "decision": decision,
+        "reasons": reasons,
+        "op_type": op_type,
+        "checks": checks,
+    }
+
+
+def kicad_post_check(params: Any, ctx: HandlerContext) -> dict[str, Any]:
+    """Post-op verification gate (GOV-04).
+
+    Runs deterministic validation checks on the affected files:
+      - Schematic ops → ERC via kicad-cli
+      - PCB ops → DRC via kicad-cli
+      - Cross-file ops → both
+
+    Params:
+        {"op_type": "add_component",
+         "files": ["board.kicad_sch"],
+         "require_erc": true,
+         "require_drc": false,
+         "semantic_check": true}
+
+    Returns:
+        {"decision": "passed" | "failed" | "indeterminate",
+         "erc": {...} | null,
+         "drc": {...} | null,
+         "failures": [str, ...]}
+
+    The Swift side treats `failed` as a rollback trigger (GOV-05).
+    `indeterminate` means we couldn't run a check (kicad-cli missing,
+    file disappeared) — the journal records it but no rollback fires.
+    """
+    params = require_dict(params, "kicad.post_check")
+    op_type = require_field(params, "op_type", "kicad.post_check")
+    if not isinstance(op_type, str):
+        raise RpcError(INVALID_PARAMS, "kicad.post_check: 'op_type' must be a string")
+    files = params.get("files", [])
+    if files is None:
+        files = []
+    if not isinstance(files, list):
+        raise RpcError(INVALID_PARAMS, "kicad.post_check: 'files' must be an array")
+    require_erc = bool(params.get("require_erc", True))
+    require_drc = bool(params.get("require_drc", True))
+
+    failures: list[str] = []
+    erc_result: dict[str, Any] | None = None
+    drc_result: dict[str, Any] | None = None
+
+    sch_files = [str(f) for f in files if str(f).endswith(".kicad_sch")]
+    pcb_files = [str(f) for f in files if str(f).endswith(".kicad_pcb")]
+
+    # ERC for schematic files.
+    if require_erc and sch_files:
+        erc_result = _run_erc_safe(sch_files)
+        if erc_result is None:
+            # kicad-cli unavailable or exception — indeterminate.
+            pass
+        elif not erc_result.get("clean", False):
+            err_count = erc_result.get("error_count", 0)
+            failures.append(
+                f"ERC failed on {len(sch_files)} file(s): {err_count} errors"
+            )
+
+    # DRC for PCB files.
+    if require_drc and pcb_files:
+        drc_result = _run_drc_safe(pcb_files)
+        if drc_result is None:
+            pass
+        elif not drc_result.get("clean", False):
+            err_count = drc_result.get("error_count", 0)
+            failures.append(
+                f"DRC failed on {len(pcb_files)} file(s): {err_count} errors"
+            )
+
+    # Decision.
+    if not failures:
+        # If both checks were skipped or returned None, indeterminate.
+        ran_a_check = (
+            (require_erc and sch_files and erc_result is not None)
+            or (require_drc and pcb_files and drc_result is not None)
+        )
+        decision = "passed" if ran_a_check else "indeterminate"
+    else:
+        decision = "failed"
+
+    if ctx.audit is not None:
+        ctx.audit.log_event(
+            "post_check",
+            op_type=op_type,
+            decision=decision,
+            failures=failures,
+        )
+
+    return {
+        "decision": decision,
+        "erc": erc_result,
+        "drc": drc_result,
+        "failures": failures,
+    }
+
+
+def kicad_snapshot(params: Any, ctx: HandlerContext) -> dict[str, Any]:
+    """Capture a file snapshot for rollback (GOV-05).
+
+    Params:
+        {"files": ["/abs/path/to/file.kicad_sch", ...],
+         "base_dir": "/abs/path/to/project"}  # optional traversal defense
+
+    Returns:
+        {"snapshot_id": "<uuid>",
+         "files_snapshotted": int,
+         "snapshot_dir": "<path>"}
+
+    The Swift side holds the snapshot_id and passes it to kicad.restore
+    if the post-op verification fails.
+    """
+    import uuid as _uuid
+
+    params = require_dict(params, "kicad.snapshot")
+    files = require_field(params, "files", "kicad.snapshot")
+    if not isinstance(files, list) or not all(
+        isinstance(f, str) for f in files
+    ):
+        raise RpcError(
+            INVALID_PARAMS,
+            "kicad.snapshot: 'files' must be an array of strings",
+        )
+    base_dir = params.get("base_dir")
+    if base_dir is not None and not isinstance(base_dir, str):
+        raise RpcError(
+            INVALID_PARAMS,
+            "kicad.snapshot: 'base_dir' must be a string if provided",
+        )
+
+    try:
+        snapshot = Snapshot.create(files=files, base_dir=base_dir)
+    except SnapshotError as exc:
+        if ctx.audit is not None:
+            ctx.audit.log_event("snapshot_failed", error=str(exc), files=files)
+        raise RpcError(INVALID_PARAMS, f"kicad.snapshot: {exc}") from exc
+
+    snapshot_id = str(_uuid.uuid4())
+    # Stash on ctx so kicad.restore can find it.
+    if not hasattr(ctx, "_verification_snapshots"):
+        ctx._verification_snapshots = {}  # type: ignore[attr-defined]
+    ctx._verification_snapshots[snapshot_id] = snapshot  # type: ignore[attr-defined]
+
+    if ctx.audit is not None:
+        ctx.audit.log_event(
+            "snapshot_captured",
+            snapshot_id=snapshot_id,
+            files=files,
+        )
+
+    return {
+        "snapshot_id": snapshot_id,
+        "files_snapshotted": len(snapshot.manifest),
+        "snapshot_dir": str(snapshot.snapshot_dir),
+    }
+
+
+def kicad_restore(params: Any, ctx: HandlerContext) -> dict[str, Any]:
+    """Restore files from a snapshot (GOV-05).
+
+    Params:
+        {"snapshot_id": "<uuid>"}
+
+    Returns:
+        {"restored": int, "removed": int, "skipped": int}
+
+    Raises RpcError if the snapshot_id is unknown or restore fails.
+    """
+    params = require_dict(params, "kicad.restore")
+    snapshot_id = require_field(params, "snapshot_id", "kicad.restore")
+    if not isinstance(snapshot_id, str):
+        raise RpcError(
+            INVALID_PARAMS,
+            "kicad.restore: 'snapshot_id' must be a string",
+        )
+
+    snapshots = getattr(ctx, "_verification_snapshots", {})
+    snapshot = snapshots.get(snapshot_id)
+    if snapshot is None:
+        raise RpcError(
+            INVALID_PARAMS,
+            f"kicad.restore: unknown snapshot_id '{snapshot_id}'",
+        )
+
+    try:
+        summary = snapshot.restore()
+    except SnapshotError as exc:
+        if ctx.audit is not None:
+            ctx.audit.log_event(
+                "restore_failed",
+                snapshot_id=snapshot_id,
+                error=str(exc),
+            )
+        raise RpcError(INVALID_PARAMS, f"kicad.restore: {exc}") from exc
+
+    # Cleanup the snapshot directory after a successful restore.
+    snapshot.close()
+    snapshots.pop(snapshot_id, None)
+
+    if ctx.audit is not None:
+        ctx.audit.log_event(
+            "restore_completed",
+            snapshot_id=snapshot_id,
+            summary=summary,
+        )
+
+    return summary
+
+
+# =============================================================================
+# Phase 170 internal helpers (ERC/DRC wrappers)
+# =============================================================================
+
+def _run_erc_safe(sch_files: list[str]) -> dict[str, Any] | None:
+    """Run ERC on each schematic file. Aggregates errors across files.
+
+    Returns None if kicad-cli unavailable or every file errored.
+    Returns aggregated dict:
+        {"clean": bool, "error_count": int, "warning_count": int,
+         "per_file": [{path, clean, error_count, error_message}, ...]}
+    """
+    try:
+        from kicad_agent.validation.erc_drc import run_erc  # type: ignore[import-not-found]
+    except Exception:
+        return None
+
+    per_file: list[dict[str, Any]] = []
+    total_errors = 0
+    total_warnings = 0
+    all_clean = True
+    for sch in sch_files:
+        try:
+            result = run_erc(Path(sch))
+        except Exception as exc:  # noqa: BLE001 — best-effort per file
+            per_file.append({
+                "path": sch,
+                "clean": False,
+                "error_count": 0,
+                "error_message": f"{type(exc).__name__}: {exc}",
+            })
+            all_clean = False
+            continue
+        per_file.append({
+            "path": sch,
+            "clean": result.passed,
+            "error_count": result.error_count,
+            "warning_count": result.warning_count,
+            "error_message": result.error_message,
+        })
+        total_errors += result.error_count
+        total_warnings += result.warning_count
+        if not result.passed:
+            all_clean = False
+
+    return {
+        "clean": all_clean,
+        "error_count": total_errors,
+        "warning_count": total_warnings,
+        "per_file": per_file,
+    }
+
+
+def _run_drc_safe(pcb_files: list[str]) -> dict[str, Any] | None:
+    """Run DRC on each PCB file. Aggregates errors across files.
+
+    Returns None if kicad-cli unavailable or every file errored.
+    """
+    try:
+        from kicad_agent.validation.erc_drc import run_drc  # type: ignore[import-not-found]
+    except Exception:
+        return None
+
+    per_file: list[dict[str, Any]] = []
+    total_errors = 0
+    total_violations = 0
+    all_clean = True
+    for pcb in pcb_files:
+        try:
+            result = run_drc(Path(pcb))
+        except Exception as exc:  # noqa: BLE001 — best-effort per file
+            per_file.append({
+                "path": pcb,
+                "clean": False,
+                "error_count": 0,
+                "error_message": f"{type(exc).__name__}: {exc}",
+            })
+            all_clean = False
+            continue
+        # DrcResult.passed / .error_count / .violation_count / .error_message
+        error_count = getattr(result, "error_count", 0) or 0
+        violation_count = getattr(result, "violation_count", 0) or 0
+        per_file.append({
+            "path": pcb,
+            "clean": result.passed,
+            "error_count": error_count,
+            "violation_count": violation_count,
+            "error_message": getattr(result, "error_message", None),
+        })
+        total_errors += error_count
+        total_violations += violation_count
+        if not result.passed:
+            all_clean = False
+
+    return {
+        "clean": all_clean,
+        "error_count": total_errors,
+        "violation_count": total_violations,
+        "per_file": per_file,
+    }
+
+
+# =============================================================================
 # Phase 163 internal helpers (KiCad CLI detection)
 # =============================================================================
 
@@ -625,6 +1079,11 @@ HANDLERS: dict[str, Any] = {
     "initialized": initialized,
     "tools/list": tools_list,
     "tools/call": tools_call,
+    # Phase 170 — Verification loop integration (GOV-03, GOV-04, GOV-05)
+    "kicad.pre_check": kicad_pre_check,
+    "kicad.post_check": kicad_post_check,
+    "kicad.snapshot": kicad_snapshot,
+    "kicad.restore": kicad_restore,
 }
 
 
