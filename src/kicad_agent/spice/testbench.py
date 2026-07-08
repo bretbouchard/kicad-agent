@@ -13,8 +13,9 @@ def generate_ac_testbench(
     input_node: str = "in",
     output_node: str = "out",
     freq_start: float = 1.0,
-    freq_stop: float = 10e6,
+    freq_stop: float = 1e9,
     points_per_decade: int = 50,
+    output_load_ohms: float = 100e3,
 ) -> str:
     """Generate an AC analysis testbench.
 
@@ -23,8 +24,17 @@ def generate_ac_testbench(
         input_node: Input node name for stimulus.
         output_node: Output node name for measurement.
         freq_start: Start frequency in Hz.
-        freq_stop: Stop frequency in Hz.
+        freq_stop: Stop frequency in Hz. Default 1 GHz — wide enough to
+            capture the high-frequency roll-off of a typical CE preamp
+            (2N3904 fT ~300 MHz; CE bandwidth lands in the 1-50 MHz range).
+            A 1 MHz ceiling leaves the -3 dB point "out of interval" for
+            ngspice's .MEASURE WHEN, which then returns no bandwidth.
         points_per_decade: Number of points per decade.
+        output_load_ohms: Load resistor from output_node to ground (Ohms).
+            Default 100 kΩ. Required when the output is AC-coupled via a
+            series capacitor — without a DC path to ground, ngspice reports
+            "singular matrix: check node <out>" because the output node
+            floats at DC.
 
     Returns:
         Complete .cir file content.
@@ -36,6 +46,10 @@ def generate_ac_testbench(
 
 * AC stimulus
 VAC_IN {input_node} 0 DC 0 AC 1
+
+* Output load — DC path to ground for AC-coupled outputs (fixes
+* singular-matrix convergence failure on coupling-cap topologies).
+RLOAD {output_node} 0 {output_load_ohms:g}
 
 * AC analysis: {freq_start:.1f}Hz to {freq_stop:.0f}Hz
 .AC DEC {points_per_decade} {freq_start} {freq_stop}

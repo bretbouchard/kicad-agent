@@ -78,7 +78,7 @@ def objective(trial: optuna.Trial) -> float:
     netlist = model + "\n" + circuit_to_spice_netlist(circuit)
     cir = generate_ac_testbench(
         netlist=netlist, input_node="in", output_node="out",
-        freq_start=10.0, freq_stop=1e6, points_per_decade=50,
+        freq_start=10.0, freq_stop=1e9, points_per_decade=50,
     )
 
     # CR-02 (Council R2 P1): per-trial wall-time budget.

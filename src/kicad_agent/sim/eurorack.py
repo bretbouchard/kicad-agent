@@ -133,6 +133,12 @@ def circuit_to_spice_netlist(circuit: Any) -> str:
     Power rails (+12V, -12V) become .GLOBAL nodes; GND becomes node 0
     (ngspice manual v46 §2.1.3.5 requires ground to be named '0').
 
+    Power supply voltage sources (VCC/VEE) are emitted before the .GLOBAL
+    declarations. The skidl.Circuit references +12V/-12V as Net names but
+    does not declare voltage source Parts for them — without VCC/VEE sources
+    the rails float, the transistor has no bias, and gain_db collapses to
+    ~0 dB. Phase 204 fix.
+
     Args:
         circuit: Live skidl.Circuit (built via build_preamp_circuit or equivalent).
 
@@ -140,7 +146,13 @@ def circuit_to_spice_netlist(circuit: Any) -> str:
         SPICE netlist body as a string. No .END — caller (generate_ac_testbench)
         adds it.
     """
-    lines: list[str] = [f".GLOBAL {rail}" for rail in _POWER_RAILS]
+    # Power supply sources for the declared rails. Without these, ngspice
+    # reports "singular matrix" and the bias network produces 0 V everywhere.
+    supply_lines: list[str] = [
+        "VCC +12V 0 DC 12",
+        "VEE -12V 0 DC -12",
+    ]
+    lines: list[str] = supply_lines + [f".GLOBAL {rail}" for rail in _POWER_RAILS]
 
     for part in circuit.parts:
         first_letter = part.ref[0].upper()

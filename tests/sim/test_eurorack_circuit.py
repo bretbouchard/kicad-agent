@@ -82,6 +82,11 @@ def test_emitted_netlist_is_valid_spice() -> None:
     (no AC sweep). If this fails, the emitter is producing invalid SPICE.
     If this passes but the full AC test fails, the topology or testbench
     is the problem.
+
+    The testbench wraps the emitted netlist with: a DC input source (so the
+    input node has a reference), a 100k load from out to ground (DC path for
+    AC-coupled outputs), and a .OP+.PRINT statement (ngspice batch mode
+    requires an analysis statement).
     """
     from kicad_agent.spice import get_model, run_simulation
 
@@ -89,8 +94,19 @@ def test_emitted_netlist_is_valid_spice() -> None:
     model = get_model("2N3904")
     assert model is not None, "2N3904 missing from registry"
     netlist = model + "\n" + circuit_to_spice_netlist(ckt)
-    # .OP analysis only — no AC stimulus, no frequency sweep
-    result = run_simulation(netlist, "emitter_op_check", analyses=["op"])
+    # Minimal .OP testbench — DC input + output load + .OP+.PRINT so ngspice
+    # batch mode has an analysis statement (without .PRINT/.PLOT/.FOURIER ngspice
+    # exits with "no simulations run").
+    op_cir = (
+        "* emitter_op_check\n"
+        f"{netlist}\n\n"
+        "VDC_IN in 0 DC 0\n"
+        "RLOAD out 0 100k\n"
+        ".OP\n"
+        ".PRINT OP v(collector) v(base) v(emitter)\n"
+        ".END\n"
+    )
+    result = run_simulation(op_cir, "emitter_op_check", analyses=["op"])
     assert result.passed, (
         f"Emitted netlist failed ngspice .OP parse: log tail = {result.log[-500:]!r}"
     )

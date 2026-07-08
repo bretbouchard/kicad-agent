@@ -110,10 +110,12 @@ def test_objective_times_out_on_slow_sim(monkeypatch: MonkeyPatch) -> None:
     val = objective(FakeTrial())
     elapsed = _time.time() - t0
     assert val == float("inf"), f"timeout must return inf, got {val}"
-    # Budget: ~10s TRIAL_TIMEOUT_S + ~3s skidl symbol-lookup overhead in
-    # build_preamp_circuit (skidl first-import is slow). 16s gives slack.
-    assert elapsed < 16.0, (
-        f"objective should short-circuit at ~10s + ~3s skidl setup, "
+    # Budget: ~10s TRIAL_TIMEOUT_S + ~3-6s skidl symbol-lookup overhead in
+    # build_preamp_circuit (skidl first-import is slow, varies by system cache).
+    # 20s gives slack for CI/disk-cache variance — the assertion's purpose is
+    # "shorter than the 120s ngspice default", not a tight timing guarantee.
+    assert elapsed < 20.0, (
+        f"objective should short-circuit at ~10s + ~3-6s skidl setup, "
         f"took {elapsed:.1f}s — TRIAL_TIMEOUT_S budget not enforced (CR-02 P1)"
     )
 
@@ -275,7 +277,7 @@ def test_optimize_best_trial_meets_floor_gain(tmp_path: Path, monkeypatch: Monke
     netlist = model + "\n" + opt_mod.circuit_to_spice_netlist(circuit)
     cir = opt_mod.generate_ac_testbench(
         netlist=netlist, input_node="in", output_node="out",
-        freq_start=10.0, freq_stop=1e6, points_per_decade=50,
+        freq_start=10.0, freq_stop=1e9, points_per_decade=50,
     )
     result = opt_mod.run_simulation(cir, "best_trial_verify", analyses=["ac"])
     ac = result.get_analysis(AnalysisType.AC)

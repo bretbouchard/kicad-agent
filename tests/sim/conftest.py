@@ -57,7 +57,7 @@ def eurorack_preamp() -> tuple[Any, Any]:
         input_node="in",
         output_node="out",
         freq_start=10.0,
-        freq_stop=1e6,
+        freq_stop=1e9,
         points_per_decade=50,
     )
     result = run_simulation(cir, "eurorack_preamp", analyses=["ac"])

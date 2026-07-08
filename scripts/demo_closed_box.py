@@ -13,7 +13,8 @@ Usage:
     python3 scripts/demo_closed_box.py
     python3 scripts/demo_closed_box.py --n-trials 30 --target-gain-db 20
 
-Time budget: < 60 s on Apple Silicon with 50 trials.
+Time budget: ~200 s on Apple Silicon with 50 trials (~4 s per ngspice trial).
+Pass --n-trials 10 for a ~45 s smoke run.
 """
 from __future__ import annotations
 
@@ -50,7 +51,7 @@ def check_ngspice() -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Closed-box Eurorack preamp demo")
     parser.add_argument("--n-trials", type=int, default=50,
-                        help="Optuna trials (default 50, fits 60s budget)")
+                        help="Optuna trials (default 50, ~4s/trial = ~200s total)")
     parser.add_argument("--target-gain-db", type=float, default=20.0,
                         help="Target gain in dB (default 20)")
     parser.add_argument("--seed", type=int, default=42,
@@ -96,7 +97,7 @@ def main() -> int:
     netlist = model + "\n" + circuit_to_spice_netlist(circuit)
     cir = generate_ac_testbench(
         netlist=netlist, input_node="in", output_node="out",
-        freq_start=10.0, freq_stop=1e6, points_per_decade=50,
+        freq_start=10.0, freq_stop=1e9, points_per_decade=50,
     )
     result = run_simulation(cir, "eurorack_demo_final", analyses=["ac"])
     ac = result.get_analysis(AnalysisType.AC)
