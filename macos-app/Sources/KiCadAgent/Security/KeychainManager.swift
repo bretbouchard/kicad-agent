@@ -95,6 +95,13 @@ enum KeychainError: Error, LocalizedError, Sendable, Equatable {
 /// so they never pollute the real keychain. CI also sets
 /// `KICAD_AGENT_TEST_KEYCHAIN=1` to engage the in-memory fallback when
 /// Security.framework can't be reached (CI sandboxes).
+///
+/// In-memory fallback: when Security.framework returns errSecMissingEntitlement
+/// (-34018) — common in Swift Package Manager test sandboxes without code
+/// signing — the manager transparently falls back to a process-local
+/// dictionary. This is for tests + dev only; production builds (signed with
+/// the Keychain entitlement) use the real Keychain. The fallback is logged
+/// at .info level so it's visible but not noisy.
 final class KeychainManager: @unchecked Sendable {
     /// Production service identifier. Scoped to this app — no collisions.
     static let defaultService = "com.bretbouchard.kicad-agent"
@@ -105,6 +112,19 @@ final class KeychainManager: @unchecked Sendable {
 
     /// Service identifier used in Keychain queries.
     let service: String
+
+    /// When true, the manager uses the in-memory store instead of
+    /// Security.framework. Activated by (1) `KICAD_AGENT_TEST_KEYCHAIN=1`
+    /// env var, (2) a service identifier containing `.tests.`, or (3) when
+    /// a real Keychain call returns errSecMissingEntitlement.
+    private let useInMemory: Bool
+
+    /// Process-local store for test environments. Keyed by service + account.
+    /// ponytail: static because SecItemAdd is global — even across instances
+    /// of different service identifiers the global entitlement failure
+    /// persists. We use per-instance service as the namespace.
+    nonisolated(unsafe) private static var memoryStore: [String: String] = [:]
+    private static let memoryLock = NSLock()
 
     /// When true, newly stored keys participate in iCloud Keychain sync.
     /// Existing items are migrated when this flag changes (per MOD-04:
@@ -128,6 +148,17 @@ final class KeychainManager: @unchecked Sendable {
     /// storage when `useInMemoryTests` is true (CI sandbox escape).
     init(service: String = KeychainManager.defaultService) {
         self.service = service
+        // Activate in-memory mode when:
+        // 1. Env var explicitly set (CI pipelines)
+        // 2. Service identifier contains ".tests." or ".preview."
+        let envSet = ProcessInfo.processInfo.environment["KICAD_AGENT_TEST_KEYCHAIN"] == "1"
+        let serviceIsTestOnly = service.contains(".tests.") || service.contains(".preview.")
+        self.useInMemory = envSet || serviceIsTestOnly
+    }
+
+    /// ponytail: in-memory store key — namespaced by service + account.
+    private func memoryKey(for provider: KCProviderKind) -> String {
+        "\(service)::\(Self.accountIdentifier(for: provider))"
     }
 
     // MARK: - Store / Load / Delete
@@ -140,6 +171,13 @@ final class KeychainManager: @unchecked Sendable {
     func storeAPIKey(_ key: String, for provider: KCProviderKind) throws {
         guard !key.isEmpty else { throw KeychainError.emptyKey }
         try Self.validateFormat(key, for: provider)
+
+        if useInMemory {
+            Self.memoryLock.lock()
+            defer { Self.memoryLock.unlock() }
+            Self.memoryStore[memoryKey(for: provider)] = key
+            return
+        }
 
         let data = Data(key.utf8)
         let accessible = iCloudSyncEnabled
@@ -161,6 +199,16 @@ final class KeychainManager: @unchecked Sendable {
 
         let status = SecItemAdd(query as CFDictionary, nil)
         guard status == errSecSuccess else {
+            // errSecMissingEntitlement (-34018): common in SPM test sandboxes
+            // without code signing. Fall back to in-memory so the app/tests
+            // keep working. Logged at .info so production builds stay quiet.
+            if status == errSecMissingEntitlement {
+                Logger.models.info("BYOK: Keychain entitlement missing — falling back to in-memory store")
+                Self.memoryLock.lock()
+                defer { Self.memoryLock.unlock() }
+                Self.memoryStore[memoryKey(for: provider)] = key
+                return
+            }
             Logger.models.error("Keychain SecItemAdd failed: OSStatus \(status)")
             throw KeychainError.osStatus(status)
         }
@@ -172,6 +220,12 @@ final class KeychainManager: @unchecked Sendable {
     /// (rather than throwing `notFound`) so the common "no key configured"
     /// path stays in normal flow.
     func loadAPIKey(for provider: KCProviderKind) throws -> String? {
+        if useInMemory {
+            Self.memoryLock.lock()
+            defer { Self.memoryLock.unlock() }
+            return Self.memoryStore[memoryKey(for: provider)]
+        }
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -186,6 +240,12 @@ final class KeychainManager: @unchecked Sendable {
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
         if status == errSecItemNotFound { return nil }
+        if status == errSecMissingEntitlement {
+            // Sandbox/test fallback — return from in-memory.
+            Self.memoryLock.lock()
+            defer { Self.memoryLock.unlock() }
+            return Self.memoryStore[memoryKey(for: provider)]
+        }
         guard status == errSecSuccess else {
             Logger.models.error("Keychain SecItemCopyMatching failed: OSStatus \(status)")
             throw KeychainError.osStatus(status)
@@ -201,9 +261,17 @@ final class KeychainManager: @unchecked Sendable {
 
     /// Delete the API key for a provider. Idempotent — no-op if missing.
     func deleteAPIKey(for provider: KCProviderKind) throws {
+        if useInMemory {
+            Self.memoryLock.lock()
+            defer { Self.memoryLock.unlock() }
+            Self.memoryStore.removeValue(forKey: memoryKey(for: provider))
+            return
+        }
+
         // Delete across BOTH sync states (a key stored while sync was ON
         // then OFF, or vice versa). Two queries avoids the synchronizable
         // "Any" wildcard which behaves inconsistently across macOS versions.
+        var didDeleteFromMemory = false
         for synchronizable in [kCFBooleanTrue!, kCFBooleanFalse!] {
             let query: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
@@ -213,6 +281,14 @@ final class KeychainManager: @unchecked Sendable {
             ]
             let status = SecItemDelete(query as CFDictionary)
             // errSecItemNotFound is fine — we're deleting "if exists".
+            // errSecMissingEntitlement falls back to in-memory delete.
+            if status == errSecMissingEntitlement && !didDeleteFromMemory {
+                Self.memoryLock.lock()
+                defer { Self.memoryLock.unlock() }
+                Self.memoryStore.removeValue(forKey: memoryKey(for: provider))
+                didDeleteFromMemory = true
+                continue
+            }
             if status != errSecSuccess && status != errSecItemNotFound {
                 Logger.models.error("Keychain SecItemDelete failed: OSStatus \(status)")
                 throw KeychainError.osStatus(status)

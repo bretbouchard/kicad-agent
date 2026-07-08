@@ -100,34 +100,41 @@ final class AnthropicCloudProvider: KiCadModelProvider, @unchecked Sendable {
                         )
                     }
 
-                    // SSE event accumulator.
+                    // SSE event accumulator. We can't use `bytes.lines`
+                    // because it strips the empty-line event boundary. Read
+                    // raw bytes and split on \n\n (SSE spec).
                     var inputTokens = 0
                     var outputTokens = 0
                     var outputChars = 0
-                    var currentEvent = ""
-                    var dataBuffer = ""
+                    var buffer = Data()
 
-                    for try await line in bytes.lines {
+                    for try await byte in bytes {
                         if Task.isCancelled { break }
-                        if line.hasPrefix("event:") {
-                            currentEvent = String(line.dropFirst(6)).trimmingCharacters(in: .whitespaces)
-                            continue
-                        }
-                        if line.hasPrefix("data:") {
-                            dataBuffer = String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces)
-                        } else if line.isEmpty {
-                            // Event boundary — process the accumulated event.
-                            try Self.processEvent(
-                                event: currentEvent,
-                                data: dataBuffer,
+                        buffer.append(byte)
+                        // Check for event boundary (\n\n).
+                        while let boundaryRange = buffer.range(of: Data([0x0A, 0x0A])) {
+                            let eventBlock = buffer.subdata(in: 0..<boundaryRange.lowerBound)
+                            buffer.removeSubrange(0..<boundaryRange.upperBound)
+                            let eventString = String(data: eventBlock, encoding: .utf8) ?? ""
+                            try Self.processEventBlock(
+                                eventBlock: eventString,
                                 continuation: continuation,
                                 inputTokens: &inputTokens,
                                 outputTokens: &outputTokens,
                                 outputChars: &outputChars
                             )
-                            currentEvent = ""
-                            dataBuffer = ""
                         }
+                    }
+                    // Flush any trailing event without \n\n terminator.
+                    if !buffer.isEmpty {
+                        let eventString = String(data: buffer, encoding: .utf8) ?? ""
+                        try Self.processEventBlock(
+                            eventBlock: eventString,
+                            continuation: continuation,
+                            inputTokens: &inputTokens,
+                            outputTokens: &outputTokens,
+                            outputChars: &outputChars
+                        )
                     }
 
                     // Estimate when usage didn't arrive.
@@ -199,41 +206,48 @@ final class AnthropicCloudProvider: KiCadModelProvider, @unchecked Sendable {
     // MARK: - SSE event processing
 
     /// Process one SSE event from Anthropic's stream. Mutates accumulators.
-    private static func processEvent(
-        event: String,
-        data: String,
+    /// Process one SSE event block (the text between two \n\n boundaries).
+    /// ponytail: split this from processEvent so the byte-stream loop can
+    /// accumulate cleanly without empty-line concerns.
+    private static func processEventBlock(
+        eventBlock: String,
         continuation: AsyncThrowingStream<KCToken, Error>.Continuation,
         inputTokens: inout Int,
         outputTokens: inout Int,
         outputChars: inout Int
     ) throws {
+        var event = ""
+        var dataLines: [String] = []
+        for line in eventBlock.split(separator: "\n", omittingEmptySubsequences: false) {
+            if line.hasPrefix("event:") {
+                event = String(line.dropFirst(6)).trimmingCharacters(in: .whitespaces)
+            } else if line.hasPrefix("data:") {
+                dataLines.append(String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces))
+            }
+        }
+        let data = dataLines.joined()
         guard !data.isEmpty, let payload = data.data(using: .utf8) else { return }
         guard let json = try? JSONSerialization.jsonObject(with: payload) as? [String: Any] else { return }
 
         switch event {
         case "message_start":
-            // usage.input_tokens arrives here.
             if let msg = json["message"] as? [String: Any],
                let usage = msg["usage"] as? [String: Any] {
                 inputTokens = (usage["input_tokens"] as? Int) ?? 0
             }
         case "content_block_delta":
-            // Streaming token text.
             if let delta = json["delta"] as? [String: Any],
                let text = delta["text"] as? String, !text.isEmpty {
                 outputChars += text.count
                 continuation.yield(.text(text))
             }
         case "message_delta":
-            // Final usage arrives here (output tokens).
             if let usage = json["usage"] as? [String: Any] {
                 outputTokens = (usage["output_tokens"] as? Int) ?? outputTokens
             }
         case "message_stop":
-            // Stream complete — caller will emit .done after the loop ends.
             break
         case "error":
-            // Anthropic emits server-side errors as SSE events.
             let errType = (json["error"] as? [String: Any])?["type"] as? String ?? "unknown"
             let errMsg = (json["error"] as? [String: Any])?["message"] as? String ?? "Anthropic stream error"
             throw KCProviderError.requestFailed(
