@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      Phase 166 — BYOK Keychain Storage
+      Per MOD-05: app makes direct HTTPS calls to LLM providers. Required
+      for outbound network (URLSession). Activated at Fastlane packaging
+      time (Phase 203).
+    -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <!--
+      Per MOD-04: API keys in Keychain. Read/write access required. iCloud
+      Keychain sync enabled when user opts IN (default).
+    -->
+    <key>com.apple.security.keychain-access-groups</key>
+    <array>
+        <string>$(AppIdentifierPrefix)com.bretbouchard.kicad-agent</string>
+    </array>
+    <!--
+      Local daemon — bundled Python daemon communicates over localhost
+      (Phase 162). Loopback exemption in sandbox.
+    -->
+    <key>com.apple.security.network.server</key>
+    <false/>
+    <!--
+      Phase 168+ — file write access for KiCad file operations. User-selected
+      files only (no broad file system access).
+    -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+</dict>
+</plist>
