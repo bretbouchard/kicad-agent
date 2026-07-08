@@ -1780,6 +1780,63 @@ def _handle_auto_place_zoned(op: Any, ir: PcbIR, file_path: Path) -> dict[str, A
     }
 
 
+@register_pcb("apply_floor_plan")
+def _handle_apply_floor_plan(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """kicad-agent-24 op integration: apply a YAML floor plan to a PCB.
+
+    Phase 157 shipped FloorPlanSpec + PlacementRule infrastructure. This
+    handler exposes it as a kicad-agent op:
+      1. Load YAML floor plan (zones, keepouts, placement rules with rationale)
+      2. Call floorplan.apply_floor_plan(content, spec) → FloorPlanResult
+      3. If applied + no hard violations, write modified content via IR
+
+    Hard-rule violations block the operation when op.fail_on_violations=True.
+    """
+    from kicad_agent.floorplan import load_floor_plan, apply_floor_plan
+
+    yaml_path = file_path.parent / op.floor_plan_file
+    if not yaml_path.exists():
+        raise FileNotFoundError(f"Floor plan file not found: {yaml_path}")
+
+    spec = load_floor_plan(yaml_path)
+    content = ir.raw_content
+    result = apply_floor_plan(content, spec)
+
+    if not result.applied:
+        return {
+            "applied": False,
+            "fixed_count": 0,
+            "keepout_count": 0,
+            "violations": result.violations,
+            "total_penalty": result.total_penalty,
+            "reason": "apply_floor_plan returned applied=False",
+        }
+
+    # Hard-rule violations block unless caller opts out.
+    has_hard_violations = bool(result.violations)
+    if has_hard_violations and op.fail_on_violations:
+        return {
+            "applied": False,
+            "fixed_count": result.fixed_count,
+            "keepout_count": result.keepout_count,
+            "violations": result.violations,
+            "total_penalty": result.total_penalty,
+            "reason": "hard-rule violations block (set fail_on_violations=False to override)",
+        }
+
+    # Commit the modified content via the IR (transaction-safe).
+    ir.commit_raw_content(result.modified_content)
+
+    return {
+        "applied": True,
+        "fixed_count": result.fixed_count,
+        "keepout_count": result.keepout_count,
+        "violations": result.violations,
+        "total_penalty": result.total_penalty,
+        "hard_violations_blocked": has_hard_violations and op.fail_on_violations,
+    }
+
+
 def _strip_segments(content: str) -> str:
     """Remove all (segment ...) blocks from PCB content.
 
