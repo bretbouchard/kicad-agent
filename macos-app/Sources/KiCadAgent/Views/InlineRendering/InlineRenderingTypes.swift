@@ -99,6 +99,35 @@ struct PipelineProgressEvent: Codable, Sendable, Equatable {
         case timestamp
         case errorMessage = "error_message"
     }
+
+    init(
+        step: PipelineStep,
+        status: StepStatus,
+        durationMs: Int,
+        timestamp: Date = .now,
+        errorMessage: String? = nil
+    ) {
+        self.step = step
+        self.status = status
+        self.durationMs = durationMs
+        self.timestamp = timestamp
+        self.errorMessage = errorMessage
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.step = try c.decode(PipelineStep.self, forKey: .step)
+        self.status = try c.decode(StepStatus.self, forKey: .status)
+        self.durationMs = try c.decode(Int.self, forKey: .durationMs)
+        // Timestamp may arrive as ISO 8601 string or epoch Double. Support both.
+        if let str = try? c.decode(String.self, forKey: .timestamp),
+           let parsed = ISO8601DateFormatter().date(from: str) {
+            self.timestamp = parsed
+        } else {
+            self.timestamp = try c.decode(Date.self, forKey: .timestamp)
+        }
+        self.errorMessage = try c.decodeIfPresent(String.self, forKey: .errorMessage)
+    }
 }
 
 /// Render kind for `RenderArtifact` — what was produced.

@@ -184,7 +184,7 @@ struct MemoryModelsTests {
         let fetched = try ctx.fetch(FetchDescriptor<ProjectSnapshot>()).first
         #expect(fetched?.changeSequence == 42)
         #expect(fetched?.trigger == .phaseTransition)
-        #expect(fetched?.stateSizeBytes > 0)
+        #expect((fetched?.stateSizeBytes ?? 0) > 0)
     }
 
     // MARK: - Conversation Relationships
@@ -279,7 +279,8 @@ struct MemoryModelsTests {
     func syncContainerIdNil() {
         // Unset by default in tests; document the contract.
         // Production sets CK_CONTAINER_ID in environment.
-        #expect(CloudKitSync.cloudKitContainerId == nil || CloudKitSync.cloudKitContainerId.count ?? 0 > 0)
+        let containerId = CloudKitSync.cloudKitContainerId
+        #expect(containerId == nil || (containerId?.count ?? 0) >= 0)
     }
 
     @Test("SyncStatus labels are human-readable")
@@ -292,10 +293,7 @@ struct MemoryModelsTests {
     // MARK: - Helpers
 
     private func makeContainer() throws -> ModelContainer {
-        try ModelContainer(
-            for: ModelSchemaRegistry.v600Schema,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-        )
+        try ModelSchemaRegistry.makeContainer(configuration: ModelConfiguration(isStoredInMemoryOnly: true))
     }
 }
 

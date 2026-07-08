@@ -64,6 +64,22 @@ struct ValueChangePayload: Sendable, Equatable {
     let changedAt: Date
     let actorRaw: String
 
+    init(
+        id: UUID = UUID(),
+        fieldPath: String,
+        oldValueJSON: String = "{}",
+        newValueJSON: String = "{}",
+        changedAt: Date,
+        actorRaw: String
+    ) {
+        self.id = id
+        self.fieldPath = fieldPath
+        self.oldValueJSON = oldValueJSON
+        self.newValueJSON = newValueJSON
+        self.changedAt = changedAt
+        self.actorRaw = actorRaw
+    }
+
     static let empty = ValueChangePayload(
         id: UUID(),
         fieldPath: "",

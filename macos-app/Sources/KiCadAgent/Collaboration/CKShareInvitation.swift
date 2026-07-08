@@ -25,21 +25,26 @@ final class CKShareInvitation {
     var isShared: Bool { share != nil }
 
     /// Generate or fetch the share URL for the project.
+    ///
+    /// Note: CKShare construction requires a valid CloudKit container, which
+    /// is configured in Phase 188.1 (two-device migration test). For now,
+    /// this throws `CKShareError.urlNotAvailable` until the container is set.
     func makeShareURL(recordID: CKRecord.ID, title: String) async throws -> URL {
-        // If existing share, return its URL.
-        if let existing = share {
-            return existing.url
+        if let existing = share, let url = existing.url {
+            return url
         }
-
-        // Create new share.
-        let newShare = CKShare(rootRecordID: recordID)
-        newShare[CKShareTitleKey] = title
-        newShare.publicPermission = .none
-        newShare.systemFields = try archiveSystemFields(newShare)
+        // CKShare requires recordType + recordID, not just recordID. Wrap in
+        // try? so test environments without CloudKit container fail gracefully.
+        let record = CKRecord(recordType: "Project", recordID: recordID)
+        let newShare = CKShare(rootRecord: record)
+        newShare[CKShare.SystemFieldKey.title] = title as NSString
         self.share = newShare
 
         Logger.models.info("CKShare created for recordID=\(recordID.recordName, privacy: .public)")
-        return newShare.url
+        guard let url = newShare.url else {
+            throw CKShareError.urlNotAvailable
+        }
+        return url
     }
 
     /// Revoke the current share.
@@ -48,18 +53,23 @@ final class CKShareInvitation {
         Logger.models.info("CKShare revoked")
     }
 
-    /// Participant operations.
+    /// Add a participant to the share.
     func addParticipant(_ participant: CKShare.Participant) {
         share?.addParticipant(participant)
     }
 
+    /// Remove a participant from the share.
     func removeParticipant(_ participant: CKShare.Participant) {
         share?.removeParticipant(participant)
     }
+}
 
-    /// Archive systemFields for stable round-trip persistence.
-    private func archiveSystemFields(_ share: CKShare) throws -> Data {
-        try NSKeyedArchiver.archivedData(withRootObject: share, requiringSecureCoding: true)
+/// Errors specific to CKShare operations.
+enum CKShareError: LocalizedError {
+    case urlNotAvailable
+
+    var errorDescription: String? {
+        "CKShare URL not available — container may not be configured"
     }
 }
 

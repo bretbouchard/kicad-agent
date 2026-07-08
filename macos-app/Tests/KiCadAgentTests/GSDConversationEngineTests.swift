@@ -144,7 +144,7 @@ struct GSDConversationEngineTests {
     func questioningLight() {
         var spec = ProjectSpec()
         let view = QuestioningView(
-            spec: $spec,
+            spec: Binding(get: { spec }, set: { spec = $0 }),
             onAdvanceToSpec: {},
             onUseDefaults: {}
         )
@@ -154,16 +154,16 @@ struct GSDConversationEngineTests {
 
     @Test("SpecView instantiates in dark mode", .tags(.ui, .a11y))
     func specDark() {
-        var spec = ProjectSpec.defaultSpec
-        let view = SpecView(spec: $spec, onApprove: {}, onBack: {})
+        let spec = ProjectSpec.defaultSpec
+        let view = SpecView(spec: .constant(spec), onApprove: {}, onBack: {})
             .preferredColorScheme(.dark)
         _ = view
     }
 
     @Test("RoadmapView instantiates at XXXL Dynamic Type", .tags(.ui, .a11y))
     func roadmapXXXL() {
-        var roadmap = ProjectRoadmap.defaultRoadmap
-        let view = RoadmapView(roadmap: $roadmap, onApprove: {}, onRefine: {})
+        let roadmap = ProjectRoadmap.defaultRoadmap
+        let view = RoadmapView(roadmap: .constant(roadmap), onApprove: {}, onRefine: {})
             .dynamicTypeSize(.accessibility3)
         _ = view
     }

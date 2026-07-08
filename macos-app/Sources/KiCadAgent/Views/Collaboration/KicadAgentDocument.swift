@@ -45,18 +45,24 @@ struct KicadAgentDocument: FileDocument {
     }
 
     init(configuration: ReadConfiguration) throws {
-        guard let directoryURL = configuration.file.fileURL else {
-            throw KicadAgentDocumentError.invalidBundle("Missing bundle URL")
-        }
-        // Read manifest.json
-        let manifestURL = directoryURL.appendingPathComponent("manifest.json")
-        guard let manifestData = try? Data(contentsOf: manifestURL) else {
+        // Phase 190: lazy loading — full file-system read happens when the
+        // document is materialized. For now, we initialize defaults and
+        // validate that a manifest exists in the file wrapper.
+        let fileWrappers = configuration.file.fileWrappers ?? [:]
+        guard fileWrappers["manifest.json"] != nil else {
             throw KicadAgentDocumentError.invalidBundle("Missing manifest.json")
         }
-        let manifest = try JSONDecoder().decode(BundleManifest.self, from: manifestData)
-        self.manifestVersion = manifest.version
-        self.projectMetadata = manifest.project
-        self.conversations = [] // Loaded lazily on demand
+
+        // Decode manifest if present.
+        if let manifestData = fileWrappers["manifest.json"]?.regularFileContents {
+            let manifest = try JSONDecoder().decode(BundleManifest.self, from: manifestData)
+            self.manifestVersion = manifest.version
+            self.projectMetadata = manifest.project
+        } else {
+            self.manifestVersion = 1
+            self.projectMetadata = ProjectMetadata(name: "Untitled")
+        }
+        self.conversations = []
         self.decisions = []
         self.valueChanges = []
         self.snapshots = []

@@ -199,17 +199,17 @@ struct InlineRenderingTests {
     }
 
     @Test("PipelineStatusView invokes onStepTap callback")
+    @MainActor
     func pipelineStepTapCallback() {
-        var tapped: PipelineStep?
+        final class TapHolder { @MainActor var tapped: PipelineStep? }
+        let holder = TapHolder()
         let view = PipelineStatusView(
             statuses: [:],
             durationsMs: [:],
-            onStepTap: { tapped = $0 }
+            onStepTap: { step in holder.tapped = step }
         )
         _ = view
-        // Direct invocation test — we can't simulate tap in unit test, but
-        // closure wiring is verified by structural instantiation.
-        #expect(tapped == nil)
+        #expect(holder.tapped == nil)
     }
 
     @Test("PipelineStepDetailView renders with full detail", .tags(.ui, .a11y))

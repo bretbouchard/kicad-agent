@@ -41,17 +41,13 @@ final class GroupActivitiesManager {
     @discardableResult
     func startSession(activity: KiCadAgentActivity) async -> Bool {
         guard sessionState != .active else { return true }
-        do {
-            session = try await GroupSession(for: activity)
-            sessionState = .active
-            participants = [Participant.local()]
-            Logger.models.info("GroupActivities session started id=\(activity.id.uuidString.prefix(8))")
-            return true
-        } catch {
-            sessionState = .error(message: error.localizedDescription)
-            Logger.models.error("GroupActivities start failed: \(error.localizedDescription)")
-            return false
-        }
+        // GroupSessions are activated by the system, not constructed by user code.
+        // Phase 187.1 wires the real `activity.activate()` → session arrival flow.
+        // For now, mark as active so the UI can exercise the participant-cap path.
+        sessionState = .active
+        participants = [Participant.local()]
+        Logger.models.info("GroupActivities session activated for activity=\(activity.id.uuidString.prefix(8))")
+        return true
     }
 
     /// Add a participant. Returns false if cap reached.

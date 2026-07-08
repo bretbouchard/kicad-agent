@@ -7,6 +7,7 @@
 
 import Testing
 import Foundation
+import SwiftUI
 import SwiftData
 @testable import KiCadAgent
 
@@ -148,8 +149,9 @@ struct TimeTravelTests {
         try engine.restore(conversationId: conversation.id, to: pastDate.addingTimeInterval(60))
 
         // History preserved: should have at least 2 ValueChange events now (old + restore)
+        let conversationId = conversation.id
         let allChanges = try context.fetch(FetchDescriptor<ValueChange>(
-            predicate: #Predicate { $0.conversationId == conversation.id }
+            predicate: #Predicate { $0.conversationId == conversationId }
         ))
         #expect(allChanges.count >= 2)
     }
@@ -294,22 +296,23 @@ struct TimeTravelTests {
     @Test("ChapterSegmentationView enforces 10-chapter cap")
     @MainActor
     func chapterCap() {
-        var chapters: [TimelineChapter] = (0..<10).map { idx in
+        let chapters: [TimelineChapter] = (0..<10).map { idx in
             TimelineChapter(id: UUID(), title: "Ch \(idx + 1)", startIndex: idx * 10, endIndex: idx * 10 + 9)
         }
-        let view = ChapterSegmentationView(chapters: $chapters, onRegenerate: {})
+        var bound = chapters
+        let view = ChapterSegmentationView(
+            chapters: Binding(get: { bound }, set: { bound = $0 }),
+            onRegenerate: {}
+        )
         _ = view
-        #expect(chapters.count == 10)
+        #expect(bound.count == 10)
     }
 
     // MARK: - Helpers
 
     @MainActor
     private func makeEngine() throws -> (TimeTravelEngine, UUID) {
-        let container = try ModelContainer(
-            for: ModelSchemaRegistry.v600Schema,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-        )
+        let container = try ModelSchemaRegistry.makeContainer(configuration: ModelConfiguration(isStoredInMemoryOnly: true))
         let ctx = container.mainContext
         let project = Project(name: "Test")
         ctx.insert(project)
@@ -321,10 +324,7 @@ struct TimeTravelTests {
 
     @MainActor
     private func makeEngineWithConversation() throws -> (TimeTravelEngine, Conversation) {
-        let container = try ModelContainer(
-            for: ModelSchemaRegistry.v600Schema,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-        )
+        let container = try ModelSchemaRegistry.makeContainer(configuration: ModelConfiguration(isStoredInMemoryOnly: true))
         let ctx = container.mainContext
         let project = Project(name: "Test")
         ctx.insert(project)

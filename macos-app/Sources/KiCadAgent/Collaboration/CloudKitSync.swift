@@ -81,7 +81,8 @@ final class CloudKitSync {
     }
 
     /// Container ID from environment (CKContainerIdentifier env var or default).
-    static var cloudKitContainerId: String? {
+    /// Nonisolated: pure env-var read, safe from any actor.
+    nonisolated static var cloudKitContainerId: String? {
         // Production: set via Info.plist or environment. Default nil = disabled.
         ProcessInfo.processInfo.environment["CK_CONTAINER_ID"]
     }

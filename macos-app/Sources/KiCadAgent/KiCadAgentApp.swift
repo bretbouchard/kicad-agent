@@ -91,6 +91,16 @@ enum ModelSchemaRegistry {
 
     /// Schema version tag for CloudKit Optionals — bump on every schema change.
     static let versionTag = "v6.0.0"
+
+    /// Construct a ModelContainer for the v6.0.0 schema with the given config.
+    /// Helper to avoid variadic-spreading the array at every call site.
+    static func makeContainer(configuration: ModelConfiguration) throws -> ModelContainer {
+        try ModelContainer(
+            for: Project.self, Conversation.self, Message.self, Decision.self,
+                 ValueChange.self, ProjectSnapshot.self,
+            configurations: configuration
+        )
+    }
 }
 
 /// Convenience Logger extension — keeps subsystem consistent across files.
