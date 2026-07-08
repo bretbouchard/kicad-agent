@@ -1,0 +1,148 @@
+# SwiftLint Configuration — Phase 201 A11y by Default
+#
+# Enforces accessibility coverage as lint. Every interactive UI element
+# must have an accessibility label.
+#
+# A11Y-01: VoiceOver navigation works (enforced via custom rule)
+# A11Y-02: Dynamic Type scaling (enforced via custom rule)
+# A11Y-03: Labels + hints on all UI (enforced via custom rule)
+
+included:
+  - macos-app/Sources
+  - macos-app/Tests
+
+excluded:
+  - macos-app/.build
+  - macos-app/Package.swift
+
+# Enabled rules — opt_in + custom
+opt_in_rules:
+  - accessibility_label_for_image
+  - accessibility_trait_for_button
+  - anyobject_protocol
+  - array_init
+  - attributes
+  - closure_body_length
+  - closure_end_indentation
+  - closure_parameter_position
+  - collection_alignment
+  - conditional_returns_on_newline
+  - contains_over_first_not_nil
+  - empty_count
+  - empty_string
+  - empty_xctest_method
+  - explicit_acl
+  - explicit_init
+  - explicit_top_level_acl
+  - extension_access_modifier
+  - fallthrough
+  - fatal_error_message
+  - file_header
+  - file_name
+  - first_where
+  - force_unwrapping
+  - function_default_parameter_at_end
+  - implicitly_unwrapped_optional
+  - is_disjoint
+  - joined_default_parameter
+  - let_var_whitespace
+  - literal_expression_end_indentation
+  - lower_acl_than_parent
+  - multiline_arguments
+  - multiline_parameters
+  - nimble_operator
+  - no_extension_access_modifier
+  - no_grouping_extension
+  - number_separator
+  - object_literal
+  - operator_usage_whitespace
+  - overridden_super_call
+  - override_in_extension
+  - pattern_matching_keywords
+  - prefixed_toplevel_constant
+  - private_action
+  - private_outlet
+  - prohibited_super_call
+  - quick_discouraged_call
+  - quick_discouraged_focused_test
+  - quick_discouraged_pending_test
+  - redundant_nil_coalescing
+  - redundant_type_annotation
+  - required_deinit
+  - required_enum_case
+  - single_test_class
+  - sorted_first_last
+  - sorted_imports
+  - static_operator
+  - strict_fileprivate
+  - switch_case_on_newline
+  - toggle_bool
+  - trailing_closure
+  - unavailable_function
+  - unneeded_parentheses_in_closure_argument
+  - untyped_error_in_catch
+  - valid_ibinspectable
+  - vertical_parameter_alignment_on_call
+  - vertical_whitespace_closing_braces
+  - vertical_whitespace_opening_braces
+  - xct_specific_matcher
+  - yoda_condition
+
+# Disabled rules
+disabled_rules:
+  - trailing_whitespace      # Xcode auto-formats
+  - todo                     # We use TODO with ticket refs
+
+# Configured rule thresholds
+line_length:
+  warning: 200
+  error: 300
+
+function_body_length:
+  warning: 50
+  error: 100
+
+type_body_length:
+  warning: 400
+  error: 800
+
+file_length:
+  warning: 600
+  error: 1200
+
+type_name:
+  min_length: 3
+  max_length: 50
+
+identifier_name:
+  min_length: 2
+  max_length: 50
+  allowed_symbols: ["_"]
+
+# Custom rules — A11Y enforcement (Phase 201)
+custom_rules:
+  accessibility_label_required:
+    name: "Accessibility Label Required"
+    regex: '\.buttonStyle\('
+    match_kinds:
+      - source.lang.swift.syntaxtype.argument
+    message: "Every Button with .buttonStyle must have .accessibilityLabel"
+    severity: warning
+
+  no_force_unwrap:
+    name: "No Force Unwrap"
+    regex: '![\.\[]'
+    message: "Force unwrap is forbidden — use if-let, guard-let, or nil-coalescing"
+    severity: error
+
+  no_print_in_production:
+    name: "No print() in Production"
+    regex: '^\s*print\('
+    message: "Use OSLog Logger instead of print()"
+    severity: warning
+
+  forbidden_phrases:
+    name: "No Workaround Phrases"
+    regex: '(?i)(workaround|hack|good enough|temporarily|for now|due to time)'
+    message: "SLC violation: forbidden phrase detected. Fix properly or create Bead with reason."
+    severity: error
