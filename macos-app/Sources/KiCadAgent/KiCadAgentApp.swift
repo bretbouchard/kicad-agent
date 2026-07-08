@@ -33,11 +33,15 @@ struct KiCadAgentApp: App {
     /// Phase 163 — gates main workflow on `.ready` per APP-04.
     @State private var kicadDetector: KiCadCLIDetector = KiCadCLIDetector()
 
+    /// Multi-window registry. Phase 171 — tracks open project windows + cap.
+    @State private var windowManager: WindowManager = WindowManager()
+
     var body: some Scene {
         WindowGroup {
             AppRootView()
                 .environment(daemonSupervisor)
                 .environment(kicadDetector)
+                .environment(windowManager)
                 .frame(minWidth: 900, minHeight: 600)
                 .onAppear {
                     // APP-01 augmentation: spawn daemon on launch; if it fails within

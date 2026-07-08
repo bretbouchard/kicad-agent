@@ -3,14 +3,21 @@
 //  KiCadAgent
 //
 //  Phase 161 — App Shell Foundation
+//  Phase 171 — Liquid Glass UI Shell (ToolbarView extraction, Reduce Motion/Transparency)
 //
 //  Main detail view — the Liquid Glass chat shell.
 //
 //  Composition:
-//  - Toolbar with New/Open/Settings/Share (APP-06 multi-window handled at scene level)
-//  - Conversation list (left rail inside detail, optional)
-//  - Chat area (placeholder for Phase 165)
-//  - Compose bar (placeholder for Phase 165)
+//  - Header with project name + daemon status badge
+//  - Content area (conversation list or placeholder)
+//  - Compose bar (Phase 175 wires to model + chat engine)
+//  - Native macOS toolbar via `ToolbarView` (Phase 171 extraction)
+//
+//  Phase 171 additions:
+//  - Reduce Motion: disables spring animations in header transitions
+//  - Reduce Transparency: forces solid backgrounds over materials
+//  - WindowManager integration: registers window on appear, unregisters on disappear
+//  - A11Y-06: high-contrast safe — uses ColorTokens semantic colors
 //
 
 import SwiftUI
@@ -22,6 +29,10 @@ struct LiquidGlassShell: View {
     @Bindable var project: Project
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
+    @Environment(WindowManager.self) private var windowManager
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     @State private var composeDraft: String = ""
     @FocusState private var composeFocused: Bool
@@ -36,9 +47,18 @@ struct LiquidGlassShell: View {
             Divider().opacity(0.3)
             composeBar
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(reduceTransparency
+                    ? AnyView(Color(nsColor: .windowBackgroundColor))
+                    : AnyView(Color(nsColor: .windowBackgroundColor).opacity(0.96)))
+        .animation(reduceMotion ? nil : LiquidGlassAnimation.default, value: project.lastModifiedAt)
         .toolbar { toolbarContent }
-        .onAppear { composeFocused = true }
+        .onAppear {
+            composeFocused = true
+            windowManager.register(projectId: project.id)
+        }
+        .onDisappear {
+            windowManager.unregister(projectId: project.id)
+        }
     }
 
     // MARK: - Header
