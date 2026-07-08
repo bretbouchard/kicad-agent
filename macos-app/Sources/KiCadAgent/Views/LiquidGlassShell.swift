@@ -25,6 +25,8 @@ struct LiquidGlassShell: View {
 
     @State private var composeDraft: String = ""
     @FocusState private var composeFocused: Bool
+    @State private var showSettings: Bool = false
+    @State private var externalMCPSettings: ExternalMCPSettings = ExternalMCPSettings()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -64,7 +66,7 @@ struct LiquidGlassShell: View {
         switch projectDaemonState {
         case .notStarted, .shutDown:
             DaemonBadge(label: "Daemon: idle", color: ColorTokens.tertiaryText, icon: "circle.dashed")
-        case .starting, .shuttingDown:
+        case .starting, .shuttingDown, .restarting:
             DaemonBadge(label: "Daemon: working", color: ColorTokens.warning, icon: "arrow.triangle.2.circlepath")
         case .ready:
             DaemonBadge(label: "Daemon: ready", color: ColorTokens.success, icon: "checkmark.circle.fill")
@@ -174,13 +176,15 @@ struct LiquidGlassShell: View {
             .accessibilityHint("Opens the macOS share sheet")
 
             Button {
-                // Phase 203 wires real settings scene.
-                Logger.ui.info("Settings — Phase 203 wires Provider Settings")
+                showSettings = true
             } label: {
                 Label("Settings", systemImage: "gearshape")
             }
             .accessibilityLabel("Settings")
             .accessibilityHint("Opens provider settings, model configuration, and daemon options")
+            .sheet(isPresented: $showSettings) {
+                SettingsSheet(externalMCPSettings: externalMCPSettings)
+            }
         }
     }
 }
@@ -246,5 +250,32 @@ private struct ConversationRow: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Conversation \(conversation.title)")
         .accessibilityHint("Started \(conversation.startedAt.formatted(.relative(presentation: .named)))")
+    }
+}
+
+/// Top-level settings sheet. Phase 163 wires External MCP; Phase 203 adds
+/// the rest (Provider Settings, model config, daemon options).
+struct SettingsSheet: View {
+    @Bindable var externalMCPSettings: ExternalMCPSettings
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Settings")
+                    .font(Typography.title)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer()
+                Button("Done") { dismiss() }
+                    .accessibilityLabel("Done")
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(Spacing.md)
+
+            Divider().opacity(0.3)
+
+            ExternalMCPSettingsView(settings: externalMCPSettings)
+        }
+        .frame(minWidth: 560, minHeight: 480)
     }
 }
