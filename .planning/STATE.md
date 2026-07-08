@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 165 Provider Router shipped (task-aware routing per MOD-02, cost ledger per MOD-12, fallback notifications, Settings UI)
-last_updated: "2026-07-08T02:50:00.000Z"
-last_activity: 2026-07-08
+stopped_at: Phase 166 BYOK Keychain Storage shipped (Track B Models complete — 7 cloud providers, Keychain iCloud sync opt-out default)
+last_updated: "2026-07-08T04:30:00.000Z"
+last_activity: 2026-07-07
 progress:
   total_phases: 32
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 34
-  completed_plans: 6
-  percent: 18
+  completed_plans: 7
+  percent: 21
 ---
 
 # Project State
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 204 SHIPPED — Closed-Box Simulation Pipeline v1 (Eurorack Magic Proof). Ready for next phase.
-Last activity: 2026-07-07 — Phase 204 complete (Council Gate 2 APPROVED)
+**Current focus:** Phase 166 SHIPPED — BYOK Keychain Storage (Track B Models complete). Ready for next phase.
+Last activity: 2026-07-07 — Phase 166 complete (7 cloud providers, Keychain integration, MOD-03/04/05 satisfied)
 
 ## Current Position
 
-Phase: 165 (Provider Router) — COMPLETE
+Phase: 166 (BYOK Keychain Storage) — COMPLETE
 Plan: 1 of 1
-Status: Phase 165 shipped — 59/59 tests pass, KiCadModelRouter + KCCostLedger + KCRoutingNotifier + ProviderRoutingSettingsView
-Last activity: 2026-07-08 -- Phase 165 provider router shipped (task-aware routing per MOD-02)
+Status: Phase 166 shipped — 31/31 new tests pass, KeychainManager + 7 cloud providers + APIKeyValidator + BYOKSettingsView. Track B Models closed.
+Last activity: 2026-07-07 — Phase 166 BYOK keychain storage shipped
 
 ## Phase 161 — App Shell Foundation (SHIPPED 2026-07-07)
 
