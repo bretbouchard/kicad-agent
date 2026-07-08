@@ -132,9 +132,19 @@ def objective(trial: optuna.Trial) -> float:
     if ac is None or not ac.passed or ac.gain_db is None:
         return float("inf")
 
-    # Heuristic Ic (mA): (Vcc - Vce_sat) / R1 * 1000
-    # Vcc=12, Vce_sat=0.2 — approximation; full .OP analysis deferred to v2.
-    ic_ma = (12.0 - 0.2) / r1 * 1000.0
+    # kicad-agent-8vv: prefer measured Ic from .OP analysis (op:i(vcc)_ma
+    # trace, populated when generate_ac_testbench has include_op=True which
+    # is the default). Falls back to the (Vcc-Vce_sat)/R1 heuristic if the
+    # OP trace isn't present (e.g., pure-AC testbench or older ngspice).
+    op_vcc_trace = next(
+        (t for t in ac.traces if t.name == "op:i(vcc)_ma"), None
+    )
+    if op_vcc_trace is not None and op_vcc_trace.values:
+        ic_ma = float(op_vcc_trace.values[0])
+    else:
+        # Heuristic fallback: (Vcc - Vce_sat) / R1 * 1000.
+        # Vcc=12, Vce_sat=0.2 — overestimates Ic, conservative for saturation guard.
+        ic_ma = (12.0 - 0.2) / r1 * 1000.0
 
     # CR-03 (Council R2 P1): current-saturation guard.
     # Without this, the (gain_db - 20)^2 term pulls R1 toward the E12 floor

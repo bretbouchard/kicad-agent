@@ -16,6 +16,7 @@ def generate_ac_testbench(
     freq_stop: float = 1e9,
     points_per_decade: int = 50,
     output_load_ohms: float = 100e3,
+    include_op: bool = True,
 ) -> str:
     """Generate an AC analysis testbench.
 
@@ -35,10 +36,17 @@ def generate_ac_testbench(
             series capacitor — without a DC path to ground, ngspice reports
             "singular matrix: check node <out>" because the output node
             floats at DC.
+        include_op: Also run .OP (operating point) analysis. Default True
+            per kicad-agent-8vv fix — produces a second "Operating Point"
+            plot in the .raw file with node voltages + supply currents.
+            _parse_ac extracts i(vcc) as the measured collector current,
+            replacing the optimizer's heuristic. Set False for pure AC
+            analysis where OP data isn't needed.
 
     Returns:
         Complete .cir file content.
     """
+    op_line = "\n.OP\n" if include_op else ""
     return f"""* AC Analysis Testbench
 * Input: {input_node}, Output: {output_node}
 
@@ -53,7 +61,7 @@ RLOAD {output_node} 0 {output_load_ohms:g}
 
 * AC analysis: {freq_start:.1f}Hz to {freq_stop:.0f}Hz
 .AC DEC {points_per_decade} {freq_start} {freq_stop}
-
+{op_line}
 * Control block: compute gain and bandwidth from AC results
 * ngspice's .MEASURE WHEN clause cannot reference prior measurement
 * results, so we use the control language to compute the -3dB threshold.

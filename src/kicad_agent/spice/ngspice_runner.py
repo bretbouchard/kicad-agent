@@ -255,6 +255,68 @@ def _compute_gain_and_bandwidth(traces: tuple[Trace, ...], input_node: str = "in
     return gain_db, bandwidth_hz
 
 
+def _extract_op_traces(raw) -> tuple[Trace, ...]:
+    """Extract Operating Point plot data from a multi-plot .raw file.
+
+    kicad-agent-8vv: ngspice testbench (per generate_ac_testbench
+    include_op=True) produces TWO plots: 'AC Analysis' + 'Operating Point'.
+    The OP plot contains single-value v(node) and i(vsource) entries —
+    the DC bias point computed before AC linearization.
+
+    Returns Trace tuple like:
+        (Trace(name='op:v(collector)', values=(4.41,), scale=(0,)),
+         Trace(name='op:i(vcc)_ma', values=(1.77,), scale=(0,)), ...)
+    where currents are negated + scaled to mA (VCC/VEE sources flow OUT
+    of the supply INTO the circuit, so i(vcc) < 0 means positive Ic).
+    """
+    op_traces: list[Trace] = []
+    for plot in getattr(raw, "plots", []):
+        # PlotData exposes get_plot_name() + get_trace_names() + get_trace(name).
+        plot_name = ""
+        if hasattr(plot, "get_plot_name"):
+            try:
+                plot_name = plot.get_plot_name() or ""
+            except Exception:
+                plot_name = ""
+        if "operating point" not in plot_name.lower():
+            continue
+
+        trace_names = []
+        if hasattr(plot, "get_trace_names"):
+            try:
+                trace_names = list(plot.get_trace_names())
+            except Exception:
+                trace_names = []
+
+        for trace_name in trace_names:
+            if trace_name.lower() in ("frequency", "time"):
+                continue
+            try:
+                trace_obj = plot.get_trace(trace_name)
+                wave = trace_obj.get_wave() if hasattr(trace_obj, "get_wave") else trace_obj
+                # OP plot has single-value traces.
+                arr_val = float(wave[0]) if hasattr(wave, "__getitem__") else float(wave)
+            except (TypeError, ValueError, IndexError, AttributeError):
+                continue
+
+            # Convert currents from VCC/VEE sources to mA (positive = into circuit).
+            if trace_name.lower().startswith("i("):
+                arr_val_ma = -arr_val * 1000.0  # negate + scale to mA
+                op_traces.append(Trace(
+                    name=f"op:{trace_name}_ma",
+                    values=(arr_val_ma,),
+                    scale=(0.0,),
+                ))
+            else:
+                op_traces.append(Trace(
+                    name=f"op:{trace_name}",
+                    values=(arr_val,),
+                    scale=(0.0,),
+                ))
+        break
+    return tuple(op_traces)
+
+
 def _parse_ac(log: str, raw_path: Path | None = None) -> AnalysisResult:
     """Parse AC analysis results — prefer .raw, fall back to regex.
 
@@ -262,6 +324,13 @@ def _parse_ac(log: str, raw_path: Path | None = None) -> AnalysisResult:
     spicelib.RawRead when raw_path exists, populating AnalysisResult.traces
     with real v(in)/v(out) magnitude and phase data. gain_db + bandwidth_hz
     computed from actual data, not regex-matched text.
+
+    kicad-agent-8vv: when generate_ac_testbench was called with
+    include_op=True (the default), the .raw contains a second 'Operating
+    Point' plot. _extract_op_traces pulls those single-value entries
+    (op:v(collector), op:i(vcc)_ma, etc.) and appends them to AC traces.
+    The optimizer looks up op:i(vcc)_ma by name to get the measured
+    collector current, replacing the (12-0.2)/R1 heuristic.
     """
     import re
 
@@ -274,8 +343,10 @@ def _parse_ac(log: str, raw_path: Path | None = None) -> AnalysisResult:
         try:
             from spicelib import RawRead
             raw = RawRead(str(raw_path), verbose=False)
-            traces = _build_traces_from_raw(raw)
-            gain_db, bandwidth_hz = _compute_gain_and_bandwidth(traces)
+            ac_traces = _build_traces_from_raw(raw)
+            op_traces = _extract_op_traces(raw)
+            traces = ac_traces + op_traces
+            gain_db, bandwidth_hz = _compute_gain_and_bandwidth(ac_traces)
         except Exception as exc:
             logger.debug("RawRead failed (%s) — falling back to regex", exc)
 
