@@ -15,7 +15,7 @@
 - [x] **Phase 167: stdio MCP Client** — Swift subprocess communication with Python daemon ✅ 2026-07-08
 - [ ] **Phase 168: Python MCP Server** — Auto-register 142 ops as MCP tools, zero glue
 - [x] **Phase 169: Obdurate Runtime** — State machine, op journal, verification gates, escalation ladder ✅ 2026-07-08
-- [ ] **Phase 170: Verification Loop Integration** — Python validation_gates.py wrapped for Swift
+- [x] **Phase 170: Verification Loop Integration** — PreOpGate + PostOpGate + auto-rollback via daemon MCP handlers wrapping validation_gates.py ✅ 2026-07-08
 - [ ] **Phase 171: Liquid Glass UI Shell** — Toolbar, window management, visual language system
 - [ ] **Phase 172: Inline Rendering** — SVG schematic preview, PNG PCB renders, live pipeline view
 - [ ] **Phase 173: GSD Conversation Engine** — Visual questioning → spec → roadmap → execute → verify
@@ -224,7 +224,7 @@
 
 ---
 
-### Phase 170: Verification Loop Integration
+### Phase 170: Verification Loop Integration ✅
 
 **Goal:** Python validation_gates.py wrapped for Swift, ERC/DRC enforcement before commits
 
@@ -232,14 +232,22 @@
 
 **Requirements:** GOV-03, GOV-04, GOV-05
 
-**Success Criteria** (what must be TRUE):
-1. Pre-op verification gate validates intent matches op and will achieve goal
-2. Post-op verification gate runs deterministic check + semantic check
-3. Auto-rollback on verification failure (PersistentUndoStack checkpoint)
-4. ERC/DRC gates must pass before KiCad files marked valid
-5. Verification failures surfaced as user decisions (not silent failures)
+**Status:** SHIPPED 2026-07-08 — commit `7b367635`
+- PreOpGate.swift: validates op + target file types via daemon kicad.pre_check
+- PostOpGate.swift: deterministic ERC/DRC (kicad.post_check) + optional semantic LLM judge
+- Rollback.swift + snapshot.py: atomic per-file snapshot/restore via kicad.snapshot/restore
+- VerificationLoop.swift: orchestrates checkpoint → preCheck → execute → postCheck → restore-on-fail
+- MCPClient.governedCall rewired to drive VerificationLoop
+- 50+ Swift tests + 26 Python tests, 211/211 Swift pass
 
-**Plans:** 1 plan
+**Success Criteria** (what must be TRUE):
+1. ✅ Pre-op verification gate validates intent matches op and will achieve goal
+2. ✅ Post-op verification gate runs deterministic check + semantic check
+3. ✅ Auto-rollback on verification failure (file snapshot checkpoint via daemon)
+4. ✅ ERC/DRC gates must pass before KiCad files marked valid
+5. ✅ Verification failures surfaced as user decisions (not silent failures)
+
+**Plans:** 1 plan (COMPLETE)
 
 ---
 

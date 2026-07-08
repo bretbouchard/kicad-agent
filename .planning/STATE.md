@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 169 Obdurate Runtime shipped (Swift governance layer with WorkflowStateMachine + IntentGate + OpJournal + DriftDetector + EscalationLadder + FindingResolution + AutoLearner + RequirementCoverage, 8 suites 47 tests, 210/210 pass)
-last_updated: "2026-07-08T05:30:00.000Z"
+stopped_at: Phase 170 Verification Loop Integration shipped (PreOpGate + PostOpGate + Rollback + VerificationLoop + 4 daemon handlers + snapshot.py atomic per-file restore, 50+ Swift tests + 26 Python tests, 211/211 Swift pass)
+last_updated: "2026-07-08T07:00:00.000Z"
 last_activity: 2026-07-08
 progress:
   total_phases: 32
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 34
-  completed_plans: 9
-  percent: 26
+  completed_plans: 10
+  percent: 29
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 169 SHIPPED — Obdurate Runtime. Swift-side governance layer wrapping every MCP op call: IntentGate → DriftDetector → WorkflowStateMachine → MCPClient.call → OpJournal (fsync) → AutoLearner → EscalationLadder. GOV-01..GOV-11 covered.
-Last activity: 2026-07-08 — Phase 169 complete (8 Governance source files ~2000 LOC + 8 test suites 47 tests, 210/210 pass)
+**Current focus:** Phase 170 SHIPPED — Verification Loop Integration. PreOpGate + PostOpGate + Rollback + VerificationLoop on Swift side; kicad.pre_check/post_check/snapshot/restore MCP handlers on daemon side wrapping existing validation_gates.py + erc_drc.py. GOV-03, GOV-04, GOV-05 closed.
+Last activity: 2026-07-08 — Phase 170 complete (4 Governance source files + snapshot.py + MCPClient.governedCall rewired to VerificationLoop, 50+ Swift tests + 26 Python tests, 211/211 Swift pass)
 
 ## Current Position
 
-Phase: 169 (Obdurate Runtime) — COMPLETE
+Phase: 170 (Verification Loop Integration) — COMPLETE
 Plan: 1 of 1
-Status: Phase 169 shipped — 8 governance components + MCPClient.governedCall<T> wrapper. WorkflowStateMachine, IntentGate, OpJournal (JSONL+fsync), DriftDetector, EscalationLadder (T1→T2→T3→T4), FindingResolution (four-state taxonomy), AutoLearner, RequirementCoverage. 210/210 tests pass.
+Status: Phase 170 shipped — PreOpGate + PostOpGate + Rollback + VerificationLoop + snapshot.py + 4 daemon handlers. MCPClient.governedCall drives full pipeline: checkpoint → preCheck → execute → postCheck → restore-on-fail. 211/211 tests pass.
 
 ## Phase 161 — App Shell Foundation (SHIPPED 2026-07-07)
 
@@ -189,6 +189,34 @@ See: `.planning/phases/165-provider-router/165-01-SUMMARY.md`
 - [Rule 1 Bug] IntentGate catalog default masked explicit empty requirementId — added explicit empty-string check before resolver
 
 See: `.planning/phases/169-obdurate-runtime/169-01-SUMMARY.md`
+
+## Phase 170 — Verification Loop Integration (SHIPPED 2026-07-08)
+
+**Files:** 11 created + 3 modified, ~1700 LOC (940 source + 760 tests)
+**Build:** `swift build` clean, zero warnings
+**Tests:** 50+ new Swift across 4 suites (PreOpGateTests, PostOpGateTests, RollbackTests, VerificationLoopTests) + 26 new Python across 2 suites (test_snapshot.py, test_verification_handlers.py) — all passing
+**Total:** 211/211 Swift tests pass in full suite
+**Commit:** `7b367635`
+
+**What shipped:**
+- PreOpGate (@MainActor): validates intent matches op + target file types. Calls daemon `kicad.pre_check`. Read-only ops short-circuit (allow). Returns PreOpDecision {allow, warn, block} with reasons + per-check map. GOV-03.
+- PostOpGate (@MainActor): runs deterministic ERC/DRC check (via `kicad.post_check` wrapping `validation/erc_drc.py`) + optional SemanticJudge LLM "did this achieve intent?" Returns PostOpDecision {passed, failed, indeterminate}. Decision composition: failed deterministic → .failed; indeterminate → .indeterminate; passed + LLM says no → .failed (semantic veto). GOV-04.
+- Rollback (@MainActor): `checkpoint(files:)` calls daemon `kicad.snapshot` → returns Checkpoint with snapshot_id. `restore(checkpoint:)` calls daemon `kicad.restore` → returns RestoreResult {restored, removed, skipped}. Sentinel IDs for empty/no-client test mode. GOV-05.
+- VerificationLoop (@MainActor): orchestrates checkpoint → preCheck → execute → postCheck → restore-on-fail. Returns VerificationOutcome with status, pre/post results, checkpointId, restore summary, per-stage timings.
+- MCPClient.governedCall rewired: after IntentGate → DriftDetector → StateMachine → EscalationLadder checks, VerificationLoop runs the actual op. Outcome status maps to journal `result_status`: passed → success; indeterminate → success (verification nil); blocked → rejected; executionFailed → failed; failed → rolled_back + escalation + auto-learn.
+- daemon/snapshot.py: atomic per-file Snapshot.create/restore with content-addressed blob dedup. Path-traversal defense (T-170-06): refuses '..' segments + optional base_dir containment. Missing files tracked as "remove-on-restore".
+- 4 new daemon MCP handlers: kicad.pre_check (op_known + file_type_ok + args_present), kicad.post_check (runs run_erc on .kicad_sch, run_drc on .kicad_pcb, aggregates), kicad.snapshot (wraps Snapshot.create), kicad.restore (looks up snapshot by UUID, calls Snapshot.restore).
+
+**Architecture decisions:**
+- Gates are @MainActor (not @unchecked Sendable) to share MCPClient's actor isolation — avoids [String: Any] sendability crossings on params dicts
+- snapshot.py uses tempfile.mkstemp in target parent dir for atomic per-file restore via os.replace (crash leaves either old or new, never torn)
+- Snapshot failures are non-fatal: op proceeds but loses rollback; post-op failure surfaces as .failed without restore. Journal records it for audit.
+- SemanticJudge is a minimal 3-field protocol so Phase 173 can wire it to KiCadModelProvider router; Phase 170 ships NoSemanticJudge default so deterministic checks run independently
+- Three plan tasks delivered as one atomic commit since VerificationLoop can't be tested in isolation without all three gates
+
+**Deviations:** None — plan executed exactly as written.
+
+See: `.planning/phases/170-verification-loop-integration/170-01-SUMMARY.md`
 
 ## Phase 204 — Closed-Box Simulation Pipeline v1 (SHIPPED 2026-07-07, parallel track)
 

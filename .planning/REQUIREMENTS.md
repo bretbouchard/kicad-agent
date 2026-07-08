@@ -198,9 +198,9 @@
 
 - [x] **GOV-01**: Every op passes through Intent Gate (parse, validate, link to requirement) before execution ✅ Phase 169
 - [x] **GOV-02**: Workflow State Machine enforces phase transitions (can't run DRC without PCB) ✅ Phase 169
-- [ ] **GOV-03**: Pre-op verification gate (intent matches op, will achieve goal)
-- [ ] **GOV-04**: Post-op verification gate (deterministic check + semantic check)
-- [ ] **GOV-05**: Auto-rollback on verification failure (PersistentUndoStack checkpoint)
+- [x] **GOV-03**: Pre-op verification gate (intent matches op, will achieve goal) ✅ Phase 170
+- [x] **GOV-04**: Post-op verification gate (deterministic check + semantic check) ✅ Phase 170
+- [x] **GOV-05**: Auto-rollback on verification failure (PersistentUndoStack checkpoint) ✅ Phase 170
 - [x] **GOV-06**: Op Journal logs every op (uuid, timestamp, actor, intent, op, args, result, verification, requirement_id) ✅ Phase 169
 - [x] **GOV-07**: Drift detection (out-of-scope files trigger warning, requirement_id required) ✅ Phase 169
 - [x] **GOV-08**: Escalation ladder (T1 retry → T2 strategy switch → T3 external AI → T4 halt) ✅ Phase 169
