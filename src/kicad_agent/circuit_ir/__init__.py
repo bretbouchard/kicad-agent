@@ -94,6 +94,38 @@ skidl.config.backup_lib_name = "kicad_agent_cache"  # type: ignore[attr-defined]
 skidl.config.backup_lib_file_name = str(_CACHE_FILE)  # type: ignore[attr-defined]
 skidl.config.query_backup_lib = True  # type: ignore[attr-defined]
 
+# kicad-agent-7xj fix: memoize skidl.utilities.get_abs_filename.
+# Profiling showed Part() took ~500ms each because skidl.schlib.SchLib.__init__
+# calls get_abs_filename(descend=-1) on EVERY Part() construction, BEFORE
+# checking the SchLib._cache. The descend=-1 triggers an unlimited recursive
+# filesystem walk (~100k+ scandir/lstat calls per Part()). Since library file
+# paths don't change during a process lifetime, memoize the function.
+import skidl.utilities  # noqa: E402
+import functools  # noqa: E402
+
+_ORIG_GET_ABS_FILENAME = skidl.utilities.get_abs_filename
+_ABS_FILENAME_MEMO: dict[tuple, str | None] = {}
+
+@functools.wraps(_ORIG_GET_ABS_FILENAME)
+def _memoized_get_abs_filename(filename, paths=None, ext=None, allow_failure=False, descend=0):
+    # Hashable cache key — paths may be a list, ext may be a list, both hashable
+    # as tuples. descend + allow_failure are scalars.
+    key = (filename, tuple(paths) if paths else None, tuple(ext) if ext else None, allow_failure, descend)
+    if key in _ABS_FILENAME_MEMO:
+        return _ABS_FILENAME_MEMO[key]
+    result = _ORIG_GET_ABS_FILENAME(filename, paths, ext, allow_failure, descend)
+    _ABS_FILENAME_MEMO[key] = result
+    return result
+
+# Patch both the module attribute and SchLib's lookup path (skidl imports
+# get_abs_filename into its namespace at module load — must replace there too).
+skidl.utilities.get_abs_filename = _memoized_get_abs_filename
+# SchLib imports it via `from .utilities import find_and_open_file, ...` — but
+# actually calls get_abs_filename via `from .utilities import get_abs_filename`
+# at line ~109 of schlib.py. That bound name lives in schlib's namespace.
+import skidl.schlib  # noqa: E402
+skidl.schlib.get_abs_filename = _memoized_get_abs_filename
+
 from kicad_agent.circuit_ir.types import (  # noqa: E402
     CircuitIR,
     NetDescriptor,

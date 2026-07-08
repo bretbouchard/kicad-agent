@@ -198,7 +198,14 @@ def optimize_preamp(
     # Quiet Optuna logs (default INFO is chatty for 50 trials)
     optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-    sampler = optuna.samplers.GPSampler(seed=seed)
+    # GPSampler is marked ExperimentalWarning by Optuna. Phase 199's pytest.ini
+    # uses --strict-markers + filterwarnings=error which turns warnings into
+    # test failures. Suppress the experimental warning here (we accept the API
+    # stability risk per RESEARCH.md).
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", optuna.exceptions.ExperimentalWarning)
+        sampler = optuna.samplers.GPSampler(seed=seed)
     study = optuna.create_study(
         sampler=sampler,
         storage=storage,
