@@ -73,3 +73,14 @@ docs/Schematic_Editor
 
 # Claude settings (per-team-member, not shared)
 .claude.json
+
+# KiCad netlist exports (test/run strays)
+*.net
+
+# Build artifacts
+/kicad_agent-*/
+/graphify-out/
+
+# Compiled Python (per-developer)
+__pycache__/
+*.pyc
