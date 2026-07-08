@@ -10,7 +10,7 @@
 - [x] **Phase 162: Python Daemon Bundling** — PyInstaller binary, code-signed, app-spawned subprocess ✅ 2026-07-07
 - [x] **Phase 163: KiCad CLI Integration** — External kicad-cli detection, App Store GPL compliance
 - [x] **Phase 164: LLM Provider Protocol** — FoundationModels, HF Hub, MLX-Swift abstraction
-- [ ] **Phase 165: Provider Router** — Task-aware, cost-aware, privacy-aware model routing
+- [x] **Phase 165: Provider Router** — Task-aware, cost-aware, privacy-aware model routing ✅ 2026-07-08
 - [ ] **Phase 166: BYOK Keychain Storage** — API key management with iCloud sync opt-out default
 - [ ] **Phase 167: stdio MCP Client** — Swift subprocess communication with Python daemon
 - [ ] **Phase 168: Python MCP Server** — Auto-register 142 ops as MCP tools, zero glue
@@ -685,7 +685,7 @@
 | 162. Python Daemon Bundling | 1/1 | Complete | 2026-07-07 |
 | 163. KiCad CLI Integration | 1/1 | Complete | 2026-07-07 |
 | 164. LLM Provider Protocol | 1/1 | Complete | 2026-07-07 |
-| 165. Provider Router | 0/3 | Not started | - |
+| 165. Provider Router | 1/1 | Complete | 2026-07-08 |
 | 166. BYOK Keychain Storage | 0/3 | Not started | - |
 | 167. stdio MCP Client | 0/3 | Not started | - |
 | 168. Python MCP Server | 0/3 | Not started | - |

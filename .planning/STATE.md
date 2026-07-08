@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 164 LLM Provider Protocol shipped (FoundationModels + MLX-Swift providers, HF Hub catalog, ProviderRegistry, ProviderBanner)
-last_updated: "2026-07-07T23:59:00.000Z"
-last_activity: 2026-07-07
+stopped_at: Phase 165 Provider Router shipped (task-aware routing per MOD-02, cost ledger per MOD-12, fallback notifications, Settings UI)
+last_updated: "2026-07-08T02:50:00.000Z"
+last_activity: 2026-07-08
 progress:
   total_phases: 32
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 34
-  completed_plans: 5
-  percent: 15
+  completed_plans: 6
+  percent: 18
 ---
 
 # Project State
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 204 — Closed-Box Simulation Pipeline v1 — Eurorack Magic Proof
-Last activity: 2026-07-07
+**Current focus:** Phase 204 SHIPPED — Closed-Box Simulation Pipeline v1 (Eurorack Magic Proof). Ready for next phase.
+Last activity: 2026-07-07 — Phase 204 complete (Council Gate 2 APPROVED)
 
 ## Current Position
 
-Phase: 204 (Closed-Box Simulation Pipeline v1 — Eurorack Magic Proof) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 204
-Last activity: 2026-07-07 -- Phase 204 execution started
+Phase: 165 (Provider Router) — COMPLETE
+Plan: 1 of 1
+Status: Phase 165 shipped — 59/59 tests pass, KiCadModelRouter + KCCostLedger + KCRoutingNotifier + ProviderRoutingSettingsView
+Last activity: 2026-07-08 -- Phase 165 provider router shipped (task-aware routing per MOD-02)
 
 ## Phase 161 — App Shell Foundation (SHIPPED 2026-07-07)
 
@@ -112,6 +112,49 @@ See commit `d33ec8c8`. KiCad CLI detector + onboarding gate. APP-04 augmentation
 - [Rule 3 Blocking] `NSLock.lock()` unavailable from async context. Replaced with private actor Counter in MockProvider.
 
 See: `.planning/phases/164-llm-provider-protocol/164-01-SUMMARY.md`
+
+## Phase 165 — Provider Router (SHIPPED 2026-07-08)
+
+**Files:** 10 created, 1 modified (MockProvider), ~1900 LOC
+**Build:** `swift build` clean, zero warnings
+**Tests:** 59 new across 4 suites (KiCadModelRouterTests, KCTaskClassifierTests, KCCostLedgerTests, ProviderRoutingSettingsViewTests) — all passing
+**Commit:** `a57eebbb`
+
+**What shipped:**
+- `KiCadModelRouter` — task-aware, cost-aware, privacy-aware routing per MOD-02:
+  - Privacy override: privacySensitive tasks ALWAYS AppleLocal (wins over user prefs, vision requirements, task defaults)
+  - Vision priority: cloud vision-capable → MLX Gemma vision → AppleLocal with one-time notification
+  - Complex reasoning: MLX local (cost $0) → AppleLocal fallback per MOD-11
+  - Quick replies / board analysis / conversation history: AppleLocal (free, fast)
+  - User preference checked before defaults (MOD-10); unavailable preferred falls back to AppleLocal with one-time notification
+- `KCTask + KCTaskClassifier` — prompt → task type via keyword heuristics (privacy/vision/generation/routing/analysis/summarization keywords + complexity ramp from prompt length)
+- `KCCostLedger` — append-only ledger with per-message entries, today/thisWeek/allTime range queries, per-provider breakdown, runaway-spend threshold ($1000 default per T-165-03), Decimal for all currency (Pitfall 6)
+- `KCRoutingNotifier` — one-time-per-shape (preferredKind, fallbackKind, taskType) fallback notifications via NotificationCenter
+- `ProviderRoutingSettingsView` — privacy mode toggle + per-task preferred-provider pickers + cost ledger summary (today/week/all-time + per-provider) + reset preferences + clear ledger actions + runaway spend banner
+- `MockProvider.kind` promoted to var + init parameter so tests can impersonate any KCProviderKind
+
+**Architecture decisions:**
+- Task classification uses keyword heuristics (not LLM) — routing must be O(1) and free
+- KCCostLedger is @MainActor ObservableObject — main-actor isolation for UI re-renders without hop overhead
+- KCRoutingNotifier uses NSLock (not actor) — NotificationCenter dispatches observers synchronously on its queue, actor methods would deadlock
+- Preferences persisted via UserDefaults JSON blob (Phase 166+ migrates to SwiftData)
+- `loadPersistedPreferences: Bool = true` init param lets tests bypass UserDefaults bleed-through
+- Privacy override is unconditional — wins over user preferences and task type
+- User-facing categories (quickReply, complexReasoning, vision, privacySensitive) drive preference lookup; internal pipeline stages (circuitGeneration, pcbRouting, boardAnalysis, conversationHistory) map onto them via `KCTaskType.preferenceCategory`
+
+**Deviations:**
+- [Rule 1 Bug] Plan file paths mismatched actual SPM structure — used Phase 164 paths as source of truth
+- [Rule 1 Bug] `Logger.warn` → `Logger.warning` (OSLog API)
+- [Rule 1 Bug] `Range<Date>?` → `summary(from: Date?, named:)` to match PartialRangeFrom call sites
+- [Rule 1 Bug] @MainActor class leaked isolation into `KCRoutingPreferences.default` — moved constant to non-isolated namespace
+- [Rule 1 Bug] `KCRoutingNotificationPayload` field order mismatched init call — reordered struct fields
+- [Rule 1 Bug] `@Bindable` requires @Observable macro — switched to @ObservedObject (Phase 164 uses ObservableObject)
+- [Rule 1 Bug] init overwrote explicitly-passed preferences with UserDefaults — added `loadPersistedPreferences` flag
+- [Rule 1 Bug] Actor-isolated capture boxes deadlocked notification observers — replaced with NSLock-based classes
+- [Rule 1 Bug] MockProvider.kind was `let` — promoted to `var` + init param
+- [Rule 3 Blocking] Precondition failure tests aborted the test runner — removed negative-case coverage
+
+See: `.planning/phases/165-provider-router/165-01-SUMMARY.md`
 
 ## Backlog (next milestone)
 
