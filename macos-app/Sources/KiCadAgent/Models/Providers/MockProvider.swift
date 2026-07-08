@@ -18,7 +18,10 @@ import OSLog
 /// Mock provider. Configurable stream output, forced availability, and
 /// optional injected error. Thread-safe via dedicated actor for the counter.
 final class MockProvider: KiCadModelProvider, @unchecked Sendable {
-    let kind: KCProviderKind = .mock
+    /// ponytail: var so tests can override to impersonate any provider kind
+    /// (Phase 165 router tests use this to build OpenAI/Anthropic/MLX mocks).
+    /// Production code never mutates this — defaults to `.mock`.
+    var kind: KCProviderKind
     let displayName: String
     let mockAvailability: KCProviderAvailability
 
@@ -34,11 +37,13 @@ final class MockProvider: KiCadModelProvider, @unchecked Sendable {
 
     init(
         displayName: String = "Mock",
+        kind: KCProviderKind = .mock,
         availability: KCProviderAvailability = .available,
         tokens: [KCToken] = [.text("hello"), .usage(KCUsage.free(input: 1, output: 1)), .done(.complete)],
         forcedError: Error? = nil
     ) {
         self.displayName = displayName
+        self.kind = kind
         self.mockAvailability = availability
         self.tokens = tokens
         self.forcedError = forcedError
