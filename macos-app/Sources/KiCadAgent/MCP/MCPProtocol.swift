@@ -39,12 +39,12 @@ import Foundation
 
 // MARK: - JSON-RPC error codes (spec-defined, mirror protocol.py)
 
-public enum MCPErrorCode {
-    public static let parseError: Int = -32700
-    public static let invalidRequest: Int = -32600
-    public static let methodNotFound: Int = -32601
-    public static let invalidParams: Int = -32602
-    public static let internalError: Int = -32603
+enum MCPErrorCode {
+    static let parseError: Int = -32700
+    static let invalidRequest: Int = -32600
+    static let methodNotFound: Int = -32601
+    static let invalidParams: Int = -32602
+    static let internalError: Int = -32603
 }
 
 // MARK: - MCPError
@@ -54,7 +54,7 @@ public enum MCPErrorCode {
 /// `MCPError` is the single error type surfaced to callers of `MCPClient`.
 /// It wraps both transport-level failures (broken pipe, timeout) and
 /// protocol-level failures (daemon-side JSON-RPC errors).
-public enum MCPError: LocalizedError, Equatable {
+enum MCPError: LocalizedError, Equatable {
     case transport(message: String)
     case daemonError(code: Int, message: String)
     case timeout
@@ -88,7 +88,7 @@ public enum MCPError: LocalizedError, Equatable {
 /// envelope type cleanly handles all four wire shapes (request, response,
 /// error, notification). The consumer inspects `id`, `method`, `result`,
 /// and `error` to discriminate.
-public struct JSONRPCEnvelope: Codable, Equatable, Sendable {
+struct JSONRPCEnvelope: Codable, Equatable, Sendable {
     public var jsonrpc: String = "2.0"
     /// JSON-RPC id. Nil for notifications, present for requests/responses.
     /// Per MCP spec, ids may be Int or String. Swift's JSONDecoder accepts
@@ -137,7 +137,7 @@ public struct JSONRPCEnvelope: Codable, Equatable, Sendable {
 }
 
 /// JSON-RPC 2.0 error object (lives inside the envelope's `error` field).
-public struct JSONRPCError: Codable, Equatable, Sendable {
+struct JSONRPCError: Codable, Equatable, Sendable {
     public var code: Int
     public var message: String
     public var data: AnyCodable?
@@ -160,7 +160,7 @@ public struct JSONRPCError: Codable, Equatable, Sendable {
 /// every JSON type: null, bool, number, string, array, object. The stored
 /// value is a value-type (`[String: Any]`, `String`, `NSNumber`, `NSNull`,
 /// `[Any]`) — safe to mark `@unchecked Sendable`.
-public struct AnyCodable: Codable, Equatable, @unchecked Sendable {
+struct AnyCodable: Codable, Equatable, @unchecked Sendable {
     public let value: Any
 
     public init(_ value: Any) {
@@ -226,7 +226,7 @@ public struct AnyCodable: Codable, Equatable, @unchecked Sendable {
         value as? [Any]
     }
 
-    public static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
+    static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
         // Compare via JSON round-trip — most reliable Any equality check.
         let l = try? JSONSerialization.data(withJSONObject: [lhs.value])
         let r = try? JSONSerialization.data(withJSONObject: [rhs.value])
@@ -238,7 +238,7 @@ public struct AnyCodable: Codable, Equatable, @unchecked Sendable {
 
 extension JSONRPCEnvelope {
     /// Build a request envelope with an incrementing Int id.
-    public static func request(id: Int, method: String, params: [String: Any] = [:]) -> JSONRPCEnvelope {
+    static func request(id: Int, method: String, params: [String: Any] = [:]) -> JSONRPCEnvelope {
         var env = JSONRPCEnvelope(
             id: AnyCodable(id),
             method: method
@@ -250,7 +250,7 @@ extension JSONRPCEnvelope {
     }
 
     /// Build a notification envelope (no id).
-    public static func notification(method: String, params: [String: Any] = [:]) -> JSONRPCEnvelope {
+    static func notification(method: String, params: [String: Any] = [:]) -> JSONRPCEnvelope {
         var env = JSONRPCEnvelope(method: method)
         if !params.isEmpty {
             env.params = AnyCodable(params)
