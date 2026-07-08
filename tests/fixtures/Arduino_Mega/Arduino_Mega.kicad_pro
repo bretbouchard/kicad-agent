@@ -1,7 +1,0 @@
-(kicad_pro
-  (version 1)
-  (setup
-    (lib_dir "lib")
-  )
-  (netlist_dir "")
-)
