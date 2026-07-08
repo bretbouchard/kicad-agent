@@ -273,6 +273,294 @@ final class MCPClient {
         messenger.onHeartbeat = handler
     }
 
+    // MARK: - Governed call (Phase 169)
+
+    /// Run an op call through the full Obdurate Runtime pipeline:
+    ///
+    ///   IntentGate → DriftDetector → WorkflowStateMachine → MCPClient.call
+    ///   → OpJournal.append → AutoLearner.store → EscalationLadder
+    ///
+    /// On any gate rejection or transport failure, the call is journaled
+    /// with `result_status="rejected"` or `"failed"` and the appropriate
+    /// error is thrown.
+    ///
+    /// - Parameters:
+    ///   - method: JSON-RPC method (e.g. "kicad.add_component" or "tools/call").
+    ///   - params: params dict.
+    ///   - requirementId: Required for mutating ops (GOV-07).
+    ///   - intent: Human-readable intent (max ~200 chars).
+    ///   - actor: Who triggered the call ("user" | "daemon" | "automation").
+    ///   - type: Decodable result type.
+    /// - Returns: Decoded result value wrapped in GovernedCallResult.
+    public func governedCall<T: Decodable & Sendable & Equatable>(
+        _ method: String,
+        params: [String: Any] = [:],
+        requirementId: String? = nil,
+        intent: String = "",
+        actor: String = "user",
+        governance: Governance = .shared,
+        as type: T.Type
+    ) async throws -> GovernedCallResult<T> {
+        // Pull op name from params or method (kicad.<op>).
+        let opName: String
+        let callParams = params
+        if method == "tools/call", let name = params["name"] as? String {
+            opName = name
+        } else if method.hasPrefix("kicad.") {
+            opName = String(method.dropFirst("kicad.".count))
+        } else {
+            opName = method
+        }
+
+        // 1. IntentGate.validate
+        let validated: IntentResult
+        do {
+            validated = try governance.intentGate.validate(
+                op: opName, args: params,
+                requirementId: requirementId, intent: intent
+            )
+        } catch let e as IntentGateError {
+            try? journalRejection(governance: governance, op: opName, params: params,
+                                  requirementId: requirementId, intent: intent,
+                                  actor: actor, reason: "\(e)")
+            throw GovernedCallError.intentRejected(e)
+        }
+
+        // 2. DriftDetector.check
+        let drift = governance.driftDetector.check(validated)
+        if governance.driftDetector.strictMode, !drift.isClean {
+            try? journalRejection(governance: governance, intent: validated,
+                                  actor: actor, reason: drift.warnings.joined(separator: "; "))
+            throw GovernedCallError.driftRejected(drift)
+        }
+
+        // 3. WorkflowStateMachine guard — mutating ops require .executing.
+        if !validated.isReadonly {
+            let s = governance.stateMachine.state
+            if !s.allowsMutation {
+                let err = WorkflowStateMachineError.invalidTransition(from: s, to: .executing)
+                try? journalRejection(governance: governance, intent: validated,
+                                      actor: actor, reason: "\(err)")
+                throw GovernedCallError.stateRejected(err)
+            }
+        }
+
+        // 4. Escalation ladder halt check — T4 means stop.
+        if governance.escalation.humanInputRequired(for: opName) {
+            let tier = governance.escalation.currentTier(for: opName)
+            try? journalRejection(governance: governance, intent: validated,
+                                  actor: actor, reason: "escalation halt at \(tier.name)")
+            throw GovernedCallError.escalationHalted(tier: tier, taskKey: opName)
+        }
+
+        // 5. MCPClient.call — the actual transport.
+        let opId = UUID().uuidString
+        let phase = governance.stateMachine.state.rawValue
+        var resultStatus = "success"
+        var resultSummary = ""
+        var verificationPassed: Bool? = nil
+
+        let started = Date()
+        let value: T
+        do {
+            value = try await call(method, params: callParams, as: type)
+            resultSummary = "completed"
+        } catch {
+            resultStatus = "failed"
+            resultSummary = String(describing: error).prefix(200).description
+            // 5b. Journal the failure first so it's durable.
+            _ = try? journal(governance: governance, opId: opId, intent: validated,
+                         actor: actor, phase: phase, status: resultStatus,
+                         summary: resultSummary, verification: verificationPassed)
+            // 6. Escalate.
+            _ = governance.escalation.recordFailure(
+                taskKey: opName, severity: .high, details: [resultSummary])
+            // 7. Auto-learn the failure.
+            try? governance.learner.storeFailureMessage(
+                op: opName, requirementId: validated.requirementId,
+                error: resultSummary)
+            _ = started   // suppress unused warning if compiler complains
+            throw error
+        }
+
+        // 6. Success — journal + learn + reset escalation.
+        verificationPassed = true
+        let entry = try? journal(governance: governance, opId: opId, intent: validated,
+                                  actor: actor, phase: phase, status: resultStatus,
+                                  summary: resultSummary, verification: verificationPassed)
+        governance.escalation.recordSuccess(taskKey: opName)
+        try? governance.learner.storeSuccessPattern(
+            op: opName, requirementId: validated.requirementId,
+            summary: "\(opName) → \(resultSummary)")
+
+        guard let entry else {
+            // Journal write failed — surface as transport error.
+            throw MCPError.transport(message: "journal write failed for op \(opId)")
+        }
+        return GovernedCallResult(value: value, journalEntry: entry, intent: validated)
+    }
+
+    /// Variant that returns the raw result without decoding.
+    public func governedCallRaw(
+        _ method: String,
+        params: [String: Any] = [:],
+        requirementId: String? = nil,
+        intent: String = "",
+        actor: String = "user",
+        governance: Governance = .shared
+    ) async throws -> Any {
+        // Pull op name from params or method.
+        let opName: String
+        if method == "tools/call", let name = params["name"] as? String {
+            opName = name
+        } else if method.hasPrefix("kicad.") {
+            opName = String(method.dropFirst("kicad.".count))
+        } else {
+            opName = method
+        }
+
+        // 1. IntentGate.validate
+        let validated: IntentResult
+        do {
+            validated = try governance.intentGate.validate(
+                op: opName, args: params,
+                requirementId: requirementId, intent: intent
+            )
+        } catch let e as IntentGateError {
+            try? journalRejection(governance: governance, op: opName, params: params,
+                                  requirementId: requirementId, intent: intent,
+                                  actor: actor, reason: "\(e)")
+            throw GovernedCallError.intentRejected(e)
+        }
+
+        // 2. DriftDetector
+        let drift = governance.driftDetector.check(validated)
+        if governance.driftDetector.strictMode, !drift.isClean {
+            try? journalRejection(governance: governance, intent: validated,
+                                  actor: actor, reason: drift.warnings.joined(separator: "; "))
+            throw GovernedCallError.driftRejected(drift)
+        }
+
+        // 3. State machine guard
+        if !validated.isReadonly {
+            let s = governance.stateMachine.state
+            if !s.allowsMutation {
+                let err = WorkflowStateMachineError.invalidTransition(from: s, to: .executing)
+                try? journalRejection(governance: governance, intent: validated,
+                                      actor: actor, reason: "\(err)")
+                throw GovernedCallError.stateRejected(err)
+            }
+        }
+
+        // 4. Escalation halt
+        if governance.escalation.humanInputRequired(for: opName) {
+            let tier = governance.escalation.currentTier(for: opName)
+            try? journalRejection(governance: governance, intent: validated,
+                                  actor: actor, reason: "escalation halt at \(tier.name)")
+            throw GovernedCallError.escalationHalted(tier: tier, taskKey: opName)
+        }
+
+        // 5. Call
+        let opId = UUID().uuidString
+        let phase = governance.stateMachine.state.rawValue
+        var resultStatus = "success"
+        var resultSummary = ""
+
+        let value: Any
+        do {
+            value = try await callRaw(method, params: params)
+            resultSummary = "completed"
+        } catch {
+            resultStatus = "failed"
+            resultSummary = String(describing: error).prefix(200).description
+            _ = try? journal(governance: governance, opId: opId, intent: validated,
+                         actor: actor, phase: phase, status: resultStatus,
+                         summary: resultSummary, verification: nil)
+            governance.escalation.recordFailure(
+                taskKey: opName, severity: .high, details: [resultSummary])
+            try? governance.learner.storeFailureMessage(
+                op: opName, requirementId: validated.requirementId,
+                error: resultSummary)
+            throw error
+        }
+
+        // 6. Success
+        _ = try? journal(governance: governance, opId: opId, intent: validated,
+                     actor: actor, phase: phase, status: resultStatus,
+                     summary: resultSummary, verification: true)
+        governance.escalation.recordSuccess(taskKey: opName)
+        try? governance.learner.storeSuccessPattern(
+            op: opName, requirementId: validated.requirementId,
+            summary: "\(opName) → \(resultSummary)")
+        return value
+    }
+
+    // MARK: - Journal helpers (private)
+
+    /// Append a journal entry for a finished call.
+    @discardableResult
+    private func journal(governance: Governance, opId: String, intent: IntentResult,
+                         actor: String, phase: String, status: String,
+                         summary: String, verification: Bool?) throws -> OpJournalEntry {
+        let entry = OpJournalEntry(
+            operationId: opId,
+            timestamp: OpJournal.nowISO8601(),
+            actor: actor,
+            intent: intent.intent,
+            op: intent.op,
+            args: intent.args,
+            resultStatus: status,
+            resultSummary: summary,
+            phase: phase,
+            verificationPassed: verification,
+            requirementId: intent.requirementId,
+            escalationTier: governance.escalation.currentTier(for: intent.op).rawValue
+        )
+        try governance.journal.append(entry)
+        return entry
+    }
+
+    /// Append a journal entry for a rejected call (gate failure).
+    private func journalRejection(governance: Governance, op: String, params: [String: Any],
+                                  requirementId: String?, intent: String,
+                                  actor: String, reason: String) throws {
+        let sanitized = IntentGate.sanitize(args: params)
+        let entry = OpJournalEntry(
+            operationId: UUID().uuidString,
+            timestamp: OpJournal.nowISO8601(),
+            actor: actor,
+            intent: intent.isEmpty ? "op=\(op)" : intent,
+            op: op,
+            args: sanitized,
+            resultStatus: "rejected",
+            resultSummary: reason.prefix(200).description,
+            phase: governance.stateMachine.state.rawValue,
+            verificationPassed: nil,
+            requirementId: requirementId,
+            escalationTier: governance.escalation.currentTier(for: op).rawValue
+        )
+        try governance.journal.append(entry)
+    }
+
+    private func journalRejection(governance: Governance, intent: IntentResult,
+                                  actor: String, reason: String) throws {
+        let entry = OpJournalEntry(
+            operationId: UUID().uuidString,
+            timestamp: OpJournal.nowISO8601(),
+            actor: actor,
+            intent: intent.intent,
+            op: intent.op,
+            args: intent.args,
+            resultStatus: "rejected",
+            resultSummary: reason.prefix(200).description,
+            phase: governance.stateMachine.state.rawValue,
+            verificationPassed: nil,
+            requirementId: intent.requirementId,
+            escalationTier: governance.escalation.currentTier(for: intent.op).rawValue
+        )
+        try governance.journal.append(entry)
+    }
+
     // MARK: - Cleanup
 
     /// Cancel any in-flight state. Called by ProcessManager during shutdown.
