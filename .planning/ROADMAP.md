@@ -836,10 +836,12 @@
 - No manual SPICE netlist writing — closed-box from intent to verified hardware
 
 Plans:
-- [ ] 204-01-PLAN.md — Foundation: pyproject sim extras, 2N3904 model, tests/sim/ package (Wave 0)
-- [ ] 204-02-PLAN.md — Core sim layer: eurorack.py (circuit_to_spice_netlist), dataframe.py, bom.py, plot.py (Wave 1)
-- [ ] 204-03-PLAN.md — Optimizer: Optuna GPSampler objective + optimize_preamp() (Wave 2)
-- [ ] 204-04-PLAN.md — End-to-end demo script + README/CLAUDE.md docs + .gitignore (Wave 3)
+- [x] 204-01-PLAN.md — Foundation: pyproject sim extras, 2N3904 model, tests/sim/ package (Wave 0) ✅ SHIPPED 2026-07-07
+- [x] 204-02-PLAN.md — Core sim layer: eurorack.py (circuit_to_spice_netlist), dataframe.py, bom.py, plot.py (Wave 1) ✅ SHIPPED 2026-07-07
+- [x] 204-03-PLAN.md — Optimizer: Optuna GPSampler objective + optimize_preamp() (Wave 2) ✅ SHIPPED 2026-07-07
+- [x] 204-04-PLAN.md — End-to-end demo script + README/CLAUDE.md docs + .gitignore (Wave 3) ✅ SHIPPED 2026-07-07
+
+**Status:** ✅ COMPLETE 2026-07-07 — Council Gate 2 APPROVED. 64/64 tests passing. Demo proven end-to-end: gain_db=19.84 (target 20±3), bode.png 45.7 KB, bom.md 8 E12 parts. Closes the v6.0 "Closed Box" keystone.
 
 ---
 
