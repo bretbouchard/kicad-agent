@@ -47,3 +47,10 @@ output/
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+# Phase 204: Optuna sweep DBs (local-only, resumable per developer)
+sweeps/
+*.db-journal
+
+# Phase 204: demo artifacts (regenerated per run, not source)
+*.png

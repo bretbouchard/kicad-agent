@@ -78,6 +78,52 @@ python3 scripts/prepare_sft_data.py   # SFT data preparation
 python3 scripts/discover_100k.py      # Large-scale schematic discovery
 ```
 
+### SPICE Simulation (Phase 204)
+
+**ngspice CLI** (external dependency — install with `brew install ngspice` on macOS, `apt install ngspice` on Linux):
+```bash
+# Run a .cir file in batch mode (Phase 158's run_simulation wraps this)
+ngspice -b -o output.log input.cir
+
+# Interactive mode (for debugging netlists)
+ngspice -i input.cir
+```
+
+**spicelib SimRunner** (advanced batch/parallel sims — Phase 158 uses raw subprocess; spicelib's `SimRunner` offers parallel batch + recovery for >4 parallel sims. Deferred to Phase 204b per CONTEXT.md):
+```python
+from spicelib import SimRunner
+runner = SimRunner(simulator_noises=-1)  # -1 = all cores
+runner.run(netlist_list)  # batch submit
+for result in runner:  # iterator yields as each sim completes
+    process(result)
+```
+
+**Python SPICE stack** (install with `pip install -e ".[sim]"`):
+| Package | Purpose |
+|---------|---------|
+| `kicad_agent.spice` (Phase 158) | ngspice subprocess wrapper, AC/TRAN/NOISE/THD testbench generators, model registry |
+| `kicad_agent.sim` (Phase 204) | Eurorack preamp builder, Optuna GPSampler optimizer, pandas adapter, BOM/Bode emit |
+| `optuna>=4.5` | Bayesian optimization with GPSampler for E12 R/C value sweeps |
+| `pandas>=2.0` | DataFrame adapter for `SimulationResult` traces + Optuna studies |
+| `matplotlib>=3.7` | Bode plot PNG generation (headless Agg backend) |
+| `spicelib>=1.5` | Advanced batch/parallel SimRunner + Monte Carlo/worst-case (deferred to v2) |
+
+**Closed-box demo (Phase 204 magic proof):**
+```bash
+python3 scripts/demo_closed_box.py            # < 60s, emits bode.png + bom.md
+python3 scripts/demo_closed_box.py --n-trials 10   # faster iteration
+```
+
+**Key files:**
+- `src/kicad_agent/spice/ngspice_runner.py` — THE entry point for all sims (Phase 158)
+- `src/kicad_agent/spice/testbench.py` — AC/TRAN/NOISE/THD testbench generators
+- `src/kicad_agent/spice/model_registry.py` — 2N3904 Gummel-Poon + NE5532/TL072/LM358
+- `src/kicad_agent/sim/eurorack.py` — skidl.Circuit → SPICE netlist bridge
+- `src/kicad_agent/sim/optimizer.py` — Optuna GPSampler objective + `optimize_preamp`
+- `src/kicad_agent/sim/plot.py` — matplotlib Bode magnitude/phase PNG
+- `src/kicad_agent/sim/bom.py` — Markdown BOM from skdl.Circuit
+- `scripts/demo_closed_box.py` — end-to-end pipeline (sweep → verify → assert → emit)
+
 ## Workflow Stages
 
 The PCB design pipeline runs in this order. Each stage has CLI automation — never ask a human to do these manually.
