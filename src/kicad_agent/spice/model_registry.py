@@ -36,7 +36,20 @@ SPICE_MODELS: dict[str, str] = {
 .ENDS LM358
 """,
     "2N3904": """
-* 2N3904 NPN general-purpose transistor (Gummel-Poon)
+* 2N3904 NPN general-purpose transistor (Gummel-Poon, room-temp only)
+*
+* kicad-agent-cjl: This is the OnSemi 2N3904 Gummel-Poon model from the
+* public datasheet. Parameters are tuned for Tnom=27C (ngspice default).
+* Temperature coefficients (Tnom, TR, etc.) are NOT included — simulations
+* are accurate at room temperature but drift significantly above 70C or
+* below 0C. For thermal analysis, swap in the official OnSemi SPICE model
+* archive (https://www.onsemi.com/design/tools-software/selection-st/spice-models)
+* which includes full temperature dependence.
+*
+* Acceptable for: Phase 204 closed-box magic proof (room temp assumed),
+*                 Eurorack input preamp optimization (always room temp)
+* NOT acceptable for: thermal runaway analysis, automotive temperature
+*                     range, military temp range, junction temp estimation
 .MODEL 2N3904 NPN(
 +  Is=6.734f Xti=3 Eg=1.11 Vaf=74.03 Bf=416.4
 +  Ne=1.259 Ise=6.734f Ikf=66.78m Xtb=1.5
