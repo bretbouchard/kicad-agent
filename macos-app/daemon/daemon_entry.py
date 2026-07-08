@@ -212,6 +212,10 @@ async def dispatch(daemon: KiCadAgentDaemon, raw_request: str) -> dict[str, Any]
             request_id=str(request_id),
             duration_ms=round(duration_ms, 2),
         )
+        # Handler-returned None means "notification, no reply" — used by
+        # MCP `initialized` and other notification handlers. Phase 167.
+        if result is None:
+            return None
         return make_result(request_id, result)
     except RpcError as exc:
         daemon.audit.log_rpc(

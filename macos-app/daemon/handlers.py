@@ -3,6 +3,7 @@ handlers.py — RPC method handlers for the bundled daemon.
 
 Phase 162 — Python Daemon Bundling.
 Phase 163 — KiCad CLI Integration (kicad_cli_check, external_http_*).
+Phase 167 — MCP lifecycle (initialize, initialized, tools/list, tools/call).
 
 Extracted from daemon_entry.py so each handler is independently testable
 (`tests/test_handlers.py`). Handlers are sync functions — the daemon's
@@ -19,6 +20,12 @@ Phase 163 adds:
     kicad_cli_check                — detects external kicad-cli install
     external_http_status           — returns current HTTP MCP opt-in state
     external_http_regenerate_token — rotates the HTTP MCP auth token
+
+Phase 167 adds (per MCP spec — modelcontextprotocol.io/specification):
+    initialize          — MCP handshake (capability exchange)
+    initialized         — MCP handshake completion (notification, no reply)
+    tools/list          — returns all 151 kicad-agent ops as MCP tools
+    tools/call          — dispatches a kicad-agent op via OperationExecutor
 
 Phase 168 adds the full execute/<op> dispatch surface.
 
@@ -296,6 +303,223 @@ def external_http_set_enabled(params: Any, ctx: HandlerContext) -> dict[str, Any
 
 
 # =============================================================================
+# Phase 167 — MCP lifecycle handlers (initialize, tools/list, tools/call)
+# =============================================================================
+#
+# Per MCP spec: https://modelcontextprotocol.io/specification
+#
+# These four handlers bring the bundled daemon into MCP compliance so any
+# MCP-compatible client (Claude Code, Cursor, etc.) can connect via stdio
+# and discover/invoke all 151 kicad-agent operations as MCP tools.
+#
+# Wire format examples:
+#   initialize:
+#     {"jsonrpc":"2.0","id":1,"method":"initialize",
+#      "params":{"protocolVersion":"2024-11-05","capabilities":{},
+#                "clientInfo":{"name":"KiCadAgent","version":"1.0"}}}
+#     → {"jsonrpc":"2.0","id":1,"result":{
+#          "protocolVersion":"2024-11-05",
+#          "serverInfo":{"name":"kicad-agent-daemon","version":"0.1.0"},
+#          "capabilities":{"tools":{}}}}
+#
+#   tools/list:
+#     {"jsonrpc":"2.0","id":2,"method":"tools/list"}
+#     → {"jsonrpc":"2.0","id":2,"result":{"tools":[
+#          {"name":"kicad.add_component","description":"...","inputSchema":{...}},
+#          ...151 entries...
+#       ]}}
+#
+#   tools/call:
+#     {"jsonrpc":"2.0","id":3,"method":"tools/call",
+#      "params":{"name":"kicad.add_component",
+#                "arguments":{"root":{"op_type":"add_component",...}}}}
+#     → {"jsonrpc":"2.0","id":3,"result":{"content":[
+#          {"type":"text","text":"{\"success\":true,...}"}
+#       ]}}
+
+# MCP protocol version we advertise in initialize response.
+MCP_PROTOCOL_VERSION = "2024-11-05"
+
+# Daemon identity (used in initialize response serverInfo).
+MCP_SERVER_NAME = "kicad-agent-daemon"
+MCP_SERVER_VERSION = "0.1.0"
+
+
+def initialize(params: Any, ctx: HandlerContext) -> dict[str, Any]:
+    """MCP handshake — capability exchange (server response).
+
+    The client sends `initialize` with its protocol version, capabilities,
+    and client info. We respond with ours. After this round-trip, the
+    client SHOULD send the `initialized` notification to complete the
+    handshake (see `initialized` handler below).
+
+    Params:
+        {"protocolVersion": "<str>", "capabilities": {...}, "clientInfo": {...}}
+
+    Returns:
+        {"protocolVersion": "2024-11-05",
+         "serverInfo": {"name": "kicad-agent-daemon", "version": "0.1.0"},
+         "capabilities": {"tools": {}}}
+    """
+    # Params are informational — we don't downgrade based on client version.
+    # The handler is permissive: even malformed params return our capabilities.
+    return {
+        "protocolVersion": MCP_PROTOCOL_VERSION,
+        "serverInfo": {
+            "name": MCP_SERVER_NAME,
+            "version": MCP_SERVER_VERSION,
+        },
+        "capabilities": {
+            "tools": {
+                # Per MCP spec, servers can advertise tools.changed support.
+                # Phase 167 does not implement tool list change notifications.
+            },
+        },
+    }
+
+
+def initialized(params: Any, ctx: HandlerContext) -> None:
+    """MCP handshake completion notification (no reply expected).
+
+    The client sends `initialized` after receiving the `initialize` response.
+    Per MCP spec, this is a notification: dispatch returns None and the
+    daemon's main loop does NOT emit a JSON-RPC response.
+
+    Returns None — see daemon_entry.dispatch() for how None is handled
+    (it skips the emit step, so the client gets no reply).
+
+    Phase 167 behavior: no-op. Hook exists so future versions can log
+    handshake completion for audit trails.
+    """
+    if ctx.audit is not None:
+        ctx.audit.log_event("mcp_initialized")
+    return None
+
+
+def tools_list(params: Any, ctx: HandlerContext) -> dict[str, Any]:
+    """MCP tools/list — enumerate all kicad-agent operations as MCP tools.
+
+    Returns each operation as an MCP tool descriptor:
+        {"name": "kicad.add_component",
+         "description": "<op description from registry>",
+         "inputSchema": <JSON schema from Pydantic model>}
+
+    Per MCP spec, tool names are namespaced as `kicad.<op_type>` so they
+    don't collide with other MCP servers the client may have connected.
+    """
+    tools = []
+    op_names = _registered_operations()
+    for op_name in op_names:
+        descriptor = _build_tool_descriptor(op_name)
+        if descriptor is not None:
+            tools.append(descriptor)
+    return {"tools": tools}
+
+
+def tools_call(params: Any, ctx: HandlerContext) -> dict[str, Any]:
+    """MCP tools/call — dispatch a kicad-agent operation by name.
+
+    Params:
+        {"name": "kicad.add_component",
+         "arguments": {"root": {"op_type": "add_component", ...}}}
+
+    The `name` is validated against the registry. `arguments` is passed
+    straight to OperationExecutor.execute(Operation.model_validate(args)).
+
+    Returns the MCP-style content envelope:
+        {"content": [{"type": "text", "text": "<JSON-encoded result>"}],
+         "isError": false}
+
+    On error, returns:
+        {"content": [{"type": "text", "text": "<error message>"}],
+         "isError": true}
+
+    MCP convention is to wrap operation results in a `content` array so
+    clients can render text/images/etc uniformly. kicad-agent ops return
+    JSON dicts, so we JSON-encode and wrap as a single text content item.
+    """
+    import json as _json
+
+    params = require_dict(params, "tools/call")
+    name = require_field(params, "name", "tools/call")
+    if not isinstance(name, str):
+        raise RpcError(INVALID_PARAMS, "tools/call: 'name' must be a string")
+    arguments = params.get("arguments", {})
+    if arguments is None:
+        arguments = {}
+    if not isinstance(arguments, dict):
+        raise RpcError(INVALID_PARAMS, "tools/call: 'arguments' must be an object")
+
+    # Validate name against the kicad.* namespace.
+    if not name.startswith("kicad."):
+        raise RpcError(
+            INVALID_PARAMS,
+            f"tools/call: unknown tool '{name}'. Expected 'kicad.<op_type>'.",
+        )
+    op_type = name[len("kicad."):]
+    registered = set(_registered_operations())
+    if op_type not in registered:
+        raise RpcError(
+            INVALID_PARAMS,
+            f"tools/call: unknown operation '{op_type}'. "
+            f"Use tools/list to see available operations.",
+        )
+
+    # Lazy-load the executor and dispatch.
+    try:
+        executor = ctx.executor()
+        if executor is None:
+            # No factory wired — Phase 162 dev mode without kicad_agent installed.
+            return {
+                "content": [{
+                    "type": "text",
+                    "text": _json.dumps({
+                        "success": False,
+                        "error": "OperationExecutor unavailable (kicad_agent not bundled)",
+                    }),
+                }],
+                "isError": True,
+            }
+        # Validate the operation through Pydantic, then execute.
+        from kicad_agent.ops.schema import Operation  # type: ignore[import-not-found]
+        op = Operation.model_validate(arguments)
+        # Patch the op_type if the caller passed name=kicad.X but arguments
+        # didn't include op_type. MCP clients may rely solely on `name`.
+        if op.root.op_type != op_type:
+            # Re-validate with the name-derived op_type to ensure consistency.
+            arguments_with_type = dict(arguments)
+            arguments_with_type.setdefault("root", {})
+            arguments_with_type["root"]["op_type"] = op_type
+            op = Operation.model_validate(arguments_with_type)
+        result = executor.execute(op)
+        return {
+            "content": [{
+                "type": "text",
+                "text": _json.dumps(result, default=str),
+            }],
+            "isError": False,
+        }
+    except Exception as exc:  # noqa: BLE001 — wrap every executor failure
+        if ctx.audit is not None:
+            ctx.audit.log_event(
+                "tools_call_error",
+                op_type=op_type,
+                error=f"{type(exc).__name__}: {exc}",
+            )
+        return {
+            "content": [{
+                "type": "text",
+                "text": _json.dumps({
+                    "success": False,
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "op_type": op_type,
+                }),
+            }],
+            "isError": True,
+        }
+
+
+# =============================================================================
 # Phase 163 internal helpers (KiCad CLI detection)
 # =============================================================================
 
@@ -396,6 +620,11 @@ HANDLERS: dict[str, Any] = {
     "external_http_status": external_http_status,
     "external_http_regenerate_token": external_http_regenerate_token,
     "external_http_set_enabled": external_http_set_enabled,
+    # Phase 167 — MCP lifecycle (per modelcontextprotocol.io/specification)
+    "initialize": initialize,
+    "initialized": initialized,
+    "tools/list": tools_list,
+    "tools/call": tools_call,
 }
 
 
@@ -442,6 +671,122 @@ def _registered_operations() -> list[str]:
         return sorted(str(op) for op in ops)
 
     return []
+
+
+def _build_tool_descriptor(op_name: str) -> dict[str, Any] | None:
+    """Construct an MCP tool descriptor for a kicad-agent operation.
+
+    Returns None if the operation isn't importable (skip silently — the
+    tools/list response should be robust to individual op failures).
+
+    Descriptor shape (per MCP spec):
+        {"name": "kicad.<op>",
+         "description": "<one-line description>",
+         "inputSchema": <JSON schema>}
+    """
+    try:
+        from kicad_agent.ops import registry as reg  # type: ignore[import-not-found]
+    except Exception:
+        # No registry — return a minimal descriptor with the op name only.
+        return {
+            "name": f"kicad.{op_name}",
+            "description": f"kicad-agent operation: {op_name}",
+            "inputSchema": {"type": "object", "additionalProperties": True},
+        }
+
+    # Look up the op metadata in the registry. The registry values are
+    # OpMeta dataclass/pydantic instances (not dicts), so use getattr.
+    registry_dict = getattr(reg, "OPERATION_REGISTRY", {}) or {}
+    op_meta = registry_dict.get(op_name)
+
+    if op_meta is not None:
+        description = (
+            getattr(op_meta, "description", None)
+            or getattr(op_meta, "summary", None)
+            or f"kicad-agent operation: {op_name}"
+        )
+    else:
+        description = f"kicad-agent operation: {op_name}"
+
+    # Try to extract JSON schema from the Pydantic model for this op.
+    input_schema: dict[str, Any]
+    try:
+        from kicad_agent.ops.schema import Operation  # type: ignore[import-not-found]
+        # Pydantic v2: construct a minimal validated Operation with this op_type,
+        # then export its JSON schema. This is heavy (validates the discriminated
+        # union), so we cache it via the op's model_json_schema() instead.
+        # Phase 167: return a permissive schema; Phase 168+ will tighten.
+        input_schema = _op_input_schema(op_name) or {
+            "type": "object",
+            "additionalProperties": True,
+            "properties": {
+                "root": {
+                    "type": "object",
+                    "additionalProperties": True,
+                    "description": f"Operation root for {op_name}",
+                }
+            },
+        }
+    except Exception:
+        input_schema = {"type": "object", "additionalProperties": True}
+
+    return {
+        "name": f"kicad.{op_name}",
+        "description": description,
+        "inputSchema": input_schema,
+    }
+
+
+def _op_input_schema(op_name: str) -> dict[str, Any] | None:
+    """Best-effort JSON schema extraction for an op's input model.
+
+    Pydantic v2 supports model_json_schema() per model. We look up the
+    specific model class for the op (via the Operation discriminated
+    union) and extract its schema. Returns None on any failure — callers
+    fall back to a permissive schema.
+    """
+    try:
+        from kicad_agent.ops.schema import Operation  # type: ignore[import-not-found]
+        # The discriminated union lives in Operation.model_fields['root'].annotation.
+        # Walk the union to find the matching model by op_type literal.
+        annotation = Operation.model_fields["root"].annotation
+        # Annotated[Union[...], ...] — extract the Union members.
+        from typing import get_args, get_origin, Union  # type: ignore[import-not-found]
+        args = get_args(annotation)
+        # Some Python versions wrap in Annotated; flatten.
+        candidates = []
+        for a in args:
+            origin = get_origin(a)
+            if origin is None:
+                candidates.append(a)
+        for model_cls in candidates:
+            # Skip NoneType (the | None in Optional).
+            if model_cls is type(None):
+                continue
+            # Each candidate is a Pydantic model. Inspect its root.op_type Literal.
+            try:
+                root_field = model_cls.model_fields.get("root")
+                if root_field is None:
+                    continue
+                root_annotation = root_field.annotation
+                root_args = get_args(root_annotation)
+                for inner in root_args:
+                    if get_origin(inner) is type(None):
+                        continue
+                    inner_args = get_args(inner)
+                    # Find the Literal[...] for op_type.
+                    for sub in inner_args:
+                        sub_args = get_args(sub)
+                        for lit in sub_args:
+                            lit_args = get_args(lit)
+                            for val in lit_args:
+                                if val == op_name:
+                                    return inner.model_json_schema()
+            except Exception:
+                continue
+        return None
+    except Exception:
+        return None
 
 
 # =============================================================================
