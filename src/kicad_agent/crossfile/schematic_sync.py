@@ -51,6 +51,10 @@ class SyncResult:
     added_net_defs: list[str] = field(default_factory=list)
     footprint_ref_updates: list[tuple[str, str]] = field(default_factory=list)
     pad_net_updates: int = 0
+    # Count of (net "name") tokens rewritten to (net N "name") with numeric IDs.
+    # Covers pads, segments, and vias. Fixes the ae-26 regression where pads
+    # were written name-only, which DRC/Quilter reject.
+    net_token_rewrites: int = 0
 
     @property
     def has_changes(self) -> bool:
@@ -61,6 +65,7 @@ class SyncResult:
             or self.added_net_defs
             or self.footprint_ref_updates
             or self.pad_net_updates
+            or self.net_token_rewrites
         )
 
 
@@ -393,6 +398,58 @@ def _remove_empty_net_from_content(content: str, net_name: str) -> str:
     return pattern.sub("", content)
 
 
+def _rewrite_net_tokens_with_codes(
+    content: str, net_codes: dict[str, int]
+) -> tuple[str, int]:
+    """Rewrite name-only (net "name") tokens to numeric (net N "name").
+
+    KiCad's GUI tolerates name-only pad/segment/via net references, but DRC
+    and external tools (e.g. Quilter) require the canonical numeric form
+    (net <code> "<name>") on every token. This walks the entire PCB and
+    rewrites every name-only token using the name->code map.
+
+    Tokens already in numeric form ((net N "...")) are left untouched.
+    Only tokens inside pads, segments, vias, and arcs are affected — net
+    *definitions* in the header ((net N "name") at column 2) are already
+    numeric by construction.
+
+    Args:
+        content: Full PCB raw content.
+        net_codes: Map of net name -> numeric code (from parsed netlist).
+
+    Returns:
+        Tuple of (modified_content, count_of_rewrites).
+    """
+    if not net_codes:
+        return content, 0
+
+    # Build a single regex matching (net "name") with escaped names, longest
+    # first so net names that are prefixes of others don't shadow.
+    # ponytail: one compiled regex, single pass over content.
+    names_by_len = sorted(net_codes.keys(), key=len, reverse=True)
+    # Escape and dedupe; skip empty names.
+    alternatives = "|".join(
+        re.escape(n.replace('"', '""')) for n in names_by_len if n
+    )
+    if not alternatives:
+        return content, 0
+
+    pattern = re.compile(r'\(net\s+"(' + alternatives + r')"\)')
+
+    def _replace(match: re.Match) -> str:
+        # Match group 1 is the raw net name as it appears in the file (with
+        # any doubled quotes). Map via the un-doubled key.
+        raw_name = match.group(1)
+        key = raw_name.replace('""', '"')
+        code = net_codes.get(key)
+        if code is None:
+            return match.group(0)
+        return f'(net {code} "{raw_name}")'
+
+    new_content, n = pattern.subn(_replace, content)
+    return new_content, n
+
+
 # ---------------------------------------------------------------------------
 # Main sync logic
 # ---------------------------------------------------------------------------
@@ -512,6 +569,18 @@ def sync_pcb_from_netlist(
             pcb_raw = _add_net_to_content(pcb_raw, net_code, net_name)
             result.added_net_defs.append(net_name)
             logger.info("Added net definition: %s (code %d)", net_name, net_code)
+
+    # Phase 7: Rewrite name-only (net "name") tokens to numeric (net N "name").
+    # This is mandatory for DRC/Quilter compatibility — the GUI tolerates
+    # name-only pad/segment/via net refs, but external tooling requires the
+    # numeric form. Must run AFTER Phase 6 so the header definitions exist
+    # for every net we reference. Fixes the ae-26 regression.
+    pcb_raw, rewrites = _rewrite_net_tokens_with_codes(pcb_raw, net_codes)
+    if rewrites:
+        result.net_token_rewrites = rewrites
+        logger.info(
+            "Rewrote %d name-only (net \"...\") tokens to numeric form", rewrites
+        )
 
     return pcb_raw, result
 

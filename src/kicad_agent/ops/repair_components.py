@@ -733,3 +733,471 @@ def place_missing_units(
         "units_placed": units_placed,
         "total": len(units_placed),
     }
+
+
+# ---------------------------------------------------------------------------
+# Pin-name -> power-rail mapping (ae-47)
+# ---------------------------------------------------------------------------
+
+# Positive-supply pin names -> default analog/digital rails.
+_POS_PIN_PATTERNS: list[tuple[str, str]] = [
+    # (substring, default-rail) — checked in order, normalized lowercase
+    ("v+", "+9V"),
+    ("vcc", "+9V"),
+    ("vdd", "+9V"),
+    ("v_{dd}", "+9V"),
+    ("v_{cc}", "+9V"),
+]
+# Negative-supply pin names -> rail.
+_NEG_PIN_PATTERNS: list[tuple[str, str]] = [
+    ("v-", "-9V"),
+    ("vee", "-9V"),
+    ("v_{ee}", "-9V"),
+]
+# Ground pin names -> rail.
+_GND_PIN_PATTERNS: list[tuple[str, str]] = [
+    ("gnd", "GND"),
+    ("vss", "GND"),
+    ("v_{ss}", "GND"),
+    ("vssb", "GND"),
+]
+
+# Digital-domain rails (when the parent IC classifies as digital).
+_DIGITAL_POS_RAIL = "+3V3"
+
+
+def _classify_domain(value: str) -> str:
+    """Classify a component value as 'analog' or 'digital'.
+
+    Reuses the ground_topology pattern lists (NE5532/CD4066 are analog;
+    MCU/74xx/40xx logic is digital). Conservative: unknown -> analog.
+    """
+    from kicad_agent.ops.ground_topology import (
+        _ANALOG_REF_PATTERNS,
+        _DIGITAL_REF_PATTERNS,
+    )
+    ref_str = value or ""
+    if any(p.search(ref_str) for p in _DIGITAL_REF_PATTERNS):
+        return "digital"
+    return "analog"  # analog or unknown -> analog (conservative for power rails)
+
+
+def _match_rail(
+    pin_name: str,
+    domain: str,
+    overrides: dict[str, str] | None,
+) -> str | None:
+    """Resolve a power pin name to its target rail name, or None if not a power pin."""
+    norm = (pin_name or "").lower().replace(" ", "")
+    # 1. Explicit overrides take precedence (substring match on normalized name).
+    if overrides:
+        for pat, rail in overrides.items():
+            if pat.lower().replace(" ", "") in norm:
+                return rail
+    # 2. Ground pins (checked before neg so "vss" doesn't catch "vssa" wrongly).
+    for pat, rail in _GND_PIN_PATTERNS:
+        if pat in norm and "a" not in norm.replace(pat, "", 1):  # avoid VSSA->AGND mismatch
+            return rail
+    # 3. Negative-supply pins.
+    for pat, rail in _NEG_PIN_PATTERNS:
+        if pat in norm:
+            return rail
+    # 4. Positive-supply pins — domain selects the rail.
+    for pat, _rail in _POS_PIN_PATTERNS:
+        if pat in norm:
+            return _DIGITAL_POS_RAIL if domain == "digital" else "+9V"
+    return None
+
+
+def _existing_power_rails(ir: SchematicIR) -> set[str]:
+    """Return the set of power-rail names already present on the sheet.
+
+    A rail is present if a power symbol (lib_id starts with "power:") with
+    that Value exists. We avoid adding duplicate rail symbols.
+    """
+    rails: set[str] = set()
+    sch = ir._parse_result.kiutils_obj
+    for sym in sch.schematicSymbols:
+        lib_id = getattr(sym, "libId", "") or ""
+        if not lib_id.startswith("power:"):
+            continue
+        # The rail name is the Value property (== the part after "power:").
+        for prop in sym.properties:
+            if prop.key == "Value" and prop.value:
+                rails.add(prop.value)
+                break
+    return rails
+
+
+def _pin_already_wired_to_rail(
+    ir: SchematicIR, pin_x: float, pin_y: float, rail: str, grid: float = 1.27
+) -> bool:
+    """Check if a pin-tip position is already wired to the target power rail.
+
+    Returns True if there's a power symbol of the target rail whose pin
+    connects (directly or via a wire chain) to (pin_x, pin_y). Used to avoid
+    re-wiring pins that a prior session already connected.
+
+    Conservative: only checks for a wire from (pin_x, pin_y) to a power-symbol
+    position within a short distance. Does not do full BFS — sufficient for the
+    common case where the rail symbol sits directly above/below the pin.
+    """
+    import re
+    raw = ir._parse_result.raw_content
+    # Collect power-symbol positions for the target rail.
+    rail_positions: list[tuple[float, float]] = []
+    for m in re.finditer(r'\(symbol\s+\(lib_id\s+"power:' + re.escape(rail) + r'"', raw):
+        s = m.start()
+        # find the (at X Y) within the next ~200 chars
+        at_m = re.search(r'\(at\s+([-\d.]+)\s+([-\d.]+)', raw[s:s+400])
+        if at_m:
+            rail_positions.append((round(float(at_m.group(1))/grid)*grid,
+                                   round(float(at_m.group(2))/grid)*grid))
+    if not rail_positions:
+        return False
+    # Collect wire endpoints.
+    wires = re.findall(
+        r'\(wire \(pts \(xy ([-\d.]+) ([-\d.]+)\) \(xy ([-\d.]+) ([-\d.]+)\)', raw
+    )
+    pin_pt = (round(pin_x/grid)*grid, round(pin_y/grid)*grid)
+    # Check: is there a wire with one endpoint at the pin tip and the other at
+    # (or chained to) a rail-symbol position?
+    for x1, y1, x2, y2 in wires:
+        p1 = (round(float(x1)/grid)*grid, round(float(y1)/grid)*grid)
+        p2 = (round(float(x2)/grid)*grid, round(float(y2)/grid)*grid)
+        if pin_pt not in (p1, p2):
+            continue
+        other = p2 if p1 == pin_pt else p1
+        if other in rail_positions:
+            return True
+    return False
+
+
+def place_and_wire_power_units(
+    ir: SchematicIR, file_path: Path, *,
+    references: list[str] | None = None,
+    offset_x: float = 25.4,
+    offset_y: float = 0.0,
+    rail_overrides: dict[str, str] | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Place missing power units of multi-unit ICs AND wire their pins to rails.
+
+    Closes bead ae-47: ``place_missing_units`` places unit C/E but leaves the
+    power pins unwired (which previously caused 51 ERC errors). This op places
+    the unit, then for each power pin (V+, V-, VDD, VSS, ...) adds a power
+    symbol (if the rail isn't already on the sheet) and wires the pin to it.
+
+    See ``PlaceAndWirePowerUnitsOp`` schema docstring for the pin-to-rail map.
+
+    Args:
+        ir: SchematicIR for the target schematic.
+        file_path: Resolved path to the schematic file.
+        references: Specific references to fix, or None for all.
+        offset_x/offset_y: Unit spacing passed to place_missing_units.
+        rail_overrides: Optional {pin_substring: rail_name} overrides.
+        dry_run: If True, report the plan without modifying.
+
+    Returns:
+        Dict with units_placed (count), pins_wired (count), rails_added
+        (list), and a per-reference detail list.
+    """
+    # Phase 1: PRE-SCAN to find which ICs need power-unit PLACEMENT.
+    # We cannot call place_missing_units on all refs then filter — it WRITES
+    # all units (including unwanted signal units like U10A/U10B) to disk before
+    # our filter runs. Instead, scan first, then restrict place_missing_units
+    # to ONLY the ICs missing their power unit, via the references parameter.
+    from kicad_agent.ir.schematic_ir import _match_lib_symbol
+    sch = ir._parse_result.kiutils_obj
+
+    def _unit_has_power_pins(lib_sym: Any, unit_num: int) -> bool:
+        if lib_sym is None:
+            return False
+        for sub_sym in lib_sym.units:
+            sub_name = getattr(sub_sym, "libId", "") or ""
+            parts = sub_name.rsplit("_", 2)
+            if len(parts) >= 3:
+                try:
+                    u = int(parts[-2])
+                except ValueError:
+                    continue
+                if u == unit_num:
+                    for p in sub_sym.pins:
+                        if getattr(p, "electricalType", "") in ("power_in", "power_out"):
+                            return True
+        return False
+
+    def _lib_sym_for_ref(ref_val: str):
+        """Return the (lib_id, lib_symbol) for a component by reference."""
+        for comp in sch.schematicSymbols:
+            rv = ""
+            for prop in comp.properties:
+                if prop.key == "Reference":
+                    rv = prop.value
+                    break
+            if rv == ref_val:
+                for ls in sch.libSymbols:
+                    if _match_lib_symbol(ls, comp.libId):
+                        return comp.libId, ls
+                return comp.libId, None
+        return None, None
+
+    # Group components by base reference + collect placed units per IC.
+    from collections import defaultdict
+    comps_by_ref: dict[str, list[Any]] = defaultdict(list)
+    for comp in sch.schematicSymbols:
+        rv = ""
+        for prop in comp.properties:
+            if prop.key == "Reference":
+                rv = prop.value
+                break
+        if rv and not rv.startswith("#"):
+            base = re.sub(r"[A-Z]$", "", rv) if rv[-1:].isalpha() and len(rv) > 1 else rv
+            comps_by_ref[base].append(comp)
+
+    # For each multi-unit IC, determine: does it have a power unit defined,
+    # and is that power unit placed? If not placed → needs placement.
+    refs_needing_power_placement: list[str] = []
+    refs_with_power_placed: list[str] = []  # power unit exists, may need wiring
+    for base_ref, comps in comps_by_ref.items():
+        if len(comps) < 1:
+            continue
+        lib_id, lib_sym = _lib_sym_for_ref(base_ref)
+        if lib_sym is None:
+            continue
+        unit_pin_map = _get_unit_pin_map(lib_sym)
+        if not unit_pin_map:
+            continue
+        # Which units have power pins?
+        power_units = [u for u in unit_pin_map if _unit_has_power_pins(lib_sym, u)]
+        if not power_units:
+            continue  # no power unit in this symbol
+        placed_units = {c.unit for c in comps}
+        has_power_placed = any(u in placed_units for u in power_units)
+        # Apply caller's references filter if given.
+        if references is not None and base_ref not in references:
+            continue
+        if has_power_placed:
+            refs_with_power_placed.append(base_ref)
+        else:
+            refs_needing_power_placement.append(base_ref)
+
+    # Phase 1b: place ONLY the power units for ICs missing them.
+    placed: list[dict[str, Any]] = []
+    if refs_needing_power_placement:
+        placement = place_missing_units(
+            ir, file_path,
+            references=refs_needing_power_placement,
+            offset_x=offset_x,
+            offset_y=offset_y,
+            dry_run=dry_run,
+        )
+        placed = placement.get("units_placed", [])
+
+    # Phase 2: wire power pins. Process newly-placed units + pre-existing
+    # power units (which may be unwired). Skip pins already wired to a rail.
+    pins_wired: list[dict[str, Any]] = []
+    rails_added: list[str] = []
+    existing_rails = _existing_power_rails(ir)
+    rails_added_set: set[str] = set()
+
+    # Build the set of power units to wire: newly-placed + pre-existing.
+    units_to_wire: list[dict[str, Any]] = list(placed)
+    queued = {(u["base_reference"], u["unit_number"]) for u in placed}
+    for base_ref in refs_with_power_placed:
+        for comp in comps_by_ref.get(base_ref, []):
+            _, lib_sym = _lib_sym_for_ref(base_ref)
+            if lib_sym and _unit_has_power_pins(lib_sym, comp.unit):
+                key = (base_ref, comp.unit)
+                if key not in queued:
+                    units_to_wire.append({
+                        "base_reference": base_ref,
+                        "unit_number": comp.unit,
+                        "unit_letter": chr(ord("A") + comp.unit - 1),
+                        "position": [comp.position.X, comp.position.Y],
+                    })
+                    queued.add(key)
+
+    if not units_to_wire:
+        return {
+            "units_placed": len(placed),
+            "pins_wired": 0,
+            "rails_added": [],
+            "details": [],
+            "message": "No power units needing placement or wiring.",
+        }
+
+    for unit_info in units_to_wire:
+        base_ref = unit_info["base_reference"]
+        unit_num = unit_info["unit_number"]
+        unit_letter = unit_info["unit_letter"]
+        ux, uy = unit_info["position"]
+
+        # Find the lib_symbol for this IC to read pin offsets + the parent value.
+        lib_id = None
+        parent_value = ""
+        for comp in sch.schematicSymbols:
+            ref_val = ""
+            for prop in comp.properties:
+                if prop.key == "Reference":
+                    ref_val = prop.value
+                    break
+            if ref_val == base_ref:
+                lib_id = comp.libId
+            if ref_val == base_ref:
+                for prop in comp.properties:
+                    if prop.key == "Value":
+                        parent_value = prop.value
+                        break
+        if not lib_id:
+            continue
+
+        lib_sym = None
+        for ls in sch.libSymbols:
+            if _match_lib_symbol(ls, lib_id):
+                lib_sym = ls
+                break
+        if lib_sym is None:
+            continue
+
+        domain = _classify_domain(parent_value)
+        pin_offsets = _get_unit_pin_offsets(lib_sym, unit_num)
+        if not pin_offsets:
+            continue
+
+        for pin_num, (px, py) in pin_offsets.items():
+            # Read pin name + electrical type from the lib_symbol sub-symbol.
+            pin_name = ""
+            pin_etype = ""
+            for sub_sym in lib_sym.units:
+                sub_name = getattr(sub_sym, "libId", "") or ""
+                parts = sub_name.rsplit("_", 2)
+                if len(parts) >= 3:
+                    try:
+                        u = int(parts[-2])
+                    except ValueError:
+                        continue
+                    if u == unit_num:
+                        for p in sub_sym.pins:
+                            if p.number == pin_num:
+                                pin_name = p.name
+                                pin_etype = getattr(p, "electricalType", "")
+                                break
+            if pin_etype not in ("power_in", "power_out"):
+                continue
+
+            rail = _match_rail(pin_name, domain, rail_overrides)
+            if rail is None:
+                continue
+
+            # Skip if this pin is ALREADY wired to a power rail. Pre-existing
+            # power units (e.g. U10/U11) may already have correct wiring from
+            # a prior session; adding a second wire to the same pin creates a
+            # different_unit_net conflict (two wires, same pin, same net, but
+            # ERC flags the duplicate path). We check whether any existing wire
+            # touches the pin tip AND leads to a power symbol of the target rail.
+            grid = 1.27
+            pre_tip_x = round((ux + px) / grid) * grid
+            pre_tip_y = round((uy - py) / grid) * grid
+            if _pin_already_wired_to_rail(ir, pre_tip_x, pre_tip_y, rail, grid):
+                continue
+
+            # Absolute pin-tip position (Y-inversion, no rotation assumed for
+            # power units which are placed at angle 0).
+            # CRITICAL: snap to the 1.27mm grid (KiCad default 50mil). Off-grid
+            # wires don't connect to pins → pin_not_connected/wire_dangling
+            # errors. The place_missing_units offset (25.4mm) is grid-aligned,
+            # but _find_position_for_unit can return off-grid wire-endpoint
+            # positions. We snap the UNIT position to grid first (and move the
+            # placed component to match), so all derived coords are aligned.
+            grid = 1.27
+            snapped_ux = round(ux / grid) * grid
+            snapped_uy = round(uy / grid) * grid
+            if not dry_run:
+                # Only NEWLY-PLACED units need correction (pre-existing power
+                # units like U10/U11 already have correct ref/position/instances).
+                # Newly-placed units are identifiable by their suffixed Reference
+                # ("{base_ref}{unit_letter}", e.g. "U5C") — place_missing_units
+                # adds the suffix; this schematic's convention is base-only.
+                placed_ref = f"{base_ref}{unit_letter}"
+                for comp in sch.schematicSymbols:
+                    ref_val = ""
+                    for prop in comp.properties:
+                        if prop.key == "Reference":
+                            ref_val = prop.value
+                            break
+                    if ref_val == placed_ref:
+                        # Fix: grid-snap position, strip suffix, fix instances unit.
+                        comp.position.X = snapped_ux
+                        comp.position.Y = snapped_uy
+                        for prop in comp.properties:
+                            if prop.key == "Reference":
+                                prop.value = base_ref
+                                break
+                        try:
+                            for proj in (comp.instances or []):
+                                for path_inst in (proj.paths or []):
+                                    path_inst.unit = unit_num
+                                    path_inst.reference = base_ref
+                        except (AttributeError, TypeError):
+                            pass
+                        break
+            ux, uy = snapped_ux, snapped_uy  # use snapped for pin-tip math
+
+            pin_tip_x = round((ux + px) / grid) * grid
+            pin_tip_y = round((uy - py) / grid) * grid
+
+            # Place the rail symbol a short offset from the pin tip so the wire
+            # is short and unambiguous. The power symbol's pin is at its origin.
+            # Offset is grid-aligned (5.08mm = 4 grid units).
+            sym_x = pin_tip_x + (offset_x if rail.startswith("+") else -offset_x)
+            if rail == "GND":
+                sym_x = pin_tip_x
+            sym_y = pin_tip_y - 5.08  # 200mil above the pin tip
+            sym_x = round(sym_x / grid) * grid
+            sym_y = round(sym_y / grid) * grid
+
+            # Track whether this rail is being introduced to the sheet for the
+            # first time (for reporting). But ALWAYS place a power-symbol
+            # instance at (sym_x, sym_y) — every connection needs its own
+            # symbol instance, mirroring how the working schematic has a
+            # separate +9V/-9V instance per op-amp. Wiring to an existing
+            # symbol elsewhere on the sheet would require long wires; a local
+            # symbol instance is how KiCad schematics actually work.
+            rails_added_for_pin = False
+            if rail not in existing_rails and rail not in rails_added_set:
+                rails_added_for_pin = True
+                if not dry_run:
+                    existing_rails.add(rail)
+                rails_added_set.add(rail)
+                rails_added.append(rail)
+
+            if not dry_run:
+                # Always place the power symbol at the wire start point.
+                ir.add_power_symbol(name=rail, x=sym_x, y=sym_y, angle=0.0)
+                try:
+                    ir.add_wire(sym_x, sym_y, pin_tip_x, pin_tip_y, force=True)
+                except Exception as exc:  # net-conflict or duplicate — record, continue
+                    logger.warning(
+                        "place_and_wire_power_units: wire failed for %s pin %s -> %s: %s",
+                        base_ref, pin_num, rail, exc,
+                    )
+
+            pins_wired.append({
+                "reference": f"{base_ref}{unit_letter}",
+                "pin_number": pin_num,
+                "pin_name": pin_name,
+                "rail": rail,
+                "rail_added": rails_added_for_pin,
+                "wire": [sym_x, sym_y, pin_tip_x, pin_tip_y],
+            })
+
+    return {
+        "units_placed": len(placed),
+        "pins_wired": len(pins_wired),
+        "rails_added": rails_added,
+        "details": pins_wired,
+        "placement_detail": placed,
+        "dry_run": dry_run,
+    }
+

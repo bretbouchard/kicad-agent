@@ -26,3 +26,4 @@ def register_query(op_type: str) -> Callable:
 def _handle_query_connectivity(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     from kicad_agent.ops.connectivity_query import handle_connectivity_query
     return handle_connectivity_query(op, ir, file_path)
+

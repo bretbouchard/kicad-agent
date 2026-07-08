@@ -155,6 +155,60 @@ class PlaceMissingUnitsOp(BaseModel):
     )
 
 
+class PlaceAndWirePowerUnitsOp(BaseModel):
+    """Place missing power units of multi-unit symbols AND wire them to rails.
+
+    Extends ``place_missing_units`` (ae-25) by also wiring each placed power
+    pin (V+, V-, VDD, VSS, etc.) to the appropriate power rail via a power
+    symbol + wire. Closes bead ae-47: the original ``place_missing_units``
+    places unit C/E but leaves the power pins unwired, which previously
+    produced 51 ERC errors on the channel-strip output-stage.
+
+    Pin-to-rail mapping (configurable, with smart defaults):
+        V+ / VCC / VDD / V_{DD} -> +9V (analog) or +3V3 (digital)
+        V- / VEE                -> -9V
+        GND / VSS / V_{SS}      -> GND
+
+    Domain detection reuses the analog/digital classifier from
+    ``ground_topology`` (NE5532/CD4066 are analog -> +9V/-9V/GND). If the
+    target rail symbol is not already present on the sheet, it is added.
+
+    Attributes:
+        op_type: Discriminator literal ``"place_and_wire_power_units"``.
+        target_file: Relative path to the .kicad_sch file.
+        references: Optional list of specific references. If None, fixes all.
+        offset_x: Horizontal spacing between units in mm (default 25.4 = 1 inch).
+        offset_y: Vertical spacing between units in mm.
+        rail_overrides: Optional dict mapping pin-name pattern to rail name,
+            e.g. {"VDD": "+5V"} to override the default +9V/+3V3 choice.
+        dry_run: If True, report the plan (units + pins + rails + wires)
+            without modifying the file.
+    """
+
+    op_type: Literal["place_and_wire_power_units"] = "place_and_wire_power_units"
+    target_file: TargetFile
+    references: Optional[list[str]] = Field(
+        default=None,
+        description="Specific references to fix, or None for all",
+    )
+    offset_x: float = Field(
+        default=25.4, gt=0, le=254,
+        description="Horizontal spacing between units in mm",
+    )
+    offset_y: float = Field(
+        default=0.0, ge=0, le=254,
+        description="Vertical spacing between units in mm",
+    )
+    rail_overrides: Optional[dict[str, str]] = Field(
+        default=None,
+        description="Override default pin-name -> rail mapping, e.g. {\"VDD\": \"+5V\"}",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Report the placement+wiring plan without modifying the file",
+    )
+
+
 class RemoveDanglingWiresOp(BaseModel):
     """Remove wire segments with unconnected endpoints.
 

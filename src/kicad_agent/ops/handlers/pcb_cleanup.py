@@ -222,19 +222,48 @@ def parse_drc_shorting_items(
     text = report_path.read_text()
     shorts: list[tuple[str, float, float]] = []
 
-    # shorting_items: @(X mm, Y mm): [NET] shorted to [NET2] on layer
+    # KiCad 10 DRC text format (verified against kicad-cli 10.0.3):
+    #   [shorting_items]: Items shorting two nets (nets NET1 and NET2)
+    #       Local override; error          ← may or may not be present
+    #       @(X mm, Y mm): Track/Via [NET] on LAYER, length ...
+    #       @(X2 mm, Y2 mm): Track/Via [NET2] on LAYER2, length ...
+    #
+    # Each shorting_items block contains TWO coordinate lines (the two shorted
+    # items). We capture both, but only keep the ones that reference a "Track"
+    # (vias are not removable by this op). Net names may be quoted, unquoted,
+    # or contain slashes (e.g. /Codec Stage/adc_in1_filter).
     pat = re.compile(
         r'\[shorting_items\]:\s*[^\n]*\n'
-        r'\s*@[\(]([\d.]+)\s*mm,\s*([\d.]+)\s*mm[\)]:\s*\[([^\]]+)\]',
+        r'(?:\s*Local override;[^\n]*\n)?'
+        r'(\s*@[\(]([\d.]+)\s*mm,\s*([\d.]+)\s*mm[\)]:\s*(Track|Via)\s*\[([^\]]+)\][^\n]*\n'
+        r'\s*@[\(]([\d.]+)\s*mm,\s*([\d.]+)\s*mm[\)]:\s*(Track|Via)\s*\[([^\]]+)\][^\n]*\n)',
         re.MULTILINE,
     )
 
     for m in pat.finditer(text):
-        x, y = float(m.group(1)), float(m.group(2))
-        net = m.group(3).strip()
-        shorts.append((net, x, y))
+        # First shorted item
+        kind1 = m.group(4)
+        if kind1 == "Track":
+            x, y = float(m.group(2)), float(m.group(3))
+            net = m.group(5).strip()
+            shorts.append((net, x, y))
+        # Second shorted item
+        kind2 = m.group(8)
+        if kind2 == "Track":
+            x, y = float(m.group(6)), float(m.group(7))
+            net = m.group(9).strip()
+            shorts.append((net, x, y))
 
-    return shorts
+    # Deduplicate (DRC may report the same track in multiple shorting_items)
+    seen = set()
+    deduped: list[tuple[str, float, float]] = []
+    for net, x, y in shorts:
+        key = (net, round(x, 4), round(y, 4))
+        if key not in seen:
+            seen.add(key)
+            deduped.append((net, x, y))
+
+    return deduped
 
 
 def remove_elements(

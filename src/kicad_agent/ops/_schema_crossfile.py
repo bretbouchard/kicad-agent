@@ -175,6 +175,90 @@ class RepopulatePcbFromSchematicOp(BaseModel):
         return _validate_pcb_sch_pair(v)
 
 
+class SafeSyncPcbFromSchematicOp(BaseModel):
+    """NON-DESTRUCTIVE PCB sync from schematic (KiCad GUI "Update PCB from Schematic").
+
+    Bridges the gap between ``update_pcb_from_schematic`` (contract-only,
+    never mutates) and ``repopulate_pcb_from_schematic`` (mutates but strips
+    routing). This op performs real mutations while preserving routing,
+    zones, and existing footprint placement by default.
+
+    All PCB modifications use raw S-expression manipulation via
+    ``atomic_write`` (kiutils ``Board.to_file()`` is forbidden -- it
+    corrupts KiCad 10 PCBs per project memory kiutils-root-sheet-danger.md
+    and Phase 101 P0-003 lesson).
+
+    Attributes:
+        op_type: Discriminator literal ``"safe_sync_pcb_from_schematic"``.
+        target_file: Primary .kicad_pcb file for execute() routing.
+        target_files: List of files: [pcb_file, schematic_file] -- exactly one of each.
+        update_references: Update REF** placeholders with real refs from schematic.
+        update_footprint_lib_ids: Update footprint lib_id from schematic.
+        update_pad_nets: Update pad-to-net assignments from schematic netlist.
+        add_missing_footprints: Add PCB footprints for components in schematic but
+            missing from PCB (cloned from existing footprint template, auto-placed
+            in free space; never moves existing footprints).
+        remove_orphans: Remove PCB footprints not in schematic. Default False --
+            the op is non-destructive by design.
+        preserve_routing: CRITICAL: never touch (segment ...) or (via ...) blocks.
+        preserve_zones: CRITICAL: never touch (zone ...) blocks.
+        preserve_placement: CRITICAL: never touch (at X Y) in existing (footprint ...)
+            blocks. Only new footprints get auto-placed positions.
+        dry_run: If True, return the change contract without writing to disk.
+    """
+
+    op_type: Literal["safe_sync_pcb_from_schematic"] = "safe_sync_pcb_from_schematic"
+    target_file: TargetFile = Field(
+        description="Primary .kicad_pcb file for execute() routing",
+    )
+    target_files: list[TargetFile] = Field(
+        min_length=2,
+        max_length=2,
+        description="[pcb_file, schematic_file] -- exactly one of each type",
+    )
+    update_references: bool = Field(
+        default=True,
+        description="Update REF** placeholders with real reference designators",
+    )
+    update_footprint_lib_ids: bool = Field(
+        default=True,
+        description="Update footprint lib_id references from schematic",
+    )
+    update_pad_nets: bool = Field(
+        default=True,
+        description="Update pad-to-net assignments from schematic netlist",
+    )
+    add_missing_footprints: bool = Field(
+        default=True,
+        description="Add PCB footprints for components in schematic but missing from PCB",
+    )
+    remove_orphans: bool = Field(
+        default=False,
+        description="Remove PCB footprints with no schematic counterpart (default False)",
+    )
+    preserve_routing: bool = Field(
+        default=True,
+        description="CRITICAL: never touch (segment ...) or (via ...) blocks",
+    )
+    preserve_zones: bool = Field(
+        default=True,
+        description="CRITICAL: never touch (zone ...) blocks",
+    )
+    preserve_placement: bool = Field(
+        default=True,
+        description="CRITICAL: never touch (at X Y) in existing footprint blocks",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Return change contract without writing to disk",
+    )
+
+    @field_validator("target_files")
+    @classmethod
+    def _validate_target_files(cls, v: list[str]) -> list[str]:
+        return _validate_pcb_sch_pair(v)
+
+
 class RebuildPcbNetsOp(BaseModel):
     """Rebuild PCB net table and pad net assignments from schematic netlist.
 
