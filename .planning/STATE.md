@@ -156,6 +156,53 @@ See: `.planning/phases/164-llm-provider-protocol/164-01-SUMMARY.md`
 
 See: `.planning/phases/165-provider-router/165-01-SUMMARY.md`
 
+## Phase 204 — Closed-Box Simulation Pipeline v1 (SHIPPED 2026-07-07, parallel track)
+
+**Files:** 6 source modules in `src/kicad_agent/sim/` (eurorack.py, dataframe.py, bom.py, plot.py, optimizer.py, __init__.py) + 8 test files in `tests/sim/` + `scripts/demo_closed_box.py` (136 LOC) + Phase 158 2N3904 model + `[sim]` extras in pyproject.toml
+**Build:** `.venv/bin/python -m pytest tests/sim/ tests/spice/ -q` — 64/64 passing
+**Tests:** 64 total (was 18 pre-ngspice). All BLK-1 strict, no skip-guards.
+**Demo:** `python3 scripts/demo_closed_box.py` exit 0 — gain_db=19.84 (target 20±3), bandwidth 104 MHz, bode.png 45.7 KB, bom.md 8 E12 parts
+**External dep:** `brew install ngspice` (macOS) / `apt install ngspice` (Linux)
+**Council:** Gate 1 R2 APPROVE (1 P0 + 3 P1 fixed). Gate 2 EXEC REVIEW APPROVE (0 critical/high/medium, 5 LO with four-state resolution).
+
+**What shipped:**
+- THE primary new capability: `circuit_to_spice_netlist()` — skidl.Circuit → SPICE .cir bridge (skidl 2.2.3's `generate_netlist()` emits KiCad .net, NOT SPICE)
+- Optuna GPSampler optimizer with E12 R/C categorical constraints, 10s trial timeout, current-saturation guard, determinism seed
+- pandas DataFrame adapter for `SimulationResult`
+- BOM markdown generator (skidl 2.2.3 has no `circuit.BOM()`)
+- matplotlib Bode plot (magnitude-only in v1; phase stub per WR-04)
+- End-to-end magic demo: intent → Optuna sweep → ngspice verify → assert → bode.png + bom.md
+
+**Architecture decisions:**
+- `src/kicad_agent/sim/` as sibling to (not child of) `src/kicad_agent/spice/` — clean separation between "run a SPICE sim" (Phase 158) and "optimize + analyze + demo a SPICE sim" (Phase 204)
+- ngspice CLI subprocess (NOT PySpice — dead project per memory pyspice-dead-use-ngspice-cli)
+- Optuna GPSampler (4.5+, shipped Aug 2025) for BO over E12 categorical space
+- `_ensure_skidl_env()` called at module top + per-call (CR-01 Phase 156 pitfall #6 guard)
+- BLK-1 strict test pattern — autouse `_require_ngspice` fixture uses `pytest.fail(pytrace=False)`, never `pytest.skip`
+
+**Deviations:**
+- [Rule 1 Bug] VCC/VEE emission added to `circuit_to_spice_netlist` after debug session (transistor had no bias, gain ≈ 0 dB)
+- [Rule 1 Bug] RLOAD DC path added to `generate_ac_testbench` after debug session (coupling cap blocked DC, ngspice singular matrix)
+- [Rule 1 Bug] Default `freq_stop` extended 10 MHz → 1 GHz after debug session (CE bandwidth lands in 1-50 MHz range, was outside sweep)
+- [Rule 2 Missing] ngspice not bundled — external CLI dep, documented in README + CLAUDE.md
+- [Rule 3 Blocking] Stale git index.lock removed during planning
+
+**Bug reports filed (7 total, all open):**
+- `kicad-agent-e2b` (P3): Demo exceeds 60s budget at default 50 trials (~180s projected)
+- `kicad-agent-obp` (P3): Phase 158 AC parser regex-based (fragile, should use .raw)
+- `kicad-agent-233` (P4): Optuna sqlite storage at cwd-relative path
+- `kicad-agent-qss` (P4): Bode phase subplot is honest stub (vp() not measured)
+- `kicad-agent-w1f` (P4): Input impedance 8.7 kΩ vs 1 MΩ target (topology limit, needs JFET)
+- `kicad-agent-cjl` (P4): 2N3904 Gummel-Poon model simplified (no thermal coef)
+- `kicad-agent-8vv` (P4): Phase 158 missing .OP parser (Phase 204 uses Ic heuristic)
+
+**Strategic impact:**
+- v6.0 "KiCad Agent — The Closed Box" milestone has its keystone — Python/SKiDL analog magic proven end-to-end
+- Matches tscircuit competitor pressure (TypeScript/browser HMR bar) for analog circuits
+- Establishes canonical template for future analog topologies (LM13700 VCA, AS3340 VCO, Sallen-Key VCF)
+
+See: `.planning/phases/204-closed-box-simulation-pipeline-v1-skidl-spice-optuna-pytest-/204-04-SUMMARY.md` (and 01-03)
+
 ## Backlog (next milestone)
 
 Phase 108 (Deterministic Autolayout Engine) — Plan 04 Task 2 still IN REVIEW on branch `phase-108-task2-on-page-guarantee`. Iteration-2 PDFs rendered, awaiting human approval. Geometric gate passes (off_page=0, max_stack≤1, 154/154 tests). Will continue post-v6.0 setup or be resumed in parallel.

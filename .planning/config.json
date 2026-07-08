@@ -25,9 +25,9 @@
   },
   "training": {
     "reward_weights": {
-      "correctness": 0.40,
-      "completeness": 0.40,
-      "legibility": 0.20
+      "correctness": 0.4,
+      "completeness": 0.4,
+      "legibility": 0.2
     },
     "completeness_source": "none",
     "legibility_factor_weights": {
@@ -37,7 +37,7 @@
       "organization": 0.25
     },
     "anti_hack": {
-      "compactness_threshold_ratio": 2.0,
+      "compactness_threshold_ratio": 2,
       "crossings_floor_min": 1,
       "crossings_floor_multiplier": 0.3,
       "alignment_jitter_mm": 0.1
