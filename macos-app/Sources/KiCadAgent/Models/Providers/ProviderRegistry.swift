@@ -57,6 +57,54 @@ final class ProviderRegistry: ObservableObject, @unchecked Sendable {
         }
     }
 
+    /// Remove a registered provider by kind. Phase 166 BYOK uses this when
+    /// the user deletes an API key — the provider instance must go too so
+    /// `availability` queries stop returning `.requiresKey`.
+    func unregister(kind: KCProviderKind) {
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+        DispatchQueue.main.async { [weak self] in
+            self?.allProviders.removeAll { $0.kind == kind }
+        }
+    }
+
+    /// Phase 166: seed cloud providers from the Keychain. Called at app
+    /// launch and on key changes from the Settings UI.
+    ///
+    /// Only includes a provider when its key is configured (or it's a
+    /// local-only provider like Ollama — no key required, just reachable).
+    /// Per MOD-05: pure BYOK. Per MOD-11: cloud providers are optional —
+    /// when no key is set, the router falls back to FoundationModels.
+    func seedCloudProviders(from keychain: KeychainManager) {
+        // Ollama is local — always register; its `availability` checks
+        // daemon reachability rather than key presence.
+        register(OllamaCloudProvider())
+
+        // Cloud providers — only when their key exists.
+        for kind in keychain.configuredProviders() {
+            switch kind {
+            case .openAI:
+                register(OpenAICompatibleCloudProvider.openAI(keychain: keychain))
+            case .anthropic:
+                register(AnthropicCloudProvider(keychain: keychain))
+            case .gemini:
+                register(GeminiCloudProvider(keychain: keychain))
+            case .groq:
+                register(OpenAICompatibleCloudProvider.groq(keychain: keychain))
+            case .xai:
+                register(OpenAICompatibleCloudProvider.xai(keychain: keychain))
+            case .together:
+                register(OpenAICompatibleCloudProvider.together(keychain: keychain))
+            case .ollama:
+                // Already registered above (only one Ollama instance).
+                break
+            case .appleLocal, .mlxLocal, .mock:
+                // Local — already seeded at init.
+                break
+            }
+        }
+    }
+
     /// All providers whose `availability` returned `.available` at last probe.
     /// Refreshes each call — UI binds to this and re-renders on changes.
     func availableProviders() async -> [any KiCadModelProvider] {
