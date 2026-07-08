@@ -8,8 +8,8 @@
 
 - [x] **Phase 161: App Shell Foundation** — macOS 27+ SwiftUI app with Liquid Glass visual language ✅ 2026-07-07
 - [x] **Phase 162: Python Daemon Bundling** — PyInstaller binary, code-signed, app-spawned subprocess ✅ 2026-07-07
-- [ ] **Phase 163: KiCad CLI Integration** — External kicad-cli detection, App Store GPL compliance
-- [ ] **Phase 164: LLM Provider Protocol** — FoundationModels, HF Hub, MLX-Swift abstraction
+- [x] **Phase 163: KiCad CLI Integration** — External kicad-cli detection, App Store GPL compliance
+- [x] **Phase 164: LLM Provider Protocol** — FoundationModels, HF Hub, MLX-Swift abstraction
 - [ ] **Phase 165: Provider Router** — Task-aware, cost-aware, privacy-aware model routing
 - [ ] **Phase 166: BYOK Keychain Storage** — API key management with iCloud sync opt-out default
 - [ ] **Phase 167: stdio MCP Client** — Swift subprocess communication with Python daemon
@@ -682,9 +682,9 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 161. App Shell Foundation | 1/1 | Complete | 2026-07-07 |
-| 162. Python Daemon Bundling | 0/3 | Not started | - |
-| 163. KiCad CLI Integration | 0/3 | Not started | - |
-| 164. LLM Provider Protocol | 0/3 | Not started | - |
+| 162. Python Daemon Bundling | 1/1 | Complete | 2026-07-07 |
+| 163. KiCad CLI Integration | 1/1 | Complete | 2026-07-07 |
+| 164. LLM Provider Protocol | 1/1 | Complete | 2026-07-07 |
 | 165. Provider Router | 0/3 | Not started | - |
 | 166. BYOK Keychain Storage | 0/3 | Not started | - |
 | 167. stdio MCP Client | 0/3 | Not started | - |

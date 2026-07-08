@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: milestone
 status: executing
-stopped_at: Milestone v5.0 Skidl-Native Design Pipeline roadmap created (Phases 156-160)
-last_updated: "2026-07-07T23:33:09.401Z"
+stopped_at: Phase 164 LLM Provider Protocol shipped (FoundationModels + MLX-Swift providers, HF Hub catalog, ProviderRegistry, ProviderBanner)
+last_updated: "2026-07-07T23:59:00.000Z"
 last_activity: 2026-07-07
 progress:
   total_phases: 32
-  completed_phases: 2
+  completed_phases: 5
   total_plans: 34
-  completed_plans: 2
-  percent: 6
+  completed_plans: 5
+  percent: 15
 ---
 
 # Project State
@@ -83,6 +83,35 @@ See: `.planning/phases/161-app-shell-foundation/161-01-SUMMARY.md`
 - [Rule 3 Blocking] Stale git index.lock removed
 
 See: `.planning/phases/162-python-daemon-bundling/162-01-SUMMARY.md`
+
+## Phase 163 — KiCad CLI Integration (SHIPPED 2026-07-07)
+
+See commit `d33ec8c8`. KiCad CLI detector + onboarding gate. APP-04 augmentation: main workflow blocked until status is `.ready`.
+
+## Phase 164 — LLM Provider Protocol (SHIPPED 2026-07-07)
+
+**Files:** 20 created, 1 modified (Package.swift), 1928 LOC
+**Build:** `swift build` clean, zero warnings
+**Tests:** 39 new across 5 suites (KiCadModelProvider Protocol, AppleLocalProvider, MLXLocalProvider, HFHubModelCatalog, ProviderBanner) — all passing
+**Commits:** `43fdfdd0` (Task 1 — protocol + types), `37602367` (Tasks 2-6 — providers + UI + tests)
+
+**Architecture decisions:**
+
+- KiCadModelProvider protocol — only model interface (MOD-01 lock). SDK types never leak through KC* value types. Compiler-enforced via test.
+- Protocol uses non-generic `generateJSON<T: Decodable>` (not associated types) so providers fit in heterogeneous arrays.
+- AppleLocalProvider — real FoundationModels streaming via `LanguageModelSession.streamResponse`. Per-request session allocation. Pitfall 3 prevention: availability probed via `SystemLanguageModel.default.availability` returning `.deviceNotEligible | .appleIntelligenceNotEnabled | .modelNotReady` — never via device model detection.
+- MLXLocalProvider — real MLX-Swift integration (MLX+MLXNN 0.31.6 SPM deps). Pitfall 7 prevention: `MTLCreateSystemDefaultDevice().recommendedMaxWorkingSetSize` with 3GB floor. Real safetensors load via `MLX.loadArraysAndMetadata` (T-164-01 supply-chain mitigation). Architecture whitelist (gemma3, llama, qwen, phi, mistral, starcoder2). Generation loop deferred to Phase 165 — SLC-correct boundary.
+- HFHubModelCatalog — 7 curated recommended models (Gemma 3 4B/12B, Qwen 2.5 7B/14B, Phi 3.5 mini, Llama 3.2 1B/3B). Real HF API parsing.
+- ProviderRegistry — ObservableObject for environment injection. `defaultProvider()` returns Apple first (MOD-06), then MLX, then any local, then cloud. `register(_:)` is Phase 166 BYOK entry point.
+- ProviderBanner — three states (hidden / localOnlyMode / noProvidersAvailable). "Add API Key" deep-link slot for Phase 166.
+
+**Deviations:**
+
+- [Rule 3 Blocking] `MLXLM` product not in mlx-swift package — lives in mlx-swift-extras. Added MLX+MLXNN only. Scoped generation loop to Phase 165.
+- [Rule 3 Blocking] Swift 6 `Mutex<T>` is non-Copyable, can't be stored in Copyable struct. Replaced with small private actor for metadata cache.
+- [Rule 3 Blocking] `NSLock.lock()` unavailable from async context. Replaced with private actor Counter in MockProvider.
+
+See: `.planning/phases/164-llm-provider-protocol/164-01-SUMMARY.md`
 
 ## Backlog (next milestone)
 

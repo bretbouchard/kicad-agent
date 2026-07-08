@@ -48,12 +48,12 @@
 
 ### MODELS — Provider Layer
 
-- [ ] **MOD-01**: App uses `KiCadModelProvider` Swift protocol as the only model interface (no SDK types leak)
+- [x] **MOD-01**: App uses `KiCadModelProvider` Swift protocol as the only model interface (no SDK types leak) ✅ Phase 164
 - [ ] **MOD-02**: App routes model calls based on task (privacy mode → local, vision needed → cloud/MLX, complex reasoning → user's preferred). *Unavailable preferred model falls back to FoundationModels with one-time notification.*
 - [ ] **MOD-03**: User can configure API keys for Anthropic, OpenAI, Google, Groq, xAI, Together via Provider Settings UI. *Invalid API keys detected via test call on save; revoked keys (401) trigger re-entry prompt.*
 - [ ] **MOD-04**: API keys are stored in Keychain with **iCloud Keychain sync ON by default** (user can opt-out via Settings). Aligns with PROJECT.md locked decision 2026-07-07.
 - [ ] **MOD-05**: App never proxies API calls through developer infrastructure (pure BYOK, zero dev liability)
-- [ ] **MOD-06**: FoundationModels is always available as default (free, on-device, no key required). *Devices without Apple Intelligence see banner explaining local-only mode + link to add API key.*
+- [x] **MOD-06**: FoundationModels is always available as default (free, on-device, no key required). *Devices without Apple Intelligence see banner explaining local-only mode + link to add API key.* ✅ Phase 164
 - [ ] **MOD-07**: User can browse and download MLX models from Hugging Face Hub catalog (zero dev infra). *Failed downloads resume on app relaunch; incompatible models (.safetensors without MLX metadata) rejected with explanation.*
 - [ ] **MOD-08**: User can drag-drop `.mlx` model files to import custom fine-tunes. *Drag-drop validates .mlx format; rejected files show inline error with format requirements.*
 - [ ] **MOD-09**: App shows download progress for MLX models and notifies on completion
