@@ -1,0 +1,4 @@
+# Fastlane plugins for Phase 203
+# Each plugin needs `bundle exec fastlane add_plugin [name]` to install.
+
+# Default plugins — no extras required for v6.0 Phase 203

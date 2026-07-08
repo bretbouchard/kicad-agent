@@ -1,0 +1,153 @@
+# frozen_string_literal: true
+
+# Phase 203 — Fastlane Build/Ship Automation
+#
+# Four lanes: test, beta, release, screenshots.
+# Recognized blockers (require user action):
+#   1. Apple Developer Program enrollment ($99/yr)
+#   2. Match repo creation (private GitHub repo for certs)
+#   3. App Store Connect app record
+# When these are unavailable, lanes run in --skip / --readonly stub mode.
+
+default_bundle_id = "com.kicadagent.app"
+
+before_all do
+  ensure_env_vars(
+    APP_IDENTIFIER: default_bundle_id
+  ) unless ENV["CI"].nil?
+end
+
+# =============================================================================
+# Lane: test
+# =============================================================================
+# Runs the full validation pipeline before any build.
+lane :test do |options|
+  UI.message("Phase 203 — Running validation pipeline")
+
+  # Swift package tests
+  Dir.chdir("../macos-app") do
+    sh("swift test")
+  end
+
+  # Python daemon tests with coverage
+  Dir.chdir("..") do
+    sh("pytest --cov=kicad_agent --cov-fail-under=80")
+  end
+
+  # CI coverage gate
+  Dir.chdir("..") do
+    sh("python3 scripts/ci_coverage_gate.py --strict")
+  end
+
+  UI.success("All tests pass")
+end
+
+# =============================================================================
+# Lane: beta — Build and ship to TestFlight
+# =============================================================================
+# Recognized blocker: Apple Developer Program enrollment required for code signing.
+# Run with `match readonly: true` to skip signing when stubbed.
+lane :beta do |options|
+  UI.message("Phase 203 — TestFlight build & upload")
+
+  # Pull signing certs via match.
+  # Phase 203.1 wires real match repo when enrollment completes.
+  if ENV["MATCH_PASSWORD"].nil?
+    UI.important("MATCH_PASSWORD not set — running in stub mode")
+    UI.important("Set MATCH_PASSWORD and create match repo when Apple Dev Program enrolls")
+  else
+    match(
+      type: "appstore",
+      readonly: true,
+      app_identifier: default_bundle_id
+    )
+  end
+
+  # Build the .app via SPM + xcodebuild wrapper.
+  # Phase 203.1 ships Xcode project; for now build via SPM and verify.
+  Dir.chdir("../macos-app") do
+    sh("swift build -c release")
+  end
+
+  # Archive + upload to TestFlight (Phase 203.1 when ASC record exists)
+  if ENV["APP_STORE_CONNECT_API_KEY_ID"].nil?
+    UI.important("App Store Connect API key not set — skipping pilot upload")
+    UI.important("Create ASC record + API key when enrollment completes")
+  else
+    pilot(
+      app_identifier: default_bundle_id,
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  UI.success("Beta lane complete (may have run in stub mode)")
+end
+
+# =============================================================================
+# Lane: release — Ship to App Store
+# =============================================================================
+lane :release do |options|
+  UI.message("Phase 203 — App Store release")
+
+  # Pre-release validation
+  test
+
+  # Upload to App Store Connect
+  if ENV["APP_STORE_CONNECT_API_KEY_ID"].nil?
+    UI.important("ASC API key not set — release requires enrollment")
+    UI.user_error!("Cannot release without App Store Connect API key")
+  else
+    deliver(
+      app_identifier: default_bundle_id,
+      submit_for_review: false,
+      automatic_release: false,
+      force: true,
+      skip_screenshots: true,
+      skip_metadata: false,
+      metadata_only: false
+    )
+  end
+
+  UI.success("Release lane complete")
+end
+
+# =============================================================================
+# Lane: screenshots — Snapshot via XCUITest
+# =============================================================================
+lane :screenshots do |options|
+  UI.message("Phase 203 — Screenshot generation")
+
+  # Phase 196.1 wires XCUITest; Phase 203 uses snapshot to capture them.
+  if Dir.exist?("../macos-app/UITests")
+    snapshot(
+      scheme: "KiCadAgentUITests",
+      devices: ["Mac"],
+      languages: ["en-US"],
+      output_directory: "../fastlane/screenshots"
+    )
+  else
+    UI.important("UITests target not found — Phase 196.1 wires XCUITest")
+  end
+
+  UI.success("Screenshots lane complete")
+end
+
+# =============================================================================
+# Lane: bootstrap — First-time setup
+# =============================================================================
+desc "First-time setup. Documents what user needs to do."
+lane :bootstrap do |options|
+  UI.message("Phase 203 — Bootstrap checklist")
+  UI.message("")
+  UI.message("Manual prerequisites (cannot be automated):")
+  UI.message("  1. Apple Developer Program enrollment ($99/yr)")
+  UI.message("     → https://developer.apple.com/programs/")
+  UI.message("  2. Create match repo (private GitHub repo for certs)")
+  UI.message("     → bundle exec fastlane match init")
+  UI.message("  3. Create App Store Connect app record")
+  UI.message("     → https://appstoreconnect.apple.com/")
+  UI.message("  4. Generate ASC API key + set APP_STORE_CONNECT_API_KEY_ID env")
+  UI.message("  5. Set MATCH_PASSWORD env var")
+  UI.message("")
+  UI.message("Once complete, run: fastlane beta")
+end
