@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import threading
+from pathlib import Path
 
 import optuna
 
@@ -171,12 +172,23 @@ def optimize_preamp(
     Returns:
         Completed optuna.Study. Use study.best_trial for the optimum.
     """
-    storage = os.environ.get(
-        "OPTUNA_STORAGE",
-        "sqlite:///sweeps/eurorack_preamp.db",
-    )
+    # kicad-agent-233: Optuna sqlite storage now lives in a stable user-data
+    # dir, not cwd. Default:
+    #   macOS:   ~/Library/Application Support/kicad-agent/sweeps/eurorack_preamp.db
+    #   Linux:   ${XDG_DATA_HOME:-~/.local/share}/kicad-agent/sweeps/eurorack_preamp.db
+    # Override with OPTUNA_STORAGE env var (must be a full sqlite:///<abs_path>
+    # URL — relative paths still go to cwd to support tests via tmp_path).
+    import sys
+    storage = os.environ.get("OPTUNA_STORAGE")
+    if storage is None:
+        if sys.platform == "darwin":
+            data_base = Path.home() / "Library" / "Application Support"
+        else:
+            data_base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+        sweeps_dir = data_base / "kicad-agent" / "sweeps"
+        sweeps_dir.mkdir(parents=True, exist_ok=True)
+        storage = f"sqlite:///{sweeps_dir / 'eurorack_preamp.db'}"
     if storage.startswith("sqlite:///"):
-        # Ensure the parent directory exists for the default sweeps/ path
         db_path = storage.removeprefix("sqlite:///")
         if not db_path.startswith(":memory:"):
             parent = os.path.dirname(db_path)
