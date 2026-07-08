@@ -2,10 +2,17 @@
 
 Headless subprocess wrapper for ngspice 45.2. Takes a .cir netlist,
 runs the simulation, and returns structured results.
+
+kicad-agent-obp fix: AC analysis parses .raw binary file via spicelib.RawRead
+(was: regex against ngspice log). Populates AnalysisResult.traces with real
+complex-valued v(in), v(out), etc. and computes gain_db/bandwidth_hz from
+actual data. Regex retained as fallback for ngspice versions where -r flag
+fails.
 """
 from __future__ import annotations
 
 import logging
+import math
 import subprocess
 import tempfile
 import time
@@ -49,8 +56,11 @@ def run_simulation(
     log_output = ""
 
     try:
-        # Run ngspice in batch mode.
-        cmd = ["ngspice", "-b", "-o", str(log_path), str(cir_path)]
+        # Run ngspice in batch mode with explicit -r to dump .raw binary.
+        # kicad-agent-obp: previously omitted -r, so .raw only existed when
+        # the .cir file had a .print/.write statement. Now we ALWAYS dump
+        # the raw to a known path so spicelib.RawRead can parse it.
+        cmd = ["ngspice", "-b", "-r", str(raw_path), "-o", str(log_path), str(cir_path)]
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -72,7 +82,7 @@ def run_simulation(
         for atype_str in analyses:
             try:
                 atype = AnalysisType(atype_str)
-                ar = _parse_analysis(atype, log_output)
+                ar = _parse_analysis(atype, log_output, raw_path)
                 if sim_failed:
                     ar = AnalysisResult(
                         analysis_type=atype,
@@ -128,12 +138,19 @@ def run_simulation(
 def _parse_analysis(
     atype: AnalysisType,
     log: str,
+    raw_path: Path | None = None,
 ) -> AnalysisResult:
-    """Parse ngspice log output for analysis-specific results."""
+    """Parse ngspice log + .raw file for analysis-specific results.
+
+    kicad-agent-obp: AC analysis now prefers .raw binary parse via
+    spicelib.RawRead over regex against ngspice log. Falls back to regex
+    if .raw file is missing (e.g., older ngspice without -r flag support
+    or when ngspice errored before writing .raw).
+    """
     if atype == AnalysisType.AC:
-        return _parse_ac(log)
+        return _parse_ac(log, raw_path)
     elif atype == AnalysisType.TRAN:
-        return _parse_tran(log)
+        return _parse_tran(log, raw_path)
     elif atype == AnalysisType.NOISE:
         return _parse_noise(log)
     else:
@@ -144,56 +161,176 @@ def _parse_analysis(
         )
 
 
-def _parse_ac(log: str) -> AnalysisResult:
-    """Parse AC analysis results from ngspice log.
+def _build_traces_from_raw(raw) -> tuple[Trace, ...]:
+    """Convert spicelib.RawRead output to Phase 158 Trace tuples.
 
-    Handles both .MEAS format (gain_db = -1.7e-04 dB) and
-    control-block meas format (gain_db = -1.714492e-04 at= ...).
+    RawRead returns complex-valued v(in), v(out), etc. for AC analysis.
+    For each voltage/current trace, we emit TWO Trace objects:
+      - "{name}_mag_db" — magnitude in dB (real-valued)
+      - "{name}_phase_deg" — phase in degrees (real-valued)
+    Frequency axis is the shared scale.
+    """
+    import numpy as np
+
+    traces: list[Trace] = []
+    freq_axis = None
+
+    for name in raw.get_trace_names():
+        wave = raw.get_wave(name)
+        arr = np.asarray(wave)
+
+        # Detect frequency axis (ngspice AC mode: real part is freq, imag is junk).
+        if name.lower() in ("frequency", "time") and freq_axis is None:
+            freq_axis = arr.real
+            continue
+
+        # For complex traces, split into magnitude (dB) + phase (deg).
+        if arr.dtype == complex or arr.dtype == complex128:
+            mag = np.abs(arr)
+            phase_deg = np.degrees(np.angle(arr))
+            # Guard against log10(0) on the magnitude.
+            mag_safe = np.where(mag > 0, mag, 1e-30)
+            mag_db = 20.0 * np.log10(mag_safe)
+            traces.append(Trace(
+                name=f"{name}_mag_db",
+                values=tuple(float(v) for v in mag_db),
+                scale=tuple(float(v) for v in (freq_axis if freq_axis is not None else range(len(mag_db)))),
+            ))
+            traces.append(Trace(
+                name=f"{name}_phase_deg",
+                values=tuple(float(v) for v in phase_deg),
+                scale=tuple(float(v) for v in (freq_axis if freq_axis is not None else range(len(phase_deg)))),
+            ))
+        else:
+            # Real-valued trace (DC operating point, real-valued measurement).
+            traces.append(Trace(
+                name=name,
+                values=tuple(float(v) for v in arr),
+                scale=tuple(float(v) for v in (freq_axis if freq_axis is not None else range(len(arr)))),
+            ))
+
+    return tuple(traces)
+
+
+def _compute_gain_and_bandwidth(traces: tuple[Trace, ...], input_node: str = "in", output_node: str = "out") -> tuple[float | None, float | None]:
+    """Compute gain_db (peak) and bandwidth_hz (high-freq -3dB from peak) from traces.
+
+    Looks for v(in)_mag_db and v(out)_mag_db. gain = v(out) - v(in) in dB.
+    Falls back to v(out)_mag_db alone if v(in) absent (assumes 1V stimulus).
+
+    Bandwidth is the HIGH-frequency -3dB point — i.e., the first frequency
+    AFTER the peak where gain drops below (peak - 3dB). For amplifiers with
+    coupling caps, gain rises from low freq (cap blocks) → peaks mid-band →
+    rolls off at high freq (transistor fT). The "bandwidth" is the upper
+    edge of the passband, not the low-freq pole.
+    """
+    import numpy as np
+
+    out_mag = next((t for t in traces if t.name == f"v({output_node})_mag_db"), None)
+    if out_mag is None:
+        return None, None
+
+    in_mag = next((t for t in traces if t.name == f"v({input_node})_mag_db"), None)
+
+    out_arr = np.asarray(out_mag.values)
+    if in_mag is not None:
+        in_arr = np.asarray(in_mag.values)
+        gain_arr = out_arr - in_arr  # dB subtraction = ratio
+    else:
+        gain_arr = out_arr
+
+    gain_db = float(np.max(gain_arr))
+    peak_idx = int(np.argmax(gain_arr))
+
+    # Bandwidth: scan FORWARD from peak to find high-freq -3dB roll-off.
+    freq = np.asarray(out_mag.scale, dtype=float)
+    threshold = gain_db - 3.0
+    for i in range(peak_idx, len(gain_arr)):
+        if gain_arr[i] <= threshold and freq[i] > freq[peak_idx]:
+            bandwidth_hz = float(freq[i])
+            break
+    else:
+        bandwidth_hz = None
+
+    return gain_db, bandwidth_hz
+
+
+def _parse_ac(log: str, raw_path: Path | None = None) -> AnalysisResult:
+    """Parse AC analysis results — prefer .raw, fall back to regex.
+
+    kicad-agent-obp: was regex-only against ngspice log. Now uses
+    spicelib.RawRead when raw_path exists, populating AnalysisResult.traces
+    with real v(in)/v(out) magnitude and phase data. gain_db + bandwidth_hz
+    computed from actual data, not regex-matched text.
     """
     import re
 
-    gain_db = None
-    # Match "gain_db = <number>" from ngspice meas output.
-    gain_match = re.search(r"gain_db\s*=\s*([-\d.eE+]+)", log, re.IGNORECASE)
-    if gain_match:
-        try:
-            gain_db = float(gain_match.group(1))
-        except ValueError:
-            pass
-    # Fallback: older format with explicit dB unit.
-    if gain_db is None:
-        gain_match = re.search(r"gain.*?=\s*([-\d.]+)\s*dB", log, re.IGNORECASE)
-        if gain_match:
-            gain_db = float(gain_match.group(1))
+    # Try .raw parse first (kicad-agent-obp fix).
+    traces: tuple[Trace, ...] = ()
+    gain_db: float | None = None
+    bandwidth_hz: float | None = None
 
-    bandwidth = None
-    # Match "bw_3db = <number>" from control-block meas output.
-    bw_match = re.search(r"bw_3db\s*=\s*([\d.eE+-]+)", log, re.IGNORECASE)
-    if bw_match:
+    if raw_path is not None and raw_path.exists():
         try:
-            bandwidth = float(bw_match.group(1))
-        except ValueError:
-            pass
-    # Fallback: older "bandwidth" format.
-    if bandwidth is None:
-        bw_match = re.search(r"bandwidth.*?=\s*([\d.eE+-]+)\s*Hz", log, re.IGNORECASE)
+            from spicelib import RawRead
+            raw = RawRead(str(raw_path), verbose=False)
+            traces = _build_traces_from_raw(raw)
+            gain_db, bandwidth_hz = _compute_gain_and_bandwidth(traces)
+        except Exception as exc:
+            logger.debug("RawRead failed (%s) — falling back to regex", exc)
+
+    # Regex fallback if .raw parsing didn't yield metrics.
+    if gain_db is None:
+        gain_match = re.search(r"gain_db\s*=\s*([-\d.eE+]+)", log, re.IGNORECASE)
+        if gain_match:
+            try:
+                gain_db = float(gain_match.group(1))
+            except ValueError:
+                pass
+        if gain_db is None:
+            gain_match = re.search(r"gain.*?=\s*([-\d.]+)\s*dB", log, re.IGNORECASE)
+            if gain_match:
+                gain_db = float(gain_match.group(1))
+
+    if bandwidth_hz is None:
+        bw_match = re.search(r"bw_3db\s*=\s*([\d.eE+-]+)", log, re.IGNORECASE)
         if bw_match:
-            bandwidth = float(bw_match.group(1))
+            try:
+                bandwidth_hz = float(bw_match.group(1))
+            except ValueError:
+                pass
+        if bandwidth_hz is None:
+            bw_match = re.search(r"bandwidth.*?=\s*([\d.eE+-]+)\s*Hz", log, re.IGNORECASE)
+            if bw_match:
+                bandwidth_hz = float(bw_match.group(1))
 
     return AnalysisResult(
         analysis_type=AnalysisType.AC,
-        traces=(),
+        traces=traces,
         gain_db=gain_db,
-        bandwidth_hz=bandwidth,
+        bandwidth_hz=bandwidth_hz,
         passed="fatal error" not in log.lower(),
     )
 
 
-def _parse_tran(log: str) -> AnalysisResult:
-    """Parse transient analysis results."""
+def _parse_tran(log: str, raw_path: Path | None = None) -> AnalysisResult:
+    """Parse transient analysis results.
+
+    kicad-agent-obp: now also parses .raw if present to populate traces
+    (was: empty traces). Real-valued time-domain traces use the time axis.
+    """
+    traces: tuple[Trace, ...] = ()
+    if raw_path is not None and raw_path.exists():
+        try:
+            from spicelib import RawRead
+            raw = RawRead(str(raw_path), verbose=False)
+            traces = _build_traces_from_raw(raw)
+        except Exception as exc:
+            logger.debug("TRAN RawRead failed (%s)", exc)
+
     return AnalysisResult(
         analysis_type=AnalysisType.TRAN,
-        traces=(),
+        traces=traces,
         passed="error" not in log.lower(),
     )
 

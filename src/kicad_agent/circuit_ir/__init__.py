@@ -66,16 +66,33 @@ _SYMBOL_DIR = _ensure_skidl_env()
 # Now safe to import skidl.
 import skidl  # noqa: E402
 
-# kicad-agent-pzz fix: Disable skidl's backup_parts feature.
-# skidl.Circuit.backup_parts() writes a {script_name}_sklib.py file to cwd on
-# every Circuit context exit (circuit.py:1425). Under pytest, the script name
-# is derived from the test's tmp_path prefix, producing files like
-# `tmp00sg8hh9_sklib.py`. A single Phase 204 debug session generated 299 such
-# files. We never load from backup_lib (query_backup_lib=False below), so the
-# writes are pure pollution + I/O overhead. Disable the method post-import;
-# the patch persists for the process lifetime since Python caches the module.
-skidl.Circuit.backup_parts = lambda self, file_=None: None  # type: ignore[assignment]
-skidl.config.query_backup_lib = False  # type: ignore[attr-defined]
+# kicad-agent-pzz fix (revised): redirect skidl's backup_lib file to a stable
+# cache dir instead of disabling it. Original fix (no-op backup_parts) broke
+# skidl's in-memory symbol cache — every Part() lookup re-parsed the full
+# Device.kicad_sym library (~8-12s per build_preamp_circuit call vs <1s).
+#
+# skidl.Circuit.backup_parts() writes a {script_name}_sklib.py file on every
+# Circuit context exit. Under pytest, get_script_name() returns the test's
+# tmp_path prefix → tmp00sg8hh9_sklib.py files pollute cwd. Solution: point
+# backup_lib_file_name at a stable, per-user cache dir so:
+#   (a) cwd stays clean (no tmp*_sklib.py pollution)
+#   (b) skidl's caching stays active (fast Part() lookups)
+#   (c) the cache file persists across sessions for warm-start speedup
+#
+# Cache dir resolution uses stdlib only (no platformdirs dep):
+#   macOS:   ~/Library/Caches/kicad-agent/skidl
+#   Linux:   ${XDG_CACHE_HOME:-~/.cache}/kicad-agent/skidl
+if sys.platform == "darwin":
+    _CACHE_BASE = Path.home() / "Library" / "Caches"
+else:
+    _CACHE_BASE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+_CACHE_DIR = _CACHE_BASE / "kicad-agent" / "skidl"
+_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+_CACHE_FILE = _CACHE_DIR / "backup_sklib.py"
+
+skidl.config.backup_lib_name = "kicad_agent_cache"  # type: ignore[attr-defined]
+skidl.config.backup_lib_file_name = str(_CACHE_FILE)  # type: ignore[attr-defined]
+skidl.config.query_backup_lib = True  # type: ignore[attr-defined]
 
 from kicad_agent.circuit_ir.types import (  # noqa: E402
     CircuitIR,

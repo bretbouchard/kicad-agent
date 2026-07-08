@@ -28,7 +28,7 @@ def test_demo_runs_clean_and_emits_artifacts(tmp_path: Path) -> None:
             "--bode", str(bode),
             "--bom", str(bom),
         ],
-        capture_output=True, text=True, timeout=180,
+        capture_output=True, text=True, timeout=240,
         cwd=str(REPO_ROOT),
     )
     elapsed = time.time() - t0

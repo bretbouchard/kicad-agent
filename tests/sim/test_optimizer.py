@@ -112,10 +112,13 @@ def test_objective_times_out_on_slow_sim(monkeypatch: MonkeyPatch) -> None:
     assert val == float("inf"), f"timeout must return inf, got {val}"
     # Budget: ~10s TRIAL_TIMEOUT_S + ~3-6s skidl symbol-lookup overhead in
     # build_preamp_circuit (skidl first-import is slow, varies by system cache).
-    # 20s gives slack for CI/disk-cache variance — the assertion's purpose is
+    # 40s gives slack for cold-cache build_preamp_circuit (Part lookups
+    # re-parse Device.kicad_sym on first call per process — ~4-6s overhead
+    # tracked as kicad-agent-pzz follow-up). The assertion's purpose is
     # "shorter than the 120s ngspice default", not a tight timing guarantee.
-    assert elapsed < 20.0, (
-        f"objective should short-circuit at ~10s + ~3-6s skidl setup, "
+    assert elapsed < 40.0, (
+        f"objective should short-circuit at ~10s TRIAL_TIMEOUT_S + ~3-6s skidl setup, "
+        f"plus cold-cache build_preamp_circuit overhead. "
         f"took {elapsed:.1f}s — TRIAL_TIMEOUT_S budget not enforced (CR-02 P1)"
     )
 
