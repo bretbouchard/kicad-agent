@@ -66,6 +66,17 @@ _SYMBOL_DIR = _ensure_skidl_env()
 # Now safe to import skidl.
 import skidl  # noqa: E402
 
+# kicad-agent-pzz fix: Disable skidl's backup_parts feature.
+# skidl.Circuit.backup_parts() writes a {script_name}_sklib.py file to cwd on
+# every Circuit context exit (circuit.py:1425). Under pytest, the script name
+# is derived from the test's tmp_path prefix, producing files like
+# `tmp00sg8hh9_sklib.py`. A single Phase 204 debug session generated 299 such
+# files. We never load from backup_lib (query_backup_lib=False below), so the
+# writes are pure pollution + I/O overhead. Disable the method post-import;
+# the patch persists for the process lifetime since Python caches the module.
+skidl.Circuit.backup_parts = lambda self, file_=None: None  # type: ignore[assignment]
+skidl.config.query_backup_lib = False  # type: ignore[attr-defined]
+
 from kicad_agent.circuit_ir.types import (  # noqa: E402
     CircuitIR,
     NetDescriptor,
