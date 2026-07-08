@@ -196,17 +196,17 @@
 
 ### GOV — Obdurate Runtime
 
-- [ ] **GOV-01**: Every op passes through Intent Gate (parse, validate, link to requirement) before execution
-- [ ] **GOV-02**: Workflow State Machine enforces phase transitions (can't run DRC without PCB)
+- [x] **GOV-01**: Every op passes through Intent Gate (parse, validate, link to requirement) before execution ✅ Phase 169
+- [x] **GOV-02**: Workflow State Machine enforces phase transitions (can't run DRC without PCB) ✅ Phase 169
 - [ ] **GOV-03**: Pre-op verification gate (intent matches op, will achieve goal)
 - [ ] **GOV-04**: Post-op verification gate (deterministic check + semantic check)
 - [ ] **GOV-05**: Auto-rollback on verification failure (PersistentUndoStack checkpoint)
-- [ ] **GOV-06**: Op Journal logs every op (uuid, timestamp, actor, intent, op, args, result, verification, requirement_id)
-- [ ] **GOV-07**: Drift detection (out-of-scope files trigger warning, requirement_id required)
-- [ ] **GOV-08**: Escalation ladder (T1 retry → T2 strategy switch → T3 external AI → T4 halt)
-- [ ] **GOV-09**: Four-state resolution taxonomy (IMPLEMENTED, ADDED-AS-PHASE, SUPERSEDED-BY-ALTERNATIVE, DEFERRED-TO-NAMED-TARGET) — no silent deferrals
-- [ ] **GOV-10**: Auto-learning (success → pattern store, failure → error_message store)
-- [ ] **GOV-11**: Requirement coverage report (every op linked to requirement, every requirement has ops)
+- [x] **GOV-06**: Op Journal logs every op (uuid, timestamp, actor, intent, op, args, result, verification, requirement_id) ✅ Phase 169
+- [x] **GOV-07**: Drift detection (out-of-scope files trigger warning, requirement_id required) ✅ Phase 169
+- [x] **GOV-08**: Escalation ladder (T1 retry → T2 strategy switch → T3 external AI → T4 halt) ✅ Phase 169
+- [x] **GOV-09**: Four-state resolution taxonomy (IMPLEMENTED, ADDED-AS-PHASE, SUPERSEDED-BY-ALTERNATIVE, DEFERRED-TO-NAMED-TARGET) — no silent deferrals ✅ Phase 169
+- [x] **GOV-10**: Auto-learning (success → pattern store, failure → error_message store) ✅ Phase 169
+- [x] **GOV-11**: Requirement coverage report (every op linked to requirement, every requirement has ops) ✅ Phase 169
 
 ## Future Requirements (Deferred to v1.x / v2+)
 

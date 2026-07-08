@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 167 Stdio MCP Client shipped (Swift MCPClient + StdioWatchdog + Python MCP lifecycle + 59 new tests)
-last_updated: "2026-07-08T05:00:00.000Z"
+stopped_at: Phase 169 Obdurate Runtime shipped (Swift governance layer with WorkflowStateMachine + IntentGate + OpJournal + DriftDetector + EscalationLadder + FindingResolution + AutoLearner + RequirementCoverage, 8 suites 47 tests, 210/210 pass)
+last_updated: "2026-07-08T05:30:00.000Z"
 last_activity: 2026-07-08
 progress:
   total_phases: 32
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 34
-  completed_plans: 8
-  percent: 24
+  completed_plans: 9
+  percent: 26
 ---
 
 # Project State
@@ -21,15 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 167 SHIPPED — Stdio MCP Client. Swift↔Python JSON-RPC over real stdin/stdout pipes with MCP lifecycle and RPC-aware watchdog. DAEM-02 fully satisfied (env + watchdog + audit-before-kill).
-Last activity: 2026-07-08 — Phase 167 complete (MCPClient + StdioWatchdog + tools/list 151 ops + tools/call dispatch, 59 new tests)
+**Current focus:** Phase 169 SHIPPED — Obdurate Runtime. Swift-side governance layer wrapping every MCP op call: IntentGate → DriftDetector → WorkflowStateMachine → MCPClient.call → OpJournal (fsync) → AutoLearner → EscalationLadder. GOV-01..GOV-11 covered.
+Last activity: 2026-07-08 — Phase 169 complete (8 Governance source files ~2000 LOC + 8 test suites 47 tests, 210/210 pass)
 
 ## Current Position
 
-Phase: 167 (Stdio MCP Client) — COMPLETE
+Phase: 169 (Obdurate Runtime) — COMPLETE
 Plan: 1 of 1
-Status: Phase 167 shipped — 38 new Python + 21 new Swift tests pass. MCP round-trip 2.2ms. 151 kicad-agent ops exposed as MCP tools.
-Last activity: 2026-07-08 — Phase 167 stdio MCP client shipped
+Status: Phase 169 shipped — 8 governance components + MCPClient.governedCall<T> wrapper. WorkflowStateMachine, IntentGate, OpJournal (JSONL+fsync), DriftDetector, EscalationLadder (T1→T2→T3→T4), FindingResolution (four-state taxonomy), AutoLearner, RequirementCoverage. 210/210 tests pass.
 
 ## Phase 161 — App Shell Foundation (SHIPPED 2026-07-07)
 
@@ -155,6 +154,41 @@ See: `.planning/phases/164-llm-provider-protocol/164-01-SUMMARY.md`
 - [Rule 3 Blocking] Precondition failure tests aborted the test runner — removed negative-case coverage
 
 See: `.planning/phases/165-provider-router/165-01-SUMMARY.md`
+
+## Phase 169 — Obdurate Runtime (SHIPPED 2026-07-08)
+
+**Files:** 10 created + 1 modified (MCPClient.swift), 2,902 LOC (1,983 source + 919 tests)
+**Build:** `swift build` clean, zero warnings
+**Tests:** 47 new across 8 suites (WorkflowStateMachineTests, IntentGateTests, OpJournalTests, EscalationLadderTests, FindingResolutionTests, AutoLearnerTests, RequirementCoverageTests, DriftDetectorTests) — all passing
+**Total:** 210/210 tests pass in full suite
+**Commit:** `f498e5d0`
+
+**What shipped:**
+- WorkflowState + WorkflowStateMachine: GSD transition table (questioning → specGenerated → roadmapApproved → executing → verifying → complete) with hard guards — review→execute needs planApproved, verifying→complete needs verificationPassed. GOV-02.
+- IntentGate: validates every op against catalog, requires non-empty requirementId on mutating ops (GOV-07), sanitizes secrets (password/token/api_key prefixes redacted). Static op catalog mirrored from Python `ops/registry.py` for 23 common ops. GOV-01.
+- OpJournal: JSONL+fsync append-only audit trail at `~/Library/Application Support/KiCadAgent/journal.jsonl`. Mirrors Python `routing/audit.py` H5 pattern with truncated-line recovery. Queryable by op, requirement, actor, date, operationId. GOV-06.
+- DriftDetector: compares target files against approved scope per requirementId. Permissive (warn) by default, strict mode rejects. GOV-07.
+- EscalationLadder: T1 (1 failure) → T2 (2+) → T3 (3+) → T4 (5+) per bureaucracy.md §4. Posts `kcEscalation` notification synchronously on tier increase. `humanInputRequired()` at T4. GOV-08.
+- FindingResolution: four-state taxonomy (IMPLEMENTED / ADDED-AS-PHASE / SUPERSEDED-BY-ALTERNATIVE / DEFERRED-TO-NAMED-TARGET). P0/P1 cannot defer. Validates evidence requirements per state. GOV-09.
+- AutoLearner: JSONL+fsync pattern/error_message store at `~/Library/Application Support/KiCadAgent/learnings.jsonl`. Queryable by op for similar-success / similar-failure retrieval. GOV-10.
+- RequirementCoverage: report generator from IntentGate.catalog. Validates every op mapped + every declared GOV requirement covered. GOV-11.
+- GovernedCall + MCPClient.governedCall<T>: full pipeline IntentGate → DriftDetector → WorkflowStateMachine → MCPClient.call → OpJournal.append → AutoLearner.store → EscalationLadder.recordSuccess. Failures journal + escalate + auto-learn. Rejects journal with `result_status="rejected"` before throwing.
+
+**Architecture decisions:**
+- Swift-side governance layer, not Python — user task spec described Swift deliverables; plan file's Python paths superseded
+- Op catalog hardcoded in Swift (Phase 170 replaces with dynamic tools/list from MCP daemon)
+- Notifications posted synchronously, not via DispatchQueue.main.async — async dispatch loses notifications under test runloops; synchronous posting is safe because observers are lock-protected
+- NSLock (not actor) for state machine — same pattern as KCCostLedger/KCRoutingNotifier (Phase 165)
+- Stripped public modifiers from Governance files — AnyCodable (MCPProtocol.swift) is internal-only and KiCadAgent is an executable target (no public API surface)
+
+**Deviations:**
+- [Rule 1 Bug] ResolutionValidationError.errorDescription referenced wrong binding (`severity` instead of `sev`)
+- [Rule 1 Bug] Public modifiers conflicted with internal AnyCodable — stripped all `public` from Governance files
+- [Rule 1 Bug] NSLock.unlock() unavailable from async context in EscalationLadderTests — switched to actor Collector
+- [Rule 1 Bug] Notification lost under test runloop — switched from `DispatchQueue.main.async` to synchronous post
+- [Rule 1 Bug] IntentGate catalog default masked explicit empty requirementId — added explicit empty-string check before resolver
+
+See: `.planning/phases/169-obdurate-runtime/169-01-SUMMARY.md`
 
 ## Phase 204 — Closed-Box Simulation Pipeline v1 (SHIPPED 2026-07-07, parallel track)
 

@@ -14,7 +14,7 @@
 - [x] **Phase 166: BYOK Keychain Storage** — API key management with iCloud sync opt-out default ✅ 2026-07-07
 - [x] **Phase 167: stdio MCP Client** — Swift subprocess communication with Python daemon ✅ 2026-07-08
 - [ ] **Phase 168: Python MCP Server** — Auto-register 142 ops as MCP tools, zero glue
-- [ ] **Phase 169: Obdurate Runtime** — State machine, op journal, verification gates, escalation ladder
+- [x] **Phase 169: Obdurate Runtime** — State machine, op journal, verification gates, escalation ladder ✅ 2026-07-08
 - [ ] **Phase 170: Verification Loop Integration** — Python validation_gates.py wrapped for Swift
 - [ ] **Phase 171: Liquid Glass UI Shell** — Toolbar, window management, visual language system
 - [ ] **Phase 172: Inline Rendering** — SVG schematic preview, PNG PCB renders, live pipeline view
