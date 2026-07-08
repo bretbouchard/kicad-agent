@@ -23,9 +23,28 @@ let package = Package(
             targets: ["KiCadAgent"]
         )
     ],
+    dependencies: [
+        // Phase 164: MLX-Swift for in-process Metal-accelerated LLM inference.
+        // Used by MLXLocalProvider for loading .mlx fine-tuned models.
+        // STACK.md decision: in-process MLX (not mlx-server subprocess).
+        // MLXLM (LLM helpers) lives in mlx-swift-extras; we model .mlx
+        // loading with MLX+MLXNN primitives here. Phase 165+ Router may
+        // add mlx-swift-extras when shipping inference to end users.
+        .package(
+            url: "https://github.com/ml-explore/mlx-swift",
+            from: "0.31.6"
+        )
+    ],
     targets: [
         .executableTarget(
             name: "KiCadAgent",
+            dependencies: [
+                // Phase 164: real MLX integration for VRAM probing and
+                // model format validation. MLXLM (LLM loop) ships in
+                // Phase 165 once Router lands.
+                .product(name: "MLX", package: "mlx-swift"),
+                .product(name: "MLXNN", package: "mlx-swift")
+            ],
             // Force macOS 27 deployment target at the ABI level.
             // sdk 26.5 toolchain accepts this — produces binary that
             // refuses to launch on macOS 26 (which is what we want).
