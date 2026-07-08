@@ -118,34 +118,51 @@ class Gemma4VisionCollator:
 
     def __call__(self, examples):
         examples = self._to_row_format(examples)
-        texts, images = [], []
+        texts, images_per_sample = [], []
+        from PIL import Image as PILImage
         for ex in examples:
-            pil_image = ex["images"][0] if ex["images"] else None
-            if pil_image is not None and pil_image.mode != "RGB":
-                pil_image = pil_image.convert("RGB")
-            # Phase 106: text-only diagnostic rows have empty images.
-            # Generate a small white placeholder AND ensure the chat template
-            # includes an <|image|> token to match. Without the token, the
-            # processor raises "0 image tokens, 1 image" mismatch.
-            if pil_image is None:
-                from PIL import Image
-                pil_image = Image.new("RGB", (224, 224), (255, 255, 255))
-            images.append(pil_image)
+            # Carry ALL images for this sample (not just images[0]).
+            # Multimodal examples may have multiple images (e.g. SCH + PCB).
+            sample_images = []
+            for img in ex.get("images", []):
+                if img is None:
+                    continue
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                sample_images.append(img)
+
+            # Phase 106: text-only rows have empty images. Inject a small white
+            # placeholder AND add an <|image|> token to the first user message
+            # so the processor doesn't raise "0 image tokens, 1 image" mismatch.
+            text_only_inject = not sample_images
+            if text_only_inject:
+                sample_images = [PILImage.new("RGB", (224, 224), (255, 255, 255))]
+            images_per_sample.append(sample_images)
 
             template_messages = []
-            for i, msg in enumerate(ex["messages"]):
+            user_msg_idx = 0
+            img_idx = 0
+            for msg in ex["messages"]:
                 template_content = []
                 has_image_part = False
                 for part in msg.get("content", []):
                     if part.get("type") == "image":
-                        template_content.append({"type": "image", "url": pil_image})
-                        has_image_part = True
+                        # Use next available image (cycle if more tokens than images)
+                        url = sample_images[img_idx % len(sample_images)] if sample_images else None
+                        if url is not None:
+                            template_content.append({"type": "image", "url": url})
+                            img_idx += 1
+                            has_image_part = True
                     elif part.get("type") == "text":
                         template_content.append({"type": "text", "text": part["text"]})
-                # If this is the first user message and no image part was present,
-                # inject one so the placeholder image has a matching token.
-                if not has_image_part and i == 0 and msg["role"] == "user":
-                    template_content.insert(0, {"type": "image", "url": pil_image})
+                # Text-only injection: add image token to first user message
+                if (text_only_inject
+                        and not has_image_part
+                        and msg["role"] == "user"
+                        and user_msg_idx == 0):
+                    template_content.insert(0, {"type": "image", "url": sample_images[0]})
+                if msg["role"] == "user":
+                    user_msg_idx += 1
                 template_messages.append({"role": msg["role"], "content": template_content})
 
             text = self.processor.apply_chat_template(
@@ -155,7 +172,7 @@ class Gemma4VisionCollator:
 
         batch = self.processor(
             text=texts,
-            images=[[img] for img in images],
+            images=images_per_sample,
             padding=True,
             truncation=True,
             max_length=self.max_seq_length,
@@ -289,12 +306,35 @@ def main():
     # [4/7] Dataset
     print("[4/7] Loading dataset...", flush=True)
     ds_path = Path(args.dataset_path)
-    if not ds_path.exists():
-        print(f"ERROR: Dataset not found at {args.dataset_path}", flush=True)
-        sys.exit(1)
-    dataset = load_from_disk(str(ds_path))
-    if hasattr(dataset, "get"):
-        dataset = dataset.get("train", dataset)
+    # Three modes: local arrow dir, local parquet files, or HF Hub path
+    if ds_path.is_dir() and (ds_path / "dataset_info.json").exists():
+        dataset = load_from_disk(str(ds_path))
+        if hasattr(dataset, "get"):
+            dataset = dataset.get("train", dataset)
+    elif ds_path.is_dir() and any(ds_path.glob("*.parquet")):
+        # Local parquet directory
+        from datasets import load_dataset
+        print(f"  Loading local parquet from: {ds_path}", flush=True)
+        dataset = load_dataset("parquet", data_files=str(ds_path / "*.parquet"), split="train")
+    elif "/" in args.dataset_path and not ds_path.exists():
+        from datasets import load_dataset
+        print(f"  Loading from HF Hub: {args.dataset_path}", flush=True)
+        dataset = load_dataset(args.dataset_path, token=os.environ.get("HF_TOKEN"))
+        if hasattr(dataset, "get"):
+            dataset = dataset.get("train", dataset)
+    else:
+        if not ds_path.exists():
+            print(f"ERROR: Dataset not found at {args.dataset_path}", flush=True)
+            sys.exit(1)
+        dataset = load_from_disk(str(ds_path))
+        if hasattr(dataset, "get"):
+            dataset = dataset.get("train", dataset)
+        if not ds_path.exists():
+            print(f"ERROR: Dataset not found at {args.dataset_path}", flush=True)
+            sys.exit(1)
+        dataset = load_from_disk(str(ds_path))
+        if hasattr(dataset, "get"):
+            dataset = dataset.get("train", dataset)
     print(f"  Samples: {len(dataset)}", flush=True)
 
     # [5/7] Collator

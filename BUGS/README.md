@@ -1,6 +1,6 @@
 # kicad-agent P0 Bugs
 
-Critical bugs discovered during analog-ecosystem backplane ERC cleanup (Phases 123-127, 2026-06-24).
+Critical bugs discovered during analog-ecosystem backplane ERC cleanup (Phases 123-127, 133 — 2026-06-24 through 2026-06-27).
 
 ## Summary
 
@@ -11,18 +11,19 @@ Critical bugs discovered during analog-ecosystem backplane ERC cleanup (Phases 1
 | [P0-003](P0-003-erc-auto-fix-corrupts-files.md) | `erc_auto_fix` rewrites entire file, corrupts KiCad 10 schematics | P0 | Data loss — files become unloadable |
 | [P0-004](P0-004-place-no-connects-from-erc-wrong-positions.md) | `place_no_connects_from_erc` places markers at wrong positions | P0 | Creates new `no_connect_connected` violations |
 | [P0-005](P0-005-remove-dangling-wires-criteria-mismatch.md) | `remove_dangling_wires` uses different dangling criteria than KiCad ERC | P1 | Silently no-ops on real wire_dangling violations |
+| [P0-006](P0-006-annotate-corrupts-files.md) | `annotate` re-serializes file via kiutils even when no changes needed (same root cause as P0-003) | P0 | Data loss — 1183/1131 ins/del on mcu.kicad_sch despite `annotated: []` |
 
 ## Discovery context
 
-All 5 bugs surfaced during execution of Phases 123-127 on `/Users/bretbouchard/apps/analog-ecosystem/hardware/backplane/` — a 12-sheet KiCad 10 hierarchical schematic with 188 components.
+All 6 bugs surfaced during execution of Phases 123-127 and Phase 133 on `/Users/bretbouchard/apps/analog-ecosystem/hardware/backplane/` — a 12-sheet KiCad 10 hierarchical schematic with 188 components.
 
 The bugs collectively block ~600 ERC violations from being addressed via script-driven cleanup. They are the primary reason backplane cleanup plateaued at 859 violations (from 915 baseline).
 
 ## Patterns observed
 
-Three of the five bugs (P0-002, P0-004, P0-005) share a common theme: **position calculation without proper KiCad 10 transform handling**. Multi-unit symbols, pin positions, and dangling-wire detection all require applying symbol `(at X Y ANGLE)` transforms to local coordinates. The ops appear to use absolute or untransformed coordinates.
+Three of the six bugs (P0-002, P0-004, P0-005) share a common theme: **position calculation without proper KiCad 10 transform handling**. Multi-unit symbols, pin positions, and dangling-wire detection all require applying symbol `(at X Y ANGLE)` transforms to local coordinates. The ops appear to use absolute or untransformed coordinates.
 
-P0-003 is a separate class: **kiutils re-serialization corrupting KiCad 10 files**. This is already documented in project memory (`kiutils-root-sheet-danger.md`) but the `erc_auto_fix` ops were not updated to use raw S-expression manipulation.
+P0-003 and P0-006 are a separate class: **kiutils re-serialization corrupting KiCad 10 files**. This is already documented in project memory (`kiutils-root-sheet-danger.md`) but the affected ops (`erc_auto_fix`, `erc_auto_fix_hierarchical`, `annotate`) were not updated to use raw S-expression manipulation. P0-006 specifically has the additional defect of re-serializing even when the early-return path (`annotated: []`) should have skipped the write.
 
 P0-001 is a simple attribute access bug (`Symbol.name` doesn't exist).
 
