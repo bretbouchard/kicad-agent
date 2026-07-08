@@ -54,6 +54,22 @@ final class Conversation {
     /// Helps the timeline show "forked from <message>" badges.
     var forkedFromMessageId: UUID?
 
+    /// Phase 176 — messages belonging to this conversation (MEM-01, MEM-03).
+    @Relationship(deleteRule: .cascade, inverse: \Message.conversation)
+    var messages: [Message] = []
+
+    /// Phase 176 — decisions made during this conversation (MEM-04).
+    @Relationship(deleteRule: .cascade, inverse: \Decision.conversation)
+    var decisions: [Decision] = []
+
+    /// Phase 176 — field-level value changes (MEM-05).
+    @Relationship(deleteRule: .cascade, inverse: \ValueChange.conversation)
+    var valueChanges: [ValueChange] = []
+
+    /// Phase 176 — point-in-time snapshots for fast time-travel (MEM-06).
+    @Relationship(deleteRule: .cascade, inverse: \ProjectSnapshot.conversation)
+    var snapshots: [ProjectSnapshot] = []
+
     init(
         id: UUID = UUID(),
         project: Project,

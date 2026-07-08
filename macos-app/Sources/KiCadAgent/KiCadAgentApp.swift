@@ -69,8 +69,28 @@ struct KiCadAgentApp: App {
                 .accessibilityHint("Re-runs KiCad CLI detection. Use after installing or upgrading KiCad.")
             }
         }
-        .modelContainer(for: [Project.self, Conversation.self])
+        .modelContainer(for: ModelSchemaRegistry.v600Schema)
     }
+}
+
+/// Phase 176 / 177 — central schema registry.
+///
+/// Keeps the `ModelContainer(for:)` argument stable across app lifecycle so
+/// CloudKit sync schema additions are explicit (Pitfall 4 prevention).
+enum ModelSchemaRegistry {
+    /// v6.0.0 frozen schema. Adding a model here REQUIRES a VersionedSchema
+    /// bump per Phase 177 CloudKit constraints (no auto-migration).
+    static let v600Schema: [any PersistentModel.Type] = [
+        Project.self,
+        Conversation.self,
+        Message.self,
+        Decision.self,
+        ValueChange.self,
+        ProjectSnapshot.self,
+    ]
+
+    /// Schema version tag for CloudKit Optionals — bump on every schema change.
+    static let versionTag = "v6.0.0"
 }
 
 /// Convenience Logger extension — keeps subsystem consistent across files.
