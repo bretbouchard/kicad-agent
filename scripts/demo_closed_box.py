@@ -50,8 +50,10 @@ def check_ngspice() -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Closed-box Eurorack preamp demo")
-    parser.add_argument("--n-trials", type=int, default=50,
-                        help="Optuna trials (default 50, ~4s/trial = ~200s total)")
+    parser.add_argument("--n-trials", type=int, default=20,
+                        help="Optuna trials (default 20, ~5s/trial = ~100s total; "
+                             "kicad-agent-e2b fix — narrowed E12 ranges let GPSampler "
+                             "converge in 15-20 trials instead of 50)")
     parser.add_argument("--target-gain-db", type=float, default=20.0,
                         help="Target gain in dB (default 20)")
     parser.add_argument("--seed", type=int, default=42,

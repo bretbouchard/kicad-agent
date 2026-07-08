@@ -29,10 +29,29 @@ E12_BASE: tuple[float, ...] = (
     1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2,
 )
 
-# Resistors: 100 Ω .. 820 kΩ (4 decades — covers CE bias network).
-E12_RESISTORS: tuple[float, ...] = tuple(
-    v * 10 ** e for e in range(2, 6) for v in E12_BASE
-)
+# Resistors — narrowed per RESEARCH.md L829-836 to fit demo time budget
+# (kicad-agent-e2b). Each resistor now has its own per-role range based on
+# the CE preamp bias equations rather than a single 100Ω-820kΩ mega-space:
+#   R1 (collector load):    1.0k  .. 82k    (2 decades, Vc ~mid-rail)
+#   R2 (base bias upper):   10k   .. 820k   (2 decades, ~10x R3)
+#   R3 (base bias lower):   1.0k  .. 82k    (2 decades, Vb divider)
+#   R4 (emitter degen):     100   .. 8.2k   (2 decades, Ie stability)
+# Total search space: ~21k combinations (was 5.3M with the wide range),
+# letting GPSampler converge in 15-20 trials instead of 50.
+def _e12_range(low_exp: int, high_exp: int) -> tuple[float, ...]:
+    """E12 values spanning [10^low_exp, 10^high_exp] inclusive."""
+    return tuple(v * 10 ** e for e in range(low_exp, high_exp + 1) for v in E12_BASE)
+
+E12_R1: tuple[float, ...] = _e12_range(3, 4)   # 1.0k .. 82k
+E12_R2: tuple[float, ...] = _e12_range(4, 5)   # 10k  .. 820k
+E12_R3: tuple[float, ...] = _e12_range(3, 4)   # 1.0k .. 82k
+E12_R4: tuple[float, ...] = _e12_range(2, 3)   # 100  .. 8.2k
+
+# E12_RESISTORS retained for backward compat (test_e12_resistors_are_discrete
+# asserts on it). Union of all per-role ranges.
+E12_RESISTORS: tuple[float, ...] = tuple(sorted(set(
+    E12_R1 + E12_R2 + E12_R3 + E12_R4
+)))
 
 # Capacitors: 1 nF .. 820 μF (8 decades — covers audio coupling + bypass).
 # WR-02 (Council R2 P2): range(-9, -2) covers exponents [-9..-2] inclusive,
@@ -63,10 +82,10 @@ def objective(trial: optuna.Trial) -> float:
 
     Returns float('inf') on simulation failure — Optuna treats this as infeasible.
     """
-    r1 = trial.suggest_categorical("r1", E12_RESISTORS)
-    r2 = trial.suggest_categorical("r2", E12_RESISTORS)
-    r3 = trial.suggest_categorical("r3", E12_RESISTORS)
-    r4 = trial.suggest_categorical("r4", E12_RESISTORS)
+    r1 = trial.suggest_categorical("r1", E12_R1)
+    r2 = trial.suggest_categorical("r2", E12_R2)
+    r3 = trial.suggest_categorical("r3", E12_R3)
+    r4 = trial.suggest_categorical("r4", E12_R4)
     c_in = trial.suggest_categorical("c_in", E12_CAPS)
     c_out = trial.suggest_categorical("c_out", E12_CAPS)
     c_emit = trial.suggest_categorical("c_emit", E12_CAPS)
