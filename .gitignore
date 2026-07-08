@@ -54,3 +54,22 @@ sweeps/
 
 # Phase 204: demo artifacts (regenerated per run, not source)
 *.png
+
+# Phase 204 / ngspice test artifacts — should never be tracked
+*.erc
+*.log
+__init___sklib.py
+demo_closed_box.erc
+demo_closed_box.log
+generate_legibility_*.erc
+generate_legibility_*.log
+
+# Schematic_Editor PDF is 132MB — exceeds GitHub 100MB limit
+docs/Schematic_Editor
+
+# Optuna sqlite sweep DBs + outputs (already partially ignored)
+/sweeps/
+*.db-journal
+
+# Claude settings (per-team-member, not shared)
+.claude.json
