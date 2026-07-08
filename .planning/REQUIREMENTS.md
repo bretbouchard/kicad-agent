@@ -64,7 +64,7 @@
 ### DAEMON — Python Daemon & stdio MCP
 
 - [x] **DAEM-01**: App spawns bundled Python daemon as subprocess on launch. *On app wake, daemon health checked; if dead, silent restart with audit-log entry.* ✅ Phase 162
-- [ ] **DAEM-02**: Swift app communicates with daemon via stdio MCP transport (no HTTP, no ports). *Daemon stdout forced unbuffered (PYTHONUNBUFFERED=1); 30s watchdog kills hung daemon.* ✅ Phase 162 (env + watchdog; full MCP lands Phase 167)
+- [x] **DAEM-02**: Swift app communicates with daemon via stdio MCP transport (no HTTP, no ports). *Daemon stdout forced unbuffered (PYTHONUNBUFFERED=1); 30s watchdog kills hung daemon.* ✅ Phase 162 (env + watchdog) + Phase 167 (MCPClient + StdioWatchdog + initialize/tools-list/tools-call lifecycle + DAEM-02 audit-before-kill)
 - [ ] **DAEM-03**: Daemon exposes every kicad-agent op (142+) as an MCP tool, auto-registered from ops registry
 - [ ] **DAEM-04**: Adding a new op to the Python registry automatically exposes it as an MCP tool (zero glue)
 - [x] **DAEM-05**: Daemon survives app sleep/wake cycles (no daemon restart needed). *On app wake, daemon health checked; silent restart if dead.* ✅ Phase 162

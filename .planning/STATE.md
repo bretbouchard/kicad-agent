@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 166 BYOK Keychain Storage shipped (Track B Models complete — 7 cloud providers, Keychain iCloud sync opt-out default)
-last_updated: "2026-07-08T04:30:00.000Z"
-last_activity: 2026-07-07
+stopped_at: Phase 167 Stdio MCP Client shipped (Swift MCPClient + StdioWatchdog + Python MCP lifecycle + 59 new tests)
+last_updated: "2026-07-08T05:00:00.000Z"
+last_activity: 2026-07-08
 progress:
   total_phases: 32
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 34
-  completed_plans: 7
-  percent: 21
+  completed_plans: 8
+  percent: 24
 ---
 
 # Project State
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 166 SHIPPED — BYOK Keychain Storage (Track B Models complete). Ready for next phase.
-Last activity: 2026-07-07 — Phase 166 complete (7 cloud providers, Keychain integration, MOD-03/04/05 satisfied)
+**Current focus:** Phase 167 SHIPPED — Stdio MCP Client. Swift↔Python JSON-RPC over real stdin/stdout pipes with MCP lifecycle and RPC-aware watchdog. DAEM-02 fully satisfied (env + watchdog + audit-before-kill).
+Last activity: 2026-07-08 — Phase 167 complete (MCPClient + StdioWatchdog + tools/list 151 ops + tools/call dispatch, 59 new tests)
 
 ## Current Position
 
-Phase: 166 (BYOK Keychain Storage) — COMPLETE
+Phase: 167 (Stdio MCP Client) — COMPLETE
 Plan: 1 of 1
-Status: Phase 166 shipped — 31/31 new tests pass, KeychainManager + 7 cloud providers + APIKeyValidator + BYOKSettingsView. Track B Models closed.
-Last activity: 2026-07-07 — Phase 166 BYOK keychain storage shipped
+Status: Phase 167 shipped — 38 new Python + 21 new Swift tests pass. MCP round-trip 2.2ms. 151 kicad-agent ops exposed as MCP tools.
+Last activity: 2026-07-08 — Phase 167 stdio MCP client shipped
 
 ## Phase 161 — App Shell Foundation (SHIPPED 2026-07-07)
 

@@ -12,7 +12,7 @@
 - [x] **Phase 164: LLM Provider Protocol** — FoundationModels, HF Hub, MLX-Swift abstraction
 - [x] **Phase 165: Provider Router** — Task-aware, cost-aware, privacy-aware model routing ✅ 2026-07-08
 - [x] **Phase 166: BYOK Keychain Storage** — API key management with iCloud sync opt-out default ✅ 2026-07-07
-- [ ] **Phase 167: stdio MCP Client** — Swift subprocess communication with Python daemon
+- [x] **Phase 167: stdio MCP Client** — Swift subprocess communication with Python daemon ✅ 2026-07-08
 - [ ] **Phase 168: Python MCP Server** — Auto-register 142 ops as MCP tools, zero glue
 - [ ] **Phase 169: Obdurate Runtime** — State machine, op journal, verification gates, escalation ladder
 - [ ] **Phase 170: Verification Loop Integration** — Python validation_gates.py wrapped for Swift
