@@ -936,6 +936,76 @@ class SchematicIR(BaseIR):
         self._record_mutation("add_no_connect", {"position": [x, y]})
         return {"position": [x, y]}
 
+    def add_design_note(
+        self,
+        text: str,
+        x: float = 0.0,
+        y: float = 0.0,
+        angle: float = 0.0,
+        note_type: str = "NOTE",
+        target_ref: str | None = None,
+        font_size_mm: float = 1.27,
+    ) -> dict[str, Any]:
+        """Add a design-intent annotation to the schematic (kicad-agent-29).
+
+        Inserts a kiutils Text element capturing the WHY/WHAT/HOW of a design
+        choice. Unlike net labels or refdes, design notes preserve design
+        intent for reviewers and future designers.
+
+        Args:
+            text: Annotation content. Multi-line via literal "\\n".
+            x: X coordinate in mm.
+            y: Y coordinate in mm.
+            angle: Text rotation in degrees (default 0).
+            note_type: Semantic category. NOTE/REASON/MATH/BLOCK_HEADER.
+                Prefixed into text as "[NOTE] " etc. for searchability.
+            target_ref: Optional refdes (e.g. "R7") for tooling linkage.
+                Stored in text prefix as "@R7" — does NOT affect placement.
+            font_size_mm: Text height in mm (default 1.27).
+
+        Returns:
+            Dict with placement details + rendered text.
+        """
+        import uuid
+        from kiutils.items.common import Position, Effects, Font, ColorRGBA
+        from kiutils.items.schitems import Text as SchText
+
+        # Prefix the note_type + target_ref into the text so it's grep-able.
+        # Example: "[MATH] @R7 2.5/55000=45.5 [uA] + 5/1000000=5 [uA]"
+        prefix = f"[{note_type}]"
+        if target_ref:
+            prefix += f" @{target_ref}"
+        rendered_text = f"{prefix} {text}" if text else prefix
+
+        text_obj = SchText(
+            text=rendered_text,
+            position=Position(X=x, Y=y, angle=angle),
+            effects=Effects(
+                font=Font(height=font_size_mm, width=font_size_mm, color=ColorRGBA(R=0, G=0, B=0, A=0)),
+            ),
+            uuid=str(uuid.uuid4()),
+        )
+        # Schematic text elements live in the `texts` collection on the kiutils object.
+        if not hasattr(self._parse_result.kiutils_obj, "texts"):
+            # Defensive — older kiutils versions may not expose this.
+            self._parse_result.kiutils_obj.texts = []
+        self._parse_result.kiutils_obj.texts.append(text_obj)
+
+        self._record_mutation("add_design_note", {
+            "text": rendered_text,
+            "position": [x, y],
+            "angle": angle,
+            "note_type": note_type,
+            "target_ref": target_ref,
+            "font_size_mm": font_size_mm,
+        })
+        return {
+            "text": rendered_text,
+            "position": [x, y],
+            "note_type": note_type,
+            "target_ref": target_ref,
+        }
+
     def add_junction(self, x: float = 0.0, y: float = 0.0) -> dict[str, Any]:
         """Add a junction dot at a wire intersection.
 

@@ -208,6 +208,9 @@ from kicad_agent.ops._schema_wire import (  # noqa: E402
     AddPowerFlagOp,
     RenameNetLabelOp,
 )
+from kicad_agent.ops._schema_annotation import (  # noqa: E402
+    AddDesignNoteOp,
+)
 from kicad_agent.ops._schema_remove import (  # noqa: E402
     RemoveWireOp,
     RemoveLabelOp,
@@ -419,6 +422,7 @@ class Operation(BaseModel):
         | AddPowerOp
         | AddNoConnectOp
         | AddJunctionOp
+        | AddDesignNoteOp
         | AddLibEntryOp
         | RemoveLibEntryOp
         | AddNetClassOp
@@ -601,6 +605,7 @@ __all__ = [
     "AddPowerOp",
     "AddNoConnectOp",
     "AddJunctionOp",
+    "AddDesignNoteOp",
     # Remove ops
     "RemoveWireOp",
     "RemoveLabelOp",

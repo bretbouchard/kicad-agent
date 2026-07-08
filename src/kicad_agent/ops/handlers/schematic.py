@@ -649,6 +649,20 @@ def _handle_add_no_connect(op: Any, ir: SchematicIR, file_path: Path) -> dict[st
     return ir.add_no_connect(x=op.position.x, y=op.position.y)
 
 
+@register_schematic("add_design_note")
+def _handle_add_design_note(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
+    """kicad-agent-29: annotate schematic with design intent (NOTE/REASON/MATH/BLOCK_HEADER)."""
+    return ir.add_design_note(
+        text=op.text,
+        x=op.position.x,
+        y=op.position.y,
+        angle=getattr(op.position, "angle", 0.0) or 0.0,
+        note_type=op.note_type,
+        target_ref=op.target_ref,
+        font_size_mm=op.font_size_mm,
+    )
+
+
 @register_schematic("add_junction")
 def _handle_add_junction(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     return ir.add_junction(x=op.position.x, y=op.position.y)
