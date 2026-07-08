@@ -47,10 +47,18 @@ import OSLog
 @MainActor
 final class StdioWatchdog {
     /// How long without stdout activity before declaring deadlock.
-    static let silenceTimeout: Duration = .seconds(30)
+    /// Default per PITFALL 2 spec. Configurable per-instance for tests.
+    static let defaultSilenceTimeout: Duration = .seconds(30)
 
     /// Polling interval for the background checker.
-    static let checkInterval: Duration = .seconds(5)
+    static let defaultCheckInterval: Duration = .seconds(5)
+
+    /// Per-instance silence deadline. Defaults to `defaultSilenceTimeout`.
+    /// Tests tighten this to .milliseconds(50) for fast CI.
+    var silenceTimeout: Duration = StdioWatchdog.defaultSilenceTimeout
+
+    /// Per-instance check interval. Defaults to `defaultCheckInterval`.
+    var checkInterval: Duration = StdioWatchdog.defaultCheckInterval
 
     /// Per-request metadata. Used for audit logging on kill.
     struct PendingRequest: Sendable {
@@ -67,7 +75,7 @@ final class StdioWatchdog {
     private(set) var lastActivityAt: ContinuousClock.Instant = .now
 
     /// Background poller task. Nil when stopped.
-    private var pollerTask: Task<Void, Never>?
+    private(set) var pollerTask: Task<Void, Never>?
 
     /// Invoked when a request exceeds the silence deadline. The closure
     /// is responsible for killing the daemon (typically SIGKILL via ProcessManager).
@@ -81,7 +89,7 @@ final class StdioWatchdog {
     // MARK: - Lifecycle
 
     init() {
-        Logger.appShell.info("StdioWatchdog initialized (silence=\(Self.silenceTimeout.components.seconds)s check=\(Self.checkInterval.components.seconds)s)")
+        Logger.appShell.info("StdioWatchdog initialized (silence=\(Self.defaultSilenceTimeout.components.seconds)s check=\(Self.defaultCheckInterval.components.seconds)s)")
     }
 
     /// Start the background poller. Idempotent.
@@ -89,7 +97,7 @@ final class StdioWatchdog {
         if pollerTask != nil { return }
         pollerTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: Self.checkInterval)
+                try? await Task.sleep(for: self?.checkInterval ?? Self.defaultCheckInterval)
                 guard !Task.isCancelled else { return }
                 self?.checkTimeouts()
             }
@@ -136,7 +144,7 @@ final class StdioWatchdog {
     func checkTimeouts() {
         guard !pendingRequests.isEmpty else { return }
         let now: ContinuousClock.Instant = .now
-        let deadline = lastActivityAt.advanced(by: Self.silenceTimeout)
+        let deadline = lastActivityAt.advanced(by: silenceTimeout)
         guard now > deadline else { return }
 
         // Find the oldest pending request for the audit entry.
