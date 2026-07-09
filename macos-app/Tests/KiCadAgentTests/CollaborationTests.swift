@@ -160,6 +160,7 @@ struct CollaborationTests {
     }
 
     @Test("CollaborationActivityFeed instantiates with empty events", .tags(.ui, .a11y, .collaboration))
+    @MainActor
     func activityFeedEmpty() {
         let view = CollaborationActivityFeed(
             events: [],
@@ -170,6 +171,7 @@ struct CollaborationTests {
     }
 
     @Test("CollaborationActivityFeed instantiates with events", .tags(.ui, .a11y, .collaboration))
+    @MainActor
     func activityFeedWithEvents() {
         let events = [
             CollaborationEvent(kind: .decision, participantName: "Alice", summary: "Approved spec"),
@@ -196,7 +198,7 @@ struct CollaborationTests {
     func documentDefaults() {
         let doc = KicadAgentDocument()
         #expect(doc.manifestVersion == 1)
-        #expect(doc.conversations.isEmpty)
+        #expect(doc.projectMetadata.name == "Untitled")
     }
 
     @Test("BundleManifest encodes + decodes")

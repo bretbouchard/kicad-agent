@@ -13,7 +13,7 @@ import Foundation
 import SwiftData
 @testable import KiCadAgent
 
-@Suite("Project Model")
+@Suite("Project Model", .serialized)
 struct ProjectTests {
 
     // MARK: - Defaults

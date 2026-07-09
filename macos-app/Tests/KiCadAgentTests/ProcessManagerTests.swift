@@ -116,8 +116,15 @@ struct ProcessManagerTests {
     }
 
     // MARK: - End-to-end spawn (single test, gated on binary presence)
+    // These tests spawn the actual PyInstaller-frozen daemon binary and
+    // wait for it to bind. PyInstaller cold start is ~30s, so they're
+    // disabled by default. Set CI_RUN_INTEGRATION=1 to run them.
 
-    @Test("Spawn launches daemon and ping works end-to-end")
+    @Test(
+        "Spawn launches daemon and ping works end-to-end",
+        .tags(.integration),
+        .disabled(if: ProcessInfo.processInfo.environment["CI_RUN_INTEGRATION"] == nil)
+    )
     func spawnAndPing() async throws {
         guard ProcessManager.resolveDaemonURL() != nil else {
             Issue.record("Daemon binary not built — run `pyinstaller kicad-agent-daemon.spec`")
@@ -142,7 +149,11 @@ struct ProcessManagerTests {
         #expect(pm.process == nil)
     }
 
-    @Test("Idempotent spawn returns same PID")
+    @Test(
+        "Idempotent spawn returns same PID",
+        .tags(.integration),
+        .disabled(if: ProcessInfo.processInfo.environment["CI_RUN_INTEGRATION"] == nil)
+    )
     func idempotentSpawn() async throws {
         guard ProcessManager.resolveDaemonURL() != nil else {
             Issue.record("Daemon binary not built")

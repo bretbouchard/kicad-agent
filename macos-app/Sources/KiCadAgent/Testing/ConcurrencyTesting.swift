@@ -19,13 +19,13 @@ public enum ConcurrencyTesting {
     /// Stress-test a closure with N concurrent invocations.
     ///
     /// Designed to surface data races when run under ThreadSanitizer.
-    /// Build with `-sanitize=thread` to enable TSan.
+    /// Build with `-sanitize=thread` to enable TSan. The function returns
+    /// immediately; TSan findings appear as runtime diagnostics in the
+    /// sanitized build's output.
     public static func stress(
         _ name: String,
         parallelism: Int = 100,
         iterations: Int = 1000,
-        fileID: String = #fileID,
-        line: Int = #line,
         _ body: @Sendable @escaping (Int) -> Void
     ) {
         Task {
@@ -39,18 +39,18 @@ public enum ConcurrencyTesting {
                 }
             }
         }
-        #expect(true, "Concurrency stress test '\(name)' ran without TSan finding",
-                sourceLocation: Testing.SourceLocation(fileID: fileID, filePath: #filePath, line: line, column: 0))
     }
 
     /// Assert that a type conforms to Sendable.
+    ///
+    /// The conformance check itself happens at compile time via the
+    /// `T: Sendable` constraint — if the type isn't Sendable, the call
+    /// site won't compile. This function exists so callers can document
+    /// the intent in test output; it has no runtime assertions.
     public static func assertSendable<T: Sendable>(
-        _ type: T.Type,
-        fileID: String = #fileID,
-        line: Int = #line
+        _ type: T.Type
     ) {
-        #expect(true, "\(type) is Sendable",
-                sourceLocation: Testing.SourceLocation(fileID: fileID, filePath: #filePath, line: line, column: 0))
+        // Compile-time enforcement via T: Sendable above. No runtime check.
     }
 
     /// Detect actor isolation violations by running a closure in a detached Task.

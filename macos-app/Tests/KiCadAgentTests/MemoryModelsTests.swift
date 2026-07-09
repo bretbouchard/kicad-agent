@@ -16,7 +16,11 @@ import Foundation
 import SwiftData
 @testable import KiCadAgent
 
-@Suite("Memory Models + CloudKit Sync", .disabled(if: ProcessInfo.processInfo.environment["CI_SKIP_SMOKE"] != nil))
+@Suite(
+    "Memory Models + CloudKit Sync",
+    .disabled(if: ProcessInfo.processInfo.environment["CI_SKIP_SMOKE"] != nil),
+    .serialized
+)
 struct MemoryModelsTests {
 
     // MARK: - Schema Registry

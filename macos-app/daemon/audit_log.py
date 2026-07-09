@@ -56,16 +56,21 @@ class AuditLogger:
     daemon. All I/O errors are written to stderr and swallowed.
     """
 
-    def __init__(self, stream: TextIO | None = None) -> None:
+    def __init__(self, stream: TextIO | None = None, owns_stream: bool = False) -> None:
         """Construct a logger writing to `stream`.
 
         Args:
             stream: Writable text stream. Defaults to sys.stderr (so logs
                 surface during development). Production callers should pass
                 a file handle opened in append mode.
+            owns_stream: When True, close() will close the underlying stream.
+                Set True only when the logger created the stream (e.g.
+                open_file_logger). Caller-supplied streams (StringIO, stderr)
+                are not closed — the caller owns their lifecycle.
         """
         self._stream: TextIO = stream if stream is not None else sys.stderr
         self._closed = False
+        self._owns_stream = owns_stream
 
     # -- core API -------------------------------------------------------------
     def log_event(self, event: str, **fields: Any) -> None:
@@ -126,12 +131,18 @@ class AuditLogger:
 
     # -- lifecycle ------------------------------------------------------------
     def close(self) -> None:
-        """Close the underlying stream. Idempotent."""
+        """Close the underlying stream. Idempotent.
+
+        Only closes the stream when this logger owns it (e.g. created by
+        open_file_logger). Caller-supplied streams are flushed but left open.
+        """
         if self._closed:
             return
         self._closed = True
         try:
             self._stream.flush()
+            if self._owns_stream:
+                self._stream.close()
         except Exception:
             pass
 
@@ -183,9 +194,9 @@ def get_default_logger() -> AuditLogger:
 def open_file_logger(path: str | Path) -> AuditLogger:
     """Open (or create) an append-mode UTF-8 file and wrap it in an AuditLogger.
 
-    Caller is responsible for closing the returned logger when done.
+    The returned logger owns the file handle — close() will close it.
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     stream = open(path, "a", encoding="utf-8", buffering=1)  # line-buffered
-    return AuditLogger(stream=stream)
+    return AuditLogger(stream=stream, owns_stream=True)

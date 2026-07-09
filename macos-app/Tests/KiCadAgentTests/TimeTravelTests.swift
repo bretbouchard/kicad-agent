@@ -251,6 +251,7 @@ struct TimeTravelTests {
     // MARK: - 4-Variant View Instantiation
 
     @Test("DecisionTimelineView instantiates with empty entries", .tags(.ui, .a11y))
+    @MainActor
     func timelineEmpty() {
         let view = DecisionTimelineView(
             entries: [],
@@ -263,6 +264,7 @@ struct TimeTravelTests {
     }
 
     @Test("DecisionTimelineView instantiates with entries", .tags(.ui, .a11y))
+    @MainActor
     func timelineWithEntries() {
         let entries = [
             TimelineEntry(kind: .decision, timestamp: Date(), title: "Approved spec", detail: "User approved", actor: "user"),

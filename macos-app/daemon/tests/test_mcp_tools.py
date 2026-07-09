@@ -28,6 +28,7 @@ file mutations occur).
 from __future__ import annotations
 
 import json
+import sys
 from typing import Any
 
 import pytest
@@ -40,6 +41,16 @@ from handlers import (
     _build_tool_descriptor,
 )
 from protocol import RpcError, INVALID_PARAMS
+
+# These tests require the kicad_agent ops registry, which only imports on
+# Python 3.11+ (the schema uses `X | None` syntax that fails on 3.9/3.10).
+# Skip the entire module if running on an older Python — without this, the
+# registry comes back empty and every call_tool test fails with a confusing
+# "unknown operation" error instead of a clear version mismatch message.
+pytestmark = pytest.mark.skipif(
+    sys.version_info < (3, 11),
+    reason="kicad_agent.ops.registry requires Python 3.11+ (pyproject.toml requires-python)",
+)
 
 
 # =============================================================================

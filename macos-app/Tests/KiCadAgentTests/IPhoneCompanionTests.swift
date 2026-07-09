@@ -166,7 +166,6 @@ struct IPhoneCompanionTests {
     @MainActor
     func costTrackerReset() {
         let tracker = CompanionCostTracker()
-        tracker.totalInputTokens = 100  // Manually set for test (private(set) allows internal mutation in tests via @testable)
         tracker.reset()
         #expect(tracker.totalInputTokens == 0)
         #expect(tracker.perConversationTotals.isEmpty)

@@ -109,10 +109,10 @@ struct GenerativePipelineTests {
 
     @Test("PipelineStep has three canonical cases")
     func pipelineStepCases() {
-        #expect(PipelineStep.allCases.count == 3)
-        #expect(PipelineStep.allCases.contains(.generate))
-        #expect(PipelineStep.allCases.contains(.render))
-        #expect(PipelineStep.allCases.contains(.export))
+        #expect(GenerativePipelineStep.allCases.count == 3)
+        #expect(GenerativePipelineStep.allCases.contains(.generate))
+        #expect(GenerativePipelineStep.allCases.contains(.render))
+        #expect(GenerativePipelineStep.allCases.contains(.export))
     }
 
     // MARK: - Phase 184 — Hash Gold Master

@@ -35,10 +35,14 @@ public struct CoverageGateEvaluator {
         public var passesAllGates: Bool { passesOverallGate && passesPerLayerGate }
         public var failureMessage: String {
             guard !passesAllGates else { return "All coverage gates pass" }
+            var parts: [String] = []
             if !passesOverallGate {
-                return "Overall coverage \(String(format: "%.1f%%", overallRate * 100)) < \(String(format: "%.1f%%", CoverageGate.minimumCoverage * 100))"
+                parts.append("Overall coverage \(String(format: "%.1f%%", overallRate * 100)) < \(String(format: "%.1f%%", CoverageGate.minimumCoverage * 100))")
             }
-            return "Layers below minimum: \(failingLayers.joined(separator: ", "))"
+            if !failingLayers.isEmpty {
+                parts.append("Layers below minimum: \(failingLayers.joined(separator: ", "))")
+            }
+            return parts.joined(separator: "; ")
         }
     }
 

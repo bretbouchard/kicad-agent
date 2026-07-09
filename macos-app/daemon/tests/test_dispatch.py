@@ -22,9 +22,20 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
 from typing import Any
 
 import pytest
+
+# These tests use @pytest.mark.asyncio, which requires the pytest-asyncio
+# plugin. The plugin is only installed in the project's required Python 3.11+
+# env (pyproject.toml requires-python). Skip the entire module on older
+# Pythons — without this, pytest fails at collection time with a confusing
+# "'asyncio' not found in markers" error.
+pytestmark = pytest.mark.skipif(
+    sys.version_info < (3, 11),
+    reason="pytest-asyncio plugin requires Python 3.11+ (pyproject.toml requires-python)",
+)
 
 from audit_log import AuditLogger
 from handlers import HandlerContext

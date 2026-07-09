@@ -115,6 +115,10 @@ struct EscalationLadderTests {
             queue: .main
         ) { note in
             guard let payload = note.userInfo?["payload"] as? EscalationNotificationPayload else { return }
+            // Filter by taskKey: NotificationCenter.default is process-wide,
+            // so parallel tests posting .kcEscalation notifications would
+            // otherwise pollute this collector with other tiers.
+            guard payload.taskKey == taskKey else { return }
             Task { await collector.set(payload.newTier) }
         }
         defer { NotificationCenter.default.removeObserver(observer) }

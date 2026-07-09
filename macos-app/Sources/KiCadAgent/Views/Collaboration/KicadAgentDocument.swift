@@ -23,6 +23,12 @@ extension UTType {
 ///
 /// ponytail: directory bundle, not flat file. Each piece (conversation,
 /// decisions, snapshots, renders) is a separate file for diff-friendliness.
+///
+/// Phase 190 note: SwiftData @Model classes (Conversation, Decision, etc.)
+/// are NOT held directly in this struct — they're not Sendable (model
+/// objects are bound to a ModelActor). The bundle holds serialized JSON
+/// snapshots only; materialization to live SwiftData objects happens in
+/// the SwiftData layer when the document is opened.
 struct KicadAgentDocument: FileDocument {
     static var readableContentTypes: [UTType] { [.kicadAgentBundle] }
     static var writableContentTypes: [UTType] { [.kicadAgentBundle] }
@@ -30,24 +36,15 @@ struct KicadAgentDocument: FileDocument {
     /// Manifest version — bump on format change.
     let manifestVersion: Int
     var projectMetadata: ProjectMetadata
-    var conversations: [Conversation]
-    var decisions: [Decision]
-    var valueChanges: [ValueChange]
-    var snapshots: [ProjectSnapshot]
 
     init() {
         self.manifestVersion = 1
         self.projectMetadata = ProjectMetadata(name: "Untitled")
-        self.conversations = []
-        self.decisions = []
-        self.valueChanges = []
-        self.snapshots = []
     }
 
     init(configuration: ReadConfiguration) throws {
         // Phase 190: lazy loading — full file-system read happens when the
-        // document is materialized. For now, we initialize defaults and
-        // validate that a manifest exists in the file wrapper.
+        // document is materialized into a live SwiftData context.
         let fileWrappers = configuration.file.fileWrappers ?? [:]
         guard fileWrappers["manifest.json"] != nil else {
             throw KicadAgentDocumentError.invalidBundle("Missing manifest.json")
@@ -62,10 +59,6 @@ struct KicadAgentDocument: FileDocument {
             self.manifestVersion = 1
             self.projectMetadata = ProjectMetadata(name: "Untitled")
         }
-        self.conversations = []
-        self.decisions = []
-        self.valueChanges = []
-        self.snapshots = []
     }
 
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
@@ -80,13 +73,6 @@ struct KicadAgentDocument: FileDocument {
         )
         let manifestData = try JSONEncoder().encode(manifest)
         directoryWrapper.addRegularFile(withContents: manifestData, preferredFilename: "manifest.json")
-
-        // conversations.jsonl
-        let conversationsJSONL = conversations.map { _ in "{}" }.joined(separator: "\n")
-        directoryWrapper.addRegularFile(
-            withContents: (conversationsJSONL + "\n").data(using: .utf8)!,
-            preferredFilename: "conversations.jsonl"
-        )
 
         return directoryWrapper
     }

@@ -197,8 +197,15 @@ struct MCPClientTests {
     }
 
     // MARK: - End-to-end spawn (gated on binary)
+    // Integration test: spawns the actual PyInstaller-frozen daemon binary
+    // and waits for it to respond to MCP ping. PyInstaller cold start is
+    // ~30s, so this is disabled by default. Set CI_RUN_INTEGRATION=1 to run.
 
-    @Test("Spawn + MCP ping roundtrip via real daemon")
+    @Test(
+        "Spawn + MCP ping roundtrip via real daemon",
+        .tags(.integration),
+        .disabled(if: ProcessInfo.processInfo.environment["CI_RUN_INTEGRATION"] == nil)
+    )
     func spawnAndMCPingRoundtrip() async throws {
         guard ProcessManager.resolveDaemonURL() != nil || ProcessManager.resolvePythonURL() != nil else {
             Issue.record("Daemon not built and no python fallback — skipping end-to-end test")
