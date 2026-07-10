@@ -1,34 +1,49 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.0
-milestone_name: milestone
-status: complete
-stopped_at: v6.0 milestone complete — all 43 phases shipped (161-203, Tracks A–I). Model training in progress for refinement/polish.
-last_updated: "2026-07-08T20:00:00.000Z"
-last_activity: 2026-07-08
+milestone: v7.0
+milestone_name: vendor-neutral-manufacturing-layer
+status: defining_requirements
+stopped_at: v7.0 milestone started — research and requirements phase. v6.0 milestone complete (43 phases, 161-203).
+last_updated: "2026-07-10T00:00:00.000Z"
+last_activity: 2026-07-10
 progress:
-  total_phases: 43
-  completed_phases: 43
-  total_plans: 43
-  completed_plans: 43
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-07)
+See: .planning/PROJECT.md (updated 2026-07-10)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** v6.0 milestone COMPLETE — all 43 phases (161-203) shipped across Tracks A–I. Track D UI (171-175), Track E Memory (176-180), Track F Generative (181-185), Track G Collaboration (186-190), Track H Quality (191-201), Track I Ship (202-203) all delivered. Model training in progress for refinement/polish.
-Last activity: 2026-07-08 — ROADMAP.md + STATE.md reconciled with git history. Roadmap previously stale (showed 33 phases unshipped); all checkboxes now match actual commit state.
+**Current focus:** v7.0 Vendor-Neutral Manufacturing Layer — DRC profiles + versioned build/handoff system + vendor API adapters. v6.0 milestone COMPLETE (43 phases, 161-203).
+Last activity: 2026-07-10 — v7.0 milestone started. Vendor landscape research, DRC file survey, and codebase architecture mapping completed in-session.
 
 ## Current Position
 
-Phase: 170 (Verification Loop Integration) — COMPLETE
-Plan: 1 of 1
-Status: Phase 170 shipped — PreOpGate + PostOpGate + Rollback + VerificationLoop + snapshot.py + 4 daemon handlers. MCPClient.governedCall drives full pipeline: checkpoint → preCheck → execute → postCheck → restore-on-fail. 211/211 tests pass.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-10 — Milestone v7.0 started
+
+## Previous Milestone: v6.0 KiCad Agent — The Closed Box (COMPLETE)
+
+All 43 phases (161-203) shipped across Tracks A–I. Track D UI (171-175), Track E Memory (176-180), Track F Generative (181-185), Track G Collaboration (186-190), Track H Quality (191-201), Track I Ship (202-203) all delivered. Phase 204 (Closed-Box Simulation Pipeline) shipped as parallel track. Model training in progress for refinement/polish.
+
+Key shipped phases (details below in Accumulated Context):
+- Phase 161: App Shell Foundation (SwiftUI app shell, SPM, macOS 27)
+- Phase 162: Python Daemon Bundling (PyInstaller, 97 Python + 23 Swift tests)
+- Phase 163: KiCad CLI Integration (detector + onboarding gate)
+- Phase 164: LLM Provider Protocol (Apple/MLX/HF providers)
+- Phase 165: Provider Router (task-aware, cost-aware, privacy-aware)
+- Phase 169: Obdurate Runtime (WorkflowStateMachine, IntentGate, OpJournal)
+- Phase 170: Verification Loop (PreOpGate, PostOpGate, Rollback, VerificationLoop)
+- Phase 204: Closed-Box Simulation Pipeline (SKiDL → Optuna → ngspice → pytest)
 
 ## Phase 161 — App Shell Foundation (SHIPPED 2026-07-07)
 
@@ -547,8 +562,9 @@ None.
 
 ## Session Continuity
 
-Stopped at: Milestone v5.0 Skidl-Native Design Pipeline roadmap created (Phases 156-160)
-Resume with: /gsd-discuss-phase 156 (SKIDL Converter). Phase 158 (SPICE Pipeline) is independent and can be planned/discussed in parallel.
+Stopped at: v7.0 Vendor-Neutral Manufacturing Layer milestone started — research and requirements phase.
+Resume with: /gsd-plan-phase [N] once roadmap is created. Phase numbering continues from 204 (v6.0's last).
+Next: complete research → requirements → roadmap cycle, then /gsd-discuss-phase or /gsd-plan-phase for Phase 205+.
 
 ### Phase 100: RoutingOrchestrator and Human Approval Loop (complete)
 

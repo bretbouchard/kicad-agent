@@ -247,6 +247,39 @@ All v6.0 phase planning, execution, Council gates, and verification loops run ag
 - Existing routing stack (Phases 98-101) — exposed via MCP tools
 - Apple ecosystem: FoundationModels, CloudKit, CKShare, Group Activities, iCloud Drive, MLX-Swift, Swift AI SDK
 
+## Current Milestone: v7.0 Vendor-Neutral Manufacturing Layer
+
+**Goal:** Send boards to ANY manufacturer — free DRC pre-flight for all vendors, universal versioned handoff package, and opt-in quote/order APIs where available. No vendor lock-in.
+
+**Target features:**
+- **Board metadata foundation** — parse + write KiCad `title_block` (rev/title/date/company) and a `BoardSpec` model (surface finish, copper weight, mask/silk color, stackup-as-fab-spec, impedance control)
+- **Vendor DRC profiles** — wire up official `.kicad_dru` files (PCBWay, JLCPCB, AISLER, OSH Park) so DRC runs against vendor-specific manufacturing limits as a pre-flight gate
+- **Versioned build system** — `Build` record (source files + git SHA + revision → artifact set), serialized manifest with SHA256-hashed artifacts, build history
+- **Manufacturer handoff package** — full export orchestration (Gerbers + drill + BOM + P&P + STEP + netlist + PDF + readme) into a versioned zip bundle, the universal path that works with EVERY vendor
+- **Crossfile + MCP integration** — link builds into `ProjectContext`, expose all new ops via MCP/CLI, group-edit awareness
+- **Vendor API adapters (DEFERRED)** — `ManufacturerClient` ABC behind which PCBWay + MacroFab + JLCPCB quote/order adapters plug in; opt-in, credential-gated
+
+**Key constraint:** NO vendor lock-in. The handoff package is the universal fallback — it works with every fab (3 with APIs, 10+ without). API adapters are accelerators on top, not requirements. Design treats PCBWay (China bare-board) and LCSC/JLC (parts sourcing) as complementary capabilities, not competing fabs.
+
+**Builds on existing primitives:**
+- `dfm/profiles.py` `ManufacturerProfile` (fab capabilities — extend with output specs)
+- `validation/gates/manufacturing_manifest.py` `ManufacturingArtifact`/`ManufacturingManifest` (in-memory manifest — promote to serialized)
+- `validation/gates/manufacturing_gate.py` `ManufacturingReadinessGate` (5-check readiness gate — reuse validation flow)
+- `export/gerber.py` `ManufacturingPackage` (Gerbers+drill only — extend to full bundle)
+- `export/bom.py` `export_jlcpcb_bom`/`enrich_with_lcsc` (vendor-specific — generalize to profile-driven)
+
+**Vendor landscape (from research):**
+| Vendor | DRC file? | API? |
+|---|---|---|
+| PCBWay | ✅ official `.kicad_dru` | ✅ Partner API (gated) |
+| JLCPCB | ✅ community (MIT) | ✅ Online API (self-serve) |
+| AISLER | ✅ official (5 stackups) | ❌ web only |
+| OSH Park | ⚠️ numeric specs (author file) | ❌ KiCad-native upload |
+| Advanced Circuits | ❌ | ❌ (FreeDFM tool) |
+| Sierra Circuits | ❌ | ❌ (Better DFM tool) |
+| MacroFab (US, ITAR) | ❌ | ✅ Cloud API v2 |
+| All others | ❌ | ❌ (handoff package) |
+
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
@@ -265,4 +298,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-07 — v6.0 KiCad Agent — The Closed Box milestone started. Stupid-Proof principle + SLC + Ponytail locked as Core Principles. GSD 1.37.1 baseline. v5.0 Skidl-Native absorbed as Track F inputs.*
+*Last updated: 2026-07-10 — v7.0 Vendor-Neutral Manufacturing Layer milestone started. v6.0 KiCad Agent — The Closed Box milestone COMPLETE (43 phases, 161-203). Vendor research, DRC file survey, and codebase architecture mapping completed in-session before milestone creation.*
