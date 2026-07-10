@@ -1228,3 +1228,53 @@ class SetBoardRevisionOp(BaseModel):
     op_type: Literal["set_board_revision"] = "set_board_revision"
     target_file: TargetFile
     rev: str = Field(min_length=1, max_length=64, description="Board revision string")
+
+
+# ---------------------------------------------------------------------------
+# Phase 206: Vendor DRC ops (DRC-01, DRC-04, DRC-08)
+# ---------------------------------------------------------------------------
+
+
+class DrcVendorOp(BaseModel):
+    """Run vendor-specific DRC checks against manufacturing limits (DRC-01).
+
+    Uses the internal geometric evaluator (manufacturing/vendor_drc.py) which
+    reads board geometry from a NativeBoard and compares against
+    ManufacturerProfile numeric limits. Does NOT call kicad-cli with vendor
+    rules (that flag does not exist in KiCad 10 — RESEARCH RQ1).
+
+    Attributes:
+        op_type: Discriminator literal ``"drc_vendor"``.
+        target_file: Relative path to the .kicad_pcb file.
+        vendor: Vendor key (pcbway, jlcpcb, aisler_2layer, oshpark,
+            advanced_circuits, generic). Validated against ``^[a-z0-9_]+$`` at
+            the schema layer as the threat-model-scenario-1 path-traversal
+            defense (no slashes/dots).
+        run_kicad_drc: Also run KiCad's built-in DRC alongside vendor checks.
+    """
+
+    op_type: Literal["drc_vendor"] = "drc_vendor"
+    target_file: TargetFile
+    vendor: str = Field(
+        min_length=1, max_length=64,
+        pattern=r"^[a-z0-9_]+$",
+        description="Vendor name (pcbway, jlcpcb, aisler_2layer, oshpark, advanced_circuits, generic)",
+    )
+    run_kicad_drc: bool = Field(
+        default=True,
+        description="Also run KiCad's built-in DRC alongside vendor checks",
+    )
+
+
+class ListVendorDrcProfilesOp(BaseModel):
+    """List available vendor DRC profiles and their capabilities (DRC-08).
+
+    target_file is required by execute_query dispatch but the handler ignores ir.
+
+    Attributes:
+        op_type: Discriminator literal ``"list_vendor_drc_profiles"``.
+        target_file: Relative path to the .kicad_pcb file (required by dispatch).
+    """
+
+    op_type: Literal["list_vendor_drc_profiles"] = "list_vendor_drc_profiles"
+    target_file: TargetFile

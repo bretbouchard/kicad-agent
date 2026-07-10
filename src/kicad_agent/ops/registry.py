@@ -1440,6 +1440,25 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    # Phase 206 vendor DRC ops (DRC-01, DRC-04, DRC-08)
+    "drc_vendor": {
+        "category": "query",
+        "description": "Run vendor-specific DRC checks against manufacturer manufacturing limits",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": True,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
+    "list_vendor_drc_profiles": {
+        "category": "query",
+        "description": "List available vendor DRC profiles and their manufacturing capabilities",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": True,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
 }
 
 OPERATION_REGISTRY: dict[str, OpMeta] = {

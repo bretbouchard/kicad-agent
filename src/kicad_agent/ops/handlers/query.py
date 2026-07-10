@@ -84,3 +84,61 @@ def _handle_read_board_metadata(op: Any, ir: PcbIR, file_path: Path) -> dict[str
         "board_spec": spec.model_dump() if spec else None,
     }
 
+
+@register_query("drc_vendor")
+def _handle_drc_vendor(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Run vendor-specific DRC checks (DRC-01, DRC-04).
+
+    Uses the internal geometric evaluator against ManufacturerProfile limits.
+    Optionally also runs KiCad's built-in DRC (run_kicad_drc flag).
+
+    CRITICAL: re-parse the PCB via NativeParser.parse_pcb(file_path) to get a
+    NativeBoard. ``execute_query`` builds PcbIR via the kiutils path where
+    _native_board is None (same dual-path issue as Phase 205's
+    read_board_metadata handler). The evaluator needs the NativeBoard geometry.
+    """
+    from dataclasses import asdict
+
+    from kicad_agent.dfm.profiles import load_profile
+    from kicad_agent.manufacturing.vendor_drc import run_vendor_drc
+    from kicad_agent.parser.pcb_native_parser import NativeParser
+
+    profile = load_profile(op.vendor)  # raises ValueError if unknown
+    board = NativeParser.parse_pcb(file_path)
+    result = run_vendor_drc(board, profile)
+
+    kicad_drc_result = None
+    if op.run_kicad_drc:
+        try:
+            from kicad_agent.validation.erc_drc import run_drc
+            drc = run_drc(file_path)
+            kicad_drc_result = {
+                "passed": drc.passed,
+                "violations": [asdict(v) for v in drc.violations],
+            }
+        except Exception as exc:
+            # kicad-cli may be absent in test/dev — degrade gracefully.
+            kicad_drc_result = {"error": str(exc)}
+
+    out = asdict(result)
+    out["kicad_drc"] = kicad_drc_result
+    # `passed` reflects VENDOR DRC only. kicad_drc is separate — user can check both.
+    # If kicad_drc failed with errors, that does NOT affect vendor passed status.
+    return out
+
+
+@register_query("list_vendor_drc_profiles")
+def _handle_list_vendor_drc_profiles(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """List available vendor DRC profiles with capabilities (DRC-08).
+
+    The handler ignores ir and file_path — execute_query always builds a PcbIR
+    before dispatching, so target_file is required by the schema even though
+    unused (CONTEXT.md line 149 accepted trade-off).
+    """
+    from dataclasses import asdict
+
+    from kicad_agent.manufacturing.drc_profiles import list_drc_profiles
+
+    profiles = [asdict(p) for p in list_drc_profiles()]
+    return {"profiles": profiles, "count": len(profiles)}
+
