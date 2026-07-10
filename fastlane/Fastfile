@@ -45,49 +45,44 @@ end
 # Recognized blocker: Apple Developer Program enrollment required for code signing.
 # Run with `match readonly: true` to skip signing when stubbed.
 lane :beta do |options|
-  UI.message("Phase 203 — TestFlight build & upload")
+  UI.message("Volta PCB — TestFlight build & upload")
 
-  # Pull signing certs via match.
-  # Phase 203.1 wires real match repo when enrollment completes.
-  if ENV["MATCH_PASSWORD"].nil?
-    UI.important("MATCH_PASSWORD not set — running in stub mode")
-    UI.important("Set MATCH_PASSWORD and create match repo when Apple Dev Program enrolls")
-  else
-    match(
-      type: "appstore",
-      readonly: true,
-      app_identifier: default_bundle_id
-    )
-  end
+  repo_root = File.expand_path("..", __dir__)
 
-  # Build the .app via XcodeGen + gym.
-  # Requires: cd macos-app && xcodegen generate (produces KiCadAgent.xcodeproj)
-  # Stub mode (no MATCH_PASSWORD): produces unsigned archive.
-  Dir.chdir("../macos-app") do
+  # Generate Xcode project if missing.
+  Dir.chdir("#{repo_root}/macos-app") do
     sh("xcodegen generate") unless File.exist?("VoltaPCB.xcodeproj")
   end
 
+  # Build + sign the archive.
   build_app(
     scheme: "VoltaPCB",
-    project: "../macos-app/VoltaPCB.xcodeproj",
+    project: "#{repo_root}/macos-app/VoltaPCB.xcodeproj",
     export_method: "app-store",
-    output_directory: "../build",
-    skip_code_signing: ENV["MATCH_PASSWORD"].nil?
+    output_directory: "#{repo_root}/build",
+    skip_code_signing: false
   )
 
-  # Archive + upload to TestFlight (Phase 203.1 when ASC record exists)
+  # Upload to TestFlight.
   if ENV["APP_STORE_CONNECT_API_KEY_ID"].nil?
-    UI.important("App Store Connect API key not set — skipping pilot upload")
-    UI.important("Create ASC record + API key when enrollment completes")
+    UI.important("ASC API key not set — skipping pilot upload")
   else
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_FILEPATH"],
+      duration: 1200,
+      in_house: false
+    )
     pilot(
       app_identifier: default_bundle_id,
       apple_id: volta_asc_apple_id,
+      api_key: api_key,
       skip_waiting_for_build_processing: true
     )
   end
 
-  UI.success("Beta lane complete (may have run in stub mode)")
+  UI.success("Beta lane complete")
 end
 
 # =============================================================================
