@@ -60,7 +60,7 @@ lane :beta do |options|
     project: "#{repo_root}/macos-app/VoltaPCB.xcodeproj",
     export_method: "app-store",
     output_directory: "#{repo_root}/build",
-    skip_code_signing: false
+    skip_codesigning: false
   )
 
   # Upload to TestFlight.
