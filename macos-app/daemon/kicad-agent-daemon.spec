@@ -71,6 +71,9 @@ HIDDEN_IMPORTS = [
     "pydantic.fields",
     "pydantic.main",
     "pydantic._internal._core_utils",
+    "onnxruntime",
+    # numpy IS needed now — onnxruntime depends on it
+    "numpy",
     # kicad_agent operation modules — keep the registry importable post-freeze
     "kicad_agent",
     "kicad_agent.ops",
@@ -87,7 +90,10 @@ HIDDEN_IMPORTS = [
 # ---------------------------------------------------------------------------
 # Data files (none yet — Phase 168 may ship prompt templates here)
 # ---------------------------------------------------------------------------
-DATAS = []
+DATAS = [
+    # Placement model — 217 KB ONNX file for component position prediction.
+    (str(HERE / "placement.onnx"), "."),
+]
 
 # ---------------------------------------------------------------------------
 # Binary exclusions — strip unused heavy modules to keep bundle lean.
@@ -114,8 +120,7 @@ EXCLUDES = [
     "mlx", "sklearn", "scikit-learn",
     "fastapi", "starlette", "uvicorn",
     "cryptography", "aiohttp",
-    # numpy is pulled in transitively but pydantic/networkx/kiutils don't need it
-    "numpy",
+    # numpy is NOT excluded — onnxruntime depends on it for inference.
     # More transitive bloat — none used by the daemon's 16 handlers
     "llvmlite", "numba",
     "babel",
@@ -135,6 +140,14 @@ EXCLUDES = [
     "shapely",
     "spicelib",
     "skidl",
+    # onnxruntime pulls these in transitively — not needed at runtime
+    "tensorflow", "tensorboard", "keras",
+    "onnx",  # the converter library, not the runtime
+    "onnxconverter_common", "onnxmltools",
+    "tf2onnx",
+    "skl2onnx",
+    "coloredlogs", "humanfriendly",
+    "flatbuffers",
 ]
 
 # ---------------------------------------------------------------------------

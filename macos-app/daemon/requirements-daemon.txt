@@ -13,6 +13,7 @@ kiutils==1.4.8
 sexpdata==1.0.0
 pydantic==2.13.4
 networkx==3.6.1
+onnxruntime>=1.20.0
 
 # Build-time only (not shipped in the bundle):
 # pyinstaller==6.21.0

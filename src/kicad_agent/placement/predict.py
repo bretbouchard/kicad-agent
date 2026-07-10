@@ -1,17 +1,17 @@
-"""High-level placement prediction wrapping model inference.
+"""High-level placement prediction wrapping ONNX model inference.
 
 Provides PlacementPredictor that takes a PlacementGraph and produces
-predicted (x, y, rotation) positions for all components. Uses lazy
-torch import so the module can be imported without torch installed.
+predicted (x, y, rotation) positions for all components. Uses ONNX Runtime
+for inference — no PyTorch dependency required.
 
-Security (threat model):
-  T-16-03: Model weights loaded with torch.load(weights_only=True).
+The model was exported from the PyTorch PlacementModel (304K params, 217 KB
+ONNX file). The ONNX Runtime Python wheel is ~2 MB vs torch's 320 MB.
 
 Usage::
 
     from kicad_agent.placement.predict import PlacementPredictor, PlacementPrediction
 
-    predictor = PlacementPredictor(model_path=Path("model.pt"))
+    predictor = PlacementPredictor()
     prediction = predictor.predict(graph)
     for ref, (x, y, rot) in prediction.positions.items():
         print(f"{ref}: ({x:.1f}, {y:.1f}, {rot:.1f} deg)")
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 class PlacementPrediction:
     """Result of a placement prediction run.
 
-    Attributes:
+    Args:
         positions: Mapping of reference designator to (x, y, rotation_degrees).
         raw_output: (n_comp, 3) raw model output array.
         model_confidence: Average softmax entropy across output heads (0-1).
@@ -45,49 +45,43 @@ class PlacementPrediction:
 
 
 class PlacementPredictor:
-    """Wraps PlacementModel for high-level inference on PlacementGraph.
+    """Wraps the ONNX placement model for high-level inference on PlacementGraph.
 
-    Handles feature extraction from the graph, tensor conversion,
-    model forward pass, and result mapping back to component references.
+    Handles feature extraction from the graph, numpy conversion,
+    ONNX forward pass, and result mapping back to component references.
 
     Args:
-        model_path: Optional path to saved model weights. None = random init.
-        device: Torch device string (default "cpu").
+        model_path: Path to the .onnx model file. Defaults to the bundled model
+                    next to this module's daemon directory.
     """
 
-    def __init__(
-        self,
-        model_path: Path | None = None,
-        device: str = "cpu",
-    ) -> None:
-        import torch
+    def __init__(self, model_path: Path | None = None) -> None:
+        import onnxruntime as ort
 
-        from kicad_agent.placement.model import PlacementModel
+        if model_path is None:
+            # Default: look for placement.onnx in likely locations.
+            # Frozen daemon (PyInstaller): _internal/placement.onnx
+            # App bundle: Contents/Resources/kicad-agent-daemon/_internal/placement.onnx
+            # Dev: macos-app/daemon/placement.onnx
+            import sys
+            candidates = [
+                Path(sys._MEIPASS) / "placement.onnx" if hasattr(sys, "_MEIPASS") else None,
+                Path(__file__).parent / "placement.onnx",
+                Path(__file__).parent.parent / "_internal" / "placement.onnx",
+                Path("macos-app/daemon/placement.onnx"),
+                Path("daemon/placement.onnx"),
+            ]
+            model_path = next((p for p in candidates if p and p.exists()), candidates[0])
 
-        self._device = device
-        self._model = PlacementModel()
-
-        if model_path is not None and Path(model_path).exists():
-            state_dict = torch.load(
-                model_path,
-                map_location=device,
-                weights_only=True,
-            )
-            self._model.load_state_dict(state_dict)
-
-        self._model.to(device)
-        self._model.eval()
-        self._torch = torch
+        self._session = ort.InferenceSession(
+            str(model_path),
+            providers=["CPUExecutionProvider"],
+        )
 
     @property
     def is_ready(self) -> bool:
-        """True if model is loaded and parameters initialized."""
-        try:
-            # Check that parameters exist and are not empty
-            params = list(self._model.parameters())
-            return len(params) > 0
-        except Exception:
-            return False
+        """True if the ONNX session is loaded."""
+        return self._session is not None
 
     def predict(self, graph: PlacementGraph) -> PlacementPrediction:
         """Predict (x, y, rotation) for all components in the graph.
@@ -98,10 +92,6 @@ class PlacementPredictor:
         Returns:
             PlacementPrediction with positions mapped to component references.
         """
-        import torch
-
-        from kicad_agent.placement.model import PlacementModel
-
         # Extract features from graph
         board_w = graph.board_width
         board_h = graph.board_height
@@ -109,29 +99,27 @@ class PlacementPredictor:
         net_features = graph.get_net_features()
         adj_matrix = graph.get_adjacency_matrix()
 
-        # Convert to tensors with batch dimension
-        comp_t = torch.tensor(
-            comp_features, dtype=torch.float32, device=self._device
-        ).unsqueeze(0)
-        net_t = torch.tensor(
-            net_features, dtype=torch.float32, device=self._device
-        ).unsqueeze(0)
-        adj_t = torch.tensor(
-            adj_matrix, dtype=torch.float32, device=self._device
-        ).unsqueeze(0)
-        bw_t = torch.tensor([board_w], dtype=torch.float32, device=self._device)
-        bh_t = torch.tensor([board_h], dtype=torch.float32, device=self._device)
+        # Add batch dimension (ONNX expects (1, n_comp, ...) etc.)
+        comp_arr = numpy.array(comp_features, dtype=numpy.float32).unsqueeze(0) if hasattr(comp_features, "unsqueeze") else numpy.expand_dims(numpy.array(comp_features, dtype=numpy.float32), 0)
+        net_arr = numpy.expand_dims(numpy.array(net_features, dtype=numpy.float32), 0)
+        adj_arr = numpy.expand_dims(numpy.array(adj_matrix, dtype=numpy.float32), 0)
+        bw_arr = numpy.array([board_w], dtype=numpy.float32)
+        bh_arr = numpy.array([board_h], dtype=numpy.float32)
 
-        # Forward pass
-        with torch.no_grad():
-            output = self._model(comp_t, net_t, adj_t, bw_t, bh_t)
+        # ONNX forward pass
+        outputs = self._session.run(None, {
+            "comp_features": comp_arr,
+            "net_features": net_arr,
+            "adj_matrix": adj_arr,
+            "board_w": bw_arr,
+            "board_h": bh_arr,
+        })
 
-        # Remove batch dimension, convert to numpy
-        raw = output.squeeze(0).cpu().numpy()  # (n_comp, 3)
+        # Remove batch dimension → (n_comp, 3)
+        raw = outputs[0].squeeze(0)
 
         # Map to component references
         comp_refs = graph.component_nodes()
-        # Strip "comp:" prefix from node IDs to get reference designators
         ref_names = [nid.replace("comp:", "", 1) for nid in comp_refs]
 
         positions: dict[str, tuple[float, float, float]] = {}
@@ -142,8 +130,6 @@ class PlacementPredictor:
                 float(raw[i, 2]),
             )
 
-        # Compute confidence from output entropy
-        # Use sigmoid probabilities from x/y heads as proxy
         confidence = _compute_confidence(raw, board_w, board_h)
 
         return PlacementPrediction(
@@ -178,15 +164,12 @@ def _compute_confidence(
     if n_comp == 0:
         return 0.0
 
-    # Normalize x to [0, 1] and y to [0, 1]
     x_norm = raw_output[:, 0] / max(board_w, 1.0)
     y_norm = raw_output[:, 1] / max(board_h, 1.0)
 
-    # Average spread (variance) of normalized positions
     if n_comp > 1:
         x_var = float(numpy.var(x_norm))
         y_var = float(numpy.var(y_norm))
-        # Map variance to confidence: moderate spread = good
         confidence = min(1.0, (x_var + y_var) * 4.0)
     else:
         confidence = 0.5

@@ -81,9 +81,11 @@ class BipartiteAttentionLayer(nn.Module):
 
         # Handle disconnected components: if all positions are masked (no net
         # connections), allow attending to all nets to avoid NaN from softmax
-        # over all -inf values.
-        fully_masked = attn_mask.all(dim=-1, keepdim=True)  # (B, n_comp, 1)
-        attn_mask = torch.where(fully_masked, False, attn_mask)
+        # over all -inf values. Use clamp instead of torch.where for ONNX
+        # compatibility (Where op not supported in some onnxruntime builds).
+        any_connected = adj_matrix.sum(dim=-1, keepdim=True)  # (B, n_comp, 1)
+        # If no connections: any_connected=0 → multiply mask by 0 (allow all)
+        attn_mask = attn_mask & (any_connected > 0)
 
         # For MultiheadAttention with batch_first:
         # query: (B, n_comp, comp_dim)

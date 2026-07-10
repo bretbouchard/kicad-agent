@@ -156,11 +156,9 @@ class HybridPlacementEngine:
         try:
             from kicad_agent.placement.predict import PlacementPredictor
 
-            self._predictor = PlacementPredictor(
-                model_path=model_path, device=device
-            )
+            self._predictor = PlacementPredictor(model_path=model_path)
         except Exception:
-            # predictor unavailable (e.g., torch not installed)
+            # predictor unavailable (e.g., onnxruntime not installed)
             self._predictor = None
 
     def place(self, request: PlacementRequest) -> PlacementOutput:
