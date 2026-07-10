@@ -140,6 +140,34 @@ lane :screenshots do |options|
 end
 
 # =============================================================================
+# Lane: certs — Generate signing certs via match (uses ASC API key auth)
+# =============================================================================
+desc "Generate distribution cert + provisioning profile via match"
+lane :certs do |options|
+  UI.message("Volta PCB — Generating signing certs")
+
+  api_key = app_store_connect_api_key(
+    key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+    issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+    key_filepath: ENV["APP_STORE_CONNECT_API_KEY_FILEPATH"],
+    duration: 1200,
+    in_house: false
+  )
+
+  match(
+    type: "appstore",
+    platform: "macos",
+    app_identifier: default_bundle_id,
+    api_key: api_key,
+    git_url: "https://github.com/bretbouchard/VoltaCertRepo",
+    generate_apple_certs: true,
+    readonly: false
+  )
+
+  UI.success("Certs generated and stored in VoltaCertRepo")
+end
+
+# =============================================================================
 # Lane: bootstrap — First-time setup
 # =============================================================================
 desc "First-time setup. Documents what user needs to do."
