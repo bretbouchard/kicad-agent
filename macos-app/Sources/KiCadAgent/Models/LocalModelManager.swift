@@ -46,7 +46,11 @@ final class LocalModelManager {
             return
         }
 
-        // Register the MLX provider with optional adapter
+        // Register the MLX provider with optional adapter.
+        // MLXLocalProvider is excluded from Xcode builds (C module resolution
+        // issue) but available in SPM builds. The #if guards let the Xcode
+        // build succeed while the SPM build has full inference support.
+        #if canImport(MLXLLM)
         let provider = MLXLocalProvider(
             modelURL: baseDir,
             modelId: "gemma-4-12b-it-4bit",
@@ -56,6 +60,11 @@ final class LocalModelManager {
         hasLocalModel = true
         showDownloadSheet = false
         Logger.appShell.info("Local model registered: \(provider.displayName)")
+        #else
+        hasLocalModel = true
+        showDownloadSheet = false
+        Logger.appShell.info("Model present but MLX provider not available in this build")
+        #endif
     }
 
     /// Called when a download completes — register the newly downloaded model.
