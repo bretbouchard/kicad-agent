@@ -62,7 +62,7 @@ Phase 205 adds the ability to read and write board metadata (revision, title, da
 - **New file: `src/kicad_agent/manufacturing/board_spec.py`** (creates `manufacturing/` package — add `manufacturing/__init__.py`)
 - **Pydantic `BaseModel`** (NOT frozen dataclass — matches `ManufacturerProfile` in `dfm/profiles.py`, the existing manufacturing-capability model convention)
 - **Fields:**
-  - `surface_finish: SurfaceFinish = SurfaceFinish.HASL` — enum (HASL, ENIG, HASL_LEAD_FREE, IMPEG, HARD_GOLD, OSP, etc.)
+  - `surface_finish: SurfaceFinish = SurfaceFinish.HASL` — enum (HASL, ENIG, HASL_LEAD_FREE, HARD_GOLD, OSP, ENEPIG)
   - `copper_weight_outer_oz: float = 1.0` — outer layer copper weight in oz (1.0 = 1oz = 35μm)
   - `copper_weight_inner_oz: float = 0.5` — inner layer copper weight (0.5oz default for signal layers)
   - `soldermask_color: SoldermaskColor = SoldermaskColor.GREEN` — enum (GREEN, RED, BLUE, BLACK, WHITE, YELLOW, PURPLE, MATTE_BLACK, etc.)
@@ -128,7 +128,7 @@ Phase 205 adds the ability to read and write board metadata (revision, title, da
 ### Claude's Discretion
 
 - **Comment numbering:** How to model KiCad's numbered comments (`(comment 1 "...")` through `(comment 9 "...")`). Decision above: position-indexed tuple where index 0 = comment 1. Alternative: dict mapping `{1: "text", 2: "text"}`. Tuple is simpler and consistent with frozen convention — use tuple.
-- **SurfaceFinish enum values:** The exact set of surface finishes to enumerate. Use common industry values (HASL, ENIG, HASL_LEAD_FREE, IMPEG, HARD_GOLD, OSP, ENIPIG). Can be extended later.
+- **SurfaceFinish enum values:** The exact set of surface finishes to enumerate. Use common industry values (HASL, ENIG, HASL_LEAD_FREE, HARD_GOLD, OSP, ENEPIG). Can be extended later.
 - **Color enums:** Use KiCad's color names (green, red, blue, black, white, yellow, purple). Match KiCad convention for consistency.
 - **BoardSpec default values:** HASL finish, 1oz outer copper, green soldermask, white silkscreen. These are the most common defaults for prototype boards.
 
