@@ -1014,7 +1014,8 @@ class PcbRawWriter:
         new_block = "\n".join(lines)
 
         # Find existing title_block and replace it, or insert new one
-        match = re.search(r"\(title_block\b", content)
+        # Anchored to line start to avoid false-matching inside quoted string values
+        match = re.search(r"^[ \t]*\(title_block\b", content, re.MULTILINE)
         if match:
             start = match.start()
             # _find_matching_close expects the position of the opening "("
