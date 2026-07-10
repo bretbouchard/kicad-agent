@@ -55,12 +55,21 @@ lane :beta do |options|
   end
 
   # Build + sign the archive.
+  # macOS App Store export needs explicit signing identity + profile.
+  # gym defaults to "Mac Installer Distribution" which we don't have;
+  # "Apple Distribution" is the correct identity for macOS App Store.
   build_app(
     scheme: "VoltaPCB",
     project: "#{repo_root}/macos-app/VoltaPCB.xcodeproj",
     export_method: "app-store",
     output_directory: "#{repo_root}/build",
-    skip_codesigning: false
+    codesigning_identity: "Apple Distribution: Bret bouchard (68SDK93S22)",
+    export_options: {
+      signingStyle: "manual",
+      provisioningProfiles: {
+        "com.bretbouchard.volta" => "Volta"
+      }
+    }
   )
 
   # Upload to TestFlight.
