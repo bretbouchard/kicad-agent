@@ -409,6 +409,9 @@ def _check_clearance(
             max_y1 = max(sy1, ey1) + w1 / 2 + limit
             for j in range(i + 1, n):
                 sx2, sy2, ex2, ey2, w2, net2 = segs[j]
+                # Skip same-net pairs — same-net copper is connected, not a clearance violation.
+                if net1 and net2 and net1 == net2:
+                    continue
                 # Bounding-box pre-filter: skip if AABBs (expanded by limit) don't overlap.
                 if (max(sx2, ex2) + w2 / 2 + limit < min_x1
                         or min(sx2, ex2) - w2 / 2 - limit > max_x1

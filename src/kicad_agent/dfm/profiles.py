@@ -258,6 +258,7 @@ _PROFILES: dict[str, ManufacturerProfile] = {
     "jlcpcb-4layer": _JLCPCB_4LAYER,
     "pcbway": _PCBWAY_STANDARD,
     "osh_park": _OSH_PARK,
+    "oshpark": _OSH_PARK,  # alias — drc_profiles registry uses "oshpark" (no underscore)
     "generic": _GENERIC_CONSERVATIVE,
     "advanced_circuits": _ADVANCED_CIRCUITS,
     "aisler_2layer": _AISLER_2LAYER,
