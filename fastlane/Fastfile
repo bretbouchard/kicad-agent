@@ -10,6 +10,8 @@
 # When these are unavailable, lanes run in --skip / --readonly stub mode.
 
 default_bundle_id = "com.bretbouchard.volta"
+volta_asc_apple_id = "6789455514"   # App Store Connect > App Information > Apple ID
+volta_sku = "volta"                  # App Store Connect SKU
 
 before_all do
   ensure_env_vars(
@@ -80,6 +82,7 @@ lane :beta do |options|
   else
     pilot(
       app_identifier: default_bundle_id,
+      apple_id: volta_asc_apple_id,
       skip_waiting_for_build_processing: true
     )
   end
