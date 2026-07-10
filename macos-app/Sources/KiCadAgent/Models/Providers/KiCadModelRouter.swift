@@ -218,6 +218,24 @@ final class KiCadModelRouter: ObservableObject {
         return await selectProvider(for: task)
     }
 
+    /// Full pipeline: classify → format → route → stream.
+    /// This is the primary entry point for user-facing model calls.
+    /// Phase D: applies task-specific system prompts and prefixes before
+    /// dispatching to the selected provider.
+    func generate(from prompt: KCPrompt) async throws -> AsyncThrowingStream<KCToken, Error> {
+        // 1. Classify intent
+        let task = KCTaskClassifier.classify(prompt)
+
+        // 2. Format prompt with task-specific system prompt + prefix + max tokens
+        let formatted = KCTaskPromptFormatter.format(prompt, for: task)
+
+        // 3. Select provider based on task type
+        let decision = await selectProvider(for: task)
+
+        // 4. Stream from the selected provider
+        return try await decision.provider.stream(formatted)
+    }
+
     // MARK: - Default routing
 
     /// Per-task-type default when no user preference is set. Implements the
@@ -276,9 +294,10 @@ final class KiCadModelRouter: ObservableObject {
                 fellBack: true
             )
 
-        case .complexReasoning, .circuitGeneration:
-            // Try user-preferred (already handled in step 2). Default: try
-            // MLX local (cost $0), then AppleLocal (per MOD-11 fallback).
+        case .complexReasoning, .circuitGeneration,
+             .circuitTheory, .spiceSimulation:
+            // Phase D: theory + SPICE route same as codegen — prefer MLX local
+            // with v5 adapter (cost $0, has task-specific training), then AppleLocal.
             if let mlx = await firstAvailableMLXProvider() {
                 return RoutingDecision(
                     provider: mlx,

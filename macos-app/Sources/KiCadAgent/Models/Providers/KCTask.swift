@@ -99,6 +99,14 @@ enum KCTaskType: String, Sendable, Equatable, Codable, CaseIterable {
     /// Conversation history summarization. Heuristic default: AppleLocal.
     case conversationHistory
 
+    /// Circuit theory questions ("Why use decoupling?", "How do opamps work?").
+    /// Routes to MLX local with v5 adapter (theory-trained).
+    case circuitTheory
+
+    /// SPICE simulation requests ("Simulate this filter", "Verify gain").
+    /// Routes to MLX local with v5 adapter (SPICE-trained).
+    case spiceSimulation
+
     /// User-facing display name for Settings UI.
     var displayName: String {
         switch self {
@@ -110,6 +118,8 @@ enum KCTaskType: String, Sendable, Equatable, Codable, CaseIterable {
         case .pcbRouting: return "PCB Routing"
         case .boardAnalysis: return "Board Analysis"
         case .conversationHistory: return "Conversation History"
+        case .circuitTheory: return "Circuit Theory"
+        case .spiceSimulation: return "SPICE Simulation"
         }
     }
 
@@ -132,6 +142,10 @@ enum KCTaskType: String, Sendable, Equatable, Codable, CaseIterable {
             return "Explaining ERC/DRC findings, BOM summaries."
         case .conversationHistory:
             return "Summarizing long conversations to save context."
+        case .circuitTheory:
+            return "Explaining circuit physics, component selection, design rules."
+        case .spiceSimulation:
+            return "Generating netlists, running ngspice, interpreting results."
         }
     }
 
@@ -142,11 +156,10 @@ enum KCTaskType: String, Sendable, Equatable, Codable, CaseIterable {
         switch self {
         case .quickReply, .complexReasoning, .vision, .privacySensitive:
             return self
-        case .circuitGeneration, .boardAnalysis, .conversationHistory:
-            // Reasoning-heavy or summarization tasks → complexReasoning pref.
+        case .circuitGeneration, .boardAnalysis, .conversationHistory,
+             .circuitTheory, .spiceSimulation:
             return .complexReasoning
         case .pcbRouting:
-            // Vision-driven task → vision pref.
             return .vision
         }
     }

@@ -77,6 +77,26 @@ enum KCTaskClassifier {
             )
         }
 
+        // 4b. SPICE simulation keywords.
+        if hasSPICEKeyword(lower) {
+            return KCTask(
+                taskType: .spiceSimulation,
+                requiresVision: false,
+                requiresPrivacy: false,
+                complexity: max(0.7, complexityFor(length: combined.count))
+            )
+        }
+
+        // 4c. Circuit theory keywords.
+        if hasTheoryKeyword(lower) {
+            return KCTask(
+                taskType: .circuitTheory,
+                requiresVision: false,
+                requiresPrivacy: false,
+                complexity: max(0.4, complexityFor(length: combined.count))
+            )
+        }
+
         // 5. Analysis keywords.
         if hasAnalysisKeyword(lower) {
             return KCTask(
@@ -187,6 +207,38 @@ enum KCTaskClassifier {
             "route the pcb"
         ]
         return keywords.contains { text.contains($0) }
+    }
+
+    private static func hasSPICEKeyword(_ text: String) -> Bool {
+        let keywords = [
+            "simulate", "simulation", "spice", "ngspice",
+            "ac analysis", "dc sweep", "transient analysis",
+            "noise analysis", "monte carlo", "worst case",
+            "verify the gain", "verify gain", "measure the",
+            "frequency response", "bode plot",
+            "check the -3db", "cutoff frequency",
+            "run analysis", "plot response", "frequency sweep"
+        ]
+        return keywords.contains { text.contains($0) }
+    }
+
+    private static func hasTheoryKeyword(_ text: String) -> Bool {
+        let questionWords = ["why", "how do", "how does", "what is", "what are",
+                             "explain", "difference between", "when should"]
+        let circuitWords = ["capacitor", "resistor", "inductor", "diode", "mosfet",
+                            "opamp", "op amp", "ground", "impedance", "decoupling",
+                            "pull-up", "pull-up", "pull-down", "trace", "via",
+                            "plane", "emi", "emc", "thermal", "noise", "bandwidth",
+                            "slew rate", "gain", "feedback", "stability",
+                            "esr", "esl", "srf", "gbw", "thd", "snr",
+                            "ohm", "kirchhoff", "impedance matching",
+                            "signal integrity", "power integrity", "ground loop",
+                            "crosstalk", "reflection", "termination",
+                            "heatsink", "junction temp", "derating", "power dissipation",
+                            "buck", "boost", "ldo", "switching regulator",
+                            "zener", "schottky", "tvz", "esd", "flyback diode"]
+        return questionWords.contains { qw in text.contains(qw) }
+            && circuitWords.contains { cw in text.contains(cw) }
     }
 
     private static func hasAnalysisKeyword(_ text: String) -> Bool {

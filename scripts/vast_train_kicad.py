@@ -145,16 +145,23 @@ class Gemma4VisionCollator:
             for msg in ex["messages"]:
                 template_content = []
                 has_image_part = False
-                for part in msg.get("content", []):
-                    if part.get("type") == "image":
-                        # Use next available image (cycle if more tokens than images)
-                        url = sample_images[img_idx % len(sample_images)] if sample_images else None
-                        if url is not None:
-                            template_content.append({"type": "image", "url": url})
-                            img_idx += 1
-                            has_image_part = True
-                    elif part.get("type") == "text":
-                        template_content.append({"type": "text", "text": part["text"]})
+                # Handle both string content and list-of-dicts content
+                raw_content = msg.get("content", "")
+                if isinstance(raw_content, str):
+                    # String content — wrap as text part
+                    template_content.append({"type": "text", "text": raw_content})
+                elif isinstance(raw_content, list):
+                    for part in raw_content:
+                        if isinstance(part, str):
+                            template_content.append({"type": "text", "text": part})
+                        elif isinstance(part, dict) and part.get("type") == "image":
+                            url = sample_images[img_idx % len(sample_images)] if sample_images else None
+                            if url is not None:
+                                template_content.append({"type": "image", "url": url})
+                                img_idx += 1
+                                has_image_part = True
+                        elif isinstance(part, dict) and part.get("type") == "text":
+                            template_content.append({"type": "text", "text": part["text"]})
                 # Text-only injection: add image token to first user message
                 if (text_only_inject
                         and not has_image_part

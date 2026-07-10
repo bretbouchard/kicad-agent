@@ -31,6 +31,116 @@ struct KCTaskClassifierTests {
         #expect(task.taskType == .privacySensitive)
     }
 
+    // MARK: - Phase D: Theory + SPICE + Codegen
+
+    @Test("Theory question detected: 'why use decoupling'")
+    func theoryDecoupling() {
+        let prompt = KCPrompt.user("Why use both 100nF and 10uF capacitors for decoupling?")
+        let task = KCTaskClassifier.classify(prompt)
+        #expect(task.taskType == .circuitTheory)
+    }
+
+    @Test("Theory question detected: 'how do opamps work'")
+    func theoryOpamp() {
+        let prompt = KCPrompt.user("How do opamps work?")
+        let task = KCTaskClassifier.classify(prompt)
+        #expect(task.taskType == .circuitTheory)
+    }
+
+    @Test("Theory question detected: 'what is impedance matching'")
+    func theoryImpedance() {
+        let prompt = KCPrompt.user("What is impedance matching and when does it matter?")
+        let task = KCTaskClassifier.classify(prompt)
+        #expect(task.taskType == .circuitTheory)
+    }
+
+    @Test("SPICE simulation detected: 'simulate this circuit'")
+    func spiceSimulate() {
+        let prompt = KCPrompt.user("Simulate this RC filter at 1kHz cutoff")
+        let task = KCTaskClassifier.classify(prompt)
+        #expect(task.taskType == .spiceSimulation)
+    }
+
+    @Test("SPICE simulation detected: 'verify gain'")
+    func spiceVerifyGain() {
+        let prompt = KCPrompt.user("Verify the gain of this amplifier")
+        let task = KCTaskClassifier.classify(prompt)
+        #expect(task.taskType == .spiceSimulation)
+    }
+
+    @Test("SPICE simulation detected: 'AC analysis'")
+    func spiceACAnalysis() {
+        let prompt = KCPrompt.user("Run AC analysis on this amplifier")
+        let task = KCTaskClassifier.classify(prompt)
+        #expect(task.taskType == .spiceSimulation)
+    }
+
+    @Test("Codegen detected: 'design an LED circuit'")
+    func codegenLED() {
+        let prompt = KCPrompt.user("Design a circuit: An LED with a 220 ohm resistor on 5V")
+        let task = KCTaskClassifier.classify(prompt)
+        #expect(task.taskType == .circuitGeneration)
+    }
+
+    @Test("Codegen detected: 'I need an ESP32 breakout'")
+    func codegenESP32() {
+        let prompt = KCPrompt.user("I need an ESP32 breakout with USB-C power and I2C pull-ups")
+        let task = KCTaskClassifier.classify(prompt)
+        #expect(task.taskType == .circuitGeneration)
+    }
+}
+
+@Suite("KCTaskPromptFormatter")
+struct KCTaskPromptFormatterTests {
+
+    @Test("Codegen adds [CODEGEN] prefix and SKIDL system prompt")
+    func codegenFormat() {
+        let prompt = KCPrompt.user("Design an LED circuit on 5V")
+        let task = KCTask(taskType: .circuitGeneration)
+        let formatted = KCTaskPromptFormatter.format(prompt, for: task)
+        #expect(formatted.systemPrompt?.contains("Part(") == true)
+        #expect(formatted.messages.first?.content.hasPrefix("[CODEGEN]") == true)
+        #expect(formatted.maxTokens == 1024)
+    }
+
+    @Test("Theory adds [THEORY] prefix and expert system prompt")
+    func theoryFormat() {
+        let prompt = KCPrompt.user("Why use decoupling capacitors?")
+        let task = KCTask(taskType: .circuitTheory)
+        let formatted = KCTaskPromptFormatter.format(prompt, for: task)
+        #expect(formatted.systemPrompt?.contains("expert") == true)
+        #expect(formatted.messages.first?.content.hasPrefix("[THEORY]") == true)
+        #expect(formatted.maxTokens == 800)
+    }
+
+    @Test("SPICE adds [SPICE] prefix and ngspice system prompt")
+    func spiceFormat() {
+        let prompt = KCPrompt.user("Simulate this RC filter")
+        let task = KCTask(taskType: .spiceSimulation)
+        let formatted = KCTaskPromptFormatter.format(prompt, for: task)
+        #expect(formatted.systemPrompt?.contains("SPICE") == true)
+        #expect(formatted.messages.first?.content.hasPrefix("[SPICE]") == true)
+        #expect(formatted.maxTokens == 1024)
+    }
+
+    @Test("General conversation gets no prefix")
+    func generalNoPrefix() {
+        let prompt = KCPrompt.user("Hello there")
+        let task = KCTask(taskType: .quickReply)
+        let formatted = KCTaskPromptFormatter.format(prompt, for: task)
+        #expect(formatted.messages.first?.content.hasPrefix("[") == false)
+    }
+
+    @Test("User-provided system prompt is preserved")
+    func preservesUserSystemPrompt() {
+        let prompt = KCPrompt.systemPlusUser("My custom system", "Design a circuit")
+        let task = KCTask(taskType: .circuitGeneration)
+        let formatted = KCTaskPromptFormatter.format(prompt, for: task)
+        #expect(formatted.systemPrompt == "My custom system")
+    }
+        #expect(task.taskType == .privacySensitive)
+    }
+
     @Test("Proprietary marker triggers privacySensitive routing")
     func proprietaryMarkerDetected() {
         let prompt = KCPrompt.user("This is proprietary — please analyze")
