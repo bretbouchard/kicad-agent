@@ -36,6 +36,9 @@ import OSLog
 #if canImport(MLXLLM)
 import MLXLLM
 import MLXLMCommon
+import MLXHuggingFace
+import HuggingFace
+import Tokenizers
 #endif
 
 /// Errors specific to MLX provider. Surfaces actionable error messages
@@ -144,25 +147,75 @@ struct MLXLocalProvider: KiCadModelProvider {
         let adapterDir = adapterURL
         let prompt = request
 
-        return AsyncThrowingStream { continuation in
+        return AsyncThrowingStream(KCToken.self, bufferingPolicy: .unbounded) { @Sendable continuation in
             let stream = continuation
-            Task {
+            Task { @Sendable in
                 #if canImport(MLXLLM)
                 do {
-                    // Phase 210.1: MLXLLM generation requires a TokenizerLoader
-                    // from the MLXHuggingFace package, which is not yet wired
-                    // into the SPM/Xcode target. The model download, validation,
-                    // and provider registration all work — only the final
-                    // generate() call is blocked on the tokenizer integration.
-                    //
-                    // Once MLXHuggingFace is added:
-                    //   let container = try await LLMModelFactory.shared.loadContainer(
-                    //       from: modelDir, using: hfTokenizerLoader
-                    //   )
-                    //   ... apply LoRA adapter, generate tokens ...
-                    throw MLXProviderError.incompatibleFormat(
-                        reason: "MLX generation requires MLXHuggingFace tokenizer (Phase 210.1). Model is downloaded and validated — generation will be enabled in the next build."
+                    // Load model from local directory with HF tokenizer.
+                    // The #huggingFaceLoadModelContainer macro handles
+                    // tokenizer + downloader wiring internally.
+                    let config = ModelConfiguration(
+                        id: modelDir.lastPathComponent,
+                        defaultPrompt: ""
                     )
+                    let container = try await #huggingFaceLoadModelContainer(
+                        configuration: config
+                    )
+
+                    // Apply LoRA adapter if present
+                    if let adapterDir {
+                        let adapterFile = adapterDir.appendingPathComponent("adapters.safetensors")
+                        if FileManager.default.fileExists(atPath: adapterFile.path) {
+                            try await container.perform { context in
+                                // Load LoRA adapter from local directory
+                                let adapterConfig = ModelConfiguration(directory: adapterDir)
+                                let adapter = try await ModelAdapterFactory.shared.load(
+                                    from: #hubDownloader(),
+                                    configuration: adapterConfig
+                                )
+                                try context.model.load(adapter: adapter)
+                            }
+                            Logger.models.info("LoRA adapter loaded from \(adapterDir.path)")
+                        }
+                    }
+
+                    // Yield usage info
+                    let inputTokens = prompt.messages.reduce(0) { $0 + $1.content.count / 4 }
+                    stream.yield(.usage(KCUsage.free(input: inputTokens, output: 0)))
+
+                    // Convert to plain (role, content) pairs for Sendable crossing.
+                    // Chat.Message is not Sendable.
+                    let rawMessages: [(String, String)] = prompt.messages.map {
+                        ($0.role.rawValue, $0.content)
+                    }
+
+                    // Generate — build UserInput inside the perform closure.
+                    let genStream = try await container.perform { context in
+                        let chatMessages = rawMessages.map { role, content in
+                            Chat.Message(
+                                role: Chat.Message.Role(rawValue: role) ?? .user,
+                                content: content
+                            )
+                        }
+                        let userInput = UserInput(prompt: .chat(chatMessages))
+                        let input = try await context.processor.prepare(input: userInput)
+                        return try generate(
+                            input: input,
+                            parameters: GenerateParameters(temperature: 0.7),
+                            context: context
+                        )
+                    }
+
+                    // Drain the generation stream
+                    for await generation in genStream {
+                        if let text = generation.chunk {
+                            stream.yield(.text(text))
+                        }
+                    }
+
+                    stream.yield(.done(.complete))
+                    stream.finish()
                 } catch {
                     Logger.appShell.error("MLX generation failed: \(error.localizedDescription)")
                     stream.yield(.done(.error))

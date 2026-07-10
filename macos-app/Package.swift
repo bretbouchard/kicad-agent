@@ -34,6 +34,15 @@ let package = Package(
         .package(
             url: "https://github.com/ml-explore/mlx-swift-lm",
             from: "3.31.4"
+        ),
+        // Phase 210.1: HuggingFace Hub client + tokenizers (required by MLXHuggingFace macros).
+        .package(
+            url: "https://github.com/huggingface/swift-huggingface",
+            from: "0.1.0"
+        ),
+        .package(
+            url: "https://github.com/huggingface/swift-transformers",
+            from: "1.3.3"
         )
     ],
     targets: [
@@ -44,7 +53,11 @@ let package = Package(
                 .product(name: "MLXNN", package: "mlx-swift"),
                 // Phase 210: generation loop + LoRA adapter loading.
                 .product(name: "MLXLLM", package: "mlx-swift-lm"),
-                .product(name: "MLXLMCommon", package: "mlx-swift-lm")
+                .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
+                // Phase 210.1: HuggingFace tokenizer + downloader integration.
+                .product(name: "MLXHuggingFace", package: "mlx-swift-lm"),
+                .product(name: "HuggingFace", package: "swift-huggingface"),
+                .product(name: "Tokenizers", package: "swift-transformers")
             ],
             // Force macOS 27 deployment target at the ABI level.
             // sdk 26.5 toolchain accepts this — produces binary that
