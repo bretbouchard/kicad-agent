@@ -55,13 +55,19 @@ lane :beta do |options|
   end
 
   # Build + sign the archive.
-  # Project.yml sets manual signing for Release config (Apple Distribution
-  # + Volta provisioning profile). Gym reads that from the project settings.
+  # Project.yml sets manual signing + Apple Distribution for Release.
+  # Export options pass the profile UUID for the archive export step.
   build_app(
     scheme: "VoltaPCB",
     project: "#{repo_root}/macos-app/VoltaPCB.xcodeproj",
     export_method: "app-store",
-    output_directory: "#{repo_root}/build"
+    output_directory: "#{repo_root}/build",
+    export_options: {
+      provisioningProfiles: {
+        "com.bretbouchard.volta" => "1240dfd2-e0f2-40d9-82c8-e749df43af36"
+      },
+      signingStyle: "manual"
+    }
   )
 
   # Upload to TestFlight.

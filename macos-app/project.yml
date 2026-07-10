@@ -36,7 +36,6 @@ settings:
     # Debug keeps automatic signing for dev builds.
     CODE_SIGN_IDENTITY[config=Release]: "Apple Distribution"
     CODE_SIGN_STYLE[config=Release]: Manual
-    PROVISIONING_PROFILE_SPECIFIER[config=Release]: "Volta"
     GCC_NO_COMMON_BLOCKS: YES
     # Explicit module builds fail to resolve C module deps (Cmlx, _NumericsShims)
     # from SPM packages. The implicit module system (used by swift build) works.
