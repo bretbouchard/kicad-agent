@@ -1014,7 +1014,11 @@ class PcbRawWriter:
         match = re.search(r"\(title_block\b", content)
         if match:
             start = match.start()
-            end = PcbRawWriter._find_matching_close(content, start + 1)
+            # _find_matching_close expects the position of the opening "("
+            # itself (depth starts at 0, first "(" -> depth 1, matching
+            # ")" -> depth 0). Passing start+1 would skip the "(" and
+            # return at the first inner closing paren.
+            end = PcbRawWriter._find_matching_close(content, start)
             if end is not None:
                 return content[:start] + new_block + content[end + 1:]
 

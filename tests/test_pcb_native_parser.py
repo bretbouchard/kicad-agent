@@ -22,6 +22,7 @@ from kicad_agent.parser.pcb_native_types import (
     NativePad,
     NativeSetup,
     NativeStackup,
+    NativeTitleBlock,
     NativeZone,
     _NativePosition,
 )
@@ -642,3 +643,91 @@ class TestImports:
                     assert "kiutils" not in alias.name
             elif isinstance(node, ast.ImportFrom):
                 assert node.module is None or "kiutils" not in node.module
+
+
+# ---------------------------------------------------------------------------
+# Phase 205: title_block parsing (META-06, META-07)
+# ---------------------------------------------------------------------------
+
+
+class TestTitleBlock:
+    """title_block parsing tests (META-06, META-07)."""
+
+    def test_native_board_title_block_exists(self, arduino_board):
+        """Arduino fixture has a title_block (date-only)."""
+        assert arduino_board.title_block is not None
+        assert isinstance(arduino_board.title_block, NativeTitleBlock)
+
+    def test_native_board_title_block_date(self, arduino_board):
+        """Arduino fixture title_block has the expected date."""
+        assert arduino_board.title_block.date == "mar. 31 mars 2015"
+        assert arduino_board.title_block.title == ""
+        assert arduino_board.title_block.rev == ""
+        assert arduino_board.title_block.company == ""
+
+    def test_native_board_title_block_absent(self):
+        """Boards with no title_block element return None."""
+        content = '(kicad_pcb (version 20241229) (generator "test") (paper "A4") (layers (0 "F.Cu" signal)))'
+        board = NativeParser.parse_pcb_content(content)
+        assert board.title_block is None
+
+    def test_title_block_full_fields(self):
+        """All title_block fields parse correctly including special characters."""
+        content = '''(kicad_pcb (version 20241229) (generator "test")
+      (paper "A4")
+      (title_block
+        (title "Test Board (prototype)")
+        (date "2026-07-10")
+        (rev "2.1")
+        (company "Smith & Co.")
+        (comment 1 "First")
+        (comment 2 "Second")
+      )
+      (layers (0 "F.Cu" signal))
+    )'''
+        board = NativeParser.parse_pcb_content(content)
+        tb = board.title_block
+        assert tb is not None
+        assert tb.title == "Test Board (prototype)"
+        assert tb.date == "2026-07-10"
+        assert tb.rev == "2.1"
+        assert tb.company == "Smith & Co."
+        assert tb.comments == ("First", "Second")
+
+    def test_title_block_non_sequential_comments(self):
+        """Non-sequential comments (1, 3, 9) parse with gaps as empty strings."""
+        content = '''(kicad_pcb (version 20241229) (generator "test")
+      (paper "A4")
+      (title_block
+        (title "X")
+        (comment 1 "First")
+        (comment 3 "Third")
+        (comment 9 "Ninth")
+      )
+      (layers (0 "F.Cu" signal))
+    )'''
+        board = NativeParser.parse_pcb_content(content)
+        tb = board.title_block
+        assert tb is not None
+        assert tb.comments[0] == "First"   # comment 1 -> index 0
+        assert tb.comments[1] == ""        # comment 2 absent -> empty
+        assert tb.comments[2] == "Third"   # comment 3 -> index 2
+        assert tb.comments[8] == "Ninth"   # comment 9 -> index 8
+
+    def test_title_block_empty_string_fields(self):
+        """Empty-string fields (title "") parse as empty strings, not None.
+
+        Distinct from absent fields.
+        """
+        content = '''(kicad_pcb (version 20241229) (generator "test")
+      (paper "A4")
+      (title_block (title "") (date "") (rev "") (company ""))
+      (layers (0 "F.Cu" signal))
+    )'''
+        board = NativeParser.parse_pcb_content(content)
+        tb = board.title_block
+        assert tb is not None
+        assert tb.title == ""
+        assert tb.date == ""
+        assert tb.rev == ""
+        assert tb.company == ""
