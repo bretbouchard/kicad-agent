@@ -1,4 +1,4 @@
-git_url(ENV["MATCH_GIT_URL"])
+git_url("https://github.com/bretbouchard/VoltaCertRepo")
 storage_mode("git")
 type("appstore")
 app_identifier("com.bretbouchard.volta")
