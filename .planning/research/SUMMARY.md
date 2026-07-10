@@ -1,86 +1,84 @@
-# Research Summary: v3.0 Full-Stack EDA
+# Research Summary — v7.0 Vendor-Neutral Manufacturing Layer
 
-**Milestone:** v3.0-full-stack-eda
-**Synthesized:** 2026-06-01
-**Sources:** ARCHITECTURE.md, PITFALLS.md, STACK.md, FEATURES.md (partial)
+## Overview
 
-## Core Insight
+v7.0 adds a vendor-neutral manufacturing layer to kicad-agent: DRC pre-flight profiles for any fab, a versioned build/handoff system, and (deferred) opt-in vendor API adapters. **Zero new dependencies** — built entirely on the existing KiCad CLI + Python + Pydantic stack. The codebase already has significant primitives (`ManufacturerProfile`, `ManufacturingManifest`, `ManufacturingReadinessGate`, export wrappers) that v7.0 assembles and completes.
 
-v3.0 is not five bolt-on modules — it is a **pipeline** that bridges the existing `analysis/` layer (topology, subcircuits, intent, design rules) through to `placement/`, `validation/`, and a new `dfm/` module. The critical missing piece is the bridge: constraint propagation that translates schematic intelligence into PCB design constraints.
+## Stack Additions
 
-## Architecture Summary
+**None.** All required technologies are already installed:
+- kicad-cli 10.0.1 — DRC with `--custom-rules`, all export formats
+- Pydantic 2.x — schema models (BoardSpec, Build record)
+- stdlib zipfile/hashlib/json — bundling, hashing, serialization
+- kiutils — S-expression parsing for title_block
 
-**26 new files (~2,730 lines), 6 modified files, zero breaking changes.**
+**Explicitly avoided:** HTTP libraries (deferred to P6), PDF generation libs (Markdown + kicad-cli PDFs), cloud storage SDKs (local builds/).
+
+## Feature Table Stakes
+
+| Category | Must-Have | Notes |
+|----------|-----------|-------|
+| Board Metadata | title_block parse/write + BoardSpec model (finish, color, stackup) | Foundation — unblocks versioning |
+| DRC Profiles | PCBWay/JLCPCB/AISLER `.kicad_dru` files + `drc_vendor` op | Files exist; wiring is the work |
+| Versioned Builds | Build record + serialized manifest + build_create/list/show | Extends existing ManufacturingManifest |
+| Handoff Package | Full export orchestration → zip + readme + manifest | Universal fallback for ALL vendors |
+| Integration | MCP auto-exposure + CLI subcommands + ProjectContext | Largely automatic |
+
+## Key Differentiators
+
+1. **Universal handoff package** — works with every fab (3 with APIs, 10+ without). No vendor lock-in.
+2. **Versioned builds** — git SHA + board rev + artifact hashes link a build to exact source state
+3. **Vendor-neutral design** — API adapters are opt-in accelerators, not requirements
+4. **DRC profiles cost nothing to extend** — drop a `.kicad_dru` file = support a new vendor
+
+## Architecture Highlights
+
+- **3 new modules** in `src/kicad_agent/manufacturing/`: drc_profiles/ (data), board_spec.py, build.py, manifest.py, handoff.py
+- **~8 new operations** following the existing pattern (schema → registry → handler → auto-MCP)
+- **Build directory structure**: `builds/v{rev}_{timestamp}/` with manifest.json, readme.md, handoff.zip
+- **BoardSpec sidecar**: `.kicad_build_spec.json` alongside the project (finish, color, stackup, impedance)
+
+## Watch Out For
+
+| Pitfall | Severity | Phase | Prevention |
+|---------|----------|-------|------------|
+| Stale DRC values (PCBWay annular ring) | Medium | P2 | Cross-check vs current capabilities; update to 0.15mm |
+| title_block parsing fragility | High | P1 | Follow NativeStackup pattern; test round-trip; handle KiCad 10 quoting |
+| Vendor lock-in via hard-coded formatting | High | P4 | Profile-driven BOM/output formatter, not direct export_jlcpcb_bom calls |
+| Build dir git pollution | Low | P3 | Add `builds/` to .gitignore |
+| Manifest false confidence | High | P3+P4 | Reuse ManufacturingReadinessGate as hard gate; validate required artifacts |
+| Profile licensing/attribution | Low | P2 | Prefer Cimos (MIT); add attribution comments |
+| API adapter scope creep | Medium | P6 (DEFERRED) | Define ABC in P5; defer adapters to separate milestone |
+
+## Build Order
 
 ```
-analysis/ (exists) → constraints/ (NEW) → spatial/pcb_model.py (NEW)
-                                              ↓
-                              placement/layout_aware.py (NEW)
-                              validation/drc_intel.py (NEW)
-                              dfm/ (NEW)
+P1 Metadata Foundation → P3 Builds → P4 Handoff → P5 Integration → P6 API (DEFERRED)
+                      ↗
+P2 DRC Profiles ──────┘
 ```
 
-Build order: A+B parallel (spatial model + constraints), then C+D+E parallel (placement + DRC intel + DFM).
+P1 and P2 are the foundation. P3 depends on P1. P4 depends on P1+P2+P3. P5 integrates. P6 is deferred.
 
-## Stack Summary
+## Vendor Landscape Summary
 
-**Two dependency changes total:**
-- `scipy>=1.11` promoted from undeclared transitive to explicit core dependency
-- `scikit-fem>=10.0` added as optional `eda` dependency for thermal FEM
+| Vendor | DRC file? | API? | v7.0 Coverage |
+|--------|-----------|------|---------------|
+| PCBWay | ✅ official | ✅ Partner API (gated) | DRC + handoff (P1-P5); API adapter deferred (P6) |
+| JLCPCB | ✅ community (MIT) | ✅ Online API | DRC + handoff; API adapter deferred |
+| AISLER | ✅ official (5 stackups) | ❌ | DRC + handoff |
+| OSH Park | ⚠️ author from specs | ❌ | DRC + handoff |
+| MacroFab (US, ITAR) | ❌ | ✅ Cloud API v2 | Handoff only; API adapter deferred |
+| Advanced Circuits (US, ITAR) | ❌ | ❌ (FreeDFM) | Handoff only |
+| All others | ❌ | ❌ | Handoff only |
 
-Everything else builds on existing stack (Shapely 2.1.1 STRtree, networkx 3.6.1, kiutils, sexpdata, pydantic). No constraint solver needed — propagation is deterministic rule-chain, not SAT/CSP.
+**Key insight:** The handoff package is the universal path. Only 3 vendors have APIs, and even those can use the handoff path. API adapters are accelerators on top of a complete vendor-neutral foundation.
 
-**Critical gap:** kiutils doesn't parse `.kicad_dru` files (net class definitions). Build a `.kicad_dru` parser using sexpdata following the PcbIR pattern.
+## Confidence
 
-## Critical Pitfalls (6)
-
-1. **kiutils UUID loss** — Every new PCB code path MUST go through PcbIR, never `Board.from_file()` directly
-2. **Y-axis flip** — Schematic Y-up vs PCB Y-down; need explicit coordinate converter at boundary
-3. **Circular constraint dependencies** — Design propagation as strictly unidirectional (Schematic → PCB)
-4. **Shapely floating-point precision** — Define `_CLEARANCE_TOLERANCE_MM = 1e-4` for all distance comparisons
-5. **KiCad layer name canonicalization** — `LayerClassifier` utility with `is_copper()`, regex for `In\d+.Cu`
-6. **Component size estimation** — Extract real footprint bounding boxes from PcbIR, replace scalar heuristic
-
-## Phase Structure
-
-| Phase | Topic | Key Deliverables | Dependencies |
-|-------|-------|-----------------|--------------|
-| 50 | Constraint Propagation | ConstraintPropagator, PCBConstraint types, .kicad_dru parser | Phase 45-48 (topology, subcircuits, intent, design rules) |
-| 51 | PCB Spatial Intelligence | PcbSpatialModel, LayerStackup, CopperConnectivityGraph | Phase 50 (constraints), existing spatial/ + PcbIR |
-| 52 | Layout-Aware Placement | LayoutAwarePlacer, SignalFlowGrouper, ThermalPlacer | Phase 50 + 51 |
-| 53 | PCB DRC Intelligence | IntelligentDrcAnalyzer, FixSuggester, spatial violation enrichment | Phase 50 + 51 |
-| 54 | Design for Manufacturing | DfmChecker, ManufacturerProfiles, multi-stage DFM | Phase 51 (spatial model) |
-
-**Parallelism:** Phases 50 and 51 can run in parallel. Phases 52, 53, 54 can all run in parallel once 50+51 complete.
-
-## Key Design Decisions
-
-| ID | Decision | Rationale |
-|----|----------|-----------|
-| D-V3-01 | No constraint solver library | Propagation is deterministic lookup (SignalIntegrity → PcbConstraint), not SAT/CSP |
-| D-V3-02 | scipy as explicit dependency | Already installed transitively; v3.0 uses KDTree, linprog, cdist directly |
-| D-V3-03 | scikit-fem optional | Thermal FEM is heavy; distance-based heuristic suffices for most boards |
-| D-V3-04 | sexpdata for .kicad_dru | kiutils doesn't parse it; same raw S-expression pattern as PcbIR |
-| D-V3-05 | Extend existing DesignRuleEngine | PCB DRC and DFM rules extend existing ABC; no new framework |
-| D-V3-06 | Closed-form impedance | Hammerstad-Jensen, IPC-2141 formulas; no EM simulation needed |
-
-## Risk Assessment
-
-| Risk | Severity | Mitigation |
-|------|----------|------------|
-| kiutils UUID loss in new PCB paths | Critical | Lint rule + roundtrip validation after every PCB phase |
-| Y-axis coordinate mismatch | Critical | Coordinate converter tested against Arduino_Mega fixture |
-| Shapely floating-point false positives | High | Explicit tolerance constant, rounded comparisons |
-| DRC JSON report format change | Moderate | Schema version check at parse time, defensive parsing |
-| Thermal analysis missing power data | Moderate | Opt-in ThermalProfile, graceful degradation to connectivity-driven |
-
-## Estimated Scope
-
-- **New code:** ~3,400 lines across 12 modules
-- **Modified code:** ~6 files, all additive changes
-- **New dependencies:** 1 core (scipy), 1 optional (scikit-fem)
-- **Estimated test count:** 80-100 new tests across 5 phases
-
----
-*Research synthesized: 2026-06-01*
-*Ready for roadmap: yes*
+- **HIGH:** DRC files exist and are verifiable (PCBWay official repo, AISLER official repo, Cimos MIT aggregator)
+- **HIGH:** kicad-cli supports `--custom-rules` flag (documented, tested in KiCad 9/10)
+- **HIGH:** Existing codebase primitives (ManufacturerProfile, ManufacturingManifest, export wrappers) — verified via codebase mapping
+- **MEDIUM:** title_block field format in KiCad 10 (may have quoting variations — needs testing)
+- **MEDIUM:** MacroFab API endpoint details (gated behind authenticated portal)
+- **DEFERRED:** All API adapter implementation (no code until credentials obtained)
