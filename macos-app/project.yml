@@ -32,6 +32,11 @@ settings:
     CODE_SIGN_IDENTITY: "Apple Development"
     CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: NO
+    # Release uses manual signing for App Store distribution via fastlane.
+    # Debug keeps automatic signing for dev builds.
+    CODE_SIGN_IDENTITY[config=Release]: "Apple Distribution"
+    CODE_SIGN_STYLE[config=Release]: Manual
+    PROVISIONING_PROFILE_SPECIFIER[config=Release]: "Volta"
     GCC_NO_COMMON_BLOCKS: YES
     # Explicit module builds fail to resolve C module deps (Cmlx, _NumericsShims)
     # from SPM packages. The implicit module system (used by swift build) works.
