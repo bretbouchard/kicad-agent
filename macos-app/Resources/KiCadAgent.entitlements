@@ -5,22 +5,14 @@
     <!--
       Phase 166 — BYOK Keychain Storage
       Per MOD-05: app makes direct HTTPS calls to LLM providers. Required
-      for outbound network (URLSession). Activated at Fastlane packaging
-      time (Phase 203).
+      for outbound network (URLSession).
     -->
     <key>com.apple.security.network.client</key>
     <true/>
     <!--
-      Per MOD-04: API keys in Keychain. Read/write access required. iCloud
-      Keychain sync enabled when user opts IN (default).
-    -->
-    <key>com.apple.security.keychain-access-groups</key>
-    <array>
-        <string>$(AppIdentifierPrefix)com.bretbouchard.kicad-agent</string>
-    </array>
-    <!--
-      Local daemon — bundled Python daemon communicates over localhost
-      (Phase 162). Loopback exemption in sandbox.
+      Per MOD-04: API keys in Keychain. macOS sandboxed apps get keychain
+      access automatically — keychain-access-groups entitlement is rejected
+      by App Store for macOS (iOS only). Use the default keychain group.
     -->
     <key>com.apple.security.network.server</key>
     <false/>
