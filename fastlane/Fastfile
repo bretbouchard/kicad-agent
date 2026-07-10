@@ -9,7 +9,7 @@
 #   3. App Store Connect app record
 # When these are unavailable, lanes run in --skip / --readonly stub mode.
 
-default_bundle_id = "com.kicadagent.app"
+default_bundle_id = "com.bretbouchard.volta"
 
 before_all do
   ensure_env_vars(
@@ -62,12 +62,12 @@ lane :beta do |options|
   # Requires: cd macos-app && xcodegen generate (produces KiCadAgent.xcodeproj)
   # Stub mode (no MATCH_PASSWORD): produces unsigned archive.
   Dir.chdir("../macos-app") do
-    sh("xcodegen generate") unless File.exist?("KiCadAgent.xcodeproj")
+    sh("xcodegen generate") unless File.exist?("VoltaPCB.xcodeproj")
   end
 
   build_app(
-    scheme: "KiCadAgent",
-    project: "../macos-app/KiCadAgent.xcodeproj",
+    scheme: "VoltaPCB",
+    project: "../macos-app/VoltaPCB.xcodeproj",
     export_method: "app-store",
     output_directory: "../build",
     skip_code_signing: ENV["MATCH_PASSWORD"].nil?

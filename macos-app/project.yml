@@ -1,6 +1,6 @@
-# KiCadAgent — XcodeGen Project
+# Volta PCB — XcodeGen Project
 #
-# Generates KiCadAgent.xcodeproj for xcodebuild archive / fastlane gym.
+# Generates VoltaPCB.xcodeproj for xcodebuild archive / fastlane gym.
 # The SPM Package.swift stays for fast `swift test` dev iteration.
 # This project is for shipping: signed .app bundles, archives, TestFlight.
 #
@@ -11,9 +11,9 @@
 # (only macOS 26.5 SDK installed; unsafeFlags force the 27.0 ABI target,
 #  same approach as Package.swift).
 
-name: KiCadAgent
+name: VoltaPCB
 options:
-  bundleIdPrefix: com.kicadagent
+  bundleIdPrefix: com.bretbouchard
   developmentTeam: "68SDK93S22"
   defaultConfig: Debug
   configs:
@@ -46,9 +46,9 @@ packages: {}
 
 targets:
   # ===========================================================================
-  # KiCadAgent — macOS 27 Liquid Glass app
+  # VoltaPCB — macOS 27 Liquid Glass app
   # ===========================================================================
-  KiCadAgent:
+  VoltaPCB:
     type: application
     platform: macOS
     deploymentTarget:
@@ -72,8 +72,8 @@ targets:
           - "Models/Providers/MLXLocalProvider.swift"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.kicadagent.app
-        PRODUCT_NAME: KiCadAgent
+        PRODUCT_BUNDLE_IDENTIFIER: com.bretbouchard.volta
+        PRODUCT_NAME: Volta PCB
         # SDK max is 26.5.99. Setting 27.0 emits a warning but produces a
         # binary that refuses to launch on macOS 26. When Xcode 27 SDK lands,
         # this becomes clean. The Package.swift uses unsafeFlags for this; we
@@ -114,9 +114,9 @@ targets:
           echo "Copied daemon bundle to $DAEMON_DEST"
 
   # ===========================================================================
-  # KiCadAgentTests — unit tests (swift-testing framework)
+  # VoltaPCBTests — unit tests (swift-testing framework)
   # ===========================================================================
-  KiCadAgentTests:
+  VoltaPCBTests:
     type: bundle.unit-test
     platform: macOS
     deploymentTarget:
@@ -128,32 +128,32 @@ targets:
       # is unavailable there.
       - path: Sources/KiCadAgent/Testing
     dependencies:
-      - target: KiCadAgent
+      - target: VoltaPCB
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.kicadagent.app.tests
-        PRODUCT_NAME: KiCadAgentTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.bretbouchard.volta.tests
+        PRODUCT_NAME: VoltaPCBTests
         MACOSX_DEPLOYMENT_TARGET: "27.0"
         GENERATE_INFOPLIST_FILE: YES
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/KiCadAgent.app/Contents/MacOS/KiCadAgent"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Volta PCB.app/Contents/MacOS/Volta PCB"
 
 # ============================================================================
 # Schemes
 # ============================================================================
 schemes:
-  KiCadAgent:
+  VoltaPCB:
     build:
       targets:
-        KiCadAgent: all
+        VoltaPCB: all
     run:
       config: Debug
     archive:
       config: Release
-  KiCadAgentTests:
+  VoltaPCBTests:
     build:
       targets:
-        KiCadAgentTests: all
+        VoltaPCBTests: all
     test:
       config: Debug
       targets:
-        - KiCadAgentTests
+        - VoltaPCBTests

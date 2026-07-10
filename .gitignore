@@ -99,3 +99,6 @@ __init___sklib.py
 /macos-app/*.xcodeproj/
 /macos-app/*.xcworkspace/
 /macos-app/Package.resolved.bak
+
+# Old project name (cleanup)
+/macos-app/KiCadAgent.xcodeproj/
