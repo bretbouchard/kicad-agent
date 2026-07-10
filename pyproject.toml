@@ -52,6 +52,12 @@ vision = [
 mcp = [
     "mcp>=1.0.0",
 ]
+playground = [
+    "fastapi>=0.115",
+    "httpx2>=2.0",
+    "python-multipart>=0.0.18",
+    "websockets>=13.0",
+]
 training = [
     "torch>=2.0",
     "transformers>=4.40",
