@@ -10,12 +10,14 @@
 Phase 206 ships verified `.kicad_dru` files for 5+ PCB manufacturers and adds the ability to run DRC against a specific vendor's manufacturing limits as a pre-flight gate. This is independent of Phase 205 (can be worked in parallel) but feeds into Phase 208 (Handoff Package) which uses vendor DRC in its pre-handoff validation gate.
 
 **What ships:**
-- 8+ static `.kicad_dru` files in `src/kicad_agent/manufacturing/drc_profiles/` (PCBWay, JLCPCB, AISLER 2/4/6/8L, OSH Park, Advanced Circuits, generic)
+- 8+ static `.kicad_dru` files in `src/kicad_agent/manufacturing/drc_profiles/` (PCBWay, JLCPCB, AISLER 2/4/6/8L, OSH Park, Advanced Circuits, generic) — shipped as reference artifacts for GUI use and as source of truth for numeric limits
 - Source attribution header comments in each profile file (repo URL, license, last-verified date)
 - `ManufacturerProfile` extended with `drc_rules_path: Path | None` field (DRC-05)
-- `run_drc()` extended with `custom_rules: Path | None` parameter — appends `--custom-rules <path>` to kicad-cli command
-- `drc_vendor` operation: resolve vendor profile → run DRC with custom rules → return `DrcResult`
+- **Internal vendor DRC evaluator** in `manufacturing/vendor_drc.py` — reads board geometry from `PcbIR` and checks against `ManufacturerProfile` numeric limits (track width, clearance, drill size, annular ring) in Python. Returns `DrcResult`-shaped structure with violations for any feature below vendor limits.
+- `drc_vendor` operation: resolve vendor profile → run internal evaluator → return `VendorDrcResult`
 - `list_vendor_drc_profiles` query operation: list available vendor profiles + their capabilities
+
+**CRITICAL PIVOT (from RESEARCH RQ1):** `kicad-cli pcb drc --custom-rules` does NOT exist in KiCad 10. Verified empirically. The `drc_vendor` op uses **internal Python-based geometric evaluation** (Option C from research) instead of relying on kicad-cli to enforce vendor rules. The `.kicad_dru` files still ship for GUI use and as documentation, but the automated pre-flight gate is our own evaluator. This gives MORE flexibility than the CLI approach — we can check any vendor's limits without depending on KiCad's rule engine.
 
 **What does NOT ship (later phases):**
 - BOM/CPL profile-driven formatting (Phase 208)
@@ -79,26 +81,43 @@ Phase 206 ships verified `.kicad_dru` files for 5+ PCB manufacturers and adds th
   - `aisler_2layer` through `aisler_8layer` → 4 new profiles with layer-appropriate constraints
 - **`load_profile(name_or_path)` unchanged** — still resolves built-in keys or file paths. The `drc_rules_path` field just points to the bundled file.
 
-### run_drc() Extension (DRC-01)
+### Internal Vendor DRC Evaluator (DRC-01) — REPLACES run_drc() extension
 
-- **Extend existing `validation/erc_drc.py` `run_drc()`:**
+**CRITICAL:** `kicad-cli pcb drc --custom-rules` does NOT exist in KiCad 10 (verified empirically in RESEARCH RQ1). Instead of extending `run_drc()`, we build an **internal evaluator** that checks board geometry against vendor limits.
+
+- **New file:** `src/kicad_agent/manufacturing/vendor_drc.py`
+- **Function:** `run_vendor_drc(ir: PcbIR, profile: ManufacturerProfile) -> VendorDrcResult`
+  - Walks `PcbIR` native board to extract actual geometry:
+    - Track/segment widths from `NativeSegment.width`
+    - Via drill sizes from `NativeVia.drill` and via diameter from `NativeVia.size`
+    - Pad drill sizes from `NativePad.drill` (if through-hole)
+    - Annular ring: computed as `(pad_or_via_diameter - drill) / 2`
+    - Clearance: computed from pairwise distance between copper elements (tracks, pads) on the same layer — use existing spatial query infrastructure if available, or a simplified bounding-box check
+  - Compares each dimension against `ManufacturerProfile` limits:
+    - `min_trace_width_mm` → check all segments
+    - `min_drill_mm` → check all via drills and pad drills
+    - `min_annular_ring_mm` → check all vias and PTH pads
+    - `min_clearance_mm` → check track-to-track, track-to-pad, pad-to-pad distances
+    - `min_via_diameter_mm` → check all via diameters
+  - Returns `VendorDrcResult` with violations for any feature below limits
+- **Violation type:** Reuses existing `Violation` frozen dataclass from `validation/erc_drc.py`:
+  - `type`: `"vendor_trace_width"`, `"vendor_drill_size"`, `"vendor_annular_ring"`, `"vendor_clearance"`, `"vendor_via_diameter"`
+  - `severity`: `Severity.ERROR` (below min) or `Severity.WARNING` (at boundary)
+  - `description`: human-readable, e.g. `"Track width 0.15mm below PCBWay minimum 0.20mm"`
+  - `items`: list of dicts with coordinates, net name, actual value, required value
+- **Result type:** `VendorDrcResult` frozen dataclass in `manufacturing/vendor_drc.py`:
   ```python
-  def run_drc(
-      pcb_path: str | Path,
-      *,
-      check_schematic_parity: bool = False,
-      custom_rules: str | Path | None = None,  # NEW
-      timeout: int = 300,
-  ) -> DrcResult:
+  @dataclass(frozen=True)
+  class VendorDrcResult:
+      vendor: str
+      passed: bool
+      violations: tuple[Violation, ...]
+      profile_name: str
+      checks_run: tuple[str, ...]  # which checks were evaluated
   ```
-- **Command construction** (mirrors the existing `check_schematic_parity` pattern at line 384):
-  ```python
-  if custom_rules is not None:
-      cmd.append("--custom-rules")
-      cmd.append(str(custom_rules))
-  ```
-- **Reuses everything:** `DrcResult`, `Violation`, `_parse_violations()`, tempfile handling, `os.chmod 0o600`, `cli_resolver.find_kicad_cli()`, cleanup in `finally`.
-- **Security:** `custom_rules` path is validated — must be an existing file with `.kicad_dru` extension. No path traversal risk since the path comes from either the bundled profiles (safe) or a user-provided path (validated by `TargetFile`-like check).
+  - `passed = len(violations) == 0` (or only warnings)
+- **Clearance check optimization:** Full pairwise clearance checking is O(n²). For Phase 206 v1, use a spatial index (existing `SpatialQueryEngine` if available, or `shapely.STRtree`) to avoid brute force. If no spatial index is available, limit to track-to-track and track-to-pad checks on the same layer with bounding-box pre-filtering.
+- **Also run standard DRC:** The `drc_vendor` handler should ALSO run the standard `run_drc()` (KiCad's built-in DRC) alongside the vendor checks, so users get both KiCad's design rule violations AND vendor-specific manufacturing limit violations. Return both in the result.
 
 ### drc_vendor Operation (DRC-01, DRC-04)
 
@@ -108,16 +127,16 @@ Phase 206 ships verified `.kicad_dru` files for 5+ PCB manufacturers and adds th
       op_type: Literal["drc_vendor"] = "drc_vendor"
       target_file: TargetFile
       vendor: str = Field(description="Vendor name (pcbway, jlcpcb, aisler_2layer, oshpark, advanced_circuits, generic)")
-      check_schematic_parity: bool = False
+      run_kicad_drc: bool = Field(default=True, description="Also run KiCad's built-in DRC alongside vendor checks")
   ```
 - **Registry:** `is_readonly: True`, `category: "query"`, `file_types: [".kicad_pcb"]`
-  - Rationale: DRC doesn't modify the PCB file — it reads it and produces a report. Read-only is correct even though it runs an external subprocess.
+  - Rationale: DRC doesn't modify the PCB file — it reads it and produces a report. Read-only is correct.
 - **Handler:** `@register_query("drc_vendor")` in `handlers/query.py`
   - Resolves vendor name → `ManufacturerProfile` via `load_profile(vendor)`
-  - Gets `drc_rules_path` from the profile
-  - Calls `run_drc(pcb_path, custom_rules=drc_rules_path, check_schematic_parity=op.check_schematic_parity)`
-  - Returns `DrcResult` as a dict (serializes the frozen dataclass)
-- **Vendor resolution:** If vendor name not found in `load_profile()`, raise `ValueError` listing available vendors. If vendor profile has `drc_rules_path = None`, raise `ValueError("Vendor '{vendor}' has no DRC rules file")`.
+  - Calls `run_vendor_drc(ir, profile)` from `manufacturing/vendor_drc.py`
+  - If `op.run_kicad_drc` is True, also calls `run_drc(pcb_path)` from `validation/erc_drc.py` and merges results
+  - Returns serialized `VendorDrcResult` as dict
+- **Vendor resolution:** If vendor name not found in `load_profile()`, raise `ValueError` listing available vendors.
 
 ### list_vendor_drc_profiles Operation (DRC-08)
 
@@ -187,10 +206,12 @@ Phase 206 ships verified `.kicad_dru` files for 5+ PCB manufacturers and adds th
 ### Profile Model
 - `src/kicad_agent/dfm/profiles.py` — `ManufacturerProfile` pydantic BaseModel (line 24), `_PROFILES` dict (line 181), `load_profile` function (line 200), `get_builtin_profiles` (line 190)
 
-### DRC Runner
-- `src/kicad_agent/validation/erc_drc.py` — `run_drc()` (line 322), `DrcResult` frozen dataclass (line 91), `Violation` frozen dataclass (line 47), `_parse_violations()` (line 137), command construction with `--format json` + `--severity-all` (lines 373-385), security hardening: tempfile + `os.chmod 0o600` (line 409)
+### DRC Runner (for standard DRC alongside vendor checks)
+- `src/kicad_agent/validation/erc_drc.py` — `run_drc()` (line 322), `DrcResult` frozen dataclass (line 91), `Violation` frozen dataclass (line 47), `Severity` enum (line 39), `_parse_violations()` (line 137)
 
-### kicad-cli Discovery
+### PcbIR (for internal vendor DRC evaluator)
+- `src/kicad_agent/ir/pcb_ir.py` — `PcbIR` class wrapping `NativeBoard`
+- `src/kicad_agent/parser/pcb_native_types.py` — `NativeSegment` (width field), `NativeVia` (size, drill fields), `NativePad` (drill field), `NativeFootprint` (pads tuple)
 - `src/kicad_agent/cli_resolver.py` — `find_kicad_cli()` (line 104), `CliInfo` frozen dataclass (line 31)
 
 ### Operation Patterns
