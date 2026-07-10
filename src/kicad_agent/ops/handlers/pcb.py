@@ -245,6 +245,48 @@ def _handle_move_footprint(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any
     }
 
 
+@register_pcb("set_board_metadata")
+def _handle_set_board_metadata(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Set board metadata fields in title_block via PcbRawWriter (META-03).
+
+    Delegates to ``PcbRawWriter.set_title_block_fields`` (block-level rebuild)
+    and commits via ``ir.commit_raw_content`` (raw-writer mutation path per
+    RESEARCH RQ2 -- the PCB serializer does NOT emit NativeBoard fields).
+    """
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    new_content = PcbRawWriter.set_title_block_fields(
+        ir.raw_content,
+        title=op.title,
+        date=op.date,
+        rev=op.rev,
+        company=op.company,
+        comments=op.comments,
+    )
+    ir.commit_raw_content(new_content)
+    return {
+        "title": op.title,
+        "date": op.date,
+        "rev": op.rev,
+        "company": op.company,
+        "comments": op.comments,
+    }
+
+
+@register_pcb("set_board_revision")
+def _handle_set_board_revision(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Set the board revision field in title_block via PcbRawWriter (META-02).
+
+    Convenience wrapper delegating to ``set_board_metadata``'s raw-writer path
+    with only the rev field.
+    """
+    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+
+    new_content = PcbRawWriter.set_title_block_fields(ir.raw_content, rev=op.rev)
+    ir.commit_raw_content(new_content)
+    return {"rev": op.rev}
+
+
 @register_pcb("add_track")
 def _handle_add_track(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     """Add a straight track segment via PcbRawWriter (Phase 101-01).
