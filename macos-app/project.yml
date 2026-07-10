@@ -74,6 +74,10 @@ targets:
           # will re-enable this for shipping builds.
           - "Models/Providers/MLXLocalProvider.swift"
       - path: Resources/Assets.xcassets
+      - path: Resources/AppIcon.icns
+        buildPhase: resources
+      - path: Resources/KiCadAgent.entitlements
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.bretbouchard.volta
@@ -93,7 +97,7 @@ targets:
         INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 Bret Bouchard. All rights reserved."
         SWIFT_EMIT_LOC_STRINGS: YES
         CODE_SIGN_ENTITLEMENTS: Resources/KiCadAgent.entitlements
-        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_CFBundleIconFile: AppIcon
         MARKETING_VERSION: "6.0.0"
         CURRENT_PROJECT_VERSION: "1"
     postBuildScripts:
