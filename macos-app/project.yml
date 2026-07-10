@@ -1,0 +1,159 @@
+# KiCadAgent — XcodeGen Project
+#
+# Generates KiCadAgent.xcodeproj for xcodebuild archive / fastlane gym.
+# The SPM Package.swift stays for fast `swift test` dev iteration.
+# This project is for shipping: signed .app bundles, archives, TestFlight.
+#
+# Usage: cd macos-app && xcodegen generate
+#
+# Dev team 68SDK93S22 from White Room + keychain signing identities.
+# macOS 27.0 target — FoundationModels + Liquid Glass requirement
+# (only macOS 26.5 SDK installed; unsafeFlags force the 27.0 ABI target,
+#  same approach as Package.swift).
+
+name: KiCadAgent
+options:
+  bundleIdPrefix: com.kicadagent
+  developmentTeam: "68SDK93S22"
+  defaultConfig: Debug
+  configs:
+    Debug:
+      type: debugging
+    Release:
+      type: release
+  groupSortPosition: top
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.2"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    DEVELOPMENT_TEAM: "68SDK93S22"
+    CODE_SIGN_IDENTITY: "Apple Development"
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    GCC_NO_COMMON_BLOCKS: YES
+    # Explicit module builds fail to resolve C module deps (Cmlx, _NumericsShims)
+    # from SPM packages. The implicit module system (used by swift build) works.
+    SWIFT_USE_INTEGRATED_DRIVER: YES
+    SWIFT_ENABLE_EXPLICIT_MODULES: NO
+    # swift-testing (import Testing) lives in the developer frameworks, not
+    # the OS SDK. The Testing/ source group uses it for test-infrastructure
+    # helpers compiled into the app target (same as SPM).
+    FRAMEWORK_SEARCH_PATHS: "$(inherited) $(PLATFORM_DIR)/Developer/Library/Frameworks"
+
+packages: {}
+
+targets:
+  # ===========================================================================
+  # KiCadAgent — macOS 27 Liquid Glass app
+  # ===========================================================================
+  KiCadAgent:
+    type: application
+    platform: macOS
+    deploymentTarget:
+      macOS: "27.0"
+    sources:
+      - path: Sources/KiCadAgent
+        excludes:
+          # Test infrastructure uses swift-testing macros (@Tag, @Suite) that
+          # require the TestingMacros compiler plugin — not available in an
+          # app target build. These compile fine under SPM (toolchain provides
+          # the plugin) and are included in KiCadAgentTests below.
+          - "Testing/**"
+          # MLXLocalProvider imports MLX/MLXNN from mlx-swift SPM package.
+          # Xcode's explicit module build can't resolve the transitive C
+          # module deps (Cmlx, _NumericsShims) from SPM. SPM builds work
+          # fine (swift test / swift build). For Xcode/shipping, MLX is
+          # excluded — the provider is dynamically registered by the Router
+          # when a model is downloaded, so no code references the type
+          # directly. Pre-built MLX xcframework integration (like White Room)
+          # will re-enable this for shipping builds.
+          - "Models/Providers/MLXLocalProvider.swift"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kicadagent.app
+        PRODUCT_NAME: KiCadAgent
+        # SDK max is 26.5.99. Setting 27.0 emits a warning but produces a
+        # binary that refuses to launch on macOS 26. When Xcode 27 SDK lands,
+        # this becomes clean. The Package.swift uses unsafeFlags for this; we
+        # use the deployment target directly to keep explicit module build
+        # (Cmlx, _NumericsShims) consistent across all targets.
+        MACOSX_DEPLOYMENT_TARGET: "27.0"
+        # Hardened runtime required for distribution.
+        ENABLE_HARDENED_RUNTIME: YES
+        # Auto-generated Info.plist with deployment target.
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSMinimumSystemVersion: "27.0"
+        INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 Bret Bouchard. All rights reserved."
+        SWIFT_EMIT_LOC_STRINGS: YES
+        CODE_SIGN_ENTITLEMENTS: Resources/KiCadAgent.entitlements
+        MARKETING_VERSION: "6.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+    postBuildScripts:
+      - name: Copy Bundled Daemon
+        # Copies the PyInstaller daemon bundle (845 MB) into Contents/Resources/
+        # so ProcessManager.resolveDaemonURL() finds it via Bundle.main.url(forResource:).
+        # Skips gracefully in dev builds where dist/ doesn't exist.
+        runOnlyWhenInstalling: false
+        script: |
+          set -e
+          DAEMON_SRC="${PROJECT_DIR}/daemon/dist/kicad-agent-daemon"
+          RESOURCES_DIR="${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Resources"
+          DAEMON_DEST="${RESOURCES_DIR}/kicad-agent-daemon"
+          mkdir -p "$RESOURCES_DIR"
+          if [ ! -d "$DAEMON_SRC" ]; then
+            echo "Daemon dist not found at $DAEMON_SRC — skipping (dev build without daemon)"
+            exit 0
+          fi
+          if [ -d "$DAEMON_DEST" ]; then
+            rm -rf "$DAEMON_DEST"
+          fi
+          cp -R "$DAEMON_SRC" "$DAEMON_DEST"
+          chmod +x "$DAEMON_DEST/kicad-agent-daemon"
+          echo "Copied daemon bundle to $DAEMON_DEST"
+
+  # ===========================================================================
+  # KiCadAgentTests — unit tests (swift-testing framework)
+  # ===========================================================================
+  KiCadAgentTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget:
+      macOS: "27.0"
+    sources:
+      - path: Tests/KiCadAgentTests
+      # Include the test-infrastructure helpers (swift-testing macros).
+      # Excluded from the app target because the TestingMacros plugin
+      # is unavailable there.
+      - path: Sources/KiCadAgent/Testing
+    dependencies:
+      - target: KiCadAgent
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kicadagent.app.tests
+        PRODUCT_NAME: KiCadAgentTests
+        MACOSX_DEPLOYMENT_TARGET: "27.0"
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/KiCadAgent.app/Contents/MacOS/KiCadAgent"
+
+# ============================================================================
+# Schemes
+# ============================================================================
+schemes:
+  KiCadAgent:
+    build:
+      targets:
+        KiCadAgent: all
+    run:
+      config: Debug
+    archive:
+      config: Release
+  KiCadAgentTests:
+    build:
+      targets:
+        KiCadAgentTests: all
+    test:
+      config: Debug
+      targets:
+        - KiCadAgentTests

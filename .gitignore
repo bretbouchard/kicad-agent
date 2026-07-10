@@ -94,3 +94,8 @@ __init___sklib.py
 
 # Root-level stray KiCad schematics (test pollution)
 /x64-*.kicad_sch
+
+# XcodeGen output (generated from project.yml, never checked in)
+/macos-app/*.xcodeproj/
+/macos-app/*.xcworkspace/
+/macos-app/Package.resolved.bak

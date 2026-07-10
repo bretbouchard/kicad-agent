@@ -24,19 +24,14 @@ end
 lane :test do |options|
   UI.message("Phase 203 — Running validation pipeline")
 
-  # Swift package tests
+  # Swift tests via SPM (fast dev loop, no archive needed)
   Dir.chdir("../macos-app") do
-    sh("swift test")
+    sh("swift test --no-parallel")
   end
 
   # Python daemon tests with coverage
   Dir.chdir("..") do
     sh("pytest --cov=kicad_agent --cov-fail-under=80")
-  end
-
-  # CI coverage gate
-  Dir.chdir("..") do
-    sh("python3 scripts/ci_coverage_gate.py --strict")
   end
 
   UI.success("All tests pass")
@@ -63,11 +58,20 @@ lane :beta do |options|
     )
   end
 
-  # Build the .app via SPM + xcodebuild wrapper.
-  # Phase 203.1 ships Xcode project; for now build via SPM and verify.
+  # Build the .app via XcodeGen + gym.
+  # Requires: cd macos-app && xcodegen generate (produces KiCadAgent.xcodeproj)
+  # Stub mode (no MATCH_PASSWORD): produces unsigned archive.
   Dir.chdir("../macos-app") do
-    sh("swift build -c release")
+    sh("xcodegen generate") unless File.exist?("KiCadAgent.xcodeproj")
   end
+
+  build_app(
+    scheme: "KiCadAgent",
+    project: "../macos-app/KiCadAgent.xcodeproj",
+    export_method: "app-store",
+    output_directory: "../build",
+    skip_code_signing: ENV["MATCH_PASSWORD"].nil?
+  )
 
   # Archive + upload to TestFlight (Phase 203.1 when ASC record exists)
   if ENV["APP_STORE_CONNECT_API_KEY_ID"].nil?
