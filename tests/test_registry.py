@@ -21,10 +21,9 @@ class TestRegistryCompleteness:
     """Verify the registry has the expected number of operations."""
 
     def test_registry_has_98_operations(self) -> None:
-        # Phase 205-01: 154 ops (was 142 stale assertion; actual was 151 +
-        # 3 new Phase 205 ops: read_board_metadata, set_board_metadata,
-        # set_board_revision).
-        assert len(OPERATION_REGISTRY) == 154
+        # Phase 206: 156 ops (was 154 after Phase 205; +2: drc_vendor,
+        # list_vendor_drc_profiles).
+        assert len(OPERATION_REGISTRY) == 156
 
     def test_validate_registry_completeness_passes(self) -> None:
         result = validate_registry_completeness()
@@ -125,6 +124,7 @@ class TestQueryFunctions:
             "detect_pin_overlaps",
             "detect_routing_collisions",
             "diagnose_violations",
+            "drc_vendor",
             "export_positions",
             "extract_nets",
             "extract_violation_positions",
@@ -133,6 +133,7 @@ class TestQueryFunctions:
             "get_constraints",
             "infer_connectivity",
             "list_design_rules",
+            "list_vendor_drc_profiles",
             "list_lib_entries",
             "list_net_classes",
             "navigate_hierarchy",

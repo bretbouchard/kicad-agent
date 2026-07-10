@@ -63,6 +63,29 @@ class VendorDrcResult:
 _EPS = 1e-9
 
 
+def _pos_xy(pos: Any) -> tuple[float, float]:
+    """Extract (x, y) from a position object (NamedTuple with .X/.Y or a tuple).
+
+    Handles both ``_NativePosition`` (has ``.X``/``.Y``) and plain tuples/lists.
+    Returns (0.0, 0.0) if pos is None or unparseable.
+    """
+    if pos is None:
+        return (0.0, 0.0)
+    # _NativePosition NamedTuple exposes .X/.Y attributes.
+    x = getattr(pos, "X", None)
+    y = getattr(pos, "Y", None)
+    if x is not None and y is not None:
+        try:
+            return (float(x), float(y))
+        except (TypeError, ValueError):
+            pass
+    # Fallback: index into a tuple/list.
+    try:
+        return (float(pos[0]), float(pos[1]))
+    except (TypeError, ValueError, IndexError):
+        return (0.0, 0.0)
+
+
 def run_vendor_drc(board: Any, profile: ManufacturerProfile) -> VendorDrcResult:
     """Run vendor-specific DRC checks against manufacturing limits.
 
@@ -155,10 +178,11 @@ def _check_track_width(
     out: list[Violation] = []
     for seg in segments:
         try:
-            width = float(getattr(seg, "width", 0.2) or 0.2)
+            raw_width = getattr(seg, "width", None)
+            width = float(raw_width) if raw_width is not None else 0.2
         except (TypeError, ValueError):
             continue
-        if width < limit:
+        if width < limit - _EPS:
             layer = getattr(seg, "layer", "") or ""
             net_name = getattr(seg, "net_name", "") or ""
             out.append(Violation(
@@ -190,7 +214,7 @@ def _check_drill_size(
             drill = float(getattr(via, "drill", 0.0) or 0.0)
         except (TypeError, ValueError):
             continue
-        if 0 < drill < limit:
+        if 0 < drill < limit - _EPS:
             net_name = getattr(via, "net_name", "") or ""
             out.append(Violation(
                 description=(
@@ -217,7 +241,7 @@ def _check_drill_size(
                 drill = float(getattr(pad, "drill", 0.0) or 0.0)
             except (TypeError, ValueError):
                 continue
-            if 0 < drill < limit:
+            if 0 < drill < limit - _EPS:
                 number = getattr(pad, "number", "") or ""
                 out.append(Violation(
                     description=(
@@ -256,7 +280,7 @@ def _check_annular_ring(
         if drill <= 0 or diameter <= 0:
             continue
         annular = (diameter - drill) / 2.0
-        if annular < limit:
+        if annular < limit - _EPS:
             net_name = getattr(via, "net_name", "") or ""
             out.append(Violation(
                 description=(
@@ -290,7 +314,7 @@ def _check_annular_ring(
             if drill <= 0 or diameter <= 0:
                 continue
             annular = (diameter - drill) / 2.0
-            if annular < limit:
+            if annular < limit - _EPS:
                 number = getattr(pad, "number", "") or ""
                 out.append(Violation(
                     description=(
@@ -324,7 +348,7 @@ def _check_via_diameter(
             continue
         if diameter <= 0:
             continue
-        if diameter < limit:
+        if diameter < limit - _EPS:
             net_name = getattr(via, "net_name", "") or ""
             out.append(Violation(
                 description=(
@@ -367,12 +391,8 @@ def _check_clearance(
         try:
             layer = getattr(seg, "layer", "") or ""
             width = float(getattr(seg, "width", 0.0) or 0.0)
-            start = getattr(seg, "start", None)
-            end = getattr(seg, "end", None)
-            sx = float(getattr(start, "X", getattr(start, 0, 0.0)) if start is not None else 0.0)
-            sy = float(getattr(start, "Y", getattr(start, 1, 0.0)) if start is not None else 0.0)
-            ex = float(getattr(end, "X", getattr(end, 0, 0.0)) if end is not None else 0.0)
-            ey = float(getattr(end, "Y", getattr(end, 1, 0.0)) if end is not None else 0.0)
+            sx, sy = _pos_xy(getattr(seg, "start", None))
+            ex, ey = _pos_xy(getattr(seg, "end", None))
             net_name = getattr(seg, "net_name", "") or ""
         except (TypeError, ValueError):
             continue
