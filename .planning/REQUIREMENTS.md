@@ -16,14 +16,14 @@
 
 ### Category 2: Vendor DRC Profiles (DRC)
 
-- [ ] **DRC-01**: User can run DRC against a specific vendor's manufacturing limits via `drc_vendor` operation (e.g., `drc_vendor(vendor="pcbway")`)
-- [ ] **DRC-02**: System ships verified `.kicad_dru` files for PCBWay, JLCPCB, AISLER (2/4/6/8-layer variants)
-- [ ] **DRC-03**: User can run DRC against OSH Park and Advanced Circuits profiles (authored from their published numeric specs)
-- [ ] **DRC-04**: User can run DRC against a generic conservative profile when vendor is unknown or unspecified
-- [ ] **DRC-05**: `ManufacturerProfile` (dfm/profiles.py) is extended with a `drc_rules_path` field linking to the `.kicad_dru` file
-- [ ] **DRC-06**: DRC profile files include source attribution (repo URL, license, last-verified date) in header comments
-- [ ] **DRC-07**: PCBWay profile updated to current capabilities (annular ring 0.15mm, not the stale 0.25mm from 2023)
-- [ ] **DRC-08**: User can list available vendor profiles and their capabilities via a query operation
+- [x] **DRC-01**: User can run DRC against a specific vendor's manufacturing limits via `drc_vendor` operation (e.g., `drc_vendor(vendor="pcbway")`)
+- [x] **DRC-02**: System ships verified `.kicad_dru` files for PCBWay, JLCPCB, AISLER (2/4/6/8-layer variants)
+- [x] **DRC-03**: User can run DRC against OSH Park and Advanced Circuits profiles (authored from their published numeric specs)
+- [x] **DRC-04**: User can run DRC against a generic conservative profile when vendor is unknown or unspecified
+- [x] **DRC-05**: `ManufacturerProfile` (dfm/profiles.py) is extended with a `drc_rules_path` field linking to the `.kicad_dru` file
+- [x] **DRC-06**: DRC profile files include source attribution (repo URL, license, last-verified date) in header comments
+- [x] **DRC-07**: PCBWay profile updated to current capabilities (annular ring 0.15mm, not the stale 0.25mm from 2023)
+- [x] **DRC-08**: User can list available vendor profiles and their capabilities via a query operation
 
 ### Category 3: Versioned Build System (BUILD)
 

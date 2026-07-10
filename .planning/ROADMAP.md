@@ -13,7 +13,7 @@ The handoff package is the universal fallback — it works with every fab (3 wit
 ## Phases
 
 - [x] **Phase 205: Board Metadata Foundation** — Parse/write KiCad `title_block`, `BoardSpec` model, sidecar JSON persistence (completed 2026-07-10)
-- [ ] **Phase 206: Vendor DRC Profiles** — Wire up `.kicad_dru` files (PCBWay, JLCPCB, AISLER, OSH Park, Advanced Circuits, generic), `drc_vendor` op
+- [x] **Phase 206: Vendor DRC Profiles** — Wire up `.kicad_dru` files (PCBWay, JLCPCB, AISLER, OSH Park, Advanced Circuits, generic), `drc_vendor` op (completed 2026-07-10)
 - [ ] **Phase 207: Versioned Build System** — Build record, manifest serialization, `build_create`/`build_list`/`build_show` ops, build diffing
 - [ ] **Phase 208: Manufacturer Handoff Package** — Full export orchestration, zip bundle + readme, vendor output profiles, pre-handoff validation gate
 - [ ] **Phase 209: Crossfile + MCP Integration** — MCP auto-exposure, CLI subcommands, `ProjectContext` discovery, `ManufacturerClient` ABC
@@ -74,7 +74,7 @@ The handoff package is the universal fallback — it works with every fab (3 wit
 3. User runs `drc_vendor(vendor="generic")` against an unknown vendor and gets conservative DRC results
 4. User can list available vendor profiles and see each profile's capabilities (layer count, min track, min clearance, source)
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 ---
 
@@ -257,7 +257,7 @@ Phase 206 (DRC) ────────┴────────────�
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 205. Board Metadata Foundation | 1/1 | Complete    | 2026-07-10 |
-| 206. Vendor DRC Profiles | 0/1 | Not started | - |
+| 206. Vendor DRC Profiles | 1/1 | Complete    | 2026-07-10 |
 | 207. Versioned Build System | 0/1 | Not started | - |
 | 208. Manufacturer Handoff Package | 0/1 | Not started | - |
 | 209. Crossfile + MCP Integration | 0/1 | Not started | - |
