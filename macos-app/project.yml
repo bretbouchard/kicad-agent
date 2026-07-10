@@ -98,18 +98,24 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
     postBuildScripts:
       - name: Copy Bundled Daemon
-        # Copies the PyInstaller daemon bundle (845 MB) into Contents/Resources/
-        # so ProcessManager.resolveDaemonURL() finds it via Bundle.main.url(forResource:).
-        # Skips gracefully in dev builds where dist/ doesn't exist.
+        # Copies the PyInstaller daemon bundle into Contents/Resources/.
+        # SKIPPED for App Store builds — the daemon contains unsigned binaries
+        # (torch, Python) that can't run in macOS App Sandbox.
+        # For non-App-Store dev builds, set BUNDLE_DAEMON=1 to include it.
+        # Future: download daemon to App Support on first launch.
         runOnlyWhenInstalling: false
         script: |
           set -e
+          if [ -z "${BUNDLE_DAEMON}" ]; then
+            echo "BUNDLE_DAEMON not set — skipping daemon copy (App Store sandbox compliant)"
+            exit 0
+          fi
           DAEMON_SRC="${PROJECT_DIR}/daemon/dist/kicad-agent-daemon"
           RESOURCES_DIR="${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Resources"
           DAEMON_DEST="${RESOURCES_DIR}/kicad-agent-daemon"
           mkdir -p "$RESOURCES_DIR"
           if [ ! -d "$DAEMON_SRC" ]; then
-            echo "Daemon dist not found at $DAEMON_SRC — skipping (dev build without daemon)"
+            echo "Daemon dist not found at $DAEMON_SRC — skipping"
             exit 0
           fi
           if [ -d "$DAEMON_DEST" ]; then

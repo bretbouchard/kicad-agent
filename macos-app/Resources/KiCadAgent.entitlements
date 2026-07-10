@@ -2,24 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!--
-      Phase 166 — BYOK Keychain Storage
-      Per MOD-05: app makes direct HTTPS calls to LLM providers. Required
-      for outbound network (URLSession).
-    -->
+    <!-- App Sandbox required for Mac App Store -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <!-- Phase 166 — outbound network for LLM provider API calls -->
     <key>com.apple.security.network.client</key>
     <true/>
-    <!--
-      Per MOD-04: API keys in Keychain. macOS sandboxed apps get keychain
-      access automatically — keychain-access-groups entitlement is rejected
-      by App Store for macOS (iOS only). Use the default keychain group.
-    -->
+    <!-- Local daemon communicates over localhost -->
     <key>com.apple.security.network.server</key>
-    <false/>
-    <!--
-      Phase 168+ — file write access for KiCad file operations. User-selected
-      files only (no broad file system access).
-    -->
+    <true/>
+    <!-- Phase 168+ — KiCad file read/write (user-selected only) -->
     <key>com.apple.security.files.user-selected.read-write</key>
     <true/>
 </dict>
