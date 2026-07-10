@@ -19,9 +19,17 @@ Usage::
 
 from __future__ import annotations
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+try:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+except ImportError:
+    # Daemon builds strip torch to keep the bundle small (~80MB vs 845MB).
+    # The placement engine handles this gracefully via try/except at
+    # engine.py:156-163 — it runs without the ML predictor.
+    torch = None
+    nn = None
+    F = None
 
 
 class BipartiteAttentionLayer(nn.Module):

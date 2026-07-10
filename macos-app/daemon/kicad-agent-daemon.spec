@@ -103,6 +103,38 @@ EXCLUDES = [
     "PyQt6",
     "PySide2",
     "PySide6",
+    # ML stack — daemon never uses these. Pulled in transitively via
+    # placement/model.py's torch import. Stripping saves ~575 MB.
+    "torch", "torchvision", "torchaudio",
+    "transformers", "tokenizers", "safetensors",
+    "pyarrow", "cv2", "opencv",
+    "scipy", "pandas",
+    "accelerate", "datasets", "sentencepiece",
+    "h5py", "lxml", "PIL", "Pillow",
+    "mlx", "sklearn", "scikit-learn",
+    "fastapi", "starlette", "uvicorn",
+    "cryptography", "aiohttp",
+    # numpy is pulled in transitively but pydantic/networkx/kiutils don't need it
+    "numpy",
+    # More transitive bloat — none used by the daemon's 16 handlers
+    "llvmlite", "numba",
+    "babel",
+    "botocore", "boto3", "moto",
+    "grpc", "grpc_tools",
+    "sphinx",
+    "psycopg2",
+    "Cython",
+    "hf_xet",
+    "sympy", "mpmath",
+    "markdown", "docutils",
+    "jinja2",
+    "psutil",
+    "tqdm",
+    "requests", "urllib3", "charset_normalizer",
+    "PyGithub",
+    "shapely",
+    "spicelib",
+    "skidl",
 ]
 
 # ---------------------------------------------------------------------------

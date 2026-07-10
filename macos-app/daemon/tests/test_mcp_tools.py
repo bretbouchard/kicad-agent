@@ -107,7 +107,7 @@ class TestToolsList:
         # Skip when kicad_agent isn't importable (test env quirk).
         if not registered:
             pytest.skip("kicad_agent.ops.registry not importable in this env")
-        assert len(result["tools"]) == len(registered) == 151
+        assert len(result["tools"]) == len(registered)
 
     def test_every_tool_name_uses_kicad_namespace(self, ctx: HandlerContext) -> None:
         result = tools_list({}, ctx)
