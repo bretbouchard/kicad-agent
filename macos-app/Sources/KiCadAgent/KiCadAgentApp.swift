@@ -36,20 +36,37 @@ struct KiCadAgentApp: App {
     /// Multi-window registry. Phase 171 — tracks open project windows + cap.
     @State private var windowManager: WindowManager = WindowManager()
 
+    /// Phase 210 — Provider registry for LLM routing (local + cloud).
+    @StateObject private var providerRegistry = ProviderRegistry()
+
+    /// Phase 210 — Local model manager (downloads, scans, registers).
+    @State private var localModelManager: LocalModelManager?
+
     var body: some Scene {
         WindowGroup {
             AppRootView()
                 .environment(daemonSupervisor)
                 .environment(kicadDetector)
                 .environment(windowManager)
+                .environmentObject(providerRegistry)
+                .sheet(isPresented: Binding(
+                    get: { localModelManager?.showDownloadSheet ?? false },
+                    set: { _ in }
+                )) {
+                    ModelDownloadView {
+                        localModelManager?.onDownloadComplete()
+                    }
+                }
                 .frame(minWidth: 900, minHeight: 600)
                 .onAppear {
                     // APP-01 augmentation: spawn daemon on launch; if it fails within
                     // 5 seconds, AppRootView surfaces recovery UI (no silent hang).
-                    KiCadAgentApp.logger.info("KiCadAgent launching — macOS 27 Liquid Glass shell")
+                    KiCadAgentApp.logger.info("Volta PCB launching — macOS 27 Liquid Glass shell")
                     daemonSupervisor.start()
                     // APP-04: detect KiCad on launch. Onboarding sheet shows if not ready.
                     Task { await kicadDetector.detect() }
+                    // Phase 210: scan for local model, show download prompt if missing.
+                    localModelManager = LocalModelManager(registry: providerRegistry)
                 }
                 .onDisappear {
                     // APP-05 augmentation placeholder: 5s shutdown timeout + force-kill

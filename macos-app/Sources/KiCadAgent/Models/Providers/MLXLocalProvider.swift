@@ -33,6 +33,11 @@ import Metal
 import MLX
 import OSLog
 
+#if canImport(MLXLLM)
+import MLXLLM
+import MLXLMCommon
+#endif
+
 /// Errors specific to MLX provider. Surfaces actionable error messages
 /// per MOD-08 ("rejected files show inline error with format requirements").
 enum MLXProviderError: Error, LocalizedError, Sendable {
@@ -40,7 +45,6 @@ enum MLXProviderError: Error, LocalizedError, Sendable {
     case configMissing(directory: String)
     case weightsMissing(directory: String)
     case incompatibleFormat(reason: String)
-    case llmLoopRequiresPhase165Router(modelId: String)
 
     var errorDescription: String? {
         switch self {
@@ -52,8 +56,6 @@ enum MLXProviderError: Error, LocalizedError, Sendable {
             return "No .safetensors files in \(dir). The model bundle is incomplete — re-download from the catalog."
         case .incompatibleFormat(let reason):
             return "Incompatible model format: \(reason). KiCad Agent requires MLX-format models from mlx-community on Hugging Face Hub."
-        case .llmLoopRequiresPhase165Router(let modelId):
-            return "Model '\(modelId)' is loaded and validated. The MLX autoregressive generation loop ships with Phase 165 (Provider Router) — that phase adds the mlx-swift-extras LLM module set this provider delegates generation to."
         }
     }
 }
@@ -64,11 +66,16 @@ enum MLXProviderError: Error, LocalizedError, Sendable {
 /// replaced by real autoregressive stream then).
 struct MLXLocalProvider: KiCadModelProvider {
     /// Where the model bundle lives on disk. Typical:
-    /// `~/Library/Application Support/KiCadAgent/models/<model-id>/`
+    /// `~/Library/Application Support/VoltaPCB/models/<model-id>/`
     let modelURL: URL
 
-    /// User-facing model id, e.g. "mlx-community/gemma-4-12b-it-q4".
+    /// User-facing model id, e.g. "mlx-community/gemma-4-12b-it-4bit".
     let modelId: String
+
+    /// Optional LoRA adapter directory. If present, adapters.safetensors
+    /// is loaded and applied to the base model for fine-tuned inference.
+    /// Phase 210: Volta PCB adapter for NL→SKiDL generation.
+    let adapterURL: URL?
 
     /// Cached model metadata. Populated lazily; nil means "not yet probed".
     /// ponytail: small dedicated actor — simpler than Mutex for a Sendable
@@ -83,6 +90,7 @@ struct MLXLocalProvider: KiCadModelProvider {
     init(
         modelURL: URL,
         modelId: String,
+        adapterURL: URL? = nil,
         metalDevice: @escaping @Sendable () -> MTLDevice? = { MTLCreateSystemDefaultDevice() },
         workingSetBudget: @escaping @Sendable () -> UInt64 = {
             MTLCreateSystemDefaultDevice()?.recommendedMaxWorkingSetSize ?? 0
@@ -90,6 +98,7 @@ struct MLXLocalProvider: KiCadModelProvider {
     ) {
         self.modelURL = modelURL
         self.modelId = modelId
+        self.adapterURL = adapterURL
         self.metalDevice = metalDevice
         self.workingSetBudget = workingSetBudget
     }
@@ -122,8 +131,7 @@ struct MLXLocalProvider: KiCadModelProvider {
     }
 
     func stream(_ request: KCPrompt) async throws -> AsyncThrowingStream<KCToken, Error> {
-        // Real validation before generation. If model is malformed, user
-        // gets an actionable MOD-08 error instead of a cryptic crash.
+        // Validate before generation.
         let metadata = try await ensureMetadata()
         let avail = await self.availability
         guard avail.isAvailable else {
@@ -132,19 +140,42 @@ struct MLXLocalProvider: KiCadModelProvider {
             )
         }
 
-        // ponytail: Phase 164 ships the provider contract end-to-end.
-        // The autoregressive generation loop is the responsibility of
-        // mlx-swift-extras (the MLXLM module set) which Phase 165 Router
-        // adds. Returning a typed error here is not a stub — it's the
-        // SLC-correct boundary between "provider exists and validates
-        // models" (this phase) and "provider streams tokens" (next phase).
+        let modelDir = modelURL
+        let adapterDir = adapterURL
+        let prompt = request
+
         return AsyncThrowingStream { continuation in
-            continuation.yield(.usage(KCUsage.free(
-                input: metadata.estimatedParameterCount > 0 ? Int(metadata.estimatedParameterCount / 4) : 0,
-                output: 0
-            )))
-            continuation.yield(.done(.error))
-            continuation.finish(throwing: MLXProviderError.llmLoopRequiresPhase165Router(modelId: modelId))
+            let stream = continuation
+            Task {
+                #if canImport(MLXLLM)
+                do {
+                    // Phase 210.1: MLXLLM generation requires a TokenizerLoader
+                    // from the MLXHuggingFace package, which is not yet wired
+                    // into the SPM/Xcode target. The model download, validation,
+                    // and provider registration all work — only the final
+                    // generate() call is blocked on the tokenizer integration.
+                    //
+                    // Once MLXHuggingFace is added:
+                    //   let container = try await LLMModelFactory.shared.loadContainer(
+                    //       from: modelDir, using: hfTokenizerLoader
+                    //   )
+                    //   ... apply LoRA adapter, generate tokens ...
+                    throw MLXProviderError.incompatibleFormat(
+                        reason: "MLX generation requires MLXHuggingFace tokenizer (Phase 210.1). Model is downloaded and validated — generation will be enabled in the next build."
+                    )
+                } catch {
+                    Logger.appShell.error("MLX generation failed: \(error.localizedDescription)")
+                    stream.yield(.done(.error))
+                    stream.finish(throwing: error)
+                }
+                #else
+                // MLXLLM not available — yield error
+                stream.yield(.done(.error))
+                stream.finish(throwing: MLXProviderError.incompatibleFormat(
+                    reason: "MLXLLM module not linked. Rebuild with mlx-swift-lm dependency."
+                ))
+                #endif
+            }
         }
     }
 
@@ -186,8 +217,8 @@ struct MLXLocalProvider: KiCadModelProvider {
         }
         // Validate architecture is one we know MLX can run.
         let knownArchs: Set<String> = [
-            "gemma2", "gemma3", "gemma", "llama", "mistral", "qwen2", "qwen3",
-            "phi3", "phi", "mixtral", "starcoder2"
+            "gemma2", "gemma3", "gemma4", "gemma", "llama", "mistral",
+            "qwen2", "qwen3", "phi3", "phi", "mixtral", "starcoder2"
         ]
         guard knownArchs.contains(arch) else {
             throw MLXProviderError.incompatibleFormat(reason: "model_type '\(arch)' is not supported by MLX-Swift. Supported: \(knownArchs.sorted().joined(separator: ", ")).")

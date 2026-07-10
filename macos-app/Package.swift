@@ -25,25 +25,26 @@ let package = Package(
     ],
     dependencies: [
         // Phase 164: MLX-Swift for in-process Metal-accelerated LLM inference.
-        // Used by MLXLocalProvider for loading .mlx fine-tuned models.
-        // STACK.md decision: in-process MLX (not mlx-server subprocess).
-        // MLXLM (LLM helpers) lives in mlx-swift-extras; we model .mlx
-        // loading with MLX+MLXNN primitives here. Phase 165+ Router may
-        // add mlx-swift-extras when shipping inference to end users.
         .package(
             url: "https://github.com/ml-explore/mlx-swift",
             from: "0.31.6"
+        ),
+        // Phase 210: MLX LM for the autoregressive generation loop + LoRA
+        // adapter loading. Provides MLXLMCommon (pipeline, generate, tokenizer).
+        .package(
+            url: "https://github.com/ml-explore/mlx-swift-lm",
+            from: "3.31.4"
         )
     ],
     targets: [
         .executableTarget(
             name: "KiCadAgent",
             dependencies: [
-                // Phase 164: real MLX integration for VRAM probing and
-                // model format validation. MLXLM (LLM loop) ships in
-                // Phase 165 once Router lands.
                 .product(name: "MLX", package: "mlx-swift"),
-                .product(name: "MLXNN", package: "mlx-swift")
+                .product(name: "MLXNN", package: "mlx-swift"),
+                // Phase 210: generation loop + LoRA adapter loading.
+                .product(name: "MLXLLM", package: "mlx-swift-lm"),
+                .product(name: "MLXLMCommon", package: "mlx-swift-lm")
             ],
             // Force macOS 27 deployment target at the ABI level.
             // sdk 26.5 toolchain accepts this — produces binary that
