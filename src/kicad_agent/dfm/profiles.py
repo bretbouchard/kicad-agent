@@ -18,6 +18,8 @@ import yaml
 
 from pydantic import BaseModel, Field
 
+from kicad_agent.manufacturing.drc_profiles import get_drc_profile_path
+
 logger = logging.getLogger(__name__)
 
 
@@ -52,6 +54,7 @@ class ManufacturerProfile(BaseModel):
     supports_blind_vias: bool = Field(default=False)
     supports_castellated: bool = Field(default=False)
     extra: dict[str, Any] = Field(default_factory=dict)
+    drc_rules_path: Path | None = Field(default=None, description="Path to vendor .kicad_dru file")
 
     @classmethod
     def from_yaml(cls, path_or_string: str) -> ManufacturerProfile:
@@ -110,13 +113,14 @@ _JLCPCB_STANDARD = ManufacturerProfile(
     name="JLCPCB Standard 2-Layer",
     min_trace_width_mm=0.127,
     min_drill_mm=0.2,
-    min_annular_ring_mm=0.1,
+    min_annular_ring_mm=0.15,
     min_solder_mask_sliver_mm=0.1,
     min_clearance_mm=0.127,
     min_via_diameter_mm=0.4,
     max_board_dim_mm=500.0,
     supports_blind_vias=False,
     supports_castellated=True,
+    drc_rules_path=get_drc_profile_path("jlcpcb"),
 )
 
 _JLCPCB_4LAYER = ManufacturerProfile(
@@ -143,13 +147,14 @@ _PCBWAY_STANDARD = ManufacturerProfile(
     name="PCBWay Standard 2-Layer",
     min_trace_width_mm=0.1,
     min_drill_mm=0.2,
-    min_annular_ring_mm=0.1,
+    min_annular_ring_mm=0.15,
     min_solder_mask_sliver_mm=0.1,
     min_clearance_mm=0.1,
     min_via_diameter_mm=0.4,
     max_board_dim_mm=500.0,
     supports_blind_vias=True,
     supports_castellated=True,
+    drc_rules_path=get_drc_profile_path("pcbway"),
 )
 
 _OSH_PARK = ManufacturerProfile(
@@ -163,6 +168,7 @@ _OSH_PARK = ManufacturerProfile(
     max_board_dim_mm=400.0,
     supports_blind_vias=False,
     supports_castellated=False,
+    drc_rules_path=get_drc_profile_path("oshpark"),
 )
 
 _GENERIC_CONSERVATIVE = ManufacturerProfile(
@@ -176,6 +182,75 @@ _GENERIC_CONSERVATIVE = ManufacturerProfile(
     max_board_dim_mm=300.0,
     supports_blind_vias=False,
     supports_castellated=False,
+    drc_rules_path=get_drc_profile_path("generic"),
+)
+
+_ADVANCED_CIRCUITS = ManufacturerProfile(
+    name="Advanced Circuits",
+    min_trace_width_mm=0.1524,
+    min_drill_mm=0.15,
+    min_annular_ring_mm=0.15,
+    min_clearance_mm=0.1524,
+    min_via_diameter_mm=0.45,
+    max_board_dim_mm=500.0,
+    supports_blind_vias=False,
+    supports_castellated=False,
+    drc_rules_path=get_drc_profile_path("advanced_circuits"),
+)
+
+_AISLER_2LAYER = ManufacturerProfile(
+    name="AISLER 2-Layer",
+    min_trace_width_mm=0.15,
+    min_drill_mm=0.2,
+    min_annular_ring_mm=0.2,   # AISLER hard limit (larger than JLC/PCBWay)
+    min_clearance_mm=0.15,
+    min_via_diameter_mm=0.45,
+    max_board_dim_mm=500.0,
+    supports_blind_vias=False,
+    supports_castellated=False,
+    drc_rules_path=get_drc_profile_path("aisler_2layer"),
+)
+
+_AISLER_4LAYER = ManufacturerProfile(
+    name="AISLER 4-Layer",
+    min_trace_width_mm=0.15,
+    min_drill_mm=0.2,
+    min_annular_ring_mm=0.2,   # AISLER hard limit
+    min_clearance_mm=0.15,
+    min_via_diameter_mm=0.45,
+    max_board_dim_mm=500.0,
+    supports_blind_vias=False,
+    supports_castellated=False,
+    drc_rules_path=get_drc_profile_path("aisler_4layer"),
+    extra={"layer_count": 4},
+)
+
+_AISLER_6LAYER = ManufacturerProfile(
+    name="AISLER 6-Layer",
+    min_trace_width_mm=0.15,
+    min_drill_mm=0.2,
+    min_annular_ring_mm=0.2,   # AISLER hard limit
+    min_clearance_mm=0.15,
+    min_via_diameter_mm=0.45,
+    max_board_dim_mm=500.0,
+    supports_blind_vias=False,
+    supports_castellated=False,
+    drc_rules_path=get_drc_profile_path("aisler_6layer"),
+    extra={"layer_count": 6},
+)
+
+_AISLER_8LAYER = ManufacturerProfile(
+    name="AISLER 8-Layer",
+    min_trace_width_mm=0.15,
+    min_drill_mm=0.2,
+    min_annular_ring_mm=0.2,   # AISLER hard limit
+    min_clearance_mm=0.15,
+    min_via_diameter_mm=0.45,
+    max_board_dim_mm=500.0,
+    supports_blind_vias=False,
+    supports_castellated=False,
+    drc_rules_path=get_drc_profile_path("aisler_8layer"),
+    extra={"layer_count": 8},
 )
 
 _PROFILES: dict[str, ManufacturerProfile] = {
@@ -184,6 +259,11 @@ _PROFILES: dict[str, ManufacturerProfile] = {
     "pcbway": _PCBWAY_STANDARD,
     "osh_park": _OSH_PARK,
     "generic": _GENERIC_CONSERVATIVE,
+    "advanced_circuits": _ADVANCED_CIRCUITS,
+    "aisler_2layer": _AISLER_2LAYER,
+    "aisler_4layer": _AISLER_4LAYER,
+    "aisler_6layer": _AISLER_6LAYER,
+    "aisler_8layer": _AISLER_8LAYER,
 }
 
 

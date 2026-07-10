@@ -64,15 +64,19 @@ class TestManufacturerProfile:
 
     def test_builtin_profiles_exist(self):
         profiles = get_builtin_profiles()
-        assert set(profiles.keys()) == {"jlcpcb", "jlcpcb-4layer", "pcbway", "osh_park", "generic"}
-        assert len(profiles) == 5
+        assert set(profiles.keys()) == {
+            "jlcpcb", "jlcpcb-4layer", "pcbway", "osh_park", "generic",
+            "advanced_circuits", "aisler_2layer", "aisler_4layer",
+            "aisler_6layer", "aisler_8layer",
+        }
+        assert len(profiles) == 10
 
     def test_jlcpcb_values(self):
         p = get_builtin_profiles()["jlcpcb"]
         assert p.name == "JLCPCB Standard 2-Layer"
         assert p.min_trace_width_mm == pytest.approx(0.127)
         assert p.min_drill_mm == pytest.approx(0.2)
-        assert p.min_annular_ring_mm == pytest.approx(0.1)
+        assert p.min_annular_ring_mm == pytest.approx(0.15)  # DRC-07: was 0.1
         assert p.min_solder_mask_sliver_mm == pytest.approx(0.1)
         assert p.supports_castellated is True
         assert p.supports_blind_vias is False
@@ -667,10 +671,13 @@ class TestBuiltinDfmChecks:
         """Check that different profiles produce different results."""
         from kicad_agent.dfm.checks import AnnularRingCheck
 
-        # Pad with annular ring of 0.12mm: passes JLCPCB (0.1mm) but might differ with generic (0.15mm)
-        # pad diameter = 0.64mm, drill = 0.4mm -> annular ring = (0.64 - 0.4) / 2 = 0.12mm
+        # Pad with annular ring of 0.16mm: passes JLCPCB/generic (0.15mm) but
+        # fails AISLER (0.2mm hard limit). DRC-07 corrected JLCPCB annular from
+        # 0.1mm to 0.15mm, so JLCPCB and generic now share the same 0.15mm limit;
+        # AISLER (0.2mm) is the differentiator.
+        # pad diameter = 0.72mm, drill = 0.4mm -> annular ring = (0.72 - 0.4) / 2 = 0.16mm
         pad = self._make_box(
-            x1=-0.32, y1=-0.32, x2=0.32, y2=0.32,
+            x1=-0.36, y1=-0.36, x2=0.36, y2=0.36,
             entity_type="pad", entity_id="p_xr", reference="X1",
         )
         drill = self._make_point(
@@ -681,15 +688,15 @@ class TestBuiltinDfmChecks:
 
         check = AnnularRingCheck()
 
-        # JLCPCB (0.1mm min) -> 0.12mm passes
+        # JLCPCB (0.15mm min) -> 0.16mm passes
         jlcpcb = get_builtin_profiles()["jlcpcb"]
         findings_jlcpcb = check.check(model, jlcpcb)
         assert len(findings_jlcpcb) == 0
 
-        # Generic (0.15mm min) -> 0.12mm fails
-        generic = get_builtin_profiles()["generic"]
-        findings_generic = check.check(model, generic)
-        assert len(findings_generic) >= 1
+        # AISLER (0.2mm min) -> 0.16mm fails
+        aisler = get_builtin_profiles()["aisler_2layer"]
+        findings_aisler = check.check(model, aisler)
+        assert len(findings_aisler) >= 1
 
     # -- get_builtin_dfm_checks ---------------------------------------------
 
