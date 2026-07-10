@@ -1,0 +1,21 @@
+# Source: Cimos/KiCad-CustomDesignRules (MIT)
+# License: MIT
+# Last verified: 2026-07-10
+# Vendor: PCBWay
+# Capabilities: min track 0.127mm, min clearance 0.127mm, min drill 0.2mm, min annular 0.15mm
+(version 1)
+(rule "Minimum track width"
+    (constraint track_width (min 0.127mm))
+)
+(rule "Minimum clearance"
+    (constraint clearance (min 0.127mm))
+)
+(rule "Minimum hole size"
+    (constraint hole_size (min 0.2mm))
+)
+(rule "Minimum annular ring"
+    (constraint annular_width (min 0.15mm))
+)
+(rule "Minimum via diameter"
+    (constraint via_diameter (min 0.4mm))
+)

@@ -90,6 +90,12 @@ Issues = "https://github.com/bretbouchard/kicad-agent/issues"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# Phase 206: bundle vendor DRC profile files so they survive pip install / wheel builds.
+# Without this, .kicad_dru files work in editable/dev mode but vanish from wheels
+# (RESEARCH RQ8 — highest-frequency integration pitfall).
+[tool.setuptools.package-data]
+"kicad_agent.manufacturing.drc_profiles" = ["*.kicad_dru"]
+
 [tool.setuptools_scm]
 fallback_version = "0.0.0"
 

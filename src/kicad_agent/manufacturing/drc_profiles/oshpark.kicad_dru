@@ -1,0 +1,21 @@
+# Source: Authored from published numeric specifications
+# License: N/A — data
+# Last verified: 2026-07-10
+# Vendor: OSH Park
+# Capabilities: min track 0.1524mm, min clearance 0.1524mm, min drill 0.3556mm, min annular 0.1524mm
+(version 1)
+(rule "Minimum track width"
+    (constraint track_width (min 0.1524mm))
+)
+(rule "Minimum clearance"
+    (constraint clearance (min 0.1524mm))
+)
+(rule "Minimum hole size"
+    (constraint hole_size (min 0.3556mm))
+)
+(rule "Minimum annular ring"
+    (constraint annular_width (min 0.1524mm))
+)
+(rule "Minimum via diameter"
+    (constraint via_diameter (min 0.6604mm))
+)
