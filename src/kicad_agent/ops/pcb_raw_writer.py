@@ -931,6 +931,108 @@ class PcbRawWriter:
         return content[:start] + new_fp_indented + content[end:]
 
     # ------------------------------------------------------------------
+    # Title block metadata (Phase 205 — META-02, META-03, META-06)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def set_title_block_fields(
+        content: str,
+        title: Optional[str] = None,
+        date: Optional[str] = None,
+        rev: Optional[str] = None,
+        company: Optional[str] = None,
+        comments: Optional[list[str]] = None,
+    ) -> str:
+        """Set title_block fields in PCB content. None fields are left unchanged.
+
+        Reads existing title_block values first (to support partial update),
+        then rebuilds the entire block. If no title_block exists, inserts one
+        after the (paper ...) line (title_block comes after paper, before layers).
+
+        Uses block-level replacement to avoid partial-update edge cases with
+        non-sequential comments.
+        """
+        import sexpdata
+        from kicad_agent.parser.pcb_native_parser import (
+            _find_string_child,
+            _find_symbol,
+            _sym,
+        )
+
+        # Read existing title_block values for partial update
+        existing_title = ""
+        existing_date = ""
+        existing_rev = ""
+        existing_company = ""
+        existing_comments: list[str] = []
+        try:
+            tree = sexpdata.loads(content)
+            tb = _find_symbol(tree, "title_block")
+            if tb is not None:
+                existing_title = _find_string_child(tb, "title")
+                existing_date = _find_string_child(tb, "date")
+                existing_rev = _find_string_child(tb, "rev")
+                existing_company = _find_string_child(tb, "company")
+                comments_map: dict[int, str] = {}
+                for item in tb:
+                    if isinstance(item, list) and len(item) >= 3 and _sym(item[0]) == "comment":
+                        try:
+                            num = int(item[1])
+                            text = item[2] if isinstance(item[2], str) else str(item[2])
+                            comments_map[num] = text
+                        except (ValueError, TypeError):
+                            continue
+                if comments_map:
+                    max_n = max(comments_map)
+                    existing_comments = [comments_map.get(i, "") for i in range(1, max_n + 1)]
+        except Exception:
+            pass  # If parsing fails, use empty defaults
+
+        # Apply partial updates (None = keep existing)
+        new_title = existing_title if title is None else title
+        new_date = existing_date if date is None else date
+        new_rev = existing_rev if rev is None else rev
+        new_company = existing_company if company is None else company
+        new_comments = existing_comments if comments is None else comments
+
+        # Build new title_block S-expression
+        def _escape_kicad_string(s: str) -> str:
+            """Escape a string for KiCad S-expression: double internal quotes."""
+            return s.replace('"', '""')
+
+        lines = ["  (title_block"]
+        lines.append(f'    (title "{_escape_kicad_string(new_title)}")')
+        lines.append(f'    (date "{_escape_kicad_string(new_date)}")')
+        lines.append(f'    (rev "{_escape_kicad_string(new_rev)}")')
+        lines.append(f'    (company "{_escape_kicad_string(new_company)}")')
+        for i, c in enumerate(new_comments):
+            lines.append(f'    (comment {i + 1} "{_escape_kicad_string(c)}")')
+        lines.append("  )")
+        new_block = "\n".join(lines)
+
+        # Find existing title_block and replace it, or insert new one
+        match = re.search(r"\(title_block\b", content)
+        if match:
+            start = match.start()
+            end = PcbRawWriter._find_matching_close(content, start + 1)
+            if end is not None:
+                return content[:start] + new_block + content[end + 1:]
+
+        # No existing title_block — insert after (paper ...) element
+        paper_match = re.search(r"\(paper\b[^)]*\)", content)
+        if paper_match:
+            insert_pos = paper_match.end()
+            return content[:insert_pos] + "\n" + new_block + content[insert_pos:]
+
+        # No (paper ...) either — insert right after the (kicad_pcb opening
+        kicad_match = re.search(r"\(kicad_pcb\b", content)
+        if kicad_match:
+            insert_pos = kicad_match.end()
+            return content[:insert_pos] + "\n" + new_block + content[insert_pos:]
+
+        return content  # Fallback: no change
+
+    # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
 
