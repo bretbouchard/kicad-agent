@@ -60,7 +60,6 @@ targets:
     sources:
       - path: Sources/KiCadAgent
         excludes:
-          # Test infrastructure uses swift-testing macros (@Tag, @Suite) that
           # require the TestingMacros compiler plugin — not available in an
           # app target build. These compile fine under SPM (toolchain provides
           # the plugin) and are included in KiCadAgentTests below.
@@ -74,6 +73,7 @@ targets:
           # directly. Pre-built MLX xcframework integration (like White Room)
           # will re-enable this for shipping builds.
           - "Models/Providers/MLXLocalProvider.swift"
+      - path: Resources/Assets.xcassets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.bretbouchard.volta
@@ -92,6 +92,7 @@ targets:
         INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 Bret Bouchard. All rights reserved."
         SWIFT_EMIT_LOC_STRINGS: YES
         CODE_SIGN_ENTITLEMENTS: Resources/KiCadAgent.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: "6.0.0"
         CURRENT_PROJECT_VERSION: "1"
     postBuildScripts:
