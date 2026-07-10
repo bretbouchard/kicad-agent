@@ -1188,6 +1188,12 @@ class SetBoardMetadataOp(BaseModel):
     Only specified (non-None) fields are updated; None means leave unchanged
     (partial update pattern matching ``ModifyNetClassOp``).
 
+    Note: these fields intentionally do NOT use ``_validate_sexpr_safe_string``.
+    Title block fields are freeform text (not identifiers like ref designators)
+    and legitimately contain parentheses, quotes, and ampersands. The raw
+    writer's ``_escape_kicad_string`` (doubled-quote escaping) is the correct
+    and sufficient defense against S-expression injection.
+
     Attributes:
         op_type: Discriminator literal ``"set_board_metadata"``.
         target_file: Relative path to the .kicad_pcb file.
@@ -1211,69 +1217,12 @@ class SetBoardRevisionOp(BaseModel):
     """Set the board revision field in the title_block.
 
     Convenience wrapper -- delegates to the title_block rev field update.
+    See ``SetBoardMetadataOp`` for why ``_validate_sexpr_safe_string`` is not applied.
 
     Attributes:
         op_type: Discriminator literal ``"set_board_revision"``.
         target_file: Relative path to the .kicad_pcb file.
         rev: Board revision string (required, 1-64 chars).
-    """
-
-    op_type: Literal["set_board_revision"] = "set_board_revision"
-    target_file: TargetFile
-    rev: str = Field(min_length=1, max_length=64, description="Board revision string")
-
-
-class ReadBoardMetadataOp(BaseModel):
-    """Read board metadata (title, date, rev, company, comments) from a PCB.
-
-    Read-only operation — returns title_block fields + board_spec sidecar if present.
-
-    Phase 205 (META-01).
-
-    Attributes:
-        op_type: Discriminator literal ``"read_board_metadata"``.
-        target_file: Relative path to the target .kicad_pcb file.
-    """
-
-    op_type: Literal["read_board_metadata"] = "read_board_metadata"
-    target_file: TargetFile
-
-
-class SetBoardMetadataOp(BaseModel):
-    """Set board metadata fields in a PCB title_block.
-
-    Only specified (non-None) fields are updated; None means leave unchanged.
-
-    Phase 205 (META-03).
-
-    Attributes:
-        op_type: Discriminator literal ``"set_board_metadata"``.
-        target_file: Relative path to the target .kicad_pcb file.
-        title: New title string (optional, leave unchanged if None).
-        date: New date string (optional, leave unchanged if None).
-        rev: New revision string (optional, leave unchanged if None).
-        company: New company string (optional, leave unchanged if None).
-        comments: New comments list (optional, leave unchanged if None).
-    """
-
-    op_type: Literal["set_board_metadata"] = "set_board_metadata"
-    target_file: TargetFile
-    title: Optional[str] = Field(default=None, max_length=256)
-    date: Optional[str] = Field(default=None, max_length=64)
-    rev: Optional[str] = Field(default=None, max_length=64)
-    company: Optional[str] = Field(default=None, max_length=256)
-    comments: Optional[list[str]] = Field(default=None)
-
-
-class SetBoardRevisionOp(BaseModel):
-    """Set the board revision field in the title_block.
-
-    Phase 205 (META-02).
-
-    Attributes:
-        op_type: Discriminator literal ``"set_board_revision"``.
-        target_file: Relative path to the target .kicad_pcb file.
-        rev: Board revision string (required, non-empty).
     """
 
     op_type: Literal["set_board_revision"] = "set_board_revision"

@@ -985,8 +985,11 @@ class PcbRawWriter:
                 if comments_map:
                     max_n = max(comments_map)
                     existing_comments = [comments_map.get(i, "") for i in range(1, max_n + 1)]
-        except Exception:
-            pass  # If parsing fails, use empty defaults
+        except (ValueError, IndexError, TypeError):
+            # If existing title_block can't be parsed, use empty defaults.
+            # Narrowed from bare Exception (Council M-3): only catch realistic
+            # parse-failure modes, not KeyboardInterrupt/SystemExit.
+            pass
 
         # Apply partial updates (None = keep existing)
         new_title = existing_title if title is None else title
