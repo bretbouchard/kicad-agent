@@ -89,6 +89,7 @@ targets:
         # Auto-generated Info.plist with deployment target.
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_LSMinimumSystemVersion: "27.0"
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.developer-tools"
         INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 Bret Bouchard. All rights reserved."
         SWIFT_EMIT_LOC_STRINGS: YES
         CODE_SIGN_ENTITLEMENTS: Resources/KiCadAgent.entitlements
