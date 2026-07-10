@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v7.0
-milestone_name: vendor-neutral-manufacturing-layer
-status: ready_to_plan
-stopped_at: v7.0 roadmap created (Phases 205-210). Ready to plan Phase 205. v6.0 milestone complete (43 phases, 161-203).
-last_updated: "2026-07-10T00:00:00.000Z"
+milestone_name: milestone
+status: executing
+stopped_at: v7.0 roadmap created (Phases 205-210). 40 active requirements mapped across 5 active phases (205-209); Phase 210 (Vendor API Adapters) DEFERRED to v7.1. Ready to plan Phase 205.
+last_updated: "2026-07-10T07:03:17.604Z"
 last_activity: 2026-07-10
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 0
-  total_plans: 0
+  total_plans: 1
   completed_plans: 0
   percent: 0
 ---
@@ -22,20 +22,21 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
 **Current focus:** v7.0 Vendor-Neutral Manufacturing Layer — DRC profiles + versioned build/handoff system + vendor API adapters. v6.0 milestone COMPLETE (43 phases, 161-203).
-Last activity: 2026-07-10 — v7.0 roadmap created (Phases 205-210). 40 active requirements mapped across 5 phases (205-209); Phase 210 (Vendor API Adapters) DEFERRED to v7.1. Ready to plan Phase 205.
+Last activity: 2026-07-10
 
 ## Current Position
 
 Phase: 205 (Board Metadata Foundation) — ready to plan
 Plan: —
-Status: Roadmap created, ready to plan Phase 205
-Last activity: 2026-07-10 — v7.0 roadmap created (Phases 205-210)
+Status: Ready to execute
+Last activity: 2026-07-10 -- Phase 205 planning complete
 
 ## Previous Milestone: v6.0 KiCad Agent — The Closed Box (COMPLETE)
 
 All 43 phases (161-203) shipped across Tracks A–I. Track D UI (171-175), Track E Memory (176-180), Track F Generative (181-185), Track G Collaboration (186-190), Track H Quality (191-201), Track I Ship (202-203) all delivered. Phase 204 (Closed-Box Simulation Pipeline) shipped as parallel track. Model training in progress for refinement/polish.
 
 Key shipped phases (details below in Accumulated Context):
+
 - Phase 161: App Shell Foundation (SwiftUI app shell, SPM, macOS 27)
 - Phase 162: Python Daemon Bundling (PyInstaller, 97 Python + 23 Swift tests)
 - Phase 163: KiCad CLI Integration (detector + onboarding gate)
@@ -75,6 +76,7 @@ See: `.planning/phases/161-app-shell-foundation/161-01-SUMMARY.md`
 **Commit:** 041b4095
 
 **What shipped:**
+
 - Bundled Python daemon speaking JSON-RPC 2.0 over stdio
 - 4 focused modules: protocol.py, handlers.py, audit_log.py, daemon_entry.py
 - ProcessManager.swift (482 LOC) + DaemonMessenger.swift (216 LOC) — Swift integration
@@ -83,6 +85,7 @@ See: `.planning/phases/161-app-shell-foundation/161-01-SUMMARY.md`
 - All stupid-proof augmentations: APP-03 checksum, APP-05 SIGTERM→SIGKILL, DAEM-01/05 wake health check, DAEM-02 unbuffered stdout + 30s watchdog, DAEM-06 crash-loop halt
 
 **Architecture decisions:**
+
 - Module split per project rule (MANY SMALL FILES > FEW LARGE FILES) — 386 LOC monolith → 4 files of 163-295 LOC
 - Ad-hoc codesigning for dev; Fastlane match (Phase 203) supplies production identity
 - PyInstaller one-folder COLLECT mode — faster cold start than one-file
@@ -91,6 +94,7 @@ See: `.planning/phases/161-app-shell-foundation/161-01-SUMMARY.md`
 - ProcessManager dev-mode fallback: `.venv/bin/python -u daemon_entry.py` for fast iteration
 
 **Deviations:**
+
 - [Rule 1 Bug] OPERATIONS → OPERATION_REGISTRY (handlers.py tolerates both)
 - [Rule 2 Missing] Module split for testability (per project coding-style rule)
 - [Rule 2 Missing] PyInstaller hidden imports for new modules
@@ -135,6 +139,7 @@ See: `.planning/phases/164-llm-provider-protocol/164-01-SUMMARY.md`
 **Commit:** `a57eebbb`
 
 **What shipped:**
+
 - `KiCadModelRouter` — task-aware, cost-aware, privacy-aware routing per MOD-02:
   - Privacy override: privacySensitive tasks ALWAYS AppleLocal (wins over user prefs, vision requirements, task defaults)
   - Vision priority: cloud vision-capable → MLX Gemma vision → AppleLocal with one-time notification
@@ -148,6 +153,7 @@ See: `.planning/phases/164-llm-provider-protocol/164-01-SUMMARY.md`
 - `MockProvider.kind` promoted to var + init parameter so tests can impersonate any KCProviderKind
 
 **Architecture decisions:**
+
 - Task classification uses keyword heuristics (not LLM) — routing must be O(1) and free
 - KCCostLedger is @MainActor ObservableObject — main-actor isolation for UI re-renders without hop overhead
 - KCRoutingNotifier uses NSLock (not actor) — NotificationCenter dispatches observers synchronously on its queue, actor methods would deadlock
@@ -157,6 +163,7 @@ See: `.planning/phases/164-llm-provider-protocol/164-01-SUMMARY.md`
 - User-facing categories (quickReply, complexReasoning, vision, privacySensitive) drive preference lookup; internal pipeline stages (circuitGeneration, pcbRouting, boardAnalysis, conversationHistory) map onto them via `KCTaskType.preferenceCategory`
 
 **Deviations:**
+
 - [Rule 1 Bug] Plan file paths mismatched actual SPM structure — used Phase 164 paths as source of truth
 - [Rule 1 Bug] `Logger.warn` → `Logger.warning` (OSLog API)
 - [Rule 1 Bug] `Range<Date>?` → `summary(from: Date?, named:)` to match PartialRangeFrom call sites
@@ -179,6 +186,7 @@ See: `.planning/phases/165-provider-router/165-01-SUMMARY.md`
 **Commit:** `f498e5d0`
 
 **What shipped:**
+
 - WorkflowState + WorkflowStateMachine: GSD transition table (questioning → specGenerated → roadmapApproved → executing → verifying → complete) with hard guards — review→execute needs planApproved, verifying→complete needs verificationPassed. GOV-02.
 - IntentGate: validates every op against catalog, requires non-empty requirementId on mutating ops (GOV-07), sanitizes secrets (password/token/api_key prefixes redacted). Static op catalog mirrored from Python `ops/registry.py` for 23 common ops. GOV-01.
 - OpJournal: JSONL+fsync append-only audit trail at `~/Library/Application Support/KiCadAgent/journal.jsonl`. Mirrors Python `routing/audit.py` H5 pattern with truncated-line recovery. Queryable by op, requirement, actor, date, operationId. GOV-06.
@@ -190,6 +198,7 @@ See: `.planning/phases/165-provider-router/165-01-SUMMARY.md`
 - GovernedCall + MCPClient.governedCall<T>: full pipeline IntentGate → DriftDetector → WorkflowStateMachine → MCPClient.call → OpJournal.append → AutoLearner.store → EscalationLadder.recordSuccess. Failures journal + escalate + auto-learn. Rejects journal with `result_status="rejected"` before throwing.
 
 **Architecture decisions:**
+
 - Swift-side governance layer, not Python — user task spec described Swift deliverables; plan file's Python paths superseded
 - Op catalog hardcoded in Swift (Phase 170 replaces with dynamic tools/list from MCP daemon)
 - Notifications posted synchronously, not via DispatchQueue.main.async — async dispatch loses notifications under test runloops; synchronous posting is safe because observers are lock-protected
@@ -197,6 +206,7 @@ See: `.planning/phases/165-provider-router/165-01-SUMMARY.md`
 - Stripped public modifiers from Governance files — AnyCodable (MCPProtocol.swift) is internal-only and KiCadAgent is an executable target (no public API surface)
 
 **Deviations:**
+
 - [Rule 1 Bug] ResolutionValidationError.errorDescription referenced wrong binding (`severity` instead of `sev`)
 - [Rule 1 Bug] Public modifiers conflicted with internal AnyCodable — stripped all `public` from Governance files
 - [Rule 1 Bug] NSLock.unlock() unavailable from async context in EscalationLadderTests — switched to actor Collector
@@ -214,6 +224,7 @@ See: `.planning/phases/169-obdurate-runtime/169-01-SUMMARY.md`
 **Commit:** `7b367635`
 
 **What shipped:**
+
 - PreOpGate (@MainActor): validates intent matches op + target file types. Calls daemon `kicad.pre_check`. Read-only ops short-circuit (allow). Returns PreOpDecision {allow, warn, block} with reasons + per-check map. GOV-03.
 - PostOpGate (@MainActor): runs deterministic ERC/DRC check (via `kicad.post_check` wrapping `validation/erc_drc.py`) + optional SemanticJudge LLM "did this achieve intent?" Returns PostOpDecision {passed, failed, indeterminate}. Decision composition: failed deterministic → .failed; indeterminate → .indeterminate; passed + LLM says no → .failed (semantic veto). GOV-04.
 - Rollback (@MainActor): `checkpoint(files:)` calls daemon `kicad.snapshot` → returns Checkpoint with snapshot_id. `restore(checkpoint:)` calls daemon `kicad.restore` → returns RestoreResult {restored, removed, skipped}. Sentinel IDs for empty/no-client test mode. GOV-05.
@@ -223,6 +234,7 @@ See: `.planning/phases/169-obdurate-runtime/169-01-SUMMARY.md`
 - 4 new daemon MCP handlers: kicad.pre_check (op_known + file_type_ok + args_present), kicad.post_check (runs run_erc on .kicad_sch, run_drc on .kicad_pcb, aggregates), kicad.snapshot (wraps Snapshot.create), kicad.restore (looks up snapshot by UUID, calls Snapshot.restore).
 
 **Architecture decisions:**
+
 - Gates are @MainActor (not @unchecked Sendable) to share MCPClient's actor isolation — avoids [String: Any] sendability crossings on params dicts
 - snapshot.py uses tempfile.mkstemp in target parent dir for atomic per-file restore via os.replace (crash leaves either old or new, never torn)
 - Snapshot failures are non-fatal: op proceeds but loses rollback; post-op failure surfaces as .failed without restore. Journal records it for audit.
@@ -243,6 +255,7 @@ See: `.planning/phases/170-verification-loop-integration/170-01-SUMMARY.md`
 **Council:** Gate 1 R2 APPROVE (1 P0 + 3 P1 fixed). Gate 2 EXEC REVIEW APPROVE (0 critical/high/medium, 5 LO with four-state resolution).
 
 **What shipped:**
+
 - THE primary new capability: `circuit_to_spice_netlist()` — skidl.Circuit → SPICE .cir bridge (skidl 2.2.3's `generate_netlist()` emits KiCad .net, NOT SPICE)
 - Optuna GPSampler optimizer with E12 R/C categorical constraints, 10s trial timeout, current-saturation guard, determinism seed
 - pandas DataFrame adapter for `SimulationResult`
@@ -251,6 +264,7 @@ See: `.planning/phases/170-verification-loop-integration/170-01-SUMMARY.md`
 - End-to-end magic demo: intent → Optuna sweep → ngspice verify → assert → bode.png + bom.md
 
 **Architecture decisions:**
+
 - `src/kicad_agent/sim/` as sibling to (not child of) `src/kicad_agent/spice/` — clean separation between "run a SPICE sim" (Phase 158) and "optimize + analyze + demo a SPICE sim" (Phase 204)
 - ngspice CLI subprocess (NOT PySpice — dead project per memory pyspice-dead-use-ngspice-cli)
 - Optuna GPSampler (4.5+, shipped Aug 2025) for BO over E12 categorical space
@@ -258,6 +272,7 @@ See: `.planning/phases/170-verification-loop-integration/170-01-SUMMARY.md`
 - BLK-1 strict test pattern — autouse `_require_ngspice` fixture uses `pytest.fail(pytrace=False)`, never `pytest.skip`
 
 **Deviations:**
+
 - [Rule 1 Bug] VCC/VEE emission added to `circuit_to_spice_netlist` after debug session (transistor had no bias, gain ≈ 0 dB)
 - [Rule 1 Bug] RLOAD DC path added to `generate_ac_testbench` after debug session (coupling cap blocked DC, ngspice singular matrix)
 - [Rule 1 Bug] Default `freq_stop` extended 10 MHz → 1 GHz after debug session (CE bandwidth lands in 1-50 MHz range, was outside sweep)
@@ -265,6 +280,7 @@ See: `.planning/phases/170-verification-loop-integration/170-01-SUMMARY.md`
 - [Rule 3 Blocking] Stale git index.lock removed during planning
 
 **Bug reports filed (7 total, all open):**
+
 - `kicad-agent-e2b` (P3): Demo exceeds 60s budget at default 50 trials (~180s projected)
 - `kicad-agent-obp` (P3): Phase 158 AC parser regex-based (fragile, should use .raw)
 - `kicad-agent-233` (P4): Optuna sqlite storage at cwd-relative path
@@ -274,6 +290,7 @@ See: `.planning/phases/170-verification-loop-integration/170-01-SUMMARY.md`
 - `kicad-agent-8vv` (P4): Phase 158 missing .OP parser (Phase 204 uses Ic heuristic)
 
 **Strategic impact:**
+
 - v6.0 "KiCad Agent — The Closed Box" milestone has its keystone — Python/SKiDL analog magic proven end-to-end
 - Matches tscircuit competitor pressure (TypeScript/browser HMR bar) for analog circuits
 - Establishes canonical template for future analog topologies (LM13700 VCA, AS3340 VCO, Sallen-Key VCF)
