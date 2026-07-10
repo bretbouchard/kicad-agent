@@ -116,18 +116,17 @@ targets:
           rm -rf "$DAEMON_DEST"
           cp -R "$DAEMON_SRC" "$DAEMON_DEST"
           chmod +x "$DAEMON_DEST/kicad-agent-daemon"
-          # Sign every Mach-O in the bundle. App Sandbox requires all
-          # executables to be signed with the same identity. Ad-hoc ("-")
-          # for dev, Apple Distribution for Release (via CODE_SIGN_IDENTITY).
-          IDENTITY="${CODE_SIGN_IDENTITY:--}"
-          ENTITLEMENTS="${PROJECT_DIR}/daemon/daemon-sandbox.entitlements"
+          # Ad-hoc sign every Mach-O in the daemon bundle.
+          # The outer .app signing (by Xcode's CodeSign phase) covers
+          # the real distribution identity. Individual .so/.dylib just
+          # need a valid signature for sandbox validation.
           find "$DAEMON_DEST" -type f \( -name "*.so" -o -name "*.dylib" -o -name "*.pyd" \) | while read -r lib; do
-            codesign --force --sign "$IDENTITY" --options runtime "$lib" 2>/dev/null || true
+            codesign --force --sign - --options runtime "$lib" 2>/dev/null || true
           done
-          # Sign main executable last (it links the libs).
-          codesign --force --sign "$IDENTITY" --options runtime \
-            --entitlements "$ENTITLEMENTS" "$DAEMON_DEST/kicad-agent-daemon"
-          echo "Daemon copied + signed ($IDENTITY)"
+          codesign --force --sign - --options runtime \
+            --entitlements "${PROJECT_DIR}/daemon/daemon-sandbox.entitlements" \
+            "$DAEMON_DEST/kicad-agent-daemon"
+          echo "Daemon copied + ad-hoc signed"
 
   # ===========================================================================
   # VoltaPCBTests — unit tests (swift-testing framework)
