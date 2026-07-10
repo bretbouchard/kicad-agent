@@ -65,11 +65,11 @@ class TestManufacturerProfile:
     def test_builtin_profiles_exist(self):
         profiles = get_builtin_profiles()
         assert set(profiles.keys()) == {
-            "jlcpcb", "jlcpcb-4layer", "pcbway", "osh_park", "generic",
+            "jlcpcb", "jlcpcb-4layer", "pcbway", "osh_park", "oshpark", "generic",
             "advanced_circuits", "aisler_2layer", "aisler_4layer",
             "aisler_6layer", "aisler_8layer",
         }
-        assert len(profiles) == 10
+        assert len(profiles) == 11
 
     def test_jlcpcb_values(self):
         p = get_builtin_profiles()["jlcpcb"]
