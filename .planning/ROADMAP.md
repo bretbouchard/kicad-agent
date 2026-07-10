@@ -256,7 +256,7 @@ Phase 206 (DRC) ────────┴────────────�
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 205. Board Metadata Foundation | 1/1 | Complete   | 2026-07-10 |
+| 205. Board Metadata Foundation | 1/1 | Complete    | 2026-07-10 |
 | 206. Vendor DRC Profiles | 0/1 | Not started | - |
 | 207. Versioned Build System | 0/1 | Not started | - |
 | 208. Manufacturer Handoff Package | 0/1 | Not started | - |
