@@ -6,13 +6,13 @@
 
 ### Category 1: Board Metadata Foundation (META)
 
-- [ ] **META-01**: User can read board revision, title, date, and company from a `.kicad_pcb` file's `title_block` via the `read_board_metadata` operation
-- [ ] **META-02**: User can set board revision (the version number that links to a specific build) via `set_board_revision` operation, which writes the `rev` field in `title_block`
-- [ ] **META-03**: User can set full board metadata (title, date, company, comments) via `set_board_metadata` operation
-- [ ] **META-04**: User can define manufacturing specs (surface finish, copper weight, soldermask color, silkscreen color) via a `BoardSpec` model persisted as a sidecar JSON file (`.kicad_build_spec.json`)
-- [ ] **META-05**: User can specify controlled impedance requirements (which nets, target ohms, reference layer) as part of `BoardSpec`
-- [ ] **META-06**: title_block round-trips correctly — parse → modify → serialize produces valid KiCad files with no data loss (follows existing immutability + round-trip fidelity patterns)
-- [ ] **META-07**: Parsing handles KiCad 10 quoting variations (quoted and unquoted fields, comments with special characters)
+- [x] **META-01**: User can read board revision, title, date, and company from a `.kicad_pcb` file's `title_block` via the `read_board_metadata` operation
+- [x] **META-02**: User can set board revision (the version number that links to a specific build) via `set_board_revision` operation, which writes the `rev` field in `title_block`
+- [x] **META-03**: User can set full board metadata (title, date, company, comments) via `set_board_metadata` operation
+- [x] **META-04**: User can define manufacturing specs (surface finish, copper weight, soldermask color, silkscreen color) via a `BoardSpec` model persisted as a sidecar JSON file (`.kicad_build_spec.json`)
+- [x] **META-05**: User can specify controlled impedance requirements (which nets, target ohms, reference layer) as part of `BoardSpec`
+- [x] **META-06**: title_block round-trips correctly — parse → modify → serialize produces valid KiCad files with no data loss (follows existing immutability + round-trip fidelity patterns)
+- [x] **META-07**: Parsing handles KiCad 10 quoting variations (quoted and unquoted fields, comments with special characters)
 
 ### Category 2: Vendor DRC Profiles (DRC)
 
