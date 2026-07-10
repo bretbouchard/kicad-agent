@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: vendor-neutral-manufacturing-layer
-status: defining_requirements
-stopped_at: v7.0 milestone started — research and requirements phase. v6.0 milestone complete (43 phases, 161-203).
+status: ready_to_plan
+stopped_at: v7.0 roadmap created (Phases 205-210). Ready to plan Phase 205. v6.0 milestone complete (43 phases, 161-203).
 last_updated: "2026-07-10T00:00:00.000Z"
 last_activity: 2026-07-10
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-07-10)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
 **Current focus:** v7.0 Vendor-Neutral Manufacturing Layer — DRC profiles + versioned build/handoff system + vendor API adapters. v6.0 milestone COMPLETE (43 phases, 161-203).
-Last activity: 2026-07-10 — v7.0 milestone started. Vendor landscape research, DRC file survey, and codebase architecture mapping completed in-session.
+Last activity: 2026-07-10 — v7.0 roadmap created (Phases 205-210). 40 active requirements mapped across 5 phases (205-209); Phase 210 (Vendor API Adapters) DEFERRED to v7.1. Ready to plan Phase 205.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 205 (Board Metadata Foundation) — ready to plan
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-10 — Milestone v7.0 started
+Status: Roadmap created, ready to plan Phase 205
+Last activity: 2026-07-10 — v7.0 roadmap created (Phases 205-210)
 
 ## Previous Milestone: v6.0 KiCad Agent — The Closed Box (COMPLETE)
 
@@ -562,9 +562,9 @@ None.
 
 ## Session Continuity
 
-Stopped at: v7.0 Vendor-Neutral Manufacturing Layer milestone started — research and requirements phase.
-Resume with: /gsd-plan-phase [N] once roadmap is created. Phase numbering continues from 204 (v6.0's last).
-Next: complete research → requirements → roadmap cycle, then /gsd-discuss-phase or /gsd-plan-phase for Phase 205+.
+Stopped at: v7.0 roadmap created (Phases 205-210). 40 active requirements mapped across 5 active phases (205-209); Phase 210 (Vendor API Adapters) DEFERRED to v7.1. Ready to plan Phase 205.
+Resume with: /gsd-plan-phase 205 (Board Metadata Foundation) or /gsd-discuss-phase 205.
+Next: plan Phase 205 (Board Metadata Foundation) — title_block parse/write + BoardSpec model + sidecar JSON persistence. Foundation for versioning; unblocks Phase 207.
 
 ### Phase 100: RoutingOrchestrator and Human Approval Loop (complete)
 

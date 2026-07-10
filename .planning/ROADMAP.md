@@ -1,856 +1,270 @@
-# ROADMAP — v6.0 KiCad Agent: The Closed Box
+# ROADMAP — v7.0 Vendor-Neutral Manufacturing Layer
 
-**Milestone:** v6.0 KiCad Agent — The Closed Box
-**Target Phases:** 161-203 (43 phases)
-**Status:** ✅ All 43 phases shipped (Track A–I complete) — 2026-07-08
+**Milestone:** v7.0 Vendor-Neutral Manufacturing Layer
+**Target Phases:** 205-210 (6 phases; 205-209 active, 210 DEFERRED)
+**Status:** Planning — 0/5 active phases shipped
+
+## Goal
+
+Send boards to ANY manufacturer — free DRC pre-flight for all vendors, universal versioned handoff package, and (deferred) opt-in quote/order APIs where available. No vendor lock-in.
+
+The handoff package is the universal fallback — it works with every fab (3 with APIs, 10+ without). API adapters are accelerators on top, not requirements.
 
 ## Phases
 
-- [x] **Phase 161: App Shell Foundation** — macOS 27+ SwiftUI app with Liquid Glass visual language ✅ 2026-07-07
-- [x] **Phase 162: Python Daemon Bundling** — PyInstaller binary, code-signed, app-spawned subprocess ✅ 2026-07-07
-- [x] **Phase 163: KiCad CLI Integration** — External kicad-cli detection, App Store GPL compliance
-- [x] **Phase 164: LLM Provider Protocol** — FoundationModels, HF Hub, MLX-Swift abstraction
-- [x] **Phase 165: Provider Router** — Task-aware, cost-aware, privacy-aware model routing ✅ 2026-07-08
-- [x] **Phase 166: BYOK Keychain Storage** — API key management with iCloud sync opt-out default ✅ 2026-07-07
-- [x] **Phase 167: stdio MCP Client** — Swift subprocess communication with Python daemon ✅ 2026-07-08
-- [x] **Phase 168: Python MCP Server** — Auto-register 142 ops as MCP tools, zero glue ✅ 2026-07-08 (shipped with Phase 162 daemon, verified by Phase 170 `7b367635`)
-- [x] **Phase 169: Obdurate Runtime** — State machine, op journal, verification gates, escalation ladder ✅ 2026-07-08
-- [x] **Phase 170: Verification Loop Integration** — PreOpGate + PostOpGate + auto-rollback via daemon MCP handlers wrapping validation_gates.py ✅ 2026-07-08
-- [x] **Phase 171: Liquid Glass UI Shell** — Toolbar, window management, visual language system ✅ 2026-07-08 (`077b2658`)
-- [x] **Phase 172: Inline Rendering** — SVG schematic preview, PNG PCB renders, live pipeline view ✅ 2026-07-08 (`677b5bf7`)
-- [x] **Phase 173: GSD Conversation Engine** — Visual questioning → spec → roadmap → execute → verify ✅ 2026-07-08 (`677b5bf7`)
-- [x] **Phase 174: Approval Gates UI** — Human-in-the-loop decision prompts with context ✅ 2026-07-08 (`381c6b74`)
-- [x] **Phase 175: Chat Interface** — Conversational UI with message streaming, image attachments ✅ 2026-07-08 (`381c6b74`)
-- [x] **Phase 176: SwiftData Models** — Project, Conversation, Message, Decision, ValueChange, Snapshot ✅ 2026-07-08 (`0a13df3a`)
-- [x] **Phase 177: CloudKit Sync** — Automatic Mac↔iPhone sync, LWW conflict resolution with prompts ✅ 2026-07-08 (`0a13df3a`)
-- [x] **Phase 178: Time-Travel Engine** — Event replay, snapshot materialization, diff visualization ✅ 2026-07-08 (`2cfb1b96`)
-- [x] **Phase 179: Decision Timeline UI** — Visual timeline with chapter segmentation, filters ✅ 2026-07-08 (`2cfb1b96`)
-- [x] **Phase 180: Event Sourcing** — Complete append-only journal, query optimization, event compaction ✅ 2026-07-08 (`2cfb1b96`)
-- [x] **Phase 181: SKIDL Compiler** — Conversation state → SKIDL IR (depends on v5.0 Track F) ✅ 2026-07-08 (`910c9e15`)
-- [x] **Phase 182: KiCad Generator** — SKIDL → .kicad_sch/.kicad_pcb files with validation gates ✅ 2026-07-08 (`910c9e15`)
-- [x] **Phase 183: Generative Pipeline** — Full transform orchestration with caching and hash verification ✅ 2026-07-08 (`910c9e15`)
-- [x] **Phase 184: Hash Gold Master Tests** — Deterministic generation verification, 10-run tests ✅ 2026-07-08 (`910c9e15`)
-- [x] **Phase 185: Generative Correctness** — SPICE validation, ERC/DRC enforcement, escalation on failure ✅ 2026-07-08 (`910c9e15`)
-- [x] **Phase 186: Project Genealogy** — Family tree, branches, false starts, snapshot relationships ✅ 2026-07-08 (`401044dc`)
-- [x] **Phase 187: Group Activities v1** — Live sessions, 4-participant cap, event sync (not files) ✅ 2026-07-08 (`401044dc`)
-- [x] **Phase 188: CKShare Invitations** — Collaborator invitations with permission management ✅ 2026-07-08 (`401044dc`)
-- [x] **Phase 189: Collaboration UI** — Activity feed, participant status, permission badges ✅ 2026-07-08 (`401044dc`)
-- [x] **Phase 190: iCloud Drive Bundle** — .kicadagent document type, atomic writes, conflict resolution ✅ 2026-07-08 (`401044dc`)
-- [x] **Phase 191: swift-testing Framework** — Unit tests with 100% line+branch coverage enforcement ✅ 2026-07-08 (`a0339050`)
-- [x] **Phase 192: Snapshot Testing** — 4-variant tests (light/dark/XXXL/high-contrast), frozen time fixtures ✅ 2026-07-08 (`a0339050`)
-- [x] **Phase 193: Property-Based Testing** — SwiftCheck for invariants, fuzz testing ✅ 2026-07-08 (`a0339050`)
-- [x] **Phase 194: Mutation Testing** — mull-xcode, >90% score enforced in CI ✅ 2026-07-08 (`a0339050`)
-- [x] **Phase 195: Accessibility Testing** — VoiceOver, Dynamic Type XXXL, keyboard-only flows ✅ 2026-07-08 (`a0339050`)
-- [x] **Phase 196: UI Automation** — XCUITest for primary flows, approval gates, time-travel ✅ 2026-07-08 (`cc6b8e6b`)
-- [x] **Phase 197: Performance Testing** — Latency, memory, regression detection ✅ 2026-07-08 (`cc6b8e6b`)
-- [x] **Phase 198: Concurrency Testing** — ThreadSanitizer, no data races allowed ✅ 2026-07-08 (`cc6b8e6b`)
-- [x] **Phase 199: Python Daemon Testing** — pytest, 100% coverage, mutation testing on daemon ✅ 2026-07-08 (`cc6b8e6b`)
-- [x] **Phase 200: CI Coverage Gates** — Build fails if <100% coverage, automated quality enforcement ✅ 2026-07-08 (`cc6b8e6b`)
-- [x] **Phase 201: A11y by Default** — SwiftLint custom rules, a11y audit in CI, block PR if violations ✅ 2026-07-08 (`cc6b8e6b`)
-- [x] **Phase 202: iPhone Companion** — LAN pairing, offline queue, cost tracking, read-only mode ✅ 2026-07-08 (`94f52a14`)
-- [x] **Phase 203: Build & Ship Automation (Fastlane)** — Fastlane lanes for build/test/sign/ship, match code signing, pilot TestFlight, deliver App Store, snapshot screenshots, build_daemon lane for PyInstaller ✅ 2026-07-08 (`94f52a14`)
+- [ ] **Phase 205: Board Metadata Foundation** — Parse/write KiCad `title_block`, `BoardSpec` model, sidecar JSON persistence
+- [ ] **Phase 206: Vendor DRC Profiles** — Wire up `.kicad_dru` files (PCBWay, JLCPCB, AISLER, OSH Park, Advanced Circuits, generic), `drc_vendor` op
+- [ ] **Phase 207: Versioned Build System** — Build record, manifest serialization, `build_create`/`build_list`/`build_show` ops, build diffing
+- [ ] **Phase 208: Manufacturer Handoff Package** — Full export orchestration, zip bundle + readme, vendor output profiles, pre-handoff validation gate
+- [ ] **Phase 209: Crossfile + MCP Integration** — MCP auto-exposure, CLI subcommands, `ProjectContext` discovery, `ManufacturerClient` ABC
+- [ ] **Phase 210: Vendor API Adapters** — DEFERRED (PCBWay, MacroFab, JLCPCB quote/order adapters) — placeholder, activated in v7.1
 
 ## Phase Details
 
-### Phase 161: App Shell Foundation
+### Phase 205: Board Metadata Foundation
 
-**Goal:** User can launch a native macOS 27+ SwiftUI app with Liquid Glass visual language within 2 seconds
+**Goal:** User can read and write board metadata (revision, title, date, company) and persist manufacturing specs (surface finish, copper weight, mask/silk color, impedance) alongside a `.kicad_pcb` file
 
-**Depends on:** Nothing (first phase)
+**Depends on:** Nothing (first phase — foundation for versioning)
 
-**Requirements:** APP-01, APP-02, APP-06, APP-07
+**Requirements:** META-01, META-02, META-03, META-04, META-05, META-06, META-07
 
-**Success Criteria** (what must be TRUE):
-1. User can double-click KiCadAgent.app and see the Liquid Glass chat interface within 2 seconds
-2. User can open multiple projects in separate windows (CMD+N)
-3. App respects system appearance (dark/light mode) and Dynamic Type scaling
-4. App installs from Mac App Store without warnings or sandbox violations
-
-**Plans:** 1 plan
-
-**UI hint:** yes
-
----
-
-### Phase 162: Python Daemon Bundling
-
-**Goal:** App bundles Python daemon (PyInstaller binary) and spawns it as subprocess on launch
-
-**Depends on:** Phase 161
-
-**Requirements:** APP-03, APP-05, DAEM-01, DAEM-05, DAEM-06
+**Key work:**
+- Extend `parser/pcb_native_parser.py` to parse `title_block` (currently in `_UNSUPPORTED_ELEMENTS`) — follow the existing `NativeStackup` pattern
+- Add `NativeTitleBlock` frozen dataclass to `parser/pcb_native_types.py` (fields: title, date, rev, company, comments)
+- Build `BoardSpec` model in `manufacturing/board_spec.py` (surface finish, copper weight, soldermask color, silkscreen color, controlled impedance requirements, stackup-as-fab-spec)
+- Sidecar JSON persistence: `.kicad_build_spec.json` alongside the project
+- Operations: `read_board_metadata`, `set_board_metadata`, `set_board_revision`
+- Handle KiCad 10 quoting variations (quoted and unquoted fields, comments with special characters) — Pitfall 2 prevention
 
 **Success Criteria** (what must be TRUE):
-1. App spawns bundled Python daemon on launch (subprocess, no LaunchAgent)
-2. Daemon survives app sleep/wake cycles (no restart needed)
-3. Daemon crashes trigger automatic restart with audit-log entry
-4. App gracefully shuts down daemon on quit (no orphan processes)
-5. PyInstaller dylibs are code-signed and pass clean-machine test (Pitfall 1 prevention)
+1. User runs `read_board_metadata` on a `.kicad_pcb` and gets the rev, title, date, and company from the `title_block`
+2. User runs `set_board_revision(rev="2.1")` and the `.kicad_pcb` `title_block` round-trips with zero data loss (parse → modify → serialize produces a valid file)
+3. User defines a `BoardSpec` (surface finish, copper weight, mask/silk color, impedance nets) and it persists to `.kicad_build_spec.json`; reloading the project restores it
+4. Parsing handles KiCad 10 quoting variations — boards with empty fields, numbered comments, and special characters in title/company round-trip without corruption
 
 **Plans:** 1 plan
 
 ---
 
-### Phase 163: KiCad CLI Integration
+### Phase 206: Vendor DRC Profiles
 
-**Goal:** App detects external KiCad install and guides user to KiCad 10+ (GPL compliance)
+**Goal:** User can run DRC against a specific vendor's manufacturing limits as a pre-flight gate, and the system ships verified `.kicad_dru` files for 5+ vendors
 
-**Depends on:** Phase 162
+**Depends on:** Nothing (independent of Phase 205; can partially overlap)
 
-**Requirements:** APP-04, DAEM-07, DAEM-08
+**Requirements:** DRC-01, DRC-02, DRC-03, DRC-04, DRC-05, DRC-06, DRC-07, DRC-08
+
+**Key work:**
+- Create `src/kicad_agent/manufacturing/drc_profiles/` with static `.kicad_dru` files:
+  - `pcbway.kicad_dru` — from PCBWay official repo, updated to current capabilities (annular ring 0.15mm, not stale 0.25mm from 2023) — Pitfall 1 + DRC-07
+  - `jlcpcb.kicad_dru` — from Cimos/KiCad-DesignRules (MIT) — Pitfall 6 cleanest source
+  - `aisler_2layer.kicad_dru`, `aisler_4layer.kicad_dru`, `aisler_6layer.kicad_dru`, `aisler_8layer.kicad_dru` — from AislerHQ/aisler-support
+  - `oshpark.kicad_dru` — authored from published numeric specs
+  - `advanced_circuits.kicad_dru` — authored from published numeric specs
+  - `generic.kicad_dru` — conservative defaults for unknown vendors
+- Add source attribution header comments to each profile (repo URL, license, last-verified date) — DRC-06, Pitfall 6
+- Extend `dfm/profiles.py` `ManufacturerProfile` with `drc_rules_path: Path | None` field — DRC-05
+- `drc_vendor` operation: resolve profile path → `kicad-cli pcb drc --custom-rules <profile>` → parse report → return `DrcResult`
+- List vendor profiles query operation (capabilities + profile path) — DRC-08
 
 **Success Criteria** (what must be TRUE):
-1. App detects missing KiCad install on first launch and shows helpful install prompt
-2. App auto-detects KiCad after install via `which kicad-cli`
-3. App Store submission passes with external kicad-cli requirement (Pitfall 9 prevention)
-4. Review notes document KiCad 10+ external install requirement
-5. User can opt-in to external HTTP MCP server with auth token (default off)
+1. User runs `drc_vendor(vendor="pcbway", file="board.kicad_pcb")` and gets vendor-specific DRC violations (annular ring, track width, clearance) against PCBWay's current published limits
+2. System ships 5+ verified vendor profiles (PCBWay, JLCPCB, AISLER 2/4/6/8L, OSH Park, Advanced Circuits, generic) — each with source attribution in header comments
+3. User runs `drc_vendor(vendor="generic")` against an unknown vendor and gets conservative DRC results
+4. User can list available vendor profiles and see each profile's capabilities (layer count, min track, min clearance, source)
 
 **Plans:** 1 plan
 
 ---
 
-### Phase 164: LLM Provider Protocol
+### Phase 207: Versioned Build System
 
-**Goal:** App uses KiCadModelProvider protocol as only model interface (SDK types don't leak)
+**Goal:** User can create a versioned build that snapshots source files, records git SHA + board revision, and serializes a manifest with SHA256-hashed artifacts to disk
 
-**Depends on:** Phase 161
+**Depends on:** Phase 205 (needs `title_block` rev field for `board_rev`)
 
-**Requirements:** MOD-01, MOD-06, MOD-07
+**Requirements:** BUILD-01, BUILD-02, BUILD-03, BUILD-04, BUILD-05, BUILD-06, BUILD-07, BUILD-08, BUILD-09, BUILD-10
+
+**Key work:**
+- `Build` record dataclass in `manufacturing/build.py` (frozen; fields: `build_id` UUID, `board_rev`, `source_files` tuple, `git_sha`, `created_at`, `status: BuildStatus`, `artifacts` tuple, `manifest_path`, `build_dir`) — BUILD-02
+- `BuildStatus` lifecycle: `draft → validated → exported → handed_off` with clear transitions — BUILD-03
+- Promote `validation/gates/manufacturing_manifest.py` `ManufacturingManifest`/`ManufacturingArtifact` with serialization (`to_json()`, `save()`) — BUILD-05
+- `build_create` operation: snapshot source files → run existing `ManufacturingReadinessGate` (5 checks) → record git SHA + board rev → create build dir. Build is NOT created if validation fails — BUILD-01, BUILD-04
+- Build directory structure: `builds/v{rev}_{timestamp}/` — BUILD-06
+- `.gitignore` entry for `builds/` — BUILD-09, Pitfall 4
+- `build_list` operation: list all builds for a project — BUILD-07
+- `build_show` operation: view build details (manifest, artifacts, validation status) — BUILD-08
+- Build diffing: diff two builds (source diffs, artifact diffs, validation status changes) — BUILD-10
+- Add `build_create` and `build_handoff_export` to `CROSS_FILE_OP_TYPES` in `ops/execution.py` — Integration Pitfall IP-4
 
 **Success Criteria** (what must be TRUE):
-1. FoundationModels is always available as default (free, on-device, no key required)
-2. App gracefully degrades to MLX-Swift + HF download on Intel Macs (Pitfall 3 prevention)
-3. User can browse MLX models from Hugging Face Hub catalog (zero dev infra)
-4. User can drag-drop .mlx model files to import custom fine-tunes
-5. FoundationModels availability check runs at app launch (not device model detection)
+1. User runs `build_create` on a clean board and gets a build record with `build_id`, `board_rev` (from `title_block`), `git_sha` (HEAD), and timestamp; the build directory `builds/v{rev}_{timestamp}/` is created
+2. User runs `build_create` on a board that fails `ManufacturingReadinessGate` and gets a clear validation error — NO build is created (no partial state)
+3. `manifest.json` is serialized to disk in the build directory with SHA256 hashes for each artifact; reloading it via `build_show` reproduces the build record exactly
+4. User runs `build_list` and sees all builds for the project with status (draft/validated/exported/handed_off)
+5. `builds/` directory is in `.gitignore` — build artifacts do not appear in `git status`
 
 **Plans:** 1 plan
 
 ---
 
-### Phase 165: Provider Router
+### Phase 208: Manufacturer Handoff Package
 
-**Goal:** App routes model calls based on task (privacy, cost, capability awareness)
+**Goal:** One call (`build_handoff_export`) produces a complete zip bundle with all manufacturing artifacts + readme + manifest, with pre-handoff validation preventing incomplete bundles
 
-**Depends on:** Phase 164
+**Depends on:** Phase 205 (BoardSpec + title_block), Phase 206 (vendor DRC profiles), Phase 207 (build record + manifest)
 
-**Requirements:** MOD-02, MOD-10, MOD-11, MOD-12
+**Requirements:** HANDOFF-01, HANDOFF-02, HANDOFF-03, HANDOFF-04, HANDOFF-05, HANDOFF-06, HANDOFF-07, HANDOFF-08, HANDOFF-09
+
+**Key work:**
+- `manufacturing/handoff.py` orchestrator — the one-call "prepare for manufacturing" command:
+  1. Read `BoardSpec` + `title_block` (board rev, finish, colors)
+  2. Run existing `ManufacturingReadinessGate` (5 checks) — FAIL → no build, error returned
+  3. Run vendor DRC (Phase 206 `drc_vendor` flow) — FAIL → DRC violations returned, no build
+  4. Run ERC clean check — FAIL → no build
+  5. Create build directory: `builds/v{rev}_{timestamp}/`
+  6. Run all exports via existing `export/` wrappers: Gerbers (`export/gerber.py`), drill, BOM (`export/bom.py`), pick-and-place (`export/general.py`), STEP, netlist, schematic PDF, PCB PDF
+  7. Build manifest with SHA256 hashes (existing `ManufacturingArtifact` pattern)
+  8. Generate `readme.md` from `BoardSpec` + board stats + DRC/ERC results
+  9. Zip everything into `handoff.zip` (streaming zip creation for large STEP files — Pitfall 7)
+  10. Serialize `manifest.json`
+  11. Return `Build` record with all artifact paths
+- Generalize `export_jlcpcb_bom` into profile-driven formatter — `export_bom(profile=...)` with JLCPCB as one profile, NOT direct hard-coded calls (Pitfall 3, HANDOFF-05)
+- Vendor output profiles: `ManufacturerProfile` extension includes output format spec (BOM columns, file naming, zip structure) — default to generic format when no vendor specified
+- Pre-handoff validation gate: DRC clean + ERC clean + manifest complete before bundling — no zip created if validation fails (HANDOFF-06, Pitfall 5)
+- STEP/render inclusion optional via `BoardSpec` or vendor profile (bare-board orders skip STEP) — HANDOFF-07
+- Vendor-specific handoff: `build_handoff_export(vendor="jlcpcb")` produces JLCPCB-formatted BOM/CPL with correct columns (HANDOFF-08)
+- DRC/ERC validation results included in manifest as proof of manufacturability (HANDOFF-09)
 
 **Success Criteria** (what must be TRUE):
-1. Router selects FoundationModels for analysis tasks (free, built-in)
-2. Router selects MLX-Swift for circuit generation (local, cost $0)
-3. Router selects cloud provider only when user has API keys configured
-4. App shows token usage and cost estimate per assistant message
-5. Router falls back to FoundationModels when user lacks cloud API keys
+1. User runs `build_handoff_export(file="board.kicad_pcb")` and gets a single `handoff.zip` containing Gerbers, drill, BOM, pick-and-place, STEP (if configured), netlist, schematic PDF, PCB PDF, `manifest.json`, and `readme.md`
+2. `readme.md` includes everything a manufacturer needs: board name, revision, date, layer count, dimensions, surface finish, copper weight, soldermask/silkscreen color, impedance requirements, designer contact
+3. Pre-handoff validation gate blocks incomplete bundles — if DRC, ERC, or manifest validation fails, NO zip is created and the user gets a clear error listing what failed
+4. `build_handoff_export(vendor="jlcpcb")` produces a JLCPCB-formatted bundle (BOM columns, CPL file naming) via the profile-driven formatter — no hard-coded `export_jlcpcb_bom` calls in the handoff path
+5. Bare-board orders (`BoardSpec` or vendor profile marks STEP as optional) produce a bundle without the STEP file
 
 **Plans:** 1 plan
 
 ---
 
-### Phase 166: BYOK Keychain Storage
+### Phase 209: Crossfile + MCP Integration
 
-**Goal:** App stores API keys in Keychain with iCloud sync (opt-out default, zero dev liability)
+**Goal:** All new operations are callable via MCP and CLI; builds are project-scoped; `ManufacturerClient` ABC is defined for future API adapters
 
-**Depends on:** Phase 165
+**Depends on:** Phase 207 (builds), Phase 208 (handoff). Phase 206 (DRC) is consumed but not a hard dependency for the integration wiring.
 
-**Requirements:** MOD-03, MOD-04, MOD-05
+**Requirements:** INTEG-01, INTEG-02, INTEG-03, INTEG-04, INTEG-05, INTEG-06
+
+**Key work:**
+- MCP auto-exposure: new ops appear automatically via `_generate_operation_tools()` in `mcp/edit_server.py` (free — no manual MCP wiring) — INTEG-01
+- CLI subcommands: `build`, `handoff`, `drc-vendor`, `board-metadata` — INTEG-02
+- Extend `crossfile/project_context.py` `ProjectContext` to discover `builds/` directories and `.kicad_build_spec.json` sidecars — INTEG-03
+- Builds are project-scoped: each project has its own `builds/` directory under the project root — INTEG-04
+- `ManufacturerClient` ABC in `manufacturing/` (interface only — `quote()`, `place_order()`, `get_status()` abstract methods). NO adapter implementations — INTEG-05, Pitfall 8 scope-creep prevention
+- Update `tests/test_registry.py:26` count assertion (currently `== 142`) for new ops — Integration Pitfall IP-1
+- `validate_registry_completeness()` passes with all new ops added (registry + schema union in sync) — INTEG-06, Integration Pitfall IP-2
+- Merge `_MANUFACTURING_HANDLERS` in `ops/handlers/__init__.py` (follow `_BOM_HANDLERS` pattern) — Integration Pitfall IP-3
 
 **Success Criteria** (what must be TRUE):
-1. User can configure API keys for Anthropic, OpenAI, Google, Groq, xAI, Together via Settings UI
-2. API keys stored in device-local Keychain by default
-3. iCloud Keychain sync is opt-out (user must explicitly disable, warned on disable)
-4. App never proxies API calls (pure BYOK, developer has zero AI cost liability)
-5. Keychain sync disabled shows warning: "You'll lose keys on device swap"
+1. All new operations (`read_board_metadata`, `set_board_metadata`, `set_board_revision`, `drc_vendor`, `build_create`, `build_list`, `build_show`, `build_handoff_export`, vendor profile list) are callable via MCP tools and CLI subcommands
+2. `ProjectContext` discovers a project's `builds/` directory and `.kicad_build_spec.json` sidecar; build operations resolve to the correct project scope
+3. `ManufacturerClient` ABC is defined with `quote()`, `place_order()`, `get_status()` abstract methods — importing it does not require any network libraries or credentials
+4. Operations registry count assertion and `validate_registry_completeness()` pass with all new ops added (registry, schema union, and handlers in sync)
 
 **Plans:** 1 plan
 
 ---
 
-### Phase 167: stdio MCP Client
+### Phase 210: Vendor API Adapters (DEFERRED)
 
-**Goal:** Swift app communicates with Python daemon via stdio MCP (JSON-RPC, no HTTP by default)
+**Status:** **DEFERRED** — Placeholder phase. Activated in v7.1+ when API credentials are obtained. Do NOT plan implementation details in v7.0.
 
-**Depends on:** Phase 162
+**Goal (when activated):** Implement `ManufacturerClient` adapters for vendors with APIs (quote/order/status), enabling programmatic quote comparison and order placement
 
-**Requirements:** DAEM-02, DAEM-05
+**Depends on:** Phase 209 (needs `ManufacturerClient` ABC). Standalone for v7.0 (no implementation work).
 
-**Success Criteria** (what must be TRUE):
-1. Swift app spawns Python daemon subprocess with stdio pipes
-2. Communication uses JSON-RPC over stdin/stdout (line-delimited, `\n` protocol)
-3. Python stdout forced to line buffering (Pitfall 2 prevention: `PYTHONUNBUFFERED=1` or `-u` flag)
-4. App survives daemon restart (no leaked pipes, reconnection transparent)
-5. Watchdog timer kills and restarts daemon if no stdout response in 30 seconds
+**Requirements:** FUTURE-API-01, FUTURE-API-02, FUTURE-API-03, FUTURE-API-04, FUTURE-API-05
 
-**Plans:** 1 plan
+**Deferred rationale:** API keys are partner-gated (PCBWay: anson@pcbway.com) or account-gated (MacroFab: factory.macrofab.com). Endpoint docs for MacroFab are behind an authenticated portal. No Python libraries exist for any of these — kicad-agent would write the first wrappers. The handoff package (Phase 208) is the universal fallback that works with all vendors, including those with APIs. API adapters are accelerators, not requirements.
 
----
+**Scope guard (Pitfall 8):** If this phase is ever activated, scope it to QUOTE ONLY first (no order placement) — quoting is read-only and safe; ordering has financial consequences.
 
-### Phase 168: Python MCP Server
+**Success Criteria:** N/A (deferred — no implementation in v7.0)
 
-**Goal:** Daemon exposes every kicad-agent op (142+) as MCP tool, auto-registered from registry
-
-**Depends on:** Phase 167
-
-**Requirements:** DAEM-03, DAEM-04
-
-**Success Criteria** (what must be TRUE):
-1. Adding new op to Python registry auto-exposes as MCP tool (zero glue code)
-2. MCP server uses stdio transport (mcp.run with transport="stdio")
-3. Tool list published via MCP list_tools (dynamic from ops registry)
-4. Pydantic schemas auto-convert to JSON Schema for Tool inputSchema
-5. All 142 ops callable via MCP with correct schema validation
-
-**Plans:** 1 plan
+**Plans:** 0 plans (deferred)
 
 ---
 
-### Phase 169: Obdurate Runtime
-
-**Goal:** State machine enforces GSD phase transitions, op journal (fsync), escalation ladder
-
-**Depends on:** Phase 168
-
-**Requirements:** GOV-01, GOV-02, GOV-06, GOV-07, GOV-08, GOV-10, GOV-11
-
-**Success Criteria** (what must be TRUE):
-1. Every op passes Intent Gate before execution (parse, validate, link to requirement)
-2. Workflow State Machine enforces transitions (can't run DRC without PCB)
-3. Op Journal logs every op with fsync durability (JSONL per audit.py pattern)
-4. Escalation ladder auto-triggers on failures (T1→T2→T3→T4)
-5. Drift detection warns on out-of-scope files (requirement_id required)
-
-**Plans:** 1 plan
-
----
-
-### Phase 170: Verification Loop Integration ✅
-
-**Goal:** Python validation_gates.py wrapped for Swift, ERC/DRC enforcement before commits
-
-**Depends on:** Phase 169
-
-**Requirements:** GOV-03, GOV-04, GOV-05
-
-**Status:** SHIPPED 2026-07-08 — commit `7b367635`
-- PreOpGate.swift: validates op + target file types via daemon kicad.pre_check
-- PostOpGate.swift: deterministic ERC/DRC (kicad.post_check) + optional semantic LLM judge
-- Rollback.swift + snapshot.py: atomic per-file snapshot/restore via kicad.snapshot/restore
-- VerificationLoop.swift: orchestrates checkpoint → preCheck → execute → postCheck → restore-on-fail
-- MCPClient.governedCall rewired to drive VerificationLoop
-- 50+ Swift tests + 26 Python tests, 211/211 Swift pass
-
-**Success Criteria** (what must be TRUE):
-1. ✅ Pre-op verification gate validates intent matches op and will achieve goal
-2. ✅ Post-op verification gate runs deterministic check + semantic check
-3. ✅ Auto-rollback on verification failure (file snapshot checkpoint via daemon)
-4. ✅ ERC/DRC gates must pass before KiCad files marked valid
-5. ✅ Verification failures surfaced as user decisions (not silent failures)
-
-**Plans:** 1 plan (COMPLETE)
-
----
-
-### Phase 171: Liquid Glass UI Shell
-
-**Goal:** SwiftUI app shell with toolbar, window management, Liquid Glass visual language
-
-**Depends on:** Phase 161
-
-**Requirements:** CHAT-05, A11Y-03, A11Y-06
-
-**Success Criteria** (what must be TRUE):
-1. App shows toolbar with New Project, Open, Settings, Share actions
-2. Window management supports multiple project windows (CMD+N, CMD+W)
-3. Liquid Glass visual language applied (consistent spacing, typography, colors)
-4. Keyboard navigation works for all UI flows (tab, space, enter)
-5. Reduce Motion and Reduce Transparency preferences respected
-
-**Plans:** 1 plan
-
-**Plan List:**
-- [x] 171-01-PLAN.md — 01
-
-**UI hint:** yes
-
----
-
-### Phase 172: Inline Rendering
-
-**Goal:** User sees inline schematic (SVG) and PCB (PNG) renders within chat/pipeline views
-
-**Depends on:** Phase 163
-
-**Requirements:** CHAT-03, CHAT-04, PIPE-01, PIPE-02, PIPE-04
-
-**Success Criteria** (what must be TRUE):
-1. Schematic previews render as SVG inline when model generates circuit
-2. PCB renders render as PNG inline when routing completes
-3. Pipeline view shows horizontal step bar (design → schematic → ERC → PCB → DRC → export)
-4. Each pipeline step shows status icon (pending/running/verified/failed) and duration
-5. Failed steps show error context and retry option
-
-**Plans:** 1 plan
-
-**Plan List:**
-- [x] 172-01-PLAN.md — 01
-
-**UI hint:** yes
-
----
-
-### Phase 173: GSD Conversation Engine
-
-**Goal:** Visual GSD methodology: questioning → spec → roadmap → execute → verify phases
-
-**Depends on:** Phase 170
-
-**Requirements:** GSD-01, GSD-02, GSD-03, GSD-04, GSD-08
-
-**Success Criteria** (what must be TRUE):
-1. When user starts new project, app runs questioning phase (clarifying questions)
-2. App generates visual Spec card (expandable, editable) from responses
-3. App generates visual Roadmap (timeline of phases) user can approve/refine
-4. User can tap any roadmap phase to see detail (goal, requirements, success criteria)
-5. User can edit a previous message and re-submit (forks conversation)
-
-**Plans:** 1 plan
-
-**Plan List:**
-- [x] 173-01-PLAN.md — 01
-
-**UI hint:** yes
-
----
-
-### Phase 174: Approval Gates UI
-
-**Goal:** Human-in-the-loop decision prompts with full context at GSD gates
-
-**Depends on:** Phase 173
-
-**Requirements:** GSD-05, GSD-06, GSD-07
-
-**Success Criteria** (what must be TRUE):
-1. App pauses execution at approval gates (ERC warnings, op confirmation, phase transitions)
-2. User can approve, reject, or "show me" at any gate
-3. Approval prompt shows full context (intent, op, verification result, requirement linkage)
-4. Obdurate Runtime verification failures surfaced as user decisions
-5. Completion summary card shows renders, exports, decisions made when phase ships
-
-**Plans:** 1 plan
-
-**Plan List:**
-- [x] 174-01-PLAN.md — 01
-
-**UI hint:** yes
-
----
-
-### Phase 175: Chat Interface
-
-**Goal:** Conversational UI with message streaming, image attachments, conversation history
-
-**Depends on:** Phase 171
-
-**Requirements:** CHAT-01, CHAT-02, CHAT-05, CHAT-06, CHAT-07, CHAT-08
-
-**Success Criteria** (what must be TRUE):
-1. User can type natural-language hardware design intent ("design a distortion pedal")
-2. User sees streamed model responses token-by-token (not buffered)
-3. User can scroll, search, and copy from full conversation history
-4. User can attach images (reference schematics, photos) to messages
-5. User sees cost estimate and model badge per assistant message
-
-**Plans:** 1 plan
-
-**Plan List:**
-- [x] 175-01-PLAN.md — 01
-
-**UI hint:** yes
-
----
-
-### Phase 176: SwiftData Models
-
-**Goal:** SwiftData models for Project, Conversation, Message, Decision, ValueChange, Snapshot
-
-**Depends on:** Phase 171
-
-**Requirements:** MEM-01, MEM-03, MEM-04, MEM-05
-
-**Success Criteria** (what must be TRUE):
-1. App persists every message, decision, value change, op call as SwiftData models
-2. Conversations are append-only (never truncated, never lost)
-3. Decisions are first-class objects (UUID, timestamp, key, value, reasoning, status)
-4. Values are event-sourced (every change tracked with old/new value and reason)
-5. SwiftData schema frozen early (v6.0.0) for CloudKit stability (Pitfall 4 prevention)
-
-**Plans:** 1 plan
-
----
-
-### Phase 177: CloudKit Sync
-
-**Goal:** Automatic Mac↔iPhone sync, LWW conflict resolution with prompts
-
-**Depends on:** Phase 176
-
-**Requirements:** MEM-02, MEM-09, MEM-10
-
-**Success Criteria** (what must be TRUE):
-1. SwiftData syncs automatically to CloudKit (private DB, free tier) across Mac and iPhone
-2. User can search across all conversations (per-project and cross-project)
-3. Conflict resolution uses LWW with prompts for value changes (both sides asked)
-4. Two-device migration test passes (Phone v1.0, Mac v1.1, verify sync, Pitfall 4 prevention)
-5. CloudKit sync never auto-migrates schema (explicit VersionedSchema only)
-
-**Plans:** 1 plan
-
----
-
-### Phase 178: Time-Travel Engine
-
-**Goal:** Event replay, snapshot materialization, diff visualization, restore capability
-
-**Depends on:** Phase 177
-
-**Requirements:** TT-01, TT-02, TT-03, TT-04, TT-06, TT-07
-
-**Success Criteria** (what must be TRUE):
-1. User sees Decision Timeline view showing all decisions/values chronologically
-2. Each timeline entry links back to originating message (jump to conversation)
-3. User can scrub slider to see project state at any point in time
-4. User can compare two points (diff view showing values, decisions, conversation changes)
-5. User can restore to any snapshot (preserves history, creates restoration event)
-
-**Plans:** 1 plan
-
-**UI hint:** yes
-
----
-
-### Phase 179: Decision Timeline UI
-
-**Goal:** Visual timeline with chapter segmentation, filters, search
-
-**Depends on:** Phase 178
-
-**Requirements:** TT-05, MEM-06, MEM-08
-
-**Success Criteria** (what must be TRUE):
-1. Decision Timeline UI loads chunks (pagination, not entire history)
-2. Run-on conversations support chapter segmentation (LLM-suggested, user-editable)
-3. Hybrid snapshot capture: auto-snapshot on every decision, manual anytime
-4. Timeline loads < 2 seconds with 100K events (Pitfall 8 prevention)
-5. User can filter timeline by decision type, date range, participant
-
-**Plans:** 1 plan
-
-**UI hint:** yes
-
----
-
-### Phase 180: Event Sourcing
-
-**Goal:** Complete append-only journal, query optimization, event compaction
-
-**Depends on:** Phase 179
-
-**Requirements:** MEM-07
-
-**Success Criteria** (what must be TRUE):
-1. Op journal logs every op (uuid, timestamp, actor, intent, op, args, result, verification, requirement_id)
-2. Events partition by project (separate Event per ProjectID for query pruning)
-3. Materialized snapshots maintain current state (don't replay events on every query)
-4. Event compaction archives old events to separate store (active events < 100K)
-5. SwiftData query tests pass with 100K event dataset (Pitfall 8 prevention)
-
-**Plans:** 1 plan
-
----
-
-### Phase 181: SKIDL Compiler
-
-**Goal:** Conversation state → SKIDL IR (depends on v5.0 Track F)
-
-**Depends on:** Phase 180, v5.0 Track F completion (BLOCKED until v5.0 lands)
-
-**Requirements:** GENOUT-01, GENOUT-06
-
-**Success Criteria** (what must be TRUE):
-1. Conversation state (messages + decisions + values + op journal) IS source of truth
-2. SKIDL compiler consumes conversation state and generates SKIDL IR
-3. .kicad_sch and .kicad_pcb are derived artifacts (regenerable from journal)
-4. SKIDL compiler integration depends on v5.0 Phase 156 (SKIDL Converter) completion
-5. Phase BLOCKED until v5.0 Track F completes (hard dependency)
-
-**Plans:** 1 plan
-
----
-
-### Phase 182: KiCad Generator
-
-**Goal:** SKIDL → .kicad_sch/.kicad_pcb files with validation gates
-
-**Depends on:** Phase 181
-
-**Requirements:** GENOUT-02, GENOUT-07
-
-**Success Criteria** (what must be TRUE):
-1. KiCad generator consumes SKIDL IR and emits .kicad_sch and .kicad_pcb files
-2. Generated files pass kicad-cli ERC/DRC before being marked valid
-3. Generation pipeline uses v5.0 Phase 160 (NL Circuit Generation) outputs
-4. Generator failures trigger Obdurate escalation (T1 retry → T2 strategy → T3 human)
-5. Generated files are deterministic (same SKIDL produces same KiCad files)
-
-**Plans:** 1 plan
-
----
-
-### Phase 183: Generative Pipeline
-
-**Goal:** Full transform orchestration with caching and hash verification
-
-**Depends on:** Phase 182
-
-**Requirements:** GENOUT-03, GENOUT-05
-
-**Success Criteria** (what must be TRUE):
-1. Pipeline orchestration runs full transform (conversation → SKIDL → KiCad → validation)
-2. Generation is deterministic (same journal state produces same hash output, Pitfall 5 prevention)
-3. Hash-based gold master tests catch generation drift in CI
-4. User can regenerate files from any snapshot (time-travel + generative combined)
-5. Pipeline caches derived artifacts (hash → artifact, invalidate on upstream change)
-
-**Plans:** 1 plan
-
----
-
-### Phase 184: Hash Gold Master Tests
-
-**Goal:** Deterministic generation verification with 10-run tests
-
-**Depends on:** Phase 183
-
-**Requirements:** GENOUT-04, TEST-06
-
-**Success Criteria** (what must be TRUE):
-1. Hash gold master tests run 10x with same inputs, assert all hashes identical (Pitfall 5 prevention)
-2. Hash includes only deterministic inputs (operation list, component set, net list, conversation intent)
-3. Hash excludes timestamps, UUIDs, metadata, ordering-independent fields
-4. Collections sorted before hashing (canonical JSON stored in event journal)
-5. CI fails if generative output hash drifts from gold master fixture
-
-**Plans:** 1 plan
-
----
-
-### Phase 185: Generative Correctness
-
-**Goal:** SPICE validation, ERC/DRC enforcement, escalation on generation failure
-
-**Depends on:** Phase 184
-
-**Requirements:** GENOUT-08
-
-**Success Criteria** (what must be TRUE):
-1. Generated schematics pass SPICE validation (ngspice integration from v5.0 Phase 158)
-2. Generated PCBs pass ERC/DRC before being marked valid
-3. Generation failures trigger Obdurate escalation (T1→T2→T3→T4 ladder)
-4. Escalation surfaces failures as user decisions (not silent failures)
-5. SPICE results used as reward signal for training (v5.0 Phase 159 integration)
-
-**Plans:** 1 plan
-
----
-
-### Phase 186: Project Genealogy
-
-**Goal:** Family tree, branches, false starts, snapshot relationships
-
-**Depends on:** Phase 178
-
-**Requirements:** GEN-01, GEN-02, GEN-03, GEN-04, GEN-05, GEN-07
-
-**Success Criteria** (what must be TRUE):
-1. User sees visual family tree of all projects (parent, children, branches, merges)
-2. Branches show status (active, abandoned, merged, archived)
-3. Abandoned branches show reason ("too noisy", "user preferred TS sound")
-4. User can branch from any project (creates child with parent reference)
-5. User can branch from any snapshot (creates child at point in time)
-
-**Plans:** 1 plan
-
-**Plan List:**
-- [x] 186-01-PLAN.md — Build project genealogy system (SwiftData models, branch/fork operations, family tree UI with graph visualization)
-
-**UI hint:** yes
-
----
-
-### Phase 187: Group Activities v1
-
-**Goal:** Live sessions with 4-participant cap, event sync (not files)
-
-**Depends on:** Phase 186
-
-**Requirements:** LIVE-01, LIVE-02, LIVE-06, LIVE-07
-
-**Success Criteria** (what must be TRUE):
-1. User can start live session via FaceTime-style interface (Group Activities)
-2. Up to 4 participants can join session (cap for v1, raise in v1.x)
-3. Session survives network drops (auto-reconnect, replay missed events)
-4. Session ends cleanly when initiator leaves (or hands off to participant)
-5. Conversation events sync live (messages, decisions, value changes appear instantly)
-
-**Plans:** 1 plan
-
-**Plan List:**
-- [x] 187-01-PLAN.md — Build Group Activities v1 (session lifecycle, 4-participant cap, event sync, auto-reconnect, auto-handoff)
-
-**UI hint:** yes
-
----
-
-### Phase 188: CKShare Invitations
-
-**Goal:** Collaborator invitations with permission management (Owner/Editor/Viewer)
-
-**Depends on:** Phase 187
-
-**Requirements:** COLLAB-01, COLLAB-02, COLLAB-03, COLLAB-04, COLLAB-09
-
-**Success Criteria** (what must be TRUE):
-1. User can share project via native macOS Share Sheet (CKShare)
-2. User can invite collaborators by email or iMessage
-3. Owner sets permission per collaborator (view, edit, fork) — default is view
-4. Collaborator accepts invite via universal link, project appears in app
-5. Owner can revoke access at any time
-
-**Plans:** 1 plan
-
-**Plan List:**
-- [x] 188-01-PLAN.md — Build CKShare invitation system (Share Sheet, permission management, Apple ID sign-in, expired link handling, revocation)
-
-**UI hint:** yes
-
----
-
-### Phase 189: Collaboration UI
-
-**Goal:** Activity feed, participant status, permission badges, sync visualization
-
-**Depends on:** Phase 188
-
-**Requirements:** COLLAB-05, COLLAB-06, COLLAB-07, COLLAB-08, COLLAB-10, LIVE-03, LIVE-04, LIVE-05
-
-**Success Criteria** (what must be TRUE):
-1. Collaborators see full conversation history, decisions, values, renders
-2. Collaborator with edit permission can send messages and approve gates
-3. Ops execute on collaborator's Mac (their daemon), state syncs via CloudKit
-4. User sees activity feed ("Alice added decision X", "Bob approved gate Y")
-5. Participants see cursor positions and selections in real-time
-
-**Plans:** 1 plan
-
-**Plan List:**
-- [x] 189-01-PLAN.md — Build collaboration UI (shared project view, activity feed, LWW conflict resolution, cursor sync stub)
-
-**UI hint:** yes
-
----
-
-### Phase 190: iCloud Drive Bundle
-
-**Goal:** .kicadagent document type, atomic writes, conflict resolution
-
-**Depends on:** Phase 189
-
-**Requirements:** FILE-01, FILE-02, FILE-03, FILE-04, FILE-05, FILE-06
-
-**Success Criteria** (what must be TRUE):
-1. Each project stored as .kicadagent document bundle (atomic document type)
-2. Bundles sync via iCloud Drive (user's account, no dev infra)
-3. Bundle contains: conversation.jsonl, decisions.json, values.json, schematic.kicad_sch, pcb.kicad_pcb, renders/
-4. Bundle writes atomic via NSFileCoordinator (Pitfall 6 prevention)
-5. Simultaneous edit Mac+iPhone test passes (atomic bundle replace, Pitfall 6 prevention)
-
-**Plans:** 1 plan
-
-**Plan List:**
-- [x] 190-01-PLAN.md — Build iCloud Drive bundle system (.kicadagent document type, atomic writes, corrupt bundle repair, macOS Versions API, zip export)
-
-**UI hint:** yes
-
----
+## Dependency Graph
+
+```
+Phase 205 (Metadata) ──┬──→ Phase 207 (Builds) ──→ Phase 208 (Handoff) ──→ Phase 209 (Integration)
+                        │                                 ↑
+Phase 206 (DRC) ────────┴─────────────────────────────────┘
+                                                                                  │
+                                                                         Phase 210 (API) — DEFERRED
+```
+
+**Hard dependencies:**
+- Phase 207 depends on Phase 205 (needs `title_block` rev field for `board_rev`)
+- Phase 208 depends on Phase 205 (BoardSpec + title_block), Phase 206 (vendor DRC), Phase 207 (build record + manifest)
+- Phase 209 depends on Phase 207 + Phase 208 (integration layer over builds + handoff)
+- Phase 206 feeds Phase 208 (vendor DRC profiles consumed by handoff validation gate)
+
+**Parallel tracks:**
+- Phase 205 (Metadata) and Phase 206 (DRC) are independent — can be worked in parallel
+- Phase 210 is standalone (DEFERRED — no implementation work in v7.0)
+
+## Track Overview
+
+**Phase 205: Board Metadata Foundation** — `title_block` parse/write + `BoardSpec` model + sidecar JSON. Foundation for versioning.
+**Phase 206: Vendor DRC Profiles** — `.kicad_dru` files for 5+ vendors + `drc_vendor` op. Pre-flight DRC gate.
+**Phase 207: Versioned Build System** — `Build` record + serialized manifest + build ops + diffing. Provenance tracking.
+**Phase 208: Manufacturer Handoff Package** — Full export orchestration → zip + readme + manifest. Universal vendor-neutral path.
+**Phase 209: Crossfile + MCP Integration** — MCP/CLI exposure + `ProjectContext` + `ManufacturerClient` ABC.
+**Phase 210: Vendor API Adapters (DEFERRED)** — PCBWay/MacroFab/JLCPCB adapters. Placeholder only in v7.0.
+
+**Critical Path:** 205 → 207 → 208 → 209 (206 feeds 208 in parallel)
+
+## Pitfall Addressed by Phase
+
+- Phase 205: title_block parsing fragility (Pitfall 2)
+- Phase 206: Stale DRC values (Pitfall 1) + profile licensing/attribution (Pitfall 6)
+- Phase 207: Build dir git pollution (Pitfall 4) + manifest false confidence (Pitfall 5, build side)
+- Phase 208: Vendor lock-in via hard-coded formatting (Pitfall 3) + manifest false confidence (Pitfall 5, handoff side) + large file handling in zips (Pitfall 7)
+- Phase 209: Integration pitfalls IP-1 (registry count), IP-2 (schema union drift), IP-3 (handler merge), IP-4 (CROSS_FILE_OP_TYPES)
+- Phase 210: API adapter scope creep (Pitfall 8) — guarded by DEFERRED status + quote-only scope rule
+
+## Requirement Coverage
+
+| Category | REQ-IDs | Phase | Count |
+|----------|---------|-------|-------|
+| Board Metadata | META-01..07 | 205 | 7 |
+| Vendor DRC Profiles | DRC-01..08 | 206 | 8 |
+| Versioned Build System | BUILD-01..10 | 207 | 10 |
+| Manufacturer Handoff | HANDOFF-01..09 | 208 | 9 |
+| Integration | INTEG-01..06 | 209 | 6 |
+| Vendor API Adapters (DEFERRED) | FUTURE-API-01..05 | 210 | 5 |
+| **Active Total** | | | **40** |
+| **Deferred Total** | | | **5** |
+| **Grand Total** | | | **45** |
+
+**Coverage:** 100% — all 40 active requirements (META-01..07, DRC-01..08, BUILD-01..10, HANDOFF-01..09, INTEG-01..06) map to an active phase (205-209). All 5 future requirements (FUTURE-API-01..05) map to deferred Phase 210.
 
 ## Progress Tracking
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 161. App Shell Foundation | 1/1 | Complete | 2026-07-07 |
-| 162. Python Daemon Bundling | 1/1 | Complete | 2026-07-07 |
-| 163. KiCad CLI Integration | 1/1 | Complete | 2026-07-07 |
-| 164. LLM Provider Protocol | 1/1 | Complete | 2026-07-07 |
-| 165. Provider Router | 1/1 | Complete | 2026-07-08 |
-| 166. BYOK Keychain Storage | 0/3 | Not started | - |
-| 167. stdio MCP Client | 0/3 | Not started | - |
-| 168. Python MCP Server | 0/3 | Not started | - |
-| 169. Obdurate Runtime | 0/4 | Not started | - |
-| 170. Verification Loop Integration | 0/3 | Not started | - |
-| 171. Liquid Glass UI Shell | 1/1 | **Planned** | - |
-| 172. Inline Rendering | 1/1 | **Planned** | - |
-| 173. GSD Conversation Engine | 1/1 | **Planned** | - |
-| 174. Approval Gates UI | 1/1 | **Planned** | - |
-| 175. Chat Interface | 1/1 | **Planned** | - |
-| 176. SwiftData Models | 0/3 | Not started | - |
-| 177. CloudKit Sync | 0/3 | Not started | - |
-| 178. Time-Travel Engine | 0/4 | Not started | - |
-| 179. Decision Timeline UI | 0/3 | Not started | - |
-| 180. Event Sourcing | 0/3 | Not started | - |
-| 181. SKIDL Compiler | 0/3 | Blocked (v5.0) | - |
-| 182. KiCad Generator | 0/3 | Blocked (v5.0) | - |
-| 183. Generative Pipeline | 0/3 | Blocked (v5.0) | - |
-| 184. Hash Gold Master Tests | 0/3 | Blocked (v5.0) | - |
-| 185. Generative Correctness | 0/3 | Blocked (v5.0) | - |
-| 186. Project Genealogy | 0/3 | Not started | - |
-| 187. Group Activities v1 | 0/3 | Not started | - |
-| 188. CKShare Invitations | 0/3 | Not started | - |
-| 189. Collaboration UI | 0/4 | Not started | - |
-| 190. iCloud Drive Bundle | 0/3 | Not started | - |
-| 191. swift-testing Framework | 0/3 | Not started | - |
-| 192. Snapshot Testing | 0/3 | Not started | - |
-| 193. Property-Based Testing | 0/3 | Not started | - |
-| 194. Mutation Testing | 0/3 | Not started | - |
-| 195. Accessibility Testing | 0/3 | Not started | - |
-| 196. UI Automation | 0/3 | Not started | - |
-| 197. Performance Testing | 0/3 | Not started | - |
-| 198. Concurrency Testing | 0/3 | Not started | - |
-| 199. Python Daemon Testing | 0/3 | Not started | - |
-| 200. CI Coverage Gates | 0/3 | Not started | - |
-| 201. A11y by Default | 1/1 | **Planned** | - |
-| 202. iPhone Companion | 1/1 | **Planned** | - |
-| 203. Build & Ship Automation (Fastlane) | 1/1 | **Planned** | - |
+| 205. Board Metadata Foundation | 0/1 | Not started | - |
+| 206. Vendor DRC Profiles | 0/1 | Not started | - |
+| 207. Versioned Build System | 0/1 | Not started | - |
+| 208. Manufacturer Handoff Package | 0/1 | Not started | - |
+| 209. Crossfile + MCP Integration | 0/1 | Not started | - |
+| 210. Vendor API Adapters (DEFERRED) | 0/0 | Deferred | - |
 
-**Total:** 43 phases, 138 requirements mapped, 100% coverage, **7 plans written for phases 171-175, 201-203**
+**Total:** 5 active phases (205-209), 40 active requirements mapped, 100% coverage, **0 plans written**
 
 ---
 
-## Track Overview
-
-**Track A: Foundation (Phases 161-163)** — App shell, Python daemon bundling, KiCad CLI integration
-**Track B: Models (Phases 164-166)** — LLM Provider protocol, Provider Router, BYOK Keychain storage
-**Track C: Governance (Phases 167-170)** — stdio MCP client, Python MCP server, Obdurate Runtime, Verification Loop
-**Track D: UI Surfaces (Phases 171-175)** — Liquid Glass shell, Inline Rendering, GSD Conversation Engine, Approval Gates, Chat Interface
-**Track E: Memory (Phases 176-180)** — SwiftData models, CloudKit sync, Time-Travel, Decision Timeline, Event Sourcing
-**Track F: Generative (Phases 181-185)** — SKIDL compiler, KiCad generator, Generative Pipeline, Hash Gold Master Tests, Generative Correctness
-**Track G: Collaboration (Phases 186-190)** — Project Genealogy, Group Activities, CKShare invitations, Collaboration UI, iCloud Drive Bundle
-**Track H: Quality (Phases 191-202)** — swift-testing, Snapshot tests, Property-based tests, Mutation tests, A11y, UI Automation, Performance, Concurrency, Python daemon tests, CI gates, iPhone Companion
-**Track I: Build & Ship (Phase 203)** — Fastlane build automation, TestFlight distribution, App Store submission
-
-**Critical Path:** A → B → C → D → E → F → G (Quality H runs in parallel)
-
-**Pitfall Addressed by Phase:**
-- Phase 162: PyInstaller dylib signing (Pitfall 1)
-- Phase 167: stdio MCP buffering deadlock (Pitfall 2)
-- Phase 164: FoundationModels unavailability (Pitfall 3)
-- Phase 177: SwiftData CloudKit migration loss (Pitfall 4)
-- Phase 184: Generative hash instability (Pitfall 5)
-- Phase 190: iCloud Drive bundle corruption (Pitfall 6)
-- Phase 164 (Task 3): MLX-Swift Metal memory pressure (Pitfall 7)
-- Phase 178 + Phase 180: SwiftData query performance (Pitfall 8)
-- Phase 163: App Store GPL compliance (Pitfall 9)
-- Phase 188: CKShare participant permissions (Pitfall 10)
-
----
-
-## Dependencies
-
-**Hard dependencies:**
-- Phase 162 depends on Phase 161 (daemon needs app shell)
-- Phase 163 depends on Phase 162 (kicad-cli needs daemon lifecycle)
-- Phase 167 depends on Phase 162 (stdio client needs daemon bundling)
-- Phase 168 depends on Phase 167 (MCP server needs stdio client)
-- Phase 169 depends on Phase 168 (Obdurate needs MCP server)
-- Phase 170 depends on Phase 169 (Verification needs Obdurate)
-- Phase 173 depends on Phase 170 (GSD needs verification gates)
-- Phase 171 depends on Phase 161 (UI shell needs app foundation)
-- Phase 172 depends on Phase 163 (inline rendering needs kicad-cli)
-- Phase 174 depends on Phase 173 (gates need GSD engine)
-- Phase 175 depends on Phase 171 (chat needs UI shell)
-- Phase 176 depends on Phase 171 (SwiftData needs UI shell)
-- Phase 177 depends on Phase 176 (CloudKit needs models)
-- Phase 178 depends on Phase 177 (Time-travel needs CloudKit)
-- Phase 181 BLOCKED on v5.0 Track F (SKIDL dependency)
-- Phase 186 depends on Phase 178 (Genealogy needs time-travel)
-- Phase 187 depends on Phase 186 (Group Activities needs genealogy)
-- Phase 188 depends on Phase 187 (CKShare needs Group Activities)
-- Phase 189 depends on Phase 188 (Collab UI needs CKShare)
-- Phase 190 depends on Phase 189 (iCloud bundle needs collab)
-
-**Parallel tracks:**
-- Track H (Quality) runs in parallel with all tracks (continuous testing)
-- Track E (Memory) can start in parallel with Track D (UI) after Track C (Governance)
-- Track G (Collaboration) can start in parallel with Track F (Generative) after Track E (Memory)
-
-### Phase 158: SPICE Pipeline — ngspice integration (COMPLETE, retroactively closed 2026-07-07)
-
-**Goal:** Headless, scriptable ngspice simulation pipeline: SKIDL netlist → ngspice → structured typed results. Foundation for AI training reward signals (Phase 159) and Phase 204 closed-box optimization.
-**Requirements:** Reward signal for Phase 159 TRAIN-04 (pre-route vs post-route degradation)
-**Depends on:** Phase 156 (SKIDL Converter provides CircuitIR)
-**Plans:** 0 (shipped without formal PLAN.md — retroactive SUMMARY.md written 2026-07-07)
-**Status:** ✅ Complete — shipped 2026-07-04 (`08c5e7a9`, `46ed4b3b`)
-
-**Shipped:**
-- `src/kicad_agent/spice/` (5 files, ~20 KB): `types.py`, `ngspice_runner.py`, `testbench.py`, `model_registry.py`, `degradation.py`
-- `tests/spice/test_spice.py`: 14/16 passing (2 failures are environment-only — require ngspice CLI install)
-- Public API: `run_simulation`, `generate_*_testbench`, `compute_degradation`, `is_simulatable`, `get_model`
-- Testbench support: AC, TRAN, NOISE, THD analyses
-- SPICE macromodels: NE5532, TL072, LM358 (simplified)
-- `UNSIMULATABLE` registry: RP2350B, AK4619VN, RP2040, W5500, MCP23017, MCP23008
-
-**Did NOT deliver (deferred to Phase 204):** Optuna integration, pytest fixtures, pandas adapter, spicelib SimRunner upgrade, end-to-end closed-box demo.
-
----
-
-### Phase 204: Closed-Box Simulation Pipeline v1 — Eurorack Magic Proof
-
-**Goal:** Build the optimization + testing + dataframe + demo layer ON TOP of Phase 158's `src/kicad_agent/spice/` foundation. Prove the closed-box magic end-to-end on a Eurorack input preamp canonical example: "give me a 20 dB preamp" → Optuna sweeps E12 resistor values → ngspice verifies → pytest asserts → Bode PNG + BOM markdown emit. Closes the three broken links in the v6.0 "Closed Box" vision.
-**Requirements:** Gap-fill — SPICE execution layer exists (Phase 158) but circuit optimization, hardware-as-code tests, and DataFrame analysis are missing. Strategic competitor pressure (tscircuit) demands matching zero-friction magic for analog circuits.
-**Depends on:** Phase 158 (uses `kicad_agent.spice.run_simulation`, `generate_ac_testbench`, `SimulationResult` types)
-**Plans:** 4 plans
-
-**Canonical example:** Eurorack input preamp — single NPN common-emitter (2N3904), ±12 V rails, audio bandwidth (20 Hz–20 kHz), target 20 dB gain, ~1M input impedance. Optuna optimizes R1/R2/Rc/Re over E12 series.
-
-**Deliverables:**
-- `src/kicad_agent/sim/optimizer.py` — Optuna sweep loop, E12/E24 resistor constraints, Pareto front support, sqlite persistence
-- `src/kicad_agent/sim/dataframe.py` — pandas DataFrame adapter for `SimulationResult` (one column per net, sweep-aware)
-- `src/kicad_agent/sim/skidl_bridge.py` — SKiDL Circuit → `ngspice_runner.run_simulation()` adapter (reuses 158 foundation)
-- `tests/sim/conftest.py` — pytest fixtures: `eurorack_preamp` builds + sims once per session
-- `tests/sim/test_eurorack_preamp.py` — first hardware-as-code test: `assert gain_db >= target_db - 3`
-- `scripts/demo_closed_box.py` — end-to-end magic demo
-
-**Infrastructure:**
-- `brew install ngspice` (macOS) / `apt install ngspice` (Linux) — document in README + CLAUDE.md
-- pyproject.toml: add `pandas>=2.0`, `matplotlib>=3.7`, `optuna>=4.5`
-- CLAUDE.md tool inventory: spicelib SimRunner patterns, ngspice patterns
-
-**Acceptance:**
-- `python3 scripts/demo_closed_box.py` produces: chosen R values, gain within 3 dB of target, `bode.png`, `bom.md`, all in <60 s on Apple Silicon
-- `pytest tests/sim/` passes with the gain assertion
-- Bode plot shows expected −3 dB frequency
-- Phase 158's 2 currently-failing tests now pass (ngspice installed)
-- No manual SPICE netlist writing — closed-box from intent to verified hardware
-
-Plans:
-- [x] 204-01-PLAN.md — Foundation: pyproject sim extras, 2N3904 model, tests/sim/ package (Wave 0) ✅ SHIPPED 2026-07-07
-- [x] 204-02-PLAN.md — Core sim layer: eurorack.py (circuit_to_spice_netlist), dataframe.py, bom.py, plot.py (Wave 1) ✅ SHIPPED 2026-07-07
-- [x] 204-03-PLAN.md — Optimizer: Optuna GPSampler objective + optimize_preamp() (Wave 2) ✅ SHIPPED 2026-07-07
-- [x] 204-04-PLAN.md — End-to-end demo script + README/CLAUDE.md docs + .gitignore (Wave 3) ✅ SHIPPED 2026-07-07
-
-**Status:** ✅ COMPLETE 2026-07-07 — Council Gate 2 APPROVED. 64/64 tests passing. Demo proven end-to-end: gain_db=19.84 (target 20±3), bode.png 45.7 KB, bom.md 8 E12 parts. Closes the v6.0 "Closed Box" keystone.
-
----
-
-**Last updated:** 2026-07-07 — Phase 204 planned with 4 plans (Wave 0-3)
+**Last updated:** 2026-07-10 — v7.0 roadmap created. Phase numbering continues from v6.0's last phase (204).

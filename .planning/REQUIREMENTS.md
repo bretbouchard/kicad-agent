@@ -82,12 +82,54 @@
 
 ## Traceability
 
-(Filled by roadmapper — maps each REQ-ID to a phase number)
+Maps each REQ-ID to a phase number. 100% coverage — all 40 active requirements map to an active phase (205-209); all 5 future requirements map to deferred Phase 210.
 
-| REQ-ID | Phase |
-|--------|-------|
-| META-01..07 | TBD |
-| DRC-01..08 | TBD |
-| BUILD-01..10 | TBD |
-| HANDOFF-01..09 | TBD |
-| INTEG-01..06 | TBD |
+| REQ-ID | Phase | Phase Name |
+|--------|-------|------------|
+| META-01 | 205 | Board Metadata Foundation |
+| META-02 | 205 | Board Metadata Foundation |
+| META-03 | 205 | Board Metadata Foundation |
+| META-04 | 205 | Board Metadata Foundation |
+| META-05 | 205 | Board Metadata Foundation |
+| META-06 | 205 | Board Metadata Foundation |
+| META-07 | 205 | Board Metadata Foundation |
+| DRC-01 | 206 | Vendor DRC Profiles |
+| DRC-02 | 206 | Vendor DRC Profiles |
+| DRC-03 | 206 | Vendor DRC Profiles |
+| DRC-04 | 206 | Vendor DRC Profiles |
+| DRC-05 | 206 | Vendor DRC Profiles |
+| DRC-06 | 206 | Vendor DRC Profiles |
+| DRC-07 | 206 | Vendor DRC Profiles |
+| DRC-08 | 206 | Vendor DRC Profiles |
+| BUILD-01 | 207 | Versioned Build System |
+| BUILD-02 | 207 | Versioned Build System |
+| BUILD-03 | 207 | Versioned Build System |
+| BUILD-04 | 207 | Versioned Build System |
+| BUILD-05 | 207 | Versioned Build System |
+| BUILD-06 | 207 | Versioned Build System |
+| BUILD-07 | 207 | Versioned Build System |
+| BUILD-08 | 207 | Versioned Build System |
+| BUILD-09 | 207 | Versioned Build System |
+| BUILD-10 | 207 | Versioned Build System |
+| HANDOFF-01 | 208 | Manufacturer Handoff Package |
+| HANDOFF-02 | 208 | Manufacturer Handoff Package |
+| HANDOFF-03 | 208 | Manufacturer Handoff Package |
+| HANDOFF-04 | 208 | Manufacturer Handoff Package |
+| HANDOFF-05 | 208 | Manufacturer Handoff Package |
+| HANDOFF-06 | 208 | Manufacturer Handoff Package |
+| HANDOFF-07 | 208 | Manufacturer Handoff Package |
+| HANDOFF-08 | 208 | Manufacturer Handoff Package |
+| HANDOFF-09 | 208 | Manufacturer Handoff Package |
+| INTEG-01 | 209 | Crossfile + MCP Integration |
+| INTEG-02 | 209 | Crossfile + MCP Integration |
+| INTEG-03 | 209 | Crossfile + MCP Integration |
+| INTEG-04 | 209 | Crossfile + MCP Integration |
+| INTEG-05 | 209 | Crossfile + MCP Integration |
+| INTEG-06 | 209 | Crossfile + MCP Integration |
+| FUTURE-API-01 | 210 (DEFERRED) | Vendor API Adapters |
+| FUTURE-API-02 | 210 (DEFERRED) | Vendor API Adapters |
+| FUTURE-API-03 | 210 (DEFERRED) | Vendor API Adapters |
+| FUTURE-API-04 | 210 (DEFERRED) | Vendor API Adapters |
+| FUTURE-API-05 | 210 (DEFERRED) | Vendor API Adapters |
+
+**Coverage summary:** 40/40 active requirements mapped (100%). 5/5 future requirements mapped to deferred Phase 210.
