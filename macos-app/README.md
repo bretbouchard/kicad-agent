@@ -38,8 +38,16 @@ This launches the Liquid Glass chat shell. Multi-window via `cmd+N`.
 ## Test
 
 ```bash
-swift test --enable-code-coverage
+swift test --no-parallel --enable-code-coverage
 ```
+
+**Always run with `--no-parallel`.** SwiftData's in-memory ModelContainer has
+a Core Data lifecycle race in parallel execution: when multiple test suites
+create local containers and attach them to SwiftUI Views with `@Query`, the
+deallocation order is undefined. `ModelContext.reset()` during cleanup can
+invalidate models still referenced by `@Query` fault-ins, triggering
+`SwiftData/BackingData.swift:835` fatal errors. This is a SwiftData framework
+bug, not a project bug — serial execution is the only reliable workaround.
 
 100% line+branch coverage is enforced in CI (TEST-02). Phase 161 covers the
 SwiftData models (Project, Conversation). Phase 192 adds full snapshot tests.

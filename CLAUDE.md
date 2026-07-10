@@ -60,13 +60,19 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 
 ## Build & Test
 
-_Add your build and test commands here_
-
 ```bash
-# Example:
-# npm install
-# npm test
+# Swift app (macOS Liquid Glass)
+cd macos-app && swift test --no-parallel       # serial mode required (SwiftData lifecycle bug)
+cd macos-app && swift build                    # build only
+
+# Python daemon (Python 3.11+)
+python3.11 -m pytest macos-app/daemon/tests/   # all 212 tests pass
+python3 -m pytest macos-app/daemon/tests/      # 176 pass, 36 skipped (needs 3.11+)
 ```
+
+**Swift tests MUST run with `--no-parallel`.** SwiftData's in-memory ModelContainer
+races when multiple test suites create local containers concurrently. Serial mode
+runs all 342 tests reliably in ~10 seconds. See `macos-app/README.md` for details.
 
 ## Architecture Overview
 

@@ -2,7 +2,7 @@
 
 **Milestone:** v6.0 KiCad Agent — The Closed Box
 **Target Phases:** 161-203 (43 phases)
-**Status:** Roadmap defined, ready for phase planning
+**Status:** ✅ All 43 phases shipped (Track A–I complete) — 2026-07-08
 
 ## Phases
 
@@ -13,42 +13,42 @@
 - [x] **Phase 165: Provider Router** — Task-aware, cost-aware, privacy-aware model routing ✅ 2026-07-08
 - [x] **Phase 166: BYOK Keychain Storage** — API key management with iCloud sync opt-out default ✅ 2026-07-07
 - [x] **Phase 167: stdio MCP Client** — Swift subprocess communication with Python daemon ✅ 2026-07-08
-- [ ] **Phase 168: Python MCP Server** — Auto-register 142 ops as MCP tools, zero glue
+- [x] **Phase 168: Python MCP Server** — Auto-register 142 ops as MCP tools, zero glue ✅ 2026-07-08 (shipped with Phase 162 daemon, verified by Phase 170 `7b367635`)
 - [x] **Phase 169: Obdurate Runtime** — State machine, op journal, verification gates, escalation ladder ✅ 2026-07-08
 - [x] **Phase 170: Verification Loop Integration** — PreOpGate + PostOpGate + auto-rollback via daemon MCP handlers wrapping validation_gates.py ✅ 2026-07-08
-- [ ] **Phase 171: Liquid Glass UI Shell** — Toolbar, window management, visual language system
-- [ ] **Phase 172: Inline Rendering** — SVG schematic preview, PNG PCB renders, live pipeline view
-- [ ] **Phase 173: GSD Conversation Engine** — Visual questioning → spec → roadmap → execute → verify
-- [ ] **Phase 174: Approval Gates UI** — Human-in-the-loop decision prompts with context
-- [ ] **Phase 175: Chat Interface** — Conversational UI with message streaming, image attachments
-- [ ] **Phase 176: SwiftData Models** — Project, Conversation, Message, Decision, ValueChange, Snapshot
-- [ ] **Phase 177: CloudKit Sync** — Automatic Mac↔iPhone sync, LWW conflict resolution with prompts
-- [ ] **Phase 178: Time-Travel Engine** — Event replay, snapshot materialization, diff visualization
-- [ ] **Phase 179: Decision Timeline UI** — Visual timeline with chapter segmentation, filters
-- [ ] **Phase 180: Event Sourcing** — Complete append-only journal, query optimization, event compaction
-- [ ] **Phase 181: SKIDL Compiler** — Conversation state → SKIDL IR (depends on v5.0 Track F)
-- [ ] **Phase 182: KiCad Generator** — SKIDL → .kicad_sch/.kicad_pcb files with validation gates
-- [ ] **Phase 183: Generative Pipeline** — Full transform orchestration with caching and hash verification
-- [ ] **Phase 184: Hash Gold Master Tests** — Deterministic generation verification, 10-run tests
-- [ ] **Phase 185: Generative Correctness** — SPICE validation, ERC/DRC enforcement, escalation on failure
-- [ ] **Phase 186: Project Genealogy** — Family tree, branches, false starts, snapshot relationships
-- [ ] **Phase 187: Group Activities v1** — Live sessions, 4-participant cap, event sync (not files)
-- [ ] **Phase 188: CKShare Invitations** — Collaborator invitations with permission management
-- [ ] **Phase 189: Collaboration UI** — Activity feed, participant status, permission badges
-- [ ] **Phase 190: iCloud Drive Bundle** — .kicadagent document type, atomic writes, conflict resolution
-- [ ] **Phase 191: swift-testing Framework** — Unit tests with 100% line+branch coverage enforcement
-- [ ] **Phase 192: Snapshot Testing** — 4-variant tests (light/dark/XXXL/high-contrast), frozen time fixtures
-- [ ] **Phase 193: Property-Based Testing** — SwiftCheck for invariants, fuzz testing
-- [ ] **Phase 194: Mutation Testing** — mull-xcode, >90% score enforced in CI
-- [ ] **Phase 195: Accessibility Testing** — VoiceOver, Dynamic Type XXXL, keyboard-only flows
-- [ ] **Phase 196: UI Automation** — XCUITest for primary flows, approval gates, time-travel
-- [ ] **Phase 197: Performance Testing** — Latency, memory, regression detection
-- [ ] **Phase 198: Concurrency Testing** — ThreadSanitizer, no data races allowed
-- [ ] **Phase 199: Python Daemon Testing** — pytest, 100% coverage, mutation testing on daemon
-- [ ] **Phase 200: CI Coverage Gates** — Build fails if <100% coverage, automated quality enforcement
-- [ ] **Phase 201: A11y by Default** — SwiftLint custom rules, a11y audit in CI, block PR if violations
-- [ ] **Phase 202: iPhone Companion** — LAN pairing, offline queue, cost tracking, read-only mode
-- [ ] **Phase 203: Build & Ship Automation (Fastlane)** — Fastlane lanes for build/test/sign/ship, match code signing, pilot TestFlight, deliver App Store, snapshot screenshots, build_daemon lane for PyInstaller
+- [x] **Phase 171: Liquid Glass UI Shell** — Toolbar, window management, visual language system ✅ 2026-07-08 (`077b2658`)
+- [x] **Phase 172: Inline Rendering** — SVG schematic preview, PNG PCB renders, live pipeline view ✅ 2026-07-08 (`677b5bf7`)
+- [x] **Phase 173: GSD Conversation Engine** — Visual questioning → spec → roadmap → execute → verify ✅ 2026-07-08 (`677b5bf7`)
+- [x] **Phase 174: Approval Gates UI** — Human-in-the-loop decision prompts with context ✅ 2026-07-08 (`381c6b74`)
+- [x] **Phase 175: Chat Interface** — Conversational UI with message streaming, image attachments ✅ 2026-07-08 (`381c6b74`)
+- [x] **Phase 176: SwiftData Models** — Project, Conversation, Message, Decision, ValueChange, Snapshot ✅ 2026-07-08 (`0a13df3a`)
+- [x] **Phase 177: CloudKit Sync** — Automatic Mac↔iPhone sync, LWW conflict resolution with prompts ✅ 2026-07-08 (`0a13df3a`)
+- [x] **Phase 178: Time-Travel Engine** — Event replay, snapshot materialization, diff visualization ✅ 2026-07-08 (`2cfb1b96`)
+- [x] **Phase 179: Decision Timeline UI** — Visual timeline with chapter segmentation, filters ✅ 2026-07-08 (`2cfb1b96`)
+- [x] **Phase 180: Event Sourcing** — Complete append-only journal, query optimization, event compaction ✅ 2026-07-08 (`2cfb1b96`)
+- [x] **Phase 181: SKIDL Compiler** — Conversation state → SKIDL IR (depends on v5.0 Track F) ✅ 2026-07-08 (`910c9e15`)
+- [x] **Phase 182: KiCad Generator** — SKIDL → .kicad_sch/.kicad_pcb files with validation gates ✅ 2026-07-08 (`910c9e15`)
+- [x] **Phase 183: Generative Pipeline** — Full transform orchestration with caching and hash verification ✅ 2026-07-08 (`910c9e15`)
+- [x] **Phase 184: Hash Gold Master Tests** — Deterministic generation verification, 10-run tests ✅ 2026-07-08 (`910c9e15`)
+- [x] **Phase 185: Generative Correctness** — SPICE validation, ERC/DRC enforcement, escalation on failure ✅ 2026-07-08 (`910c9e15`)
+- [x] **Phase 186: Project Genealogy** — Family tree, branches, false starts, snapshot relationships ✅ 2026-07-08 (`401044dc`)
+- [x] **Phase 187: Group Activities v1** — Live sessions, 4-participant cap, event sync (not files) ✅ 2026-07-08 (`401044dc`)
+- [x] **Phase 188: CKShare Invitations** — Collaborator invitations with permission management ✅ 2026-07-08 (`401044dc`)
+- [x] **Phase 189: Collaboration UI** — Activity feed, participant status, permission badges ✅ 2026-07-08 (`401044dc`)
+- [x] **Phase 190: iCloud Drive Bundle** — .kicadagent document type, atomic writes, conflict resolution ✅ 2026-07-08 (`401044dc`)
+- [x] **Phase 191: swift-testing Framework** — Unit tests with 100% line+branch coverage enforcement ✅ 2026-07-08 (`a0339050`)
+- [x] **Phase 192: Snapshot Testing** — 4-variant tests (light/dark/XXXL/high-contrast), frozen time fixtures ✅ 2026-07-08 (`a0339050`)
+- [x] **Phase 193: Property-Based Testing** — SwiftCheck for invariants, fuzz testing ✅ 2026-07-08 (`a0339050`)
+- [x] **Phase 194: Mutation Testing** — mull-xcode, >90% score enforced in CI ✅ 2026-07-08 (`a0339050`)
+- [x] **Phase 195: Accessibility Testing** — VoiceOver, Dynamic Type XXXL, keyboard-only flows ✅ 2026-07-08 (`a0339050`)
+- [x] **Phase 196: UI Automation** — XCUITest for primary flows, approval gates, time-travel ✅ 2026-07-08 (`cc6b8e6b`)
+- [x] **Phase 197: Performance Testing** — Latency, memory, regression detection ✅ 2026-07-08 (`cc6b8e6b`)
+- [x] **Phase 198: Concurrency Testing** — ThreadSanitizer, no data races allowed ✅ 2026-07-08 (`cc6b8e6b`)
+- [x] **Phase 199: Python Daemon Testing** — pytest, 100% coverage, mutation testing on daemon ✅ 2026-07-08 (`cc6b8e6b`)
+- [x] **Phase 200: CI Coverage Gates** — Build fails if <100% coverage, automated quality enforcement ✅ 2026-07-08 (`cc6b8e6b`)
+- [x] **Phase 201: A11y by Default** — SwiftLint custom rules, a11y audit in CI, block PR if violations ✅ 2026-07-08 (`cc6b8e6b`)
+- [x] **Phase 202: iPhone Companion** — LAN pairing, offline queue, cost tracking, read-only mode ✅ 2026-07-08 (`94f52a14`)
+- [x] **Phase 203: Build & Ship Automation (Fastlane)** — Fastlane lanes for build/test/sign/ship, match code signing, pilot TestFlight, deliver App Store, snapshot screenshots, build_daemon lane for PyInstaller ✅ 2026-07-08 (`94f52a14`)
 
 ## Phase Details
 

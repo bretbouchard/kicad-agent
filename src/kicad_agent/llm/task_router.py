@@ -56,7 +56,7 @@ CODEGEN_PATTERNS = [
     r"\b(i need|we need|i want)\b.*\b(circuit|board|pcb|connector|interface)\b",
     r"\b(add|place|connect|wire)\b.*\b(resistor|capacitor|led|mosfet|opamp|mcu|esp32|stm32|crystal|connector)\b",
     r"\b(part|skidl|net|footprint|component)\b",
-    r"\b(voltage divider|rc filter|lc filter|pull.?up|pull.?down|decoupling|h.bridge|current.limiter)\b",
+    r"\b(voltage divider|rc filter|lc filter|decoupling|h.bridge|current.limiter)\b",
     r"\b(breakout|shield|carrier|adapter board)\b",
     r"\b(esp32|stm32|rp2040|atmega|arduino|raspberry)\b.*\b(board|circuit|breakout)\b",
 ]
@@ -80,6 +80,7 @@ SPICE_PATTERNS = [
     r"\b(ac analysis|dc sweep|transient analysis|noise analysis|monte carlo|worst.case)\b",
     r"\b(run.*analysis|plot.*response|frequency.sweep)\b",
     r"\b(-3db|3db.point|cutoff.frequency|corner.frequency|rolloff)\b.*\b(verify|check|measure|find)\b",
+    r"\b(verify|check|measure|find)\b.*\b(-3db|3db.point|cutoff.frequency|corner.frequency|rolloff)\b",
     r"\b(simulate|simulation)\b.*\b(filter|circuit|amplifier|regulator)\b",
 ]
 

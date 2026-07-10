@@ -138,8 +138,10 @@ struct KCTaskPromptFormatterTests {
         let formatted = KCTaskPromptFormatter.format(prompt, for: task)
         #expect(formatted.systemPrompt == "My custom system")
     }
-        #expect(task.taskType == .privacySensitive)
-    }
+}
+
+@Suite("KCTaskClassifier additional")
+struct KCTaskClassifierAdditionalTests {
 
     @Test("Proprietary marker triggers privacySensitive routing")
     func proprietaryMarkerDetected() {

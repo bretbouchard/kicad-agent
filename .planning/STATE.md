@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: milestone
-status: executing
-stopped_at: Phase 170 Verification Loop Integration shipped (PreOpGate + PostOpGate + Rollback + VerificationLoop + 4 daemon handlers + snapshot.py atomic per-file restore, 50+ Swift tests + 26 Python tests, 211/211 Swift pass)
-last_updated: "2026-07-08T07:00:00.000Z"
+status: complete
+stopped_at: v6.0 milestone complete — all 43 phases shipped (161-203, Tracks A–I). Model training in progress for refinement/polish.
+last_updated: "2026-07-08T20:00:00.000Z"
 last_activity: 2026-07-08
 progress:
-  total_phases: 32
-  completed_phases: 10
-  total_plans: 34
-  completed_plans: 10
-  percent: 29
+  total_phases: 43
+  completed_phases: 43
+  total_plans: 43
+  completed_plans: 43
+  percent: 100
 ---
 
 # Project State
@@ -21,8 +21,8 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-07)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 170 SHIPPED — Verification Loop Integration. PreOpGate + PostOpGate + Rollback + VerificationLoop on Swift side; kicad.pre_check/post_check/snapshot/restore MCP handlers on daemon side wrapping existing validation_gates.py + erc_drc.py. GOV-03, GOV-04, GOV-05 closed.
-Last activity: 2026-07-08 — Phase 170 complete (4 Governance source files + snapshot.py + MCPClient.governedCall rewired to VerificationLoop, 50+ Swift tests + 26 Python tests, 211/211 Swift pass)
+**Current focus:** v6.0 milestone COMPLETE — all 43 phases (161-203) shipped across Tracks A–I. Track D UI (171-175), Track E Memory (176-180), Track F Generative (181-185), Track G Collaboration (186-190), Track H Quality (191-201), Track I Ship (202-203) all delivered. Model training in progress for refinement/polish.
+Last activity: 2026-07-08 — ROADMAP.md + STATE.md reconciled with git history. Roadmap previously stale (showed 33 phases unshipped); all checkboxes now match actual commit state.
 
 ## Current Position
 

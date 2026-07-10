@@ -190,7 +190,10 @@ enum KCTaskClassifier {
             "build a schematic",
             "emit netlist",
             "generate footprint",
-            "create footprint"
+            "create footprint",
+            "breakout",
+            "i need a circuit",
+            "i need an esp"
         ]
         return keywords.contains { text.contains($0) }
     }
