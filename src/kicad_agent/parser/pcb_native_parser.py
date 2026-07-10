@@ -34,6 +34,7 @@ from kicad_agent.parser.pcb_native_types import (
     NativeSetup,
     NativeStackup,
     NativeStackupLayer,
+    NativeTitleBlock,
     NativeVia,
     NativeZone,
     _NativePosition,
@@ -59,7 +60,6 @@ _UNSUPPORTED_ELEMENTS: frozenset[str] = frozenset({
     "fp_text",
     "3d_model_refs",
     "page_info",
-    "title_block",
 })
 
 # P-BUG-003: Thread lock for recursion limit manipulation.
@@ -374,10 +374,11 @@ class NativeParser:
         graphic_items = tuple(cls._extract_graphic_items(root))
         general = cls._extract_general(root)
         setup = cls._extract_setup(root)
+        title_block = cls._extract_title_block(root)
 
         # Warn about unsupported top-level elements.
         _KNOWN_TOP_LEVEL = {
-            "version", "generator", "general", "layers", "setup",
+            "version", "generator", "general", "layers", "setup", "title_block",
             "net", "net_class", "footprint", "segment", "via",
             "zone", "gr_line", "gr_arc", "gr_circle", "gr_rect",
             "gr_poly", "gr_curve", "kicad_pcb",
@@ -411,6 +412,7 @@ class NativeParser:
             file_path=file_path,
             general=general,
             setup=setup,
+            title_block=title_block,
         )
 
     # -----------------------------------------------------------------------
@@ -1253,6 +1255,39 @@ class NativeParser:
             )
 
         return NativeSetup(stackup=stackup)
+
+    @classmethod
+    def _extract_title_block(cls, root: list) -> NativeTitleBlock | None:
+        """Extract (title_block ...) metadata. Returns None if absent.
+
+        Phase 205 (META-06, META-07): reads title, date, rev, company, and
+        numbered comments. Comments are 1-indexed in KiCad (comment 1, comment 2)
+        and may be non-sequential; gaps become empty strings.
+        """
+        tb_block = _find_symbol(root, "title_block")
+        if tb_block is None:
+            return None
+        title = _find_string_child(tb_block, "title")
+        date = _find_string_child(tb_block, "date")
+        rev = _find_string_child(tb_block, "rev")
+        company = _find_string_child(tb_block, "company")
+        # Numbered comments: (comment N "text") where N is 1-9, non-sequential
+        comments_map: dict[int, str] = {}
+        for item in tb_block:
+            if isinstance(item, list) and len(item) >= 3 and _sym(item[0]) == "comment":
+                try:
+                    num = int(item[1])
+                    text = item[2] if isinstance(item[2], str) else str(item[2])
+                    comments_map[num] = text
+                except (ValueError, TypeError):
+                    continue
+        # Convert to tuple (index 0 = comment 1, gaps become empty strings)
+        if comments_map:
+            max_n = max(comments_map)
+            comments = tuple(comments_map.get(i, "") for i in range(1, max_n + 1))
+        else:
+            comments = ()
+        return NativeTitleBlock(title=title, date=date, rev=rev, company=company, comments=comments)
 
     @classmethod
     def _extract_stackup_layers(cls, stackup_block: list) -> list:

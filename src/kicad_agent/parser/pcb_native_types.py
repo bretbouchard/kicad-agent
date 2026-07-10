@@ -340,6 +340,21 @@ class NativeSetup:
     stackup: NativeStackup | None = None
 
 
+@dataclass(frozen=True)
+class NativeTitleBlock:
+    """Title block metadata: (title_block ...).
+
+    Fields map to KiCad title_block children. Comments are position-indexed
+    by KiCad comment number: comment 1 -> index 0, comment 2 -> index 1, etc.
+    Empty/absent comments are empty strings. Tuple (not dict) per CR-01.
+    """
+    title: str = ""
+    date: str = ""
+    rev: str = ""
+    company: str = ""
+    comments: tuple[str, ...] = ()
+
+
 # ---------------------------------------------------------------------------
 # Top-level board container
 # ---------------------------------------------------------------------------
@@ -374,6 +389,7 @@ class NativeBoard:
     # Cleanly type-safe, no # type: ignore, works on frozen dataclasses.
     general: NativeGeneral = field(default_factory=NativeGeneral)
     setup: NativeSetup | None = None
+    title_block: NativeTitleBlock | None = None
 
     @property
     def graphicItems(self) -> list[NativeGraphicItem]:
@@ -406,5 +422,6 @@ __all__ = [
     "NativeStackup",
     "NativeStackupLayer",
     "NativeSetup",
+    "NativeTitleBlock",
     "NativeBoard",
 ]
