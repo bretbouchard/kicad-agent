@@ -277,6 +277,9 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
     AddStitchingViaPatternOp,
     StitchPowerNetsOp,
     PlaceComponentOp,
+    ReadBoardMetadataOp,
+    SetBoardMetadataOp,
+    SetBoardRevisionOp,
 )
 from kicad_agent.ops._schema_placement import (  # noqa: E402
     AutoPlaceOp,
@@ -553,7 +556,10 @@ class Operation(BaseModel):
         | PlaceComponentsSchOp
         | RouteWiresSchOp
         | ApplyLabelsSchOp
-        | AutoLayoutSchOp,
+        | AutoLayoutSchOp
+        | ReadBoardMetadataOp
+        | SetBoardMetadataOp
+        | SetBoardRevisionOp,
         Field(discriminator="op_type"),
     ]
 
@@ -762,6 +768,10 @@ __all__ = [
     "RouteWiresSchOp",
     "ApplyLabelsSchOp",
     "AutoLayoutSchOp",
+    # Phase 205 board metadata ops (META-01, META-02, META-03)
+    "ReadBoardMetadataOp",
+    "SetBoardMetadataOp",
+    "SetBoardRevisionOp",
     # Union and helpers
     "Operation",
     "get_operation_schema",
