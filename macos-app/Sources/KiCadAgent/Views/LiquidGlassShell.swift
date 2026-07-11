@@ -34,10 +34,18 @@ struct LiquidGlassShell: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
+    // Phase 211 — the router for LLM generation.
+    @EnvironmentObject private var modelRouter: KiCadModelRouter
+
     @State private var composeDraft: String = ""
     @FocusState private var composeFocused: Bool
     @State private var showSettings: Bool = false
     @State private var externalMCPSettings: ExternalMCPSettings = ExternalMCPSettings()
+
+    // Phase 211 — selected conversation for ChatView display.
+    @State private var selectedConversation: Conversation?
+    // Chat messages for the active conversation (mirrors SwiftData).
+    @State private var chatMessages: [ChatMessage] = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -104,14 +112,27 @@ struct LiquidGlassShell: View {
 
     @ViewBuilder
     private var contentArea: some View {
-        if project.conversations.isEmpty {
+        if let _ = selectedConversation {
+            // Phase 211: show the live chat view with streaming responses.
+            ChatView(
+                messages: $chatMessages,
+                streamProvider: RouterStreamProvider(router: modelRouter),
+                previewRenderer: nil
+            )
+        } else if project.conversations.isEmpty {
             ChatPlaceholderContent(projectName: project.name)
         } else {
-            // Phase 165 will replace this with ConversationListView.
+            // Conversation list — tap to open.
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: Spacing.md) {
-                    ForEach(project.conversations) { conversation in
-                        ConversationRow(conversation: conversation)
+                    ForEach(project.conversations.reversed()) { conversation in
+                        Button {
+                            selectedConversation = conversation
+                            loadMessages(for: conversation)
+                        } label: {
+                            ConversationRow(conversation: conversation)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(Spacing.lg)
@@ -157,12 +178,86 @@ struct LiquidGlassShell: View {
     private func submitDraft() {
         let trimmed = composeDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        // Phase 165 will route this to ConversationEngine + KiCadModelProvider.
-        Logger.ui.info("Compose submitted (Phase 165 wires model): \(trimmed.prefix(80), privacy: .public)…")
+
+        // Create a conversation and seed it with the user's first message.
         let conversation = Conversation(project: project, title: String(trimmed.prefix(40)))
         modelContext.insert(conversation)
+
+        // Save the user message to SwiftData.
+        let userMessage = Message(
+            conversation: conversation,
+            role: .user,
+            content: trimmed,
+            status: .complete
+        )
+        modelContext.insert(userMessage)
+
+        // Add a streaming assistant message placeholder.
+        let assistantMessage = Message(
+            conversation: conversation,
+            role: .assistant,
+            content: "",
+            status: .streaming
+        )
+        modelContext.insert(assistantMessage)
+
         project.touch()
         composeDraft = ""
+
+        // Select the conversation and seed chatMessages for ChatView.
+        selectedConversation = conversation
+        chatMessages = [
+            ChatMessage(id: userMessage.id, role: .user, content: trimmed, status: .complete, sentAt: .now),
+            ChatMessage(id: assistantMessage.id, role: .assistant, content: "", status: .streaming, sentAt: .now),
+        ]
+
+        // Stream the response from the LLM.
+        Task { @MainActor in
+            await streamResponse(into: chatMessages.count - 1, conversation: conversation, assistantMessage: assistantMessage)
+        }
+    }
+
+    /// Load persisted messages for a conversation into chatMessages.
+    private func loadMessages(for conversation: Conversation) {
+        let sorted = conversation.messages.sorted { $0.sentAt < $1.sentAt }
+        chatMessages = sorted.map { msg in
+            ChatMessage(
+                id: msg.id,
+                role: MessageRole(rawValue: msg.roleRaw) ?? .assistant,
+                content: msg.content,
+                status: msg.failureReason != nil ? .failed(msg.failureReason ?? "Unknown error") : .complete,
+                sentAt: msg.sentAt,
+                modelBadge: msg.modelBadge
+            )
+        }
+    }
+
+    /// Stream the LLM response and update both the chat UI and SwiftData.
+    private func streamResponse(into index: Int, conversation: Conversation, assistantMessage: Message) async {
+        let provider = RouterStreamProvider(router: modelRouter) { usage in
+            // Persist cost/token data when streaming completes.
+            assistantMessage.inputTokens = usage.inputTokens
+            assistantMessage.outputTokens = usage.outputTokens
+            assistantMessage.estimatedCostUSD = NSDecimalNumber(decimal: usage.estimatedCostUSD).doubleValue
+        }
+
+        do {
+            let stream = provider.stream(prompt: chatMessages[index - 1].content, attachments: [])
+            for try await chunk in stream {
+                chatMessages[index].content += chunk
+            }
+            chatMessages[index].status = .complete
+            assistantMessage.content = chatMessages[index].content
+            assistantMessage.status = .complete
+        } catch {
+            chatMessages[index].status = .failed(error.localizedDescription)
+            assistantMessage.content = chatMessages[index].content
+            assistantMessage.status = .failed(error.localizedDescription)
+            assistantMessage.failureReason = error.localizedDescription
+        }
+
+        project.touch()
+        try? modelContext.save()
     }
 
     // MARK: - Toolbar

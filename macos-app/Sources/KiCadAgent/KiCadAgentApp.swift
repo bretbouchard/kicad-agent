@@ -39,6 +39,9 @@ struct KiCadAgentApp: App {
     /// Phase 210 — Provider registry for LLM routing (local + cloud).
     @StateObject private var providerRegistry = ProviderRegistry()
 
+    /// Phase 211 — Model router for LLM generation. Built from registry.
+    @StateObject private var modelRouter = KiCadModelRouter()
+
     /// Phase 210 — Local model manager (downloads, scans, registers).
     @State private var localModelManager: LocalModelManager?
 
@@ -49,6 +52,7 @@ struct KiCadAgentApp: App {
                 .environment(kicadDetector)
                 .environment(windowManager)
                 .environmentObject(providerRegistry)
+                .environmentObject(modelRouter)
                 .sheet(isPresented: Binding(
                     get: { localModelManager?.showDownloadSheet ?? false },
                     set: { _ in }
