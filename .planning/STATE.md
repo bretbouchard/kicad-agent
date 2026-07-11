@@ -298,15 +298,15 @@ See: `.planning/phases/170-verification-loop-integration/170-01-SUMMARY.md`
 - [Rule 2 Missing] ngspice not bundled — external CLI dep, documented in README + CLAUDE.md
 - [Rule 3 Blocking] Stale git index.lock removed during planning
 
-**Bug reports filed (7 total, all open):**
+**Bug reports (7 total, all RESOLVED):**
 
-- `kicad-agent-e2b` (P3): Demo exceeds 60s budget at default 50 trials (~180s projected)
-- `kicad-agent-obp` (P3): Phase 158 AC parser regex-based (fragile, should use .raw)
-- `kicad-agent-233` (P4): Optuna sqlite storage at cwd-relative path
-- `kicad-agent-qss` (P4): Bode phase subplot is honest stub (vp() not measured)
-- `kicad-agent-w1f` (P4): Input impedance 8.7 kΩ vs 1 MΩ target (topology limit, needs JFET)
-- `kicad-agent-cjl` (P4): 2N3904 Gummel-Poon model simplified (no thermal coef)
-- `kicad-agent-8vv` (P4): Phase 158 missing .OP parser (Phase 204 uses Ic heuristic)
+- `kicad-agent-e2b` (P3): RESOLVED. Default trials reduced from 50 to 20 (~100s total).
+- `kicad-agent-obp` (P3): RESOLVED. AC parser uses spicelib.RawRead on .raw binary, not regex.
+- `kicad-agent-233` (P4): RESOLVED. Optuna sqlite storage in stable user-data dir.
+- `kicad-agent-qss` (P4): RESOLVED. Bode phase plots real vp(out) from RawRead.
+- `kicad-agent-w1f` (P4): RESOLVED. TL072 JFET-input buffered preamp gives real 1 Mohm input Z.
+- `kicad-agent-cjl` (P4): RESOLVED. 2N3904 model room-temp limitation documented.
+- `kicad-agent-8vv` (P4): RESOLVED. .OP parser added to ngspice_runner.
 
 **Strategic impact:**
 
