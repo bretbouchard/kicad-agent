@@ -1487,6 +1487,16 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    # Phase 208 manufacturer handoff op (HANDOFF-01, HANDOFF-08)
+    "build_handoff_export": {
+        "category": "query",
+        "description": "Export a complete manufacturer handoff zip: gerbers, drill, BOM, CPL, STEP, PDFs, readme, manifest with DRC/ERC proof",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": True,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
 }
 
 OPERATION_REGISTRY: dict[str, OpMeta] = {

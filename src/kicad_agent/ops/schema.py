@@ -285,6 +285,7 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
     BuildCreateOp,
     BuildListOp,
     BuildShowOp,
+    BuildHandoffExportOp,
 )
 from kicad_agent.ops._schema_placement import (  # noqa: E402
     AutoPlaceOp,
@@ -569,7 +570,8 @@ class Operation(BaseModel):
         | ListVendorDrcProfilesOp
         | BuildCreateOp
         | BuildListOp
-        | BuildShowOp,
+        | BuildShowOp
+        | BuildHandoffExportOp,
         Field(discriminator="op_type"),
     ]
 
@@ -789,6 +791,8 @@ __all__ = [
     "BuildCreateOp",
     "BuildListOp",
     "BuildShowOp",
+    # Phase 208 manufacturer handoff ops (HANDOFF-01, HANDOFF-08)
+    "BuildHandoffExportOp",
     # Union and helpers
     "Operation",
     "get_operation_schema",

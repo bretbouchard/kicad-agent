@@ -1359,3 +1359,50 @@ class BuildShowOp(BaseModel):
         default=None, description="Project root (defaults to target_file parent)"
     )
 
+
+# ---------------------------------------------------------------------------
+# Phase 208: Manufacturer handoff ops (HANDOFF-01, HANDOFF-08)
+# ---------------------------------------------------------------------------
+
+
+class BuildHandoffExportOp(BaseModel):
+    """Export a complete manufacturer handoff package (HANDOFF-01, HANDOFF-08).
+
+    Produces a zip bundle with all manufacturing artifacts (gerbers, drill, BOM,
+    pick-and-place, STEP, PDFs), a readme, and a manifest with DRC/ERC proof of
+    manufacturability. The target ``.kicad_pcb`` is never modified (registered
+    as a read-only query op — same rationale as build_create).
+
+    Attributes:
+        op_type: Discriminator literal ``"build_handoff_export"``.
+        target_file: Relative path to the .kicad_pcb file.
+        project_dir: Project root (defaults to target_file parent). Rejected
+            if it contains ``..`` path segments (threat-model #1).
+        vendor: Optional vendor key (e.g. "jlcpcb", "pcbway"). When set,
+            vendor-specific BOM formatting + vendor DRC are applied.
+            Pattern-validated to prevent path escape (threat-model #3).
+        include_step: Include STEP 3D model in the bundle (default True).
+        include_render: Include PCB render image (default False — slow).
+        skip_validation: Skip pre-handoff DRC/ERC validation gate.
+    """
+
+    op_type: Literal["build_handoff_export"] = "build_handoff_export"
+    target_file: TargetFile
+    project_dir: Optional[str] = Field(
+        default=None, description="Project root (defaults to target_file parent)"
+    )
+    vendor: Optional[str] = Field(
+        default=None, min_length=1, max_length=64,
+        pattern=r"^[a-z0-9_]+$",
+        description="Vendor key (jlcpcb, pcbway, etc.) for profile-driven output",
+    )
+    include_step: bool = Field(
+        default=True, description="Include STEP 3D model in the bundle"
+    )
+    include_render: bool = Field(
+        default=False, description="Include PCB render image (slow)"
+    )
+    skip_validation: bool = Field(
+        default=False, description="Skip pre-handoff DRC/ERC validation gate"
+    )
+

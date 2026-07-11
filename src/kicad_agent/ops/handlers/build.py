@@ -314,3 +314,50 @@ def _handle_build_show(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
                 response["diff_error"] = f"diff failed: {exc}"
 
     return response
+
+
+@register_build("build_handoff_export")
+def _handle_build_handoff_export(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
+    """Export a complete manufacturer handoff package (HANDOFF-01, HANDOFF-08).
+
+    Delegates to ``export_handoff()`` from ``manufacturing/handoff.py``.
+    The target ``.kicad_pcb`` is never modified (registered read-only).
+    """
+    from dataclasses import asdict
+
+    from kicad_agent.manufacturing.handoff import export_handoff
+
+    # 1. Resolve project_dir + reject path traversal (threat model #1).
+    if op.project_dir and ".." in Path(op.project_dir).parts:
+        return {
+            "success": False,
+            "error": "Invalid project_dir: path traversal forbidden",
+        }
+    project_dir = Path(op.project_dir) if op.project_dir else Path(file_path).parent
+
+    # 2. Call the orchestrator (schematic discovered inside via stem).
+    result = export_handoff(
+        pcb_path=Path(file_path),
+        sch_path=None,
+        project_dir=project_dir,
+        vendor=op.vendor,
+        include_step=op.include_step,
+        include_render=op.include_render,
+        skip_validation=op.skip_validation,
+    )
+
+    # 3. Serialize HandoffResult to dict.
+    out: dict[str, Any] = {
+        "success": result.success,
+        "zip_path": result.zip_path,
+        "validation": asdict(result.validation),
+        "error_message": result.error_message,
+        "manifest": result.manifest.to_json(),
+        "artifact_count": len(result.manifest.artifacts),
+    }
+    if result.build is not None:
+        out["build_id"] = result.build.build_id
+        out["build_status"] = result.build.status.value
+    if result.error_message:
+        out["error"] = result.error_message
+    return out
