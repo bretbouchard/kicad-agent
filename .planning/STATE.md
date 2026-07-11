@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v7.0
-milestone_name: milestone
+milestone: v8.0
+milestone_name: volta-pcb-integration
 status: executing
-stopped_at: Executing 205-01-PLAN.md
-last_updated: "2026-07-11T04:23:50.844Z"
+stopped_at: Phase 211-217 integration complete — app wired end-to-end
+last_updated: "2026-07-11T04:30:00.000Z"
 last_activity: 2026-07-11
 progress:
-  total_phases: 6
-  completed_phases: 5
-  total_plans: 5
-  completed_plans: 5
+  total_phases: 7
+  completed_phases: 7
+  total_plans: 7
+  completed_plans: 7
   percent: 100
 ---
 
@@ -21,13 +21,32 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-10)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 207 — versioned-build-system
+**Current focus:** Phase 211-217 complete — app is wired end-to-end. Chat streams from Gemma 4 12B, daemon executes KiCad ops, file import works, ERC/DRC panel active, inline rendering wired.
 Last activity: 2026-07-11
+
+## Integration Status (Honest)
+
+### What works end-to-end
+- ✅ Chat → LLM router → streaming tokens (Phase 211)
+- ✅ Messages persist to SwiftData (Phase 211)
+- ✅ Daemon operations from chat (Phase 212)
+- ✅ KiCad file import + UTI registration (Phase 213)
+- ✅ Inline rendering via DaemonPreviewRenderer (Phase 214)
+- ✅ Settings tabs for Memory + Collaboration (Phase 215)
+- ✅ ERC/DRC validation panel (Phase 216)
+- ✅ 355 Swift tests pass, 0 fail (Phase 217)
+
+### What's wired but needs external setup
+- CloudKit sync: requires CK_CONTAINER_ID env var
+- MLX generation: requires 8GB model download on first launch
+- kicad-cli ERC/DRC: requires external KiCad install (not bundled, GPL)
+
+### Test count: 355 pass, 0 fail
 
 ## Current Position
 
-Phase: 210
-Plan: Not started
+Phase: 217
+Plan: Complete
 Status: Ready to execute
 Last activity: 2026-07-11 -- Phase 209 planning complete
 

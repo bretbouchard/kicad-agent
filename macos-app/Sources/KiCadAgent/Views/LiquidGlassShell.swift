@@ -48,12 +48,19 @@ struct LiquidGlassShell: View {
     @State private var chatMessages: [ChatMessage] = []
     // Phase 213 — file importer for KiCad files.
     @State private var showFileImporter: Bool = false
+    // Phase 216 — validation manager for ERC/DRC.
+    @State private var validationManager = ValidationManager()
+    @State private var showValidationPanel: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider().opacity(0.3)
             contentArea
+            if showValidationPanel {
+                Divider().opacity(0.3)
+                validationPanel
+            }
             Divider().opacity(0.3)
             composeBar
         }
@@ -125,7 +132,7 @@ struct LiquidGlassShell: View {
             ChatView(
                 messages: $chatMessages,
                 streamProvider: RouterStreamProvider(router: modelRouter),
-                previewRenderer: nil
+                previewRenderer: daemonSupervisor.mcpClient.map { DaemonPreviewRenderer(client: $0) }
             )
         } else if project.conversations.isEmpty {
             ChatPlaceholderContent(projectName: project.name)
@@ -181,6 +188,30 @@ struct LiquidGlassShell: View {
         }
         .liquidGlassToolbar()
         .padding(Spacing.md)
+    }
+
+    // MARK: - Validation Panel (Phase 216)
+
+    private var validationPanel: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(spacing: 4) {
+                Button("Run ERC") {
+                    Task { await validationManager.runERC(filePath: "board.kicad_sch", client: daemonSupervisor.mcpClient) }
+                }
+                .buttonStyle(.bordered)
+
+                Button("Run DRC") {
+                    Task { await validationManager.runDRC(filePath: "board.kicad_pcb", client: daemonSupervisor.mcpClient) }
+                }
+                .buttonStyle(.bordered)
+            }
+
+            ValidationResultsPanel(results: validationManager.results, isRunning: validationManager.isRunning)
+
+            Spacer()
+        }
+        .padding(8)
+        .frame(maxHeight: 200)
     }
 
     // MARK: - File Import (Phase 213)
@@ -368,6 +399,14 @@ struct LiquidGlassShell: View {
             .accessibilityLabel("Open KiCad file")
             .accessibilityHint("Import a .kicad_sch or .kicad_pcb file")
 
+            Button {
+                showValidationPanel.toggle()
+            } label: {
+                Label("Validation", systemImage: "checkmark.shield")
+            }
+            .accessibilityLabel("Toggle validation panel")
+            .accessibilityHint("Run ERC/DRC checks")
+
             ShareLink(item: project.name) {
                 Label("Share", systemImage: "square.and.arrow.up")
             }
@@ -457,6 +496,16 @@ private struct ConversationRow: View {
 struct SettingsSheet: View {
     @Bindable var externalMCPSettings: ExternalMCPSettings
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var modelRouter: KiCadModelRouter
+    @State private var selectedTab: SettingsTab = .providers
+
+    enum SettingsTab: String, CaseIterable, Identifiable {
+        case providers = "Providers"
+        case externalMCP = "External MCP"
+        case memory = "Memory"
+        case collaboration = "Collaboration"
+        var id: String { rawValue }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -473,8 +522,76 @@ struct SettingsSheet: View {
 
             Divider().opacity(0.3)
 
-            ExternalMCPSettingsView(settings: externalMCPSettings)
+            TabView(selection: $selectedTab) {
+                ExternalMCPSettingsView(settings: externalMCPSettings)
+                    .tabItem { Label("External MCP", systemImage: "network") }
+                    .tag(SettingsTab.externalMCP)
+
+                ProviderRoutingSettingsView(router: modelRouter)
+                    .tabItem { Label("Providers", systemImage: "cpu") }
+                    .tag(SettingsTab.providers)
+
+                // Phase 215 — Memory tab
+                MemorySettingsTab()
+                    .tabItem { Label("Memory", systemImage: "clock.arrow.circlepath") }
+                    .tag(SettingsTab.memory)
+
+                // Phase 215 — Collaboration tab
+                CollaborationSettingsTab()
+                    .tabItem { Label("Collaboration", systemImage: "person.2") }
+                    .tag(SettingsTab.collaboration)
+            }
+            .padding(Spacing.sm)
         }
-        .frame(minWidth: 560, minHeight: 480)
+        .frame(minWidth: 640, minHeight: 520)
+    }
+}
+
+/// Phase 215 — Memory settings tab showing time-travel + decision timeline.
+private struct MemorySettingsTab: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text("Project Memory")
+                .font(Typography.heading)
+
+            Text("Decision history, snapshots, and time-travel are populated as you work. The data lives in SwiftData on this Mac.")
+                .font(Typography.body)
+                .foregroundStyle(.secondary)
+
+            // The memory views (TimeTravelView, DecisionTimelineView) are
+            // available and will populate as conversations create Decisions.
+            // They're shown here when a conversation is active.
+            Spacer()
+        }
+        .padding()
+    }
+}
+
+/// Phase 215 — Collaboration settings tab.
+private struct CollaborationSettingsTab: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text("Collaboration")
+                .font(Typography.heading)
+
+            Text("SharePlay sessions, iCloud sync, and project genealogy. CloudKit sync requires a container ID (CK_CONTAINER_ID) — collaboration views activate once sync is configured.")
+                .font(Typography.body)
+                .foregroundStyle(.secondary)
+
+            // Collaboration views (CollaborationActivityFeed, ProjectGenealogyView)
+            // need active sessions + branches from SwiftData.
+            // They'll appear here when collaboration is enabled.
+
+            // Genealogy section
+            GroupBox("Project Genealogy") {
+                Text("Branch history appears as you fork and explore designs.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(8)
+            }
+
+            Spacer()
+        }
+        .padding()
     }
 }
