@@ -5,6 +5,8 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+# Phase 207: versioned build artifacts (snapshot copies + manifests)
+builds/
 .mypy_cache/
 .ruff_cache/
 htmlcov/
