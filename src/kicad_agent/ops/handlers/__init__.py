@@ -16,6 +16,7 @@ from .project import _PROJECT_HANDLERS, register_project
 from .create import _CREATE_HANDLERS, register_create
 from .circuit_ir import _CIRCUIT_IR_HANDLERS, register_circuit_ir
 from .query import _QUERY_HANDLERS, register_query
+from .build import _BUILD_HANDLERS, register_build
 from .crossfile import _CROSSFILE_HANDLERS, register_crossfile
 from .gate_handlers import _GATE_HANDLERS, register_gate_handler
 
@@ -29,6 +30,9 @@ _PCB_HANDLERS.update(_CLEANUP_HANDLERS)
 _PCB_HANDLERS.update(_AUTO_ROUTE_HANDLERS)
 _PCB_HANDLERS.update(_BOM_HANDLERS)
 _PCB_HANDLERS.update(_STITCH_HANDLERS)
+# Phase 207: build handlers ARE query handlers (read-only re the target .kicad_pcb;
+# they create side-effect artifacts in builds/ without modifying the source).
+_QUERY_HANDLERS.update(_BUILD_HANDLERS)
 
 __all__ = [
     "_SCHEMATIC_HANDLERS",
@@ -55,6 +59,8 @@ __all__ = [
     "register_circuit_ir",
     "_QUERY_HANDLERS",
     "register_query",
+    "_BUILD_HANDLERS",
+    "register_build",
     "_CROSSFILE_HANDLERS",
     "register_crossfile",
     "_GATE_HANDLERS",

@@ -1459,6 +1459,34 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    # Phase 207 build system ops (BUILD-01, BUILD-07, BUILD-08)
+    "build_create": {
+        "category": "query",
+        "description": "Create a versioned build: snapshot source files, capture git SHA + board rev, write manifest",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": True,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
+    "build_list": {
+        "category": "query",
+        "description": "List all builds for a project (scan builds/ directory)",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": True,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
+    "build_show": {
+        "category": "query",
+        "description": "Show build details: manifest, artifacts, validation status",
+        "file_types": [".kicad_pcb"],
+        "is_readonly": True,
+        "scope": "single_file",
+        "requires": [],
+        "conflicts": [],
+    },
 }
 
 OPERATION_REGISTRY: dict[str, OpMeta] = {

@@ -282,6 +282,9 @@ from kicad_agent.ops._schema_pcb import (  # noqa: E402
     SetBoardRevisionOp,
     DrcVendorOp,
     ListVendorDrcProfilesOp,
+    BuildCreateOp,
+    BuildListOp,
+    BuildShowOp,
 )
 from kicad_agent.ops._schema_placement import (  # noqa: E402
     AutoPlaceOp,
@@ -563,7 +566,10 @@ class Operation(BaseModel):
         | SetBoardMetadataOp
         | SetBoardRevisionOp
         | DrcVendorOp
-        | ListVendorDrcProfilesOp,
+        | ListVendorDrcProfilesOp
+        | BuildCreateOp
+        | BuildListOp
+        | BuildShowOp,
         Field(discriminator="op_type"),
     ]
 
@@ -779,6 +785,10 @@ __all__ = [
     # Phase 206 vendor DRC ops (DRC-01, DRC-08)
     "DrcVendorOp",
     "ListVendorDrcProfilesOp",
+    # Phase 207 build system ops (BUILD-01, BUILD-07, BUILD-08)
+    "BuildCreateOp",
+    "BuildListOp",
+    "BuildShowOp",
     # Union and helpers
     "Operation",
     "get_operation_schema",

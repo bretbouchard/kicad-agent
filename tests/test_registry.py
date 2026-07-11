@@ -21,9 +21,9 @@ class TestRegistryCompleteness:
     """Verify the registry has the expected number of operations."""
 
     def test_registry_has_98_operations(self) -> None:
-        # Phase 206: 156 ops (was 154 after Phase 205; +2: drc_vendor,
-        # list_vendor_drc_profiles).
-        assert len(OPERATION_REGISTRY) == 156
+        # Phase 207: 159 ops (was 156 after Phase 206; +3: build_create,
+        # build_list, build_show).
+        assert len(OPERATION_REGISTRY) == 159
 
     def test_validate_registry_completeness_passes(self) -> None:
         result = validate_registry_completeness()
@@ -115,6 +115,9 @@ class TestQueryFunctions:
             "analyze_gaps",
             "analyze_ground_topology",
             "analyze_split_plane",
+            "build_create",
+            "build_list",
+            "build_show",
             "classify_violations",
             "convert_to_skidl",
             "critique_sch",

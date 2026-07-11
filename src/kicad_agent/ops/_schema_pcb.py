@@ -1278,3 +1278,84 @@ class ListVendorDrcProfilesOp(BaseModel):
 
     op_type: Literal["list_vendor_drc_profiles"] = "list_vendor_drc_profiles"
     target_file: TargetFile
+
+
+# ---------------------------------------------------------------------------
+# Phase 207: Versioned build system ops (BUILD-01, BUILD-07, BUILD-08)
+# ---------------------------------------------------------------------------
+
+
+class BuildCreateOp(BaseModel):
+    """Create a versioned build snapshot (BUILD-01, BUILD-06).
+
+    Snapshots source files, captures git SHA + board revision, and writes a
+    manifest with SHA256-hashed artifacts to a ``builds/`` directory. The
+    target ``.kicad_pcb`` is never modified (registered as a read-only query
+    op -- CONTEXT.md IP-4 deviation).
+
+    Attributes:
+        op_type: Discriminator literal ``"build_create"``.
+        target_file: Relative path to the .kicad_pcb file.
+        project_dir: Project root (defaults to target_file parent). Rejected
+            if it contains ``..`` path segments (threat-model #1).
+        skip_validation: Skip validation (for testing / quick drafts). The
+            build is still created with ``DRAFT`` status.
+    """
+
+    op_type: Literal["build_create"] = "build_create"
+    target_file: TargetFile
+    project_dir: Optional[str] = Field(
+        default=None, description="Project root (defaults to target_file parent)"
+    )
+    skip_validation: bool = Field(
+        default=False, description="Skip validation (for testing / quick drafts)"
+    )
+
+
+class BuildListOp(BaseModel):
+    """List all builds for a project (BUILD-07).
+
+    Scans the ``builds/`` directory for build subdirectories.
+
+    Attributes:
+        op_type: Discriminator literal ``"build_list"``.
+        target_file: Relative path to any .kicad_pcb in the project.
+        project_dir: Project root (defaults to target_file parent).
+    """
+
+    op_type: Literal["build_list"] = "build_list"
+    target_file: TargetFile
+    project_dir: Optional[str] = Field(
+        default=None, description="Project root (defaults to target_file parent)"
+    )
+
+
+class BuildShowOp(BaseModel):
+    """Show build details by build_id (BUILD-08, BUILD-10).
+
+    Optionally accepts ``diff_build_id`` to diff a second build against the
+    primary (BUILD-10). Diffing is a parameter, NOT a separate op, to keep the
+    registry delta at +3.
+
+    Attributes:
+        op_type: Discriminator literal ``"build_show"``.
+        target_file: Relative path to any .kicad_pcb in the project.
+        build_id: UUID of the build to show.
+        diff_build_id: Optional second build_id to diff against.
+        project_dir: Project root (defaults to target_file parent).
+    """
+
+    op_type: Literal["build_show"] = "build_show"
+    target_file: TargetFile
+    build_id: str = Field(
+        min_length=1, max_length=64, pattern=r"^[A-Za-z0-9-]+$",
+        description="UUID of the build to show",
+    )
+    diff_build_id: Optional[str] = Field(
+        default=None, min_length=1, max_length=64, pattern=r"^[A-Za-z0-9-]+$",
+        description="Optional second build_id to diff against",
+    )
+    project_dir: Optional[str] = Field(
+        default=None, description="Project root (defaults to target_file parent)"
+    )
+
