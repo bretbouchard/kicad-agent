@@ -299,13 +299,11 @@ See: `.planning/phases/204-closed-box-simulation-pipeline-v1-skidl-spice-optuna-
 
 ## Backlog (next milestone)
 
-Phase 108 (Deterministic Autolayout Engine) — Plan 04 Task 2 still IN REVIEW on branch `phase-108-task2-on-page-guarantee`. Iteration-2 PDFs rendered, awaiting human approval. Geometric gate passes (off_page=0, max_stack≤1, 154/154 tests). Will continue post-v6.0 setup or be resumed in parallel.
+Phase 108 (Deterministic Autolayout Engine) — **RESOLVED.** All 108-T2 commits merged to master. `auto_layout_sch` op registered, 56 autolayout tests pass. Branch `phase-108-task2-on-page-guarantee` was merged and deleted. The "IN REVIEW" status was a stale handoff note — the work is complete.
 
 Phases 156-160 (v5.0 Skidl-Native) — Absorbed into v6.0 Track F (Generative). Work continues as part of Mac app's generative pipeline rather than standalone library milestone.
 
-## Backlog (next milestone)
-
-Phase 156 (SKIDL Converter) — not started (roadmap defined). Deferred until Phase 108 Task 2 approved + Council Gate 2 passes.
+Phase 156 (SKIDL Converter) — not started (roadmap defined). Absorbed into v6.0 generative pipeline.
 
 ## Previous Milestone (v3.0 Full-Stack EDA)
 

@@ -154,9 +154,23 @@ def _find_first_value(block: list, name: str, default: Any = None) -> Any:
 
 
 def _find_string_child(block: list, name: str, default: str = "") -> str:
-    """Find a string-valued child: (name "value") -> "value"."""
+    """Find a string-valued child: (name "value") -> "value".
+
+    Q-1 fix: sexpdata splits KiCad doubled-quote strings ("" inside strings)
+    into multiple fragments. Concatenate all string fragments and re-insert
+    the literal quotes that sexpdata consumed.
+    """
     for item in block:
         if isinstance(item, list) and len(item) >= 2 and _sym(item[0]) == name:
+            # Normal case: single string value
+            if len(item) == 2 and isinstance(item[1], str):
+                return item[1]
+            # Q-1: sexpdata split a doubled-quote string into fragments.
+            # (name "Has " "quotes" " inside") -> item has >2 elements, all str.
+            # The quotes between fragments were literal " chars in the original.
+            if len(item) > 2 and all(isinstance(x, str) for x in item[1:]):
+                # Join fragments with literal " (the doubled quotes become one ")
+                return '"'.join(item[1:])
             val = item[1]
             if isinstance(val, str):
                 return val

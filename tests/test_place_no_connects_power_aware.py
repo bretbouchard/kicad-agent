@@ -311,7 +311,7 @@ class TestPlaceNoConnectsFromErcPinColocation:
             with patch.object(ir, "get_pin_positions", return_value=mock_pins):
                 with patch("kicad_agent.ops.erc_parser.extract_violation_positions",
                            return_value=[violation]):
-                    with patch("kicad_agent.ops.repair.NetPositionIndex") as mock_idx:
+                    with patch("kicad_agent.ops.repair_erc.NetPositionIndex") as mock_idx:
                         mock_idx.from_file.return_value = MagicMock(
                             get_net_at=MagicMock(return_value=None)
                         )
@@ -356,7 +356,7 @@ class TestPlaceNoConnectsFromErcPinColocation:
 
             with patch("kicad_agent.ops.erc_parser.extract_violation_positions",
                        return_value=[violation]):
-                with patch("kicad_agent.ops.repair.NetPositionIndex") as mock_idx:
+                with patch("kicad_agent.ops.repair_erc.NetPositionIndex") as mock_idx:
                     mock_idx.from_file.return_value = MagicMock(
                         get_net_at=MagicMock(return_value=None)
                     )
@@ -416,7 +416,7 @@ class TestPlaceNoConnectsFromErcToleranceMatching:
                     with patch.object(ir, "get_label_positions", return_value=[]):
                         with patch("kicad_agent.ops.erc_parser.extract_violation_positions",
                                    return_value=[violation]):
-                            with patch("kicad_agent.ops.repair.NetPositionIndex") as mock_idx:
+                            with patch("kicad_agent.ops.repair_erc.NetPositionIndex") as mock_idx:
                                 mock_idx.from_file.return_value = MagicMock(
                                     get_net_at=MagicMock(return_value=None)
                                 )
@@ -464,7 +464,7 @@ class TestPlaceNoConnectsFromErcToleranceMatching:
                     with patch.object(ir, "get_label_positions", return_value=[]):
                         with patch("kicad_agent.ops.erc_parser.extract_violation_positions",
                                    return_value=[violation]):
-                            with patch("kicad_agent.ops.repair.NetPositionIndex") as mock_idx:
+                            with patch("kicad_agent.ops.repair_erc.NetPositionIndex") as mock_idx:
                                 mock_idx.from_file.return_value = MagicMock(
                                     get_net_at=MagicMock(return_value=None)
                                 )

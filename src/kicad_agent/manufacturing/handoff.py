@@ -443,6 +443,19 @@ def export_handoff(
 
         # Pick-and-place (critical) — output_dir
         cpl_result = export_position(pcb_path, output_dir=build_dir)
+        # Apply vendor-specific CPL filename pattern if the profile specifies one
+        if profile and getattr(profile, "cpl_filename_pattern", None):
+            for f in build_dir.glob("*-pos.csv"):
+                new_name = profile.cpl_filename_pattern.format(stem=stem)
+                f.rename(build_dir / new_name)
+                # Re-export to update the result path
+                cpl_result = cpl_result.__class__(
+                    success=cpl_result.success,
+                    output_path=str(build_dir / new_name),
+                    command=cpl_result.command,
+                    stderr=cpl_result.stderr,
+                )
+                break
         if not _record_export("cpl", cpl_result, critical=True):
             return _fail_with_cleanup(
                 build_dir, stem, vendor or "generic", validation,
@@ -558,6 +571,23 @@ def export_handoff(
         )
         manifest.save(build_dir / "manifest.json")
         produced_files.append(build_dir / "manifest.json")
+
+        # Step 8b: Defense-in-depth — validate manifest completeness before zipping.
+        # This is a secondary check; critical export failures already trigger
+        # _fail_with_cleanup above. Only validate artifacts that were actually
+        # expected (BOM is optional when no schematic is present).
+        from kicad_agent.validation.gates.manufacturing_manifest import validate_manifest
+        manifest_errors = validate_manifest(manifest, vendor or "generic")
+        # Filter out BOM-missing errors when no schematic was available
+        if resolved_sch is None:
+            manifest_errors = [
+                e for e in manifest_errors if "bom" not in e.lower()
+            ]
+        if manifest_errors:
+            return _fail_with_cleanup(
+                build_dir, stem, vendor or "generic", validation,
+                f"manifest validation failed: {'; '.join(manifest_errors)}",
+            )
 
         # Step 9: Streaming zip (Pitfall 7, TM-2).
         zip_path = build_dir / "handoff.zip"

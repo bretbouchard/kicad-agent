@@ -959,37 +959,44 @@ class PcbRawWriter:
             _sym,
         )
 
-        # Read existing title_block values for partial update
+        # Read existing title_block values for partial update.
+        # Q-1 fix: sexpdata.loads does not understand KiCad's doubled-quote
+        # convention ("" inside strings). Use regex extraction that handles
+        # this correctly, falling back to sexpdata for complex cases.
         existing_title = ""
         existing_date = ""
         existing_rev = ""
         existing_company = ""
         existing_comments: list[str] = []
-        try:
-            tree = sexpdata.loads(content)
-            tb = _find_symbol(tree, "title_block")
-            if tb is not None:
-                existing_title = _find_string_child(tb, "title")
-                existing_date = _find_string_child(tb, "date")
-                existing_rev = _find_string_child(tb, "rev")
-                existing_company = _find_string_child(tb, "company")
-                comments_map: dict[int, str] = {}
-                for item in tb:
-                    if isinstance(item, list) and len(item) >= 3 and _sym(item[0]) == "comment":
-                        try:
-                            num = int(item[1])
-                            text = item[2] if isinstance(item[2], str) else str(item[2])
-                            comments_map[num] = text
-                        except (ValueError, TypeError):
-                            continue
-                if comments_map:
-                    max_n = max(comments_map)
-                    existing_comments = [comments_map.get(i, "") for i in range(1, max_n + 1)]
-        except (ValueError, IndexError, TypeError):
-            # If existing title_block can't be parsed, use empty defaults.
-            # Narrowed from bare Exception (Council M-3): only catch realistic
-            # parse-failure modes, not KeyboardInterrupt/SystemExit.
-            pass
+
+        def _extract_field(block_content: str, field_name: str) -> str:
+            """Extract a (field_name "value") from title_block content, handling doubled quotes."""
+            # Match (field_name "..." with doubled-quote-aware value extraction
+            pattern = rf'\({field_name}\s+"((?:[^"]|"")*)"\)'
+            m = re.search(pattern, block_content)
+            if m:
+                # Un-doublify: KiCad uses "" for literal "
+                return m.group(1).replace('""', '"')
+            return ""
+
+        # Extract the title_block block content (between first (title_block and its matching close)
+        tb_match = re.search(r"^[ \t]*\(title_block\b", content, re.MULTILINE)
+        if tb_match:
+            tb_start = tb_match.start()
+            tb_end = PcbRawWriter._find_matching_close(content, tb_start)
+            if tb_end is not None:
+                tb_content = content[tb_start:tb_end + 1]
+                existing_title = _extract_field(tb_content, "title")
+                existing_date = _extract_field(tb_content, "date")
+                existing_rev = _extract_field(tb_content, "rev")
+                existing_company = _extract_field(tb_content, "company")
+                # Extract numbered comments
+                for m in re.finditer(r'\(comment\s+(\d+)\s+"((?:[^"]|"")*)"\)', tb_content):
+                    num = int(m.group(1))
+                    text = m.group(2).replace('""', '"')
+                    while len(existing_comments) < num:
+                        existing_comments.append("")
+                    existing_comments[num - 1] = text
 
         # Apply partial updates (None = keep existing)
         new_title = existing_title if title is None else title
@@ -1051,9 +1058,18 @@ class PcbRawWriter:
         Handles nested parens and quoted strings using KiCad's doubled-quote
         escaping convention (``""`` inside a string represents a literal quote).
 
+        .. note::
+            ``open_pos`` is the position of the opening ``(`` character itself
+            (depth starts at 0, first ``(`` increments to depth 1, matching
+            ``)`` returns to depth 0). Do NOT pass ``open_pos + 1`` — that
+            skips the opening paren and returns at the first inner close.
+            The existing ``find_zone_block`` caller (line ~186) passes
+            ``start + 1`` due to a historical convention; new callers should
+            pass the exact ``(`` position.
+
         Args:
             content: Raw S-expression text.
-            open_pos: Position of the opening paren.
+            open_pos: Position of the opening paren ``(`` itself.
 
         Returns:
             Position of the matching close paren, or None.
