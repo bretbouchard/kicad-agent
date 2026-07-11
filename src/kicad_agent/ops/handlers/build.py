@@ -170,20 +170,147 @@ def _handle_build_create(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
         }
 
 
+def _resolve_project_dir(op: Any, file_path: Path) -> Path | dict[str, Any]:
+    """Resolve project_dir from op, rejecting path traversal.
+
+    Returns the resolved ``Path`` on success, or an error dict (with
+    ``success=False``) if the project_dir contains ``..`` segments. Used by
+    build_list/build_show to share the traversal check with build_create.
+    """
+    if op.project_dir and ".." in Path(op.project_dir).parts:
+        return {
+            "success": False,
+            "error": "Invalid project_dir: path traversal forbidden",
+        }
+    return Path(op.project_dir) if op.project_dir else Path(file_path).parent
+
+
+def _find_build_dir_by_id(project_dir: Path, build_id: str) -> Path | None:
+    """Scan builds/v*_* for the build whose build.json matches ``build_id``.
+
+    Returns the build subdirectory Path, or None if not found.
+    """
+    builds_root = project_dir / "builds"
+    if not builds_root.is_dir():
+        return None
+    from kicad_agent.manufacturing.build import Build
+
+    for subdir in sorted(builds_root.glob("v*_*")):
+        build_json = subdir / "build.json"
+        if not build_json.is_file():
+            continue
+        try:
+            build = Build.load(build_json)
+        except Exception:
+            continue  # corrupt build.json -- skip
+        if build.build_id == build_id:
+            return subdir
+    return None
+
 
 @register_build("build_list")
 def _handle_build_list(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     """List all builds for a project (BUILD-07).
 
-    Implemented in Task 4.
+    Scans ``builds/v*_*`` for subdirectories with a valid ``build.json``.
+    Corrupt directories are skipped (never crash the whole list on one bad
+    dir). Builds are sorted by ``created_at`` descending (most recent first).
     """
-    raise NotImplementedError("build_list handler not yet implemented")
+    from kicad_agent.manufacturing.build import Build
+
+    resolved = _resolve_project_dir(op, file_path)
+    if isinstance(resolved, dict):
+        return resolved  # traversal error
+    project_dir = resolved
+
+    builds_root = project_dir / "builds"
+    if not builds_root.is_dir():
+        return {"builds": [], "count": 0}
+
+    summaries: list[dict[str, Any]] = []
+    for subdir in sorted(builds_root.glob("v*_*")):
+        build_json = subdir / "build.json"
+        if not build_json.is_file():
+            continue
+        try:
+            build = Build.load(build_json)
+        except Exception as exc:
+            # Skip corrupt dirs -- never crash the whole list on one bad dir.
+            logger.warning("build_list: skipping corrupt build dir %s: %s", subdir, exc)
+            continue
+        summaries.append({
+            "build_id": build.build_id,
+            "board_rev": build.board_rev,
+            "git_sha": build.git_sha,
+            "created_at": build.created_at,
+            "status": build.status.value,
+            "build_dir": str(subdir.relative_to(project_dir)),
+        })
+
+    # Sort by created_at descending (most recent first).
+    summaries.sort(key=lambda s: s["created_at"], reverse=True)
+    return {"builds": summaries, "count": len(summaries)}
 
 
 @register_build("build_show")
 def _handle_build_show(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
-    """Show build details by build_id (BUILD-08).
+    """Show build details by build_id (BUILD-08, BUILD-10).
 
-    Implemented in Task 4.
+    Optionally accepts ``diff_build_id`` (BUILD-10) -- when set, loads the
+    second build and includes a ``diff`` in the response via
+    ``diff_builds``. If the diff target is not found, the primary build
+    details are still returned with a ``diff_error`` note.
     """
-    raise NotImplementedError("build_show handler not yet implemented")
+    from dataclasses import asdict
+
+    from kicad_agent.manufacturing.build import Build, diff_builds
+    from kicad_agent.validation.gates.manufacturing_manifest import (
+        ManufacturingManifest,
+    )
+
+    resolved = _resolve_project_dir(op, file_path)
+    if isinstance(resolved, dict):
+        return resolved  # traversal error
+    project_dir = resolved
+
+    # 1. Find the primary build.
+    build_dir = _find_build_dir_by_id(project_dir, op.build_id)
+    if build_dir is None:
+        return {"success": False, "error": f"build not found: {op.build_id}"}
+
+    build = Build.load(build_dir / "build.json")
+
+    # 2. Load the manifest (tolerate missing/corrupt manifest).
+    manifest: ManufacturingManifest | None = None
+    try:
+        manifest = ManufacturingManifest.load(build_dir / "manifest.json")
+    except Exception as exc:
+        logger.warning("build_show: could not load manifest for %s: %s", build_dir, exc)
+
+    response: dict[str, Any] = {
+        "success": True,
+        "build_id": build.build_id,
+        "board_rev": build.board_rev,
+        "git_sha": build.git_sha,
+        "created_at": build.created_at,
+        "status": build.status.value,
+        "source_files": list(build.source_files),
+        "build_dir": str(build_dir.relative_to(project_dir)),
+        "manifest": manifest.to_json() if manifest else None,
+        "artifacts": [a.to_dict() for a in build.artifacts],
+    }
+
+    # 3. Diff integration (BUILD-10).
+    if op.diff_build_id:
+        diff_dir = _find_build_dir_by_id(project_dir, op.diff_build_id)
+        if diff_dir is None:
+            response["diff_error"] = f"build not found: {op.diff_build_id}"
+        else:
+            try:
+                build_b = Build.load(diff_dir / "build.json")
+                diff = diff_builds(build, build_b)
+                response["diff"] = asdict(diff)
+            except Exception as exc:
+                response["diff_error"] = f"diff failed: {exc}"
+
+    return response

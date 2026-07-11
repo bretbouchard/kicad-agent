@@ -496,3 +496,224 @@ class TestBuildCreate:
         assert loaded.status.value == "draft"
         assert loaded.build_dir == result["build_dir"]
 
+
+# ---------------------------------------------------------------------------
+# TestBuildList
+# ---------------------------------------------------------------------------
+
+
+class TestBuildList:
+    """build_list handler (BUILD-07)."""
+
+    def _create_build(self, tmp_path: Path, rev: str = "1.0") -> str:
+        """Helper: create one build and return its build_id."""
+        from kicad_agent.ops._schema_pcb import BuildCreateOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        pcb_path = _create_pcb_with_title_block(tmp_path, rev=rev)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_create"]
+        result = handler(
+            BuildCreateOp(target_file="test_build.kicad_pcb", skip_validation=True),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        return result["build_id"]
+
+    def test_build_list_returns_builds(self, tmp_path: Path) -> None:
+        """Create 2 builds -> list count == 2, both build_ids present."""
+        from kicad_agent.ops._schema_pcb import BuildListOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        id1 = self._create_build(tmp_path, rev="1.0")
+        id2 = self._create_build(tmp_path, rev="2.0")
+        pcb_path = _create_pcb_with_title_block(tmp_path, rev="1.0")
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_list"]
+        result = handler(BuildListOp(target_file="test_build.kicad_pcb"), ir, pcb_path)
+        ids = {b["build_id"] for b in result["builds"]}
+        assert result["count"] == 2
+        assert id1 in ids
+        assert id2 in ids
+
+    def test_build_list_empty_when_no_builds(self, tmp_path: Path) -> None:
+        """No builds/ dir -> count == 0, builds == []."""
+        from kicad_agent.ops._schema_pcb import BuildListOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_list"]
+        result = handler(BuildListOp(target_file="test_build.kicad_pcb"), ir, pcb_path)
+        assert result["count"] == 0
+        assert result["builds"] == []
+
+    def test_build_list_skips_corrupt_dir(self, tmp_path: Path) -> None:
+        """A valid build + a dir with corrupt build.json -> count==1 (no crash)."""
+        from kicad_agent.ops._schema_pcb import BuildListOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        self._create_build(tmp_path)
+        # create a corrupt build dir
+        corrupt_dir = tmp_path / "builds" / "v9.9_20260101_000000"
+        corrupt_dir.mkdir(parents=True)
+        (corrupt_dir / "build.json").write_text("{not valid json", encoding="utf-8")
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_list"]
+        result = handler(BuildListOp(target_file="test_build.kicad_pcb"), ir, pcb_path)
+        # only the valid build counted; corrupt dir skipped
+        assert result["count"] == 1
+
+    def test_build_list_sorted_descending(self, tmp_path: Path) -> None:
+        """Builds are sorted by created_at descending (most recent first)."""
+        from kicad_agent.ops._schema_pcb import BuildListOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        self._create_build(tmp_path, rev="1.0")
+        self._create_build(tmp_path, rev="2.0")
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_list"]
+        result = handler(BuildListOp(target_file="test_build.kicad_pcb"), ir, pcb_path)
+        times = [b["created_at"] for b in result["builds"]]
+        assert times == sorted(times, reverse=True)
+
+
+# ---------------------------------------------------------------------------
+# TestBuildShow
+# ---------------------------------------------------------------------------
+
+
+class TestBuildShow:
+    """build_show handler (BUILD-08, BUILD-10)."""
+
+    def _create_build(self, tmp_path: Path, rev: str = "1.0") -> str:
+        from kicad_agent.ops._schema_pcb import BuildCreateOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        pcb_path = _create_pcb_with_title_block(tmp_path, rev=rev)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_create"]
+        result = handler(
+            BuildCreateOp(target_file="test_build.kicad_pcb", skip_validation=True),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        return result["build_id"]
+
+    def test_build_show_returns_details(self, tmp_path: Path) -> None:
+        """Show by build_id -> success, status, artifacts present."""
+        from kicad_agent.ops._schema_pcb import BuildShowOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        build_id = self._create_build(tmp_path, rev="1.0")
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_show"]
+        result = handler(
+            BuildShowOp(target_file="test_build.kicad_pcb", build_id=build_id),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        assert result["build_id"] == build_id
+        assert result["status"] == "draft"
+        assert len(result["artifacts"]) >= 1
+
+    def test_build_show_not_found(self, tmp_path: Path) -> None:
+        """Unknown build_id -> success=False, error mentions the id."""
+        from kicad_agent.ops._schema_pcb import BuildShowOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_show"]
+        result = handler(
+            BuildShowOp(target_file="test_build.kicad_pcb", build_id="nope-nope"),
+            ir, pcb_path,
+        )
+        assert result["success"] is False
+        assert "nope-nope" in result["error"]
+
+    def test_build_show_round_trip_manifest(self, tmp_path: Path) -> None:
+        """Create then show -> manifest is not None, artifacts length matches source count."""
+        from kicad_agent.ops._schema_pcb import BuildShowOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        build_id = self._create_build(tmp_path, rev="1.0")
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_show"]
+        result = handler(
+            BuildShowOp(target_file="test_build.kicad_pcb", build_id=build_id),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        assert result["manifest"] is not None
+        # artifacts count matches source_files count (each source file -> 1 artifact)
+        assert len(result["artifacts"]) == len(result["source_files"])
+
+    def test_build_show_with_diff(self, tmp_path: Path) -> None:
+        """Show build_1 with diff_build_id=build_2 -> response includes diff flags."""
+        import json as _json
+        from kicad_agent.ops._schema_pcb import BuildShowOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        id1 = self._create_build(tmp_path, rev="1.0")
+        id2 = self._create_build(tmp_path, rev="2.0")
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_show"]
+        result = handler(
+            BuildShowOp(
+                target_file="test_build.kicad_pcb",
+                build_id=id1,
+                diff_build_id=id2,
+            ),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        assert "diff" in result
+        diff = result["diff"]
+        # different board_rev between the two builds
+        assert diff["board_rev_changed"] is True
+
+    def test_build_show_diff_not_found(self, tmp_path: Path) -> None:
+        """Show with unknown diff_build_id -> primary build returned + diff_error."""
+        from kicad_agent.ops._schema_pcb import BuildShowOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        build_id = self._create_build(tmp_path, rev="1.0")
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_show"]
+        result = handler(
+            BuildShowOp(
+                target_file="test_build.kicad_pcb",
+                build_id=build_id,
+                diff_build_id="deadbeef-dead-beef-dead-beefdeadbeef",
+            ),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        assert result["build_id"] == build_id
+        assert "diff_error" in result
+        assert "diff" not in result
+
+    def test_build_show_no_diff_when_omitted(self, tmp_path: Path) -> None:
+        """Without diff_build_id, response has neither diff nor diff_error."""
+        from kicad_agent.ops._schema_pcb import BuildShowOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        build_id = self._create_build(tmp_path, rev="1.0")
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_show"]
+        result = handler(
+            BuildShowOp(target_file="test_build.kicad_pcb", build_id=build_id),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        assert "diff" not in result
+        assert "diff_error" not in result
+
