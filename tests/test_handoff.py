@@ -216,3 +216,463 @@ class TestExportBomProfileJlcpcb:
             rows = list(csv.reader(f))
         # header + 1 data row (the "?" row dropped)
         assert len(rows) == 2
+
+
+# ---------------------------------------------------------------------------
+# Tasks 3 & 4: export_handoff orchestrator + readme generation
+# ---------------------------------------------------------------------------
+
+
+def _stub_export_single(category: str, build_dir: Path, name: str):
+    """Return a fake export that writes one file into build_dir."""
+
+    def _fake(*args, **kwargs):
+        # output_dir OR output_path kwarg
+        target_dir = build_dir
+        if "output_dir" in kwargs and kwargs["output_dir"] is not None:
+            target_dir = Path(kwargs["output_dir"])
+        elif "output_path" in kwargs and kwargs["output_path"] is not None:
+            target_dir = Path(kwargs["output_path"]).parent
+            Path(kwargs["output_path"]).parent.mkdir(parents=True, exist_ok=True)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        f = target_dir / name
+        f.write_text(f"dummy {category}")
+        return ExportResult(
+            success=True,
+            output_dir=target_dir,
+            files=(f,),
+            command=f"stub-{category}",
+            stderr="",
+        )
+
+    return _fake
+
+
+def _install_export_stubs(monkeypatch, build_dir: Path) -> None:
+    """Install stub export wrappers on the handoff module namespace."""
+    monkeypatch.setattr(
+        "kicad_agent.manufacturing.handoff.export_gerber",
+        _stub_export_single("gerbers", build_dir, "board-F_Cu.gbr"),
+    )
+    monkeypatch.setattr(
+        "kicad_agent.manufacturing.handoff.export_drill",
+        _stub_export_single("drill", build_dir, "board.drl"),
+    )
+    monkeypatch.setattr(
+        "kicad_agent.manufacturing.handoff.export_position",
+        _stub_export_single("cpl", build_dir, "board-pos.csv"),
+    )
+    monkeypatch.setattr(
+        "kicad_agent.manufacturing.handoff.export_netlist",
+        _stub_export_single("netlist", build_dir, "board.net"),
+    )
+    monkeypatch.setattr(
+        "kicad_agent.manufacturing.handoff.export_step",
+        _stub_export_single("step", build_dir, "board.step"),
+    )
+    monkeypatch.setattr(
+        "kicad_agent.manufacturing.handoff.export_pcb_pdf",
+        _stub_export_single("pcb_pdf", build_dir, "board.pdf"),
+    )
+    monkeypatch.setattr(
+        "kicad_agent.manufacturing.handoff.export_schematic_pdf",
+        _stub_export_single("schematic_pdf", build_dir, "board_schematic.pdf"),
+    )
+
+    def _fake_bom_profile(sch_path, output_dir, profile=None):
+        output_dir.mkdir(parents=True, exist_ok=True)
+        f = output_dir / "board-BOM.csv"
+        f.write_text("dummy bom")
+        return BomResult(True, f, 1, 1, "stub-bom", "")
+
+    monkeypatch.setattr(
+        "kicad_agent.manufacturing.handoff.export_bom_profile", _fake_bom_profile
+    )
+
+
+def _stub_board_stats(monkeypatch, stats=None) -> None:
+    """Stub get_board_statistics so tests run without a parseable PCB."""
+    if stats is None:
+        stats = {
+            "layer_count": 2,
+            "board_width_mm": 50.0,
+            "board_height_mm": 30.0,
+            "component_count": 5,
+            "net_count": 3,
+        }
+    monkeypatch.setattr(
+        "kicad_agent.manufacturing.handoff.get_board_statistics",
+        lambda pcb_path: stats,
+    )
+
+
+class TestExportHandoff:
+    """Tests for the export_handoff orchestrator (Tasks 3 & 4)."""
+
+    def test_handoff_creates_zip(self, tmp_path: Path, monkeypatch) -> None:
+        """skip_validation=True + stubbed exports -> zip exists on disk."""
+        from kicad_agent.manufacturing.handoff import export_handoff
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(monkeypatch)
+
+        result = export_handoff(
+            pcb_path=pcb_path,
+            sch_path=None,
+            project_dir=tmp_path,
+            skip_validation=True,
+        )
+
+        assert result.success is True
+        assert result.zip_path != ""
+        # The zip file exists on disk under builds/handoff_*/handoff.zip
+        full_zip = tmp_path / result.zip_path
+        assert full_zip.is_file()
+
+    def test_handoff_blocks_on_drc_failure(self, tmp_path: Path, monkeypatch) -> None:
+        """DRC fail (passed=False, error_message=None) -> no zip created (HANDOFF-06)."""
+        from kicad_agent.manufacturing.handoff import export_handoff
+        from kicad_agent.validation.erc_drc import DrcResult
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(monkeypatch)
+
+        # Stub run_drc on the handoff module's imported reference (lazy import).
+        import kicad_agent.validation.erc_drc as erc_drc_mod
+
+        def _fail_drc(pcb_path, **kwargs):
+            return DrcResult(
+                passed=False, file_path=pcb_path, error_message=None
+            )
+
+        monkeypatch.setattr(erc_drc_mod, "run_drc", _fail_drc)
+
+        result = export_handoff(
+            pcb_path=pcb_path,
+            sch_path=None,
+            project_dir=tmp_path,
+        )
+
+        assert result.success is False
+        assert "DRC" in result.error_message
+        # No handoff.zip anywhere under the project dir.
+        zips = list((tmp_path / "builds").glob("**/handoff.zip")) if (tmp_path / "builds").exists() else []
+        assert zips == []
+
+    def test_handoff_includes_all_artifacts(self, tmp_path: Path, monkeypatch) -> None:
+        """Zip contains gerber, drill, bom, cpl, manifest.json, readme.md."""
+        from kicad_agent.manufacturing.handoff import export_handoff
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        sch_path = _create_minimal_sch(tmp_path)
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(monkeypatch)
+
+        result = export_handoff(
+            pcb_path=pcb_path,
+            sch_path=sch_path,
+            project_dir=tmp_path,
+            skip_validation=True,
+        )
+        assert result.success
+        full_zip = tmp_path / result.zip_path
+        names = zipfile.ZipFile(full_zip).namelist()
+        names_lower = " ".join(names).lower()
+        assert "manifest.json" in names
+        assert "readme.md" in names
+        # gerber / drill / bom / cpl categories present (by filename fragments)
+        assert "board-f_cu.gbr" in names_lower or ".gbr" in names_lower
+        assert ".drl" in names_lower
+        assert "bom" in names_lower
+        assert "pos" in names_lower
+
+    def test_handoff_step_excluded_when_flag_false(self, tmp_path: Path, monkeypatch) -> None:
+        """include_step=False -> no .step file in the zip (HANDOFF-07)."""
+        from kicad_agent.manufacturing.handoff import export_handoff
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(monkeypatch)
+
+        result = export_handoff(
+            pcb_path=pcb_path,
+            sch_path=None,
+            project_dir=tmp_path,
+            include_step=False,
+            skip_validation=True,
+        )
+        assert result.success
+        names = zipfile.ZipFile(tmp_path / result.zip_path).namelist()
+        assert not any(n.lower().endswith(".step") for n in names)
+
+    def test_handoff_step_included_when_flag_true(self, tmp_path: Path, monkeypatch) -> None:
+        """include_step=True (default) -> .step file present in the zip."""
+        from kicad_agent.manufacturing.handoff import export_handoff
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(monkeypatch)
+
+        result = export_handoff(
+            pcb_path=pcb_path,
+            sch_path=None,
+            project_dir=tmp_path,
+            include_step=True,
+            skip_validation=True,
+        )
+        assert result.success
+        names = zipfile.ZipFile(tmp_path / result.zip_path).namelist()
+        assert any(n.lower().endswith(".step") for n in names)
+
+    def test_handoff_no_partial_state_on_failure(self, tmp_path: Path, monkeypatch) -> None:
+        """After a validation failure, no builds/handoff_* dir remains."""
+        from kicad_agent.manufacturing.handoff import export_handoff
+        from kicad_agent.validation.erc_drc import DrcResult
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(monkeypatch)
+
+        import kicad_agent.validation.erc_drc as erc_drc_mod
+
+        monkeypatch.setattr(
+            erc_drc_mod,
+            "run_drc",
+            lambda pcb_path, **kw: DrcResult(passed=False, file_path=pcb_path, error_message=None),
+        )
+
+        result = export_handoff(pcb_path=pcb_path, sch_path=None, project_dir=tmp_path)
+        assert result.success is False
+        handoff_dirs = list((tmp_path / "builds").glob("handoff_*")) if (tmp_path / "builds").exists() else []
+        assert handoff_dirs == []
+
+    def test_handoff_arcname_no_path_separator(self, tmp_path: Path, monkeypatch) -> None:
+        """Every name in the zip namelist has no / or \\ (TM-2)."""
+        from kicad_agent.manufacturing.handoff import export_handoff
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(monkeypatch)
+
+        result = export_handoff(
+            pcb_path=pcb_path,
+            sch_path=None,
+            project_dir=tmp_path,
+            skip_validation=True,
+        )
+        assert result.success
+        names = zipfile.ZipFile(tmp_path / result.zip_path).namelist()
+        for n in names:
+            assert "/" not in n, f"arcname contains '/': {n}"
+            assert "\\" not in n, f"arcname contains '\\': {n}"
+
+    def test_target_file_unchanged(self, tmp_path: Path, monkeypatch) -> None:
+        """The .kicad_pcb bytes are identical before and after export_handoff."""
+        from kicad_agent.manufacturing.handoff import export_handoff
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        before = pcb_path.read_bytes()
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(monkeypatch)
+
+        export_handoff(
+            pcb_path=pcb_path,
+            sch_path=None,
+            project_dir=tmp_path,
+            skip_validation=True,
+        )
+        after = pcb_path.read_bytes()
+        assert before == after
+
+    def test_handoff_drc_inconclusive_does_not_block(self, tmp_path: Path, monkeypatch) -> None:
+        """kicad-cli absent (error_message set) -> None -> does NOT block (graceful degradation)."""
+        from kicad_agent.manufacturing.handoff import export_handoff
+        from kicad_agent.validation.erc_drc import DrcResult
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(monkeypatch)
+
+        import kicad_agent.validation.erc_drc as erc_drc_mod
+
+        monkeypatch.setattr(
+            erc_drc_mod,
+            "run_drc",
+            lambda pcb_path, **kw: DrcResult(
+                passed=False, file_path=pcb_path, error_message="kicad-cli not found"
+            ),
+        )
+
+        result = export_handoff(pcb_path=pcb_path, sch_path=None, project_dir=tmp_path)
+        assert result.success is True
+        assert result.validation.drc_passed is None
+
+    def test_handoff_manifest_has_validation_proof(self, tmp_path: Path, monkeypatch) -> None:
+        """Manifest records drc_passed/erc_passed/violation counts (HANDOFF-09)."""
+        from kicad_agent.manufacturing.handoff import export_handoff
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(monkeypatch)
+
+        result = export_handoff(
+            pcb_path=pcb_path,
+            sch_path=None,
+            project_dir=tmp_path,
+            skip_validation=True,
+        )
+        assert result.success
+        m = result.manifest
+        # skip_validation -> all None
+        assert m.drc_passed is None
+        assert m.erc_passed is None
+        assert m.vendor_drc_passed is None
+
+    def test_handoff_vendor_drc_blocks_on_failure(self, tmp_path: Path, monkeypatch) -> None:
+        """Vendor DRC fail (passed=False, no error_message) -> no zip."""
+        from kicad_agent.manufacturing.handoff import export_handoff
+        from kicad_agent.validation.erc_drc import DrcResult, ErcResult
+        from kicad_agent.manufacturing.vendor_drc import VendorDrcResult
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(monkeypatch)
+
+        import kicad_agent.validation.erc_drc as erc_drc_mod
+        import kicad_agent.manufacturing.vendor_drc as vdrc_mod
+
+        monkeypatch.setattr(
+            erc_drc_mod, "run_drc",
+            lambda pcb_path, **kw: DrcResult(passed=True, file_path=pcb_path),
+        )
+        monkeypatch.setattr(
+            vdrc_mod, "run_vendor_drc",
+            lambda board, profile: VendorDrcResult(
+                vendor="jlcpcb", passed=False, error_message=None
+            ),
+        )
+
+        result = export_handoff(
+            pcb_path=pcb_path, sch_path=None, project_dir=tmp_path, vendor="jlcpcb"
+        )
+        assert result.success is False
+        assert "vendor DRC" in result.error_message
+
+
+class TestReadmeGeneration:
+    """Tests for _generate_readme (Task 4)."""
+
+    def _make_title_block(self, title="My Board", rev="2.0", company="Acme"):
+        from kicad_agent.parser.pcb_native_types import NativeTitleBlock
+
+        return NativeTitleBlock(title=title, rev=rev, company=company)
+
+    def test_readme_has_board_name(self, tmp_path: Path, monkeypatch) -> None:
+        from kicad_agent.manufacturing.handoff import export_handoff
+
+        pcb_path = _create_pcb_with_title_block(tmp_path, title="Unique Board Name")
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(monkeypatch)
+
+        result = export_handoff(
+            pcb_path=pcb_path,
+            sch_path=None,
+            project_dir=tmp_path,
+            skip_validation=True,
+        )
+        assert result.success
+        full_zip = tmp_path / result.zip_path
+        with zipfile.ZipFile(full_zip) as zf:
+            readme = zf.read("readme.md").decode("utf-8")
+        assert "Unique Board Name" in readme
+
+    def test_readme_has_surface_finish(self, tmp_path: Path, monkeypatch) -> None:
+        """When a BoardSpec sidecar exists with surface_finish=ENIG, readme contains ENIG."""
+        from kicad_agent.manufacturing.handoff import export_handoff
+        from kicad_agent.manufacturing.board_spec import (
+            BoardSpec,
+            SurfaceFinish,
+            save_board_spec,
+        )
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        spec = BoardSpec(surface_finish=SurfaceFinish.ENIG)
+        save_board_spec(pcb_path, spec)
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(monkeypatch)
+
+        result = export_handoff(
+            pcb_path=pcb_path,
+            sch_path=None,
+            project_dir=tmp_path,
+            skip_validation=True,
+        )
+        assert result.success
+        with zipfile.ZipFile(tmp_path / result.zip_path) as zf:
+            readme = zf.read("readme.md").decode("utf-8")
+        assert "ENIG" in readme
+
+    def test_readme_has_validation_results(self, tmp_path: Path, monkeypatch) -> None:
+        from kicad_agent.manufacturing.handoff import export_handoff
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(monkeypatch)
+
+        result = export_handoff(
+            pcb_path=pcb_path,
+            sch_path=None,
+            project_dir=tmp_path,
+            skip_validation=True,
+        )
+        assert result.success
+        with zipfile.ZipFile(tmp_path / result.zip_path) as zf:
+            readme = zf.read("readme.md").decode("utf-8")
+        assert "DRC" in readme
+        assert any(w in readme for w in ("passed", "failed", "inconclusive"))
+
+    def test_readme_has_dimensions(self, tmp_path: Path, monkeypatch) -> None:
+        from kicad_agent.manufacturing.handoff import export_handoff
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        _install_export_stubs(monkeypatch, tmp_path)
+        _stub_board_stats(
+            monkeypatch,
+            {
+                "layer_count": 4,
+                "board_width_mm": 75.5,
+                "board_height_mm": 42.25,
+                "component_count": 12,
+                "net_count": 7,
+            },
+        )
+
+        result = export_handoff(
+            pcb_path=pcb_path,
+            sch_path=None,
+            project_dir=tmp_path,
+            skip_validation=True,
+        )
+        assert result.success
+        with zipfile.ZipFile(tmp_path / result.zip_path) as zf:
+            readme = zf.read("readme.md").decode("utf-8")
+        assert "75.5" in readme
+        assert "42.25" in readme
+
+    def test_readme_handles_missing_board_spec(self, tmp_path: Path, monkeypatch) -> None:
+        """No sidecar -> readme still generates with 'not specified' placeholders."""
+        from kicad_agent.manufacturing.handoff import _generate_readme, HandoffValidation
+
+        readme = _generate_readme(
+            title_block=self._make_title_block(),
+            board_spec=None,
+            board_stats={"layer_count": 2, "board_width_mm": 50.0, "board_height_mm": 30.0},
+            validation=HandoffValidation(None, None, None, 0, 0, 0),
+            vendor=None,
+            generated_at="2026-07-10T00:00:00+00:00",
+            board_name="test",
+        )
+        assert "not specified" in readme
+        assert "My Board" in readme
