@@ -1056,6 +1056,47 @@ def _split_version(s: str) -> tuple[int, int, int] | None:
     return (nums[0], nums[1], nums[2])
 
 
+
+
+def kicad_native_check(params: Any, ctx: "HandlerContext") -> dict[str, Any]:
+    """Run native ERC/DRC checks — pure Python, no kicad-cli dependency.
+
+    Phase 218: Replaces kicad.post_check for App Store sandboxed builds.
+    Uses the native_erc and native_drc modules.
+
+    Returns same decision shape as kicad.post_check.
+    """
+    import sys
+    from pathlib import Path
+
+    files = params.get("files", []) if isinstance(params, dict) else []
+    require_erc = params.get("require_erc", True) if isinstance(params, dict) else True
+    require_drc = params.get("require_drc", True) if isinstance(params, dict) else True
+
+    sch_files = [Path(f) for f in files if f.endswith(".kicad_sch")]
+    pcb_files = [Path(f) for f in files if f.endswith(".kicad_pcb")]
+
+    try:
+        from kicad_agent.validation.native_drc_runner import run_all_native_checks
+        result = run_all_native_checks(
+            sch_path=sch_files[0] if sch_files else None,
+            pcb_path=pcb_files[0] if pcb_files else None,
+            require_erc=require_erc,
+            require_drc=require_drc,
+        )
+        if ctx.audit is not None:
+            ctx.audit.log_event("native_check", decision=result.decision,
+                               errors=result.total_errors)
+        return result.to_dict()
+    except Exception as e:
+        print(f"Native check error: {e}", file=sys.stderr)
+        return {
+            "decision": "indeterminate",
+            "erc": None, "drc": None,
+            "failures": [f"Native check error: {e}"],
+        }
+
+
 # =============================================================================
 # Handler registry — maps method names to callables
 # =============================================================================
@@ -1084,6 +1125,7 @@ HANDLERS: dict[str, Any] = {
     "kicad.post_check": kicad_post_check,
     "kicad.snapshot": kicad_snapshot,
     "kicad.restore": kicad_restore,
+    "kicad.native_check": kicad_native_check,
 }
 
 

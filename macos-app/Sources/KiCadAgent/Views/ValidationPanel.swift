@@ -42,7 +42,7 @@ final class ValidationManager {
 
         do {
             let result = try await client.callRaw(
-                "kicad.post_check",
+                "kicad.native_check",
                 params: [
                     "op_type": "erc",
                     "files": [filePath],
@@ -77,7 +77,7 @@ final class ValidationManager {
 
         do {
             let result = try await client.callRaw(
-                "kicad.post_check",
+                "kicad.native_check",
                 params: [
                     "op_type": "drc",
                     "files": [filePath],
