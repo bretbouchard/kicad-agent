@@ -119,33 +119,53 @@ def check_copper_spacing(
     # Build geometry items with metadata
     items: list[dict] = []
 
+    # Skip non-copper layers (Edge.Cuts, F.Fab, F.SilkS, etc.)
+    _COPPER_LAYERS = {".Cu", "F.Cu", "B.Cu", "In1.Cu", "In2.Cu", "In3.Cu",
+                      "In4.Cu", "In5.Cu", "In6.Cu", "In7.Cu", "In8.Cu"}
+
+    def _is_copper_layer(layer: str) -> bool:
+        if not layer:
+            return False
+        return any(cl in layer for cl in _COPPER_LAYERS)
+
     for seg in segments:
         try:
+            layer = getattr(seg, "layer", "")
+            if not _is_copper_layer(layer):
+                continue  # Skip board outline, silkscreen, etc.
             line = LineString([(seg.start[0], seg.start[1]), (seg.end[0], seg.end[1])])
-            buf = line.buffer(seg.width / 2) if hasattr(seg, "width") else line.buffer(0.1)
+            width = getattr(seg, "width", 0.2)
+            buf = line.buffer(width / 2)
             items.append({"geom": buf, "net": getattr(seg, "net_name", ""),
-                         "layer": getattr(seg, "layer", ""), "type": "segment"})
+                         "layer": layer, "type": "segment"})
         except Exception:
             pass
 
     for pad in pads:
         try:
-            x, y = pad.position if hasattr(pad, "position") else (pad.at[0], pad.at[1])
-            w = getattr(pad, "size", [0.6, 0.6])[0]
-            h = getattr(pad, "size", [0.6, 0.6])[1]
+            pos = getattr(pad, "position", None) or getattr(pad, "at", (0, 0))
+            x, y = float(pos[0]), float(pos[1])
+            size = getattr(pad, "size", [0.6, 0.6])
+            w = float(size[0]) if isinstance(size, (list, tuple)) else 0.6
+            h = float(size[1]) if isinstance(size, (list, tuple)) and len(size) > 1 else w
             poly = box(x - w/2, y - h/2, x + w/2, y + h/2)
+            pad_layers = str(getattr(pad, "layers", ""))
+            if not _is_copper_layer(pad_layers):
+                continue  # Skip non-copper pads
             items.append({"geom": poly, "net": getattr(pad, "net_name", ""),
-                         "layer": getattr(pad, "layers", ""), "type": "pad"})
+                         "layer": pad_layers, "type": "pad"})
         except Exception:
             pass
 
     for via in vias:
         try:
-            x, y = via.position if hasattr(via, "position") else (via.at[0], via.at[1])
-            d = getattr(via, "size", 0.6)
+            pos = getattr(via, "position", None) or getattr(via, "at", (0, 0))
+            x, y = float(pos[0]), float(pos[1])
+            d = float(getattr(via, "size", 0.6))
             pt = Point(x, y).buffer(d / 2)
+            via_layers = str(getattr(via, "layers", ""))
             items.append({"geom": pt, "net": getattr(via, "net_name", ""),
-                         "layer": getattr(via, "layers", ""), "type": "via"})
+                         "layer": via_layers, "type": "via"})
         except Exception:
             pass
 
@@ -170,13 +190,20 @@ def check_copper_spacing(
 
             other = items[int(j)]
             # Same net = exempt
-            if item["net"] and item["net"] == other["net"]:
+            if item["net"] and other["net"] and item["net"] == other["net"]:
+                continue
+            # Both unrouted (no net) = skip to avoid false positives
+            if not item["net"] and not other["net"]:
+                continue
+            # Items at exactly the same position (0.000mm distance) are
+            # likely overlapping pads from the same footprint — skip.
+            dist = item["geom"].distance(other["geom"])
+            if dist == 0.0:
                 continue
             # Different layers = exempt
             if item["layer"] and other["layer"] and item["layer"] != other["layer"]:
                 continue
 
-            dist = item["geom"].distance(other["geom"])
             if dist < min_clearance:
                 cx = float((item["geom"].centroid.x + other["geom"].centroid.x) / 2)
                 cy = float((item["geom"].centroid.y + other["geom"].centroid.y) / 2)
@@ -221,6 +248,9 @@ def check_netclass_widths(
     for seg in segments:
         width = getattr(seg, "width", 0.127)
         net = getattr(seg, "net_name", "")
+        # Skip segments with no net (board outline, silkscreen, etc.)
+        if not net:
+            continue
         cls_name = net_to_class.get(net)
         min_width = class_widths.get(cls_name, 0.127) if cls_name else 0.127
 
@@ -331,30 +361,38 @@ def check_hole_to_hole(
         drill = getattr(via, "drill", 0.2)
         pos = getattr(via, "position", None) or getattr(via, "at", (0, 0))
         holes.append({"x": float(pos[0]), "y": float(pos[1]),
-                      "drill": float(drill), "ref": "via"})
+                      "drill": float(drill), "ref": "via", "fp_ref": ""})
 
     for pad in pads:
         drill = getattr(pad, "drill", None)
-        if drill and drill > 0:
+        if drill and float(drill) > 0:
             pos = getattr(pad, "position", None) or getattr(pad, "at", (0, 0))
             holes.append({"x": float(pos[0]), "y": float(pos[1]),
-                          "drill": float(drill), "ref": getattr(pad, "reference", "pad")})
+                          "drill": float(drill),
+                          "ref": getattr(pad, "number", "pad"),
+                          "fp_ref": getattr(pad, "reference", "")})
 
     for i in range(len(holes)):
         for j in range(i + 1, len(holes)):
             a, b = holes[i], holes[j]
+            # Skip holes within the same footprint (mounting holes, etc.)
+            if a["fp_ref"] and b["fp_ref"] and a["fp_ref"] == b["fp_ref"]:
+                continue
             dx = a["x"] - b["x"]
             dy = a["y"] - b["y"]
             center_dist = math.sqrt(dx * dx + dy * dy)
+            # Edge-to-edge distance (can be negative if holes overlap)
             edge_dist = center_dist - (a["drill"] + b["drill"]) / 2
             if edge_dist < min_clearance:
+                # Report actual distance (clamp at 0 for display)
+                display_dist = max(0.0, edge_dist)
                 violations.append(DRCViolation(
                     severity="error", check_id="DRC_HOLE_CLEARANCE",
                     description=(
-                        f"Hole-to-hole clearance {edge_dist:.3f}mm < {min_clearance:.3f}mm "
+                        f"Hole-to-hole clearance {display_dist:.3f}mm < {min_clearance:.3f}mm "
                         f"({a['ref']} <-> {b['ref']})"
                     ),
-                    value=round(edge_dist, 4), limit=min_clearance,
+                    value=round(display_dist, 4), limit=min_clearance,
                     position=((a["x"] + b["x"]) / 2, (a["y"] + b["y"]) / 2),
                 ))
 
@@ -425,18 +463,44 @@ def run_native_drc(
     all_violations: list[DRCViolation] = []
 
     try:
-        from kicad_agent.parser.pcb_native_parser import parse_pcb_native
+        from kicad_agent.parser.pcb_native_parser import NativeParser
     except ImportError:
         logger.error("Cannot import PCB parser")
         return NativeDrcResult(checks_skipped=("all",))
 
     try:
-        board = parse_pcb_native(pcb_path)
+        parser = NativeParser()
+        board = parser.parse_pcb(pcb_path)
         segments = list(board.segments)
-        pads = list(board.pads)
         vias = list(board.vias)
         footprints = list(board.footprints)
-        net_classes = {nc.name: nc for nc in board.net_classes}
+        # Pads live inside footprints — compute ABSOLUTE positions
+        # by adding the footprint's offset to each pad's relative position.
+        pads = []
+        for fp in footprints:
+            fp_pos = getattr(fp, "at", (0, 0))
+            fp_x = float(fp_pos[0]) if isinstance(fp_pos, (tuple, list)) else 0.0
+            fp_y = float(fp_pos[1]) if isinstance(fp_pos, (tuple, list)) else 0.0
+            for pad in (getattr(fp, "pads", []) or []):
+                # Clone pad with absolute position
+                pad_pos = getattr(pad, "position", getattr(pad, "at", (0, 0)))
+                rel_x = float(pad_pos[0]) if isinstance(pad_pos, (tuple, list)) else 0.0
+                rel_y = float(pad_pos[1]) if isinstance(pad_pos, (tuple, list)) else 0.0
+                # Create a simple namespace with absolute position
+                class _AbsPad:
+                    pass
+                ap = _AbsPad()
+                ap.position = (fp_x + rel_x, fp_y + rel_y)
+                ap.net_name = getattr(pad, "net_name", "")
+                ap.size = getattr(pad, "size", [0.6, 0.6])
+                ap.layers = getattr(pad, "layers", "*.Cu")
+                ap.drill = getattr(pad, "drill", 0)
+                ap.reference = getattr(fp, "reference", "?")
+                pads.append(ap)
+        net_classes = {}
+        for nc in board.net_classes:
+            nc_name = getattr(nc, "name", str(nc))
+            net_classes[nc_name] = nc
         checks_run.append("pcb_parse")
     except Exception as e:
         logger.error(f"Failed to parse PCB: {e}")
