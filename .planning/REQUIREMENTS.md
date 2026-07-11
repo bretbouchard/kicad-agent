@@ -52,12 +52,12 @@
 
 ### Category 5: Integration (INTEG)
 
-- [ ] **INTEG-01**: All new operations are exposed via MCP (auto-generated from Operation union — no manual MCP wiring)
-- [ ] **INTEG-02**: All new operations are exposed via CLI subcommands (build, handoff, drc-vendor, board-metadata)
-- [ ] **INTEG-03**: `ProjectContext` discovers `builds/` directories and `.kicad_build_spec.json` sidecars
-- [ ] **INTEG-04**: Builds are project-scoped (each project has its own `builds/` directory)
-- [ ] **INTEG-05**: `ManufacturerClient` ABC is defined (interface only — `quote()`, `place_order()`, `get_status()` methods) to enable future API adapters without breaking changes
-- [ ] **INTEG-06**: Operations registry count assertion and schema completeness validation pass with all new ops added
+- [x] **INTEG-01**: All new operations are exposed via MCP (auto-generated from Operation union — no manual MCP wiring)
+- [x] **INTEG-02**: All new operations are exposed via CLI subcommands (build, handoff, drc-vendor, board-metadata)
+- [x] **INTEG-03**: `ProjectContext` discovers `builds/` directories and `.kicad_build_spec.json` sidecars
+- [x] **INTEG-04**: Builds are project-scoped (each project has its own `builds/` directory)
+- [x] **INTEG-05**: `ManufacturerClient` ABC is defined (interface only — `quote()`, `place_order()`, `get_status()` methods) to enable future API adapters without breaking changes
+- [x] **INTEG-06**: Operations registry count assertion and schema completeness validation pass with all new ops added
 
 ---
 
