@@ -46,6 +46,8 @@ struct LiquidGlassShell: View {
     @State private var selectedConversation: Conversation?
     // Chat messages for the active conversation (mirrors SwiftData).
     @State private var chatMessages: [ChatMessage] = []
+    // Phase 213 — file importer for KiCad files.
+    @State private var showFileImporter: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -60,6 +62,12 @@ struct LiquidGlassShell: View {
                     : AnyView(Color(nsColor: .windowBackgroundColor).opacity(0.96)))
         .animation(reduceMotion ? nil : LiquidGlassAnimation.default, value: project.lastModifiedAt)
         .toolbar { toolbarContent }
+        .fileImporter(
+            isPresented: $showFileImporter,
+            allowedContentTypes: [.data]
+        ) { result in
+            handleFileImport(result)
+        }
         .onAppear {
             composeFocused = true
             windowManager.register(projectId: project.id)
@@ -173,6 +181,52 @@ struct LiquidGlassShell: View {
         }
         .liquidGlassToolbar()
         .padding(Spacing.md)
+    }
+
+    // MARK: - File Import (Phase 213)
+
+    private func handleFileImport(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let url):
+            let needsScope = url.startAccessingSecurityScopedResource()
+            defer { if needsScope { url.stopAccessingSecurityScopedResource() } }
+
+            let fileName = url.lastPathComponent
+            Logger.ui.info("Importing KiCad file: \(fileName)")
+
+            // Create a conversation noting the imported file.
+            let conversation = Conversation(project: project, title: "Imported: \(fileName)")
+            modelContext.insert(conversation)
+
+            let userMessage = Message(
+                conversation: conversation,
+                role: .user,
+                content: "I've opened \(fileName). Analyze this design.",
+                status: .complete
+            )
+            modelContext.insert(userMessage)
+
+            // Store the file path context for the daemon.
+            project.touch()
+            try? modelContext.save()
+
+            // Select the new conversation.
+            selectedConversation = conversation
+            chatMessages = [
+                ChatMessage(id: userMessage.id, role: .user, content: userMessage.content, status: .complete, sentAt: .now),
+                ChatMessage(role: .assistant, content: "", status: .streaming, sentAt: .now),
+            ]
+
+            // Start analysis with file context.
+            Task { @MainActor in
+                await streamResponse(into: chatMessages.count - 1, conversation: conversation, assistantMessage: Message(
+                    conversation: conversation, role: .assistant, content: "", status: .streaming
+                ))
+            }
+
+        case .failure(let error):
+            Logger.ui.error("File import failed: \(error.localizedDescription)")
+        }
     }
 
     private func submitDraft() {
@@ -305,6 +359,14 @@ struct LiquidGlassShell: View {
             }
             .accessibilityLabel("New window")
             .accessibilityHint("Opens a new project window (cmd+N)")
+
+            Button {
+                showFileImporter = true
+            } label: {
+                Label("Open KiCad File", systemImage: "folder")
+            }
+            .accessibilityLabel("Open KiCad file")
+            .accessibilityHint("Import a .kicad_sch or .kicad_pcb file")
 
             ShareLink(item: project.name) {
                 Label("Share", systemImage: "square.and.arrow.up")
