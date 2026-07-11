@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  ProcessManager.swift
 //  KiCadAgent
@@ -480,3 +481,5 @@ final class LineBuffer: @unchecked Sendable {
         return lines
     }
 }
+
+#endif // os(macOS)

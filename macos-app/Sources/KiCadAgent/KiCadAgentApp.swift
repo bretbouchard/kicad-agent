@@ -27,11 +27,15 @@ struct KiCadAgentApp: App {
     private static let logger = Logger.appShell
 
     /// Daemon supervisor. Tracks daemon lifecycle (spawn, health, shutdown).
+#if os(macOS)
     @State private var daemonSupervisor: DaemonSupervisor = DaemonSupervisor()
+#endif
 
     /// KiCad CLI detector. Tracks install status (notInstalled / wrongVersion / ready).
     /// Phase 163 — gates main workflow on `.ready` per APP-04.
+#if os(macOS)
     @State private var kicadDetector: KiCadCLIDetector = KiCadCLIDetector()
+#endif
 
     /// Multi-window registry. Phase 171 — tracks open project windows + cap.
     @State private var windowManager: WindowManager = WindowManager()
@@ -48,8 +52,12 @@ struct KiCadAgentApp: App {
     var body: some Scene {
         WindowGroup {
             AppRootView()
+                #if os(macOS)
                 .environment(daemonSupervisor)
+                #endif
+                #if os(macOS)
                 .environment(kicadDetector)
+                #endif
                 .environment(windowManager)
                 .environmentObject(providerRegistry)
                 .environmentObject(modelRouter)
@@ -66,16 +74,22 @@ struct KiCadAgentApp: App {
                     // APP-01 augmentation: spawn daemon on launch; if it fails within
                     // 5 seconds, AppRootView surfaces recovery UI (no silent hang).
                     KiCadAgentApp.logger.info("Volta PCB launching — macOS 27 Liquid Glass shell")
+                    #if os(macOS)
                     daemonSupervisor.start()
+                    #endif
                     // APP-04: detect KiCad on launch. Onboarding sheet shows if not ready.
+                    #if os(macOS)
                     Task { await kicadDetector.detect() }
+                    #endif
                     // Phase 210: scan for local model, show download prompt if missing.
                     localModelManager = LocalModelManager(registry: providerRegistry)
                 }
                 .onDisappear {
                     // APP-05 augmentation placeholder: 5s shutdown timeout + force-kill
                     // lands in Phase 162 when real daemon process exists.
+                    #if os(macOS)
                     daemonSupervisor.shutdown()
+                    #endif
                 }
         }
         .windowResizability(.contentMinSize)
@@ -84,7 +98,9 @@ struct KiCadAgentApp: App {
             // ponytail: cmd+N handled natively by WindowGroup. Add app-level commands here.
             CommandGroup(after: .newItem) {
                 Button("Check KiCad Install") {
+                    #if os(macOS)
                     Task { await kicadDetector.detect() }
+                    #endif
                 }
                 .accessibilityLabel("Check KiCad install")
                 .accessibilityHint("Re-runs KiCad CLI detection. Use after installing or upgrading KiCad.")

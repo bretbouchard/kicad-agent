@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  DaemonMessenger.swift
 //  KiCadAgent
@@ -213,3 +214,5 @@ struct SendableBox: @unchecked Sendable {
     @usableFromInline let value: Any
     @inlinable init(_ value: Any) { self.value = value }
 }
+
+#endif // os(macOS)

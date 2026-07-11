@@ -103,25 +103,65 @@ struct LiquidGlassShell: View {
         .padding(.vertical, Spacing.md)
     }
 
-    /// APP-01 / APP-03 surface — surfaces daemon state to user.
+    /// APP-01 / APP-03 surface — surfaces daemon/engine state to user.
     @ViewBuilder
     private var daemonStatusBadge: some View {
-        switch projectDaemonState {
-        case .notStarted, .shutDown:
-            DaemonBadge(label: "Daemon: idle", color: ColorTokens.tertiaryText, icon: "circle.dashed")
-        case .starting, .shuttingDown, .restarting:
-            DaemonBadge(label: "Daemon: working", color: ColorTokens.warning, icon: "arrow.triangle.2.circlepath")
-        case .ready:
-            DaemonBadge(label: "Daemon: ready", color: ColorTokens.success, icon: "checkmark.circle.fill")
-        case .failed(let reason):
-            DaemonBadge(label: "Daemon: \(reason)", color: ColorTokens.destructive, icon: "exclamationmark.triangle.fill")
-        }
+        DaemonBadge(label: daemonStatusLabel, color: daemonStatusColor, icon: daemonStatusIcon)
     }
 
     /// ponytail: project inherits global daemon state for Phase 161.
     /// Phase 168 will give each conversation its own daemon session if needed.
+    #if os(macOS)
     @Environment(DaemonSupervisor.self) private var daemonSupervisor
-    private var projectDaemonState: DaemonState { daemonSupervisor.state }
+    #endif
+
+    private var daemonStatusLabel: String {
+        #if os(macOS)
+        switch daemonSupervisor.state {
+        case .ready: return "Daemon: ready"
+        case .failed(let reason): return "Daemon: \(reason)"
+        case .starting, .restarting: return "Daemon: working"
+        default: return "Daemon: idle"
+        }
+        #else
+        return "Engine: ready"
+        #endif
+    }
+
+    private var daemonStatusColor: Color {
+        #if os(macOS)
+        switch daemonSupervisor.state {
+        case .ready: return ColorTokens.success
+        case .failed: return ColorTokens.destructive
+        case .starting, .restarting: return ColorTokens.warning
+        default: return ColorTokens.tertiaryText
+        }
+        #else
+        return ColorTokens.success
+        #endif
+    }
+
+    private var daemonStatusIcon: String {
+        #if os(macOS)
+        switch daemonSupervisor.state {
+        case .ready: return "checkmark.circle.fill"
+        case .failed: return "exclamationmark.triangle.fill"
+        case .starting, .restarting: return "arrow.triangle.2.circlepath"
+        default: return "circle.dashed"
+        }
+        #else
+        return "checkmark.circle.fill"
+        #endif
+    }
+
+
+    private func makePreviewRenderer() -> (any PreviewRenderer)? {
+        #if os(macOS)
+        return daemonSupervisor.mcpClient.map { DaemonPreviewRenderer(client: $0) }
+        #else
+        return nil
+        #endif
+    }
 
     // MARK: - Content
 
@@ -132,7 +172,7 @@ struct LiquidGlassShell: View {
             ChatView(
                 messages: $chatMessages,
                 streamProvider: RouterStreamProvider(router: modelRouter),
-                previewRenderer: daemonSupervisor.mcpClient.map { DaemonPreviewRenderer(client: $0) }
+                previewRenderer: makePreviewRenderer()
             )
         } else if project.conversations.isEmpty {
             ChatPlaceholderContent(projectName: project.name)
@@ -196,12 +236,16 @@ struct LiquidGlassShell: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(spacing: 4) {
                 Button("Run ERC") {
+                    #if os(macOS)
                     Task { await validationManager.runERC(filePath: selectedConversation?.title ?? "board.kicad_sch", client: daemonSupervisor.mcpClient) }
+                    #endif
                 }
                 .buttonStyle(.bordered)
 
                 Button("Run DRC") {
+                    #if os(macOS)
                     Task { await validationManager.runDRC(filePath: selectedConversation?.title ?? "board.kicad_pcb", client: daemonSupervisor.mcpClient) }
+                    #endif
                 }
                 .buttonStyle(.bordered)
             }
@@ -346,7 +390,11 @@ struct LiquidGlassShell: View {
 
         // Phase 212: check if the LLM response contains operation JSON.
         // If so, execute via the daemon and append the result.
+#if os(macOS)
         let mcpClient = daemonSupervisor.mcpClient
+        #else
+        let mcpClient: MCPClient? = nil
+        #endif
         let responseText = chatMessages[index].content
         let opResult = await OperationExecutor.execute(from: responseText, client: mcpClient)
         if case .success(let resultText) = opResult {

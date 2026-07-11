@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  MCPClient.swift
 //  KiCadAgent
@@ -732,3 +733,5 @@ struct MCPResponseStream: AsyncSequence {
         }
     }
 }
+
+#endif // os(macOS)

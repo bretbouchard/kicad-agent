@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  DaemonSupervisor.swift
 //  KiCadAgent
@@ -260,3 +261,5 @@ final class DaemonSupervisor {
         }
     }
 }
+
+#endif // os(macOS)

@@ -13,14 +13,20 @@ import PackageDescription
 let package = Package(
     name: "KiCadAgent",
     platforms: [
-        // Forward-declared deployment target. Real target is macOS 27.0
-        // per PROJECT.md decision 2026-07-07 (FoundationModels, Liquid Glass).
-        .macOS(.v26)
+        // macOS 27+ for Liquid Glass + FoundationModels.
+        // iOS 18+ for iPhone/iPad companion (Phase 226).
+        .macOS(.v26),
+        .iOS(.v18)
     ],
     products: [
         .executable(
             name: "KiCadAgent",
             targets: ["KiCadAgent"]
+        ),
+        // Phase 226: Shared library for iOS + macOS targets.
+        .library(
+            name: "VoltaPCBCore",
+            targets: ["VoltaPCBCore"]
         )
     ],
     dependencies: [
@@ -46,22 +52,24 @@ let package = Package(
         )
     ],
     targets: [
+        // Phase 226: Cross-platform core library (iOS + macOS).
+        // Contains parser, ERC/DRC, VoltaEngine, models — no daemon deps.
+        .target(
+            name: "VoltaPCBCore",
+            path: "Sources/VoltaPCBCore"
+        ),
         .executableTarget(
             name: "KiCadAgent",
             dependencies: [
+                "VoltaPCBCore",
                 .product(name: "MLX", package: "mlx-swift"),
                 .product(name: "MLXNN", package: "mlx-swift"),
-                // Phase 210: generation loop + LoRA adapter loading.
                 .product(name: "MLXLLM", package: "mlx-swift-lm"),
                 .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
-                // Phase 210.1: HuggingFace tokenizer + downloader integration.
                 .product(name: "MLXHuggingFace", package: "mlx-swift-lm"),
                 .product(name: "HuggingFace", package: "swift-huggingface"),
                 .product(name: "Tokenizers", package: "swift-transformers")
             ],
-            // Force macOS 27 deployment target at the ABI level.
-            // sdk 26.5 toolchain accepts this — produces binary that
-            // refuses to launch on macOS 26 (which is what we want).
             swiftSettings: [
                 .unsafeFlags(["-target", "arm64-apple-macosx27.0"]),
             ],

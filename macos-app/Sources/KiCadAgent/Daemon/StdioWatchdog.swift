@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  StdioWatchdog.swift
 //  KiCadAgent
@@ -188,3 +189,5 @@ final class StdioWatchdog {
         .now - lastActivityAt
     }
 }
+
+#endif // os(macOS)

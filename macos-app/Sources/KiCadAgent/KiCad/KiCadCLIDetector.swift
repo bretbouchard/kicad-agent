@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  KiCadCLIDetector.swift
 //  KiCadAgent
@@ -287,3 +288,5 @@ extension Version {
         return nil
     }
 }
+
+#endif // os(macOS)
