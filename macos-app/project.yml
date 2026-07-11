@@ -79,6 +79,9 @@ targets:
       - path: Resources/Assets.xcassets
       - path: Resources/AppIcon.icns
         buildPhase: resources
+      - path: Resources/PrivacyInfo.xcprivacy
+        buildPhase: resources
+        buildPhase: resources
       - path: Resources/KiCadAgent.entitlements
         buildPhase: resources
     settings:
