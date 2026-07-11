@@ -16,7 +16,7 @@ The handoff package is the universal fallback — it works with every fab (3 wit
 - [x] **Phase 206: Vendor DRC Profiles** — Wire up `.kicad_dru` files (PCBWay, JLCPCB, AISLER, OSH Park, Advanced Circuits, generic), `drc_vendor` op (completed 2026-07-10)
 - [x] **Phase 207: Versioned Build System** — Build record, manifest serialization, `build_create`/`build_list`/`build_show` ops, build diffing (completed 2026-07-11)
 - [x] **Phase 208: Manufacturer Handoff Package** — Full export orchestration, zip bundle + readme, vendor output profiles, pre-handoff validation gate (completed 2026-07-11)
-- [ ] **Phase 209: Crossfile + MCP Integration** — MCP auto-exposure, CLI subcommands, `ProjectContext` discovery, `ManufacturerClient` ABC
+- [x] **Phase 209: Crossfile + MCP Integration** — MCP auto-exposure, CLI subcommands, `ProjectContext` discovery, `ManufacturerClient` ABC (completed 2026-07-11)
 - [ ] **Phase 210: Vendor API Adapters** — DEFERRED (PCBWay, MacroFab, JLCPCB quote/order adapters) — placeholder, activated in v7.1
 
 ## Phase Details
@@ -172,7 +172,7 @@ The handoff package is the universal fallback — it works with every fab (3 wit
 3. `ManufacturerClient` ABC is defined with `quote()`, `place_order()`, `get_status()` abstract methods — importing it does not require any network libraries or credentials
 4. Operations registry count assertion and `validate_registry_completeness()` pass with all new ops added (registry, schema union, and handlers in sync)
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 ---
 
@@ -260,7 +260,7 @@ Phase 206 (DRC) ────────┴────────────�
 | 206. Vendor DRC Profiles | 1/1 | Complete    | 2026-07-10 |
 | 207. Versioned Build System | 1/1 | Complete    | 2026-07-11 |
 | 208. Manufacturer Handoff Package | 1/1 | Complete    | 2026-07-11 |
-| 209. Crossfile + MCP Integration | 0/1 | Not started | - |
+| 209. Crossfile + MCP Integration | 1/1 | Complete    | 2026-07-11 |
 | 210. Vendor API Adapters (DEFERRED) | 0/0 | Deferred | - |
 
 **Total:** 5 active phases (205-209), 40 active requirements mapped, 100% coverage, **0 plans written**
