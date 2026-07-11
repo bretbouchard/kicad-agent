@@ -35,7 +35,7 @@ from kicad_agent.handler import format_result, handle_operation, validate_operat
 from kicad_agent.logging_config import configure_logging
 from kicad_agent.ops.schema import get_operation_schema
 
-_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "pre-pcb-gate", "gate", "demo", "playground", "dfm", "undo", "redo", "workflow", "critique", "check-conventions"}
+_SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze", "component-search", "ai-stats", "design-rules", "review-schematic", "pre-pcb-gate", "gate", "demo", "playground", "dfm", "undo", "redo", "workflow", "critique", "check-conventions", "build", "handoff", "drc-vendor", "board-metadata"}
 
 _SUBCOMMAND_DESCRIPTIONS = {
     "collect": "Collect real-world KiCad training data from GitHub.",
@@ -59,6 +59,10 @@ _SUBCOMMAND_DESCRIPTIONS = {
     "redo": "Redo the most recently undone operation.",
     "workflow": "Run a named workflow (e.g. route-and-fill) on a KiCad file.",
     "check-conventions": "Run IEEE 315 / H&H conventions against a KiCad schematic.",
+    "build": "Create, list, or show versioned build snapshots of a KiCad PCB.",
+    "handoff": "Export a complete manufacturer handoff package from a KiCad PCB.",
+    "drc-vendor": "Run vendor-specific DRC checks or list vendor DRC profiles.",
+    "board-metadata": "Read or set KiCad PCB title-block metadata (title, rev, company, date).",
 }
 
 
@@ -704,6 +708,215 @@ def _handle_dfm(argv: list[str]) -> None:
     sys.exit(dfm_command(args))
 
 
+def _dispatch_op_and_print(op: dict, project_dir: str | None = None) -> None:
+    """Shared dispatch for v7.0 CLI subcommands.
+
+    Builds a JSON op string, calls ``handle_operation``, and prints the result
+    as JSON via ``format_result``. On success prints to stdout and exits 0; on
+    failure prints to stderr and exits 1 (matches ``_handle_route:453-461``).
+
+    The op layer already enforces path-traversal + vendor-pattern guards, so
+    the CLI does not re-validate (TM-1, TM-2, TM-5).
+    """
+    from kicad_agent.handler import handle_operation, format_result
+    op_json = json.dumps(op)
+    result = handle_operation(op_json, project_dir=Path(project_dir) if project_dir else None)
+    if result.success:
+        print(format_result(result))
+        sys.exit(0)
+    print(format_result(result), file=sys.stderr)
+    sys.exit(1)
+
+
+def _handle_handoff(argv: list[str]) -> None:
+    """Handle the 'handoff' subcommand -- export a manufacturer handoff package.
+
+    Wraps the ``build_handoff_export`` op (Phase 208). Flat handler (no
+    sub-actions) mirroring ``_handle_drc``.
+    """
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent handoff",
+        description="Export a complete manufacturer handoff package from a KiCad PCB.",
+    )
+    parser.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
+    parser.add_argument("--vendor", default=None,
+                        help="Vendor key (e.g. jlcpcb, pcbway) for profile-driven output")
+    parser.add_argument("--no-step", action="store_true",
+                        help="Omit the STEP 3D model from the bundle")
+    args = parser.parse_args(argv)
+
+    # TM-1: missing-file guard. The op executor handles path traversal.
+    if not args.pcb.exists():
+        print(f"Error: PCB file not found: {args.pcb}", file=sys.stderr)
+        sys.exit(1)
+
+    op = {
+        "op_type": "build_handoff_export",
+        "project_dir": str(args.pcb.parent),
+        "target_file": str(args.pcb),
+        "vendor": args.vendor,
+        "include_step": not args.no_step,
+    }
+    _dispatch_op_and_print(op, project_dir=str(args.pcb.parent))
+
+
+def _handle_build(argv: list[str]) -> None:
+    """Handle the 'build' subcommand -- versioned build snapshots.
+
+    Wraps ``build_create`` / ``build_list`` / ``build_show`` (Phase 207).
+    Nested subcommands mirroring the ``_handle_dfm`` subparser shape.
+    """
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent build",
+        description="Create, list, or show versioned build snapshots of a KiCad PCB.",
+    )
+    subparsers = parser.add_subparsers(dest="action", required=True)
+
+    p_create = subparsers.add_parser("create", help="Create a new build snapshot")
+    p_create.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
+    p_create.add_argument("--rev", default=None, help="Board revision label (default: read from PCB)")
+
+    p_list = subparsers.add_parser("list", help="List all builds for the project")
+    p_list.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
+
+    p_show = subparsers.add_parser("show", help="Show details of a specific build")
+    p_show.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
+    p_show.add_argument("--id", required=True, dest="build_id", help="Build UUID to show")
+
+    args = parser.parse_args(argv)
+
+    # TM-1: missing-file guard (applies to all sub-actions that take <pcb>).
+    if not args.pcb.exists():
+        print(f"Error: PCB file not found: {args.pcb}", file=sys.stderr)
+        sys.exit(1)
+
+    project_dir = str(args.pcb.parent)
+    if args.action == "create":
+        op = {
+            "op_type": "build_create",
+            "project_dir": project_dir,
+            "target_file": str(args.pcb),
+        }
+        _dispatch_op_and_print(op, project_dir=project_dir)
+    elif args.action == "list":
+        op = {
+            "op_type": "build_list",
+            "project_dir": project_dir,
+            "target_file": str(args.pcb),
+        }
+        _dispatch_op_and_print(op, project_dir=project_dir)
+    elif args.action == "show":
+        op = {
+            "op_type": "build_show",
+            "project_dir": project_dir,
+            "target_file": str(args.pcb),
+            "build_id": args.build_id,
+        }
+        _dispatch_op_and_print(op, project_dir=project_dir)
+
+
+def _handle_drc_vendor(argv: list[str]) -> None:
+    """Handle the 'drc-vendor' subcommand -- vendor-specific DRC.
+
+    Wraps ``drc_vendor`` / ``list_vendor_drc_profiles`` (Phase 206). Nested
+    subcommands. The op layer enforces the ``^[a-z0-9_]+$`` vendor pattern
+    (TM-2) -- the CLI does not re-validate.
+    """
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent drc-vendor",
+        description="Run vendor-specific DRC checks or list vendor DRC profiles.",
+    )
+    subparsers = parser.add_subparsers(dest="action", required=True)
+
+    p_run = subparsers.add_parser("run", help="Run vendor DRC against a PCB")
+    p_run.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
+    p_run.add_argument("--vendor", required=True,
+                       help="Vendor key (e.g. jlcpcb, pcbway, generic)")
+
+    p_list = subparsers.add_parser("list", help="List available vendor DRC profiles")
+    p_list.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
+
+    args = parser.parse_args(argv)
+
+    # TM-1: missing-file guard.
+    if not args.pcb.exists():
+        print(f"Error: PCB file not found: {args.pcb}", file=sys.stderr)
+        sys.exit(1)
+
+    project_dir = str(args.pcb.parent)
+    if args.action == "run":
+        op = {
+            "op_type": "drc_vendor",
+            "target_file": str(args.pcb),
+            "vendor": args.vendor,
+        }
+        _dispatch_op_and_print(op, project_dir=project_dir)
+    elif args.action == "list":
+        op = {
+            "op_type": "list_vendor_drc_profiles",
+            "target_file": str(args.pcb),
+        }
+        _dispatch_op_and_print(op, project_dir=project_dir)
+
+
+def _handle_board_metadata(argv: list[str]) -> None:
+    """Handle the 'board-metadata' subcommand -- PCB title-block metadata.
+
+    Wraps ``read_board_metadata`` / ``set_board_metadata`` / ``set_board_revision``
+    (Phase 205). Nested subcommands. Delegates to the already-hardened ops
+    (TM-5) -- no new write logic in the CLI.
+    """
+    parser = argparse.ArgumentParser(
+        prog="kicad-agent board-metadata",
+        description="Read or set KiCad PCB title-block metadata (title, rev, company, date).",
+    )
+    subparsers = parser.add_subparsers(dest="action", required=True)
+
+    p_read = subparsers.add_parser("read", help="Read board title-block metadata")
+    p_read.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
+
+    p_setrev = subparsers.add_parser("set-rev", help="Set the board revision")
+    p_setrev.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
+    p_setrev.add_argument("rev", help="Board revision string (1-64 chars)")
+
+    p_set = subparsers.add_parser("set", help="Set board metadata fields")
+    p_set.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
+    p_set.add_argument("--title", default=None, help="Board title")
+    p_set.add_argument("--company", default=None, help="Company name")
+    p_set.add_argument("--date", default=None, help="Board date string")
+
+    args = parser.parse_args(argv)
+
+    # TM-1: missing-file guard.
+    if not args.pcb.exists():
+        print(f"Error: PCB file not found: {args.pcb}", file=sys.stderr)
+        sys.exit(1)
+
+    project_dir = str(args.pcb.parent)
+    if args.action == "read":
+        op = {
+            "op_type": "read_board_metadata",
+            "target_file": str(args.pcb),
+        }
+        _dispatch_op_and_print(op, project_dir=project_dir)
+    elif args.action == "set-rev":
+        op = {
+            "op_type": "set_board_revision",
+            "target_file": str(args.pcb),
+            "rev": args.rev,
+        }
+        _dispatch_op_and_print(op, project_dir=project_dir)
+    elif args.action == "set":
+        op = {
+            "op_type": "set_board_metadata",
+            "target_file": str(args.pcb),
+            "title": args.title,
+            "company": args.company,
+            "date": args.date,
+        }
+        _dispatch_op_and_print(op, project_dir=project_dir)
+
+
 def _handle_review_schematic(argv: list[str]) -> None:
     """Handle the 'review-schematic' subcommand -- review schematic readability."""
     from kicad_agent.cli.review_schematic_cmd import review_schematic_command
@@ -1241,6 +1454,14 @@ def main(argv: list[str] | None = None) -> None:
             _handle_check_conventions(subcmd_argv)
         elif subcmd == "dfm":
             _handle_dfm(subcmd_argv)
+        elif subcmd == "build":
+            _handle_build(subcmd_argv)
+        elif subcmd == "handoff":
+            _handle_handoff(subcmd_argv)
+        elif subcmd == "drc-vendor":
+            _handle_drc_vendor(subcmd_argv)
+        elif subcmd == "board-metadata":
+            _handle_board_metadata(subcmd_argv)
         elif subcmd == "review-schematic":
             _handle_review_schematic(subcmd_argv)
         elif subcmd == "critique":
