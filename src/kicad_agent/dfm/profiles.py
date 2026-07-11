@@ -55,6 +55,23 @@ class ManufacturerProfile(BaseModel):
     supports_castellated: bool = Field(default=False)
     extra: dict[str, Any] = Field(default_factory=dict)
     drc_rules_path: Path | None = Field(default=None, description="Path to vendor .kicad_dru file")
+    # Phase 208 output format spec (HANDOFF-05)
+    bom_columns: tuple[str, ...] | None = Field(
+        default=None,
+        description="BOM column names for vendor-specific CSV format. None = generic default.",
+    )
+    bom_filename_pattern: str | None = Field(
+        default=None,
+        description="BOM filename pattern with {stem} placeholder. None = generic default.",
+    )
+    cpl_filename_pattern: str | None = Field(
+        default=None,
+        description="Pick-and-place filename pattern with {stem} placeholder.",
+    )
+    include_step_by_default: bool = Field(
+        default=True,
+        description="Whether STEP 3D model is included in handoff by default.",
+    )
 
     @classmethod
     def from_yaml(cls, path_or_string: str) -> ManufacturerProfile:
@@ -121,6 +138,10 @@ _JLCPCB_STANDARD = ManufacturerProfile(
     supports_blind_vias=False,
     supports_castellated=True,
     drc_rules_path=get_drc_profile_path("jlcpcb"),
+    # Phase 208 output spec:
+    bom_columns=("Comment", "Designator", "Footprint", "LCSC"),
+    bom_filename_pattern="{stem}_JLCPCB-BOM.csv",
+    cpl_filename_pattern="{stem}_JLCPCB-CPL.csv",
 )
 
 _JLCPCB_4LAYER = ManufacturerProfile(
@@ -141,6 +162,10 @@ _JLCPCB_4LAYER = ManufacturerProfile(
         "default_silkscreen": "white",
         "copper_weight": "1oz",
     },
+    # Phase 208 output spec (same vendor as _JLCPCB_STANDARD):
+    bom_columns=("Comment", "Designator", "Footprint", "LCSC"),
+    bom_filename_pattern="{stem}_JLCPCB-BOM.csv",
+    cpl_filename_pattern="{stem}_JLCPCB-CPL.csv",
 )
 
 _PCBWAY_STANDARD = ManufacturerProfile(

@@ -85,6 +85,12 @@ class ManufacturingManifest:
     generated_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
+    # Phase 208: DRC/ERC validation results as proof of manufacturability (HANDOFF-09)
+    drc_passed: Optional[bool] = None
+    erc_passed: Optional[bool] = None
+    vendor_drc_passed: Optional[bool] = None
+    drc_violation_count: int = 0
+    erc_violation_count: int = 0
 
     def to_json(self) -> str:
         """Serialize manifest to JSON string (indent=2).
@@ -100,6 +106,11 @@ class ManufacturingManifest:
             "bom_rows": self.bom_rows,
             "total_components": self.total_components,
             "generated_at": self.generated_at,
+            "drc_passed": self.drc_passed,
+            "erc_passed": self.erc_passed,
+            "vendor_drc_passed": self.vendor_drc_passed,
+            "drc_violation_count": self.drc_violation_count,
+            "erc_violation_count": self.erc_violation_count,
         }
         return json.dumps(data, indent=2)
 
@@ -131,6 +142,11 @@ class ManufacturingManifest:
             bom_rows=data.get("bom_rows", 0),
             total_components=data.get("total_components", 0),
             generated_at=data.get("generated_at", ""),
+            drc_passed=data.get("drc_passed", None),
+            erc_passed=data.get("erc_passed", None),
+            vendor_drc_passed=data.get("vendor_drc_passed", None),
+            drc_violation_count=data.get("drc_violation_count", 0),
+            erc_violation_count=data.get("erc_violation_count", 0),
         )
 
 
