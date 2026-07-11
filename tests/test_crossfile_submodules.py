@@ -63,3 +63,35 @@ class TestProjectContextModule:
             )
             ctx = discover_project(Path(tmp))
             assert ctx is not None
+
+    def test_discover_project_finds_build_spec_and_builds_dir(self):
+        """discover_project populates build_spec_files + builds_dir (INTEG-03/04)."""
+        from kicad_agent.crossfile.project_context import discover_project
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "test.kicad_pro").write_text(
+                '{\n  "version": "8",\n  "generator": "kicad-agent"\n}\n'
+            )
+            (root / "test.kicad_pcb").write_text("(kicad_pcb)")
+            # Project-scoped builds/ directory (INTEG-04)
+            builds_dir = root / "builds"
+            builds_dir.mkdir()
+            # .kicad_build_spec.json sidecar next to the .kicad_pcb (INTEG-03)
+            (root / "test.kicad_build_spec.json").write_text("{}")
+            ctx = discover_project(root)
+            # discover_project resolves() the root, so compare resolved paths.
+            assert ctx.builds_dir == builds_dir.resolve()
+            assert len(ctx.build_spec_files) == 1
+            assert ctx.build_spec_files[0].name == "test.kicad_build_spec.json"
+
+    def test_discover_project_no_builds_is_backward_compat(self):
+        """A project with no builds/ + no sidecar defaults cleanly (INTEG-03/04)."""
+        from kicad_agent.crossfile.project_context import discover_project
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "test.kicad_pro").write_text(
+                '{\n  "version": "8",\n  "generator": "kicad-agent"\n}\n'
+            )
+            ctx = discover_project(root)
+            assert ctx.build_spec_files == []
+            assert ctx.builds_dir is None

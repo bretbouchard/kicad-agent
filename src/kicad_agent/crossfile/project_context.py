@@ -35,6 +35,12 @@ class ProjectContext:
         sym_lib_files: All .kicad_sym files found in the project.
         footprint_files: All .kicad_mod files found in the project.
         library_paths: lib_dir values extracted from the .kicad_pro file.
+        build_spec_files: All ``.kicad_build_spec.json`` sidecars found in
+            the project (manufacturing specs persisted by Phase 205). Empty
+            list when none exist (backward-compatible default).
+        builds_dir: The project's ``builds/`` directory (project-scoped,
+            INTEG-04) if it exists as a direct child of the project root,
+            otherwise None. No upward walk is performed.
     """
 
     project_root: Path
@@ -44,6 +50,8 @@ class ProjectContext:
     sym_lib_files: list[Path] = field(default_factory=list)
     footprint_files: list[Path] = field(default_factory=list)
     library_paths: list[str] = field(default_factory=list)
+    build_spec_files: list[Path] = field(default_factory=list)
+    builds_dir: Optional[Path] = None
 
 
 def detect_project_root(file_path: Path) -> Path:
@@ -120,6 +128,12 @@ def discover_project(project_root: Path) -> ProjectContext:
     if pro_file is not None:
         library_paths = _parse_kicad_pro(pro_file)
 
+    # Discover manufacturing sidecars + project-scoped builds/ dir (INTEG-03,
+    # INTEG-04). Same glob depth as the file-type globs above; no upward walk.
+    build_spec_files = sorted(resolved_root.glob("**/*.kicad_build_spec.json"))
+    _builds_dir_path = resolved_root / "builds"
+    builds_dir = _builds_dir_path if _builds_dir_path.is_dir() else None
+
     return ProjectContext(
         project_root=resolved_root,
         pro_file=pro_file,
@@ -128,6 +142,8 @@ def discover_project(project_root: Path) -> ProjectContext:
         sym_lib_files=sym_lib_files,
         footprint_files=footprint_files,
         library_paths=library_paths,
+        build_spec_files=build_spec_files,
+        builds_dir=builds_dir,
     )
 
 
