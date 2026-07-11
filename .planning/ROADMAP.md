@@ -15,7 +15,7 @@ The handoff package is the universal fallback — it works with every fab (3 wit
 - [x] **Phase 205: Board Metadata Foundation** — Parse/write KiCad `title_block`, `BoardSpec` model, sidecar JSON persistence (completed 2026-07-10)
 - [x] **Phase 206: Vendor DRC Profiles** — Wire up `.kicad_dru` files (PCBWay, JLCPCB, AISLER, OSH Park, Advanced Circuits, generic), `drc_vendor` op (completed 2026-07-10)
 - [x] **Phase 207: Versioned Build System** — Build record, manifest serialization, `build_create`/`build_list`/`build_show` ops, build diffing (completed 2026-07-11)
-- [ ] **Phase 208: Manufacturer Handoff Package** — Full export orchestration, zip bundle + readme, vendor output profiles, pre-handoff validation gate
+- [x] **Phase 208: Manufacturer Handoff Package** — Full export orchestration, zip bundle + readme, vendor output profiles, pre-handoff validation gate (completed 2026-07-11)
 - [ ] **Phase 209: Crossfile + MCP Integration** — MCP auto-exposure, CLI subcommands, `ProjectContext` discovery, `ManufacturerClient` ABC
 - [ ] **Phase 210: Vendor API Adapters** — DEFERRED (PCBWay, MacroFab, JLCPCB quote/order adapters) — placeholder, activated in v7.1
 
@@ -144,7 +144,7 @@ The handoff package is the universal fallback — it works with every fab (3 wit
 4. `build_handoff_export(vendor="jlcpcb")` produces a JLCPCB-formatted bundle (BOM columns, CPL file naming) via the profile-driven formatter — no hard-coded `export_jlcpcb_bom` calls in the handoff path
 5. Bare-board orders (`BoardSpec` or vendor profile marks STEP as optional) produce a bundle without the STEP file
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 ---
 
@@ -259,7 +259,7 @@ Phase 206 (DRC) ────────┴────────────�
 | 205. Board Metadata Foundation | 1/1 | Complete    | 2026-07-10 |
 | 206. Vendor DRC Profiles | 1/1 | Complete    | 2026-07-10 |
 | 207. Versioned Build System | 1/1 | Complete    | 2026-07-11 |
-| 208. Manufacturer Handoff Package | 0/1 | Not started | - |
+| 208. Manufacturer Handoff Package | 1/1 | Complete    | 2026-07-11 |
 | 209. Crossfile + MCP Integration | 0/1 | Not started | - |
 | 210. Vendor API Adapters (DEFERRED) | 0/0 | Deferred | - |
 

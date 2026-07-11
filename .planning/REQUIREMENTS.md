@@ -40,15 +40,15 @@
 
 ### Category 4: Manufacturer Handoff Package (HANDOFF)
 
-- [ ] **HANDOFF-01**: User can generate a complete manufacturing handoff package via `build_handoff_export` operation — one call produces everything
-- [ ] **HANDOFF-02**: Handoff package includes all manufacturable artifacts: Gerbers, drill, BOM, pick-and-place, STEP, netlist, schematic PDF, PCB PDF
-- [ ] **HANDOFF-03**: Handoff package is bundled into a single zip file (`handoff.zip`) with all artifacts + manifest + readme
-- [ ] **HANDOFF-04**: Readme includes all information a manufacturer needs: board name, revision, date, layer count, dimensions, surface finish, copper weight, soldermask/silkscreen color, impedance requirements, designer contact
-- [ ] **HANDOFF-05**: Vendor output profiles drive formatting (BOM columns, file naming, zip structure) — replaces hard-coded `export_jlcpcb_bom` with profile-driven formatter
-- [ ] **HANDOFF-06**: Pre-handoff validation: DRC clean + ERC clean + manifest complete before bundling — no zip created if validation fails
-- [ ] **HANDOFF-07**: STEP file and renders are optional (configurable via BoardSpec or vendor profile — bare-board orders don't need STEP)
-- [ ] **HANDOFF-08**: User can generate vendor-specific handoff (e.g., `build_handoff_export(vendor="jlcpcb")` produces JLCPCB-formatted BOM/CPL with correct columns)
-- [ ] **HANDOFF-09**: Handoff package includes DRC/ERC validation results in the manifest (proof of manufacturability)
+- [x] **HANDOFF-01**: User can generate a complete manufacturing handoff package via `build_handoff_export` operation — one call produces everything
+- [x] **HANDOFF-02**: Handoff package includes all manufacturable artifacts: Gerbers, drill, BOM, pick-and-place, STEP, netlist, schematic PDF, PCB PDF
+- [x] **HANDOFF-03**: Handoff package is bundled into a single zip file (`handoff.zip`) with all artifacts + manifest + readme
+- [x] **HANDOFF-04**: Readme includes all information a manufacturer needs: board name, revision, date, layer count, dimensions, surface finish, copper weight, soldermask/silkscreen color, impedance requirements, designer contact
+- [x] **HANDOFF-05**: Vendor output profiles drive formatting (BOM columns, file naming, zip structure) — replaces hard-coded `export_jlcpcb_bom` with profile-driven formatter
+- [x] **HANDOFF-06**: Pre-handoff validation: DRC clean + ERC clean + manifest complete before bundling — no zip created if validation fails
+- [x] **HANDOFF-07**: STEP file and renders are optional (configurable via BoardSpec or vendor profile — bare-board orders don't need STEP)
+- [x] **HANDOFF-08**: User can generate vendor-specific handoff (e.g., `build_handoff_export(vendor="jlcpcb")` produces JLCPCB-formatted BOM/CPL with correct columns)
+- [x] **HANDOFF-09**: Handoff package includes DRC/ERC validation results in the manifest (proof of manufacturability)
 
 ### Category 5: Integration (INTEG)
 
