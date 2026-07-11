@@ -27,16 +27,16 @@
 
 ### Category 3: Versioned Build System (BUILD)
 
-- [ ] **BUILD-01**: User can create a versioned build via `build_create` operation that snapshots source files, records git SHA, and captures board revision
-- [ ] **BUILD-02**: Build record includes: build_id (UUID), board_rev, source file paths, git SHA, timestamp, status, artifacts list
-- [ ] **BUILD-03**: Build status lifecycle: draft → validated → exported → handed_off (with clear transitions)
-- [ ] **BUILD-04**: Build creation runs `ManufacturingReadinessGate` (existing 5-check gate) — build is not created if validation fails
-- [ ] **BUILD-05**: Manifest is serialized to disk as `manifest.json` with SHA256-hashed artifacts (promotes existing in-memory `ManufacturingManifest`)
-- [ ] **BUILD-06**: Build artifacts stored in structured directory: `builds/v{rev}_{timestamp}/`
-- [ ] **BUILD-07**: User can list all builds for a project via `build_list` operation
-- [ ] **BUILD-08**: User can view build details (manifest, artifacts, validation status) via `build_show` operation
-- [ ] **BUILD-09**: `builds/` directory is added to `.gitignore` (artifacts are not committed)
-- [ ] **BUILD-10**: User can diff two builds to see what changed (source diffs, artifact diffs, validation status changes)
+- [x] **BUILD-01**: User can create a versioned build via `build_create` operation that snapshots source files, records git SHA, and captures board revision
+- [x] **BUILD-02**: Build record includes: build_id (UUID), board_rev, source file paths, git SHA, timestamp, status, artifacts list
+- [x] **BUILD-03**: Build status lifecycle: draft → validated → exported → handed_off (with clear transitions)
+- [x] **BUILD-04**: Build creation runs `ManufacturingReadinessGate` (existing 5-check gate) — build is not created if validation fails
+- [x] **BUILD-05**: Manifest is serialized to disk as `manifest.json` with SHA256-hashed artifacts (promotes existing in-memory `ManufacturingManifest`)
+- [x] **BUILD-06**: Build artifacts stored in structured directory: `builds/v{rev}_{timestamp}/`
+- [x] **BUILD-07**: User can list all builds for a project via `build_list` operation
+- [x] **BUILD-08**: User can view build details (manifest, artifacts, validation status) via `build_show` operation
+- [x] **BUILD-09**: `builds/` directory is added to `.gitignore` (artifacts are not committed)
+- [x] **BUILD-10**: User can diff two builds to see what changed (source diffs, artifact diffs, validation status changes)
 
 ### Category 4: Manufacturer Handoff Package (HANDOFF)
 
