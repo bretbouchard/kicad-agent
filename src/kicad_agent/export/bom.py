@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from kicad_agent.export.gerber import ExportResult, _find_kicad_cli, _run_kicad_export
+from kicad_agent.dfm.profiles import ManufacturerProfile
 
 logger = logging.getLogger(__name__)
 
@@ -308,6 +309,125 @@ def enrich_with_lcsc(
     }
 
 
+def _sanitize_csv_cell(value: str) -> str:
+    """Defend against CSV formula injection (TM-5).
+
+    Prefixes a cell value with a leading single-quote when it starts with a
+    character that spreadsheet applications interpret as a formula
+    (=, +, -, @, tab, carriage return). Defensive measure for vendor BOM CSVs
+    that may be opened in Excel/Sheets by the manufacturer.
+    """
+    if not value:
+        return value
+    # Only the first character determines formula interpretation.
+    if value[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + value
+    return value
+
+
+def export_bom_profile(
+    sch_path: Path,
+    output_dir: Path,
+    profile: ManufacturerProfile | None = None,
+) -> BomResult:
+    """Export BOM using a ManufacturerProfile output format spec (HANDOFF-05).
+
+    If ``profile`` has ``bom_columns``/``bom_filename_pattern``, post-process
+    the kicad-cli BOM to match the vendor-specific format. If ``profile`` is
+    None or lacks an output spec, use the generic kicad-cli default format.
+
+    The handoff orchestrator MUST call this function rather than the
+    hard-coded ``export_jlcpcb_bom`` (Pitfall 3 -- vendor lock-in avoidance).
+
+    Args:
+        sch_path: Path to the .kicad_sch file.
+        output_dir: Directory to write the BOM into.
+        profile: Manufacturer profile with optional output format spec. None =
+            generic default format.
+
+    Returns:
+        BomResult with component counts and file path.
+
+    Raises:
+        FileNotFoundError: If sch_path does not exist or kicad-cli not found.
+        ValueError: If sch_path is not a .kicad_sch file.
+    """
+    stem = sch_path.stem
+
+    # 1. Determine output filename from profile pattern or default.
+    if profile and profile.bom_filename_pattern:
+        filename = profile.bom_filename_pattern.format(stem=stem)
+    else:
+        filename = f"{stem}-BOM.csv"
+    output_path = output_dir / filename
+
+    has_vendor_columns = bool(profile and profile.bom_columns)
+
+    # 2. Export standard BOM via kicad-cli.
+    std_result = export_bom(sch_path, output_path=output_path)
+
+    # 3. If profile is None or has no column spec, the generic default is fine.
+    if not has_vendor_columns:
+        return std_result
+
+    target_columns = profile.bom_columns  # type: ignore[assignment]
+
+    # 4. Enrich with LCSC when a target column requires it.
+    needs_lcsc = "LCSC" in target_columns
+    if needs_lcsc:
+        enrichment = enrich_with_lcsc(sch_path)
+        rows = enrichment["components"]
+    else:
+        # Parse the kicad-cli-generated CSV directly.
+        try:
+            rows = parse_bom_csv(output_path) if output_path.exists() else []
+        except Exception:
+            rows = []
+
+    if not rows:
+        return std_result
+
+    # 5. Source-to-target column mapping (alias table).
+    #    Comment <- Value (fallback Comment); Designator <- Reference;
+    #    Footprint <- Footprint; LCSC <- LCSC (from enrichment).
+    #    Any target column with no known source is written as empty string.
+    def _resolve(col: str, comp: dict) -> str:
+        if col == "Comment":
+            return comp.get("Value", comp.get("Comment", ""))
+        if col == "Designator":
+            return comp.get("Reference", comp.get("Designator", ""))
+        # Pass-through for Footprint, LCSC, and any other named source column.
+        return comp.get(col, "")
+
+    # 6. Rewrite via csv.DictWriter with profile columns as fieldnames.
+    remapped_rows = []
+    for comp in rows:
+        ref = comp.get("Reference", "")
+        if not ref or ref == "?":
+            continue
+        remapped = {
+            col: _sanitize_csv_cell(_resolve(col, comp)) for col in target_columns
+        }
+        remapped_rows.append(remapped)
+
+    with open(output_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(target_columns))
+        writer.writeheader()
+        writer.writerows(remapped_rows)
+
+    return BomResult(
+        success=True,
+        output_path=output_path,
+        component_count=sum(
+            1 for r in remapped_rows
+            for _ in r.get("Designator", "").split(",")
+        ),
+        unique_components=len(remapped_rows),
+        command=std_result.command,
+        stderr=std_result.stderr,
+    )
+
+
 def export_jlcpcb_bom(
     schematic_path: Path,
     output_path: Path | None = None,
@@ -316,7 +436,10 @@ def export_jlcpcb_bom(
 
     JLCPCB requires a specific CSV format for their SMT assembly service.
     This function exports the BOM with LCSC part numbers if available,
-    in the format JLCPCB expects: Comment,Designator,Footprint,LCSC
+    in the format JLCPCB expects: Comment,Designator,Footprint,LCSC.
+
+    Internally delegates to ``export_bom_profile`` with the built-in JLCPCB
+    profile (Phase 208). Preserved for backward compatibility.
 
     Args:
         schematic_path: Path to .kicad_sch file.
@@ -326,50 +449,25 @@ def export_jlcpcb_bom(
     Returns:
         BomResult with component counts.
     """
+    from kicad_agent.dfm.profiles import load_profile
+
+    profile = load_profile("jlcpcb")
     if output_path is None:
-        output_path = schematic_path.parent / f"{schematic_path.stem}_JLCPCB-BOM.csv"
+        return export_bom_profile(schematic_path, schematic_path.parent, profile)
+    # Preserve the caller-specified output path: write into its parent dir with
+    # the JLCPCB column layout, then the profile-driven filename would differ,
+    # so delegate to the generic path and move the file into place.
+    result = export_bom_profile(schematic_path, output_path.parent, profile)
+    if result.output_path != output_path:
+        import shutil
 
-    # First export the standard BOM
-    std_result = export_bom(schematic_path, output_path)
-
-    # Enrich with LCSC codes
-    enrichment = enrich_with_lcsc(schematic_path)
-
-    # Rewrite in JLCPCB format
-    rows = enrichment["components"]
-    if not rows:
-        return std_result
-
-    # Write JLCPCB-format CSV
-    jlcpcb_rows = []
-    for comp in rows:
-        ref = comp.get("Reference", "")
-        value = comp.get("Value", comp.get("Comment", ""))
-        footprint = comp.get("Footprint", "")
-        lcsc = comp.get("LCSC", "")
-        if ref and ref != "?":
-            jlcpcb_rows.append({
-                "Comment": value,
-                "Designator": ref,
-                "Footprint": footprint,
-                "LCSC": lcsc,
-            })
-
-    # Write CSV
-    fieldnames = ["Comment", "Designator", "Footprint", "LCSC"]
-    with open(output_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(jlcpcb_rows)
-
-    return BomResult(
-        success=True,
-        output_path=output_path,
-        component_count=sum(
-            1 for c in jlcpcb_rows
-            for _ in c.get("Designator", "").split(",")
-        ),
-        unique_components=len(jlcpcb_rows),
-        command=std_result.command,
-        stderr=std_result.stderr,
-    )
+        shutil.move(str(result.output_path), str(output_path))
+        return BomResult(
+            success=result.success,
+            output_path=output_path,
+            component_count=result.component_count,
+            unique_components=result.unique_components,
+            command=result.command,
+            stderr=result.stderr,
+        )
+    return result
