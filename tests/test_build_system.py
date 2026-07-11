@@ -280,3 +280,219 @@ class TestBuildModel:
         assert d.status_changed is False
         assert d.git_sha_changed is False
         assert d.board_rev_changed is False
+
+
+# ---------------------------------------------------------------------------
+# TestBuildCreate
+# ---------------------------------------------------------------------------
+
+
+class TestBuildCreate:
+    """build_create handler (BUILD-01, BUILD-04, BUILD-06)."""
+
+    def test_build_create_creates_directory(self, tmp_path: Path) -> None:
+        """build_create creates builds/v*_*/ with manifest.json + build.json + snapshot."""
+        from kicad_agent.ops._schema_pcb import BuildCreateOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        pcb_path = _create_pcb_with_title_block(tmp_path, rev="1.0")
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_create"]
+        result = handler(
+            BuildCreateOp(target_file="test_build.kicad_pcb", skip_validation=True),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        build_dir = tmp_path / result["build_dir"]
+        assert build_dir.is_dir()
+        assert (build_dir / "manifest.json").is_file()
+        assert (build_dir / "build.json").is_file()
+        # snapshot copy of the .kicad_pcb
+        assert (build_dir / "test_build.kicad_pcb").is_file()
+
+    def test_build_create_reads_board_rev(self, tmp_path: Path) -> None:
+        """PCB with rev '2.3' -> result['board_rev'] == '2.3'."""
+        from kicad_agent.ops._schema_pcb import BuildCreateOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        pcb_path = _create_pcb_with_title_block(tmp_path, rev="2.3")
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_create"]
+        result = handler(
+            BuildCreateOp(target_file="test_build.kicad_pcb", skip_validation=True),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        assert result["board_rev"] == "2.3"
+
+    def test_build_create_records_git_sha(self, tmp_path: Path) -> None:
+        """result['git_sha'] is a string (SHA or 'unknown')."""
+        from kicad_agent.ops._schema_pcb import BuildCreateOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_create"]
+        result = handler(
+            BuildCreateOp(target_file="test_build.kicad_pcb", skip_validation=True),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        assert isinstance(result["git_sha"], str)
+        assert len(result["git_sha"]) > 0
+
+    def test_build_create_creates_draft_status(self, tmp_path: Path) -> None:
+        """build_create produces status == 'draft' (simplified v1 validation)."""
+        from kicad_agent.ops._schema_pcb import BuildCreateOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_create"]
+        result = handler(
+            BuildCreateOp(target_file="test_build.kicad_pcb", skip_validation=True),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        assert result["status"] == "draft"
+
+    def test_build_create_snapshots_source_files(self, tmp_path: Path) -> None:
+        """The .kicad_pcb is copied; artifact sha256 matches a re-hash of the copy."""
+        from kicad_agent.ops._schema_pcb import BuildCreateOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_create"]
+        result = handler(
+            BuildCreateOp(target_file="test_build.kicad_pcb", skip_validation=True),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        build_dir = tmp_path / result["build_dir"]
+        copy_path = build_dir / "test_build.kicad_pcb"
+        copy_hash = hashlib.sha256(copy_path.read_bytes()).hexdigest()
+        # find the .kicad_pcb artifact in the result
+        pcb_artifact = next(
+            a for a in result["artifacts"] if a["name"] == "test_build.kicad_pcb"
+        )
+        assert pcb_artifact["sha256"] == copy_hash
+        assert "test_build.kicad_pcb" in result["source_files"]
+
+    def test_build_create_snapshots_sch_and_pro(self, tmp_path: Path) -> None:
+        """Sibling .kicad_sch and .kicad_pro with the same stem are also snapshotted."""
+        from kicad_agent.ops._schema_pcb import BuildCreateOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        (tmp_path / "test_build.kicad_sch").write_text("(kicad_sch ...)", encoding="utf-8")
+        (tmp_path / "test_build.kicad_pro").write_text('{"board":{}}', encoding="utf-8")
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_create"]
+        result = handler(
+            BuildCreateOp(target_file="test_build.kicad_pcb", skip_validation=True),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        source_set = set(result["source_files"])
+        assert "test_build.kicad_pcb" in source_set
+        assert "test_build.kicad_sch" in source_set
+        assert "test_build.kicad_pro" in source_set
+
+    def test_build_create_no_partial_state_on_parse_failure(self, tmp_path: Path) -> None:
+        """A non-PCB target produces success=False and NO builds/ directory."""
+        from kicad_agent.ops._schema_pcb import BuildCreateOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        # A file that NativeParser can read but produces a degenerate board
+        # (empty title block). To force a genuine failure we point at a path
+        # that does not exist -- NativeParser.parse_pcb raises FileNotFoundError.
+        bad_path = tmp_path / "missing.kicad_pcb"
+        ir = _build_ir(_create_pcb_with_title_block(tmp_path))  # valid ir, bad file_path
+        handler = _QUERY_HANDLERS["build_create"]
+        result = handler(
+            BuildCreateOp(target_file="missing.kicad_pcb", skip_validation=True),
+            ir, bad_path,
+        )
+        assert result["success"] is False
+        assert "error" in result
+        # No builds/ directory should exist
+        assert not (tmp_path / "builds").exists()
+
+    def test_build_create_target_file_unchanged(self, tmp_path: Path) -> None:
+        """The target .kicad_pcb is byte-identical after build_create (is_readonly contract)."""
+        from kicad_agent.ops._schema_pcb import BuildCreateOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        original_hash = hashlib.sha256(pcb_path.read_bytes()).hexdigest()
+        original_mtime = pcb_path.stat().st_mtime_ns
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_create"]
+        result = handler(
+            BuildCreateOp(target_file="test_build.kicad_pcb", skip_validation=True),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        assert hashlib.sha256(pcb_path.read_bytes()).hexdigest() == original_hash
+        assert pcb_path.stat().st_mtime_ns == original_mtime
+
+    def test_build_create_rejects_path_traversal(self, tmp_path: Path) -> None:
+        """project_dir with '..' segments is rejected (threat model #1)."""
+        from kicad_agent.ops._schema_pcb import BuildCreateOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_create"]
+        result = handler(
+            BuildCreateOp(
+                target_file="test_build.kicad_pcb",
+                project_dir="../../../etc",
+                skip_validation=True,
+            ),
+            ir, pcb_path,
+        )
+        assert result["success"] is False
+        assert "traversal" in result["error"]
+
+    def test_build_create_generates_uuid(self, tmp_path: Path) -> None:
+        """build_id matches UUID4 format (36 chars with hyphens)."""
+        from kicad_agent.ops._schema_pcb import BuildCreateOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+
+        pcb_path = _create_pcb_with_title_block(tmp_path)
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_create"]
+        result = handler(
+            BuildCreateOp(target_file="test_build.kicad_pcb", skip_validation=True),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        build_id = result["build_id"]
+        # UUID4 format: 8-4-4-4-12 hex
+        parts = build_id.split("-")
+        assert len(parts) == 5
+        assert [len(p) for p in parts] == [8, 4, 4, 4, 12]
+
+    def test_build_create_build_json_round_trip(self, tmp_path: Path) -> None:
+        """build.json round-trips losslessly via Build.load (success criterion #3)."""
+        from kicad_agent.ops._schema_pcb import BuildCreateOp
+        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from kicad_agent.manufacturing.build import Build
+
+        pcb_path = _create_pcb_with_title_block(tmp_path, rev="3.1")
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_create"]
+        result = handler(
+            BuildCreateOp(target_file="test_build.kicad_pcb", skip_validation=True),
+            ir, pcb_path,
+        )
+        assert result["success"] is True
+        build_dir = tmp_path / result["build_dir"]
+        loaded = Build.load(build_dir / "build.json")
+        assert loaded.build_id == result["build_id"]
+        assert loaded.board_rev == "3.1"
+        assert loaded.status.value == "draft"
+        assert loaded.build_dir == result["build_dir"]
+
