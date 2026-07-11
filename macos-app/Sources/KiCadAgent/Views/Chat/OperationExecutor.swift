@@ -26,31 +26,47 @@ enum OperationResult: Sendable {
     }
 }
 
-/// Executes KiCad operations parsed from LLM output via the daemon.
+/// Executes KiCad operations parsed from LLM output.
+///
+/// Phase 225: Uses the native Swift VoltaEngine first (no daemon needed).
+/// Falls back to the daemon MCPClient if the op isn't in the Swift engine.
 ///
 /// Scans assistant messages for JSON code blocks containing operation
-/// specs ({"op_type": "...", "target_file": "...", ...}), sends them
-/// to the daemon via MCPClient tools/call, and returns formatted results.
+/// specs ({"op_type": "...", "target_file": "...", ...}), executes them,
+/// and returns formatted results.
 struct OperationExecutor {
 
     /// Execute any operations found in an LLM response.
-    /// Returns the result text to append as a system message, or nil
-    /// if no operations were found.
+    /// Tries Swift VoltaEngine first, falls back to daemon.
     @MainActor
     static func execute(from responseText: String, client: MCPClient?) async -> OperationResult {
-        guard let client else {
-            return .noOperation
-        }
-
         // Parse JSON code blocks from the response
         let operations = parseOperations(from: responseText)
         guard !operations.isEmpty else {
             return .noOperation
         }
 
+        let voltaEngine = VoltaEngine()
         var results: [String] = []
+
         for op in operations {
             do {
+                // Try Swift VoltaEngine first
+                if voltaEngine.availableOperations.contains(op.opType),
+                   let targetPath = op.arguments["target_file"] as? String {
+                    let fileURL = URL(fileURLWithPath: targetPath)
+                    let result = try voltaEngine.execute(op.opType, params: op.arguments, on: fileURL)
+                    let summary = result["status"] as? String ?? "completed"
+                    results.append("✅ \(op.opType): \(summary)")
+                    continue
+                }
+
+                // Fall back to daemon MCPClient
+                guard let client else {
+                    results.append("⚠️ \(op.opType): no engine available")
+                    continue
+                }
+
                 let result = try await client.callRaw(
                     "tools/call",
                     params: ["name": "kicad.\(op.opType)", "arguments": op.arguments]
