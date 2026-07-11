@@ -84,11 +84,15 @@ final class DaemonSupervisor {
     /// The OS-level process manager. Owned here so tests can inject mocks.
     let processManager: ProcessManager
 
-    /// Phase 212 — lazily-constructed MCPClient for daemon communication.
+    /// Phase 212 — cached MCPClient for daemon communication.
     /// Returns nil if the daemon hasn't started yet (no messenger).
+    private var _cachedClient: MCPClient?
     var mcpClient: MCPClient? {
+        if let cached = _cachedClient { return cached }
         guard let messenger = processManager.messenger else { return nil }
-        return MCPClient(messenger: messenger)
+        let client = MCPClient(messenger: messenger)
+        _cachedClient = client
+        return client
     }
 
     /// Observer for NSWorkspace.didWakeNotification (DAEM-01/DAEM-05).

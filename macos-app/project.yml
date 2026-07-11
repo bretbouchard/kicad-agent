@@ -46,7 +46,19 @@ settings:
     # helpers compiled into the app target (same as SPM).
     FRAMEWORK_SEARCH_PATHS: "$(inherited) $(PLATFORM_DIR)/Developer/Library/Frameworks"
 
-packages: {}
+packages:
+  MLXSwift:
+    url: https://github.com/ml-explore/mlx-swift
+    from: "0.31.6"
+  MLXSwiftLM:
+    url: https://github.com/ml-explore/mlx-swift-lm
+    from: "3.31.4"
+  SwiftTransformers:
+    url: https://github.com/huggingface/swift-transformers
+    from: "1.3.3"
+  SwiftHuggingFace:
+    url: https://github.com/huggingface/swift-huggingface
+    from: "0.1.0"
 
 targets:
   # ===========================================================================
@@ -64,15 +76,6 @@ targets:
           # app target build. These compile fine under SPM (toolchain provides
           # the plugin) and are included in KiCadAgentTests below.
           - "Testing/**"
-          # MLXLocalProvider imports MLX/MLXNN from mlx-swift SPM package.
-          # Xcode's explicit module build can't resolve the transitive C
-          # module deps (Cmlx, _NumericsShims) from SPM. SPM builds work
-          # fine (swift test / swift build). For Xcode/shipping, MLX is
-          # excluded — the provider is dynamically registered by the Router
-          # when a model is downloaded, so no code references the type
-          # directly. Pre-built MLX xcframework integration (like White Room)
-          # will re-enable this for shipping builds.
-          - "Models/Providers/MLXLocalProvider.swift"
       - path: Resources/Assets.xcassets
       - path: Resources/AppIcon.icns
         buildPhase: resources
@@ -127,6 +130,21 @@ targets:
             --entitlements "${PROJECT_DIR}/daemon/daemon-sandbox.entitlements" \
             "$DAEMON_DEST/kicad-agent-daemon"
           echo "Daemon copied + ad-hoc signed"
+    dependencies:
+      - package: MLXSwift
+        product: MLX
+      - package: MLXSwift
+        product: MLXNN
+      - package: MLXSwiftLM
+        product: MLXLLM
+      - package: MLXSwiftLM
+        product: MLXLMCommon
+      - package: MLXSwiftLM
+        product: MLXHuggingFace
+      - package: SwiftTransformers
+        product: Tokenizers
+      - package: SwiftHuggingFace
+        product: HuggingFace
 
   # ===========================================================================
   # VoltaPCBTests — unit tests (swift-testing framework)

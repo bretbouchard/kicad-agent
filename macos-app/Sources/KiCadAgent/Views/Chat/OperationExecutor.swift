@@ -53,7 +53,7 @@ struct OperationExecutor {
             do {
                 let result = try await client.callRaw(
                     "tools/call",
-                    params: ["name": op.opType, "arguments": op.arguments]
+                    params: ["name": "kicad.\(op.opType)", "arguments": op.arguments]
                 )
                 if let resultDict = result as? [String: Any],
                    let content = resultDict["content"] as? String {

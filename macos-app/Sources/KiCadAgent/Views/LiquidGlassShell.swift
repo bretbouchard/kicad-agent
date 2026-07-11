@@ -196,12 +196,12 @@ struct LiquidGlassShell: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(spacing: 4) {
                 Button("Run ERC") {
-                    Task { await validationManager.runERC(filePath: "board.kicad_sch", client: daemonSupervisor.mcpClient) }
+                    Task { await validationManager.runERC(filePath: selectedConversation?.title ?? "board.kicad_sch", client: daemonSupervisor.mcpClient) }
                 }
                 .buttonStyle(.bordered)
 
                 Button("Run DRC") {
-                    Task { await validationManager.runDRC(filePath: "board.kicad_pcb", client: daemonSupervisor.mcpClient) }
+                    Task { await validationManager.runDRC(filePath: selectedConversation?.title ?? "board.kicad_pcb", client: daemonSupervisor.mcpClient) }
                 }
                 .buttonStyle(.bordered)
             }

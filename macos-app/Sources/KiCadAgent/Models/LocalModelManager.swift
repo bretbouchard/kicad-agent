@@ -61,9 +61,11 @@ final class LocalModelManager {
         showDownloadSheet = false
         Logger.appShell.info("Local model registered: \(provider.displayName)")
         #else
-        hasLocalModel = true
+        // MLX not available — show download sheet but note generation
+        // won't work without MLX. The user can still use cloud providers.
+        hasLocalModel = false
         showDownloadSheet = false
-        Logger.appShell.info("Model present but MLX provider not available in this build")
+        Logger.appShell.info("MLX provider not available — LLM generation requires cloud or Apple Intelligence")
         #endif
     }
 

@@ -310,7 +310,7 @@ struct MLXLocalProvider: KiCadModelProvider {
     }
 
     /// Pitfall 7: 3GB minimum VRAM for any 4-bit 4B model.
-    static let minimumVRAMBytes: UInt64 = 3 * 1024 * 1024 * 1024
+    static let minimumVRAMBytes: UInt64 = 7 * 1024 * 1024 * 1024  // 7GB for 12B 4-bit models
 
     private static func totalDiskSize(of urls: [URL]) -> UInt64 {
         var total: UInt64 = 0

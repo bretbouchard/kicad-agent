@@ -30,7 +30,7 @@ final class DaemonPreviewRenderer: PreviewRenderer, @unchecked Sendable {
         let result = try await client.callRaw(
             "tools/call",
             params: [
-                "name": "export_svg",
+                "name": "kicad.export_svg",
                 "arguments": [
                     "target_file": schematicPath.path
                 ]
@@ -54,7 +54,7 @@ final class DaemonPreviewRenderer: PreviewRenderer, @unchecked Sendable {
         let result = try await client.callRaw(
             "tools/call",
             params: [
-                "name": "render_pcb",
+                "name": "kicad.render_pcb",
                 "arguments": [
                     "target_file": pcbPath.path,
                     "side": side.rawValue
