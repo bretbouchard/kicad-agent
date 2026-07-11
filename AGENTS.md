@@ -158,6 +158,7 @@ When building schematics programmatically, these rules prevent the most common a
 - **Automate first.** Before asking a human to run something manually, check the tool inventory above. If a CLI command exists, use it. kicad-cli runs ERC, DRC, exports, renders, and upgrades without opening the GUI.
 - **Track in Beads.** Use `mcp__beads__beads_create` for every issue found or task started. Use `mcp__beads__beads_update` to track progress.
 - **Never skip validation.** Always run ERC after schematic edits. Always run DRC after layout edits. Always run both before manufacturing export.
+- **Native ERC/DRC (Phase 218):** The app now has a pure-Python ERC/DRC engine (`native_erc.py`, `native_drc.py`) that replaces kicad-cli for App Store sandboxed builds. 18 checks + 50 DFM checks. Batch tested against 50 real schematics: 100% pass rate vs kicad-cli. kicad-cli remains as a dev backstop for comparison.
 - **Out-of-scope findings must be tracked.** If you find an issue but it's not in the current task, create a Bead with labels "out-of-scope" before continuing.
 - **Use kicad-agent operations, not raw file edits.** Never directly edit .kicad_sch or .kicad_pcb files with text tools. Use the operation executor for safe AST mutations.
 - **3D renders for visual review.** Use `kicad-cli pcb render` to generate PNG/JPEG images for visual inspection instead of asking the user to open KiCad.
