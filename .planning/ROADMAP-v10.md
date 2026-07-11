@@ -1,98 +1,72 @@
-# Volta PCB v10.0 — Swift Port + iOS Expansion Roadmap
+# Volta PCB v10.0 — Swift Port + iOS Expansion (Council-Reviewed)
 
 ## Strategic Goal
+Port Python functionality to native Swift, eliminate daemon, add iOS support.
 
-Port all Python-dependent functionality to native Swift, eliminating the
-daemon entirely. This unlocks:
-- iOS/iPadOS support (no subprocess allowed)
-- Faster Mac execution (no IPC overhead)
-- Smaller app bundle (no 141MB Python runtime)
-- True single-codebase cross-platform app
+## Council-Corrected Scoping
 
-## Model Strategy
+### Scoped Parity (not full 50K LOC)
+Port only the critical path for a functional iOS app:
+- S-expression parser ✅ (Phase 221, done)
+- Schematic IR + topology ✅ (Phase 221, done)
+- ERC/DRC engine (Phase 222, in progress)
+- ~30 critical ops: add/remove/modify component, wire, label, query, validate
+- Leave remaining ~130 ops daemon-backed on Mac only
 
-### For iPhone/iPad
+### Geometry Strategy
+Implement 4 operations natively in Swift (~2000 LOC):
+- LineString.buffer(width) → polygon
+- Polygon.intersection(other).area
+- Point/Box distance queries
+- Simple spatial hash (replaces STRtree for <10K items)
 
-The Gemma 4 12B adapter cannot run on iPhone (needs 7GB VRAM). Instead:
+### Training Corpus Reality
+- On disk: 168 training pairs, 84 schematics, 5 PCBs
+- Phase 227 precondition: run crawler to materialize corpus
+- Until then: cloud model as default for iOS
 
-1. Gemma 3 4B MLX (~2.5 GB) — runs on iPhone 15 Pro+ / iPad Pro M-series
-2. Cloud fallback — BYOK providers for devices that can't run local models
-3. Apple Intelligence — FoundationModels as zero-cost fallback
+### Parity Gate (C-04)
+Batch validation (Phase 228) MUST complete before daemon removal (Phase 225).
+Daemon stays wired and functional as fallback through transition.
 
-### Training Plan (Gemma 3 4B adapter)
-
-- Base: mlx-community/gemma-3-4b-it-4bit
-- Training data: existing 47K SKiDL pairs
-- LoRA rank: 32, 2000 steps
-- Hardware: Vast.ai RTX 4090, ~3 hours, ~$2
-- Output: ~50 MB adapter
+## Corrected Dependency Graph
+```
+221 → 222 → 223 → 224 → 228 → 225 → 226 → 229
+                                 ↑
+                227 (parallel) ──┘
+```
 
 ## Phases
 
-### Phase 221: Swift S-Expression Parser + Schematic IR
-Port KiCad file parser from Python to Swift.
+### Phase 221: Swift Parser + IR ✅ COMPLETE
 - SExpression.swift — recursive descent parser
-- SchematicParser.swift — .kicad_sch parser
-- SchematicIR.swift — typed schematic model
-- SchematicGraph.swift — connectivity graph
+- SchematicParser.swift — .kicad_sch → typed structs
 - TopologyBuilder.swift — union-find net resolution
-- NetClassifier.swift — power/signal classification
 
-### Phase 222: Swift Native ERC/DRC Engine
-Port the 18-check validation engine.
+### Phase 222: Swift ERC/DRC (IN PROGRESS)
+Port 18 checks using the Swift parser instead of Python.
 - NativeERC.swift — pin conflicts, power, NC, dangling
 - NativeDRC.swift — copper, width, courtyard, holes, annular
-- NativeDRCAdvanced.swift — net-tie, thermal, diff pair, teardrops
-- NativeDRCRunner.swift — unified runner
+- Swift geometry layer (buffer, intersection, distance)
 
-### Phase 223: Swift PCB Parser + Geometry
-Port PCB parser and geometry layer.
-- PCBParser.swift — .kicad_pcb parser
-- PCBTypes.swift — board data model
-- Geometry layer (CGPath or Turf/GEOSwift)
+### Phase 223: Swift PCB Parser
+Port .kicad_pcb parser + PCB IR types.
 
-### Phase 224: Swift Operation Registry + Executor
-Port the 160-op executor.
-- OperationRegistry.swift — op metadata
-- OperationExecutor.swift — dispatch + execute
-- Raw S-expression writer
+### Phase 224: Swift Operation Executor (Scoped)
+Port ~30 critical ops. Leave 130 ops daemon-backed on Mac.
 
-### Phase 225: Remove Daemon Dependency
-Wire Swift engine in, remove Python daemon.
-- Replace ProcessManager with VoltaEngine
-- Remove PyInstaller bundle
-- App drops from ~150MB to ~15MB
+### Phase 228: Batch Parity Validation
+Swift vs Python vs kicad-cli on all fixtures.
+Must reach ≥99% agreement before Phase 225.
 
-### Phase 226: iPad/iPhone Target
-Add iOS build target.
-- Shared VoltaPCBCore package
-- iPad layout (NavigationSplitView)
-- iPhone adaptive layout
-- CloudKit sync
+### Phase 225: Remove Daemon (Mac)
+Gate on Phase 228 parity proof. Feature flag transition.
 
-### Phase 227: Gemma 3 4B Adapter Training
-Train smaller model for iOS.
-- Adapt training script for gemma-3-4b
-- Rank-32 LoRA, 2000 steps
-- MLX conversion + HuggingFace upload
+### Phase 226: iOS Target
+iPad/iPhone build target with shared core.
 
-### Phase 228: Batch ERC/DRC Validation Suite
-Automated testing against 28K corpus.
-- Swift test harness
-- Comparison reports
-- Regression suite with golden boards
+### Phase 227: Gemma 3 4B Training (Parallel)
+Train smaller model. Requires corpus materialization first.
 
-### Phase 229: App Store Submission Polish
-Final hardening.
-- Privacy manifest
-- Screenshots (Mac + iPad)
-- Reviewer notes
-- Final TestFlight
-
-## Dependency Graph
-221 → 222 → 225
-221 → 223 → 224 → 225
-225 → 226
-225 → 227
-222 → 228
-All → 229
+### Phase 229: App Store Polish
+Privacy manifest, screenshots, reviewer notes.
