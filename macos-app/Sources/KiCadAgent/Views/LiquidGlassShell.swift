@@ -258,6 +258,28 @@ struct LiquidGlassShell: View {
 
         project.touch()
         try? modelContext.save()
+
+        // Phase 212: check if the LLM response contains operation JSON.
+        // If so, execute via the daemon and append the result.
+        let mcpClient = daemonSupervisor.mcpClient
+        let responseText = chatMessages[index].content
+        let opResult = await OperationExecutor.execute(from: responseText, client: mcpClient)
+        if case .success(let resultText) = opResult {
+            chatMessages.append(ChatMessage(
+                role: .system,
+                content: resultText,
+                status: .complete,
+                sentAt: .now
+            ))
+            let systemMsg = Message(
+                conversation: conversation,
+                role: .system,
+                content: resultText,
+                status: .complete
+            )
+            modelContext.insert(systemMsg)
+            try? modelContext.save()
+        }
     }
 
     // MARK: - Toolbar
