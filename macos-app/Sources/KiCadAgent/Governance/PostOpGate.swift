@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  PostOpGate.swift
 //  KiCadAgent
@@ -214,3 +215,5 @@ class PostOpGate {
         return dict.mapValues { AnyCodable($0) }
     }
 }
+
+#endif // os(macOS)

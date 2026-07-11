@@ -100,6 +100,14 @@ final class VoltaEngine {
 
         // Reference ops
         AnnotateOp(),
+
+        // Phase 224 expansion — additional query + sheet ops
+        AddSheetOp(),
+        GetSchematicInfoOp(),
+        GetPCBInfoOp(),
+        ListPadsOp(),
+        ListViasOp(),
+        ListSegmentsOp(),
     ]
 }
 
@@ -682,3 +690,141 @@ extension NativeERC {
         return pins
     }
 }
+
+// MARK: - Additional Operations (Phase 224 expansion)
+
+struct AddSheetOp: VoltaOperation {
+    let opType = "add_sheet"
+    let readOnly = false
+
+    func execute(params: [String: Any], on fileURL: URL) throws -> [String: Any] {
+        let fileName = params["filename"] as? String ?? "subsheet.kicad_sch"
+        let name = params["name"] as? String ?? "Subsheet"
+        let x = params["x"] as? Double ?? 100
+        let y = params["y"] as? Double ?? 100
+
+        var sexpr = try SExpr.parse(fileURL: fileURL)
+        let sheet = SExpr.list("sheet", [
+            .list("at", [.atom(String(x)), .atom(String(y)), .atom("0")]),
+            .list("property", [.string("Sheetname"), .string(name)]),
+            .list("property", [.string("Sheetfile"), .string(fileName)]),
+        ])
+        sexpr = sexpr.appending(sheet)
+        try sexpr.serialize().write(to: fileURL, atomically: true, encoding: .utf8)
+        return ["status": "ok", "name": name]
+    }
+}
+
+struct RemoveWireAllOp: VoltaOperation {
+    let opType = "remove_all_wires"
+    let readOnly = false
+
+    func execute(params: [String: Any], on fileURL: URL) throws -> [String: Any] {
+        var sexpr = try SExpr.parse(fileURL: fileURL)
+        sexpr = sexpr.removingChildren { $0.head == "wire" }
+        try sexpr.serialize().write(to: fileURL, atomically: true, encoding: .utf8)
+        return ["status": "ok"]
+    }
+}
+
+struct ListComponentsDetailedOp: VoltaOperation {
+    let opType = "list_components_detailed"
+    let readOnly = true
+
+    func execute(params: [String: Any], on fileURL: URL) throws -> [String: Any] {
+        let ir = try SchematicParser.parse(fileURL)
+        let components = ir.symbols.map { sym -> [String: Any] in
+            ["reference": sym.reference, "lib_id": sym.libId,
+             "x": sym.position.x, "y": sym.position.y]
+        }
+        return ["components": components, "count": components.count]
+    }
+}
+
+struct GetSchematicInfoOp: VoltaOperation {
+    let opType = "get_schematic_info"
+    let readOnly = true
+
+    func execute(params: [String: Any], on fileURL: URL) throws -> [String: Any] {
+        let ir = try SchematicParser.parse(fileURL)
+        return [
+            "version": ir.version,
+            "component_count": ir.symbols.count,
+            "wire_count": ir.wires.count,
+            "label_count": ir.labels.count,
+            "lib_symbol_count": ir.libSymbols.count,
+            "no_connect_count": ir.noConnects.count,
+            "pin_count": ir.pinCount,
+        ]
+    }
+}
+
+struct GetPCBInfoOp: VoltaOperation {
+    let opType = "get_pcb_info"
+    let readOnly = true
+
+    func execute(params: [String: Any], on fileURL: URL) throws -> [String: Any] {
+        let board = try PCBParser.parse(fileURL)
+        return [
+            "version": board.version,
+            "footprint_count": board.footprints.count,
+            "pad_count": board.padCount,
+            "segment_count": board.segments.count,
+            "via_count": board.vias.count,
+            "net_count": board.nets.count,
+            "net_class_count": board.netClasses.count,
+            "layer_count": board.layers.count,
+        ]
+    }
+}
+
+struct ListPadsOp: VoltaOperation {
+    let opType = "list_pads"
+    let readOnly = true
+
+    func execute(params: [String: Any], on fileURL: URL) throws -> [String: Any] {
+        let board = try PCBParser.parse(fileURL)
+        var pads: [[String: Any]] = []
+        for fp in board.footprints {
+            for pad in fp.pads {
+                pads.append([
+                    "reference": fp.reference, "number": pad.number,
+                    "net": pad.netName, "type": pad.type,
+                    "x": fp.position.x + pad.position.x,
+                    "y": fp.position.y + pad.position.y,
+                ])
+            }
+        }
+        return ["pads": pads, "count": pads.count]
+    }
+}
+
+struct ListViasOp: VoltaOperation {
+    let opType = "list_vias"
+    let readOnly = true
+
+    func execute(params: [String: Any], on fileURL: URL) throws -> [String: Any] {
+        let board = try PCBParser.parse(fileURL)
+        let vias = board.vias.map { via -> [String: Any] in
+            ["x": via.position.x, "y": via.position.y,
+             "size": via.size, "drill": via.drill, "net": via.netName]
+        }
+        return ["vias": vias, "count": vias.count]
+    }
+}
+
+struct ListSegmentsOp: VoltaOperation {
+    let opType = "list_segments"
+    let readOnly = true
+
+    func execute(params: [String: Any], on fileURL: URL) throws -> [String: Any] {
+        let board = try PCBParser.parse(fileURL)
+        let segs = board.segments.map { seg -> [String: Any] in
+            ["start_x": seg.start.x, "start_y": seg.start.y,
+             "end_x": seg.end.x, "end_y": seg.end.y,
+             "width": seg.width, "layer": seg.layer, "net": seg.netName]
+        }
+        return ["segments": segs, "count": segs.count]
+    }
+}
+

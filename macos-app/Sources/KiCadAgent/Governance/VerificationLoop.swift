@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  VerificationLoop.swift
 //  KiCadAgent
@@ -214,3 +215,5 @@ class VerificationLoop {
             + Int(elapsed.components.attoseconds / 1_000_000_000_000_000)
     }
 }
+
+#endif // os(macOS)

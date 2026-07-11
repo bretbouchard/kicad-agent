@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  KiCadGenerator.swift
 //  KiCadAgent
@@ -88,3 +89,5 @@ public final class KiCadGenerator: @unchecked Sendable {
         return result
     }
 }
+
+#endif // os(macOS)

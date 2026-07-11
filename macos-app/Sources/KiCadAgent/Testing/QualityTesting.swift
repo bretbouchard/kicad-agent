@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  QualityTesting.swift
 //  KiCadAgent
@@ -82,3 +83,5 @@ public enum TestRegistry {
         "DaemonMessengerTests",
     ]
 }
+
+#endif // os(macOS)

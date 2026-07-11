@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  PreOpGate.swift
 //  KiCadAgent
@@ -206,3 +207,5 @@ class PreOpGate {
         )
     }
 }
+
+#endif // os(macOS)

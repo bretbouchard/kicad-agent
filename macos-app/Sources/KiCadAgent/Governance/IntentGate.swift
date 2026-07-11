@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  IntentGate.swift
 //  KiCadAgent
@@ -238,3 +239,5 @@ final class IntentGate: @unchecked Sendable {
         return out
     }
 }
+
+#endif // os(macOS)

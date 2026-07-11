@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  MCPProtocol.swift
 //  KiCadAgent
@@ -275,3 +276,5 @@ extension JSONRPCEnvelope {
 // payload contains a non-int/non-double NSNumber, we fall back to double
 // encoding — JSON-safe either way. Bool is matched first (before NSNumber)
 // because Bool is bridged to NSNumber by the ObjC runtime.
+
+#endif // os(macOS)

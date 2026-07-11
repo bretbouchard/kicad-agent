@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  GovernedCall.swift
 //  KiCadAgent
@@ -110,3 +111,5 @@ struct GovernedCallResult<T: Sendable & Equatable>: Equatable, Sendable {
         lhs.value == rhs.value && lhs.journalEntry == rhs.journalEntry
     }
 }
+
+#endif // os(macOS)

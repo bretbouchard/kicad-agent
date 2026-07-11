@@ -1,3 +1,4 @@
+#if os(macOS)
 //
 //  Rollback.swift
 //  KiCadAgent
@@ -201,3 +202,5 @@ class Rollback {
     /// Sentinel: test mode, no MCPClient wired. Restore is a no-op.
     static let noClientSnapshotId = "__no_client__"
 }
+
+#endif // os(macOS)
