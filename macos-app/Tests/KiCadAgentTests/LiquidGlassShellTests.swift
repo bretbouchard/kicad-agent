@@ -23,70 +23,82 @@ import SwiftUI
 import SwiftData
 @testable import KiCadAgent
 
-@Suite("LiquidGlassShell — 4 Variant Trait Tests", .disabled(if: ProcessInfo.processInfo.environment["CI_SKIP_SMOKE"] != nil))
+@Suite("LiquidGlassShell — 4 Variant Trait Tests", .disabled(if: ProcessInfo.processInfo.environment["CI_SKIP_SMOKE"] != nil), .serialized)
 struct LiquidGlassShellTests {
 
     // MARK: - Variant 1: Light Mode
 
     @MainActor
     @Test("LiquidGlassShell instantiates in light mode", .tags(.a11y, .ui))
-    func instantiatesLightMode() throws {
+    func instantiatesLightMode() async throws {
         let container = try makeContainer()
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let project = Project(name: "Light Mode Test")
         container.mainContext.insert(project)
+        try container.mainContext.save()
         let view = LiquidGlassShell(project: project)
             .environment(WindowManager())
             .environment(DaemonSupervisor())
             .modelContainer(container)
         _ = view
+        try await Task.sleep(for: .milliseconds(50))
     }
 
     // MARK: - Variant 2: Dark Mode
 
     @MainActor
     @Test("LiquidGlassShell instantiates in dark mode", .tags(.a11y, .ui))
-    func instantiatesDarkMode() throws {
+    func instantiatesDarkMode() async throws {
         let container = try makeContainer()
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let project = Project(name: "Dark Mode Test")
         container.mainContext.insert(project)
+        try container.mainContext.save()
         let view = LiquidGlassShell(project: project)
             .environment(WindowManager())
             .environment(DaemonSupervisor())
             .preferredColorScheme(.dark)
             .modelContainer(container)
         _ = view
+        try await Task.sleep(for: .milliseconds(50))
     }
 
     // MARK: - Variant 3: Dynamic Type XXXL
 
     @MainActor
     @Test("LiquidGlassShell instantiates at Dynamic Type XXXL", .tags(.a11y, .ui))
-    func instantiatesXXXL() throws {
+    func instantiatesXXXL() async throws {
         let container = try makeContainer()
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let project = Project(name: "XXXL Test")
         container.mainContext.insert(project)
+        try container.mainContext.save()
         let view = LiquidGlassShell(project: project)
             .environment(WindowManager())
             .environment(DaemonSupervisor())
             .dynamicTypeSize(.accessibility3)
             .modelContainer(container)
         _ = view
+        try await Task.sleep(for: .milliseconds(50))
     }
 
     // MARK: - Variant 4: High Contrast + Reduce Motion + Reduce Transparency
 
     @MainActor
     @Test("LiquidGlassShell instantiates with full accessibility", .tags(.a11y, .ui))
-    func instantiatesWithAccessibility() throws {
+    func instantiatesWithAccessibility() async throws {
         let container = try makeContainer()
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let project = Project(name: "A11Y Test")
         container.mainContext.insert(project)
+        try container.mainContext.save()
         let view = LiquidGlassShell(project: project)
             .environment(WindowManager())
             .environment(DaemonSupervisor())
             .accessibilityShowsLargeContentViewer()
             .modelContainer(container)
         _ = view
+        try await Task.sleep(for: .milliseconds(50))
     }
 
     // MARK: - ToolbarView

@@ -47,6 +47,7 @@ struct MemoryModelsTests {
     @MainActor
     func messagePersist() throws {
         let container = try makeContainer()
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "Test")
         ctx.insert(project)
@@ -70,6 +71,7 @@ struct MemoryModelsTests {
     @MainActor
     func messageStatusRoundTrip() throws {
         let container = try makeContainer()
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "T")
         ctx.insert(project)
@@ -88,6 +90,7 @@ struct MemoryModelsTests {
     @MainActor
     func messageTokens() throws {
         let container = try makeContainer()
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "T")
         ctx.insert(project)
@@ -112,6 +115,7 @@ struct MemoryModelsTests {
     @MainActor
     func decisionPersist() throws {
         let container = try makeContainer()
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "T")
         ctx.insert(project)
@@ -146,6 +150,7 @@ struct MemoryModelsTests {
     @MainActor
     func valueChangePersist() throws {
         let container = try makeContainer()
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "T")
         ctx.insert(project)
@@ -171,6 +176,7 @@ struct MemoryModelsTests {
     @MainActor
     func snapshotPersist() throws {
         let container = try makeContainer()
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "T")
         ctx.insert(project)
@@ -197,6 +203,7 @@ struct MemoryModelsTests {
     @MainActor
     func cascadeDelete() throws {
         let container = try makeContainer()
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "T")
         ctx.insert(project)

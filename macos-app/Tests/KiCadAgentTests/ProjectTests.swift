@@ -66,6 +66,7 @@ struct ProjectTests {
             for: Project.self, Conversation.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "Persist Test", projectDescription: "", createdAt: .now, lastModifiedAt: .now)
         ctx.insert(project)
@@ -85,6 +86,7 @@ struct ProjectTests {
             for: Project.self, Conversation.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "Parent", projectDescription: "", createdAt: .now, lastModifiedAt: .now)
         ctx.insert(project)

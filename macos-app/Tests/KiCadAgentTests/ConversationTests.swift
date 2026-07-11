@@ -13,7 +13,7 @@ import Foundation
 import SwiftData
 @testable import KiCadAgent
 
-@Suite("Conversation Model")
+@Suite("Conversation Model", .serialized)
 struct ConversationTests {
 
     @MainActor
@@ -23,6 +23,7 @@ struct ConversationTests {
             for: Project.self, Conversation.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "P1", projectDescription: "", createdAt: .now, lastModifiedAt: .now)
         ctx.insert(project)
@@ -43,6 +44,7 @@ struct ConversationTests {
             for: Project.self, Conversation.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "P1", projectDescription: "", createdAt: .distantPast, lastModifiedAt: .distantPast)
         ctx.insert(project)
@@ -64,6 +66,7 @@ struct ConversationTests {
             for: Project.self, Conversation.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "P1", projectDescription: "", createdAt: .now, lastModifiedAt: .now)
         ctx.insert(project)
@@ -83,6 +86,7 @@ struct ConversationTests {
             for: Project.self, Conversation.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "P1", projectDescription: "", createdAt: .now, lastModifiedAt: .now)
         ctx.insert(project)

@@ -17,36 +17,43 @@ import SwiftUI
 import SwiftData
 @testable import KiCadAgent
 
-@Suite("App Root View Smoke", .disabled(if: ProcessInfo.processInfo.environment["CI_SKIP_SMOKE"] != nil))
+@Suite("App Root View Smoke", .disabled(if: ProcessInfo.processInfo.environment["CI_SKIP_SMOKE"] != nil), .serialized)
 struct AppRootViewSnapshotTests {
 
     @MainActor
     @Test("AppRootView instantiates with empty store")
-    func instantiatesEmpty() throws {
+    func instantiatesEmpty() async throws {
         let container = try ModelContainer(
             for: Project.self, Conversation.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let view = AppRootView()
             .environment(DaemonSupervisor())
             .modelContainer(container)
         _ = view  // Smoke test: instantiates without crash.
+        // Allow SwiftUI's @Query to settle before container dealloc runs.
+        try await Task.sleep(for: .milliseconds(50))
     }
 
     @MainActor
     @Test("AppRootView instantiates with a project")
-    func instantiatesWithProject() throws {
+    func instantiatesWithProject() async throws {
         let container = try ModelContainer(
             for: Project.self, Conversation.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "Test Project", projectDescription: "", createdAt: .now, lastModifiedAt: .now)
         ctx.insert(project)
+        try ctx.save()
         let view = AppRootView()
             .environment(DaemonSupervisor())
             .modelContainer(container)
         _ = view
+        // Allow SwiftUI's @Query to settle before container dealloc runs.
+        try await Task.sleep(for: .milliseconds(50))
     }
 
     @MainActor

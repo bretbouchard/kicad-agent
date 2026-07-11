@@ -14,7 +14,7 @@ import SwiftUI
 import SwiftData
 @testable import KiCadAgent
 
-@Suite("GSD Conversation Engine", .disabled(if: ProcessInfo.processInfo.environment["CI_SKIP_SMOKE"] != nil))
+@Suite("GSD Conversation Engine", .disabled(if: ProcessInfo.processInfo.environment["CI_SKIP_SMOKE"] != nil), .serialized)
 struct GSDConversationEngineTests {
 
     // MARK: - SpecValidator (T-173-02)
@@ -123,6 +123,7 @@ struct GSDConversationEngineTests {
             for: Project.self, Conversation.self,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true)
         )
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "Test")
         ctx.insert(project)

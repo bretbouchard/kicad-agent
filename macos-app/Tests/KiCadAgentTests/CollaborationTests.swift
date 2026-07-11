@@ -16,7 +16,7 @@ import Foundation
 import SwiftData
 @testable import KiCadAgent
 
-@Suite("Collaboration Track G", .disabled(if: ProcessInfo.processInfo.environment["CI_SKIP_SMOKE"] != nil))
+@Suite("Collaboration Track G", .disabled(if: ProcessInfo.processInfo.environment["CI_SKIP_SMOKE"] != nil), .serialized)
 struct CollaborationTests {
 
     // MARK: - ProjectBranch (Phase 186)
@@ -44,6 +44,7 @@ struct CollaborationTests {
     @MainActor
     func projectBranchPersist() throws {
         let container = try makeContainer()
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "T")
         ctx.insert(project)
@@ -62,6 +63,7 @@ struct CollaborationTests {
     @MainActor
     func branchOutcomeRoundTrip() throws {
         let container = try makeContainer()
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "T")
         ctx.insert(project)
@@ -230,6 +232,7 @@ struct CollaborationTests {
     @MainActor
     func genealogyViewInstantiates() throws {
         let container = try makeContainer()
+        defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
         let project = Project(name: "Test")
         ctx.insert(project)
