@@ -42,7 +42,7 @@ final class ModelDownloader: Sendable {
     private let baseModelRepo = "mlx-community/gemma-4-12b-it-4bit"
 
     /// LoRA adapter repo on HuggingFace.
-    private let adapterRepo = "bretbouchard/volta-pcb-adapter-v1"
+    private let adapterRepo = "bretbouchard/volta-pcb-adapter-v2"
 
     /// URLSession for downloads (configurable for testing).
     private let session: URLSession
