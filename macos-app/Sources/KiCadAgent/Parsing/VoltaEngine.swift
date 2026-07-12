@@ -108,7 +108,7 @@ final class VoltaEngine {
         ListPadsOp(),
         ListViasOp(),
         ListSegmentsOp(),
-    ] + allGeneratedOps  // Phase 224: all 145 generated ops
+    ] + allGeneratedOps + remainingOps  // Phase 224: all ops
 }
 
 enum VoltaEngineError: Error, LocalizedError {
