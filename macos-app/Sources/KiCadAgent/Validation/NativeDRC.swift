@@ -203,21 +203,30 @@ struct NativeDRC {
             }
         }
 
-        // Pairwise check (O(n²) — fine for <1000 items)
-        for i in 0..<geoms.count {
-            for j in (i+1)..<geoms.count {
-                let a = geoms[i], b = geoms[j]
+        // Phase 232: Use SpatialHash for O(n log n) instead of O(n²)
+        var spatial = SpatialHash<(Int, ItemGeom)>(cellSize: minClearance * 4) { _, geom in
+            (geom.center.x, geom.center.y)
+        }
+        for (i, geom) in geoms.enumerated() {
+            spatial.insert((i, geom))
+        }
+
+        for (i, a) in geoms.enumerated() {
+            // Query nearby items only
+            let nearby = spatial.query(near: a.center.x, a.center.y, radius: minClearance * 4)
+            for (j, b) in nearby {
+                if j <= i { continue }
                 if !a.net.isEmpty && a.net == b.net { continue }
                 if a.net.isEmpty && b.net.isEmpty { continue }
                 if !a.layer.isEmpty && !b.layer.isEmpty && a.layer != b.layer { continue }
 
-                // Approximate distance via center-to-center minus item sizes
                 let centerDist = a.center.distance(to: b.center)
+                if centerDist == 0 { continue }
                 let distA = a.distance(b.center)
                 let distB = b.distance(a.center)
                 let dist = min(distA, distB)
 
-                if dist < minClearance && centerDist > 0 {
+                if dist < minClearance {
                     violations.append(DRCViolation(
                         severity: "error", checkId: "DRC_COPPER_CLEARANCE",
                         description: String(format: "Copper clearance: %@-%@ %.3fmm < %.3fmm",
