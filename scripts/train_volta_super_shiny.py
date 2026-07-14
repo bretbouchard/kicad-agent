@@ -180,8 +180,10 @@ def train_model(
         max_seq_length=max_seq_length,
         output_dir=output_dir,
         num_train_epochs=1,
-        per_device_train_batch_size=4,
-        gradient_accumulation_steps=4,
+        # 24GB GPUs (RTX 4090) OOM on the fp32 chunked CE matmul at batch=4,
+        # seq=4096. Keep effective batch=16 via grad_accum but reduce peak.
+        per_device_train_batch_size=1,
+        gradient_accumulation_steps=16,
         learning_rate=2e-4,
         max_steps=max_steps,
         warmup_steps=100,

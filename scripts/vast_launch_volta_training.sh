@@ -267,6 +267,10 @@ export HUGGING_FACE_HUB_TOKEN="$HF_TOKEN"
 export HF_HUB_DISABLE_XET=1
 export HF_HUB_ENABLE_HF_TRANSFER=0
 export HF_HUB_DOWNLOAD_TIMEOUT=300
+# RTX 4090 (24GB) is tight for 12B + LoRA r=64 + seq 4096 + fp32 chunked CE.
+# expandable_segments reduces CUDA fragmentation (the original OOM cause was
+# reserved-but-unallocated memory, not peak working set).
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 python -m pip install -q --upgrade pip
 python -m pip install -q transformers peft trl datasets bitsandbytes accelerate sentencepiece protobuf huggingface_hub
 echo "Dependencies installed at $(date -u)." > /workspace/volta_training_launch.log

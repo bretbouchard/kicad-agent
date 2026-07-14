@@ -54,11 +54,15 @@ final class ModelDownloader: Sendable {
     }
 
     /// LoRA adapter repo for the current platform.
+    ///
+    /// Smoke-test path: `volta-pcb-adapter-v1` (public, 12B, 1GB MLX LoRA).
+    /// After v2 training completes, swap back to `volta-pcb-adapter-v2`.
+    /// See `.planning/phases/230-voltapcb-adapter-v2.md` for the swap gate.
     var adapterRepo: String {
         #if os(iOS)
         return "bretbouchard/volta-pcb-ios-4b-adapter"
         #else
-        return "bretbouchard/volta-pcb-adapter-v2"
+        return "bretbouchard/volta-pcb-adapter-v1"
         #endif
     }
 
@@ -101,7 +105,7 @@ final class ModelDownloader: Sendable {
         #if os(iOS)
         return modelsDirectory.appendingPathComponent("volta-pcb-ios-4b-adapter", isDirectory: true)
         #else
-        return modelsDirectory.appendingPathComponent("volta-pcb-adapter-v2", isDirectory: true)
+        return modelsDirectory.appendingPathComponent("volta-pcb-adapter-v1", isDirectory: true)
         #endif
     }
 
