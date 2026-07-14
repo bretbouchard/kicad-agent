@@ -107,6 +107,103 @@ struct ChatInterfaceTests {
         #expect(tokens.joined().contains("hello") == true)
     }
 
+    // MARK: - ContentChunker (paragraph chunking for readable streaming)
+
+    @Test("ContentChunker splits on double newlines")
+    func chunkerDoubleNewlines() {
+        let chunks = ContentChunker.chunk("Para one.\n\nPara two.\n\nPara three.", isStreaming: false)
+        #expect(chunks.count == 3)
+        #expect(chunks[0].text == "Para one.")
+        #expect(chunks[1].text == "Para two.")
+        #expect(chunks[2].text == "Para three.")
+        #expect(chunks.allSatisfy { !$0.isPartial })
+    }
+
+    @Test("ContentChunker splits oversized paragraph on sentence boundaries")
+    func chunkerOversizedParagraph() {
+        // Build a paragraph > maxChunkChars with multiple *distinct* sentences.
+        // (If we used repeated sentences, the dedup pass would collapse them
+        // into a single chunk — which is correct behavior, but it would
+        // defeat the point of testing sentence-level splitting.)
+        let sentences = (1...20).map { "Sentence number \($0) explains a concept." }
+        let para = sentences.joined(separator: " ")
+        #expect(para.count > ContentChunker.maxChunkChars)
+        let chunks = ContentChunker.chunk(para, isStreaming: false)
+        #expect(chunks.count > 1, "expected oversized paragraph to be split")
+        #expect(chunks.allSatisfy { !$0.text.isEmpty })
+        // Reconstructed text should preserve sentence content.
+        let rejoined = chunks.map(\.text).joined(separator: " ")
+        #expect(rejoined.contains("explains a concept"))
+    }
+
+    @Test("ContentChunker marks last chunk as partial while streaming")
+    func chunkerPartialLast() {
+        let chunks = ContentChunker.chunk("Para one.\n\nPara two.", isStreaming: true)
+        #expect(chunks.count == 2)
+        #expect(chunks[0].isPartial == false)
+        #expect(chunks[1].isPartial == true)
+    }
+
+    @Test("ContentChunker does not mark anything partial when done")
+    func chunkerCompleteNotPartial() {
+        let chunks = ContentChunker.chunk("Single paragraph.", isStreaming: false)
+        #expect(chunks.count == 1)
+        #expect(chunks[0].isPartial == false)
+    }
+
+    @Test("ContentChunker handles empty content")
+    func chunkerEmpty() {
+        #expect(ContentChunker.chunk("", isStreaming: false).isEmpty)
+        #expect(ContentChunker.chunk("   \n\n  ", isStreaming: false).isEmpty)
+    }
+
+    @Test("ContentChunker handles single sentence")
+    func chunkerSingleSentence() {
+        let chunks = ContentChunker.chunk("Just one short thought.", isStreaming: false)
+        #expect(chunks.count == 1)
+        #expect(chunks[0].text == "Just one short thought.")
+    }
+
+    @Test("ContentChunker collapses consecutive identical chunks with repetition marker")
+    func chunkerCollapsesRepeatedChunks() {
+        // Phase 220+: the local MLX model commonly loops on short prompts,
+        // producing N copies of the same sentence. The chunker must surface
+        // this as ONE visible block with a "(repeated N×)" marker so the
+        // chat stays scannable instead of showing 12 identical stacked
+        // blocks. The user can still see the loop happened via the count.
+        let looped = String(repeating: "Designing a distortion pedal. ", count: 12)
+        let chunks = ContentChunker.chunk(looped, isStreaming: false)
+        #expect(chunks.count == 1,
+                "consecutive identical chunks must be collapsed into one")
+        #expect(chunks[0].text.contains("Designing a distortion pedal."))
+        #expect(chunks[0].text.contains("(repeated 12×)"),
+                "collapsed chunk should annotate the repetition count")
+    }
+
+    @Test("ContentChunker does not annotate non-repeating content")
+    func chunkerLeavesNonRepeatingAlone() {
+        // Regression: dedup must not affect normal multi-paragraph output.
+        // Each paragraph is unique, so no "(repeated N×)" marker should appear.
+        let content = "First paragraph here.\n\nSecond paragraph here.\n\nThird paragraph here."
+        let chunks = ContentChunker.chunk(content, isStreaming: false)
+        #expect(chunks.count == 3)
+        for chunk in chunks {
+            #expect(!chunk.text.contains("(repeated"),
+                    "non-repeating chunks must not be annotated with a repetition marker")
+        }
+    }
+
+    @Test("ContentChunker preserves partial flag on a collapsed run while streaming")
+    func chunkerCollapsedRunStaysPartial() {
+        // When the model is still streaming and a run is the tail of the
+        // output, the deduped chunk must remain partial so the view still
+        // shows the streaming caret.
+        let looped = String(repeating: "Designing a distortion pedal. ", count: 4)
+        let chunks = ContentChunker.chunk(looped, isStreaming: true)
+        #expect(chunks.count == 1)
+        #expect(chunks[0].isPartial == true)
+    }
+
     // MARK: - 4-Variant Trait Tests for Chat Views
 
     @Test("MessageBubbleView renders user message", .tags(.ui, .a11y))

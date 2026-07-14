@@ -2,8 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>CFBundleExecutable</key>
+    <string>Volta PCB</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.bretbouchard.volta</string>
+    <key>CFBundleName</key>
+    <string>Volta PCB</string>
+    <key>CFBundleDisplayName</key>
+    <string>Volta PCB</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>6.0.0</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.developer-tools</string>
     <key>LSMinimumSystemVersion</key>

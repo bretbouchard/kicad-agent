@@ -3,7 +3,6 @@
 //  KiCadAgent
 //
 //  Phase 161 — App Shell Foundation
-//  Phase 163 — KiCad CLI Integration (onboarding gate)
 //
 //  Root container for the KiCad Agent app.
 //
@@ -11,7 +10,11 @@
 //  - NavigationSplitView: sidebar (ProjectSidebar) + main (LiquidGlassShell)
 //  - Recovery UI overlay when daemon state is `.failed` (APP-01 augmentation)
 //  - New Project button (modelContainer-aware)
-//  - KiCad onboarding sheet when status is not `.ready` (APP-04 augmentation)
+//
+//  Note: KiCad is no longer a hard requirement (Phase 220+). The app runs
+//  entirely on the local MLX model for chat/inference and only invokes
+//  external KiCad CLI for optional ERC/DRC/validation. The onboarding
+//  gate was removed in Phase 220.
 //
 
 import SwiftUI
@@ -22,13 +25,11 @@ import OSLog
 struct AppRootView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(DaemonSupervisor.self) private var daemonSupervisor
-    @Environment(KiCadCLIDetector.self) private var kicadDetector
 
     @Query(sort: \Project.lastModifiedAt, order: .reverse) private var projects: [Project]
 
     @State private var selectedProjectId: UUID?
     @State private var showErrorRecovery: Bool = false
-    @State private var showKiCadOnboarding: Bool = false
 
     var body: some View {
         NavigationSplitView {
@@ -66,31 +67,6 @@ struct AppRootView: View {
                 Text(daemonSupervisor.state.failureMessage ?? "Unknown daemon error.")
             }
         )
-        .sheet(isPresented: kiCadOnboardingBinding) {
-            KiCadInstallView(
-                detector: kicadDetector,
-                onQuit: {
-                    NSApplication.shared.terminate(nil)
-                },
-                onReady: {
-                    showKiCadOnboarding = false
-                }
-            )
-            .interactiveDismissDisabled(true) // User must resolve before proceeding.
-        }
-        .onChange(of: kicadDetector.status) { _, newStatus in
-            // APP-04 augmentation: gate main workflow on `.ready`.
-            // Show onboarding whenever status is NOT ready. Dismiss when ready.
-            showKiCadOnboarding = !newStatus.isReady
-            if newStatus.isReady {
-                Logger.kicad.info("KiCad ready — main workflow unblocked")
-            }
-        }
-        .onAppear {
-            // Initial state — if detector hasn't run yet, assume worst case
-            // until the first detect() lands.
-            showKiCadOnboarding = !kicadDetector.status.isReady
-        }
     }
 
     // MARK: - Derived state
@@ -113,25 +89,12 @@ struct AppRootView: View {
         )
     }
 
-    /// Binding that drives the KiCad onboarding sheet (APP-04 augmentation).
-    /// Disables default dismiss behavior — user must resolve before proceeding.
-    private var kiCadOnboardingBinding: Binding<Bool> {
-        Binding(
-            get: { showKiCadOnboarding },
-            set: { newValue in showKiCadOnboarding = newValue }
-        )
-    }
-
     // MARK: - Mutations
 
     private func createProject() {
-        // APP-04: refuse to create a project if KiCad isn't ready.
-        // The onboarding sheet is already visible; this just no-ops.
-        guard kicadDetector.status.isReady else {
-            Logger.ui.warning("createProject blocked — KiCad not ready")
-            showKiCadOnboarding = true
-            return
-        }
+        // Phase 220+: KiCad is no longer required. Project creation runs
+        // on the local MLX engine only; KiCad CLI is only used for optional
+        // ERC/DRC/validation when present.
         let project = Project.newDefault()
         modelContext.insert(project)
         selectedProjectId = project.id
@@ -159,7 +122,6 @@ extension DaemonState {
 #Preview("App Root — Empty") {
     AppRootView()
         .environment(DaemonSupervisor())
-        .environment(KiCadCLIDetector())
         .modelContainer(for: [Project.self, Conversation.self], inMemory: true)
 }
 
@@ -173,7 +135,6 @@ extension DaemonState {
     ctx.insert(project)
     return AppRootView()
         .environment(DaemonSupervisor())
-        .environment(KiCadCLIDetector())
         .modelContainer(container)
 }
 #endif

@@ -3,10 +3,12 @@
 //  KiCadAgent
 //
 //  Phase 161 — App Shell Foundation
-//  Phase 163 — KiCad CLI Integration (detection + onboarding gate)
 //
 //  macOS 27+ Liquid Glass chat shell. Entry point for the v6.0 KiCad Agent app.
 //  ponytail: SwiftUI App lifecycle (no AppDelegate legacy). Multi-window via WindowGroup.
+//
+//  Phase 220: KiCad CLI is no longer a hard requirement. The app runs on the
+//  local MLX engine; KiCad CLI is only invoked for optional ERC/DRC when present.
 //
 
 import SwiftUI
@@ -20,7 +22,6 @@ import OSLog
 /// - WindowGroup scene (multi-window via cmd+N, automatic state restoration)
 /// - In-memory SwiftData container (Track E adds CloudKit sync)
 /// - Daemon recovery UI surfaced via `AppRootView`
-/// - KiCad install onboarding (Phase 163) — gates main workflow on `.ready`
 @main
 struct KiCadAgentApp: App {
     /// Structured logger for the app shell. Bundled daemon gets its own logger.
@@ -29,12 +30,6 @@ struct KiCadAgentApp: App {
     /// Daemon supervisor. Tracks daemon lifecycle (spawn, health, shutdown).
 #if os(macOS)
     @State private var daemonSupervisor: DaemonSupervisor = DaemonSupervisor()
-#endif
-
-    /// KiCad CLI detector. Tracks install status (notInstalled / wrongVersion / ready).
-    /// Phase 163 — gates main workflow on `.ready` per APP-04.
-#if os(macOS)
-    @State private var kicadDetector: KiCadCLIDetector = KiCadCLIDetector()
 #endif
 
     /// Multi-window registry. Phase 171 — tracks open project windows + cap.
@@ -55,9 +50,6 @@ struct KiCadAgentApp: App {
                 #if os(macOS)
                 .environment(daemonSupervisor)
                 #endif
-                #if os(macOS)
-                .environment(kicadDetector)
-                #endif
                 .environment(windowManager)
                 .environmentObject(providerRegistry)
                 .environmentObject(modelRouter)
@@ -75,11 +67,12 @@ struct KiCadAgentApp: App {
                     // 5 seconds, AppRootView surfaces recovery UI (no silent hang).
                     KiCadAgentApp.logger.info("Volta PCB launching — macOS 27 Liquid Glass shell")
                     #if os(macOS)
+                    // Grab focus from the launching terminal. Without this, the SPM
+                    // binary inherits the terminal's tty and TextField keystrokes
+                    // land in the terminal instead of the app window.
+                    NSApp.setActivationPolicy(.regular)
+                    NSApp.activate(ignoringOtherApps: true)
                     daemonSupervisor.start()
-                    #endif
-                    // APP-04: detect KiCad on launch. Onboarding sheet shows if not ready.
-                    #if os(macOS)
-                    Task { await kicadDetector.detect() }
                     #endif
                     // Phase 210: scan for local model, show download prompt if missing.
                     localModelManager = LocalModelManager(registry: providerRegistry)
@@ -96,15 +89,6 @@ struct KiCadAgentApp: App {
         .windowToolbarStyle(.unified(showsTitle: true))
         .commands {
             // ponytail: cmd+N handled natively by WindowGroup. Add app-level commands here.
-            CommandGroup(after: .newItem) {
-                Button("Check KiCad Install") {
-                    #if os(macOS)
-                    Task { await kicadDetector.detect() }
-                    #endif
-                }
-                .accessibilityLabel("Check KiCad install")
-                .accessibilityHint("Re-runs KiCad CLI detection. Use after installing or upgrading KiCad.")
-            }
         }
         .modelContainer(for: ModelSchemaRegistry.v600Schema)
     }

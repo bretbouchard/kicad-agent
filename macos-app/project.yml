@@ -47,9 +47,11 @@ settings:
     FRAMEWORK_SEARCH_PATHS: "$(inherited) $(PLATFORM_DIR)/Developer/Library/Frameworks"
 
 packages:
+  # Local fork: gates the CudaBuild plugin on MLX_BUILD_CUDA so macOS
+  # builds don't try to validate the nvcc-dependent buildTool plugin.
+  # Keep in sync with https://github.com/ml-explore/mlx-swift at 0.31.6.
   MLXSwift:
-    url: https://github.com/ml-explore/mlx-swift
-    from: "0.31.6"
+    path: /Users/bretbouchard/apps/mlx-swift
   MLXSwiftLM:
     url: https://github.com/ml-explore/mlx-swift-lm
     from: "3.31.4"

@@ -100,6 +100,13 @@ final class ProcessManager {
     private(set) var stdinPipe: Pipe?
     private(set) var stdoutPipe: Pipe?
 
+    /// Line buffer for stdout reads. Retained on `self` so the readability
+    /// handler's weak capture resolves for the daemon's lifetime — without
+    /// this, the local `let buffer` in `spawn()` is deallocated when the
+    /// function returns and every line is silently dropped (PITFALL: the
+    /// watchdog then fires after 30s of "no stdout").
+    private var stdoutLineBuffer: LineBuffer?
+
     /// Messenger bound to the most recent successful spawn. Nil until the
     /// first response line is received (so callers can detect readiness).
     private(set) var messenger: DaemonMessenger?
@@ -143,17 +150,33 @@ final class ProcessManager {
     /// Locate the bundled daemon executable.
     ///
     /// Resolution order:
-    /// 1. `Bundle.main` resource named "kicad-agent-daemon" (production).
-    /// 2. `macos-app/daemon/dist/kicad-agent-daemon/kicad-agent-daemon` (dev).
-    /// 3. `macos-app/daemon/daemon_entry.py` invoked via `.venv/bin/python -u`
-    ///    (last-resort dev mode, no PyInstaller bundle required).
+    /// 1. `<Bundle.main.resourcePath>/kicad-agent-daemon/kicad-agent-daemon` (production).
+    /// 2. `Bundle.main.url(forResource: "kicad-agent-daemon", withExtension: nil)`
+    ///    (fallback if the resource is registered as a top-level file).
+    /// 3. `macos-app/daemon/dist/kicad-agent-daemon/kicad-agent-daemon` (dev SPM).
+    /// 4. `daemon/dist/kicad-agent-daemon/kicad-agent-daemon` (dev relative).
+    /// 5. Hardcoded dev path.
+    ///
+    /// The .app bundle path is preferred so the sandboxed app finds the
+    /// binary inside its own bundle (sandbox blocks launching executables
+    /// from arbitrary user paths). The hardcoded fallback intentionally
+    /// points inside the user's clone — dev convenience only, and the
+    /// sandbox will block it in shipping builds.
     nonisolated static func resolveDaemonURL() -> URL? {
-        // 1. App bundle resource.
+        // 1. App bundle: Contents/Resources/kicad-agent-daemon/kicad-agent-daemon
+        if let resourcePath = Bundle.main.resourcePath {
+            let bundled = (resourcePath as NSString)
+                .appendingPathComponent("kicad-agent-daemon/kicad-agent-daemon")
+            if FileManager.default.isExecutableFile(atPath: bundled) {
+                return URL(fileURLWithPath: bundled)
+            }
+        }
+        // 2. Top-level bundle resource (registered as file, not directory).
         if let bundleURL = Bundle.main.url(forResource: "kicad-agent-daemon", withExtension: nil),
            FileManager.default.isExecutableFile(atPath: bundleURL.path) {
             return bundleURL
         }
-        // 2. PyInstaller dist directory. Try cwd-relative + known repo path.
+        // 3. Dev paths (cwd-relative + known repo path).
         let cwd = FileManager.default.currentDirectoryPath
         let distCandidates = [
             "\(cwd)/macos-app/daemon/dist/kicad-agent-daemon/kicad-agent-daemon",
@@ -263,7 +286,11 @@ final class ProcessManager {
 
         // Wrap mutable accumulators in a class so we can capture a stable
         // reference inside the readability handler (Swift 6 sendability).
+        // Store on self so the buffer outlives `spawn()` — the readability
+        // handler's `[weak buffer]` capture would otherwise resolve to nil
+        // once the function returns, silently dropping every stdout line.
         let buffer = LineBuffer()
+        stdoutLineBuffer = buffer
 
         // Termination handler — runs on background queue.
         let terminationClosure: @Sendable (Process) -> Void = { [weak self] terminated in
@@ -346,6 +373,7 @@ final class ProcessManager {
         process = nil
         stdinPipe = nil
         stdoutPipe = nil
+        stdoutLineBuffer = nil
         messenger = nil
     }
 
@@ -419,6 +447,7 @@ final class ProcessManager {
         process = nil
         stdinPipe = nil
         stdoutPipe = nil
+        stdoutLineBuffer = nil
         messenger = nil
     }
 
