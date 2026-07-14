@@ -53,7 +53,7 @@ final class LocalModelManager {
         #if canImport(MLXLLM)
         let provider = MLXLocalProvider(
             modelURL: baseDir,
-            modelId: "gemma-4-12b-it-4bit",
+            modelId: ModelDownloader().baseModelRepo,  // "mlx-community/..." full HF id
             adapterURL: ModelDownloader.isAdapterPresent ? adapterDir : nil
         )
         registry.register(provider)

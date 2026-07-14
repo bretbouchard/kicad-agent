@@ -155,8 +155,15 @@ struct MLXLocalProvider: KiCadModelProvider {
                     // Load model from local directory with HF tokenizer.
                     // The #huggingFaceLoadModelContainer macro handles
                     // tokenizer + downloader wiring internally.
+                    //
+                    // Use the directory-only initializer so MLX-Swift
+                    // reads weights + tokenizer from
+                    // ~/Library/Application Support/VoltaPCB/models/...
+                    // instead of trying to fetch from HF by id (the
+                    // bare `id` form would 404, leaving the inference
+                    // daemon unable to connect).
                     let config = ModelConfiguration(
-                        id: modelDir.lastPathComponent,
+                        directory: modelDir,
                         defaultPrompt: ""
                     )
                     let container = try await #huggingFaceLoadModelContainer(
