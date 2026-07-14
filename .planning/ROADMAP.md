@@ -266,7 +266,8 @@ Phase 206 (DRC) ────────┴────────────�
 | 231. Wire Swift ERC as Primary Validation | 1/1 | Complete    | 2026-07-14 |
 | 232. Spatial Index for DRC Performance | 1/1 | Complete    | 2026-07-14 |
 | 233. Swift Schematic SVG Renderer | 1/1 | Complete    | 2026-07-14 |
-| 234. 1000-Schematic Swift ERC Batch Test | 0/? | Pending | - |
+| 234A. Corpus Acquisition + Parity Driver | 0/1 | Pending | - |
+| 234B. Parity Execution + Report + Fix | 0/1 | Pending | - |
 | 235. Complex Op Implementations | 1/1 | Complete    | 2026-07-14 |
 | 236. Vision Input (Camera → Schematic) | 0/? | Pending | - |
 
@@ -302,11 +303,17 @@ Phase 206 (DRC) ────────┴────────────�
 - Works on iOS (no daemon needed)
 - Wire into `LiquidGlassShell.previewRenderer`
 
-### Phase 234: 1000-Schematic Swift ERC Batch Test
-- Run `NativeERC.run()` on 1000 schematics from the 28K corpus
-- Compare against Python `native_erc` results
-- Generate parity report: pass rate, FP/FN counts
-- Fix discrepancies
+### Phase 234A: Corpus Acquisition + Parity Driver
+- Stage 1000-schematic corpus via `CorpusCurator` (accept what it returns, target ≥100)
+- Implement Python parity driver (`scripts/batch_erc_parity.py`)
+- Smoke test on 3 schematics, write handoff artifacts for 234B
+- See: `.planning/phases/234a-corpus-and-driver/`
+
+### Phase 234B: Parity Execution + Report + Fix
+- Run full batch on corpus from 234A
+- Generate parity report (pass rate, FP/FN counts, per-check breakdown)
+- Fix root-cause discrepancies (≥5-schematic drift threshold, 2-iteration cap)
+- See: `.planning/phases/234b-execution-and-fix/`
 
 ### Phase 235: Complex Op Implementations
 - Fully implement the 78 scaffold ops in `VoltaEngineRemaining.swift`
