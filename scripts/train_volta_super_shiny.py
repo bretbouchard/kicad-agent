@@ -25,6 +25,7 @@ Usage on Vast.ai RTX 4090:
 """
 
 import argparse
+import inspect
 import json
 import os
 import sys
@@ -36,6 +37,22 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import LoraConfig, get_peft_model, TaskType
 from trl import SFTTrainer, SFTConfig
 from datasets import Dataset
+
+
+def build_sft_config(max_seq_length: int, **kwargs) -> SFTConfig:
+    """Build SFTConfig across TRL versions.
+
+    Newer TRL releases renamed max_seq_length to max_length. Keep both paths so
+    remote Vast images can use their installed package version without a script
+    edit.
+    """
+    params = dict(kwargs)
+    signature = inspect.signature(SFTConfig)
+    if "max_length" in signature.parameters:
+        params["max_length"] = max_seq_length
+    else:
+        params["max_seq_length"] = max_seq_length
+    return SFTConfig(**params)
 
 
 def load_combined_dataset() -> Dataset:
@@ -159,7 +176,8 @@ def train_model(
     model.print_trainable_parameters()
 
     # Training config
-    config = SFTConfig(
+    config = build_sft_config(
+        max_seq_length=max_seq_length,
         output_dir=output_dir,
         num_train_epochs=1,
         per_device_train_batch_size=4,
@@ -176,7 +194,6 @@ def train_model(
         lr_scheduler_type="cosine",
         report_to="none",
         dataset_text_field="text",
-        max_seq_length=max_seq_length,
     )
 
     # Trainer
