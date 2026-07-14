@@ -24,25 +24,43 @@ enum DownloadProgress: Sendable {
     case failed(Error)
 }
 
-/// Downloads the Gemma 4 12B base model + Volta PCB LoRA adapter.
+/// Downloads the Gemma base model + Volta PCB LoRA adapter.
+///
+/// Phase 230 wires the v2 adapters: 12B for macOS, 4B for iPhone/iPad.
+/// The right adapter is selected at runtime by `currentAdapterRepo` based
+/// on the current target platform — call sites don't need to branch.
 ///
 /// Two-phase download:
-/// 1. Base model from `mlx-community/gemma-4-12b-it-4bit` (HuggingFace)
-/// 2. LoRA adapter from `bretbouchard/volta-pcb-adapter-v1` (HuggingFace)
+/// 1. Base model from `mlx-community/gemma-4-12b-it-4bit` (HuggingFace, macOS)
+///    or `mlx-community/gemma-3-4b-it-4bit` (HuggingFace, iOS)
+/// 2. LoRA adapter from `bretbouchard/volta-pcb-adapter-v2` (macOS)
+///    or `bretbouchard/volta-pcb-ios-4b-adapter` (iOS)
 ///
 /// Files are saved to the sandbox container:
 ///   ~/Library/Application Support/VoltaPCB/models/gemma-4-12b-it-4bit/
-///   ~/Library/Application Support/VoltaPCB/models/volta-pcb-adapter-v1/
+///   ~/Library/Application Support/VoltaPCB/models/volta-pcb-adapter-v2/
 final class ModelDownloader: Sendable {
 
     /// HuggingFace API base.
     private let hfBase = "https://huggingface.co"
 
-    /// Base model repo on HuggingFace.
-    private let baseModelRepo = "mlx-community/gemma-4-12b-it-4bit"
+    /// Base model repo for the current platform.
+    var baseModelRepo: String {
+        #if os(iOS)
+        return "mlx-community/gemma-3-4b-it-4bit"
+        #else
+        return "mlx-community/gemma-4-12b-it-4bit"
+        #endif
+    }
 
-    /// LoRA adapter repo on HuggingFace.
-    private let adapterRepo = "bretbouchard/volta-pcb-adapter-v2"
+    /// LoRA adapter repo for the current platform.
+    var adapterRepo: String {
+        #if os(iOS)
+        return "bretbouchard/volta-pcb-ios-4b-adapter"
+        #else
+        return "bretbouchard/volta-pcb-adapter-v2"
+        #endif
+    }
 
     /// URLSession for downloads (configurable for testing).
     private let session: URLSession
@@ -71,12 +89,20 @@ final class ModelDownloader: Sendable {
 
     /// Path where the base model should live.
     static var baseModelDirectory: URL {
-        modelsDirectory.appendingPathComponent("gemma-4-12b-it-4bit", isDirectory: true)
+        #if os(iOS)
+        return modelsDirectory.appendingPathComponent("gemma-3-4b-it-4bit", isDirectory: true)
+        #else
+        return modelsDirectory.appendingPathComponent("gemma-4-12b-it-4bit", isDirectory: true)
+        #endif
     }
 
     /// Path where the LoRA adapter should live.
     static var adapterDirectory: URL {
-        modelsDirectory.appendingPathComponent("volta-pcb-adapter-v1", isDirectory: true)
+        #if os(iOS)
+        return modelsDirectory.appendingPathComponent("volta-pcb-ios-4b-adapter", isDirectory: true)
+        #else
+        return modelsDirectory.appendingPathComponent("volta-pcb-adapter-v2", isDirectory: true)
+        #endif
     }
 
     /// Check if the base model is already downloaded and valid.
