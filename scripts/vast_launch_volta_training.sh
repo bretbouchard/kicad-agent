@@ -261,6 +261,12 @@ set -euo pipefail
 cd /workspace
 export HF_TOKEN="$(cat /workspace/.hf_token)"
 export HUGGING_FACE_HUB_TOKEN="$HF_TOKEN"
+# HuggingFace Xet chunked download hangs indefinitely on some Vast
+# instances (xet_client spins on CAS retries that never resolve).
+# Disabling Xet forces plain HTTPS, which downloads cleanly here.
+export HF_HUB_DISABLE_XET=1
+export HF_HUB_ENABLE_HF_TRANSFER=0
+export HF_HUB_DOWNLOAD_TIMEOUT=300
 python -m pip install -q --upgrade pip
 python -m pip install -q transformers peft trl datasets bitsandbytes accelerate sentencepiece protobuf huggingface_hub
 echo "Dependencies installed at $(date -u)." > /workspace/volta_training_launch.log
