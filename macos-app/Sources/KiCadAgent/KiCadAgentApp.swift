@@ -57,8 +57,12 @@ struct KiCadAgentApp: App {
                     get: { localModelManager?.showDownloadSheet ?? false },
                     set: { _ in }
                 )) {
-                    ModelDownloadView {
-                        localModelManager?.onDownloadComplete()
+                    if let manager = localModelManager {
+                        ModelDownloadView(
+                            localModelManager: manager
+                        ) {
+                            manager.onDownloadComplete()
+                        }
                     }
                 }
                 .frame(minWidth: 900, minHeight: 600)
@@ -108,6 +112,7 @@ enum ModelSchemaRegistry {
         Decision.self,
         ValueChange.self,
         ProjectSnapshot.self,
+        OnboardingState.self,
     ]
 
     /// Schema version tag for CloudKit Optionals — bump on every schema change.
@@ -118,7 +123,7 @@ enum ModelSchemaRegistry {
     static func makeContainer(configuration: ModelConfiguration) throws -> ModelContainer {
         try ModelContainer(
             for: Project.self, Conversation.self, Message.self, Decision.self,
-                 ValueChange.self, ProjectSnapshot.self,
+                 ValueChange.self, ProjectSnapshot.self, OnboardingState.self,
             configurations: configuration
         )
     }
@@ -131,4 +136,5 @@ extension Logger {
     static let models = Logger(subsystem: "com.kicadagent.app", category: "models")
     static let ui = Logger(subsystem: "com.kicadagent.app", category: "ui")
     static let kicad = Logger(subsystem: "com.kicadagent.app", category: "kicad")
+    static let stream = Logger(subsystem: "com.kicadagent.app", category: "stream")
 }

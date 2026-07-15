@@ -22,12 +22,57 @@ enum ModelDownloadState: Equatable {
     case failed(message: String)
 }
 
+/// Banner for displaying failure reasons with retry option.
+struct FailureBanner: View {
+    let reason: DownloadFailureReason
+    let onRetry: () -> Void
+
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                Text(reason.userFacingMessage)
+                    .font(.caption)
+            }
+            Button("Retry") { onRetry() }
+                .buttonStyle(.bordered)
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(8)
+    }
+}
+
+/// Banner for displaying when adapter is not yet published.
+struct AdapterNotPublishedBanner: View {
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "clock.fill")
+                    .foregroundStyle(.primary)
+                Text("Volta v2 adapter is not yet published. Check back later or build from source.")
+                    .font(.caption)
+            }
+            Link("View issue tracker", destination: URL(string: "https://github.com/bretbouchard/kicad-agent/issues")!)
+                .font(.caption)
+                .buttonStyle(.plain)
+        }
+        .padding()
+        .background(Color.blue.opacity(0.1))
+        .cornerRadius(8)
+    }
+}
+
 /// SwiftUI view for downloading the Volta PCB intelligence model.
 /// Shows VRAM check, download progress, and skip option.
 struct ModelDownloadView: View {
     @State private var state: ModelDownloadState = .notStarted
     @State private var downloadTask: Task<Void, Never>?
     @Environment(\.dismiss) private var dismiss
+
+    /// Reference to LocalModelManager for status-based UI.
+    let localModelManager: LocalModelManager
 
     /// Called when download completes successfully.
     var onComplete: (() -> Void)?
@@ -90,6 +135,17 @@ struct ModelDownloadView: View {
                 Text("~8 GB download")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+            }
+
+            // Failure banners for distinct states
+            if case .downloadFailed(let reason) = localModelManager.status {
+                FailureBanner(reason: reason) {
+                    localModelManager.scanAndRegister()
+                }
+            }
+
+            if case .adapterNotPublished = localModelManager.status {
+                AdapterNotPublishedBanner()
             }
 
             // Progress

@@ -55,14 +55,15 @@ final class ModelDownloader: Sendable {
 
     /// LoRA adapter repo for the current platform.
     ///
-    /// Smoke-test path: `volta-pcb-adapter-v1` (public, 12B, 1GB MLX LoRA).
-    /// After v2 training completes, swap back to `volta-pcb-adapter-v2`.
-    /// See `.planning/phases/230-voltapcb-adapter-v2.md` for the swap gate.
+    /// macOS: `bretbouchard/volta-pcb-adapter-v2` (PEFT r=64 alpha=128, gemma-4-12b-it base).
+    /// iOS: `bretbouchard/volta-pcb-ios-4b-adapter` (separate training job, deferred).
+    ///
+    /// Phase 245 (2026-07-14): v1 removed. The smoke-test v1 path is gone.
     var adapterRepo: String {
         #if os(iOS)
         return "bretbouchard/volta-pcb-ios-4b-adapter"
         #else
-        return "bretbouchard/volta-pcb-adapter-v1"
+        return "bretbouchard/volta-pcb-adapter-v2"
         #endif
     }
 
@@ -105,7 +106,7 @@ final class ModelDownloader: Sendable {
         #if os(iOS)
         return modelsDirectory.appendingPathComponent("volta-pcb-ios-4b-adapter", isDirectory: true)
         #else
-        return modelsDirectory.appendingPathComponent("volta-pcb-adapter-v1", isDirectory: true)
+        return modelsDirectory.appendingPathComponent("volta-pcb-adapter-v2", isDirectory: true)
         #endif
     }
 
@@ -124,7 +125,8 @@ final class ModelDownloader: Sendable {
     static var isAdapterPresent: Bool {
         let dir = adapterDirectory
         guard FileManager.default.fileExists(atPath: dir.path) else { return false }
-        let adapterURL = dir.appendingPathComponent("adapters.safetensors")
+        // v2 uses PEFT-standard adapter file
+        let adapterURL = dir.appendingPathComponent("adapter_model.safetensors")
         let configURL = dir.appendingPathComponent("adapter_config.json")
         return FileManager.default.fileExists(atPath: adapterURL.path)
             && FileManager.default.fileExists(atPath: configURL.path)
@@ -222,8 +224,14 @@ final class ModelDownloader: Sendable {
         let url = URL(string: "\(hfBase)/api/models/\(repo)")!
         let (data, response) = try await session.data(from: url)
 
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw ModelDownloadError.manifestFailed(repo: repo)
+        }
+
+        if httpResponse.statusCode == 404 {
+            throw ModelDownloadError.adapterNotFound(repo: repo)
+        }
+        if httpResponse.statusCode != 200 {
             throw ModelDownloadError.manifestFailed(repo: repo)
         }
 
@@ -252,6 +260,7 @@ enum ModelDownloadError: LocalizedError {
     case manifestFailed(repo: String)
     case downloadFailed(file: String)
     case checksumMismatch(file: String)
+    case adapterNotFound(repo: String)
 
     var errorDescription: String? {
         switch self {
@@ -261,6 +270,8 @@ enum ModelDownloadError: LocalizedError {
             return "Failed to download \(file)"
         case .checksumMismatch(let file):
             return "Checksum mismatch for \(file)"
+        case .adapterNotFound(let repo):
+            return "Adapter not found: \(repo) — repo may be missing or still processing"
         }
     }
 }

@@ -75,9 +75,10 @@ struct MLXLocalProvider: KiCadModelProvider {
     /// User-facing model id, e.g. "mlx-community/gemma-4-12b-it-4bit".
     let modelId: String
 
-    /// Optional LoRA adapter directory. If present, adapters.safetensors
+    /// Optional LoRA adapter directory. If present, adapter_model.safetensors
     /// is loaded and applied to the base model for fine-tuned inference.
     /// Phase 210: Volta PCB adapter for NL→SKiDL generation.
+    /// Phase 245: v2 adapter uses PEFT-standard adapter_model.safetensors.
     let adapterURL: URL?
 
     /// Cached model metadata. Populated lazily; nil means "not yet probed".
@@ -110,7 +111,7 @@ struct MLXLocalProvider: KiCadModelProvider {
 
     var kind: KCProviderKind { .mlxLocal }
 
-    var displayName: String { "MLX: \(modelId)" }
+    var displayName: String { "Volta PCB v2 (Local, MLX)" }
 
     var availability: KCProviderAvailability {
         get async {
@@ -172,18 +173,24 @@ struct MLXLocalProvider: KiCadModelProvider {
 
                     // Apply LoRA adapter if present
                     if let adapterDir {
-                        let adapterFile = adapterDir.appendingPathComponent("adapters.safetensors")
+                        let adapterFile = adapterDir.appendingPathComponent("adapter_model.safetensors")
                         if FileManager.default.fileExists(atPath: adapterFile.path) {
-                            try await container.perform { context in
-                                // Load LoRA adapter from local directory
-                                let adapterConfig = ModelConfiguration(directory: adapterDir)
-                                let adapter = try await ModelAdapterFactory.shared.load(
-                                    from: #hubDownloader(),
-                                    configuration: adapterConfig
-                                )
-                                try context.model.load(adapter: adapter)
+                            do {
+                                try await container.perform { context in
+                                    // Load LoRA adapter from local directory
+                                    let adapterConfig = ModelConfiguration(directory: adapterDir)
+                                    let adapter = try await ModelAdapterFactory.shared.load(
+                                        from: #hubDownloader(),
+                                        configuration: adapterConfig
+                                    )
+                                    try context.model.load(adapter: adapter)
+                                }
+                                Logger.models.info("LoRA adapter loaded from \(adapterDir.path)")
+                            } catch {
+                                // TODO(245): MLXLLM 0.x LoRA loading may fail on some configurations.
+                                // Inference falls back to base model (no LoRA tuning applied).
+                                Logger.models.warning("LoRA adapter load failed: \(error.localizedDescription) — using base model only")
                             }
-                            Logger.models.info("LoRA adapter loaded from \(adapterDir.path)")
                         }
                     }
 

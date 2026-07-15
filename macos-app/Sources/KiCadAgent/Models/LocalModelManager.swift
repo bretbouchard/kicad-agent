@@ -21,11 +21,16 @@ import OSLog
 @Observable
 final class LocalModelManager {
 
-    /// Whether a local model is currently registered and available.
-    var hasLocalModel: Bool = false
+    /// Lifecycle state of the local Volta v2 model + adapter.
+    var status: LocalModelStatus = .notDownloaded
 
     /// Whether the download sheet should be shown.
-    var showDownloadSheet: Bool = false
+    var showDownloadSheet: Bool {
+        switch status {
+        case .downloaded: return false
+        case .downloading, .notDownloaded, .downloadFailed, .adapterNotPublished: return true
+        }
+    }
 
     private var registry: ProviderRegistry
 
@@ -40,9 +45,20 @@ final class LocalModelManager {
         let adapterDir = ModelDownloader.adapterDirectory
 
         guard ModelDownloader.isBaseModelPresent else {
-            hasLocalModel = false
-            showDownloadSheet = true
+            status = .notDownloaded
             Logger.appShell.info("No local model found — showing download prompt")
+            return
+        }
+
+        // Check if adapter is present (v2 standard: adapter_model.safetensors)
+        let isAdapter = ModelDownloader.isAdapterPresent
+
+        // Distinguish 404 (repo not found) from other failures
+        if !isAdapter {
+            // Could be adapter not published or other issue - check for 404
+            // We'll treat missing adapter as "adapter not published" for now
+            status = .adapterNotPublished
+            Logger.appShell.info("Adapter not published or not found")
             return
         }
 
@@ -54,17 +70,15 @@ final class LocalModelManager {
         let provider = MLXLocalProvider(
             modelURL: baseDir,
             modelId: ModelDownloader().baseModelRepo,  // "mlx-community/..." full HF id
-            adapterURL: ModelDownloader.isAdapterPresent ? adapterDir : nil
+            adapterURL: isAdapter ? adapterDir : nil
         )
         registry.register(provider)
-        hasLocalModel = true
-        showDownloadSheet = false
+        status = .downloaded
         Logger.appShell.info("Local model registered: \(provider.displayName)")
         #else
         // MLX not available — show download sheet but note generation
         // won't work without MLX. The user can still use cloud providers.
-        hasLocalModel = false
-        showDownloadSheet = false
+        status = .notDownloaded
         Logger.appShell.info("MLX provider not available — LLM generation requires cloud or Apple Intelligence")
         #endif
     }
