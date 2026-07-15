@@ -109,3 +109,6 @@ __init___sklib.py
 
 # Old project name (cleanup)
 /macos-app/Volta.xcodeproj/
+
+# Stale build artifacts (sdist/wheel output before rename)
+kicad_agent-*/
