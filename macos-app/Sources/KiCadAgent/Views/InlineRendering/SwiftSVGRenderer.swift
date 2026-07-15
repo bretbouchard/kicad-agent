@@ -26,13 +26,11 @@ struct SwiftSVGRenderer: PreviewRenderer {
     }
 
     func renderPCB(pcbPath: URL, side: PCBSide) async throws -> RenderArtifact {
-        // PCB rendering is more complex — delegate to daemon on macOS, skip on iOS
-        let tempDir = FileManager.default.temporaryDirectory
-        let pngPath = tempDir.appendingPathComponent("\(UUID().uuidString).png")
-        // Write a minimal placeholder PNG
-        let placeholderData = createPlaceholderPNG()
-        try placeholderData.write(to: pngPath)
-        return RenderArtifact(kind: .pcbPNG, url: pngPath)
+        // Phase 238: real PCB renderer via Core Graphics, no daemon.
+        // Replaces the 1x1 placeholder. Mirrors schematic renderer — pure
+        // Swift, works on macOS and iOS.
+        let pngURL = try PCBImageRenderer.render(pcbPath: pcbPath, side: side)
+        return RenderArtifact(kind: .pcbPNG, url: pngURL)
     }
 
     // MARK: - SVG Generation
@@ -131,20 +129,5 @@ struct SwiftSVGRenderer: PreviewRenderer {
          .replacingOccurrences(of: "<", with: "&lt;")
          .replacingOccurrences(of: ">", with: "&gt;")
          .replacingOccurrences(of: "\"", with: "&quot;")
-    }
-
-    private func createPlaceholderPNG() -> Data {
-        // Minimal 1x1 transparent PNG
-        return Data([
-            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-            0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
-            0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41,
-            0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
-            0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00,
-            0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE,
-            0x42, 0x60, 0x82
-        ])
     }
 }

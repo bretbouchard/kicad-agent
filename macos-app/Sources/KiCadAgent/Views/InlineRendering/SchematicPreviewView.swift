@@ -23,6 +23,7 @@ struct SchematicPreviewView: View {
     @State private var loadState: LoadState = .idle
     @State private var artifact: RenderArtifact?
     @State private var showInspector: Bool = false
+    @State private var watcher: PreviewFileWatcher?
 
     enum LoadState: Equatable {
         case idle
@@ -48,6 +49,11 @@ struct SchematicPreviewView: View {
         }
         .task {
             await render()
+            startWatching()
+        }
+        .onDisappear {
+            watcher?.stop()
+            watcher = nil
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Schematic preview")
@@ -74,6 +80,9 @@ struct SchematicPreviewView: View {
             .aspectRatio(contentMode: .fit)
             .frame(maxWidth: .infinity, minHeight: 180)
             .liquidGlassPanel()
+            .overlay(alignment: .topTrailing) {
+                openInKiCadButton
+            }
             .contentShape(Rectangle())
             .onTapGesture { showInspector = true }
             .accessibilityAddTraits(.isButton)
@@ -81,6 +90,25 @@ struct SchematicPreviewView: View {
             .sheet(isPresented: $showInspector) {
                 FullScreenInspector(title: "Schematic", url: artifact.url)
             }
+    }
+
+    /// Open the schematic in the user's KiCad app. macOS only.
+    @ViewBuilder
+    private var openInKiCadButton: some View {
+        #if os(macOS)
+        Button {
+            NSWorkspace.shared.open(schematicPath)
+        } label: {
+            Image(systemName: "arrow.up.right.square")
+                .font(.system(size: 14))
+                .padding(6)
+                .background(.ultraThinMaterial, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .padding(8)
+        .accessibilityLabel("Open schematic in KiCad")
+        .accessibilityHint("Launches KiCad with the source schematic file")
+        #endif
     }
 
     private func failureView(_ reason: String) -> some View {
@@ -131,6 +159,22 @@ struct SchematicPreviewView: View {
         artifact = nil
         loadState = .idle
         Task { await render() }
+    }
+
+    // MARK: - File watching
+
+    /// Start watching the source schematic for changes (debounced).
+    /// On change, re-render the preview. Auto-stops on view disappear.
+    private func startWatching() {
+        watcher?.stop()
+        let w = PreviewFileWatcher(url: schematicPath) { [self] in
+            // Re-render off the watcher's utility queue
+            Task { @MainActor in
+                await render()
+            }
+        }
+        w.start()
+        watcher = w
     }
 }
 

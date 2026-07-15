@@ -51,6 +51,11 @@ struct LiquidGlassShell: View {
     // Phase 216 — validation manager for ERC/DRC.
     @State private var validationManager = ValidationManager()
     @State private var showValidationPanel: Bool = false
+    // Phase 220+ — copy-to-clipboard feedback. A short toast string is
+    // set when the conversation is copied; the overlay renders it for
+    // ~1.6s then clears. nil = no toast visible.
+    @State private var copyToast: String? = nil
+    @State private var copyToastTask: Task<Void, Never>? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -75,12 +80,34 @@ struct LiquidGlassShell: View {
         ) { result in
             handleFileImport(result)
         }
+        .overlay(alignment: .top) {
+            // Copy-to-clipboard confirmation toast. Floats in from above
+            // the header for ~1.6s, then fades. A11y: reads the message
+            // count to non-sighted users; lives in the .top so it doesn't
+            // occlude the chat list.
+            if let toast = copyToast {
+                Text(toast)
+                    .font(Typography.caption.weight(.medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, Spacing.xs)
+                    .background(
+                        Capsule().fill(ColorTokens.success.opacity(0.95))
+                    )
+                    .padding(.top, Spacing.sm)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .accessibilityAddTraits(.isStaticText)
+                    .accessibilityLabel(toast)
+            }
+        }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: copyToast)
         .onAppear {
             composeFocused = true
             windowManager.register(projectId: project.id)
         }
         .onDisappear {
             windowManager.unregister(projectId: project.id)
+            copyToastTask?.cancel()
         }
     }
 
@@ -157,9 +184,16 @@ struct LiquidGlassShell: View {
 
     private func makePreviewRenderer() -> (any PreviewRenderer)? {
         #if os(macOS)
-        return daemonSupervisor.mcpClient.map { DaemonPreviewRenderer(client: $0) }
+        // Prefer daemon (real kicad-cli) when MCP is wired; otherwise fall
+        // back to native Swift renderer. Either way the chat always shows
+        // a real preview — no more "no preview" dead state when the daemon
+        // is down. Phase 238.
+        if let client = daemonSupervisor.mcpClient {
+            return DaemonPreviewRenderer(client: client)
+        }
+        return SwiftSVGRenderer()
         #else
-        return nil
+        return SwiftSVGRenderer()
         #endif
     }
 
@@ -371,7 +405,12 @@ struct LiquidGlassShell: View {
         }
 
         do {
-            let stream = provider.stream(prompt: chatMessages[index - 1].content, attachments: [])
+            // Snapshot the conversation (including the just-appended user
+            // message at index - 1) so the provider sees full multi-turn
+            // context. Echo stripping uses the last user message to detect
+            // the model repeating the question as the opener of the reply.
+            let history = Array(chatMessages.prefix(index))
+            let stream = provider.stream(history: history, attachments: [])
             for try await chunk in stream {
                 chatMessages[index].content += chunk
             }
@@ -412,6 +451,42 @@ struct LiquidGlassShell: View {
             )
             modelContext.insert(systemMsg)
             try? modelContext.save()
+        }
+    }
+
+    // MARK: - Copy Conversation
+
+    /// True when a conversation is active AND has at least one
+    /// exportable (non-empty, non-streaming) message. The Copy button
+    /// is disabled otherwise so the user doesn't get an empty clipboard.
+    private var canCopyConversation: Bool {
+        guard selectedConversation != nil else { return false }
+        return chatMessages.contains { msg in
+            let trimmed = msg.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return false }
+            switch msg.status {
+            case .pending, .streaming, .cancelled: return false
+            case .complete, .failed: return true
+            }
+        }
+    }
+
+    /// Format the active conversation and copy to the system clipboard.
+    /// Shows a transient toast confirming what was copied. The toast
+    /// auto-clears after 1.6s; successive copies reset the timer.
+    private func copyConversation() {
+        let chars = ConversationExporter.copyToClipboard(messages: chatMessages)
+        let msgCount = chatMessages.filter {
+            let t = $0.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            return !t.isEmpty
+        }.count
+        copyToast = "Copied \(msgCount) message\(msgCount == 1 ? "" : "s") · \(chars.formatted()) characters"
+        copyToastTask?.cancel()
+        copyToastTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_600_000_000)
+            if !Task.isCancelled {
+                copyToast = nil
+            }
         }
     }
 
@@ -460,6 +535,24 @@ struct LiquidGlassShell: View {
             }
             .accessibilityLabel("Share project")
             .accessibilityHint("Opens the macOS share sheet")
+
+            // Phase 220+: copy the active conversation to the system
+            // clipboard as plain text. Disabled when no conversation is
+            // selected OR when the chat has no exportable messages
+            // (empty / all-streaming). Mirrors the existing toolbar
+            // buttons' icon + accessibility-label idiom.
+            Button {
+                copyConversation()
+            } label: {
+                Label("Copy Conversation", systemImage: "doc.on.clipboard")
+            }
+            .disabled(!canCopyConversation)
+            .accessibilityLabel("Copy conversation to clipboard")
+            .accessibilityHint(
+                canCopyConversation
+                    ? "Copies the full conversation as plain text"
+                    : "Open a conversation to copy it"
+            )
 
             Button {
                 showSettings = true

@@ -24,6 +24,7 @@ struct PCBPreviewView: View {
     @State private var loadState: LoadState = .idle
     @State private var artifact: RenderArtifact?
     @State private var showInspector: Bool = false
+    @State private var watcher: PreviewFileWatcher?
 
     enum LoadState: Equatable {
         case idle
@@ -49,6 +50,11 @@ struct PCBPreviewView: View {
         }
         .task {
             await render()
+            startWatching()
+        }
+        .onDisappear {
+            watcher?.stop()
+            watcher = nil
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("PCB preview")
@@ -74,6 +80,9 @@ struct PCBPreviewView: View {
             .aspectRatio(contentMode: .fit)
             .frame(maxWidth: .infinity, minHeight: 180)
             .liquidGlassPanel()
+            .overlay(alignment: .topTrailing) {
+                openInKiCadButton
+            }
             .contentShape(Rectangle())
             .onTapGesture { showInspector = true }
             .accessibilityAddTraits(.isButton)
@@ -81,6 +90,25 @@ struct PCBPreviewView: View {
             .sheet(isPresented: $showInspector) {
                 FullScreenInspector(title: "PCB", url: artifact.url)
             }
+    }
+
+    /// Open the board in the user's KiCad app. macOS only.
+    @ViewBuilder
+    private var openInKiCadButton: some View {
+        #if os(macOS)
+        Button {
+            NSWorkspace.shared.open(pcbPath)
+        } label: {
+            Image(systemName: "arrow.up.right.square")
+                .font(.system(size: 14))
+                .padding(6)
+                .background(.ultraThinMaterial, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .padding(8)
+        .accessibilityLabel("Open PCB in KiCad")
+        .accessibilityHint("Launches KiCad with the source PCB file")
+        #endif
     }
 
     private func failureView(_ reason: String) -> some View {
@@ -129,5 +157,18 @@ struct PCBPreviewView: View {
         artifact = nil
         loadState = .idle
         Task { await render() }
+    }
+
+    // MARK: - File watching
+
+    private func startWatching() {
+        watcher?.stop()
+        let w = PreviewFileWatcher(url: pcbPath) { [self] in
+            Task { @MainActor in
+                await render()
+            }
+        }
+        w.start()
+        watcher = w
     }
 }

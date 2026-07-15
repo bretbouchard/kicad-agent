@@ -17,6 +17,7 @@
 
 import Foundation
 import SwiftUI
+import AppKit
 
 /// Who sent a chat message.
 enum MessageRole: String, Codable, Sendable, Equatable {
@@ -157,10 +158,15 @@ enum ImageAttachmentValidator {
 ///
 /// ponytail: protocol, not concrete class. Phase 175 ships NoopChatStream
 /// for previews. Phase 175+ wires ProviderRouter as ChatStreamProvider.
+///
+/// Pass the full conversation history (including the in-flight user
+/// message) so providers can render multi-turn context into the model's
+/// chat template. The first element is the oldest turn; the last is the
+/// most recent user message that triggered this stream.
 protocol ChatStreamProvider: Sendable {
-    /// Stream tokens for a user prompt + attachments.
+    /// Stream tokens for a full conversation.
     /// Returns `AsyncThrowingStream<String, Error>` — caller cancels via task cancellation.
-    func stream(prompt: String, attachments: [ImageAttachment]) -> AsyncThrowingStream<String, Error>
+    func stream(history: [ChatMessage], attachments: [ImageAttachment]) -> AsyncThrowingStream<String, Error>
 }
 
 /// Default stream provider used in previews/tests — emits canned text.
@@ -171,7 +177,7 @@ struct NoopChatStream: ChatStreamProvider {
         self.cannedResponse = cannedResponse
     }
 
-    func stream(prompt: String, attachments: [ImageAttachment]) -> AsyncThrowingStream<String, Error> {
+    func stream(history: [ChatMessage], attachments: [ImageAttachment]) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             // Emit word-by-word so streaming UI is exercisable.
             Task {
@@ -182,5 +188,82 @@ struct NoopChatStream: ChatStreamProvider {
                 continuation.finish()
             }
         }
+    }
+}
+
+// MARK: - ConversationExporter
+
+/// Formats a chat conversation for export to the system clipboard.
+///
+/// Why this exists: chat history is the user's design intent + the
+/// model's engineering response. Both halves are valuable artifacts that
+/// the user wants to paste into bug reports, design docs, share with
+/// collaborators, or save alongside their KiCad project. Exporter is a
+/// pure function so it's testable without NSPasteboard and reusable
+/// from any future export destinations (file, share sheet, etc.).
+enum ConversationExporter {
+    /// Format the full conversation as plain text, suitable for paste
+    /// into a text editor, GitHub issue, email, or document.
+    ///
+    /// Format:
+    /// ```
+    /// [2026-07-14 09:42] User:
+    /// Design a 20dB gain stage for guitar.
+    ///
+    /// [2026-07-14 09:42] Assistant (gemma-4-12b-it-mlx-q4):
+    /// Sure — here's a non-inverting op-amp stage...
+    /// ```
+    ///
+    /// System messages (operation results, daemon errors) are included
+    /// with a `System:` label so the full session context is preserved.
+    /// Empty / streaming / cancelled messages are skipped — only finished
+    /// content is exported.
+    static func plainText(messages: [ChatMessage]) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withYear, .withMonth, .withDay, .withTime]
+
+        var parts: [String] = []
+        for message in messages {
+            // Skip empty / in-flight messages — pasting a half-streamed
+            // response is worse than not pasting it.
+            let content = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !content.isEmpty else { continue }
+            if case .pending = message.status { continue }
+            if case .streaming = message.status { continue }
+            if case .cancelled = message.status { continue }
+
+            let label: String
+            switch message.role {
+            case .user: label = "User"
+            case .assistant:
+                if let badge = message.modelBadge, !badge.isEmpty {
+                    label = "Assistant (\(badge))"
+                } else {
+                    label = "Assistant"
+                }
+            case .system: label = "System"
+            }
+            let timestamp = formatter.string(from: message.sentAt)
+            parts.append("[\(timestamp)] \(label):\n\(content)")
+        }
+
+        // Header + body. The header signals the export format so pasted
+        // text is self-describing.
+        let header = "Volta PCB Conversation Export"
+        let generated = formatter.string(from: Date())
+        return "\(header) — generated \(generated)\n\n" + parts.joined(separator: "\n\n") + "\n"
+    }
+
+    /// Copy the formatted conversation to the system clipboard.
+    /// Returns the number of characters written so callers can show a
+    /// confirmation toast ("Copied 1,243 characters").
+    @discardableResult
+    @MainActor
+    static func copyToClipboard(messages: [ChatMessage]) -> Int {
+        let text = plainText(messages: messages)
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        return text.count
     }
 }

@@ -205,17 +205,24 @@ struct MessageBubbleView: View {
 ///    split on sentence boundaries (`. `, `? `, `! `).
 /// 3. While streaming, the last chunk is marked partial so the view
 ///    can show a caret to signal "more coming".
-/// 4. **Dedup:** runs of identical consecutive chunks are collapsed
-///    into a single chunk with a "(×N)" annotation. Local MLX models
-///    commonly loop on short prompts — without this, a 12x repetition
-///    would render as 12 visually-identical stacked blocks. The user
-///    still sees the loop happened (via the count), but the chat stays
-///    scannable.
+/// 4. **Dedup — across chunks:** runs of identical consecutive chunks
+///    are collapsed into a single chunk with a "(×N)" annotation.
+/// 5. **Dedup — within a chunk:** repeated identical sentences inside
+///    a single chunk are collapsed (e.g. "X. X. X. X. " becomes
+///    "X. (×4)"). Local MLX models commonly loop on short prompts
+///    inside a single emitted blob — without this, a 20x repetition
+///    would render as a wall of repeated text inside one chunk.
 enum ContentChunker {
     /// Target maximum characters per rendered chunk. Tuned to ~2 short
     /// paragraphs of typical chat output — long enough to be coherent,
     /// short enough to scan.
     static let maxChunkChars = 320
+
+    /// Minimum number of consecutive identical sentence repeats before
+    /// we collapse them. 3 = "X. X. X. X. ..." → "X. (×4)". Below 3
+    /// we leave the text alone so a normal one- or two-sentence reply
+    /// isn't annotated.
+    static let minLoopRepeatsToCollapse = 3
 
     struct Chunk: Identifiable, Equatable {
         let id: Int
@@ -258,10 +265,15 @@ enum ContentChunker {
             expanded = [trimmed]
         }
 
+        // Third pass: collapse intra-chunk loops. After sentence splitting
+        // the typical loop pattern is "X. X. X. X." (or "X? X? X? X?")
+        // inside a single emitted block. Detect and collapse.
+        let loopCollapsed = expanded.map(collapseIntraChunkLoop)
+
         // Build raw chunks. The last one is partial iff still streaming.
         var rawChunks: [Chunk] = []
-        for (idx, text) in expanded.enumerated() {
-            let isLast = idx == expanded.count - 1
+        for (idx, text) in loopCollapsed.enumerated() {
+            let isLast = idx == loopCollapsed.count - 1
             rawChunks.append(Chunk(
                 id: idx,
                 text: text,
@@ -274,6 +286,45 @@ enum ContentChunker {
         // with a "(×N)" marker keeps the chat scannable and still signals
         // the user that the model looped.
         return dedupConsecutive(rawChunks)
+    }
+
+    /// Detect a run of N or more identical sentences inside `text` and
+    /// collapse to "<sentence>. (×N)". Returns the input unchanged if
+    /// the loop threshold isn't met, so short / varied sentences render
+    /// normally. Looks at the FIRST sentence's normalized form; if the
+    /// rest of the text is mostly that same sentence repeated, we
+    /// collapse. Preserves any unique trailing content after the run.
+    static func collapseIntraChunkLoop(_ text: String) -> String {
+        let sentences = splitSentences(text)
+        guard sentences.count >= minLoopRepeatsToCollapse else { return text }
+
+        // Normalize for comparison: trim + lowercase. Model output can
+        // drift on punctuation/case, so we compare on a fingerprint.
+        let fingerprints = sentences.map {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+                .trimmingCharacters(in: CharacterSet(charactersIn: ".?! "))
+        }
+        let first = fingerprints[0]
+        guard !first.isEmpty else { return text }
+
+        // Count how many leading sentences match the first.
+        var matchCount = 0
+        for fp in fingerprints {
+            if fp == first { matchCount += 1 } else { break }
+        }
+        guard matchCount >= minLoopRepeatsToCollapse else { return text }
+
+        // The remaining sentences (after the matched run) form a tail.
+        // If there's a mix, preserve it; otherwise the whole chunk is
+        // just the loop.
+        let tailSentences = Array(sentences[matchCount...])
+        let originalFirst = sentences[0]
+        let collapsedRun = "\(originalFirst) (×\(matchCount))"
+        if tailSentences.isEmpty {
+            return collapsedRun
+        }
+        return collapsedRun + "\n\n" + tailSentences.joined(separator: " ")
     }
 
     /// Collapse runs of identical consecutive chunks into one chunk with

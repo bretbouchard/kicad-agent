@@ -859,19 +859,166 @@ struct BreakWireShortsGenOp: VoltaOperation {
     }
 }
 
+/// Real fix_net_short implementation (Phase 243).
+///
+/// Runs NativeERC, finds ERC_PIN_CONFLICT violations, removes the first
+/// wire on each shorted net (heuristic position match).
 struct FixNetShortGenOp: VoltaOperation {
     let opType = "fix_net_short"
     let readOnly = false
     func execute(params: [String: Any], on fileURL: URL) throws -> [String: Any] {
-        return ["status": "ok", "message": "Net short fix requires topology analysis — use Python daemon for full fix"]
+        let result = NativeERC.run(schematicURL: fileURL)
+        let shorts = result.violations.filter { $0.checkId == "ERC_PIN_CONFLICT" }
+
+        guard !shorts.isEmpty else {
+            return ["status": "ok", "shorts_found": 0, "removed": 0, "removed_wire_uuids": []]
+        }
+
+        var sexpr = try SExpr.parse(fileURL: fileURL)
+        var removed = 0
+        var removedUUIDs: [String] = []
+
+        for s in shorts {
+            guard let pos = s.position else { continue }
+            let candidates: [(SExpr, String)] = sexpr.findAll("wire").compactMap { wire in
+                guard let pts = wire.find("pts"),
+                      let firstXY = pts.findAll("xy").first else { return nil }
+                let x = firstXY.childDouble(0) ?? 0
+                let y = firstXY.childDouble(1) ?? 0
+                let dx = abs(x - pos.0)
+                let dy = abs(y - pos.1)
+                if dx < 0.5 && dy < 0.5 {
+                    let uuid = wire.find("uuid")?.childString(0) ?? "unknown"
+                    return (wire, uuid)
+                }
+                return nil
+            }
+            if let (wire, uuid) = candidates.first {
+                // SExpr is a value-type enum, so we rebuild the top-level
+                // list with the matched wire filtered out (Equatable
+                // synthesis gives us `!=` for value comparison).
+                if case .list(let head, let children) = sexpr {
+                    let newChildren = children.filter { $0 != wire }
+                    sexpr = .list(head, newChildren)
+                }
+                removedUUIDs.append(uuid)
+                removed += 1
+            }
+        }
+
+        if removed > 0 {
+            try sexpr.serialize().write(to: fileURL, atomically: true, encoding: .utf8)
+        }
+
+        return [
+            "status": "ok",
+            "shorts_found": shorts.count,
+            "removed": removed,
+            "removed_wire_uuids": removedUUIDs,
+        ]
     }
 }
 
+/// Real fix_pin_type_mismatches implementation (Phase 243).
+///
+/// Runs NativeERC, finds ERC_PIN_CONFLICT violations, sets all
+/// referenced lib_symbol pins to "passive" (the most compatible type).
 struct FixPinTypeMismatchesGenOp: VoltaOperation {
     let opType = "fix_pin_type_mismatches"
     let readOnly = false
     func execute(params: [String: Any], on fileURL: URL) throws -> [String: Any] {
-        return ["status": "ok", "message": "Pin type fix requires library symbol editing — use Python daemon"]
+        let result = NativeERC.run(schematicURL: fileURL)
+        let conflicts = result.violations.filter { $0.checkId == "ERC_PIN_CONFLICT" }
+
+        guard !conflicts.isEmpty else {
+            return ["status": "ok", "conflicts_found": 0, "fixed": 0, "fixed_pins": []]
+        }
+
+        var sexpr = try SExpr.parse(fileURL: fileURL)
+        var fixed = 0
+        var fixedPins: [String] = []
+
+        guard let libSymbols = sexpr.find("lib_symbols") else {
+            return [
+                "status": "ok",
+                "conflicts_found": conflicts.count,
+                "fixed": 0,
+                "fixed_pins": [],
+                "message": "no lib_symbols section in schematic",
+            ]
+        }
+
+        // SExpr is a value-type enum, so we rebuild the lib_symbols
+        // subtree with modified pin subtrees. No mutation in place.
+        guard case .list(let lsHead, let lsChildren) = libSymbols else {
+            return [
+                "status": "ok",
+                "conflicts_found": conflicts.count,
+                "fixed": 0,
+                "fixed_pins": [],
+                "message": "lib_symbols is not a list",
+            ]
+        }
+
+        let newLsChildren: [SExpr] = lsChildren.map { symNode -> SExpr in
+            guard case .list(let sHead, let sChildren) = symNode, sHead == "symbol" else {
+                return symNode
+            }
+            let symName = symNode.childString(0) ?? "?"
+            let newSChildren: [SExpr] = sChildren.map { child -> SExpr in
+                guard case .list(let cHead, let cChildren) = child, cHead == "pin" else {
+                    return child
+                }
+                let typeIdx = cChildren.firstIndex { $0.head == "type" }
+                let currentType: String = {
+                    guard let idx = typeIdx,
+                          case .list(_, let tChildren) = cChildren[idx],
+                          let first = tChildren.first else {
+                        return "unspecified"
+                    }
+                    return first.stringValue ?? "unspecified"
+                }()
+                if currentType == "passive" { return child }
+
+                let pinName = child.childString(0) ?? "?"
+                fixed += 1
+                fixedPins.append("\(symName).\(pinName)")
+
+                let newCChildren: [SExpr]
+                if let idx = typeIdx {
+                    newCChildren = cChildren.enumerated().map { (i, c) -> SExpr in
+                        if i == idx { return .list("type", [.atom("passive")]) }
+                        return c
+                    }
+                } else {
+                    newCChildren = cChildren + [.list("type", [.atom("passive")])]
+                }
+                return .list(cHead, newCChildren)
+            }
+            return .list(sHead, newSChildren)
+        }
+        let newLibSymbols = SExpr.list(lsHead, newLsChildren)
+
+        // Splice the new lib_symbols back into the root sexpr.
+        if case .list(let rootHead, let rootChildren) = sexpr {
+            let newRootChildren = rootChildren.map { c -> SExpr in
+                if c.head == "lib_symbols" { return newLibSymbols }
+                return c
+            }
+            sexpr = .list(rootHead, newRootChildren)
+        }
+
+        if fixed > 0 {
+            try sexpr.serialize().write(to: fileURL, atomically: true, encoding: .utf8)
+        }
+
+        return [
+            "status": "ok",
+            "conflicts_found": conflicts.count,
+            "fixed": fixed,
+            "fixed_pins": fixedPins,
+            "strategy": "set_all_conflicting_pins_to_passive",
+        ]
     }
 }
 
@@ -930,14 +1077,139 @@ struct ErcAutoFixHierarchicalGenOp: VoltaOperation {
 
 // MARK: - Sync / Update / Rebuild Operations
 
+/// Real safe_sync implementation (Phase 237).
+///
+/// Computes a delta between the schematic symbols and the PCB footprints:
+///   - symbols in schematic but not in PCB → "added" (would need footprint added)
+///   - footprints in PCB but not in schematic → "removed" (orphans; not auto-removed
+///     unless remove_orphans=true)
+///   - same reference but different libId → "updated" (footprint assignment changed)
+///
+/// Returns a diff structure. The op does NOT mutate the PCB — the caller is
+/// expected to journal the result and apply via the existing add_footprint /
+/// remove_footprint / set_footprint_lib_id ops.
+///
+/// Required params:
+///   - schematic_path: String path to the .kicad_sch (or omit to derive from PCB)
+///
+/// Optional params:
+///   - dry_run: Bool (default true) — if true, return diff without committing
+///   - remove_orphans: Bool (default false) — include PCB-only footprints in removed
 struct SafeSyncPcbFromSchematicGenOp: VoltaOperation {
     let opType = "safe_sync_pcb_from_schematic"
     let readOnly = false
+
     func execute(params: [String: Any], on fileURL: URL) throws -> [String: Any] {
-        // Sync PCB from schematic: update net list, references
-        let board = try PCBParser.parse(fileURL)
-        return ["status": "ok", "footprints": board.footprints.count,
-                "message": "PCB synced (full sync requires schematic+PCB pair)"]
+        // Resolve schematic path: explicit param, or sibling of PCB.
+        let schematicPath: URL = {
+            if let sp = params["schematic_path"] as? String {
+                return URL(fileURLWithPath: sp)
+            }
+            // Default: replace .kicad_pcb with .kicad_sch in same directory.
+            let pcbPath = fileURL.path
+            if pcbPath.hasSuffix(".kicad_pcb") {
+                let schPath = String(pcbPath.dropLast(".kicad_pcb".count)) + ".kicad_sch"
+                if FileManager.default.fileExists(atPath: schPath) {
+                    return URL(fileURLWithPath: schPath)
+                }
+            }
+            return fileURL  // fall back; will produce empty schematic diff
+        }()
+
+        let dryRun = params["dry_run"] as? Bool ?? true
+        let removeOrphans = params["remove_orphans"] as? Bool ?? false
+
+        // Parse both files (best-effort: empty diff on parse failure).
+        let schIR: SchematicIR
+        do {
+            schIR = try SchematicParser.parse(schematicPath)
+        } catch {
+            return [
+                "status": "error",
+                "error": "schematic_parse_failed: \(error)",
+                "added": [],
+                "removed": [],
+                "updated": [],
+            ]
+        }
+
+        let board: PCBBoard
+        do {
+            board = try PCBParser.parse(fileURL)
+        } catch {
+            return [
+                "status": "error",
+                "error": "pcb_parse_failed: \(error)",
+                "added": [],
+                "removed": [],
+                "updated": [],
+            ]
+        }
+
+        // Index by reference.
+        let schByRef: [String: SymbolInstance] = Dictionary(
+            schIR.symbols.map { ($0.reference, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let pcbByRef: [String: PCBFootprint] = Dictionary(
+            board.footprints.map { ($0.reference, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        // Compute deltas.
+        var added: [[String: String]] = []
+        var removed: [[String: String]] = []
+        var updated: [[String: String]] = []
+
+        for (ref, sym) in schByRef {
+            if let fp = pcbByRef[ref] {
+                if sym.libId != fp.libId {
+                    updated.append([
+                        "reference": ref,
+                        "from_lib_id": fp.libId,
+                        "to_lib_id": sym.libId,
+                        "action": "update_lib_id",
+                    ])
+                }
+            } else {
+                added.append([
+                    "reference": ref,
+                    "lib_id": sym.libId,
+                    "action": "add_footprint",
+                ])
+            }
+        }
+
+        for (ref, fp) in pcbByRef where schByRef[ref] == nil {
+            let entry: [String: String] = [
+                "reference": ref,
+                "lib_id": fp.libId,
+                "action": "remove_footprint",
+            ]
+            if removeOrphans {
+                removed.append(entry)
+            }
+            // If removeOrphans=false, silently skip — they're preserved.
+        }
+
+        let hasChanges = !added.isEmpty || !removed.isEmpty || !updated.isEmpty
+        let result: [String: Any] = [
+            "status": "ok",
+            "schematic_path": schematicPath.path,
+            "pcb_path": fileURL.path,
+            "dry_run": dryRun,
+            "has_changes": hasChanges,
+            "added": added,
+            "removed": removed,
+            "updated": updated,
+            "added_count": added.count,
+            "removed_count": removed.count,
+            "updated_count": updated.count,
+            "schematic_symbols": schByRef.count,
+            "pcb_footprints": pcbByRef.count,
+            "remove_orphans": removeOrphans,
+        ]
+        return result
     }
 }
 

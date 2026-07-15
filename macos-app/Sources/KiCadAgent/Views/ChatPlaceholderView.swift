@@ -15,6 +15,10 @@ import OSLog
 struct ChatPlaceholderView: View {
     /// Closure fired when user taps "Start your first design".
     let onStartFirstDesign: () -> Void
+    /// Phase 242 — optional re-entry into the welcome tour. When nil,
+    /// the "Show tour" link is hidden (preserves the original Phase 161
+    /// empty-state for callers that don't care about the tour).
+    var onShowTour: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: Spacing.lg) {
@@ -22,6 +26,9 @@ struct ChatPlaceholderView: View {
             heroIcon
             heroText
             ctaButton
+            if let onShowTour {
+                tourLink(onShowTour)
+            }
             hints
             Spacer()
         }
@@ -68,6 +75,18 @@ struct ChatPlaceholderView: View {
         .buttonStyle(.plain)
         .accessibilityLabel("Start your first design")
         .accessibilityHint("Creates a new project and opens the chat shell")
+    }
+
+    /// Secondary link shown below the primary CTA when a tour
+    /// re-entry closure is supplied. Phase 242 addition.
+    private func tourLink(_ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label("Show welcome tour", systemImage: "hand.wave.fill")
+                .font(Typography.caption)
+        }
+        .buttonStyle(.borderless)
+        .accessibilityLabel("Show welcome tour")
+        .accessibilityHint("Re-opens the 3-step onboarding walkthrough")
     }
 
     private var hints: some View {

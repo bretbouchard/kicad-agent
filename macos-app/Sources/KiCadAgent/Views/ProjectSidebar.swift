@@ -17,6 +17,9 @@ struct ProjectSidebar: View {
     @Binding var selectedProjectId: UUID?
     let onCreateProject: () -> Void
     let onDeleteProject: (Project) -> Void
+    /// Phase 242 — when the workspace is empty, surface a "Show tour"
+    /// button that re-opens the onboarding flow.
+    let onShowTour: () -> Void
 
     var body: some View {
         List(selection: $selectedProjectId) {
@@ -31,6 +34,9 @@ struct ProjectSidebar: View {
                             .accessibilityLabel("Delete project \(project.name)")
                         }
                 }
+                if projects.isEmpty {
+                    emptyStateRow
+                }
             }
         }
         .listStyle(.sidebar)
@@ -39,6 +45,22 @@ struct ProjectSidebar: View {
         }
         .navigationTitle("KiCad Agent")
         .accessibilityLabel("Project list")
+    }
+
+    private var emptyStateRow: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text("No projects yet")
+                .font(Typography.caption)
+                .foregroundStyle(ColorTokens.secondaryText)
+            Button(action: onShowTour) {
+                Label("Show welcome tour", systemImage: "hand.wave.fill")
+                    .font(Typography.caption)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Show welcome tour")
+            .accessibilityHint("Re-opens the 3-step onboarding walkthrough")
+        }
+        .padding(.vertical, Spacing.xs)
     }
 
     private var sidebarFooter: some View {
