@@ -324,7 +324,7 @@ def external_http_set_enabled(params: Any, ctx: HandlerContext) -> dict[str, Any
 #   initialize:
 #     {"jsonrpc":"2.0","id":1,"method":"initialize",
 #      "params":{"protocolVersion":"2024-11-05","capabilities":{},
-#                "clientInfo":{"name":"KiCadAgent","version":"1.0"}}}
+#                "clientInfo":{"name":"Volta","version":"1.0"}}}
 #     → {"jsonrpc":"2.0","id":1,"result":{
 #          "protocolVersion":"2024-11-05",
 #          "serverInfo":{"name":"kicad-agent-daemon","version":"0.1.0"},

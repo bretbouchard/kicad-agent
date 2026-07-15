@@ -1,6 +1,6 @@
 // swift-tools-version: 6.2
 //
-// KiCadAgent — macOS 27+ Liquid Glass app shell.
+// Volta — macOS 27+ Liquid Glass app shell.
 // ponytail: SPM over .xcodeproj — simpler, fully macOS 27+ compatible, no PBX hell.
 import PackageDescription
 
@@ -11,7 +11,7 @@ import PackageDescription
 // `-target arm64-apple-macosx27.0` via `unsafeFlags`. When Xcode 27 ships,
 // remove the unsafeFlags and change `.v26` → `.v27`. Tracked in SUMMARY.
 let package = Package(
-    name: "KiCadAgent",
+    name: "Volta",
     platforms: [
         // macOS 27+ for Liquid Glass + FoundationModels.
         // iOS 18+ for iPhone/iPad companion (Phase 226).
@@ -20,8 +20,8 @@ let package = Package(
     ],
     products: [
         .executable(
-            name: "KiCadAgent",
-            targets: ["KiCadAgent"]
+            name: "Volta",
+            targets: ["Volta"]
         ),
         // Phase 226: Shared library for iOS + macOS targets.
         .library(
@@ -59,7 +59,7 @@ let package = Package(
             path: "Sources/VoltaPCBCore"
         ),
         .executableTarget(
-            name: "KiCadAgent",
+            name: "Volta",
             dependencies: [
                 "VoltaPCBCore",
                 .product(name: "MLX", package: "mlx-swift"),
@@ -78,8 +78,8 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "KiCadAgentTests",
-            dependencies: ["KiCadAgent"],
+            name: "VoltaTests",
+            dependencies: ["Volta"],
             swiftSettings: [
                 .unsafeFlags(["-target", "arm64-apple-macosx27.0"]),
             ],

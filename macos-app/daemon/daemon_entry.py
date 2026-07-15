@@ -120,7 +120,7 @@ from audit_log import AuditLogger, get_default_logger  # noqa: E402
 # Daemon supervisor — owns the HandlerContext and heartbeat loop
 # =============================================================================
 
-class KiCadAgentDaemon:
+class VoltaDaemon:
     """Owns the HandlerContext, heartbeat timer, and shutdown flag.
 
     The asyncio main loop (amain, below) constructs one of these and
@@ -169,7 +169,7 @@ class KiCadAgentDaemon:
 # Request dispatch
 # =============================================================================
 
-async def dispatch(daemon: KiCadAgentDaemon, raw_request: str) -> dict[str, Any] | None:
+async def dispatch(daemon: VoltaDaemon, raw_request: str) -> dict[str, Any] | None:
     """Parse + dispatch one raw request line.
 
     Returns:
@@ -242,7 +242,7 @@ async def dispatch(daemon: KiCadAgentDaemon, raw_request: str) -> dict[str, Any]
 # Main loop
 # =============================================================================
 
-async def read_requests(stream: asyncio.StreamReader, daemon: KiCadAgentDaemon) -> None:
+async def read_requests(stream: asyncio.StreamReader, daemon: VoltaDaemon) -> None:
     """Read line-delimited JSON-RPC requests from stdin until EOF."""
     while not daemon.shutdown_requested:
         try:
@@ -287,7 +287,7 @@ async def emit(payload: dict[str, Any]) -> None:
         sys.stderr.flush()
 
 
-async def heartbeat_loop(daemon: KiCadAgentDaemon) -> None:
+async def heartbeat_loop(daemon: VoltaDaemon) -> None:
     """Idle heartbeat emitter so the watchdog sees traffic even with no RPCs."""
     while not daemon.shutdown_requested:
         await asyncio.sleep(1.0)
@@ -306,7 +306,7 @@ async def amain() -> int:
         return OperationExecutor()
 
     ctx = HandlerContext(executor_factory=_executor_factory, audit=audit)
-    daemon = KiCadAgentDaemon(ctx=ctx, audit=audit)
+    daemon = VoltaDaemon(ctx=ctx, audit=audit)
 
     audit.log_event("daemon_start", pid=os.getpid(), python=sys.version.split()[0])
 

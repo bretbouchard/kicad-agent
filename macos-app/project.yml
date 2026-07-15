@@ -72,11 +72,11 @@ targets:
     deploymentTarget:
       macOS: "27.0"
     sources:
-      - path: Sources/KiCadAgent
+      - path: Sources/Volta
         excludes:
           # require the TestingMacros compiler plugin — not available in an
           # app target build. These compile fine under SPM (toolchain provides
-          # the plugin) and are included in KiCadAgentTests below.
+          # the plugin) and are included in VoltaTests below.
           - "Testing/**"
       - path: Resources/Assets.xcassets
       - path: Resources/AppIcon.icns
@@ -84,7 +84,7 @@ targets:
       - path: Resources/PrivacyInfo.xcprivacy
         buildPhase: resources
         buildPhase: resources
-      - path: Resources/KiCadAgent.entitlements
+      - path: Resources/Volta.entitlements
         buildPhase: resources
     settings:
       base:
@@ -102,20 +102,20 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: Resources/Info.plist
         SWIFT_EMIT_LOC_STRINGS: YES
-        CODE_SIGN_ENTITLEMENTS: Resources/KiCadAgent.entitlements
+        CODE_SIGN_ENTITLEMENTS: Resources/Volta.entitlements
         MARKETING_VERSION: "6.0.0"
         CURRENT_PROJECT_VERSION: "1"
     postBuildScripts:
       - name: Copy + Sign Bundled Daemon
         # Copies the stripped PyInstaller daemon (82MB) into Contents/Resources/
         # and signs every Mach-O for App Store sandbox compliance.
-        # Daemon is built separately: cd daemon && pyinstaller --noconfirm kicad-agent-daemon.spec
+        # Daemon is built separately: cd daemon && pyinstaller --noconfirm volta-daemon.spec
         runOnlyWhenInstalling: false
         script: |
           set -e
-          DAEMON_SRC="${PROJECT_DIR}/daemon/dist/kicad-agent-daemon"
+          DAEMON_SRC="${PROJECT_DIR}/daemon/dist/volta-daemon"
           RESOURCES_DIR="${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Resources"
-          DAEMON_DEST="${RESOURCES_DIR}/kicad-agent-daemon"
+          DAEMON_DEST="${RESOURCES_DIR}/volta-daemon"
           mkdir -p "$RESOURCES_DIR"
           if [ ! -d "$DAEMON_SRC" ]; then
             echo "Daemon not built at $DAEMON_SRC — skipping (dev build without daemon)"
@@ -123,7 +123,7 @@ targets:
           fi
           rm -rf "$DAEMON_DEST"
           cp -R "$DAEMON_SRC" "$DAEMON_DEST"
-          chmod +x "$DAEMON_DEST/kicad-agent-daemon"
+          chmod +x "$DAEMON_DEST/volta-daemon"
           # Ad-hoc sign every Mach-O in the daemon bundle.
           # The outer .app signing (by Xcode's CodeSign phase) covers
           # the real distribution identity. Individual .so/.dylib just
@@ -133,7 +133,7 @@ targets:
           done
           codesign --force --sign - --options runtime \
             --entitlements "${PROJECT_DIR}/daemon/daemon-sandbox.entitlements" \
-            "$DAEMON_DEST/kicad-agent-daemon"
+            "$DAEMON_DEST/volta-daemon"
           echo "Daemon copied + ad-hoc signed"
     dependencies:
       - package: MLXSwift
@@ -160,11 +160,11 @@ targets:
     deploymentTarget:
       macOS: "27.0"
     sources:
-      - path: Tests/KiCadAgentTests
+      - path: Tests/VoltaTests
       # Include the test-infrastructure helpers (swift-testing macros).
       # Excluded from the app target because the TestingMacros plugin
       # is unavailable there.
-      - path: Sources/KiCadAgent/Testing
+      - path: Sources/Volta/Testing
     dependencies:
       - target: VoltaPCB
     settings:

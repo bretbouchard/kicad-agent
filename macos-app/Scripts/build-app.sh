@@ -38,7 +38,7 @@ PRODUCT_NAME="Volta PCB"
 BUNDLE_ID="com.bretbouchard.volta"
 APP_DIR="$ROOT/build/VoltaPCB.app"
 BIN_DIR="$ROOT/.build/arm64-apple-macosx/$SWIFT_CONFIG"
-BIN_SRC="$BIN_DIR/KiCadAgent"
+BIN_SRC="$BIN_DIR/Volta"
 CONTENTS="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS/MacOS"
 RESOURCES_DIR="$CONTENTS/Resources"
@@ -102,7 +102,7 @@ done
 cp "$ROOT/Resources/Info.plist" "$CONTENTS/Info.plist"
 cp "$ROOT/Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 cp "$ROOT/Resources/PrivacyInfo.xcprivacy" "$RESOURCES_DIR/PrivacyInfo.xcprivacy"
-cp "$ROOT/Resources/KiCadAgent.entitlements" "$RESOURCES_DIR/KiCadAgent.entitlements"
+cp "$ROOT/Resources/Volta.entitlements" "$RESOURCES_DIR/Volta.entitlements"
 
 # PkgInfo — required for the bundle to be recognized as an app
 printf 'APPL????' > "$CONTENTS/PkgInfo"
@@ -120,7 +120,7 @@ echo "▶ Ad-hoc signing"
 # Developer ID signing (in fastlane match) replaces this step.
 
 codesign --force --sign - --deep \
-    --entitlements "$ROOT/Resources/KiCadAgent.entitlements" \
+    --entitlements "$ROOT/Resources/Volta.entitlements" \
     "$MACOS_DIR/$PRODUCT_NAME"
 
 codesign --force --sign - --deep \

@@ -1,4 +1,4 @@
-# KiCadAgent — macOS 27+ Liquid Glass App
+# Volta — macOS 27+ Liquid Glass App
 
 Native macOS app shell for the KiCad Agent — the closed-box conversational hardware design tool.
 
@@ -30,7 +30,7 @@ Build complete! (X.Xs)
 ## Run
 
 ```bash
-swift run KiCadAgent
+swift run Volta
 ```
 
 This launches the Liquid Glass chat shell. Multi-window via `cmd+N`.
@@ -56,17 +56,17 @@ SwiftData models (Project, Conversation). Phase 192 adds full snapshot tests.
 
 | File | Responsibility |
 |------|----------------|
-| `Sources/KiCadAgent/KiCadAgentApp.swift` | `@main` App, WindowGroup scene, daemon lifecycle hook |
-| `Sources/KiCadAgent/DaemonSupervisor.swift` | Daemon lifecycle state machine (Phase 162 wires real spawn) |
-| `Sources/KiCadAgent/Views/AppRootView.swift` | NavigationSplitView root, daemon recovery alert |
-| `Sources/KiCadAgent/Views/LiquidGlassShell.swift` | Main detail view — chat shell |
-| `Sources/KiCadAgent/Views/ChatPlaceholderView.swift` | Empty-state hero card |
-| `Sources/KiCadAgent/Views/ProjectSidebar.swift` | Sidebar with project list + create/delete |
-| `Sources/KiCadAgent/Models/Project.swift` | SwiftData `@Model` — top-level container |
-| `Sources/KiCadAgent/Models/Conversation.swift` | SwiftData `@Model` — conversation envelope |
-| `Sources/KiCadAgent/Theme/DesignTokens.swift` | Spacing, typography, color constants |
-| `Sources/KiCadAgent/Theme/LiquidGlassModifiers.swift` | Reusable `.regularMaterial` wrappers |
-| `Sources/KiCadAgent/Utilities/Logger.swift` | OSLog structured logging helpers |
+| `Sources/Volta/VoltaApp.swift` | `@main` App, WindowGroup scene, daemon lifecycle hook |
+| `Sources/Volta/DaemonSupervisor.swift` | Daemon lifecycle state machine (Phase 162 wires real spawn) |
+| `Sources/Volta/Views/AppRootView.swift` | NavigationSplitView root, daemon recovery alert |
+| `Sources/Volta/Views/LiquidGlassShell.swift` | Main detail view — chat shell |
+| `Sources/Volta/Views/ChatPlaceholderView.swift` | Empty-state hero card |
+| `Sources/Volta/Views/ProjectSidebar.swift` | Sidebar with project list + create/delete |
+| `Sources/Volta/Models/Project.swift` | SwiftData `@Model` — top-level container |
+| `Sources/Volta/Models/Conversation.swift` | SwiftData `@Model` — conversation envelope |
+| `Sources/Volta/Theme/DesignTokens.swift` | Spacing, typography, color constants |
+| `Sources/Volta/Theme/LiquidGlassModifiers.swift` | Reusable `.regularMaterial` wrappers |
+| `Sources/Volta/Utilities/Logger.swift` | OSLog structured logging helpers |
 
 ## Distribution (APP-02)
 
