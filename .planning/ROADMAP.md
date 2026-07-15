@@ -431,6 +431,25 @@ Created 2026-07-14 to close the 8 high-priority gaps identified in `docs/GAP-ANA
 - Verifier re-runs after closure; updated gap file goes to `docs/GAP-ANALYSIS-CURRENT.md` with status column
 - Plan: `.planning/phases/247-gap-closure-vol11/247-01-PLAN.md`
 
+### Phase 248: Reconcile volta-12b-v2 naming (Storage vs app)
+- Eliminate naming drift: Storage has `kicad-vision-v2`, app expects `volta-pcb-adapter-v2`
+- Verify they're the same adapter (config comparison), fix broken `volta-12b-v2` symlink
+- Document canonical paths in `CLAUDE.md`
+- Plan: `.planning/phases/248-reconcile-volta-naming/248-01-PLAN.md`
+
+### Phase 249: Project-wide rename kicad-agent → Volta
+- Rename Python package `kicad_agent` → `volta`
+- Rename Swift types `KicadAgent` → `Volta`, CLI command `kicad-agent` → `volta`
+- Update all docs, paths, settings keys, environment variables
+- Preserve all 6300+ tests
+- Plan: `.planning/phases/249-rename-kicad-agent-to-volta/249-01-PLAN.md`
+
+### Phase 250: Portable build setup
+- `scripts/setup_local.py` creates `volta-12b-v2` symlink at repo root, resolves or downloads canonical adapter
+- Detects `/Volumes/Storage` mount, alternative paths, or HuggingFace download
+- Verifies Python version, kicad-cli presence, base model availability
+- Plan: `.planning/phases/250-portable-build-setup/250-01-PLAN.md`
+
 ---
 
 ## v11.0 Execution Order
