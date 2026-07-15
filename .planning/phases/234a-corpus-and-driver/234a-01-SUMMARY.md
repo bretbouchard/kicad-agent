@@ -21,10 +21,10 @@ Tasks 1, 2, 3 all green. Python ERC engine is wired and producing real results a
 
 ## Corpus Stats
 
-- **raw = 212** (107 unique paths × 2 due to mirror dirs `kicad_agent-0.1.0/tests/` and `tests/`, plus root-level x64 fixtures)
+- **raw = 212** (107 unique paths × 2 due to mirror dirs `volta-0.1.0/tests/` and `tests/`, plus root-level x64 fixtures)
 - **dedup = 81** (after SHA256 dedup; 25 out of 28 "missing" files in the original 41-file run are intentional dupes of the same content under different paths)
 - **seed = 42** (reproducible shuffle, deterministic)
-- **Source distribution**: 56 from `output/legibility/` (synthetic gen output), 18 from `kicad_agent-0.1.0/tests/fixtures/`, 5 from `kicad_agent-0.1.0/tests/data/`, 2 from repo root (`x64-smart-grid.kicad_sch`, `x64-test.kicad_sch`)
+- **Source distribution**: 56 from `output/legibility/` (synthetic gen output), 18 from `volta-0.1.0/tests/fixtures/`, 5 from `volta-0.1.0/tests/data/`, 2 from repo root (`x64-smart-grid.kicad_sch`, `x64-test.kicad_sch`)
 
 Target was ">=100" but plan acknowledged "we accept whatever's available" (`stage_corpus.py:30`). 81 is the upper bound for this repo.
 
@@ -35,7 +35,7 @@ Target was ">=100" but plan acknowledged "we accept whatever's available" (`stag
 | Sample | Path | Python errors | Python warnings |
 |--------|------|---------------|-----------------|
 | 1 | `output/legibility/.../S5_esp32_breakout.kicad_sch` | 0 | 378 |
-| 2 | `kicad_agent-0.1.0/.../multi_sheet_root.kicad_sch` | 0 | 0 |
+| 2 | `volta-0.1.0/.../multi_sheet_root.kicad_sch` | 0 | 0 |
 | 3 | `output/legibility/.../S3_opamp_preamp.kicad_sch` | 5 | 3 |
 
 This is real, varied data — 3 distinct ERC outcomes (clean / warnings-only / mixed). Good baseline for parity testing in 234B.

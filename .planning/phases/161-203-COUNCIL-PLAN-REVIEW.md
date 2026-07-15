@@ -117,7 +117,7 @@ REQUIREMENTS.md "Out of Scope (Locked Exclusions)":
 **Required fix:** Edit Phase 162 Task 1 to:
 1. Remove the `Bundle kicad-cli from system` line entirely.
 2. Add explicit note: "kicad-cli is NOT bundled — Phase 163 detects external install per App Store GPL compliance (Pitfall 9 prevention)."
-3. The daemon bundles only Python stdlib + kicad-agent library + ops/registry.
+3. The daemon bundles only Python stdlib + volta library + ops/registry.
 
 **Resolution state:** ADDED-AS-PHASE — must be fixed in Phase 162 plan before Gate 1.
 
@@ -443,7 +443,7 @@ Phase 162 line 100: `sys.path.insert(0, '/usr/local/lib/python3.11/site-packages
 
 ### P3-02: Phase 203 Appfile uses `bretbouchard` bundle ID placeholder
 
-Phase 203 Appfile: `app_identifier("com.bretbouchard.kicad-agent")` — should be parameterized via `ENV['APP_BUNDLE_ID']` to support team scaling.
+Phase 203 Appfile: `app_identifier("com.bretbouchard.volta")` — should be parameterized via `ENV['APP_BUNDLE_ID']` to support team scaling.
 
 **Resolution state:** DEFERRED-TO-NAMED-TARGET — v1.x when team scales beyond solo dev. Trigger: Second developer joins.
 
@@ -641,7 +641,7 @@ None — no GCGamepad, no OpenGL ES, no UIWebView references in any plan.
 - Privacy policy mention for FoundationModels (PITFALLS.md Security Mistakes table) — not explicitly in any plan. **P2-NEW: Add privacy policy requirement to Phase 164 or 175.**
 
 ### KiCad Rick (PCB view on app code)
-- KiCad file generation uses kicad-agent ops (Phase 182) ✅
+- KiCad file generation uses volta ops (Phase 182) ✅
 - ERC/DRC gates enforced before file marked valid (Phase 185) ✅
 - External KiCad install requirement is correct architecture (Phase 163) ✅
 - Hash gold master tests prevent generative drift (Phase 184) ✅

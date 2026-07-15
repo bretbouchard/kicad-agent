@@ -4,7 +4,7 @@
 
 Agent-centric reference for programmatic KiCad PCB editing. This document contains
 the technical details an AI agent needs when creating, modifying, or validating KiCad
-PCB files through the kicad-agent operation system. Covers board setup, layer
+PCB files through the volta operation system. Covers board setup, layer
 configuration, design rules and constraints, footprints, pads, zones, routing,
 teardrops, backdrills, net classes, DRC, and manufacturing outputs.
 

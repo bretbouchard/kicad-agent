@@ -9,7 +9,7 @@ Headless, scriptable ngspice simulation pipeline: SKIDL netlist → ngspice → 
 
 ## What Shipped
 
-### Source code (`src/kicad_agent/spice/`, 5 files, ~20 KB)
+### Source code (`src/volta/spice/`, 5 files, ~20 KB)
 
 | File | Purpose | Lines |
 |---|---|---|
@@ -49,7 +49,7 @@ Headless, scriptable ngspice simulation pipeline: SKIDL netlist → ngspice → 
 ## Public API
 
 ```python
-from kicad_agent.spice import (
+from volta.spice import (
     # Types
     AnalysisType, Trace, AnalysisResult, SimulationResult, DegradationReport,
     # Runner
@@ -96,7 +96,7 @@ These deviations are documented for transparency. Phase 204+ returns to normal G
 
 ## Hand-off to Phase 204
 
-Phase 204 consumes this module as-is. Phase 204's job is the **optimization, testing, dataframe, and demo layer on top of `src/kicad_agent/spice/`** — not a rewrite.
+Phase 204 consumes this module as-is. Phase 204's job is the **optimization, testing, dataframe, and demo layer on top of `src/volta/spice/`** — not a rewrite.
 
 Phase 204 canonical example: **Eurorack input preamp** (single NPN common-emitter, ±12 V rails, audio bandwidth, ~20 dB target gain). Optuna sweeps R1/R2/Rc/Re over E12 series, ngspice_runner verifies, pandas aggregates, pytest asserts, demo script ships Bode PNG + BOM markdown.
 

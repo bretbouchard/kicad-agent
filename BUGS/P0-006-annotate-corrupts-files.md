@@ -17,7 +17,7 @@ In the Phase 133 reproduction, the op was invoked on `hardware/backplane/mcu.kic
 ## Reproduction
 
 ```bash
-PYTHONPATH=/Users/bretbouchard/apps/kicad-agent/src /opt/homebrew/bin/python3.11 -m kicad_agent.cli '{
+PYTHONPATH=/Users/bretbouchard/apps/volta/src /opt/homebrew/bin/python3.11 -m volta.cli '{
   "op": "annotate",
   "target_file": "hardware/backplane/mcu.kicad_sch"
 }'
@@ -34,7 +34,7 @@ Immediately reverted via `git checkout hardware/backplane/mcu.kicad_sch`. Root E
 
 This op is actively dangerous for the same reason as P0-003: **kiutils re-serialization does not preserve KiCad 10's strict formatting requirements.** Per project memory `kiutils-root-sheet-danger.md`: "NEVER to_file() on root sheets; cascading re-serialization breaks kicad-cli."
 
-Affects all KiCad 10 projects using kicad-agent — any call to `annotate` risks file corruption regardless of whether the op reports making changes.
+Affects all KiCad 10 projects using volta — any call to `annotate` risks file corruption regardless of whether the op reports making changes.
 
 ## Suspected root cause
 
@@ -61,7 +61,7 @@ This is the same class of bug as P0-003. Both ops:
 **Use the `safe_annotate` op** (Phase 102+). It is the direct replacement for `annotate` and handles all the same use cases without corruption.
 
 ```bash
-PYTHONPATH=src /opt/homebrew/bin/python3.11 -m kicad_agent.cli '{
+PYTHONPATH=src /opt/homebrew/bin/python3.11 -m volta.cli '{
   "op": "safe_annotate",
   "target_file": "my_project.kicad_sch",
   "scope": "whole_project",
@@ -69,7 +69,7 @@ PYTHONPATH=src /opt/homebrew/bin/python3.11 -m kicad_agent.cli '{
 }'
 ```
 
-For reference designator renumbering on older kicad-agent versions (pre-Phase 102):
+For reference designator renumbering on older volta versions (pre-Phase 102):
 - Use KiCad GUI (Tools → Edit Annotations → Annotate Schematic)
 - Or use `kicad-cli sch export bom` to inspect current annotations, then manually update via `modify_property` op per ref (preserves formatting)
 
@@ -77,5 +77,5 @@ For reference designator renumbering on older kicad-agent versions (pre-Phase 10
 
 - **P0-003** (`erc-auto-fix-corrupts-files.md`) — same root cause, same fix path
 - Discovered during Phase 133 Plan 133-03 execution on `hardware/backplane/mcu.kicad_sch`
-- Phase 133 SUMMARY: `.planning/phases/133-backplane-erc-zero-violation-cleanup-via-kicad-agent-pipelin/133-03-SUMMARY.md`
+- Phase 133 SUMMARY: `.planning/phases/133-backplane-erc-zero-violation-cleanup-via-volta-pipelin/133-03-SUMMARY.md`
 - Project memory: `kiutils-root-sheet-danger.md`

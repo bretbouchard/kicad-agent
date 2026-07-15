@@ -32,7 +32,7 @@ Phase 208 is the capstone of v7.0 — one call (`build_handoff_export`) produces
 
 ### Handoff Orchestrator (HANDOFF-01, HANDOFF-02, HANDOFF-03)
 
-- **New file:** `src/kicad_agent/manufacturing/handoff.py`
+- **New file:** `src/volta/manufacturing/handoff.py`
 - **Function:** `export_handoff(pcb_path: Path, sch_path: Path | None, project_dir: Path, vendor: str | None = None, board_spec: BoardSpec | None = None, include_step: bool = True, include_render: bool = False) -> HandoffResult`
 - **Pipeline (11 steps):**
   1. Read BoardSpec (from sidecar if not provided) + title_block (via NativeParser.parse_pcb)
@@ -217,30 +217,30 @@ class HandoffValidation:
 ## Canonical References
 
 ### Export Wrappers (to call)
-- `src/kicad_agent/export/gerber.py` — `export_gerber` (line 136), `export_drill` (line 206), `export_manufacturing_package` (line 312)
-- `src/kicad_agent/export/bom.py` — `export_bom` (line 76), `export_jlcpcb_bom` (line 311), `enrich_with_lcsc` (line 242), `parse_bom_csv` (line 168)
-- `src/kicad_agent/export/general.py` — `export_position` (line 59), `export_step` (line 176), `export_netlist` (line 122), `export_schematic_pdf` (line 241), `get_board_statistics` (line 298)
-- `src/kicad_agent/export/render.py` — `export_pcb_pdf`, `render_pcb` (line 87)
+- `src/volta/export/gerber.py` — `export_gerber` (line 136), `export_drill` (line 206), `export_manufacturing_package` (line 312)
+- `src/volta/export/bom.py` — `export_bom` (line 76), `export_jlcpcb_bom` (line 311), `enrich_with_lcsc` (line 242), `parse_bom_csv` (line 168)
+- `src/volta/export/general.py` — `export_position` (line 59), `export_step` (line 176), `export_netlist` (line 122), `export_schematic_pdf` (line 241), `get_board_statistics` (line 298)
+- `src/volta/export/render.py` — `export_pcb_pdf`, `render_pcb` (line 87)
 
 ### Phase 207 (Build system)
-- `src/kicad_agent/manufacturing/build.py` — `Build` dataclass, `BuildStatus` (EXPORTED → HANDED_OFF transition)
-- `src/kicad_agent/validation/gates/manufacturing_manifest.py` — `ManufacturingManifest`, `ManufacturingArtifact`, `to_json()/save()/load()`
+- `src/volta/manufacturing/build.py` — `Build` dataclass, `BuildStatus` (EXPORTED → HANDED_OFF transition)
+- `src/volta/validation/gates/manufacturing_manifest.py` — `ManufacturingManifest`, `ManufacturingArtifact`, `to_json()/save()/load()`
 
 ### Phase 206 (Vendor DRC)
-- `src/kicad_agent/manufacturing/vendor_drc.py` — `run_vendor_drc(board, profile) -> VendorDrcResult`
-- `src/kicad_agent/dfm/profiles.py` — `ManufacturerProfile`, `load_profile()`
+- `src/volta/manufacturing/vendor_drc.py` — `run_vendor_drc(board, profile) -> VendorDrcResult`
+- `src/volta/dfm/profiles.py` — `ManufacturerProfile`, `load_profile()`
 
 ### Phase 205 (BoardSpec + title_block)
-- `src/kicad_agent/manufacturing/board_spec.py` — `BoardSpec`, `load_board_spec()`, `save_board_spec()`
-- `src/kicad_agent/parser/pcb_native_parser.py` — `NativeParser.parse_pcb()` for title_block access
+- `src/volta/manufacturing/board_spec.py` — `BoardSpec`, `load_board_spec()`, `save_board_spec()`
+- `src/volta/parser/pcb_native_parser.py` — `NativeParser.parse_pcb()` for title_block access
 
 ### Validation
-- `src/kicad_agent/validation/erc_drc.py` — `run_erc()` (line 171), `run_drc()` (line 322), `DrcResult`, `ErcResult`
+- `src/volta/validation/erc_drc.py` — `run_erc()` (line 171), `run_drc()` (line 322), `DrcResult`, `ErcResult`
 
 ### Infrastructure
-- `src/kicad_agent/io/atomic_write.py` — `atomic_write(file_path, content)`
-- `src/kicad_agent/ops/handlers/build.py` — existing build handlers (Phase 207), `_BUILD_HANDLERS` merge pattern
-- `src/kicad_agent/ops/handlers/__init__.py` — handler merge pattern
+- `src/volta/io/atomic_write.py` — `atomic_write(file_path, content)`
+- `src/volta/ops/handlers/build.py` — existing build handlers (Phase 207), `_BUILD_HANDLERS` merge pattern
+- `src/volta/ops/handlers/__init__.py` — handler merge pattern
 
 ### Pitfalls
 - `.planning/research/PITFALLS.md` — Pitfall 3 (vendor lock-in), Pitfall 5 (false confidence), Pitfall 7 (large files in zips)

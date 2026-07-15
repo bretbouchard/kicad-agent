@@ -23,13 +23,13 @@ The App Store claim of inline schematic / PCB previews is now real:
 
 | File | Change |
 |------|--------|
-| `macos-app/Sources/KiCadAgent/Views/InlineRendering/PCBImageRenderer.swift` | NEW — Core Graphics PCB → PNG renderer (no daemon) |
-| `macos-app/Sources/KiCadAgent/Views/InlineRendering/PreviewFileWatcher.swift` | NEW — DispatchSource-based debounced file watcher |
-| `macos-app/Sources/KiCadAgent/Views/InlineRendering/SwiftSVGRenderer.swift` | MODIFIED — `renderPCB` now delegates to `PCBImageRenderer` (was placeholder) |
-| `macos-app/Sources/KiCadAgent/Views/InlineRendering/SchematicPreviewView.swift` | MODIFIED — wires `PreviewFileWatcher` + adds "Open in KiCad" button |
-| `macos-app/Sources/KiCadAgent/Views/InlineRendering/PCBPreviewView.swift` | MODIFIED — wires `PreviewFileWatcher` + adds "Open in KiCad" button |
-| `macos-app/Sources/KiCadAgent/Views/LiquidGlassShell.swift` | MODIFIED — falls back to `SwiftSVGRenderer` when daemon unavailable |
-| `macos-app/Tests/KiCadAgentTests/PreviewRendererTests.swift` | NEW — 7 tests |
+| `macos-app/Sources/Volta/Views/InlineRendering/PCBImageRenderer.swift` | NEW — Core Graphics PCB → PNG renderer (no daemon) |
+| `macos-app/Sources/Volta/Views/InlineRendering/PreviewFileWatcher.swift` | NEW — DispatchSource-based debounced file watcher |
+| `macos-app/Sources/Volta/Views/InlineRendering/SwiftSVGRenderer.swift` | MODIFIED — `renderPCB` now delegates to `PCBImageRenderer` (was placeholder) |
+| `macos-app/Sources/Volta/Views/InlineRendering/SchematicPreviewView.swift` | MODIFIED — wires `PreviewFileWatcher` + adds "Open in KiCad" button |
+| `macos-app/Sources/Volta/Views/InlineRendering/PCBPreviewView.swift` | MODIFIED — wires `PreviewFileWatcher` + adds "Open in KiCad" button |
+| `macos-app/Sources/Volta/Views/LiquidGlassShell.swift` | MODIFIED — falls back to `SwiftSVGRenderer` when daemon unavailable |
+| `macos-app/Tests/VoltaTests/PreviewRendererTests.swift` | NEW — 7 tests |
 
 ## PCB Renderer
 

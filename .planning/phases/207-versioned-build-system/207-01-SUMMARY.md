@@ -29,15 +29,15 @@ tech-stack:
 
 key-files:
   created:
-    - src/kicad_agent/manufacturing/build.py
-    - src/kicad_agent/ops/handlers/build.py
+    - src/volta/manufacturing/build.py
+    - src/volta/ops/handlers/build.py
     - tests/test_build_system.py
   modified:
-    - src/kicad_agent/validation/gates/manufacturing_manifest.py
-    - src/kicad_agent/ops/_schema_pcb.py
-    - src/kicad_agent/ops/schema.py
-    - src/kicad_agent/ops/registry.py
-    - src/kicad_agent/ops/handlers/__init__.py
+    - src/volta/validation/gates/manufacturing_manifest.py
+    - src/volta/ops/_schema_pcb.py
+    - src/volta/ops/schema.py
+    - src/volta/ops/registry.py
+    - src/volta/ops/handlers/__init__.py
     - tests/test_registry.py
     - .gitignore
 
@@ -106,14 +106,14 @@ Each task was committed atomically:
 5. **Task 5: .gitignore + verification** - `1113326` (chore)
 
 ## Files Created/Modified
-- `src/kicad_agent/manufacturing/build.py` - Build, BuildStatus, BuildDiff, diff_builds, _get_git_sha
-- `src/kicad_agent/ops/handlers/build.py` - _BUILD_HANDLERS + 3 query handlers + shared helpers
+- `src/volta/manufacturing/build.py` - Build, BuildStatus, BuildDiff, diff_builds, _get_git_sha
+- `src/volta/ops/handlers/build.py` - _BUILD_HANDLERS + 3 query handlers + shared helpers
 - `tests/test_build_system.py` - 35 tests across TestBuildModel/TestBuildCreate/TestBuildList/TestBuildShow
-- `src/kicad_agent/validation/gates/manufacturing_manifest.py` - to_json/save/load + to_dict/from_dict (additive)
-- `src/kicad_agent/ops/_schema_pcb.py` - BuildCreateOp/BuildListOp/BuildShowOp
-- `src/kicad_agent/ops/schema.py` - Operation union + import + __all__ (+3 ops)
-- `src/kicad_agent/ops/registry.py` - _RAW_CATALOG (+3 query ops)
-- `src/kicad_agent/ops/handlers/__init__.py` - _BUILD_HANDLERS import + _QUERY_HANDLERS.merge
+- `src/volta/validation/gates/manufacturing_manifest.py` - to_json/save/load + to_dict/from_dict (additive)
+- `src/volta/ops/_schema_pcb.py` - BuildCreateOp/BuildListOp/BuildShowOp
+- `src/volta/ops/schema.py` - Operation union + import + __all__ (+3 ops)
+- `src/volta/ops/registry.py` - _RAW_CATALOG (+3 query ops)
+- `src/volta/ops/handlers/__init__.py` - _BUILD_HANDLERS import + _QUERY_HANDLERS.merge
 - `tests/test_registry.py` - count 159, readonly set +3
 - `.gitignore` - builds/
 

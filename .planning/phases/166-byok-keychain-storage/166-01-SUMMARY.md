@@ -27,19 +27,19 @@ tech-stack:
     - "SSE byte-stream parsing with \\n\\n boundary detection"
 key-files:
   created:
-    - "macos-app/Sources/KiCadAgent/Security/KeychainManager.swift (293 lines)"
-    - "macos-app/Sources/KiCadAgent/Security/APIKeyValidator.swift (284 lines)"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/OpenAICompatibleCloudProvider.swift (271 lines)"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/AnthropicCloudProvider.swift (266 lines)"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/GeminiCloudProvider.swift (252 lines)"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/OllamaCloudProvider.swift (165 lines)"
-    - "macos-app/Sources/KiCadAgent/Views/Settings/BYOKSettingsView.swift (422 lines)"
-    - "macos-app/Resources/KiCadAgent.entitlements (network.client + keychain)"
-    - "macos-app/Tests/KiCadAgentTests/KeychainManagerTests.swift (14 tests)"
-    - "macos-app/Tests/KiCadAgentTests/APIKeyValidatorTests.swift (11 tests)"
-    - "macos-app/Tests/KiCadAgentTests/AnthropicProviderTests.swift (6 tests)"
+    - "macos-app/Sources/Volta/Security/KeychainManager.swift (293 lines)"
+    - "macos-app/Sources/Volta/Security/APIKeyValidator.swift (284 lines)"
+    - "macos-app/Sources/Volta/Models/Providers/OpenAICompatibleCloudProvider.swift (271 lines)"
+    - "macos-app/Sources/Volta/Models/Providers/AnthropicCloudProvider.swift (266 lines)"
+    - "macos-app/Sources/Volta/Models/Providers/GeminiCloudProvider.swift (252 lines)"
+    - "macos-app/Sources/Volta/Models/Providers/OllamaCloudProvider.swift (165 lines)"
+    - "macos-app/Sources/Volta/Views/Settings/BYOKSettingsView.swift (422 lines)"
+    - "macos-app/Resources/Volta.entitlements (network.client + keychain)"
+    - "macos-app/Tests/VoltaTests/KeychainManagerTests.swift (14 tests)"
+    - "macos-app/Tests/VoltaTests/APIKeyValidatorTests.swift (11 tests)"
+    - "macos-app/Tests/VoltaTests/AnthropicProviderTests.swift (6 tests)"
   modified:
-    - "macos-app/Sources/KiCadAgent/Models/Providers/ProviderRegistry.swift (+48 lines)"
+    - "macos-app/Sources/Volta/Models/Providers/ProviderRegistry.swift (+48 lines)"
 decisions:
   - "OpenAI-compatible adapter pattern (4 of 7 providers share base class) — DRY win, OpenAI Chat Completions is the de facto standard"
   - "Auto-degrade Keychain → in-memory store on errSecMissingEntitlement — SPM test sandbox escape without polluting production paths"
@@ -72,7 +72,7 @@ Phase 166 closes Track B (Models). The full provider stack now exists:
 
 ## What Shipped
 
-### 1. KeychainManager (`macos-app/Sources/KiCadAgent/Security/KeychainManager.swift`)
+### 1. KeychainManager (`macos-app/Sources/Volta/Security/KeychainManager.swift`)
 
 - Wraps `Security.framework` (`kSecClassGenericPassword`)
 - `storeAPIKey`, `loadAPIKey`, `deleteAPIKey`, `applyICloudSyncSettingToAllKeys`, `configuredProviders`
@@ -82,10 +82,10 @@ Phase 166 closes Track B (Models). The full provider stack now exists:
 - **MOD-04**: When iCloud OFF, `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` (stricter)
 - **T-166-01**: Provider-specific format validation (sk-, sk-ant-, AIza, gsk_, xai-, tg-)
 - **T-166-01**: API keys never logged
-- Service-scoped: `com.bretbouchard.kicad-agent`
+- Service-scoped: `com.bretbouchard.volta`
 - **Rule 2 deviation**: Auto-degrade to in-memory store on `errSecMissingEntitlement` (-34018) — common in SPM test sandbox without code signing
 
-### 2. APIKeyValidator (`macos-app/Sources/KiCadAgent/Security/APIKeyValidator.swift`)
+### 2. APIKeyValidator (`macos-app/Sources/Volta/Security/APIKeyValidator.swift`)
 
 - **MOD-03**: Real provider test calls via direct URLSession (MOD-05: no proxy)
 - **MOD-03**: Revoked keys (401/403) → `.invalid` → triggers re-entry prompt
@@ -123,7 +123,7 @@ Phase 166 closes Track B (Models). The full provider stack now exists:
 - Cost always $0 (MOD-12 local provider)
 - No API key (KCProviderKind.isLocal == true)
 
-### 4. BYOKSettingsView (`macos-app/Sources/KiCadAgent/Views/Settings/BYOKSettingsView.swift`)
+### 4. BYOKSettingsView (`macos-app/Sources/Volta/Views/Settings/BYOKSettingsView.swift`)
 
 - Per-provider row: name, status badge, SecureField, Save/Test/Remove buttons
 - **MOD-03**: Validate-on-Save via real provider test call
@@ -144,7 +144,7 @@ Phase 166 closes Track B (Models). The full provider stack now exists:
 - Ollama always registered (local daemon, no key required)
 - Per MOD-11: cloud providers optional — router falls back to FoundationModels
 
-### 6. Entitlements (`macos-app/Resources/KiCadAgent.entitlements`)
+### 6. Entitlements (`macos-app/Resources/Volta.entitlements`)
 
 - `com.apple.security.network.client: true` (MOD-05 direct HTTPS)
 - `com.apple.security.keychain-access-groups: app-scoped` (MOD-04 storage)
@@ -203,17 +203,17 @@ Phase 166 closes Track B (Models). The full provider stack now exists:
 
 | Artifact | Path | Status |
 |---|---|---|
-| KeychainManager.swift | macos-app/Sources/KiCadAgent/Security/ | ✅ FOUND |
-| APIKeyValidator.swift | macos-app/Sources/KiCadAgent/Security/ | ✅ FOUND |
-| OpenAICompatibleCloudProvider.swift | macos-app/Sources/KiCadAgent/Models/Providers/ | ✅ FOUND |
-| AnthropicCloudProvider.swift | macos-app/Sources/KiCadAgent/Models/Providers/ | ✅ FOUND |
-| GeminiCloudProvider.swift | macos-app/Sources/KiCadAgent/Models/Providers/ | ✅ FOUND |
-| OllamaCloudProvider.swift | macos-app/Sources/KiCadAgent/Models/Providers/ | ✅ FOUND |
-| BYOKSettingsView.swift | macos-app/Sources/KiCadAgent/Views/Settings/ | ✅ FOUND |
-| KiCadAgent.entitlements | macos-app/Resources/ | ✅ FOUND |
-| KeychainManagerTests.swift | macos-app/Tests/KiCadAgentTests/ | ✅ FOUND |
-| APIKeyValidatorTests.swift | macos-app/Tests/KiCadAgentTests/ | ✅ FOUND |
-| AnthropicProviderTests.swift | macos-app/Tests/KiCadAgentTests/ | ✅ FOUND |
+| KeychainManager.swift | macos-app/Sources/Volta/Security/ | ✅ FOUND |
+| APIKeyValidator.swift | macos-app/Sources/Volta/Security/ | ✅ FOUND |
+| OpenAICompatibleCloudProvider.swift | macos-app/Sources/Volta/Models/Providers/ | ✅ FOUND |
+| AnthropicCloudProvider.swift | macos-app/Sources/Volta/Models/Providers/ | ✅ FOUND |
+| GeminiCloudProvider.swift | macos-app/Sources/Volta/Models/Providers/ | ✅ FOUND |
+| OllamaCloudProvider.swift | macos-app/Sources/Volta/Models/Providers/ | ✅ FOUND |
+| BYOKSettingsView.swift | macos-app/Sources/Volta/Views/Settings/ | ✅ FOUND |
+| Volta.entitlements | macos-app/Resources/ | ✅ FOUND |
+| KeychainManagerTests.swift | macos-app/Tests/VoltaTests/ | ✅ FOUND |
+| APIKeyValidatorTests.swift | macos-app/Tests/VoltaTests/ | ✅ FOUND |
+| AnthropicProviderTests.swift | macos-app/Tests/VoltaTests/ | ✅ FOUND |
 
 | Commit | Hash | Status |
 |---|---|---|

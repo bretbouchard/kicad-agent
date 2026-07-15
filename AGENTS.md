@@ -1,4 +1,4 @@
-# kicad-agent — Agent Context
+# volta — Agent Context
 
 AI-safe structural editing of KiCad 10+ schematic, PCB, symbol, and footprint files.
 
@@ -43,27 +43,27 @@ kicad-cli fp upgrade <file.kicad_mod>                    # Upgrade footprint lib
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `kicad-agent` | 0.0.1 | Core library — AST mutation, operation executor, validation gates |
+| `volta` | 0.0.1 | Core library — AST mutation, operation executor, validation gates |
 | `kicad-python` | 0.4.0 | KiCad file I/O bindings |
 | `kiutils` | 1.4.8 | S-expression parser/writer for KiCad files |
 | `sexpdata` | 1.0.0 | Low-level S-expression parsing |
 | `skidl` | 2.0.1 | Script-based circuit design (Python → netlist) |
 | `spicelib` | 1.5.1 | SPICE simulation integration |
 
-**kicad-agent operations (via `/kicad-agent` skill or direct Python):**
+**volta operations (via `/volta` skill or direct Python):**
 ```bash
-cd ~/apps/kicad-agent && python3 -c "
-from kicad_agent.ops.executor import execute
+cd ~/apps/volta && python3 -c "
+from volta.ops.executor import execute
 result = execute(operation_json)
 "
 ```
 
-98 operation types. Operation metadata (category, file types, read-only, dependencies) available via `kicad_agent.ops.registry`.
+98 operation types. Operation metadata (category, file types, read-only, dependencies) available via `volta.ops.registry`.
 
 ### Analysis & Inference
 ```bash
-cd ~/apps/kicad-agent && python3 -c "
-from kicad_agent.inference import generate_analysis
+cd ~/apps/volta && python3 -c "
+from volta.inference import generate_analysis
 result = generate_analysis('path/to/file.kicad_pcb')
 "
 ```
@@ -92,8 +92,8 @@ python3 -c "from spicelib import ..."
 
 ### 2. Schematic Capture
 ```bash
-# Edit via kicad-agent operations (JSON → AST mutation)
-/kicad-agent '{"op": "add_component", ...}'
+# Edit via volta operations (JSON → AST mutation)
+/volta '{"op": "add_component", ...}'
 
 # Validate schematic
 kicad-cli sch erc <project.kicad_sch>
@@ -106,8 +106,8 @@ kicad-cli sch erc <project.kicad_sch>    # Always run ERC after schematic edits
 
 ### 4. PCB Layout
 ```bash
-# Operations via kicad-agent
-/kicad-agent '{"op": "pcb_ops", ...}'
+# Operations via volta
+/volta '{"op": "pcb_ops", ...}'
 
 # 3D visualization
 kicad-cli pcb render <project.kicad_pcb> -o render.png --rotate "-45,0,45"
@@ -135,7 +135,7 @@ kicad-cli sch export pdf <project.kicad_sch> -o schematic.pdf
 
 ## Known Bugs & Workarounds (Phase 26)
 
-These bugs have workarounds that MUST be applied in any build script using kicad-agent. See KNOWN_LIMITATIONS.md P26-1 through P26-5 for full details.
+These bugs have workarounds that MUST be applied in any build script using volta. See KNOWN_LIMITATIONS.md P26-1 through P26-5 for full details.
 
 | Bug | Issue | Workaround |
 |-----|-------|-----------|
@@ -160,13 +160,13 @@ When building schematics programmatically, these rules prevent the most common a
 - **Never skip validation.** Always run ERC after schematic edits. Always run DRC after layout edits. Always run both before manufacturing export.
 - **Native ERC/DRC (Phase 218):** The app now has a pure-Python ERC/DRC engine (`native_erc.py`, `native_drc.py`) that replaces kicad-cli for App Store sandboxed builds. 18 checks + 50 DFM checks. Batch tested against 50 real schematics: 100% pass rate vs kicad-cli. kicad-cli remains as a dev backstop for comparison.
 - **Out-of-scope findings must be tracked.** If you find an issue but it's not in the current task, create a Bead with labels "out-of-scope" before continuing.
-- **Use kicad-agent operations, not raw file edits.** Never directly edit .kicad_sch or .kicad_pcb files with text tools. Use the operation executor for safe AST mutations.
+- **Use volta operations, not raw file edits.** Never directly edit .kicad_sch or .kicad_pcb files with text tools. Use the operation executor for safe AST mutations.
 - **3D renders for visual review.** Use `kicad-cli pcb render` to generate PNG/JPEG images for visual inspection instead of asking the user to open KiCad.
 
 ## Project Structure
 
 ```
-src/kicad_agent/
+src/volta/
   cli.py           — CLI entry point
   context.py       — Project context loading
   handler.py       — Operation dispatch
@@ -201,16 +201,16 @@ skills/            — Codex skill definitions
 
 | I want to... | Command |
 |-------------|---------|
-| Edit a KiCad file | `/kicad-agent '<json operation>'` |
+| Edit a KiCad file | `/volta '<json operation>'` |
 | Run ERC | `kicad-cli sch erc <file.kicad_sch>` |
 | Run DRC | `kicad-cli pcb drc <file.kicad_pcb>` |
 | Export Gerbers | `kicad-cli pcb export gerbers <file.kicad_pcb> -o gerbers/` |
 | 3D render | `kicad-cli pcb render <file.kicad_pcb> -o render.png --rotate "-45,0,45"` |
 | Export schematic PDF | `kicad-cli sch export pdf <file.kicad_sch> -o sch.pdf` |
-| Analyze with AI model | `/kicad-agent analyze <file.kicad_pcb>` |
-| Check project status | `/kicad-agent status` |
-| Get project context | `/kicad-agent context` |
-| View operations help | `/kicad-agent help` |
+| Analyze with AI model | `/volta analyze <file.kicad_pcb>` |
+| Check project status | `/volta status` |
+| Get project context | `/volta context` |
+| View operations help | `/volta help` |
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:970c3bf2 -->
 ## Beads Issue Tracker

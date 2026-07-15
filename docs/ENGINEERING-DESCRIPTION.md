@@ -1,14 +1,14 @@
-# kicad-agent — Engineering Description
+# volta — Engineering Description
 
-**For engineering teams evaluating kicad-agent as a tool, integration target, or contribution base.**
+**For engineering teams evaluating volta as a tool, integration target, or contribution base.**
 
 Version: v6.0 (2026-07-14)
-Repository: `kicad-agent` (monorepo)
+Repository: `volta` (monorepo)
 Audience: EDA-tooling engineers, ML engineers, IDE/UI engineers, PCB designers with software interests.
 
 ---
 
-## What kicad-agent is
+## What volta is
 
 A **dual-layer system** that turns natural-language circuit intent into validated KiCad schematics, then hands the schematic off to a human for placement/routing and a fab house for manufacturing.
 
@@ -130,14 +130,14 @@ The cost is verbosity (the LLM emits multi-op JSON), but models handle this well
 - **Freerouting integration** — DSN/SES exchange for serious routing jobs
 - **Vendor DRC profiles** — JLCPCB, PCBWay, AISLER (2/4/6/8L), OSH Park, Advanced Circuits, General
 - **Manufacturer handoff** — single `build_handoff_export(vendor=...)` produces complete zip
-- **MCP server** — exposes `kicad-component-search` and `kicad-agent-edit` for IDE integration
+- **MCP server** — exposes `kicad-component-search` and `volta-edit` for IDE integration
 - **CLI** — 26 subcommands, see `FEATURE-INVENTORY.md` §5.1
 
 ### Models
 
 - **Local MLX** — Qwen 2.5 0.5B (bundled), Gemma 4 12B V2 (when downloaded), custom adapters
 - **Cloud** — Anthropic, OpenAI-compatible, Gemini, Ollama (any provider speaking the OpenAI streaming protocol)
-- **BYOK** — keys stored in macOS Keychain, never sent to kicad-agent
+- **BYOK** — keys stored in macOS Keychain, never sent to volta
 - **Cost ledger** — per-message token count + estimated USD, persisted in SwiftData
 
 ### Training infrastructure
@@ -174,7 +174,7 @@ We do not currently ship:
 
 ```python
 # Spawn the daemon from any Python tool
-from kicad_agent.daemon import DaemonClient
+from volta.daemon import DaemonClient
 
 with DaemonClient() as daemon:
     result = daemon.op("add_wire", {
@@ -190,8 +190,8 @@ Or via the MCP server:
 ```json
 {
   "mcpServers": {
-    "kicad-agent": {
-      "command": "kicad-agent",
+    "volta": {
+      "command": "volta",
       "args": ["component-search"]
     }
   }
@@ -202,7 +202,7 @@ Or via the MCP server:
 
 ```python
 # Training loop with our SFT trainer
-from kicad_agent.training import VoltaSFT, load_corpus
+from volta.training import VoltaSFT, load_corpus
 
 corpus = load_corpus("volta-v3", split="train", level="L1")
 model = VoltaSFT(base="google/gemma-4-12b-it", rank=64, alpha=128)
@@ -243,9 +243,9 @@ The daemon exposes a JSON-lines IPC channel. A minimal client is ~80 LOC in any 
 ## Repo layout
 
 ```
-kicad-agent/
+volta/
 ├── macos-app/                    # Swift 6.2 / SwiftUI app
-│   ├── Sources/KiCadAgent/
+│   ├── Sources/Volta/
 │   │   ├── Views/                # SwiftUI views
 │   │   ├── Parsing/              # Volta engine (op registry)
 │   │   ├── Validation/           # NativeERC, NativeDRC
@@ -253,8 +253,8 @@ kicad-agent/
 │   │   ├── IPC/                  # DaemonMessenger
 │   │   └── State/                # SwiftData persistence
 │   └── Tests/                    # Swift tests
-├── kicad-agent-0.1.0/            # Python daemon + training
-│   ├── src/kicad_agent/
+├── volta-0.1.0/            # Python daemon + training
+│   ├── src/volta/
 │   │   ├── handler.py            # IPC dispatcher
 │   │   ├── ops/                  # Operation implementations
 │   │   ├── validation/           # native_erc.py, native_drc.py
@@ -282,10 +282,10 @@ kicad-agent/
 
 ## Open questions for engineering teams
 
-If you're evaluating kicad-agent, these are the questions we can't answer for you:
+If you're evaluating volta, these are the questions we can't answer for you:
 
 1. **What's your typical board complexity?** (component count, layer count, signal speed) — tells you whether our DRC/ERC rules are sufficient.
 2. **What fab house?** — we have first-class profiles for JLCPCB/PCBWay/AISLER/OSH Park; others use the General profile.
 3. **What's your model policy?** — local MLX is private but slower; cloud is faster but your prompts go to Anthropic/OpenAI.
 4. **What's your team size?** — multi-user collaboration is not yet shipped; we recommend per-developer local installs.
-5. **What's your EDA baseline?** — if you already pay for Altium, kicad-agent is a sketching tool, not a replacement. If you're on KiCad, kicad-agent is an accelerator.
+5. **What's your EDA baseline?** — if you already pay for Altium, volta is a sketching tool, not a replacement. If you're on KiCad, volta is an accelerator.

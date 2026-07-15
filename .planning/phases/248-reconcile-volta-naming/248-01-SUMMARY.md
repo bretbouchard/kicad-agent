@@ -6,7 +6,7 @@
 
 ## What shipped
 
-- Symlink `volta-12b-v2 → /Volumes/Storage/models/kicad-agent/adapters/kicad-vision-v2` verified intact
+- Symlink `volta-12b-v2 → /Volumes/Storage/models/volta/adapters/kicad-vision-v2` verified intact
 - Adapter config verified against Phase 245 spec
 - Canonical paths documented in `CLAUDE.md`
 
@@ -26,7 +26,7 @@
 | Use case | Path |
 |----------|------|
 | Repo symlink | `volta-12b-v2` (in repo root) |
-| Storage target | `/Volumes/Storage/models/kicad-agent/adapters/kicad-vision-v2` |
+| Storage target | `/Volumes/Storage/models/volta/adapters/kicad-vision-v2` |
 | HuggingFace repo | `bretbouchard/volta-pcb-adapter-v2` |
 | App local cache | `~/Library/Application Support/VoltaPCB/models/volta-pcb-adapter-v2/` |
 

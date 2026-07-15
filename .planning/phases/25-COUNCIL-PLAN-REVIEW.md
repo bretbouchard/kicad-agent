@@ -169,7 +169,7 @@ Verify whether `uuid` is already imported in create_file.py. If not, add `import
 The plan says "Add the `_escape_sexpr_value` helper if it does not already exist in create_file.py." Codebase analysis shows `_escape_sexpr_value` exists in `pcb_ir.py` (line 675) but NOT in `create_file.py`. The plan's Step 6 shows defining a local `_escape_sexpr_value` function, which is correct, but it should import from the canonical location rather than defining a duplicate.
 
 **Recommendation:**
-Import `_escape_sexpr_value` from `kicad_agent.ir.pcb_ir` rather than defining a local copy. Duplicate implementations risk diverging over time (Pitfall 15 -- schema-prompt mismatch pattern applies here to code duplication).
+Import `_escape_sexpr_value` from `volta.ir.pcb_ir` rather than defining a local copy. Duplicate implementations risk diverging over time (Pitfall 15 -- schema-prompt mismatch pattern applies here to code duplication).
 
 ---
 
@@ -233,9 +233,9 @@ This is a codebase accuracy issue, not a design issue. The intent is correct (PI
 **Severity:** MEDIUM
 
 **Problem:**
-The navigate_hierarchy implementation calls `parse_schematic(sub_path)` but does not specify where this import comes from. The plan says "Import `parse_schematic` at the top of the file (lazy import inside the function is also fine)" but the file is `src/kicad_agent/ops/sheet_ops.py`, not a parser module. The correct import path is `from kicad_agent.parser import parse_schematic`.
+The navigate_hierarchy implementation calls `parse_schematic(sub_path)` but does not specify where this import comes from. The plan says "Import `parse_schematic` at the top of the file (lazy import inside the function is also fine)" but the file is `src/volta/ops/sheet_ops.py`, not a parser module. The correct import path is `from volta.parser import parse_schematic`.
 
-Similarly, `SchematicIR` is used without specifying the import: `from kicad_agent.ir.schematic_ir import SchematicIR`.
+Similarly, `SchematicIR` is used without specifying the import: `from volta.ir.schematic_ir import SchematicIR`.
 
 **Recommendation:**
 Specify all imports explicitly in the plan. Every file reference should include the full import path.
@@ -318,9 +318,9 @@ Add a design decision note to the Plan 29-01 context section:
 **Severity:** MEDIUM
 
 **Problem:**
-Plan 25-01 says to add `_validate_sexpr_safe_string` validator on the uuid field, and Plan 28-01 says to apply it to `pin_name` and `sheet_name`. Both reference importing it from `kicad_agent.ops.schema`. This is correct based on the codebase (`_validate_sexpr_safe_string` is defined in schema.py line 59). However, the `_schema_remove.py` plan does not show the actual import statement for this validator. It should explicitly show:
+Plan 25-01 says to add `_validate_sexpr_safe_string` validator on the uuid field, and Plan 28-01 says to apply it to `pin_name` and `sheet_name`. Both reference importing it from `volta.ops.schema`. This is correct based on the codebase (`_validate_sexpr_safe_string` is defined in schema.py line 59). However, the `_schema_remove.py` plan does not show the actual import statement for this validator. It should explicitly show:
 ```python
-from kicad_agent.ops.schema import _validate_sexpr_safe_string
+from volta.ops.schema import _validate_sexpr_safe_string
 ```
 
 This is a plan clarity issue, not a code bug. But during autonomous execution, the agent might miss the import.

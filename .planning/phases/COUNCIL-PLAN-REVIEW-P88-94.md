@@ -9,7 +9,7 @@
 
 ## Stack Assessment
 
-- **Project Type**: Python (kicad-agent -- structural KiCad editing)
+- **Project Type**: Python (volta -- structural KiCad editing)
 - **Core Framework**: Pydantic models, S-expression parsing, KiCad 10+ CLI
 - **Gate Infrastructure**: Established (Phase 85) -- GateResult, GateDefinition, GateRunner, register_gate()
 - **Existing Gates**: pre_pcb_schematic, schematic_intent (Phase 86), transfer_contract (Phase 87)
@@ -213,7 +213,7 @@ register_gate(
 **File**: Plan step 1, handle_get_constraints
 **Location**: 88-02-PLAN.md:45
 
-"reads .kicad_dru, returns DesignConstraints" -- but reading a .kicad_dru file and reverse-engineering DesignConstraints is non-trivial. The .kicad_dru contains net classes and design rules, not the original constraint schema. The plan should specify the reverse mapping or note that GetConstraintsOp returns the last-set constraints from a sidecar file (e.g., `.kicad_agent/constraints.json`).
+"reads .kicad_dru, returns DesignConstraints" -- but reading a .kicad_dru file and reverse-engineering DesignConstraints is non-trivial. The .kicad_dru contains net classes and design rules, not the original constraint schema. The plan should specify the reverse mapping or note that GetConstraintsOp returns the last-set constraints from a sidecar file (e.g., `.volta/constraints.json`).
 
 **Fix**: Specify whether GetConstraintsOp reads from `.kicad_dru` (requires reverse mapping) or from a persisted constraint file. Recommend the latter for reliability.
 
@@ -572,7 +572,7 @@ Creating 6 valid KiCad fixture boards (each with .kicad_sch + .kicad_pcb + expec
 
 The plan estimates this as a single phase with "20+ integration tests" but does not acknowledge the complexity of creating these fixtures.
 
-**Fix**: Add a note that fixture boards may be created using the kicad-agent operation pipeline (building schematics programmatically via operations) rather than hand-authoring S-expressions. Add a step to verify fixtures pass ERC/DRC before integration tests run.
+**Fix**: Add a note that fixture boards may be created using the volta operation pipeline (building schematics programmatically via operations) rather than hand-authoring S-expressions. Add a step to verify fixtures pass ERC/DRC before integration tests run.
 
 #### 93-H2 (HIGH): Repair Loop Integration Test Cannot Work Without Fix Providers
 
@@ -636,7 +636,7 @@ The parametrized test pattern `@pytest.mark.parametrize("board", ALL_BOARDS)` is
 
 #### 94-H1 (HIGH): CLI Status Enhancement Scope Underestimated
 
-**File**: Plan step 2, Enhance `kicad-agent status`
+**File**: Plan step 2, Enhance `volta status`
 **Location**: 94-01-PLAN.md:49-54
 
 The existing `handle_gate_status` (gate_handlers.py:69-99) already returns current stage and registered gates. The plan says "Enhance" but the existing code already does much of what the plan describes. The plan should specify exactly what changes are needed beyond what exists.

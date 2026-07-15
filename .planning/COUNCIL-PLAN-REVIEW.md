@@ -35,7 +35,7 @@ Round-trip integration tests with real .kicad_pcb fixtures. `kicad-cli pcb drc` 
 
 # COUNCIL-PLAN-REVIEW: Routing Overhaul — Phases 103-106
 
-**Plan:** `/Users/bretbouchard/apps/kicad-agent/plans/routing-overhaul-phases-103-106.md`
+**Plan:** `/Users/bretbouchard/apps/volta/plans/routing-overhaul-phases-103-106.md`
 **Verdict:** APPROVE WITH CONDITIONS (3 conditions)
 **Date:** 2026-07-02
 **Phases:** 103 (Foundation), 104 (Diagnosis), 105 (Negotiation), 106 (Placement-Advisor)
@@ -206,7 +206,7 @@ The Council independently verified every file:line citation in §3 of the plan a
 # COUNCIL-PLAN-REVIEW: Phase 156 — SKIDL Converter
 
 **Plan:** `.planning/phases/156-skidl-converter/PLAN.md`
-**Implementation:** `src/kicad_agent/circuit_ir/` (9 modules, 33 tests passing)
+**Implementation:** `src/volta/circuit_ir/` (9 modules, 33 tests passing)
 **Verdict:** APPROVE WITH CONDITIONS (6 conditions — 2 BLOCKING)
 **Date:** 2026-07-03
 **Phases:** 156 (SKIDL Converter) → 157 (Floor Planner)
@@ -217,7 +217,7 @@ The Council independently verified every file:line citation in §3 of the plan a
 
 The Council **approves with conditions**. The core engineering of Phase 156 is sound: the KiCad→SKIDL read-back path (`build_circuit`) genuinely composes the proven `extract_nets` + `SchematicIR` primitives, the immutable `CircuitIR` types are clean and frozen, the L1/L2 emission modes work as specified, the import guard for pitfall #6 (`KICAD_SYMBOL_DIR`) is correctly implemented, and the round-trip proof (`build_circuit` → `circuit_to_kicad_sch`) is demonstrated on a real fixture. The plan's "compose, don't rebuild" principle was honored for the read-back path.
 
-However, the phase **declares DONE in ways that do not match the Definition of Done in the PLAN.md.** The most serious gap: the `convert_to_skidl` op handler does **not** call `build_circuit()` — it delegates to a legacy `KiCadToSkidlConverter` that shells out to the `kicad-agent` CLI via `subprocess` and parses the result with `eval()`. The proven in-process pipeline the plan mandates is bypassed in the only integration path that users actually invoke. This is a load-bearing architectural divergence, not a cosmetic one.
+However, the phase **declares DONE in ways that do not match the Definition of Done in the PLAN.md.** The most serious gap: the `convert_to_skidl` op handler does **not** call `build_circuit()` — it delegates to a legacy `KiCadToSkidlConverter` that shells out to the `volta` CLI via `subprocess` and parses the result with `eval()`. The proven in-process pipeline the plan mandates is bypassed in the only integration path that users actually invoke. This is a load-bearing architectural divergence, not a cosmetic one.
 
 The conditions split into **blocking** (C-01, C-02 — the phase does not meet its own acceptance criteria and breaks SLC compliance tests) and **non-blocking** (C-03–C-06 — gaps to close but they don't make the deliverable unsafe to build on). All six must be met before Phase 157 ships; only the two blocking ones must be met to *start* Phase 157.
 
@@ -246,7 +246,7 @@ The conditions split into **blocking** (C-01, C-02 — the phase does not meet i
 - `ops/handlers/circuit_ir.py:21` — registered in `_CIRCUIT_IR_HANDLERS` which is **never dispatched** by the executor (dead code)
 
 Both delegate to `KiCadToSkidlConverter.convert()` (`converter.py:23`), which:
-1. Shells out to the `kicad-agent` CLI via `subprocess.run(["kicad-agent", json.dumps({...})])` (line 45-49) — re-invoking the whole agent to call one op
+1. Shells out to the `volta` CLI via `subprocess.run(["volta", json.dumps({...})])` (line 45-49) — re-invoking the whole agent to call one op
 2. Parses stdout with a regex and **`eval()`s the captured dict** (line 61: `nets_data = eval(nets_match.group(1))`) — arbitrary code execution on command output
 3. Uses a separate `_extract_components` and the legacy `SkidlEmitter` (emitter.py), bypassing the tested `build_circuit` + `skidl_emitter.emit_build_py` pipeline entirely
 
@@ -272,7 +272,7 @@ Adding `ConvertToSkidlOp` to the Operation union bumped the schema op count from
 
 **`ConvertFromSkidlOp` is a phantom op.** It exists in `ops/_schema_circuit.py:31` but:
 - Is **not imported** into `schema.py`'s Operation union (grep confirms: `ConvertFromSkidlOp` appears nowhere in schema.py)
-- Has **no registered handler** (grep for `convert_from_skidl` across `src/kicad_agent/` returns only the schema class definition)
+- Has **no registered handler** (grep for `convert_from_skidl` across `src/volta/` returns only the schema class definition)
 - Is **not in `SELF_SERIALIZING_OPS`** (the plan's W6-5 mandates this)
 - Has **no test** exercising the op (the round-trip test in `test_hierarchy_and_reverse.py` calls `circuit_to_kicad_sch()` directly, not via the op)
 
@@ -282,7 +282,7 @@ This fails the "no phantom operations" SLC criterion that the project has enforc
 
 ### C-04 [MEDIUM]: Declare `skidl` in `pyproject.toml` dependencies
 
-**The plan's DoD requires** `skidl>=2.2.3` in `pyproject.toml`. The Risks section explicitly calls this out: *"skidl not in pyproject.toml (confirmed: only spicelib declared, skidl installed but undeclared)"*. **Verified:** `pyproject.toml:24` has `spicelib>=1.5.1` but no `skidl`. The package imports successfully only because it's installed in the dev environment. Any fresh install / CI run / new contributor will hit an `ImportError` on `import kicad_agent.circuit_ir`.
+**The plan's DoD requires** `skidl>=2.2.3` in `pyproject.toml`. The Risks section explicitly calls this out: *"skidl not in pyproject.toml (confirmed: only spicelib declared, skidl installed but undeclared)"*. **Verified:** `pyproject.toml:24` has `spicelib>=1.5.1` but no `skidl`. The package imports successfully only because it's installed in the dev environment. Any fresh install / CI run / new contributor will hit an `ImportError` on `import volta.circuit_ir`.
 
 **Condition:** Add `skidl>=2.2.3` to `pyproject.toml` dependencies. (F-07)
 
@@ -639,8 +639,8 @@ See §6 (Prioritized Remediation).
 
 **Reproduction (executed in this review):**
 ```python
-from kicad_agent.spice.testbench import generate_ac_testbench
-from kicad_agent.spice.ngspice_runner import run_simulation
+from volta.spice.testbench import generate_ac_testbench
+from volta.spice.ngspice_runner import run_simulation
 cir = generate_ac_testbench(netlist='R1 in out 1000\nC1 out 0 1u', input_node='in', output_node='out')
 r = run_simulation(cir, 'rc_test', analyses=['ac'])
 # → stderr: "ngspice exited 1 for rc_test"

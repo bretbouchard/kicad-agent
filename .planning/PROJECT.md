@@ -1,4 +1,4 @@
-# kicad-agent
+# volta
 
 ## What This Is
 
@@ -70,7 +70,7 @@ Always active. Before writing code, climb the YAGNI ladder: does this need to ex
 - [ ] Net consistency: verify netlist consistency between schematic and PCB
 - [ ] Structural diffs: syntax-aware diffs for S-expressions
 - [ ] Round-trip fidelity: parse → modify → serialize produces valid KiCad files
-- [ ] GSD Skill integration: invoke from any KiCad project via /kicad-agent
+- [ ] GSD Skill integration: invoke from any KiCad project via /volta
 - [ ] Operation schema: well-defined JSON operation format for AI-to-tool communication
 
 ### Out of Scope
@@ -88,7 +88,7 @@ Always active. Before writing code, climb the YAGNI ladder: does this need to ex
 - The fix is constrained structural editing — the LLM emits operations, never raw text
 - This tool integrates with the existing GSD/AI stack (Council of Ricks, kicad-rick agent, etc.)
 - Existing tools: kiutils (Python), sexpdata (Python), kicad-cli for validation, difftastic for diffs
-- The tool lives at ~/apps/kicad-agent/ (Python backend) with a skill definition at ~/.claude/skills/kicad-agent/
+- The tool lives at ~/apps/volta/ (Python backend) with a skill definition at ~/.claude/skills/volta/
 
 ## Current Milestone: v4.1 Stage-Safe PCB Flow
 
@@ -126,7 +126,7 @@ Complete routing stack production-ready:
 
 ## Previous Milestone: v2.3 mcp-server
 
-**Goal:** Expose all 57 kicad-agent operations as MCP tools so any AI agent (Claude, Cursor, etc.) can invoke KiCad file edits directly.
+**Goal:** Expose all 57 volta operations as MCP tools so any AI agent (Claude, Cursor, etc.) can invoke KiCad file edits directly.
 
 **What exists:** Component-search MCP server (4 tools, stdio transport) — only covers JLCPCB search, not file editing.
 
@@ -241,7 +241,7 @@ All v6.0 phase planning, execution, Council gates, and verification loops run ag
 **Biggest risks:** Track E (event-sourced memory + time-travel) and Track F (generative transform correctness). Both are differentiators — if they fail, the app is just another chat UI.
 
 **Dependencies:**
-- Existing kicad-agent Python library (142 ops) — bundled as daemon
+- Existing volta Python library (142 ops) — bundled as daemon
 - Existing Obdurate Runtime design (extending `routing/audit.py` app-wide)
 - v5.0 SKIDL/SPICE/training work — feeds Track F generative pipeline
 - Existing routing stack (Phases 98-101) — exposed via MCP tools

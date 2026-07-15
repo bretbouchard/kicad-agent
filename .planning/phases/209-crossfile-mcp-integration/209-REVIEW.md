@@ -16,9 +16,9 @@ verdict: PASS
 
 | File | Type | LOC Δ |
 |------|------|-------|
-| `src/kicad_agent/manufacturing/manufacturer_client.py` | new | +105 |
-| `src/kicad_agent/cli.py` | modified | +223 |
-| `src/kicad_agent/crossfile/project_context.py` | modified | +16 |
+| `src/volta/manufacturing/manufacturer_client.py` | new | +105 |
+| `src/volta/cli.py` | modified | +223 |
+| `src/volta/crossfile/project_context.py` | modified | +16 |
 | `tests/test_manufacturer_client.py` | new | +104 |
 | `tests/test_cli_integration.py` | new | +250 |
 | `tests/test_mcp_tools.py` | new | +45 |
@@ -83,7 +83,7 @@ builds_dir = _builds_dir_path if _builds_dir_path.is_dir() else None
 
 ## 4. MCP auto-exposure — zero edit_server.py changes (PASS)
 
-`grep -c "def _generate_operation_tools" src/kicad_agent/mcp/edit_server.py` is unchanged from pre-phase (1 match, unedited). The auto-generation reads the `Operation` discriminated union, so all 9 v7.0 ops surface as MCP tools for free.
+`grep -c "def _generate_operation_tools" src/volta/mcp/edit_server.py` is unchanged from pre-phase (1 match, unedited). The auto-generation reads the `Operation` discriminated union, so all 9 v7.0 ops surface as MCP tools for free.
 
 Verification command prints `mcp-exposure-ok 163 tools total` (160 registered + 3 schema-only union variants). `tests/test_mcp_tools.py` locks this as a regression guard — asserts all 9 op_types present and `len(tools) >= 163`.
 
@@ -91,7 +91,7 @@ Verification command prints `mcp-exposure-ok 163 tools total` (160 registered + 
 
 **`test_manufacturer_client.py`:** Import-purity via `sys.modules` **delta** (not global absence) — robust across full-suite runs where httpx may be loaded by other tests (sound deviation from a naive global-absence check). Frozen-dataclass, abstract-instantiation, and stub-subclass coverage all present.
 
-**`test_cli_integration.py`:** Uses the in-process `main([...])` + `capsys` + `monkeypatch` pattern. The monkeypatch seam is **correct**: `_dispatch_op_and_print` does `from kicad_agent.handler import handle_operation` at call time, so patching `kicad_agent.handler.handle_operation` is the complete seam (the local re-import re-reads the patched module attribute). Verified empirically — all dispatch tests pass and assert the captured op dict's `op_type`, `target_file`, and key kwargs.
+**`test_cli_integration.py`:** Uses the in-process `main([...])` + `capsys` + `monkeypatch` pattern. The monkeypatch seam is **correct**: `_dispatch_op_and_print` does `from volta.handler import handle_operation` at call time, so patching `volta.handler.handle_operation` is the complete seam (the local re-import re-reads the patched module attribute). Verified empirically — all dispatch tests pass and assert the captured op dict's `op_type`, `target_file`, and key kwargs.
 
 **`test_mcp_tools.py`:** Minimal regression guard, as the plan prescribed.
 

@@ -1,4 +1,4 @@
-# kicad-agent — Product Description
+# volta — Product Description
 
 ## For App Store / Consumer-Facing
 
@@ -8,9 +8,9 @@ Design real circuit boards by describing what you want. Type "I need a preamp wi
 
 ### Full Description
 
-**kicad-agent turns words into circuit boards.**
+**volta turns words into circuit boards.**
 
-Describe your project in plain English — an LED blinker, a sensor breakout, a guitar pedal, a motor controller — and kicad-agent designs the circuit, lays out the PCB, and generates manufacturing files you can send to any fab house.
+Describe your project in plain English — an LED blinker, a sensor breakout, a guitar pedal, a motor controller — and volta designs the circuit, lays out the PCB, and generates manufacturing files you can send to any fab house.
 
 **No schematic editor. No PCB layout tool. No learning curve.**
 
@@ -19,7 +19,7 @@ Just describe what you want:
 - *"Design a microphone preamp with 40dB gain and phantom power"*
 - *"Make a 4-channel LED driver for a grow light with PWM dimming"*
 
-kicad-agent handles everything:
+volta handles everything:
 1. **Circuit design** — selects components, calculates values, wires them together
 2. **Schematic** — generates a proper KiCad schematic with ERC validation
 3. **SPICE simulation** — verifies analog performance (gain, bandwidth, noise)
@@ -36,7 +36,7 @@ kicad-agent handles everything:
 
 **What makes it different?**
 
-Unlike Tinkercad (too simple) or Altium (too complex), kicad-agent sits in the sweet spot: real manufacturable PCBs without the EDA learning curve. It uses SKIDL — a Python-based circuit description language — as its "thinking language," so circuits are programmable, version-controllable, and AI-readable.
+Unlike Tinkercad (too simple) or Altium (too complex), volta sits in the sweet spot: real manufacturable PCBs without the EDA learning curve. It uses SKIDL — a Python-based circuit description language — as its "thinking language," so circuits are programmable, version-controllable, and AI-readable.
 
 **Technical capabilities:**
 - Natural language → SKIDL code → KiCad schematic → PCB → Gerbers
@@ -53,7 +53,7 @@ Unlike Tinkercad (too simple) or Altium (too complex), kicad-agent sits in the s
 
 ### Executive Summary
 
-kicad-agent is an AI-native EDA platform that bridges natural language and KiCad's file format. It uses a three-layer architecture: NL → SKIDL (Python IR) → KiCad (S-expressions), with validation gates at every stage. The platform is built on 142+ atomic operations, a multimodal AI model (Gemma 4 12B), and a bidirectional KiCad↔SKIDL converter.
+volta is an AI-native EDA platform that bridges natural language and KiCad's file format. It uses a three-layer architecture: NL → SKIDL (Python IR) → KiCad (S-expressions), with validation gates at every stage. The platform is built on 142+ atomic operations, a multimodal AI model (Gemma 4 12B), and a bidirectional KiCad↔SKIDL converter.
 
 ### Architecture
 

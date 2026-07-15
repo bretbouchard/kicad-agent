@@ -4,7 +4,7 @@
 enforcement model -- validation rules that always produce the same result
 for the same input. This is not a legal warranty of PCB correctness.
 
-## What kicad-agent Guarantees (Deterministic)
+## What volta Guarantees (Deterministic)
 
 These checks always produce the same result for the same input. No AI
 model is involved.
@@ -40,7 +40,7 @@ between runs.
 ## How to Tell Which is Which
 
 1. **Gates are always deterministic.** If a check runs through the gate
-   system (`kicad-agent gate run ...`), it is deterministic.
+   system (`volta gate run ...`), it is deterministic.
 2. **Operations may use AI.** Operations like `auto_route` or `analyze`
    may invoke AI models. Check the operation documentation.
 3. **The audit trail is always truthful.** Gate results include an
@@ -51,7 +51,7 @@ between runs.
 Every gate run produces an audit trail:
 
 ```bash
-kicad-agent gate run manufacturing_readiness -p /path/to/project --json
+volta gate run manufacturing_readiness -p /path/to/project --json
 ```
 
 The `artifacts` array contains a JSON-encoded audit trail with

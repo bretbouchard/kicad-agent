@@ -1,6 +1,6 @@
 # FEATURE-007: Intelligent Auto-Routing with Obstacle Awareness
 
-**Issue:** kicad-agent-7
+**Issue:** volta-7
 **Priority:** P0 — blocks Phase 21.5 channel-strip-pcb completion
 **Date:** 2026-06-05
 **Status:** OPEN
@@ -367,8 +367,8 @@ Files to create/modify:
 
 - KNOWN_LIMITATIONS M-5: Auto-router single-layer only (FIXED — multi-layer exists)
 - KNOWN_LIMITATIONS L-13: Copper zone has no polygon outline (addressed in Sprint 2)
-- kicad-agent-6: update_pcb_from_schematic (CLOSED — provides net sync for routing input)
+- volta-6: update_pcb_from_schematic (CLOSED — provides net sync for routing input)
 
 ---
 
-*Feature request authored by kicad-agent team for analog-ecosystem Phase 21.5.*
+*Feature request authored by volta team for analog-ecosystem Phase 21.5.*

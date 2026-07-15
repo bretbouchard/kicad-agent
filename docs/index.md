@@ -1,4 +1,4 @@
-# kicad-agent
+# volta
 
 AI-safe structural editing of KiCad schematic, PCB, symbol library, and footprint files.
 
@@ -18,7 +18,7 @@ AI-safe structural editing of KiCad schematic, PCB, symbol library, and footprin
 ## Quick Install
 
 ```bash
-pip install kicad-agent
+pip install volta
 ```
 
 Requires Python 3.11+ and KiCad 10+ (for ERC/DRC validation).
@@ -27,13 +27,13 @@ Requires Python 3.11+ and KiCad 10+ (for ERC/DRC validation).
 
 ```bash
 # Print the operation JSON Schema
-kicad-agent --schema
+volta --schema
 
 # Add a component
-kicad-agent '{"root": {"op_type": "add_component", "target_file": "board.kicad_sch", "library_id": "Device:R_Small_US", "position": {"x": 50.0, "y": 30.0}}}'
+volta '{"root": {"op_type": "add_component", "target_file": "board.kicad_sch", "library_id": "Device:R_Small_US", "position": {"x": 50.0, "y": 30.0}}}'
 
 # Validate without executing
-kicad-agent --dry-run operation.json
+volta --dry-run operation.json
 ```
 
 ## Documentation
@@ -43,12 +43,12 @@ kicad-agent --dry-run operation.json
 - [API Reference](api/index.md) -- Auto-generated API docs from source
 - [Examples](examples/basic-operations.md) -- Walkthroughs with complete JSON operations
 - [KiCad Schematic Editor Reference](kicad_docs.md) -- Full KiCad 10.99 docs from PDF
-- [KiCad Agent Reference](kicad_agent_reference.md) -- Agent-centric distilled reference for schematic editing
+- [KiCad Agent Reference](volta_reference.md) -- Agent-centric distilled reference for schematic editing
 - [KiCad PCB Editor Agent Reference](pcb_editor_reference.md) -- Agent-centric distilled reference for PCB editing
 - [KiCad GerbView Agent Reference](gerbview_reference.md) -- Agent-centric distilled reference for Gerber viewing
 
 ## Links
 
-- [GitHub Repository](https://github.com/bretbouchard/kicad-agent)
-- [PyPI Package](https://pypi.org/project/kicad-agent/)
-- [Issue Tracker](https://github.com/bretbouchard/kicad-agent/issues)
+- [GitHub Repository](https://github.com/bretbouchard/volta)
+- [PyPI Package](https://pypi.org/project/volta/)
+- [Issue Tracker](https://github.com/bretbouchard/volta/issues)

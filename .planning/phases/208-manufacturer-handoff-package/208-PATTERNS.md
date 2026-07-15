@@ -1,16 +1,16 @@
 # Phase 208: Pattern Mapping — Manufacturer Handoff Package
 
 **Phase:** 208
-**Source root:** `src/kicad_agent/`
+**Source root:** `src/volta/`
 **Scope:** Handoff orchestrator, profile-driven BOM, manifest extension, `build_handoff_export` op, streaming zip.
 
 Each file below maps a target artifact to its **closest in-repo analog** with a verbatim excerpt and a note on what changes. Copy the shape, not the semantics.
 
 ---
 
-## FILE 1 (CREATE): `src/kicad_agent/manufacturing/handoff.py`
+## FILE 1 (CREATE): `src/volta/manufacturing/handoff.py`
 
-### Closest analog: `src/kicad_agent/ops/handlers/build.py` (`_handle_build_create`, lines 34-170)
+### Closest analog: `src/volta/ops/handlers/build.py` (`_handle_build_create`, lines 34-170)
 
 The handoff orchestrator is a larger pipeline but follows the same skeleton: resolve project_dir → reject traversal → re-parse via NativeParser → create build dir → produce artifacts → build manifest → serialize → return result dict. The `build_create` handler is the canonical "multi-step side-effecting pipeline that never touches the source .kicad_pcb" shape.
 
@@ -31,13 +31,13 @@ def _handle_build_create(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     import uuid
     from datetime import datetime, timezone
 
-    from kicad_agent.manufacturing.build import (
+    from volta.manufacturing.build import (
         Build,
         BuildStatus,
         _get_git_sha,
     )
-    from kicad_agent.parser.pcb_native_parser import NativeParser
-    from kicad_agent.validation.gates.manufacturing_manifest import (
+    from volta.parser.pcb_native_parser import NativeParser
+    from volta.validation.gates.manufacturing_manifest import (
         ManufacturingArtifact,
         ManufacturingManifest,
     )
@@ -105,7 +105,7 @@ def _handle_build_create(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
 - Step 10 transitions a `Build` to `HANDED_OFF` if one exists (optional).
 - The function returns a `HandoffResult` dataclass, not a dict (see FILE 1c).
 
-### Validation gate analog: `src/kicad_agent/ops/handlers/query.py` (`_handle_drc_vendor`, lines 88-127)
+### Validation gate analog: `src/volta/ops/handlers/query.py` (`_handle_drc_vendor`, lines 88-127)
 
 The validation step calls `run_drc`, `run_erc`, `run_vendor_drc` defensively. The `_handle_drc_vendor` handler shows the pattern for re-parsing via `NativeParser` and degrading gracefully when kicad-cli is absent.
 
@@ -123,9 +123,9 @@ def _handle_drc_vendor(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     """
     from dataclasses import asdict
 
-    from kicad_agent.dfm.profiles import load_profile
-    from kicad_agent.manufacturing.vendor_drc import run_vendor_drc
-    from kicad_agent.parser.pcb_native_parser import NativeParser
+    from volta.dfm.profiles import load_profile
+    from volta.manufacturing.vendor_drc import run_vendor_drc
+    from volta.parser.pcb_native_parser import NativeParser
 
     profile = load_profile(op.vendor)  # raises ValueError if unknown
     board = NativeParser.parse_pcb(file_path)
@@ -134,7 +134,7 @@ def _handle_drc_vendor(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     kicad_drc_result = None
     if op.run_kicad_drc:
         try:
-            from kicad_agent.validation.erc_drc import run_drc
+            from volta.validation.erc_drc import run_drc
             drc = run_drc(file_path)
             kicad_drc_result = {
                 "passed": drc.passed,
@@ -153,7 +153,7 @@ def _handle_drc_vendor(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
 
 ### Validation result classes to consume
 
-From `src/kicad_agent/validation/erc_drc.py:58-122`:
+From `src/volta/validation/erc_drc.py:58-122`:
 
 ```python
 @dataclass(frozen=True)
@@ -181,7 +181,7 @@ class DrcResult:
     error_message: Optional[str] = None
 ```
 
-From `src/kicad_agent/manufacturing/vendor_drc.py:31-53`:
+From `src/volta/manufacturing/vendor_drc.py:31-53`:
 
 ```python
 @dataclass(frozen=True)
@@ -235,12 +235,12 @@ with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
 
 ### FILE 1c: `HandoffResult` / `HandoffValidation` dataclasses
 
-Follow the frozen-dataclass pattern from `src/kicad_agent/manufacturing/build.py:54-80` (`Build`) and `src/kicad_agent/manufacturing/vendor_drc.py:31-53` (`VendorDrcResult`):
+Follow the frozen-dataclass pattern from `src/volta/manufacturing/build.py:54-80` (`Build`) and `src/volta/manufacturing/vendor_drc.py:31-53` (`VendorDrcResult`):
 
 ```python
 from dataclasses import dataclass
-from kicad_agent.manufacturing.build import Build
-from kicad_agent.validation.gates.manufacturing_manifest import ManufacturingManifest
+from volta.manufacturing.build import Build
+from volta.validation.gates.manufacturing_manifest import ManufacturingManifest
 
 
 @dataclass(frozen=True)
@@ -271,7 +271,7 @@ Use `atomic_write` (see FILE 5) to write a markdown string built from BoardSpec 
 
 ### `ManufacturingArtifact.from_file` pattern for each export
 
-From `src/kicad_agent/validation/gates/manufacturing_manifest.py:33-45`:
+From `src/volta/validation/gates/manufacturing_manifest.py:33-45`:
 
 ```python
 @staticmethod
@@ -304,7 +304,7 @@ The build system tests show the exact pattern for testing a side-effecting query
 ```python
 @pytest.fixture(autouse=True)
 def _clear_ir_registry():
-    from kicad_agent.ir.base import _clear_registry
+    from volta.ir.base import _clear_registry
     _clear_registry()
     yield
     _clear_registry()
@@ -334,9 +334,9 @@ def _create_pcb_with_title_block(tmpdir: Path, rev: str = "1.0") -> Path:
 
 def _build_ir(pcb_path: Path):
     """Parse PCB and build PcbIR (mimics executor setup)."""
-    from kicad_agent.parser.pcb_parser import parse_pcb
-    from kicad_agent.ir.pcb_ir import PcbIR
-    from kicad_agent.parser.uuid_extractor import extract_uuids
+    from volta.parser.pcb_parser import parse_pcb
+    from volta.ir.pcb_ir import PcbIR
+    from volta.parser.uuid_extractor import extract_uuids
     result = parse_pcb(pcb_path)
     uuid_map = extract_uuids(result.raw_content, "pcb")
     return PcbIR(_parse_result=result, _uuid_map=uuid_map)
@@ -358,8 +358,8 @@ def _make_artifact(name: str = "gerbers") -> ManufacturingArtifact:
 ```python
 def test_build_create_creates_directory(self, tmp_path: Path) -> None:
     """build_create creates builds/v*_*/ with manifest.json + build.json + snapshot."""
-    from kicad_agent.ops._schema_pcb import BuildCreateOp
-    from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+    from volta.ops._schema_pcb import BuildCreateOp
+    from volta.ops.handlers.query import _QUERY_HANDLERS
 
     pcb_path = _create_pcb_with_title_block(tmp_path, rev="1.0")
     ir = _build_ir(pcb_path)
@@ -401,7 +401,7 @@ def test_handoff_creates_zip(self, tmp_path, monkeypatch):
         f = output_dir / "board-F_Cu.gbr"
         f.write_text("dummy gerber")
         return ExportResult(success=True, output_dir=output_dir, files=(f,), command="stub")
-    monkeypatch.setattr("kicad_agent.manufacturing.handoff.export_gerber", _fake_export_gerber)
+    monkeypatch.setattr("volta.manufacturing.handoff.export_gerber", _fake_export_gerber)
     # ... similarly stub run_drc to return a passing DrcResult ...
     result = export_handoff(pcb_path=pcb_path, sch_path=None, project_dir=tmp_path, skip_validation=True)
     assert result.success
@@ -409,7 +409,7 @@ def test_handoff_creates_zip(self, tmp_path, monkeypatch):
 
 ---
 
-## FILE 3 (MODIFY): `src/kicad_agent/export/bom.py` — add `export_bom_profile`
+## FILE 3 (MODIFY): `src/volta/export/bom.py` — add `export_bom_profile`
 
 ### Closest analog: `export_jlcpcb_bom` in the same file (`bom.py:311-375`)
 
@@ -508,7 +508,7 @@ def export_bom_profile(
 
 ```python
 def export_jlcpcb_bom(schematic_path, output_path=None):
-    from kicad_agent.dfm.profiles import load_profile
+    from volta.dfm.profiles import load_profile
     profile = load_profile("jlcpcb")
     if output_path is None:
         output_path = schematic_path.parent / f"{schematic_path.stem}_JLCPCB-BOM.csv"
@@ -518,12 +518,12 @@ def export_jlcpcb_bom(schematic_path, output_path=None):
 **Import to add at top of `bom.py`:**
 
 ```python
-from kicad_agent.dfm.profiles import ManufacturerProfile
+from volta.dfm.profiles import ManufacturerProfile
 ```
 
 ---
 
-## FILE 4 (MODIFY): `src/kicad_agent/dfm/profiles.py` — add output format spec fields
+## FILE 4 (MODIFY): `src/volta/dfm/profiles.py` — add output format spec fields
 
 ### Closest analog: the existing `ManufacturerProfile` class in the same file (`profiles.py:26-57`)
 
@@ -598,7 +598,7 @@ All other built-in profiles (`_PCBWAY_STANDARD`, `_OSH_PARK`, `_GENERIC_CONSERVA
 
 ---
 
-## FILE 5 (MODIFY): `src/kicad_agent/validation/gates/manufacturing_manifest.py` — add validation result fields
+## FILE 5 (MODIFY): `src/volta/validation/gates/manufacturing_manifest.py` — add validation result fields
 
 ### Closest analog: the existing `ManufacturingManifest` class in the same file (`manufacturing_manifest.py:75-134`)
 
@@ -699,7 +699,7 @@ The `Optional` type is already imported at line 17: `from typing import Any, Opt
 
 ---
 
-## FILE 6 (MODIFY): `src/kicad_agent/ops/_schema_pcb.py` — add `BuildHandoffExportOp`
+## FILE 6 (MODIFY): `src/volta/ops/_schema_pcb.py` — add `BuildHandoffExportOp`
 
 ### Closest analog: `BuildCreateOp` in the same file (`_schema_pcb.py:1288-1312`)
 
@@ -787,7 +787,7 @@ The `vendor` field uses `pattern=r"^[a-z0-9_]+$"` — identical to `DrcVendorOp.
 
 ---
 
-## FILE 7 (MODIFY): `src/kicad_agent/ops/schema.py` — add to Operation union
+## FILE 7 (MODIFY): `src/volta/ops/schema.py` — add to Operation union
 
 ### Closest analog: the Phase 207 import block + union additions
 
@@ -825,7 +825,7 @@ The `vendor` field uses `pattern=r"^[a-z0-9_]+$"` — identical to `DrcVendorOp.
 
 ---
 
-## FILE 8 (MODIFY): `src/kicad_agent/ops/registry.py` — add `_RAW_CATALOG` entry
+## FILE 8 (MODIFY): `src/volta/ops/registry.py` — add `_RAW_CATALOG` entry
 
 ### Closest analog: the Phase 207 build entries (`registry.py:1462-1489`)
 
@@ -863,7 +863,7 @@ Note: `is_readonly: True` and `category: "query"` — same as `build_create` (CO
 
 ---
 
-## FILE 9 (MODIFY): `src/kicad_agent/ops/handlers/build.py` — add `build_handoff_export` handler
+## FILE 9 (MODIFY): `src/volta/ops/handlers/build.py` — add `build_handoff_export` handler
 
 ### Closest analog: `_handle_build_create` in the same file (`build.py:34-170`)
 
@@ -888,7 +888,7 @@ def _handle_build_handoff_export(op: Any, ir: PcbIR, file_path: Path) -> dict[st
     """
     from dataclasses import asdict
 
-    from kicad_agent.manufacturing.handoff import export_handoff, HandoffResult
+    from volta.manufacturing.handoff import export_handoff, HandoffResult
 
     # 1. Resolve project_dir + reject path traversal (threat model #1).
     if op.project_dir and ".." in Path(op.project_dir).parts:
@@ -970,7 +970,7 @@ The set currently has 44 entries (per the assertion `len(readonly) == len(expect
 
 ## Cross-cutting reference: `atomic_write` for readme/manifest persistence
 
-From `src/kicad_agent/io/atomic_write.py:15-43`:
+From `src/volta/io/atomic_write.py:15-43`:
 
 ```python
 def atomic_write(file_path: Path, content: str) -> None:
@@ -1007,7 +1007,7 @@ def atomic_write(file_path: Path, content: str) -> None:
 
 ## Cross-cutting reference: `load_board_spec` + `load_profile`
 
-From `src/kicad_agent/manufacturing/board_spec.py:67-72`:
+From `src/volta/manufacturing/board_spec.py:67-72`:
 
 ```python
 def load_board_spec(pcb_path: Path) -> BoardSpec | None:
@@ -1018,7 +1018,7 @@ def load_board_spec(pcb_path: Path) -> BoardSpec | None:
     return BoardSpec.model_validate_json(sidecar.read_text(encoding="utf-8"))
 ```
 
-From `src/kicad_agent/dfm/profiles.py:281-320`:
+From `src/volta/dfm/profiles.py:281-320`:
 
 ```python
 def load_profile(name_or_path: str) -> ManufacturerProfile:

@@ -104,11 +104,11 @@ The import path (`kiutils.items.schitems`) and field names (`instancePath`, `pag
 **Original problem:** `uuid.uuid4()` used in create_footprint handler without verifying import exists.
 
 **Revised plan (27-02, Task 1, Step 1, line 162):**
-> "Open `src/kicad_agent/ops/create_file.py`. Verify that `import uuid` is present at the top of the file. If it is missing, add it alongside the existing imports."
+> "Open `src/volta/ops/create_file.py`. Verify that `import uuid` is present at the top of the file. If it is missing, add it alongside the existing imports."
 
 The plan explicitly instructs the executor to verify the import exists and add it if missing.
 
-**Codebase verification:** `grep "import uuid" src/kicad_agent/ops/create_file.py` confirms `import uuid` is already present at line 17. The plan's verification step handles the case where it might not be present in future refactors.
+**Codebase verification:** `grep "import uuid" src/volta/ops/create_file.py` confirms `import uuid` is already present at line 17. The plan's verification step handles the case where it might not be present in future refactors.
 
 **Assessment:** RESOLVED. Explicit verification step added, and the import already exists in the codebase.
 
@@ -119,13 +119,13 @@ The plan explicitly instructs the executor to verify the import exists and add i
 **Original problem:** Plan suggested defining a local `_escape_sexpr_value` in create_file.py instead of importing from the canonical location in pcb_ir.py.
 
 **Revised plan (27-02, Task 1, Step 7, lines 284-288):**
-> "Import `_escape_sexpr_value` from its canonical location in `kicad_agent.ir.pcb_ir` rather than defining a local copy in create_file.py. Add this import near the top of the file with the other imports:
+> "Import `_escape_sexpr_value` from its canonical location in `volta.ir.pcb_ir` rather than defining a local copy in create_file.py. Add this import near the top of the file with the other imports:
 > ```python
-> from kicad_agent.ir.pcb_ir import _escape_sexpr_value
+> from volta.ir.pcb_ir import _escape_sexpr_value
 > ```
 > Do NOT define a local `_escape_sexpr_value` function in create_file.py -- use the imported version to avoid duplication and ensure consistency across the codebase."
 
-**Codebase verification:** `grep "def _escape_sexpr_value" src/kicad_agent/ir/pcb_ir.py` confirms the function exists at line 675.
+**Codebase verification:** `grep "def _escape_sexpr_value" src/volta/ir/pcb_ir.py` confirms the function exists at line 675.
 
 **Assessment:** RESOLVED. Import from canonical location, explicit prohibition against local duplication.
 
@@ -227,17 +227,17 @@ The schema is completely removed. Only the implemented operation ships. YAGNI ap
 
 **Revised plan (25-01, Task 1, lines 179-183):**
 ```python
-from kicad_agent.ops.schema import _validate_sexpr_safe_string
+from volta.ops.schema import _validate_sexpr_safe_string
 ```
 
 **Revised plan (28-01, Task 1, line 115):**
 ```python
-Import explicitly: `from kicad_agent.ops.schema import _validate_sexpr_safe_string` (Council F-CROSS-02: explicit import path required).
+Import explicitly: `from volta.ops.schema import _validate_sexpr_safe_string` (Council F-CROSS-02: explicit import path required).
 ```
 
 Both plans now explicitly show the import path. Plan 28-01 even references the Council finding by number.
 
-**Codebase verification:** `grep "_validate_sexpr_safe_string" src/kicad_agent/ops/schema.py` confirms the function exists at line 59 and is in `__all__` at line 327.
+**Codebase verification:** `grep "_validate_sexpr_safe_string" src/volta/ops/schema.py` confirms the function exists at line 59 and is in `__all__` at line 327.
 
 **Assessment:** RESOLVED. Explicit import statements with full paths in both affected plans.
 
@@ -295,15 +295,15 @@ Upper bound is now `le=20`, matching the `_MAX_WALK_LEVELS` pattern from PITFALL
 
 **Revised plan (28-02, Task 1, interfaces section, lines 106-109):**
 ```python
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.parser import parse_schematic
+from volta.ir.schematic_ir import SchematicIR
+from volta.parser import parse_schematic
 ```
 
 Plan 28-02 Task 2, Step 3 (lines 379-382) also explicitly specifies:
 > "Import `parse_schematic` and `SchematicIR` at the top of the file with explicit paths (Council F-28-02):
 > ```python
-> from kicad_agent.parser import parse_schematic
-> from kicad_agent.ir.schematic_ir import SchematicIR
+> from volta.parser import parse_schematic
+> from volta.ir.schematic_ir import SchematicIR
 > ```"
 
 Plan 28-03 Task 1 (line 124) also notes:
@@ -336,7 +336,7 @@ Plan 28-03 Task 1 (line 124) also notes:
 | F-27-01 | S-expression variable name bug | CRITICAL | RESOLVED | Plan 27-02 lines 229-233: `layer_strs` used consistently |
 | F-28-01 | Wrong kiutils class | HIGH | RESOLVED | Plan 28-02 lines 89-103, 198-211: `HierarchicalSheetInstance` from `kiutils.items.schitems` |
 | F-27-02 | Missing uuid import | HIGH | RESOLVED | Plan 27-02 line 162: explicit verification step; import exists at create_file.py:17 |
-| F-27-03 | Duplicate _escape_sexpr_value | HIGH | RESOLVED | Plan 27-02 lines 284-288: import from `kicad_agent.ir.pcb_ir` |
+| F-27-03 | Duplicate _escape_sexpr_value | HIGH | RESOLVED | Plan 27-02 lines 284-288: import from `volta.ir.pcb_ir` |
 | F-CROSS-01 | D-03 undocumented | HIGH | RESOLVED | Plan 29-01 lines 60-65: design decision note in context |
 | F-25-02 | Float comparison tolerance | MEDIUM | RESOLVED | Plan 25-01 lines 296-333: `tolerance: float = 0.0001` parameter |
 | F-26-01 | source/target list length | MEDIUM | RESOLVED | Plan 26-01 lines 155-156: `min_length=2, max_length=2` |

@@ -49,9 +49,9 @@ The executing agent MUST verify the following BEFORE marking Phase 247 complete:
 | Artifact | Will Exist At | Verification Command |
 |----------|---------------|----------------------|
 | `triage.md` (32 rows) | End of Task 1 | `wc -l .planning/phases/247-gap-closure-vol11/triage.md` returns ≥ 32 |
-| A6 deleted | End of Task 2 | `test ! -f macos-app/Sources/KiCadAgent/Views/Onboarding/KiCadInstallView.swift` |
-| B7 tabs filled or removed | End of Task 3 | `grep -rni "coming.*soon" macos-app/Sources/KiCadAgent/Views/Settings/` returns 0 |
-| E4 rate-limit implemented | End of Task 4 | `grep -c "429\|rateLimit" macos-app/Sources/KiCadAgent/Models/Router/KiCadModelRouter.swift` returns ≥ 3 |
+| A6 deleted | End of Task 2 | `test ! -f macos-app/Sources/Volta/Views/Onboarding/KiCadInstallView.swift` |
+| B7 tabs filled or removed | End of Task 3 | `grep -rni "coming.*soon" macos-app/Sources/Volta/Views/Settings/` returns 0 |
+| E4 rate-limit implemented | End of Task 4 | `grep -c "429\|rateLimit" macos-app/Sources/Volta/Models/Router/KiCadModelRouter.swift` returns ≥ 3 |
 | `RateLimitFallbackTests.swift` passes | End of Task 4 | `swift test --filter "RateLimitFallbackTests"` exits 0 |
 | `SettingsTabTests.swift` passes | End of Task 3 | `swift test --filter "SettingsTabTests"` exits 0 |
 | 17 phase directories 248-264 | End of Task 5 | `ls .planning/phases/ | wc -l` returns ≥ 264 |

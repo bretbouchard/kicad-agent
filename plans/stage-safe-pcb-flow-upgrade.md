@@ -4,7 +4,7 @@ Date: 2026-06-11
 
 ## Purpose
 
-This plan captures the recommended upgrades from the kicad-agent review so another agent can expand them into the existing GSD workflow, write detailed phase plans, and run review gates.
+This plan captures the recommended upgrades from the volta review so another agent can expand them into the existing GSD workflow, write detailed phase plans, and run review gates.
 
 The core shift is from "file-safe KiCad editing" to "stage-safe PCB design." Every major design transition should have a deterministic gate:
 
@@ -45,7 +45,7 @@ LLM output should propose intent and repairs. Deterministic tool gates should de
 
 ### Objective
 
-Make `kicad-agent` enforce a credible schematic-to-manufacturing PCB workflow where each stage has deterministic readiness gates, explicit constraints, and verified artifacts.
+Make `volta` enforce a credible schematic-to-manufacturing PCB workflow where each stage has deterministic readiness gates, explicit constraints, and verified artifacts.
 
 ### Success Criteria
 
@@ -225,7 +225,7 @@ Goal: Make the stage-safe workflow obvious.
 Plans:
 
 1. Rewrite getting-started around stage gates.
-2. Add `kicad-agent status` showing current stage and blockers.
+2. Add `volta status` showing current stage and blockers.
 3. Add examples for failing gates and repair workflow.
 4. Document what the tool guarantees versus what AI suggests.
 5. Add "not manufacturable until" checklist.

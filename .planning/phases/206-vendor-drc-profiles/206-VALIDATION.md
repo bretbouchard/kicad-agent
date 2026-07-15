@@ -38,8 +38,8 @@ created: 2026-07-10
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 206-01-01 | 01 | 1 | DRC-02, DRC-03, DRC-06 | — | N/A (static data files) | unit | `test -f src/kicad_agent/manufacturing/drc_profiles/pcbway.kicad_dru && grep "Source:" src/kicad_agent/manufacturing/drc_profiles/pcbway.kicad_dru` | ❌ W0 | ⬜ pending |
-| 206-01-02 | 01 | 1 | DRC-05, DRC-07 | — | N/A (model extension) | unit | `.venv/bin/python -c "from kicad_agent.dfm.profiles import ManufacturerProfile; p = ManufacturerProfile.example(); assert hasattr(p, 'drc_rules_path')"` | ❌ W0 | ⬜ pending |
+| 206-01-01 | 01 | 1 | DRC-02, DRC-03, DRC-06 | — | N/A (static data files) | unit | `test -f src/volta/manufacturing/drc_profiles/pcbway.kicad_dru && grep "Source:" src/volta/manufacturing/drc_profiles/pcbway.kicad_dru` | ❌ W0 | ⬜ pending |
+| 206-01-02 | 01 | 1 | DRC-05, DRC-07 | — | N/A (model extension) | unit | `.venv/bin/python -c "from volta.dfm.profiles import ManufacturerProfile; p = ManufacturerProfile.example(); assert hasattr(p, 'drc_rules_path')"` | ❌ W0 | ⬜ pending |
 | 206-01-03 | 01 | 1 | DRC-01 | — | Read-only (no file mutation) | unit | `.venv/bin/python -m pytest tests/test_vendor_drc.py -x -q` | ❌ W0 | ⬜ pending |
 | 206-01-04 | 01 | 1 | DRC-01, DRC-04, DRC-08 | — | Read-only query, path validation | unit | `.venv/bin/python -m pytest tests/test_drc_vendor_ops.py -x -q` | ❌ W0 | ⬜ pending |
 | 206-01-05 | 01 | 1 | IP-1, IP-2 | — | Registry/schema parity | unit | `.venv/bin/python -m pytest tests/test_registry.py -x -q` | ✅ | ⬜ pending |

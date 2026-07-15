@@ -1,4 +1,4 @@
-# kicad-agent — App Store Description
+# volta — App Store Description
 
 **Version 6.0 · 2026-07-14**
 
@@ -20,9 +20,9 @@
 
 ## Full Description
 
-**kicad-agent turns words into KiCad schematics.**
+**volta turns words into KiCad schematics.**
 
-You describe the circuit. kicad-agent designs it. The output is a real `.kicad_sch` file — openable in KiCad 10, editable by hand, and ready to route.
+You describe the circuit. volta designs it. The output is a real `.kicad_sch` file — openable in KiCad 10, editable by hand, and ready to route.
 
 ### What you do
 
@@ -32,7 +32,7 @@ Open a project. Type what you want in plain English:
 - *"ESP32-S3 dev board with USB-C and 4MB flash"*
 - *"Non-inverting op-amp preamp, 20dB gain, 9V battery"*
 
-kicad-agent uses a local MLX language model (or your API key for cloud) to draft a KiCad schematic with parts, nets, and pin connections. The assistant streams its work, attaches the schematic as you go, and you can copy the conversation to a clipboard at any time.
+volta uses a local MLX language model (or your API key for cloud) to draft a KiCad schematic with parts, nets, and pin connections. The assistant streams its work, attaches the schematic as you go, and you can copy the conversation to a clipboard at any time.
 
 ### What you get
 
@@ -51,7 +51,7 @@ kicad-agent uses a local MLX language model (or your API key for cloud) to draft
 - **Inventors** prototyping a one-off board without a $5K/seat Altium license
 - **Synth / pedal / keyboard / ham / LED DIY communities** — see our community-specific templates (in roadmap)
 
-### What kicad-agent does NOT do (yet)
+### What volta does NOT do (yet)
 
 We're honest about scope:
 
@@ -65,7 +65,7 @@ The full feature inventory is in `FEATURE-INVENTORY.md`. The honest gap list is 
 
 ### Why we built it
 
-Most people with a circuit idea never get past the KiCad learning curve. They give up, hire someone, or build a breadboard. kicad-agent removes the first wall: getting from "I know what I want" to "I have a schematic I can edit." Everything past that — layout, fab, assembly — still benefits from a human eye, but the barrier to start drops to zero.
+Most people with a circuit idea never get past the KiCad learning curve. They give up, hire someone, or build a breadboard. volta removes the first wall: getting from "I know what I want" to "I have a schematic I can edit." Everything past that — layout, fab, assembly — still benefits from a human eye, but the barrier to start drops to zero.
 
 ### Tech
 
@@ -77,7 +77,7 @@ Most people with a circuit idea never get past the KiCad learning curve. They gi
 
 ### Privacy
 
-kicad-agent runs locally. The Python daemon is local. Local models run on your GPU. When you use a cloud provider, your prompts go directly to that provider — kicad-agent does not proxy, log, or store them. See `PRIVACY.md`.
+volta runs locally. The Python daemon is local. Local models run on your GPU. When you use a cloud provider, your prompts go directly to that provider — volta does not proxy, log, or store them. See `PRIVACY.md`.
 
 ### Requirements
 
@@ -91,8 +91,8 @@ None. v6 is the free tier. v7 (planned) will offer a cloud-pro tier with shared 
 
 ### Support
 
-- Docs: https://kicad-agent.dev/docs
-- Issues: https://github.com/bretbouchard/kicad-agent/issues
+- Docs: https://volta.dev/docs
+- Issues: https://github.com/bretbouchard/volta/issues
 - Community: Discord (link in app)
 
 ### License

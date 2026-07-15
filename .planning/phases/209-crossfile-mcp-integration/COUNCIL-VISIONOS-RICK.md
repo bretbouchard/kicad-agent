@@ -28,7 +28,7 @@ I read the data models before forming opinions. Here is what the manufacturing l
 
 ### NativeBoard Geometry (fully spatial)
 
-File: `src/kicad_agent/parser/pcb_native_types.py`
+File: `src/volta/parser/pcb_native_types.py`
 
 | Data Model | Spatial Fields | Spatial Mapping |
 |---|---|---|
@@ -44,7 +44,7 @@ This is a complete 3D-representable geometry graph. Every track, via, pad, and c
 
 ### STEP Export (the spatial ace in the hole)
 
-File: `src/kicad_agent/export/general.py:176` — `export_step()`
+File: `src/volta/export/general.py:176` — `export_step()`
 
 The handoff package already produces a `.step` 3D model via `kicad-cli pcb export step`. STEP is directly convertible to USDZ (Apple's tooling does this). USDZ loads natively into RealityKit via `Entity(named:in:)`. This means the spatial 3D model of the board is **already being generated** — it just lands in a zip file instead of a visionOS volume.
 
@@ -52,13 +52,13 @@ This is the single most important fact for my review. The 3D asset pipeline alre
 
 ### BoardSpec (physical properties)
 
-File: `src/kicad_agent/manufacturing/board_spec.py`
+File: `src/volta/manufacturing/board_spec.py`
 
 `SurfaceFinish`, `SoldermaskColor`, `SilkscreenColor`, copper weights, `ImpedanceRequirement` (net_name, target_ohms, reference_layer). These are physical manufacturing properties. They are not coordinates — but they describe a physical object. In a spatial context, they become visual attributes of the 3D board model (the soldermask color literally colors the model; the impedance requirements annotate specific traces).
 
 ### Build Records + Handoff Packages
 
-File: `src/kicad_agent/manufacturing/build.py`, `handoff.py`
+File: `src/volta/manufacturing/build.py`, `handoff.py`
 
 `Build` (versioned record with artifacts, git_sha, status lifecycle), `HandoffResult` (zip with Gerbers, BOM, STEP, renders, readme, manifest). These are document/data artifacts — metadata about the manufacturing process. Flat data, not spatial, but they accompany the spatial STEP asset.
 
@@ -70,7 +70,7 @@ This is the one finding I want the council to act on. It is small, cheap, and un
 
 ### Violation records drop the coordinates the evaluator already computes
 
-File: `src/kicad_agent/manufacturing/vendor_drc.py`
+File: `src/volta/manufacturing/vendor_drc.py`
 
 The vendor DRC evaluator iterates over real geometry with real coordinates, then throws the coordinates away when constructing `Violation` records.
 

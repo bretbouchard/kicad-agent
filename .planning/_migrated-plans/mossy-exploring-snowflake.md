@@ -1,10 +1,10 @@
-# Plan: Implement GAP-CP9 — Batch Synthetic Footprint Expansion in kicad-agent
+# Plan: Implement GAP-CP9 — Batch Synthetic Footprint Expansion in volta
 
 ## Context
 
 Channel strip PCB manufacturing pipeline (21.5.x) is blocked at auto-route (21.5.4): 211/215 footprints on analog board and 47/48 on digital board are "synthetic" — they have lib_id + position + reference + value but no pad geometry. The router can't find connection points.
 
-kicad-agent already has `update_footprint_from_library()` in `pcb_ir.py` (line 396) that loads a single footprint from its library .kicad_mod file and replaces geometry while preserving position, rotation, net assignments. It's registered as a PCB operation handler at `ops/handlers/pcb.py:56`.
+volta already has `update_footprint_from_library()` in `pcb_ir.py` (line 396) that loads a single footprint from its library .kicad_mod file and replaces geometry while preserving position, rotation, net assignments. It's registered as a PCB operation handler at `ops/handlers/pcb.py:56`.
 
 **Missing:** A batch operation that iterates all synthetic footprints and calls the existing single-footprint expansion. Plus KiCad 10 format handling (`tedit`/`tstamp` instead of `uuid`).
 
@@ -22,12 +22,12 @@ This reuses the existing `lib_resolver.resolve_footprint_path()` and the injecti
 
 ## Files to Modify
 
-### 1. `src/kicad_agent/ops/handlers/pcb.py` — Add batch_expand_footprints handler (~60 lines)
+### 1. `src/volta/ops/handlers/pcb.py` — Add batch_expand_footprints handler (~60 lines)
 - New `@register_pcb("batch_expand_footprints")` function
 - Iterates all footprints, filters synthetic ones, calls batch expansion on each
 - Returns expanded/failed/skipped counts
 
-### 2. `src/kicad_agent/ops/pcb_raw_writer.py` — Add batch expansion logic (~80 lines)
+### 2. `src/volta/ops/pcb_raw_writer.py` — Add batch expansion logic (~80 lines)
 - New `batch_expand_footprints()` static method
 - Core logic: parse all footprint blocks, identify synthetic, resolve + expand each
 - Uses existing `_find_footprint_block()`, `resolve_footprint_path()`, `_inject_*` helpers
@@ -35,16 +35,16 @@ This reuses the existing `lib_resolver.resolve_footprint_path()` and the injecti
 - Preserves pad net assignments from original synthetic block (if any)
 - Graceful error handling: log failures, continue with next footprint
 
-### 3. `src/kicad_agent/ops/_schema_pcb.py` — Add schema validation (~20 lines)
+### 3. `src/volta/ops/_schema_pcb.py` — Add schema validation (~20 lines)
 - Add `batch_expand_footprints` to PCB operation schema
 - Minimal schema: just `dry_run: bool = False`
 
-### 4. `src/kicad_agent/ir/pcb_ir.py` — Fix KiCad 10 tstamp handling (~10 lines)
+### 4. `src/volta/ir/pcb_ir.py` — Fix KiCad 10 tstamp handling (~10 lines)
 - `update_footprint_from_library()` extracts `uuid` field but synthetic footprints use `tstamp`
 - Update `_extract_field` pattern to also match KiCad 10 `(tstamp ...-....-....)` format
 - Or use `saved_tedit`/`saved_tstamp` extraction as primary (KiCad 10)
 
-### 5. `src/kicad_agent/ops/registry.py` — Register new operation (~1 line)
+### 5. `src/volta/ops/registry.py` — Register new operation (~1 line)
 - Add `"batch_expand_footprints": {...}` to registry
 
 ## Key Implementation Details
@@ -94,6 +94,6 @@ Must replace footprints from **bottom to top** in the file to preserve character
 1. Add schema + registry entry first (enables operation discovery)
 2. Add `batch_expand_footprints()` to PcbRawWriter (core logic)
 3. Fix KiCad 10 tstamp handling in pcb_ir.py
-4. Add handler to pcb.py (wires it to /kicad-agent skill)
+4. Add handler to pcb.py (wires it to /volta skill)
 5. Test on channel strip PCBs
 6. Re-execute 21.5.4 auto-route

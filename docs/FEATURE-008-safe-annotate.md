@@ -1,6 +1,6 @@
 # FEATURE-008: Safe Annotate — Non-Destructive Reference Designator Renumbering
 
-**Issue:** kicad-agent-XX (to be filed)
+**Issue:** volta-XX (to be filed)
 **Priority:** P0 — blocks Phase 145 channel-strip routing completion (analog-ecosystem)
 **Date:** 2026-06-29
 **Status:** OPEN
@@ -10,7 +10,7 @@
 
 ## Problem Statement
 
-The existing `annotate` op is FORBIDDEN (P0-006) because it re-serializes schematic files via kiutils, corrupting KiCad 10 formatting even when reporting "no changes." This leaves kicad-agent with **no safe way to perform reference designator (refdes) renumbering** — a critical operation for any schematic that has accumulated duplicate or missing annotations.
+The existing `annotate` op is FORBIDDEN (P0-006) because it re-serializes schematic files via kiutils, corrupting KiCad 10 formatting even when reporting "no changes." This leaves volta with **no safe way to perform reference designator (refdes) renumbering** — a critical operation for any schematic that has accumulated duplicate or missing annotations.
 
 There is currently **no scriptable alternative**. The only safe path is the KiCad GUI (Tools → Edit Annotations → "Reset existing annotation" checked), which requires human intervention and breaks autonomous pipelines.
 
@@ -160,7 +160,7 @@ The GUI path works but breaks autonomy. The existing `annotate` op claims to wor
 
 ## Acceptance Criteria
 
-- [ ] Op `safe_annotate` implemented in `src/kicad_agent/schematic/safe_annotate.py`
+- [ ] Op `safe_annotate` implemented in `src/volta/schematic/safe_annotate.py`
 - [ ] Test suite in `tests/schematic/test_safe_annotate.py` covering all 5 validation cases above
 - [ ] Zero calls to `kiutils.scch.Schematic.to_file()` or any kiutils writer in the new code path
 - [ ] Diff validation: op produces ONLY the targeted `(property "Reference" ...)` line changes, nothing else
@@ -191,4 +191,4 @@ Phase 145 Plan 145-01 is currently paused waiting for manual GUI annotation. Onc
 
 *Feature request ID: FEATURE-008*
 *Filed: 2026-06-29*
-*Repo: bretbouchard/kicad-agent*
+*Repo: bretbouchard/volta*

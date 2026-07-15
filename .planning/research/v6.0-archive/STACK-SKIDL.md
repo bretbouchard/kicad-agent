@@ -2,7 +2,7 @@
 
 **Milestone:** v5.0 — "Skidl-Native Design Pipeline"
 **Date:** 2026-07-03
-**Purpose:** Document the Python library stack, converter feature surface, architecture integration points, and known pitfalls for adopting SKIDL as the canonical intermediate representation (IR) for all circuit operations in kicad-agent v5.0.
+**Purpose:** Document the Python library stack, converter feature surface, architecture integration points, and known pitfalls for adopting SKIDL as the canonical intermediate representation (IR) for all circuit operations in volta v5.0.
 
 ---
 
@@ -28,7 +28,7 @@ The paper tests three representation levels (ablation in Table 1 & 2):
 - **Code-L2:** Removes relative coordinates — uses **absolute coordinates** for symbol placement instead. Still retains pin-name-based `connect_pins`.
 - **Code-L3:** Removes *both* relative coordinates and pin-name connectivity. Replaces `connect_pins` with `add_new_wire([x1,y1],[x2,y2])` — raw wire segments drawn at absolute coordinates. The model must independently compute pin locations and draw geometry.
 
-### Why L1 Wins (the key finding for kicad-agent)
+### Why L1 Wins (the key finding for volta)
 
 L1 achieves the **lowest Minimum Description Length (MDL)**, **lowest Lempel-Ziv complexity**, and **lowest validation loss** — meaning relative coordinates and pin-name connectivity jointly produce a more structured, compressible, and learnable representation. Empirically:
 
@@ -41,9 +41,9 @@ L1 achieves the **lowest Minimum Description Length (MDL)**, **lowest Lempel-Ziv
 
 The L2→L3 drop is the most telling: removing pin-name connectivity causes a *"large drop in netlist accuracy, indicating that pin-name connectivity is critical for correct wiring."* This directly validates SKIDL's design philosophy — SKIDL connects parts via `part["VCC"] += net`, which is precisely the pin-name-based wiring that L1 proves is essential.
 
-**Implication for kicad-agent v5.0:** SKIDL *is* a Code-L1 representation. It uses semantic pin names (`part["ALIAS"] += net`), relative/abstract connectivity (no absolute geometry), and a compact editing primitive set (`Part()`, `Net()`, `+=`). Adopting SKIDL as the IR gives kicad-agent the representation SchGen proved is optimal, without building a custom API layer.
+**Implication for volta v5.0:** SKIDL *is* a Code-L1 representation. It uses semantic pin names (`part["ALIAS"] += net`), relative/abstract connectivity (no absolute geometry), and a compact editing primitive set (`Part()`, `Net()`, `+=`). Adopting SKIDL as the IR gives volta the representation SchGen proved is optimal, without building a custom API layer.
 
-> **Note:** SchGen explicitly does *not* use SPICE for evaluation because "most PCB schematics are system-level mixed-domain designs containing components beyond the scope of available SPICE models." kicad-agent's v5.0 plan to use SPICE results as a reward signal should therefore target **analog sub-circuits** (where the analog-ecosystem mono-arch already demonstrates the pattern), not full-board validation.
+> **Note:** SchGen explicitly does *not* use SPICE for evaluation because "most PCB schematics are system-level mixed-domain designs containing components beyond the scope of available SPICE models." volta's v5.0 plan to use SPICE results as a reward signal should therefore target **analog sub-circuits** (where the analog-ecosystem mono-arch already demonstrates the pattern), not full-board validation.
 
 ---
 
@@ -51,7 +51,7 @@ The L2→L3 drop is the most telling: removing pin-name connectivity causes a *"
 
 ### Current State
 
-| Library | Version | Status in kicad-agent | Action |
+| Library | Version | Status in volta | Action |
 |---|---|---|---|
 | **skidl** | 2.2.3 | Installed in environment, **NOT in `pyproject.toml`** | **ADD as dependency** |
 | ngspice | 45.2 | External binary (CLI simulator) | Wire via subprocess; ensure on PATH |
@@ -80,7 +80,7 @@ os.environ.setdefault("KICAD_SYMBOL_DIR", str(KICAD_SYMLIB_PATH))
 import skidl
 ```
 
-**`spicelib`** — Already used in `kicad_agent.ltspice`:
+**`spicelib`** — Already used in `volta.ltspice`:
 - `AsyReader` for `.asy` symbol files (pin offsets, rotations)
 - `.asc`/`.raw` parsing for LTspice import/sim results
 - For ngspice interaction, spicelib provides the ngspice shared-library interface that PySpice would otherwise provide — **no need for PySpice**
@@ -88,7 +88,7 @@ import skidl
 **`ngspice`** (external binary, v45.2) — The actual simulator engine:
 - Invoked as subprocess or via spicelib's shared-library binding
 - Consumes SPICE decks (`.cir`/`.sp`), produces `.raw` results
-- kicad-agent's `read_raw()` already parses `.raw` output
+- volta's `read_raw()` already parses `.raw` output
 
 **`networkx`** — Connectivity graph engine:
 - Used by `LTspiceNetGraph` (wire geometry → connected components)
@@ -105,7 +105,7 @@ dependencies = [
 ]
 ```
 
-The `KICAD_SYMBOL_DIR` environment variable must be configured at runtime (pointing at the kicad-agent's bundled symbol libraries or the system KiCad install). This should be set in a skidl integration module's import-time guard.
+The `KICAD_SYMBOL_DIR` environment variable must be configured at runtime (pointing at the volta's bundled symbol libraries or the system KiCad install). This should be set in a skidl integration module's import-time guard.
 
 ---
 
@@ -121,7 +121,7 @@ KiCad hierarchical sheets decompose a board into sub-sheets connected via hierar
 - Flatten hierarchy: traverse `.kicad_sch` sheet instances recursively, merge all components into one `Circuit`
 - Map hierarchical sheet pins to net labels: a sheet pin "SDA" on the parent sheet and a matching label "SDA" in the sub-sheet must connect to the same `Net("SDA")`
 - Preserve sheet membership as metadata (component property or grouping) for the floor planner's module-aware placement
-- Handle the `navigate_hierarchy` operation's existing data (kicad-agent already has this handler)
+- Handle the `navigate_hierarchy` operation's existing data (volta already has this handler)
 
 ### 2. Custom Symbols (Non-Standard Library Parts)
 
@@ -175,11 +175,11 @@ The milestone calls for a *bidirectional* KiCad↔SKIDL bridge:
 
 ---
 
-## ARCHITECTURE — Integration with Existing kicad-agent Ops
+## ARCHITECTURE — Integration with Existing volta Ops
 
 ### What Already Exists
 
-kicad-agent has a mature operation pipeline and substantial schematic analysis infrastructure. The SKIDL converter must integrate with — not replace — these systems.
+volta has a mature operation pipeline and substantial schematic analysis infrastructure. The SKIDL converter must integrate with — not replace — these systems.
 
 **Operation pipeline pattern:**
 ```
@@ -201,7 +201,7 @@ Every handler follows the signature `(op: Any, ir: SchematicIR, file_path: Path)
 | `SymbolMapper` | `ltspice/symbol_mapper.py` | KiCad libId → LTspice symbol / power FLAG. **Directly reusable** for SKIDL→SPICE power symbol handling. |
 
 **LTspice module as architectural precedent:**
-The `kicad_agent.ltspice` package is the existing model for a self-contained subsystem with parse → IR → graph → export. Its structure should be mirrored for a `kicad_agent.skidl` (or `circuit_ir`) package:
+The `volta.ltspice` package is the existing model for a self-contained subsystem with parse → IR → graph → export. Its structure should be mirrored for a `volta.skidl` (or `circuit_ir`) package:
 ```
 ltspice/
   __init__.py          # public API exports
@@ -217,7 +217,7 @@ ltspice/
 
 ### What Is Missing (the v5.0 build surface)
 
-**1. SKIDL package** — No `skidl`/`circuit_ir` module exists. A `grep` for "skidl" across `src/kicad_agent/` returns zero results. Must build:
+**1. SKIDL package** — No `skidl`/`circuit_ir` module exists. A `grep` for "skidl" across `src/volta/` returns zero results. Must build:
 ```
 circuit_ir/ (proposed)
   __init__.py
@@ -271,7 +271,7 @@ The v5.0 pipeline stages map to existing gates:
 
 ## PITFALLS — What Breaks When Converting Legacy Schematics to SKIDL
 
-These pitfalls are drawn from the analog-ecosystem pipeline (`gen_schematic.py`, `gen_pcb.py`, `parts.py`), which is the only proven SKIDL↔KiCad implementation. Every one of these has a documented workaround that must be ported into kicad-agent.
+These pitfalls are drawn from the analog-ecosystem pipeline (`gen_schematic.py`, `gen_pcb.py`, `parts.py`), which is the only proven SKIDL↔KiCad implementation. Every one of these has a documented workaround that must be ported into volta.
 
 ### 1. Multi-Unit Symbols Break lib_symbol Extraction
 
@@ -330,15 +330,15 @@ These pitfalls are drawn from the analog-ecosystem pipeline (`gen_schematic.py`,
 
 ### 5. PCB Population: Name-Only Pads and Missing Net Tables
 
-**Problem:** When going SKIDL → PCB via `populate_pcb_from_netlist`, kicad-agent's netlist parser has known issues that require external workarounds (documented in `gen_pcb.py`):
+**Problem:** When going SKIDL → PCB via `populate_pcb_from_netlist`, volta's netlist parser has known issues that require external workarounds (documented in `gen_pcb.py`):
 
-1. **S-expression layout parsing:** SKIDL's `generate_netlist()` produces a multiline S-expression that kicad-agent's parser doesn't handle. `gen_pcb.py` pre-parses it into temp XML first.
+1. **S-expression layout parsing:** SKIDL's `generate_netlist()` produces a multiline S-expression that volta's parser doesn't handle. `gen_pcb.py` pre-parses it into temp XML first.
 2. **Missing net table:** `populate_pcb_from_netlist` doesn't inject the `(net N "name")` declarations. `_inject_net_table` must be called.
 3. **Name-only pads:** `populate_pcb_from_netlist` writes pads with name-only `(net "name")` but KiCad and the Quilter router need numeric `(net N "name")`. `_rewrite_pad_nets_to_numeric` converts these.
 4. **Pin-count mismatches:** Extra pads (mounting holes, thermal pads, crystal ground pads) have no net assignment. `_assign_ground_to_unconnected_pads` assigns GND to fix the mismatch.
-5. **Parser key mismatch:** kicad-agent's `_parse_netlist_xml` reads `node.get("pad")` not `node.get("pin")` — the XML conversion must use "pad" as the key.
+5. **Parser key mismatch:** volta's `_parse_netlist_xml` reads `node.get("pad")` not `node.get("pin")` — the XML conversion must use "pad" as the key.
 
-**Mitigation:** These five workarounds from `gen_pcb.py` must either be (a) ported into kicad-agent's `populate_pcb_from_netlist` to fix it at the source, or (b) wrapped in a `skidl_to_pcb.py` adapter. Option (a) is preferable — it fixes the parser for all callers.
+**Mitigation:** These five workarounds from `gen_pcb.py` must either be (a) ported into volta's `populate_pcb_from_netlist` to fix it at the source, or (b) wrapped in a `skidl_to_pcb.py` adapter. Option (a) is preferable — it fixes the parser for all callers.
 
 ### 6. KICAD_SYMBOL_DIR Initialization Race
 

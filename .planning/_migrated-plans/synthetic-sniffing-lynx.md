@@ -1,10 +1,10 @@
-# Plan: Create GitHub README for kicad-agent
+# Plan: Create GitHub README for volta
 
 ## Context
 
-The repo at `github.com/bretbouchard/kicad-agent` has **zero public-facing docs** — no README.md, no LICENSE, no badges, no install instructions. 116 commits, 7 phases complete, 459 tests passing, ~8K lines of source code, and nobody can understand what it does or how to use it from the repo page alone.
+The repo at `github.com/bretbouchard/volta` has **zero public-facing docs** — no README.md, no LICENSE, no badges, no install instructions. 116 commits, 7 phases complete, 459 tests passing, ~8K lines of source code, and nobody can understand what it does or how to use it from the repo page alone.
 
-The goal: write a single README.md that gives visitors everything they need to understand, evaluate, install, and use kicad-agent — both as a Python library and as a Claude Code skill.
+The goal: write a single README.md that gives visitors everything they need to understand, evaluate, install, and use volta — both as a Python library and as a Claude Code skill.
 
 ## Files to Create
 
@@ -15,14 +15,14 @@ The goal: write a single README.md that gives visitors everything they need to u
 - `.planning/PROJECT.md` — Project description, requirements, constraints
 - `.planning/ROADMAP.md` — Phase structure, all 7 phases complete
 - `pyproject.toml` — Package metadata, dependencies, entry points
-- `~/.claude/skills/kicad-agent/SKILL.md` — Skill manifest
-- `~/.claude/skills/kicad-agent/prompt.md` — Full operation reference (19 ops)
-- `src/kicad_agent/cli.py` — CLI usage patterns
+- `~/.claude/skills/volta/SKILL.md` — Skill manifest
+- `~/.claude/skills/volta/prompt.md` — Full operation reference (19 ops)
+- `src/volta/cli.py` — CLI usage patterns
 
 ## README Structure
 
 ```markdown
-# kicad-agent
+# volta
 
 ## One-liner + badges (Python version, license, tests)
 
@@ -46,7 +46,7 @@ The goal: write a single README.md that gives visitors everything they need to u
 
 ## Claude Code Skill
 - How to install the skill
-- How to invoke (/kicad-agent)
+- How to invoke (/volta)
 - What the skill does (routes JSON ops through Python backend)
 
 ## Operations Reference

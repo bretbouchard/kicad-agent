@@ -33,13 +33,13 @@ tech-stack:
 
 key-files:
   created:
-    - src/kicad_agent/manufacturing/manufacturer_client.py
+    - src/volta/manufacturing/manufacturer_client.py
     - tests/test_manufacturer_client.py
     - tests/test_cli_integration.py
     - tests/test_mcp_tools.py
   modified:
-    - src/kicad_agent/cli.py
-    - src/kicad_agent/crossfile/project_context.py
+    - src/volta/cli.py
+    - src/volta/crossfile/project_context.py
     - tests/test_crossfile_submodules.py
     - .planning/REQUIREMENTS.md
 
@@ -97,9 +97,9 @@ Each task was committed atomically:
 5. **Task 5: manufacturer_client + cli_integration tests; mark INTEG done** - `0cfe34f` (test)
 
 ## Files Created/Modified
-- `src/kicad_agent/manufacturing/manufacturer_client.py` - ManufacturerClient ABC + 3 frozen dataclasses (interface seed for v7.1, no network deps)
-- `src/kicad_agent/cli.py` - 4 new subcommands + _dispatch_op_and_print helper + routing registration
-- `src/kicad_agent/crossfile/project_context.py` - build_spec_files + builds_dir fields + glob discovery
+- `src/volta/manufacturing/manufacturer_client.py` - ManufacturerClient ABC + 3 frozen dataclasses (interface seed for v7.1, no network deps)
+- `src/volta/cli.py` - 4 new subcommands + _dispatch_op_and_print helper + routing registration
+- `src/volta/crossfile/project_context.py` - build_spec_files + builds_dir fields + glob discovery
 - `tests/test_manufacturer_client.py` - import-purity (TM-4), frozen dataclass, abstract, stub-subclass tests
 - `tests/test_cli_integration.py` - in-process main([...]) + monkeypatch tests for all 4 subcommands + TM-1 guard
 - `tests/test_mcp_tools.py` - MCP auto-exposure regression guard (INTEG-01 contract lock)

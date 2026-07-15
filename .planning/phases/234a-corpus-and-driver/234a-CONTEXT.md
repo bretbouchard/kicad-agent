@@ -73,8 +73,8 @@ Out of scope (handled by other phases):
 **Downstream agents MUST read these before planning or implementing.**
 
 ### Swift ERC engine
-- `macos-app/Sources/KiCadAgent/Validation/NativeERC.swift` — the 4-check engine being tested
-- `macos-app/Sources/KiCadAgent/Views/ValidationPanel.swift:35-37` — Phase 231 wiring (calls `NativeERC.run()`)
+- `macos-app/Sources/Volta/Validation/NativeERC.swift` — the 4-check engine being tested
+- `macos-app/Sources/Volta/Views/ValidationPanel.swift:35-37` — Phase 231 wiring (calls `NativeERC.run()`)
 
 ### Python reference
 - `daemon/kicad_daemon/handlers/erc_handler.py` (or equivalent) — Python `native_erc` reference impl
@@ -85,7 +85,7 @@ Out of scope (handled by other phases):
 - `data/erc_corpus/` or similar — the 28K schematic corpus referenced by Phase 218
 
 ### Test infrastructure
-- `macos-app/Tests/KiCadAgentTests/` — existing Swift test patterns
+- `macos-app/Tests/VoltaTests/` — existing Swift test patterns
 - `daemon/tests/` — existing Python test patterns
 
 </canonical_refs>

@@ -17,11 +17,11 @@ status: complete
 ## Setup
 
 - **Corpus**: 81 schematics (raw 212, dedup by SHA256, seed=42) from
-  `kicad_agent-0.1.0/tests/fixtures`, `tests/data`, `output/legibility`, and repo root
+  `volta-0.1.0/tests/fixtures`, `tests/data`, `output/legibility`, and repo root
 - **Swift engine**: `erc-cli` binary at `.planning/phases/234b-parity-execute/erc-cli`
   (Phase 234B). Compiles 4 files (NativeERC + SchematicParser + TopologyBuilder + SExpression)
   into a standalone executable via `swiftc -O -target arm64-apple-macos14.0`
-- **Python engine**: `kicad_agent.validation.native_erc.run_native_erc` invoked in-process
+- **Python engine**: `volta.validation.native_erc.run_native_erc` invoked in-process
 - **Driver**: `.planning/phases/234a-corpus-and-driver/scripts/batch_erc_parity.py`
 - **Runtime**: 22 seconds for full 81-schematic run
 
@@ -118,15 +118,15 @@ macos-app/Sources/erc-cli/main.swift (CLI source — 100 lines)
 
 ```bash
 # Rebuild the Swift CLI
-bash /Users/bretbouchard/apps/kicad-agent/.planning/phases/234b-parity-execute/scripts/build_erc_cli.sh
+bash /Users/bretbouchard/apps/volta/.planning/phases/234b-parity-execute/scripts/build_erc_cli.sh
 
 # Run parity on a single schematic
-/Users/bretbouchard/apps/kicad-agent/.planning/phases/234b-parity-execute/erc-cli /path/to/file.kicad_sch
+/Users/bretbouchard/apps/volta/.planning/phases/234b-parity-execute/erc-cli /path/to/file.kicad_sch
 
 # Run parity on the full corpus
-python3 /Users/bretbouchard/apps/kicad-agent/.planning/phases/234a-corpus-and-driver/scripts/batch_erc_parity.py \
+python3 /Users/bretbouchard/apps/volta/.planning/phases/234a-corpus-and-driver/scripts/batch_erc_parity.py \
   parity-test \
-  --manifest /Users/bretbouchard/apps/kicad-agent/.planning/phases/234a-corpus-and-driver/corpus/manifest.json \
+  --manifest /Users/bretbouchard/apps/volta/.planning/phases/234a-corpus-and-driver/corpus/manifest.json \
   --sample 1000 \
   --output /tmp/parity.json
 ```

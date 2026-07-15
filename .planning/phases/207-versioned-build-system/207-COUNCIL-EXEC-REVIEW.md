@@ -16,7 +16,7 @@ Phase 207 shipped a versioned build system: a frozen `Build` record, `BuildStatu
 | Registry count == 159 | PASS | `len(OPERATION_REGISTRY) == 159`; `test_registry_has_98_operations` passes |
 | Schema/registry in sync | PASS | `validate_registry_completeness()` → `extra_in_registry: []`; `missing_from_registry` has only the 3 pre-existing entries, none from Phase 207 |
 | 3 ops in readonly set | PASS | `test_readonly_operations_count` exact-set includes `build_create`, `build_list`, `build_show` |
-| All 3 ops reachable via `_QUERY_HANDLERS` | PASS | `_QUERY_HANDLERS.update(_BUILD_HANDLERS)` in `handlers/__init__.py:35`; confirmed via the test imports `from kicad_agent.ops.handlers.query import _QUERY_HANDLERS` |
+| All 3 ops reachable via `_QUERY_HANDLERS` | PASS | `_QUERY_HANDLERS.update(_BUILD_HANDLERS)` in `handlers/__init__.py:35`; confirmed via the test imports `from volta.ops.handlers.query import _QUERY_HANDLERS` |
 | Schema union + import + `__all__` all updated | PASS | `schema.py:570-572` (union), `285-287` (import), `788-791` (`__all__`) |
 | No partial state on failure (BUILD-04) | PASS | `try/except` wraps handler body; `shutil.rmtree(build_dir, ignore_errors=True)` on any failure |
 | Target `.kicad_pcb` byte-identical | PASS | `test_build_create_target_file_unchanged` asserts hash + mtime unchanged |
@@ -93,4 +93,4 @@ No additional Council-level findings. The execution matches the plan, requiremen
 
 ## Verdict
 
-**APPROVE.** Phase 207 is well-executed: plan adherence is exact, all 10 BUILD requirements are addressed, 73 phase tests + 42 regression tests pass, registry/schema are in sync, and the threat model is substantially mitigated. The one medium finding (absolute-path rejection) is recommended for a follow-up but does not block — it is not exploitable in the single-user kicad-agent model and the `mkdir` permission check provides a backstop.
+**APPROVE.** Phase 207 is well-executed: plan adherence is exact, all 10 BUILD requirements are addressed, 73 phase tests + 42 regression tests pass, registry/schema are in sync, and the threat model is substantially mitigated. The one medium finding (absolute-path rejection) is recommended for a follow-up but does not block — it is not exploitable in the single-user volta model and the `mkdir` permission check provides a backstop.

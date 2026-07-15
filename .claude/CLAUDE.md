@@ -1,4 +1,4 @@
-# kicad-agent — Agent Context
+# volta — Agent Context
 
 AI-safe structural editing of KiCad 10+ schematic, PCB, symbol, and footprint files.
 
@@ -43,27 +43,27 @@ kicad-cli fp upgrade <file.kicad_mod>                    # Upgrade footprint lib
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| `kicad-agent` | 0.0.1 | Core library — AST mutation, operation executor, validation gates |
+| `volta` | 0.0.1 | Core library — AST mutation, operation executor, validation gates |
 | `kicad-python` | 0.4.0 | KiCad file I/O bindings |
 | `kiutils` | 1.4.8 | S-expression parser/writer for KiCad files |
 | `sexpdata` | 1.0.0 | Low-level S-expression parsing |
 | `skidl` | 2.0.1 | Script-based circuit design (Python → netlist) |
 | `spicelib` | 1.5.1 | SPICE simulation integration |
 
-**kicad-agent operations (via `/kicad-agent` skill or direct Python):**
+**volta operations (via `/volta` skill or direct Python):**
 ```bash
-cd ~/apps/kicad-agent && python3 -c "
-from kicad_agent.ops.executor import execute
+cd ~/apps/volta && python3 -c "
+from volta.ops.executor import execute
 result = execute(operation_json)
 "
 ```
 
-98 operation types. Operation metadata (category, file types, read-only, dependencies) available via `kicad_agent.ops.registry`.
+98 operation types. Operation metadata (category, file types, read-only, dependencies) available via `volta.ops.registry`.
 
 ### Analysis & Inference
 ```bash
-cd ~/apps/kicad-agent && python3 -c "
-from kicad_agent.inference import generate_analysis
+cd ~/apps/volta && python3 -c "
+from volta.inference import generate_analysis
 result = generate_analysis('path/to/file.kicad_pcb')
 "
 ```
@@ -101,8 +101,8 @@ for result in runner:  # iterator yields as each sim completes
 **Python SPICE stack** (install with `pip install -e ".[sim]"`):
 | Package | Purpose |
 |---------|---------|
-| `kicad_agent.spice` (Phase 158) | ngspice subprocess wrapper, AC/TRAN/NOISE/THD testbench generators, model registry |
-| `kicad_agent.sim` (Phase 204) | Eurorack preamp builder, Optuna GPSampler optimizer, pandas adapter, BOM/Bode emit |
+| `volta.spice` (Phase 158) | ngspice subprocess wrapper, AC/TRAN/NOISE/THD testbench generators, model registry |
+| `volta.sim` (Phase 204) | Eurorack preamp builder, Optuna GPSampler optimizer, pandas adapter, BOM/Bode emit |
 | `optuna>=4.5` | Bayesian optimization with GPSampler for E12 R/C value sweeps |
 | `pandas>=2.0` | DataFrame adapter for `SimulationResult` traces + Optuna studies |
 | `matplotlib>=3.7` | Bode plot PNG generation (headless Agg backend) |
@@ -115,13 +115,13 @@ python3 scripts/demo_closed_box.py --n-trials 10   # faster iteration
 ```
 
 **Key files:**
-- `src/kicad_agent/spice/ngspice_runner.py` — THE entry point for all sims (Phase 158)
-- `src/kicad_agent/spice/testbench.py` — AC/TRAN/NOISE/THD testbench generators
-- `src/kicad_agent/spice/model_registry.py` — 2N3904 Gummel-Poon + NE5532/TL072/LM358
-- `src/kicad_agent/sim/eurorack.py` — skidl.Circuit → SPICE netlist bridge
-- `src/kicad_agent/sim/optimizer.py` — Optuna GPSampler objective + `optimize_preamp`
-- `src/kicad_agent/sim/plot.py` — matplotlib Bode magnitude/phase PNG
-- `src/kicad_agent/sim/bom.py` — Markdown BOM from skdl.Circuit
+- `src/volta/spice/ngspice_runner.py` — THE entry point for all sims (Phase 158)
+- `src/volta/spice/testbench.py` — AC/TRAN/NOISE/THD testbench generators
+- `src/volta/spice/model_registry.py` — 2N3904 Gummel-Poon + NE5532/TL072/LM358
+- `src/volta/sim/eurorack.py` — skidl.Circuit → SPICE netlist bridge
+- `src/volta/sim/optimizer.py` — Optuna GPSampler objective + `optimize_preamp`
+- `src/volta/sim/plot.py` — matplotlib Bode magnitude/phase PNG
+- `src/volta/sim/bom.py` — Markdown BOM from skdl.Circuit
 - `scripts/demo_closed_box.py` — end-to-end pipeline (sweep → verify → assert → emit)
 
 ## Workflow Stages
@@ -138,8 +138,8 @@ python3 -c "from spicelib import ..."
 
 ### 2. Schematic Capture
 ```bash
-# Edit via kicad-agent operations (JSON → AST mutation)
-/kicad-agent '{"op": "add_component", ...}'
+# Edit via volta operations (JSON → AST mutation)
+/volta '{"op": "add_component", ...}'
 
 # Validate schematic
 kicad-cli sch erc <project.kicad_sch>
@@ -152,8 +152,8 @@ kicad-cli sch erc <project.kicad_sch>    # Always run ERC after schematic edits
 
 ### 4. PCB Layout
 ```bash
-# Operations via kicad-agent
-/kicad-agent '{"op": "pcb_ops", ...}'
+# Operations via volta
+/volta '{"op": "pcb_ops", ...}'
 
 # 3D visualization
 kicad-cli pcb render <project.kicad_pcb> -o render.png --rotate "-45,0,45"
@@ -181,7 +181,7 @@ kicad-cli sch export pdf <project.kicad_sch> -o schematic.pdf
 
 ## Known Bugs & Workarounds (Phase 26)
 
-These bugs have workarounds that MUST be applied in any build script using kicad-agent. See KNOWN_LIMITATIONS.md P26-1 through P26-5 for full details.
+These bugs have workarounds that MUST be applied in any build script using volta. See KNOWN_LIMITATIONS.md P26-1 through P26-5 for full details.
 
 | Bug | Issue | Workaround |
 |-----|-------|-----------|
@@ -206,21 +206,21 @@ The complete routing pipeline is available for multi-layer PCB routing:
 ```
 User Intent JSON
     ↓
-RoutingOrchestrator (src/kicad_agent/routing/orchestrator.py)
+RoutingOrchestrator (src/volta/routing/orchestrator.py)
     ├─ DeterministicStrategy (5-case dispatch: diff pair → power → high-pin → simple → default A*)
-    ├─ AiRoutingStrategy (src/kicad_agent/routing/ai_strategy.py — optional, Gemma 4 12B V2)
-    │   └─ KiCadVisionPipeline (src/kicad_agent/inference/vision_pipeline.py)
-    │   └─ StrategyValidator (src/kicad_agent/routing/strategy_validator.py — R-4 gate)
+    ├─ AiRoutingStrategy (src/volta/routing/ai_strategy.py — optional, Gemma 4 12B V2)
+    │   └─ KiCadVisionPipeline (src/volta/inference/vision_pipeline.py)
+    │   └─ StrategyValidator (src/volta/routing/strategy_validator.py — R-4 gate)
     │   └─ Falls back to DeterministicStrategy on any failure (R-6)
     ├─ Per-net dispatch: A* (simple) or Freerouting v2.2.4 (complex)
-    ├─ JSONL audit trail (src/kicad_agent/routing/audit.py — fsync durable)
+    ├─ JSONL audit trail (src/volta/routing/audit.py — fsync durable)
     └─ Rollback via PersistentUndoStack + UUID-based PcbRawWriter.delete_segment/delete_via
 ```
 
 **Key commands:**
 ```bash
 # Route a full board via orchestrator (batch API)
-/kicad-agent '{"op": "auto_route", "target_file": "board.kicad_pcb", "strategy": "freerouting"}'
+/volta '{"op": "auto_route", "target_file": "board.kicad_pcb", "strategy": "freerouting"}'
 
 # Baseline metrics on 3 fixture boards
 python3 scripts/phase99_baseline.py --json
@@ -230,34 +230,34 @@ python3 scripts/phase98_eval.py --fixtures tests/fixtures/smd_test_board.kicad_p
 ```
 
 **Key files:**
-- `src/kicad_agent/routing/orchestrator.py` — RoutingOrchestrator + route_board batch API
-- `src/kicad_agent/routing/strategy.py` — RoutingStrategy Protocol + DeterministicStrategy
-- `src/kicad_agent/routing/ai_strategy.py` — AiRoutingStrategy (Phase 98, Gemma 4 vision)
-- `src/kicad_agent/routing/strategy_validator.py` — R-4 validation gate
-- `src/kicad_agent/routing/audit.py` — JSONL audit trail
-- `src/kicad_agent/routing/dsn_generator.py` — NativeBoard-backed DSN generation (Phase 99)
-- `src/kicad_agent/routing/freerouting.py` — Freerouting subprocess wrapper + SES parser
+- `src/volta/routing/orchestrator.py` — RoutingOrchestrator + route_board batch API
+- `src/volta/routing/strategy.py` — RoutingStrategy Protocol + DeterministicStrategy
+- `src/volta/routing/ai_strategy.py` — AiRoutingStrategy (Phase 98, Gemma 4 vision)
+- `src/volta/routing/strategy_validator.py` — R-4 validation gate
+- `src/volta/routing/audit.py` — JSONL audit trail
+- `src/volta/routing/dsn_generator.py` — NativeBoard-backed DSN generation (Phase 99)
+- `src/volta/routing/freerouting.py` — Freerouting subprocess wrapper + SES parser
 
 **Critical constraints:**
 - NativeBoard dataclasses are **frozen** (Phase 100 CR-01). Use `dataclasses.replace()`, never in-place mutation.
-- PCB writes use `atomic_write` from `kicad_agent.io.atomic_write`, never `kiutils.Board.to_file()`.
-- Freerouting JAR at `~/.kicad-agent/tools/freerouting.jar` (stock build `20f1a72`, newer than v2.2.4).
+- PCB writes use `atomic_write` from `volta.io.atomic_write`, never `kiutils.Board.to_file()`.
+- Freerouting JAR at `~/.volta/tools/freerouting.jar` (stock build `20f1a72`, newer than v2.2.4).
 
 ## Schematic Ops (v2.2 — Bug Fixes + New Op)
 
 **safe_sync_pcb_from_schematic** (ae-26): Non-destructive PCB sync — updates pad nets, footprint lib_ids, adds missing footprints. Preserves routing, zones, placement by default. Equivalent to KiCad GUI's "Update PCB from Schematic".
 
 ```bash
-/kicad-agent '{"op": "safe_sync_pcb_from_schematic", "target_file": "board.kicad_pcb", "target_files": ["board.kicad_pcb", "board.kicad_sch"]}'
+/volta '{"op": "safe_sync_pcb_from_schematic", "target_file": "board.kicad_pcb", "target_files": ["board.kicad_pcb", "board.kicad_sch"]}'
 ```
 
-**SchematicRawWriter** (`src/kicad_agent/ops/schematic_raw_writer.py`): Raw S-expression manipulation for KiCad 10 schematics. Replaces kiutils `to_file()` which corrupts KiCad 10 files. Used by `erc_auto_fix` (deprecated, raw S-expr rewrite complete).
+**SchematicRawWriter** (`src/volta/ops/schematic_raw_writer.py`): Raw S-expression manipulation for KiCad 10 schematics. Replaces kiutils `to_file()` which corrupts KiCad 10 files. Used by `erc_auto_fix` (deprecated, raw S-expr rewrite complete).
 
 **Deprecated ops:** `erc_auto_fix` and `erc_auto_fix_hierarchical` emit DeprecationWarning. Use targeted individual ops instead (add_no_connect, place_no_connects_from_erc, remove_dangling_wires with trust_erc=True).
 
 ## Planning (MANDATORY)
 
-All implementation planning MUST go through GSD. Never use native plan mode for kicad-agent work.
+All implementation planning MUST go through GSD. Never use native plan mode for volta work.
 
 | I want to... | Command | Plans land at |
 |---|---|---|
@@ -265,7 +265,7 @@ All implementation planning MUST go through GSD. Never use native plan mode for 
 | Execute a phase | `/gsd-execute-phase N` | Source files + `.planning/phases/N/SUMMARY.md` |
 | Check progress | `/gsd-progress` | `.planning/STATE.md` |
 
-**Forbidden:** Writing plans to `~/.claude/plans/` for kicad-agent work.
+**Forbidden:** Writing plans to `~/.claude/plans/` for volta work.
 
 ## Agent Rules
 
@@ -273,13 +273,13 @@ All implementation planning MUST go through GSD. Never use native plan mode for 
 - **Track in Beads.** Use `mcp__beads__beads_create` for every issue found or task started. Use `mcp__beads__beads_update` to track progress.
 - **Never skip validation.** Always run ERC after schematic edits. Always run DRC after layout edits. Always run both before manufacturing export.
 - **Out-of-scope findings must be tracked.** If you find an issue but it's not in the current task, create a Bead with labels "out-of-scope" before continuing.
-- **Use kicad-agent operations, not raw file edits.** Never directly edit .kicad_sch or .kicad_pcb files with text tools. Use the operation executor for safe AST mutations.
+- **Use volta operations, not raw file edits.** Never directly edit .kicad_sch or .kicad_pcb files with text tools. Use the operation executor for safe AST mutations.
 - **3D renders for visual review.** Use `kicad-cli pcb render` to generate PNG/JPEG images for visual inspection instead of asking the user to open KiCad.
 
 ## Project Structure
 
 ```
-src/kicad_agent/
+src/volta/
   cli.py           — CLI entry point
   context.py       — Project context loading
   handler.py       — Operation dispatch
@@ -327,16 +327,16 @@ skills/            — Claude Code skill definitions
 
 | I want to... | Command |
 |-------------|---------|
-| Edit a KiCad file | `/kicad-agent '<json operation>'` |
+| Edit a KiCad file | `/volta '<json operation>'` |
 | Run ERC | `kicad-cli sch erc <file.kicad_sch>` |
 | Run DRC | `kicad-cli pcb drc <file.kicad_pcb>` |
 | Export Gerbers | `kicad-cli pcb export gerbers <file.kicad_pcb> -o gerbers/` |
 | 3D render | `kicad-cli pcb render <file.kicad_pcb> -o render.png --rotate "-45,0,45"` |
 | Export schematic PDF | `kicad-cli sch export pdf <file.kicad_sch> -o sch.pdf` |
-| Analyze with AI model | `/kicad-agent analyze <file.kicad_pcb>` |
-| Check project status | `/kicad-agent status` |
-| Get project context | `/kicad-agent context` |
-| View operations help | `/kicad-agent help` |
+| Analyze with AI model | `/volta analyze <file.kicad_pcb>` |
+| Check project status | `/volta status` |
+| Get project context | `/volta context` |
+| View operations help | `/volta help` |
 
 ## Memory / Confucius (MANDATORY)
 
@@ -344,7 +344,7 @@ Before solving a problem, check if a solution already exists:
 - `mcp__confucius__memory_retrieve` — search for existing patterns
 - `mcp__confucius__memory_store` — store solutions worth remembering
 
-### What to store for kicad-agent:
+### What to store for volta:
 - PCB layout patterns and design rules
 - DRC error fixes and workarounds
 - Footprint creation decisions

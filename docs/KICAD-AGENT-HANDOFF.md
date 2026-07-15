@@ -1,14 +1,14 @@
-# kicad-agent — Team Handoff Document
+# volta — Team Handoff Document
 
 **AI-safe structural editing of KiCad 10+ schematic, PCB, symbol, and footprint files.**
 
-> **Quick start:** `pip install -e .` then `kicad-agent '{"op_type":"query","file_path":"my.kicad_pcb"}'`
+> **Quick start:** `pip install -e .` then `volta '{"op_type":"query","file_path":"my.kicad_pcb"}'`
 
 ---
 
-## What Is kicad-agent?
+## What Is volta?
 
-kicad-agent is a Python library and CLI tool for programmatically editing KiCad design files with zero corruption. It provides:
+volta is a Python library and CLI tool for programmatically editing KiCad design files with zero corruption. It provides:
 
 - **98 operation types** covering schematic editing, PCB layout, routing, cross-file sync, validation, and manufacturing export
 - **Structural safety** — every edit goes through AST mutation or raw S-expression surgery, never text-level find/replace
@@ -45,7 +45,7 @@ kicad-agent is a Python library and CLI tool for programmatically editing KiCad 
 
 ```bash
 git clone <repo-url>
-cd kicad-agent
+cd volta
 pip install -e .
 ```
 
@@ -54,7 +54,7 @@ pip install -e .
 **Verify:**
 ```bash
 kicad-cli --version
-kicad-agent --schema | python3 -m json.tool | head -20
+volta --schema | python3 -m json.tool | head -20
 ```
 
 ---
@@ -63,24 +63,24 @@ kicad-agent --schema | python3 -m json.tool | head -20
 
 | Command | What it does |
 |---|---|
-| `kicad-agent '<json>'` | Run any operation from inline JSON |
-| `kicad-agent ops.json` | Run operations from a JSON file |
-| `kicad-agent --dry-run '<json>'` | Validate without executing |
-| `kicad-agent --schema` | Print the full operation JSON Schema |
-| `kicad-agent erc <schematic>` | Run ERC on a schematic |
-| `kicad-agent drc <pcb>` | Run DRC on a PCB |
-| `kicad-agent export gerber <pcb> -o gerbers/` | Export Gerbers |
-| `kicad-agent export bom <pcb> -o bom.csv` | Export BOM |
-| `kicad-agent export step <pcb> -o board.step` | Export STEP 3D model |
-| `kicad-agent route <pcb>` | Auto-route a PCB |
-| `kicad-agent context [project_dir]` | Show project summary |
-| `kicad-agent analyze <file>` | AI-powered board analysis |
-| `kicad-agent pre-pcb-gate <schematic>` | Schematic readiness gate |
-| `kicad-agent review-schematic <sch>` | Schematic quality review |
-| `kicad-agent undo [file]` / `redo [file]` | Persistent undo/redo |
-| `kicad-agent workflow route-and-fill <pcb>` | Multi-step workflow |
-| `kicad-agent playground` | Interactive web UI |
-| `kicad-agent demo --list` | Template-based schematic generation |
+| `volta '<json>'` | Run any operation from inline JSON |
+| `volta ops.json` | Run operations from a JSON file |
+| `volta --dry-run '<json>'` | Validate without executing |
+| `volta --schema` | Print the full operation JSON Schema |
+| `volta erc <schematic>` | Run ERC on a schematic |
+| `volta drc <pcb>` | Run DRC on a PCB |
+| `volta export gerber <pcb> -o gerbers/` | Export Gerbers |
+| `volta export bom <pcb> -o bom.csv` | Export BOM |
+| `volta export step <pcb> -o board.step` | Export STEP 3D model |
+| `volta route <pcb>` | Auto-route a PCB |
+| `volta context [project_dir]` | Show project summary |
+| `volta analyze <file>` | AI-powered board analysis |
+| `volta pre-pcb-gate <schematic>` | Schematic readiness gate |
+| `volta review-schematic <sch>` | Schematic quality review |
+| `volta undo [file]` / `redo [file]` | Persistent undo/redo |
+| `volta workflow route-and-fill <pcb>` | Multi-step workflow |
+| `volta playground` | Interactive web UI |
+| `volta demo --list` | Template-based schematic generation |
 
 ---
 
@@ -95,24 +95,24 @@ JSON input → Pydantic schema validation → Pre-analysis gate → Handler → 
 **Invocation patterns:**
 ```bash
 # Inline JSON
-kicad-agent '{"op_type":"add_component","file_path":"my.kicad_sch","reference":"R1","lib_id":"Device:R","x":100,"y":50}'
+volta '{"op_type":"add_component","file_path":"my.kicad_sch","reference":"R1","lib_id":"Device:R","x":100,"y":50}'
 
 # From file
-kicad-agent ops.json
+volta ops.json
 
 # Dry run (validate only)
-kicad-agent --dry-run '{"op_type":"auto_route","file_path":"my.kicad_pcb"}'
+volta --dry-run '{"op_type":"auto_route","file_path":"my.kicad_pcb"}'
 
 # Programmatic
-from kicad_agent.ops.executor import execute
+from volta.ops.executor import execute
 result = execute(operation_json)
 ```
 
 **Categories (25):** component, net, reference, footprint, wire, remove, query, library, pcb, erc, gap, create, repair, sheet, crossfile, routing, schematic_intel, erc_smart, readability, gate, constraint, manufacturing, placement, drc, zone.
 
-**Registry queries:** Use `kicad_agent.ops.registry` to discover operations:
+**Registry queries:** Use `volta.ops.registry` to discover operations:
 ```python
-from kicad_agent.ops.registry import get_operations_for_file_type, get_readonly_operations
+from volta.ops.registry import get_operations_for_file_type, get_readonly_operations
 pcb_ops = get_operations_for_file_type("pcb")  # All PCB operations
 read_only = get_readonly_operations()          # Safe query operations
 ```
@@ -232,7 +232,7 @@ File type: `.kicad_pcb`
 
 ## Routing Capabilities
 
-kicad-agent has a multi-layered routing system under `src/kicad_agent/routing/`:
+volta has a multi-layered routing system under `src/volta/routing/`:
 
 ### Routing Backends
 - **A\* Pathfinder** — in-house grid-based A* with DRC-aware edge weights, Euclidean heuristic, nearest-neighbor Steiner tree for multi-pin nets
@@ -267,7 +267,7 @@ The most recent work adds a **closed-loop negotiation system** with AI-powered b
 
 ```python
 # Use the negotiation loop with AI diagnosis
-from kicad_agent.routing import negotiate_route, BlockerDiagnosticianModel
+from volta.routing import negotiate_route, BlockerDiagnosticianModel
 
 result = negotiate_route(
     board_bounds=bounds,
@@ -285,12 +285,12 @@ print(f"Routed: {len(result.routed_nets)}, Failed: {len(result.failed_nets)}")
 
 ### KiCad-CLI Checks
 ```bash
-kicad-agent erc my.kicad_sch     # Electrical Rules Check
-kicad-agent drc my.kicad_pcb     # Design Rules Check
+volta erc my.kicad_sch     # Electrical Rules Check
+volta drc my.kicad_pcb     # Design Rules Check
 ```
 
 ### Stage Gates
-kicad-agent enforces a stage-gate pipeline:
+volta enforces a stage-gate pipeline:
 
 ```
 SCHEMATIC → PCB_SETUP → PLACEMENT → ROUTING → MANUFACTURING
@@ -298,9 +298,9 @@ SCHEMATIC → PCB_SETUP → PLACEMENT → ROUTING → MANUFACTURING
 
 Each transition has a deterministic gate that fails closed:
 ```bash
-kicad-agent pre-pcb-gate my.kicad_sch    # Schematic readiness before PCB
-kicad-agent gate run placement_gate       # Placement readiness
-kicad-agent gate status                    # Show all gate results
+volta pre-pcb-gate my.kicad_sch    # Schematic readiness before PCB
+volta gate run placement_gate       # Placement readiness
+volta gate status                    # Show all gate results
 ```
 
 ### Spatial & Structural Validators
@@ -315,7 +315,7 @@ kicad-agent gate status                    # Show all gate results
 
 ## Cross-File Sync
 
-kicad-agent provides non-destructive schematic↔PCB synchronization:
+volta provides non-destructive schematic↔PCB synchronization:
 
 | Operation | Description |
 |---|---|
@@ -331,11 +331,11 @@ kicad-agent provides non-destructive schematic↔PCB synchronization:
 
 ## MCP Server
 
-kicad-agent exposes two MCP servers for AI agent integration:
+volta exposes two MCP servers for AI agent integration:
 
 ### Edit Server (operation execution)
 ```bash
-KICAD_PROJECT_DIR=/path/to/project kicad-agent-edit
+KICAD_PROJECT_DIR=/path/to/project volta-edit
 ```
 
 Exposes **one MCP tool per operation** (all 98), plus meta-tools:
@@ -349,7 +349,7 @@ Tool annotations (`readOnlyHint`/`destructiveHint`) are auto-derived from the op
 
 ### Component Search Server
 ```bash
-kicad-agent component-search
+volta component-search
 ```
 
 Searches JLCPCB/EasyEDA for components:
@@ -393,7 +393,7 @@ Searches JLCPCB/EasyEDA for components:
 
 ### Inference Wrapper
 ```python
-from kicad_agent.inference import generate_analysis
+from volta.inference import generate_analysis
 result = generate_analysis("my.kicad_pcb", n_best=3)
 ```
 
@@ -404,15 +404,15 @@ result = generate_analysis("my.kicad_pcb", n_best=3)
 All exports go through kicad-cli:
 
 ```bash
-kicad-agent export gerber my.kicad_pcb -o gerbers/      # Gerber files
-kicad-agent export bom my.kicad_pcb -o bom.csv           # BOM with LCSC numbers
-kicad-agent export position my.kicad_pcb -o pos.csv      # Pick-and-place
-kicad-agent export step my.kicad_pcb -o board.step       # 3D STEP model
+volta export gerber my.kicad_pcb -o gerbers/      # Gerber files
+volta export bom my.kicad_pcb -o bom.csv           # BOM with LCSC numbers
+volta export position my.kicad_pcb -o pos.csv      # Pick-and-place
+volta export step my.kicad_pcb -o board.step       # 3D STEP model
 ```
 
 **DFM analysis:**
 ```bash
-kicad-agent dfm my.kicad_pcb --profile jlcpcb --output dfm_report.md
+volta dfm my.kicad_pcb --profile jlcpcb --output dfm_report.md
 ```
 
 ---
@@ -434,7 +434,7 @@ kicad-agent dfm my.kicad_pcb --profile jlcpcb --output dfm_report.md
 ## Architecture
 
 ```
-src/kicad_agent/
+src/volta/
   cli.py              — CLI entry point (19 subcommands)
   handler.py          — Operation dispatch
   ops/
@@ -495,13 +495,13 @@ The most recent work was a comprehensive placement-aware routing overhaul. See `
 
 ## Getting Help
 
-- **Operation schema:** `kicad-agent --schema`
-- **Available operations:** `python3 -c "from kicad_agent.ops.registry import OPERATIONS; print(len(OPERATIONS))"`
-- **Project context:** `kicad-agent context /path/to/project`
-- **Gate status:** `kicad-agent gate status`
+- **Operation schema:** `volta --schema`
+- **Available operations:** `python3 -c "from volta.ops.registry import OPERATIONS; print(len(OPERATIONS))"`
+- **Project context:** `volta context /path/to/project`
+- **Gate status:** `volta gate status`
 - **Test suite:** `pytest tests/ -m "not slow"`
-- **Playground:** `kicad-agent playground` → http://localhost:8000
+- **Playground:** `volta playground` → http://localhost:8000
 
 ---
 
-*Document generated 2026-07-03. kicad-agent v0.0.1, KiCad 10+.*
+*Document generated 2026-07-03. volta v0.0.1, KiCad 10+.*

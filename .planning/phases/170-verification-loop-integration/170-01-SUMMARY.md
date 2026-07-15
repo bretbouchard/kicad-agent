@@ -10,8 +10,8 @@ provides:
   - "Daemon kicad.pre_check / kicad.post_check / kicad.snapshot / kicad.restore MCP methods"
   - "snapshot.py atomic per-file snapshot/restore with path-traversal defense"
 affects:
-  - "macos-app/Sources/KiCadAgent/MCP/MCPClient.swift (governedCall rewired)"
-  - "macos-app/Sources/KiCadAgent/Governance/GovernedCall.swift (Governance holds verificationLoop)"
+  - "macos-app/Sources/Volta/MCP/MCPClient.swift (governedCall rewired)"
+  - "macos-app/Sources/Volta/Governance/GovernedCall.swift (Governance holds verificationLoop)"
 tech-stack:
   added: []
   patterns:
@@ -21,20 +21,20 @@ tech-stack:
     - "Daemon RPC handlers wrapping existing validation_gates.py infrastructure"
 key-files:
   created:
-    - macos-app/Sources/KiCadAgent/Governance/PreOpGate.swift
-    - macos-app/Sources/KiCadAgent/Governance/PostOpGate.swift
-    - macos-app/Sources/KiCadAgent/Governance/Rollback.swift
-    - macos-app/Sources/KiCadAgent/Governance/VerificationLoop.swift
+    - macos-app/Sources/Volta/Governance/PreOpGate.swift
+    - macos-app/Sources/Volta/Governance/PostOpGate.swift
+    - macos-app/Sources/Volta/Governance/Rollback.swift
+    - macos-app/Sources/Volta/Governance/VerificationLoop.swift
     - macos-app/daemon/snapshot.py
-    - macos-app/Tests/KiCadAgentTests/Governance/PreOpGateTests.swift
-    - macos-app/Tests/KiCadAgentTests/Governance/PostOpGateTests.swift
-    - macos-app/Tests/KiCadAgentTests/Governance/RollbackTests.swift
-    - macos-app/Tests/KiCadAgentTests/Governance/VerificationLoopTests.swift
+    - macos-app/Tests/VoltaTests/Governance/PreOpGateTests.swift
+    - macos-app/Tests/VoltaTests/Governance/PostOpGateTests.swift
+    - macos-app/Tests/VoltaTests/Governance/RollbackTests.swift
+    - macos-app/Tests/VoltaTests/Governance/VerificationLoopTests.swift
     - macos-app/daemon/tests/test_snapshot.py
     - macos-app/daemon/tests/test_verification_handlers.py
   modified:
-    - macos-app/Sources/KiCadAgent/Governance/GovernedCall.swift
-    - macos-app/Sources/KiCadAgent/MCP/MCPClient.swift
+    - macos-app/Sources/Volta/Governance/GovernedCall.swift
+    - macos-app/Sources/Volta/MCP/MCPClient.swift
     - macos-app/daemon/handlers.py
 decisions:
   - "Gates are @MainActor to share MCPClient's actor isolation, avoiding [String: Any] sendability crossings"
@@ -165,16 +165,16 @@ The `SemanticJudge` protocol is intentionally minimal (3 fields: intent, op, res
 ## Self-Check: PASSED
 
 Created files verified present:
-- macos-app/Sources/KiCadAgent/Governance/PreOpGate.swift ✓
-- macos-app/Sources/KiCadAgent/Governance/PostOpGate.swift ✓
-- macos-app/Sources/KiCadAgent/Governance/Rollback.swift ✓
-- macos-app/Sources/KiCadAgent/Governance/VerificationLoop.swift ✓
+- macos-app/Sources/Volta/Governance/PreOpGate.swift ✓
+- macos-app/Sources/Volta/Governance/PostOpGate.swift ✓
+- macos-app/Sources/Volta/Governance/Rollback.swift ✓
+- macos-app/Sources/Volta/Governance/VerificationLoop.swift ✓
 - macos-app/daemon/snapshot.py ✓
 - 4 Swift test files + 2 Python test files ✓
 
 Modified files verified:
-- macos-app/Sources/KiCadAgent/Governance/GovernedCall.swift ✓
-- macos-app/Sources/KiCadAgent/MCP/MCPClient.swift ✓
+- macos-app/Sources/Volta/Governance/GovernedCall.swift ✓
+- macos-app/Sources/Volta/MCP/MCPClient.swift ✓
 - macos-app/daemon/handlers.py ✓
 
 Commit verified: `7b367635 feat(governance): phase 170 verification loop` ✓

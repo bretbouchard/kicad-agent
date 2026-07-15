@@ -1,7 +1,7 @@
 # Feature Request: Contextual Placement Constraints
 
 **Created:** 2026-07-04
-**Bead:** kicad-agent-24
+**Bead:** volta-24
 **Priority:** P1
 **Status:** Proposed
 
@@ -25,7 +25,7 @@ These are the "stupid requirements" — the ones experienced designers carry in 
 
 ## Current State: Zero Infrastructure
 
-A codebase audit confirmed kicad-agent has no model for contextual placement rules:
+A codebase audit confirmed volta has no model for contextual placement rules:
 
 | Requirement | Exists? | What we have |
 |---|---|---|
@@ -124,20 +124,20 @@ set_constraints (placement_rules)
 
 ### 5. Persistence
 
-- Extends `.kicad_agent/constraints.json` sidecar (already stores `DesignConstraints`)
+- Extends `.volta/constraints.json` sidecar (already stores `DesignConstraints`)
 - Each rule carries `rationale` — this is the **"why"** that becomes training data for the model
 - The sidecar is the bridge between "stupid requirements" and the AI
 
 ## Connection to SKIDL + Training Data
 
-This feature connects to the SKIDL research (Bead kicad-agent-24 / Phase 107 proposal):
+This feature connects to the SKIDL research (Bead volta-24 / Phase 107 proposal):
 
 1. **SKIDL code** describes circuits as Python — includes component relationships
 2. **Placement rules** capture the spatial intent — not in the schematic, but in constraints
 3. **Training pairs**: `(SKIDL circuit code + placement rules) → (placed PCB)` = training data for the model
 4. The model learns: "given this circuit and these rules, where do components go?"
 
-This is the pipeline SchGen (Microsoft 2026) and PCBSchemaGen (2026) demonstrated — we have the infrastructure to go further because we have routing + DRC + the full kicad-agent pipeline.
+This is the pipeline SchGen (Microsoft 2026) and PCBSchemaGen (2026) demonstrated — we have the infrastructure to go further because we have routing + DRC + the full volta pipeline.
 
 ## Files That Would Be Affected
 
@@ -153,6 +153,6 @@ This is the pipeline SchGen (Microsoft 2026) and PCBSchemaGen (2026) demonstrate
 
 ## Why This Matters
 
-Without capturing these requirements, kicad-agent produces boards that **route but respin** — they pass DRC but fail in the real world because the implicit knowledge wasn't enforced. This is the gap between "auto-placement that kinda works" and "auto-placement that experienced engineers trust."
+Without capturing these requirements, volta produces boards that **route but respin** — they pass DRC but fail in the real world because the implicit knowledge wasn't enforced. This is the gap between "auto-placement that kinda works" and "auto-placement that experienced engineers trust."
 
 The `rationale` field is the key to the AI angle — every rule carries the reason it exists, and those reasons become the training corpus that lets the model eventually infer rules autonomously. The "stupid requirements" aren't stupid — they're the expertise that's currently locked in designers' heads.

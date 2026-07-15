@@ -2,7 +2,7 @@
 
 ## Overview
 
-v7.0 adds a vendor-neutral manufacturing layer to kicad-agent: DRC pre-flight profiles for any fab, a versioned build/handoff system, and (deferred) opt-in vendor API adapters. **Zero new dependencies** — built entirely on the existing KiCad CLI + Python + Pydantic stack. The codebase already has significant primitives (`ManufacturerProfile`, `ManufacturingManifest`, `ManufacturingReadinessGate`, export wrappers) that v7.0 assembles and completes.
+v7.0 adds a vendor-neutral manufacturing layer to volta: DRC pre-flight profiles for any fab, a versioned build/handoff system, and (deferred) opt-in vendor API adapters. **Zero new dependencies** — built entirely on the existing KiCad CLI + Python + Pydantic stack. The codebase already has significant primitives (`ManufacturerProfile`, `ManufacturingManifest`, `ManufacturingReadinessGate`, export wrappers) that v7.0 assembles and completes.
 
 ## Stack Additions
 
@@ -33,7 +33,7 @@ v7.0 adds a vendor-neutral manufacturing layer to kicad-agent: DRC pre-flight pr
 
 ## Architecture Highlights
 
-- **3 new modules** in `src/kicad_agent/manufacturing/`: drc_profiles/ (data), board_spec.py, build.py, manifest.py, handoff.py
+- **3 new modules** in `src/volta/manufacturing/`: drc_profiles/ (data), board_spec.py, build.py, manifest.py, handoff.py
 - **~8 new operations** following the existing pattern (schema → registry → handler → auto-MCP)
 - **Build directory structure**: `builds/v{rev}_{timestamp}/` with manifest.json, readme.md, handoff.zip
 - **BoardSpec sidecar**: `.kicad_build_spec.json` alongside the project (finish, color, stackup, impedance)

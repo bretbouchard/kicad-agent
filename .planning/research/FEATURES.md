@@ -86,7 +86,7 @@
 - Quote comparison across multiple vendors
 - Order tracking with status notifications
 
-**Complexity:** High. Requires API keys (PCBWay partner-gated, MacroFab account-gated). Endpoint docs for MacroFab are gated behind authenticated portal. No Python libraries exist for any of these — kicad-agent would write the first wrappers.
+**Complexity:** High. Requires API keys (PCBWay partner-gated, MacroFab account-gated). Endpoint docs for MacroFab are gated behind authenticated portal. No Python libraries exist for any of these — volta would write the first wrappers.
 
 **Status:** DEFERRED to P6. The handoff package (Category 4) is the universal fallback that works with all vendors, including those with APIs. API adapters are accelerators, not requirements.
 

@@ -22,7 +22,7 @@ tech-stack:
 key-files:
   created: []
   modified:
-    - src/kicad_agent/ops/pre_analysis.py
+    - src/volta/ops/pre_analysis.py
     - tests/test_pre_analysis.py
 
 key-decisions:
@@ -76,7 +76,7 @@ Each task was committed atomically:
 **Plan metadata:** pending (orchestrator handles docs commit)
 
 ## Files Created/Modified
-- `src/kicad_agent/ops/pre_analysis.py` - Added `_analyze_label_operation`, `_check_single_label`, `_check_label_list` methods; added `_get_existing_global_label_names` helper; wired label dispatch into `analyze()`
+- `src/volta/ops/pre_analysis.py` - Added `_analyze_label_operation`, `_check_single_label`, `_check_label_list` methods; added `_get_existing_global_label_names` helper; wired label dispatch into `analyze()`
 - `tests/test_pre_analysis.py` - Added 13 new tests: 11 unit tests in `TestDuplicateGlobalLabelDetection`, 2 integration tests in `TestDuplicateLabelExecutorIntegration`; added helper functions `_make_ir_with_global_labels` and `_cleanup_ir`
 
 ## Decisions Made

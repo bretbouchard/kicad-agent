@@ -22,7 +22,7 @@ Add a new component to a schematic or PCB file.
 Execute:
 
 ```bash
-kicad-agent add-resistor.json
+volta add-resistor.json
 ```
 
 ### Key fields

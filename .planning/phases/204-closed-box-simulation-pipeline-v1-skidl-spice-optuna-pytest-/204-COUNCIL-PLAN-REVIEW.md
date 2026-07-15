@@ -17,7 +17,7 @@
 | **P2 (MEDIUM — must fix during execution)** | 5 |
 | **P3 (LOW — quality improvements)** | 4 |
 
-**Top issue:** Plan 02's `build_preamp_circuit()` uses `import skidl` + `skidl.Part("Device", "Q_NPN")` without first calling `kicad_agent.circuit_ir._ensure_skidl_env()`. RESEARCH.md Pitfall 1 explicitly mandates this helper to set `KICAD_SYMBOL_DIR` before any skidl symbol lookup. On any system without the env var pre-set, `skidl.Part("Device", "Q_NPN")` either raises `Unable to find part` or silently produces no-pins Parts (Phase 156 already shipped this fix; Plan 02 omits it). This breaks every Wave 1+ BLK-1 integration test.
+**Top issue:** Plan 02's `build_preamp_circuit()` uses `import skidl` + `skidl.Part("Device", "Q_NPN")` without first calling `volta.circuit_ir._ensure_skidl_env()`. RESEARCH.md Pitfall 1 explicitly mandates this helper to set `KICAD_SYMBOL_DIR` before any skidl symbol lookup. On any system without the env var pre-set, `skidl.Part("Device", "Q_NPN")` either raises `Unable to find part` or silently produces no-pins Parts (Phase 156 already shipped this fix; Plan 02 omits it). This breaks every Wave 1+ BLK-1 integration test.
 
 **Requirement coverage:** All 12 derived requirements (P204-01 through P204-12) are mapped to plan tasks. See §Coverage Matrix.
 
@@ -33,8 +33,8 @@
 - **Project type:** Python (3.11+, requires-python verified)
 - **Domain:** Electronic Design Automation — SPICE simulation
 - **Foundation packages:** `skidl>=2.2.3`, `spicelib>=1.5.1`, `kiutils>=1.4.8` (all in pyproject)
-- **Phase 158 foundation (consumed as-is):** `src/kicad_agent/spice/` (5 files, frozen dataclasses, ngspice subprocess)
-- **Phase 156 foundation (referenced):** `src/kicad_agent/circuit_ir/_ensure_skidl_env()` — KICAD_SYMBOL_DIR guard
+- **Phase 158 foundation (consumed as-is):** `src/volta/spice/` (5 files, frozen dataclasses, ngspice subprocess)
+- **Phase 156 foundation (referenced):** `src/volta/circuit_ir/_ensure_skidl_env()` — KICAD_SYMBOL_DIR guard
 - **New deps:** `optuna>=4.5` (GPSampler Aug 2025), `pandas>=2.0` (already installed at 3.0.3), `matplotlib>=3.7` (already at 3.10.9)
 - **External CLI:** ngspice (brew/apt, not pip)
 - **Testing:** pytest with `slow`/`integration` markers, mypy strict, ruff
@@ -54,7 +54,7 @@
 
 | Req ID | Description | Plan(s) | Task | Status |
 |--------|-------------|---------|------|--------|
-| P204-01 | `src/kicad_agent/sim/` package as sibling to `spice/` | 02 | T1 | ✅ Covered (`__init__.py` created) |
+| P204-01 | `src/volta/sim/` package as sibling to `spice/` | 02 | T1 | ✅ Covered (`__init__.py` created) |
 | P204-02 | `circuit_to_spice_netlist()` skidl→SPICE bridge | 02 | T1 | ⚠️ Covered but P0 finding (skidl env) |
 | P204-03 | Optuna GPSampler objective for E12 R/C | 03 | T1 | ✅ Covered |
 | P204-04 | 2N3904 Gummel-Poon `.MODEL` in registry | 01 | T2 | ✅ Covered (TDD, 4 tests) |
@@ -85,7 +85,7 @@
 
 #### Pattern: "Phase 156 skidl Environment Guard (_ensure_skidl_env)"
 - **Category:** bug-prevention
-- **Historical context:** Phase 156 discovered that skidl silently produces no-pin Parts when `KICAD_SYMBOL_DIR` is unset. They shipped `_ensure_skidl_env()` in `src/kicad_agent/circuit_ir/__init__.py` which auto-discovers KiCad's symbol dir on macOS/Linux and sets both `KICAD_SYMBOL_DIR` and version-specific `KICAD{5..10}_SYMBOL_DIR` variants.
+- **Historical context:** Phase 156 discovered that skidl silently produces no-pin Parts when `KICAD_SYMBOL_DIR` is unset. They shipped `_ensure_skidl_env()` in `src/volta/circuit_ir/__init__.py` which auto-discovers KiCad's symbol dir on macOS/Linux and sets both `KICAD_SYMBOL_DIR` and version-specific `KICAD{5..10}_SYMBOL_DIR` variants.
 - **Pattern compliance:** ❌ VIOLATED by Plan 02 Task 1. `build_preamp_circuit` does `import skidl` and `skidl.Part("Device", "Q_NPN")` without triggering the env guard. RESEARCH.md Pitfall 1 explicitly cites this helper as the fix.
 - **Recommendation:** FIX (becomes P0 finding CR-01 below).
 
@@ -106,12 +106,12 @@
 #### Anti-Pattern: "Silent Import Without Env Guard"
 - **Problem:** Module imports `skidl` directly without first triggering a parent-package init that sets required env vars. skidl lookup silently degrades.
 - **Historical evidence:** Phase 156 hit this exact failure in early Wave 1 — `skidl.Part()` returned empty-pin Parts, downstream netlist emission produced "R1 NC NC 1k" lines, ngspice reported `Node NC is floating`, and root cause took 4 hours to localize.
-- **Current violation:** Plan 02 Task 1 `eurorack.py` does `import skidl` at top of `build_preamp_circuit`. The `kicad_agent.sim` package is a sibling of `circuit_ir`, not a child — so `circuit_ir.__init__` does NOT run automatically.
+- **Current violation:** Plan 02 Task 1 `eurorack.py` does `import skidl` at top of `build_preamp_circuit`. The `volta.sim` package is a sibling of `circuit_ir`, not a child — so `circuit_ir.__init__` does NOT run automatically.
 - **Resolution:** See CR-01.
 
 ### Rickfucius Decision: ⚠️ DOCUMENT DEVIATION (CR-01 must land before Plan 02 execution)
 
-**Reasoning:** Plans are historically informed and follow 3 of 4 patterns. The 4th pattern violation (skidl env guard) is a known-silent-failure trap from Phase 156. The fix is small (1 line: `from kicad_agent.circuit_ir import _ensure_skidl_env; _ensure_skidl_env()` at module top of `eurorack.py`), but it MUST land before Plan 02 execution or every BLK-1 integration test will fail with cryptic skidl errors.
+**Reasoning:** Plans are historically informed and follow 3 of 4 patterns. The 4th pattern violation (skidl env guard) is a known-silent-failure trap from Phase 156. The fix is small (1 line: `from volta.circuit_ir import _ensure_skidl_env; _ensure_skidl_env()` at module top of `eurorack.py`), but it MUST land before Plan 02 execution or every BLK-1 integration test will fail with cryptic skidl errors.
 
 ---
 
@@ -235,15 +235,15 @@ Plans include comprehensive `<threat_model>` sections in all 4 plans with STRIDE
   - `204-02-PLAN.md:396-439` — `build_preamp_circuit` body does `import skidl` + `skidl.Circuit()` + `skidl.Part("Device", "Q_NPN", value="2N3904")` with NO call to `_ensure_skidl_env()`.
   - `204-02-PLAN.md:341-357` — Module-level `import` block in `eurorack.py` also lacks the env guard.
 - **Evidence:**
-  - `src/kicad_agent/circuit_ir/__init__.py:24-67` — Phase 156 ships `_ensure_skidl_env()` and explicitly documents: "Pitfall #6 guard: KICAD_SYMBOL_DIR MUST be set before importing skidl, otherwise skidl silently resolves no symbols and parts get no pins."
-  - `204-RESEARCH.md` Pitfall 1 explicitly mandates: "Route through `kicad_agent.circuit_ir._ensure_skidl_env()` (Phase 156) — it auto-discovers KiCad's symbol dir at `/Applications/KiCad/KiCad.app/Contents/SharedSupport/symbols` on macOS [VERIFIED: codebase]."
-  - `src/kicad_agent/__init__.py` does NOT import `circuit_ir`, so importing `kicad_agent.sim.eurorack` does NOT transitively trigger the env guard.
+  - `src/volta/circuit_ir/__init__.py:24-67` — Phase 156 ships `_ensure_skidl_env()` and explicitly documents: "Pitfall #6 guard: KICAD_SYMBOL_DIR MUST be set before importing skidl, otherwise skidl silently resolves no symbols and parts get no pins."
+  - `204-RESEARCH.md` Pitfall 1 explicitly mandates: "Route through `volta.circuit_ir._ensure_skidl_env()` (Phase 156) — it auto-discovers KiCad's symbol dir at `/Applications/KiCad/KiCad.app/Contents/SharedSupport/symbols` on macOS [VERIFIED: codebase]."
+  - `src/volta/__init__.py` does NOT import `circuit_ir`, so importing `volta.sim.eurorack` does NOT transitively trigger the env guard.
 - **Engineering principle:** Don't repeat Phase 156's silent-failure discovery. Reuse the existing fix.
 - **Fix recommendation:** In Plan 02 Task 1 STEP B, change the `build_preamp_circuit` body to:
 
   ```python
   # At top of eurorack.py module (BEFORE import skidl):
-  from kicad_agent.circuit_ir import _ensure_skidl_env
+  from volta.circuit_ir import _ensure_skidl_env
   _ensure_skidl_env()  # Phase 156 pitfall #6 guard — set KICAD_SYMBOL_DIR
   import skidl
   ```
@@ -251,7 +251,7 @@ Plans include comprehensive `<threat_model>` sections in all 4 plans with STRIDE
   Or inline at the start of `build_preamp_circuit` (preferred — keeps side-effect at function entry, not module import). Add a unit test `test_build_preamp_circuit_sets_skidl_env` asserting `os.environ.get("KICAD_SYMBOL_DIR")` is non-empty after the call.
 - **Reasoning:**
   - **Evidence:** Read `circuit_ir/__init__.py:1-67`, `circuit_ir/skidl_circuit.py:58-59`, `204-02-PLAN.md:341-505`, `204-RESEARCH.md` Pitfall 1.
-  - **Alternatives considered:** (a) Add `from kicad_agent import circuit_ir` at top of `eurorack.py` — works but obscure. (b) Document "user must set KICAD_SYMBOL_DIR" in README — rejected: violates Stupid-Proof Principle. (c) Inline the env-guard call — preferred because it's explicit.
+  - **Alternatives considered:** (a) Add `from volta import circuit_ir` at top of `eurorack.py` — works but obscure. (b) Document "user must set KICAD_SYMBOL_DIR" in README — rejected: violates Stupid-Proof Principle. (c) Inline the env-guard call — preferred because it's explicit.
   - **Severity rationale:** P0 because Plan 02's BLK-1 integration tests (`test_eurorack_preamp_meets_target_gain`, `test_eurorack_preamp_meets_target_bandwidth`, `test_emitted_netlist_is_valid_spice`) all call `build_preamp_circuit`. If KICAD_SYMBOL_DIR is not set in the user's shell, skidl produces no-pin Parts, `circuit_to_spice_netlist` emits lines like `R1   4.7k` (empty node list), ngspice reports parse errors, the conftest session fixture fails, and every test in `tests/sim/` fails collection.
   - **Confidence factors:** Increased by RESEARCH.md Pitfall 1 explicitly citing this exact helper. Decreased by 0.05 because if the user happens to have `KICAD_SYMBOL_DIR` already exported (e.g., from a KiCad GUI session), the bug doesn't manifest — making it intermittent and hard to localize in CI.
 
@@ -264,7 +264,7 @@ Plans include comprehensive `<threat_model>` sections in all 4 plans with STRIDE
 - **Severity:** P1 HIGH (functional — demo time budget blown if any trial hits ngspice hang)
 - **Category:** Missing edge case (convergence failure)
 - **Confidence:** 0.85
-- **Location:** `204-03-PLAN.md:374` (objective calls `run_simulation` per trial); `src/kicad_agent/spice/ngspice_runner.py:18` (`_NGSPICE_TIMEOUT = 120`).
+- **Location:** `204-03-PLAN.md:374` (objective calls `run_simulation` per trial); `src/volta/spice/ngspice_runner.py:18` (`_NGSPICE_TIMEOUT = 120`).
 - **Evidence:**
   - Phase 158's runner has a 120s per-sim timeout.
   - Plan 03's `optimize_preamp(n_trials=50)` calls `run_simulation` once per trial.
@@ -620,7 +620,7 @@ Test Rick audited the test pyramid across all 4 plans:
 ### Issues Found
 
 #### Pattern: "Sibling Package, Not Child"
-- Plan 02 creates `src/kicad_agent/sim/` as a **sibling** to `src/kicad_agent/spice/`, not a child. This is the correct architectural decision per the stated rationale: "clean separation between 'run a SPICE sim' (spice/) and 'optimize + analyze + demo a SPICE sim' (sim/)."
+- Plan 02 creates `src/volta/sim/` as a **sibling** to `src/volta/spice/`, not a child. This is the correct architectural decision per the stated rationale: "clean separation between 'run a SPICE sim' (spice/) and 'optimize + analyze + demo a SPICE sim' (sim/)."
 - **Compliance:** ✅ Follows Hexagonal Architecture — `spice/` is the infrastructure layer (subprocess wrapper), `sim/` is the application layer (optimization, demo).
 
 #### Pattern: "Adapter, Not Replacement"
@@ -768,7 +768,7 @@ Per bureaucracy §7.5 Gate 1: Plans CANNOT execute until Council returns clean.
 **Next steps:**
 
 1. **Agent applies P0 + P1 fixes (CR-01, CR-02, CR-03, CR-04) to plans 204-01/02/03/04.**
-   - CR-01: Add `from kicad_agent.circuit_ir import _ensure_skidl_env; _ensure_skidl_env()` at start of `build_preamp_circuit` in Plan 02 Task 1. Add unit test `test_build_preamp_circuit_sets_skidl_env`.
+   - CR-01: Add `from volta.circuit_ir import _ensure_skidl_env; _ensure_skidl_env()` at start of `build_preamp_circuit` in Plan 02 Task 1. Add unit test `test_build_preamp_circuit_sets_skidl_env`.
    - CR-02: Add trial-level timeout (5-10s) in Plan 03 `optimize_preamp` or `objective`. Document budget math: `n_trials × trial_timeout ≤ 45s` (leaves 15s for rebuild + plot).
    - CR-03: In Plan 02 fixture, change `c_emitter` to a smaller value (e.g., 1µF) so the bypass is partial at audio band → gain lands near 20 dB. Or add `ic_ma > 50: return float('inf')` in Plan 03 objective. Tighten fixture test to `17 <= gain_db <= 30`.
    - CR-04: Add input validation at start of `build_preamp_circuit`. Add unit tests for NaN/negative rejection.

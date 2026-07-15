@@ -24,16 +24,16 @@ Gap F3 from `GAP-ANALYSIS-CURRENT.md` closed.
 
 | File | Change |
 |------|--------|
-| `macos-app/Sources/KiCadAgent/State/OnboardingState.swift` | NEW — SwiftData `@Model` with hard-coded canonical id, plus `OnboardingStateStore.current(in:)` fetch-or-create façade |
-| `macos-app/Sources/KiCadAgent/Views/Onboarding/Starters.swift` | NEW — 3 starter projects as a value type catalog (id, name, icon, blurb, prompt) |
-| `macos-app/Sources/KiCadAgent/Views/Onboarding/OnboardingFlowView.swift` | NEW — 3-step page view with welcome → chat → result; per-step Back/Continue/Start designing CTAs; always-visible Skip; custom page dots |
-| `macos-app/Sources/KiCadAgent/Views/AppRootView.swift` | MODIFIED — `@Query` for `OnboardingState`; routing logic: project → LiquidGlassShell, no project + tour not dismissed → OnboardingFlowView, no project + tour dismissed → ChatPlaceholderView with re-entry link |
-| `macos-app/Sources/KiCadAgent/Views/ProjectSidebar.swift` | MODIFIED — new `onShowTour` closure; empty-state row with "Show welcome tour" link |
-| `macos-app/Sources/KiCadAgent/Views/ChatPlaceholderView.swift` | MODIFIED — optional `onShowTour` closure; secondary "Show welcome tour" link under primary CTA |
-| `macos-app/Sources/KiCadAgent/Views/Chat/ChatView.swift` | MODIFIED — listens for `.onboardingStarterPicked` NotificationCenter event; prefills `inputDraft` if it's currently empty (idempotent) |
-| `macos-app/Sources/KiCadAgent/KiCadAgentApp.swift` | MODIFIED — added `OnboardingState.self` to `ModelSchemaRegistry.v600Schema` and `makeContainer` |
-| `macos-app/Sources/KiCadAgent/Views/Onboarding/KiCadInstallView.swift` | DELETED — orphaned since Phase 220 removed the install path |
-| `macos-app/Tests/KiCadAgentTests/OnboardingFlowTests.swift` | NEW — 8 tests |
+| `macos-app/Sources/Volta/State/OnboardingState.swift` | NEW — SwiftData `@Model` with hard-coded canonical id, plus `OnboardingStateStore.current(in:)` fetch-or-create façade |
+| `macos-app/Sources/Volta/Views/Onboarding/Starters.swift` | NEW — 3 starter projects as a value type catalog (id, name, icon, blurb, prompt) |
+| `macos-app/Sources/Volta/Views/Onboarding/OnboardingFlowView.swift` | NEW — 3-step page view with welcome → chat → result; per-step Back/Continue/Start designing CTAs; always-visible Skip; custom page dots |
+| `macos-app/Sources/Volta/Views/AppRootView.swift` | MODIFIED — `@Query` for `OnboardingState`; routing logic: project → LiquidGlassShell, no project + tour not dismissed → OnboardingFlowView, no project + tour dismissed → ChatPlaceholderView with re-entry link |
+| `macos-app/Sources/Volta/Views/ProjectSidebar.swift` | MODIFIED — new `onShowTour` closure; empty-state row with "Show welcome tour" link |
+| `macos-app/Sources/Volta/Views/ChatPlaceholderView.swift` | MODIFIED — optional `onShowTour` closure; secondary "Show welcome tour" link under primary CTA |
+| `macos-app/Sources/Volta/Views/Chat/ChatView.swift` | MODIFIED — listens for `.onboardingStarterPicked` NotificationCenter event; prefills `inputDraft` if it's currently empty (idempotent) |
+| `macos-app/Sources/Volta/VoltaApp.swift` | MODIFIED — added `OnboardingState.self` to `ModelSchemaRegistry.v600Schema` and `makeContainer` |
+| `macos-app/Sources/Volta/Views/Onboarding/KiCadInstallView.swift` | DELETED — orphaned since Phase 220 removed the install path |
+| `macos-app/Tests/VoltaTests/OnboardingFlowTests.swift` | NEW — 8 tests |
 
 ## OnboardingState (the persistence layer)
 

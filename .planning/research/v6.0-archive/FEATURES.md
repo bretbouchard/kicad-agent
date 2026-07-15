@@ -4,7 +4,7 @@
 **Milestone:** v3.0-full-stack-eda (Phases 50-54)
 **Researched:** 2026-06-01
 **Confidence:** HIGH
-**Scope:** 5 new feature areas extending kicad-agent's existing schematic analysis into PCB layout intelligence
+**Scope:** 5 new feature areas extending volta's existing schematic analysis into PCB layout intelligence
 
 ---
 
@@ -23,7 +23,7 @@
 
 ## Executive Summary
 
-v3.0 closes the most significant gap in kicad-agent: schematic intelligence stops at the schematic boundary, while PCB placement and DRC operate without any knowledge of design intent. The five feature areas are not independent modules but a **pipeline**: constraint propagation translates schematic analysis outputs into PCB design constraints, the PCB spatial model provides geometry-rich query infrastructure, layout-aware placement consumes both to produce intelligent component positions, DRC intelligence enriches violation reports with spatial context and fix suggestions, and DFM adds manufacturing-readiness assessment.
+v3.0 closes the most significant gap in volta: schematic intelligence stops at the schematic boundary, while PCB placement and DRC operate without any knowledge of design intent. The five feature areas are not independent modules but a **pipeline**: constraint propagation translates schematic analysis outputs into PCB design constraints, the PCB spatial model provides geometry-rich query infrastructure, layout-aware placement consumes both to produce intelligent component positions, DRC intelligence enriches violation reports with spatial context and fix suggestions, and DFM adds manufacturing-readiness assessment.
 
 The critical feature is constraint propagation -- it is the keystone that connects the existing `analysis/` layer (topology graphs, subcircuit detection, intent inference, design rules) to the PCB domain. Without it, placement is connectivity-driven but blind to differential pairs, impedance targets, and thermal requirements. With it, the entire pipeline from schematic capture through manufacturing export becomes aware of what the designer intended.
 
@@ -35,7 +35,7 @@ Three of the five feature areas build directly on existing infrastructure: layou
 
 ### What Already Exists
 
-The kicad-agent codebase has 85+ operations, 2,899 tests, and deep schematic understanding from Phases 1-49. The following existing modules form the foundation for v3.0:
+The volta codebase has 85+ operations, 2,899 tests, and deep schematic understanding from Phases 1-49. The following existing modules form the foundation for v3.0:
 
 | Component | Location | Capability | v3.0 Role |
 |-----------|----------|------------|-----------|
@@ -159,11 +159,11 @@ Features users expect from a "full-stack EDA intelligence" system. Missing any m
 
 ## Differentiators
 
-Features that set kicad-agent apart from other EDA automation tools. Not expected by users, but they significantly raise the value ceiling.
+Features that set volta apart from other EDA automation tools. Not expected by users, but they significantly raise the value ceiling.
 
 ### D-1: Constraint Propagation from Schematic Intent (Not Just Net Names)
 
-**Value:** Most EDA tools propagate constraints from net names or manual net class assignment. kicad-agent propagates from inferred design intent -- the system knows a subcircuit is a "compressor VCA" because of the IC topology, and it knows the VCA control net is HIGH_SPEED because of the net classifier, and it propagates impedance constraints accordingly. No manual net class assignment required.
+**Value:** Most EDA tools propagate constraints from net names or manual net class assignment. volta propagates from inferred design intent -- the system knows a subcircuit is a "compressor VCA" because of the IC topology, and it knows the VCA control net is HIGH_SPEED because of the net classifier, and it propagates impedance constraints accordingly. No manual net class assignment required.
 
 **Complexity:** HIGH (builds on TS-1)
 
@@ -253,7 +253,7 @@ Features to explicitly NOT build. These would harm reliability, over-engineer th
 
 ### AF-7: Proprietary EDA Format Support
 
-**Why avoid:** Supporting Altium, Cadence, or Eagle formats would massively expand scope. kicad-agent is KiCad 10+ only.
+**Why avoid:** Supporting Altium, Cadence, or Eagle formats would massively expand scope. volta is KiCad 10+ only.
 
 **What to do instead:** Focus exclusively on KiCad file formats. LTspice import already exists. No additional EDA format support needed.
 
@@ -431,6 +431,6 @@ The spatial model provides the query infrastructure that placement, DRC intellig
 - scipy: dual_annealing, KDTree, linprog, cdist -- verified via Context7
 
 ---
-*Feature landscape research for: kicad-agent milestone v3.0-full-stack-eda*
+*Feature landscape research for: volta milestone v3.0-full-stack-eda*
 *Researched: 2026-06-01*
 *Confidence: HIGH*

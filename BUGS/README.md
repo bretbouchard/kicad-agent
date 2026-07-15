@@ -1,4 +1,4 @@
-# kicad-agent P0 Bugs
+# volta P0 Bugs
 
 Critical bugs discovered during analog-ecosystem backplane ERC cleanup (Phases 123-127, 133 — 2026-06-24 through 2026-06-27).
 
@@ -37,12 +37,12 @@ P0-001 is a simple attribute access bug (`Symbol.name` doesn't exist).
 ## Related
 
 - Discovery phase reports: `/Users/bretbouchard/apps/analog-ecosystem/.planning/phases/{123,124,125-127}-*`
-- Existing limitations: `~/apps/kicad-agent/KNOWN_LIMITATIONS.md`
+- Existing limitations: `~/apps/volta/KNOWN_LIMITATIONS.md`
 - Existing PCB op gaps: `/Users/bretbouchard/apps/analog-ecosystem/hardware/KICAD-AGENT-GAP-SPECS.md`
 
 ## Handoff
 
-These bugs are queued for the kicad-agent team alongside the router expansion work (memory: `channel-strip-router-handoff.md`). The team has:
+These bugs are queued for the volta team alongside the router expansion work (memory: `channel-strip-router-handoff.md`). The team has:
 - This BUGS/ directory with detailed reports
 - Reproduction steps
 - Fix path recommendations

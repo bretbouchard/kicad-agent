@@ -1,6 +1,6 @@
 # Council of Ricks All-Hands Review — 2026-06-01
 
-**Review scope:** Entire kicad-agent codebase — 315 files, ~81K lines, 3171 tests, 54 phases
+**Review scope:** Entire volta codebase — 315 files, ~81K lines, 3171 tests, 54 phases
 
 ## Specialists Deployed (6)
 

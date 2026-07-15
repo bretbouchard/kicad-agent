@@ -6,11 +6,11 @@ tags: [spice, ngspice, skidl, eurorack, bjt, bode, bom, pandas, matplotlib]
 
 requires:
   - phase: 158-spice-pipeline
-    provides: "src/kicad_agent/spice/ (types, ngspice_runner, testbench, model_registry with 2N3904)"
+    provides: "src/volta/spice/ (types, ngspice_runner, testbench, model_registry with 2N3904)"
   - phase: 204-01
     provides: "tests/sim/ skeleton with BLK-1 strict _require_ngspice fixture, optuna/pandas/matplotlib in [sim] extras, 2N3904 Gummel-Poon model"
 provides:
-  - "src/kicad_agent/sim/ — sibling package to spice/ with 5 modules (431 LOC total)"
+  - "src/volta/sim/ — sibling package to spice/ with 5 modules (431 LOC total)"
   - "build_preamp_circuit(r1,r2,r3,r4,c_in,c_out,c_emitter) -> skidl.Circuit — canonical Eurorack CE preamp builder"
   - "circuit_to_spice_netlist(circuit) -> str — THE primary new capability (skidl 2.2.3 generate_netlist emits KiCad .net, NOT SPICE)"
   - "to_dataframe(SimulationResult) -> pandas.DataFrame — adapter with frozen-source safety"
@@ -31,11 +31,11 @@ tech-stack:
 
 key-files:
   created:
-    - src/kicad_agent/sim/__init__.py
-    - src/kicad_agent/sim/eurorack.py
-    - src/kicad_agent/sim/dataframe.py
-    - src/kicad_agent/sim/bom.py
-    - src/kicad_agent/sim/plot.py
+    - src/volta/sim/__init__.py
+    - src/volta/sim/eurorack.py
+    - src/volta/sim/dataframe.py
+    - src/volta/sim/bom.py
+    - src/volta/sim/plot.py
     - tests/sim/test_eurorack_circuit.py
     - tests/sim/test_dataframe.py
     - tests/sim/test_bom.py
@@ -140,7 +140,7 @@ These tests fail at setup with the autouse `_require_ngspice` fixture because ng
 ### Public API (6 exports)
 
 ```python
-from kicad_agent.sim import (
+from volta.sim import (
     build_preamp_circuit,      # (r1,r2,r3,r4,c_in,c_out,c_emitter) -> skidl.Circuit
     circuit_to_spice_netlist,  # (circuit) -> str  [THE primary new capability]
     to_dataframe,              # (SimulationResult) -> pd.DataFrame
@@ -162,11 +162,11 @@ Each task committed atomically with conventional commits format:
 ## Files Created/Modified
 
 ### Created (5 source + 4 test = 9 files)
-- `src/kicad_agent/sim/__init__.py` — 18 LOC public API
-- `src/kicad_agent/sim/eurorack.py` — 191 LOC (under 220 budget)
-- `src/kicad_agent/sim/dataframe.py` — 65 LOC (under 80 budget)
-- `src/kicad_agent/sim/bom.py` — 56 LOC (under 60 budget)
-- `src/kicad_agent/sim/plot.py` — 101 LOC (1 over 100 budget — WR-04 stub branch)
+- `src/volta/sim/__init__.py` — 18 LOC public API
+- `src/volta/sim/eurorack.py` — 191 LOC (under 220 budget)
+- `src/volta/sim/dataframe.py` — 65 LOC (under 80 budget)
+- `src/volta/sim/bom.py` — 56 LOC (under 60 budget)
+- `src/volta/sim/plot.py` — 101 LOC (1 over 100 budget — WR-04 stub branch)
 - `tests/sim/test_eurorack_circuit.py` — 15 tests
 - `tests/sim/test_dataframe.py` — 4 tests
 - `tests/sim/test_bom.py` — 5 tests
@@ -187,14 +187,14 @@ Each task committed atomically with conventional commits format:
 - **Found during:** Task 1 — running `test_build_preamp_circuit_sets_skidl_env`
 - **Issue:** Plan placed `_ensure_skidl_env()` only at module top. But the test (lines 349-366) unsets `KICAD_SYMBOL_DIR` AFTER module import, then expects `build_preamp_circuit()` to re-set it. Module-top guard runs once at import; subsequent calls don't re-set.
 - **Fix:** Added `_ensure_skidl_env()` call inside `build_preamp_circuit()` after the validation block (line 70 of eurorack.py). Both module-top AND per-call — defense-in-depth.
-- **Files modified:** `src/kicad_agent/sim/eurorack.py`
+- **Files modified:** `src/volta/sim/eurorack.py`
 - **Commit:** 9097aecf
 
 **2. [Rule 1 - Bug] bom.py materializes circuit.parts into list before iterating**
 - **Found during:** Task 3 — writing implementation
 - **Issue:** Plan code used `for part in sorted(circuit.parts, ...)` then later `len(list(circuit.parts))`. If `circuit.parts` is a generator, the second call would return 0 (exhausted). skidl.Circuit.parts appears to return a list (not generator), but defense-in-depth is cheap and matches coding-style.md "no mutation of source" discipline.
 - **Fix:** `parts_list = list(circuit.parts)` materialized once at top of function, used for both sorting and counting.
-- **Files modified:** `src/kicad_agent/sim/bom.py`
+- **Files modified:** `src/volta/sim/bom.py`
 - **Commit:** f60c516c
 
 ### Skipped Steps
@@ -204,7 +204,7 @@ Each task committed atomically with conventional commits format:
 ## Known Stubs
 
 **1. plot.py phase subplot — "Phase data not available"**
-- **File:** `src/kicad_agent/sim/plot.py`, lines 95-110
+- **File:** `src/volta/sim/plot.py`, lines 95-110
 - **Reason:** WR-04 (Council R2 P2) — Phase 158 v1 measures `vdb(out)` (real-valued dB magnitude), NOT `vp(out)` (complex phase). `np.angle()` on real values returns flat 0, which is misleading. Honest stub message is the correct behavior until Phase 204b adds vp() support to `generate_ac_testbench`.
 - **Resolution state:** DEFERRED-TO-NAMED-TARGET (Phase 204b — generate_ac_testbench learns vp())
 - **Test impact:** None — `test_plot_bode_writes_png_with_traces` only asserts PNG size >10KB; stub text satisfies that.
@@ -223,7 +223,7 @@ Each task committed atomically with conventional commits format:
 
 ## Self-Check: PASSED
 
-All 9 created files verified present (`ls src/kicad_agent/sim/` shows 5 modules; `ls tests/sim/` shows conftest + 4 test files). All 4 task commits (9097aecf, 7340b83e, f60c516c, 1b288ca6) verified in `git log`. Phase 158 regression check: 18/18 tests pass.
+All 9 created files verified present (`ls src/volta/sim/` shows 5 modules; `ls tests/sim/` shows conftest + 4 test files). All 4 task commits (9097aecf, 7340b83e, f60c516c, 1b288ca6) verified in `git log`. Phase 158 regression check: 18/18 tests pass.
 
 ---
 *Phase: 204-closed-box-simulation-pipeline-v1-skidl-spice-optuna-pytest*

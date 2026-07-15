@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-kicad-agent already possesses the four primitives a floor planner needs —
+volta already possesses the four primitives a floor planner needs —
 **zones** (`ZoneDefinition`), **constraints** (`PCBConstraint` hierarchy),
 **signal-flow grouping** (`SignalFlowGrouper`), and **position + keepout
 vectors** consumed by `HybridPlacementEngine`/`LayoutAwarePlacer`. What is
@@ -135,11 +135,11 @@ hand-listing 16×(ADC_HOT, DAC_HOT, GPIO_0..6, CV_*, EQ_*) in
 
 ## Q2 — How Other EDA Tools Handle Floor Planning
 
-| Tool | Mechanism | What kicad-agent can borrow |
+| Tool | Mechanism | What volta can borrow |
 |---|---|---|
 | **Altium Designer** | **Rooms** — rectangular regions on the PCB; sheet→room auto-assignment by hierarchical sheet; components dragged *into* a room are member-bound; rooms can be moved/locked as a unit. Room definitions live in the `.SchDoc`/`.PcbDoc`. | The `ZoneDefinition` + `priority_refs` model is a direct analog of Altium rooms. The YAML `zones:` section is our "room table." |
 | **Cadence Allegro / OrCAD** | **Constraint Manager** — a spreadsheet-driven matrix of net-class rules (clearance, impedance, differential pair, max length) plus **Placement Regions** (keep-in/keep-out polygons). | The `PCBConstraint` Pydantic hierarchy is our Constraint Manager. `keepout_zones` are our keep-out polygons. |
-| **KiCad (native)** | **No room/floor-plan concept.** Has `.kicad_dru` design rules (clearance, min track width, courtyards) and sheet-based hierarchical grouping, but no first-class "place this group in this region" primitive. Users resort to area fills + locked footprints. | **This is the gap kicad-agent fills.** The floor-plan spec is a *custom* construct — it must not assume KiCad-native persistence. It lowers into `(locked)` tokens + keepout polygons that *are* KiCad-native. |
+| **KiCad (native)** | **No room/floor-plan concept.** Has `.kicad_dru` design rules (clearance, min track width, courtyards) and sheet-based hierarchical grouping, but no first-class "place this group in this region" primitive. Users resort to area fills + locked footprints. | **This is the gap volta fills.** The floor-plan spec is a *custom* construct — it must not assume KiCad-native persistence. It lowers into `(locked)` tokens + keepout polygons that *are* KiCad-native. |
 | **Quilter (AI autorouter/placer)** | **Pre-placed components** (anything inside the board outline at upload is treated as locked) + **Placement Regions** (user polygons on F.Cu/B.Cu that constrain which components may sit inside). Constraint-maturity is explicit: "if your constraints are vague, any tool will struggle." | **This is the downstream consumer.** The floor-plan spec must emit (a) fixed positions for anchors → Quilter locks them; (b) keepout polygons → Quilter respects them as Placement Regions; (c) numeric net IDs → already handled by `gen_pcb.py`. |
 | **Open-source (coriolis, OpenROAD)** | Hierarchical floorplanning with hard/soft macros, simulated annealing, cut-minimization. | Our `LayoutAwarePlacer` already does SA via `scipy.optimize.dual_annealing` with constraint-aware penalties — we don't need to import a floorplanner, just feed it better zones. |
 
@@ -172,7 +172,7 @@ skidl .net ──parse──► XML netlist ──► populate_pcb_from_netlist(
 
 ### Critical constraint: `populate_pcb_from_netlist` does NOT accept a floor plan
 
-Inspection of `src/kicad_agent/crossfile/pcb_populate.py:526` shows the
+Inspection of `src/volta/crossfile/pcb_populate.py:526` shows the
 signature is:
 
 ```python
@@ -240,7 +240,7 @@ be injected into the populate call**; it must be applied **after**.
 # After the three net post-processing passes, before OUT_PCB.write_text():
 floorplan_path = BASE_DIR / f"{stem}.floorplan.yaml"
 if floorplan_path.exists():
-    from kicad_agent.placement.floorplan import apply_floor_plan
+    from volta.placement.floorplan import apply_floor_plan
     new_pcb, fp_result = apply_floor_plan(
         pcb_raw=new_pcb,
         spec_path=floorplan_path,
@@ -252,7 +252,7 @@ if floorplan_path.exists():
           f"{fp_result['violations']} violations")
 ```
 
-The new module `kicad_agent/placement/floorplan.py` would:
+The new module `volta/placement/floorplan.py` would:
 1. Define `FloorPlanSpec` (Pydantic, extending `ZoneDefinition` +
    `PCBConstraint`).
 2. Lower `spec.zones` → `LayoutAwarePlacer` zone assignment.
@@ -282,7 +282,7 @@ constraint mechanisms (per official docs) are:
 
 ### What this means for the floor-plan spec
 
-| Floor-plan concept | Quilter mechanism | How kicad-agent satisfies it |
+| Floor-plan concept | Quilter mechanism | How volta satisfies it |
 |---|---|---|
 | `pre_placed` anchors | Pre-placed (locked) components | `apply_floor_plan` sets the position via `modify_footprint_position` AND injects `(locked)` via `_inject_locked_token` — belt-and-suspenders, since Quilter keys off "inside board boundary" but the token makes intent explicit for KiCad too. |
 | `zones` (functional regions) | Placement Regions (polygons) | `apply_floor_plan` emits `gr_poly` keepout-for-other-zones objects (using the existing `build_keepouts_from_zone` from `zone_partition.py`). Quilter sees these as region boundaries. |

@@ -47,7 +47,7 @@ Every architecture decision below is grounded in verified facts about the curren
 
 ### 3.1 Router frontier recovery is feasible
 
-- `RoutingGraph.graph` is a public read-only property exposing the underlying networkx Graph (`src/kicad_agent/routing/graph.py:336-339`).
+- `RoutingGraph.graph` is a public read-only property exposing the underlying networkx Graph (`src/volta/routing/graph.py:336-339`).
 - `route_net` (`pathfinder.py:63-118`) catches `nx.NetworkXNoPath` at line 109 and returns `None`, discarding the search frontier. The `src_node`/`tgt_node` are in scope (lines 92-96) before the try block.
 - `nx.single_source_dijkstra_path_length(graph.graph, src_node)` recovers the reachable component (DRC-weighted) after the failure — same complexity class as the failed A\* (`O(V+E)`), bounded by `max_nodes = 500_000` (`constraints.py:65`, raises `ValueError` if exceeded at `graph.py:171-176`).
 - networkx's `astar_path` does **not** expose its closed set (verified). Post-failure reachable-component query is the cleanest recovery method.
@@ -55,7 +55,7 @@ Every architecture decision below is grounded in verified facts about the curren
 
 ### 3.2 The legacy handler is the canonical production path
 
-- `_handle_auto_route` (`src/kicad_agent/ops/handlers/pcb.py:513`) is reached via CLI (`cli.py:441`), MCP server (`mcp/edit_server.py:730,1248`), and handler dispatch (`ops/executor.py:49,64` → `__init__.py:9,22`).
+- `_handle_auto_route` (`src/volta/ops/handlers/pcb.py:513`) is reached via CLI (`cli.py:441`), MCP server (`mcp/edit_server.py:730,1248`), and handler dispatch (`ops/executor.py:49,64` → `__init__.py:9,22`).
 - `RoutingOrchestrator.route_board` (`orchestrator.py:157`) is **only** called from `scripts/phase98_eval.py:112` and `tests/test_phase100_*.py`. **Zero production wiring.**
 - The orchestrator's `_dispatch_astar` (`orchestrator.py:349-412`) is a **feature subset**: `obstacles=[]` (empty), no power-net filtering, 2-pin only (no multi-pin Steiner), no retry loop. The legacy handler has all of these.
 

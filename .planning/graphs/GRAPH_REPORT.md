@@ -1,4 +1,4 @@
-# Graph Report - kicad-agent  (2026-06-08)
+# Graph Report - volta  (2026-06-08)
 
 ## Corpus Check
 - 732 files · ~853,954 words
@@ -692,20 +692,20 @@
 
 ## Surprising Connections (you probably didn't know these)
 - `SchematicIR` --uses--> `SchematicIR`  [INFERRED]
-  tests/test_net_label_placer.py → src/kicad_agent/ir/schematic_ir.py
+  tests/test_net_label_placer.py → src/volta/ir/schematic_ir.py
 - `Path` --uses--> `OperationExecutor`  [INFERRED]
-  tests/test_mcp_health_check.py → src/kicad_agent/ops/executor.py
+  tests/test_mcp_health_check.py → src/volta/ops/executor.py
 - `Namespace` --uses--> `PcbSpatialModel`  [INFERRED]
-  tests/test_dfm_cli.py → src/kicad_agent/spatial/pcb_model.py
+  tests/test_dfm_cli.py → src/volta/spatial/pcb_model.py
 - `generate_spatial_report()` --calls--> `analyzer()`  [INFERRED]
-  src/kicad_agent/spatial/rick_integration.py → tests/test_pcb_gap_analyzer.py
+  src/volta/spatial/rick_integration.py → tests/test_pcb_gap_analyzer.py
 - `add_spatial_to_record()` --calls--> `parse_schematic()`  [INFERRED]
-  scripts/add_schematic_spatial.py → src/kicad_agent/parser/schematic_parser.py
+  scripts/add_schematic_spatial.py → src/volta/parser/schematic_parser.py
 
 ## Import Cycles
-- 1-file cycle: `src/kicad_agent/ai_tracking/tracker.py -> src/kicad_agent/ai_tracking/tracker.py`
-- 1-file cycle: `src/kicad_agent/mcp/server.py -> src/kicad_agent/mcp/server.py`
-- 1-file cycle: `src/kicad_agent/playground/app.py -> src/kicad_agent/playground/app.py`
+- 1-file cycle: `src/volta/ai_tracking/tracker.py -> src/volta/ai_tracking/tracker.py`
+- 1-file cycle: `src/volta/mcp/server.py -> src/volta/mcp/server.py`
+- 1-file cycle: `src/volta/playground/app.py -> src/volta/playground/app.py`
 
 ## Communities (669 total, 110 thin omitted)
 
@@ -975,7 +975,7 @@ Nodes (44): place_net_labels(), Place net labels on IC pins based on a pin-to-ne
 
 ### Community 66 - "Community 66"
 Cohesion: 0.03
-Nodes (29): Prevent direct instantiation of PCBConstraint base class., Initialize atomic operation with file paths.          Args:             file_pat, export_pcb_pdf(), export_pcb_svg(), export_schematic_svg(), 3D rendering and visual export wrappers for kicad-agent.  Provides Python wrappe, Export schematic as SVG via kicad-cli.      Invokes ``kicad-cli sch export svg``, Export PCB as SVG via kicad-cli.      Invokes ``kicad-cli pcb export svg`` with (+21 more)
+Nodes (29): Prevent direct instantiation of PCBConstraint base class., Initialize atomic operation with file paths.          Args:             file_pat, export_pcb_pdf(), export_pcb_svg(), export_schematic_svg(), 3D rendering and visual export wrappers for volta.  Provides Python wrappe, Export schematic as SVG via kicad-cli.      Invokes ``kicad-cli sch export svg``, Export PCB as SVG via kicad-cli.      Invokes ``kicad-cli pcb export svg`` with (+21 more)
 
 ### Community 67 - "Community 67"
 Cohesion: 0.05
@@ -1167,7 +1167,7 @@ Nodes (32): MazeDataset, RewardModel, Tests for GRPO training loop and evaluatio
 
 ### Community 114 - "Community 114"
 Cohesion: 0.07
-Nodes (47): ArgumentParser, Allow running ``python -m kicad_agent.cli``., _build_analyze_parser(), _build_collect_parser(), _build_operation_parser(), _handle_ai_stats(), _handle_analyze(), _handle_collect() (+39 more)
+Nodes (47): ArgumentParser, Allow running ``python -m volta.cli``., _build_analyze_parser(), _build_collect_parser(), _build_operation_parser(), _handle_ai_stats(), _handle_analyze(), _handle_collect() (+39 more)
 
 ### Community 115 - "Community 115"
 Cohesion: 0.07
@@ -1311,7 +1311,7 @@ Nodes (22): AdversarialTestSuite, Orchestrates mutation, property-based, and fuz
 
 ### Community 150 - "Community 150"
 Cohesion: 0.08
-Nodes (30): _build_spatial_model(), dfm_command(), _format_json(), _format_markdown(), CLI subcommand: kicad-agent dfm <board>  DFM-05: Run DFM (Design for Manufacturi, Parse a .kicad_pcb file and build PcbSpatialModel.      Returns None with error, Format DFM report as JSON.      Args:         report: MultiStageDfmReport or Dfm, Format DFM report as human-readable markdown.      Args:         report: MultiSt (+22 more)
+Nodes (30): _build_spatial_model(), dfm_command(), _format_json(), _format_markdown(), CLI subcommand: volta dfm <board>  DFM-05: Run DFM (Design for Manufacturi, Parse a .kicad_pcb file and build PcbSpatialModel.      Returns None with error, Format DFM report as JSON.      Args:         report: MultiStageDfmReport or Dfm, Format DFM report as human-readable markdown.      Args:         report: MultiSt (+22 more)
 
 ### Community 151 - "Community 151"
 Cohesion: 0.08
@@ -1343,7 +1343,7 @@ Nodes (24): CoordinateConverter, CoordinateConverter for schematic-to-PCB coordi
 
 ### Community 158 - "Community 158"
 Cohesion: 0.08
-Nodes (31): FileResponse, JSONResponse, ErcDrcRequest, execute_operation(), ExecuteRequest, list_operations(), preview_file(), REST API routes for the kicad-agent playground.  Endpoints:     POST /api/upload (+23 more)
+Nodes (31): FileResponse, JSONResponse, ErcDrcRequest, execute_operation(), ExecuteRequest, list_operations(), preview_file(), REST API routes for the volta playground.  Endpoints:     POST /api/upload (+23 more)
 
 ### Community 159 - "Community 159"
 Cohesion: 0.07
@@ -1451,7 +1451,7 @@ Nodes (12): arduino_board(), raspberry_board(), Tests for native PCB parser (pcb
 
 ### Community 185 - "Community 185"
 Cohesion: 0.08
-Nodes (23): CaptureFixture, CompletedProcess, Path, Phase 64 tests -- CLI/UX polish: H-15, H-16, H-17., H-16: ``kicad-agent --help`` (or ``-h`` or no args) should print a     help mess, ``kicad-agent --help`` exits 0 and lists subcommands., ``kicad-agent --help`` includes descriptions for subcommands., ``kicad-agent -h`` exits 0 and lists subcommands. (+15 more)
+Nodes (23): CaptureFixture, CompletedProcess, Path, Phase 64 tests -- CLI/UX polish: H-15, H-16, H-17., H-16: ``volta --help`` (or ``-h`` or no args) should print a     help mess, ``volta --help`` exits 0 and lists subcommands., ``volta --help`` includes descriptions for subcommands., ``volta -h`` exits 0 and lists subcommands. (+15 more)
 
 ### Community 186 - "Community 186"
 Cohesion: 0.11
@@ -1519,7 +1519,7 @@ Nodes (21): OpPlanner, Operation-sequence planner that converts GenerationIntent
 
 ### Community 202 - "Community 202"
 Cohesion: 0.11
-Nodes (20): HybridLLMClient, HybridResponse, Response from HybridLLMClient with routing metadata.      Attributes:         co, _make_client(), MockClient, Tests for HybridLLMClient (kicad_agent.llm.backend)., When the scorer returns low confidence, cloud fallback is triggered., HybridResponse.content[0].text works for both local and cloud. (+12 more)
+Nodes (20): HybridLLMClient, HybridResponse, Response from HybridLLMClient with routing metadata.      Attributes:         co, _make_client(), MockClient, Tests for HybridLLMClient (volta.llm.backend)., When the scorer returns low confidence, cloud fallback is triggered., HybridResponse.content[0].text works for both local and cloud. (+12 more)
 
 ### Community 203 - "Community 203"
 Cohesion: 0.09
@@ -1583,7 +1583,7 @@ Nodes (25): BomResult, enrich_with_lcsc(), export_bom(), export_jlcpcb_bom(), _e
 
 ### Community 218 - "Community 218"
 Cohesion: 0.07
-Nodes (12): count_operation_tools(), Count tools generated from operation schemas in edit_server., Tests for the MCP edit server (kicad-agent-edit).  Covers: tool generation, call, Dynamic tool generation from Operation discriminated union., Server instantiation and configuration., Test server_lifespan creates UndoStack and passes to executor., Each tool name matches its op_type discriminator value., ToolAnnotations assigned per operation category. (+4 more)
+Nodes (12): count_operation_tools(), Count tools generated from operation schemas in edit_server., Tests for the MCP edit server (volta-edit).  Covers: tool generation, call, Dynamic tool generation from Operation discriminated union., Server instantiation and configuration., Test server_lifespan creates UndoStack and passes to executor., Each tool name matches its op_type discriminator value., ToolAnnotations assigned per operation category. (+4 more)
 
 ### Community 219 - "Community 219"
 Cohesion: 0.09
@@ -1759,7 +1759,7 @@ Nodes (15): Phase 65: Architecture refactor tests for M-1 through M-12.  Tests t
 
 ### Community 262 - "Community 262"
 Cohesion: 0.11
-Nodes (16): CircuitProperty, FuzzResult, Adversarial test suite orchestrator for kicad-agent robustness testing.  Combine, A property-based test specification for circuit invariants.      Defines an inva, Result of a single fuzz test against the parser.      Records whether a randomly, Adversarial test generation: mutation engine, property-based tests, fuzz tests., Test CircuitProperty schema and verification., CircuitProperty validates with required fields. (+8 more)
+Nodes (16): CircuitProperty, FuzzResult, Adversarial test suite orchestrator for volta robustness testing.  Combine, A property-based test specification for circuit invariants.      Defines an inva, Result of a single fuzz test against the parser.      Records whether a randomly, Adversarial test generation: mutation engine, property-based tests, fuzz tests., Test CircuitProperty schema and verification., CircuitProperty validates with required fields. (+8 more)
 
 ### Community 263 - "Community 263"
 Cohesion: 0.14
@@ -1795,7 +1795,7 @@ Nodes (14): Tests for PCB MMLU benchmark dataset schemas and generators.  TDD RE
 
 ### Community 271 - "Community 271"
 Cohesion: 0.14
-Nodes (23): _make_mock_result(), CompletedProcess, Path, CLI test suite -- subprocess invocation of kicad-agent command., Create a mock ScoredChain-like result for analyze tests., `kicad-agent analyze board.kicad_pcb` calls generate_analysis and prints chain., `kicad-agent analyze board.kicad_pcb --n-best 8` passes n_best=8., `kicad-agent analyze missing.kicad_pcb` exits with error code 1. (+15 more)
+Nodes (23): _make_mock_result(), CompletedProcess, Path, CLI test suite -- subprocess invocation of volta command., Create a mock ScoredChain-like result for analyze tests., `volta analyze board.kicad_pcb` calls generate_analysis and prints chain., `volta analyze board.kicad_pcb --n-best 8` passes n_best=8., `volta analyze missing.kicad_pcb` exits with error code 1. (+15 more)
 
 ### Community 272 - "Community 272"
 Cohesion: 0.10
@@ -1823,7 +1823,7 @@ Nodes (14): Render a 3D view of a PCB via kicad-cli pcb render.      Invokes ``k
 
 ### Community 278 - "Community 278"
 Cohesion: 0.11
-Nodes (17): FastAPI, create_app(), FastAPI app factory for the kicad-agent playground.  Creates the FastAPI applica, Create and configure the playground FastAPI application.      Args:         uplo, _handle_execute(), handle_ws(), WebSocket handler for real-time operation execution feedback.  Protocol:   Clien, Handle WebSocket connections for real-time operation feedback. (+9 more)
+Nodes (17): FastAPI, create_app(), FastAPI app factory for the volta playground.  Creates the FastAPI applica, Create and configure the playground FastAPI application.      Args:         uplo, _handle_execute(), handle_ws(), WebSocket handler for real-time operation execution feedback.  Protocol:   Clien, Handle WebSocket connections for real-time operation feedback. (+9 more)
 
 ### Community 279 - "Community 279"
 Cohesion: 0.09
@@ -1915,7 +1915,7 @@ Nodes (14): Tests for crossfile module: atomic operations, diff, propagation, pr
 
 ### Community 301 - "Community 301"
 Cohesion: 0.09
-Nodes (21): Tests for LLM client, tool definitions, and context builder.  Task 1 RED phase:, ContextBuilder.sanitize() must strip instruction-like patterns from content., ContextBuilder.sanitize() must preserve legitimate KiCad file content., ContextBuilder.truncate_violations must cap violation count and truncate descrip, ContextBuilder.truncate_violations must return plain dicts with severity and des, kicad_agent.llm must export LLMClient, ContextBuilder, INTENT_TOOL, SUGGEST_TOOL, kicad_agent.llm must raise ImportError with install instructions when anthropic, LLMClient must raise LLMConfigError with clear message when ANTHROPIC_API_KEY is (+13 more)
+Nodes (21): Tests for LLM client, tool definitions, and context builder.  Task 1 RED phase:, ContextBuilder.sanitize() must strip instruction-like patterns from content., ContextBuilder.sanitize() must preserve legitimate KiCad file content., ContextBuilder.truncate_violations must cap violation count and truncate descrip, ContextBuilder.truncate_violations must return plain dicts with severity and des, volta.llm must export LLMClient, ContextBuilder, INTENT_TOOL, SUGGEST_TOOL, volta.llm must raise ImportError with install instructions when anthropic, LLMClient must raise LLMConfigError with clear message when ANTHROPIC_API_KEY is (+13 more)
 
 ### Community 302 - "Community 302"
 Cohesion: 0.09
@@ -2047,7 +2047,7 @@ Nodes (11): _make_component_data(), _make_pad(), _make_pin(), Any, Tests for com
 
 ### Community 334 - "Community 334"
 Cohesion: 0.11
-Nodes (17): 1. Bridge routing engine to PCB writes, 2. Fix GRPO training pipeline, 3. Add human-friendly CLI subcommands, Architecture, Code Quality, Council of Ricks — kicad-agent Full Review, CRITICAL Findings (7), Executive Summary (+9 more)
+Nodes (17): 1. Bridge routing engine to PCB writes, 2. Fix GRPO training pipeline, 3. Add human-friendly CLI subcommands, Architecture, Code Quality, Council of Ricks — volta Full Review, CRITICAL Findings (7), Executive Summary (+9 more)
 
 ### Community 335 - "Community 335"
 Cohesion: 0.15
@@ -2135,7 +2135,7 @@ Nodes (16): _extract_from_tree(), _find_all_symbols(), _find_at(), _find_pad_net
 
 ### Community 357 - "Community 357"
 Cohesion: 0.16
-Nodes (16): arduino_mega_pcb(), arduino_mega_sch(), arduino_mounting_hole_mod(), Path, raspberry_pi_pcb(), raspberry_pi_sch(), Shared test fixtures for kicad-agent parser tests.  Provides paths to KiCad test, Path to Arduino_Mega.kicad_sch from local fixtures.      Returns:         Path t (+8 more)
+Nodes (16): arduino_mega_pcb(), arduino_mega_sch(), arduino_mounting_hole_mod(), Path, raspberry_pi_pcb(), raspberry_pi_sch(), Shared test fixtures for volta parser tests.  Provides paths to KiCad test, Path to Arduino_Mega.kicad_sch from local fixtures.      Returns:         Path t (+8 more)
 
 ### Community 358 - "Community 358"
 Cohesion: 0.16
@@ -2351,7 +2351,7 @@ Nodes (12): format_prompt_for_generation(), generate_completions(), load_prompts
 
 ### Community 412 - "Community 412"
 Cohesion: 0.15
-Nodes (8): project_dir(), Tests for CLI undo/redo commands and .gitignore integration.  Issue #7: Verify k, Appends to existing .gitignore without clobbering., Undo via subprocess exits 1 when no history exists., Create a temporary project directory with a schematic file., PersistentUndoStack creates .gitignore with .kicad-agent/., Second init doesn't duplicate the entry., TestGitignore
+Nodes (8): project_dir(), Tests for CLI undo/redo commands and .gitignore integration.  Issue #7: Verify k, Appends to existing .gitignore without clobbering., Undo via subprocess exits 1 when no history exists., Create a temporary project directory with a schematic file., PersistentUndoStack creates .gitignore with .volta/., Second init doesn't duplicate the entry., TestGitignore
 
 ### Community 413 - "Community 413"
 Cohesion: 0.19
@@ -2655,7 +2655,7 @@ Nodes (7): CacheEntry, CacheManifest, FetchResult, Type definitions for the ADI 
 
 ### Community 490 - "Community 490"
 Cohesion: 0.25
-Nodes (7): CLI subcommand: kicad-agent review-schematic <file>  READ-01/02/03/04: Review a, Execute the review-schematic subcommand., Register the review-schematic subcommand., register_parser(), review_schematic_command(), Namespace, _SubParsersAction
+Nodes (7): CLI subcommand: volta review-schematic <file>  READ-01/02/03/04: Review a, Execute the review-schematic subcommand., Register the review-schematic subcommand., register_parser(), review_schematic_command(), Namespace, _SubParsersAction
 
 ### Community 491 - "Community 491"
 Cohesion: 0.25
@@ -2739,7 +2739,7 @@ Nodes (4): _estimate_gap minimum gap between bounding boxes., TestEstimateGap, _
 
 ### Community 511 - "Community 511"
 Cohesion: 0.29
-Nodes (6): Documentation, Key Features, kicad-agent, Links, Quick Install, Quick Start
+Nodes (6): Documentation, Key Features, volta, Links, Quick Install, Quick Start
 
 ### Community 512 - "Community 512"
 Cohesion: 0.38

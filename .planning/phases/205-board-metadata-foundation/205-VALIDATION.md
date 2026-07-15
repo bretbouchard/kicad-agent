@@ -38,9 +38,9 @@ created: 2026-07-10
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 205-01-01 | 01 | 1 | META-06, META-07 | — | N/A (frozen dataclass, immutable) | unit | `.venv/bin/python -c "from kicad_agent.parser.pcb_native_types import NativeTitleBlock; tb = NativeTitleBlock(); assert tb.title == ''"` | ❌ W0 | ⬜ pending |
+| 205-01-01 | 01 | 1 | META-06, META-07 | — | N/A (frozen dataclass, immutable) | unit | `.venv/bin/python -c "from volta.parser.pcb_native_types import NativeTitleBlock; tb = NativeTitleBlock(); assert tb.title == ''"` | ❌ W0 | ⬜ pending |
 | 205-01-02 | 01 | 1 | META-04, META-05 | — | Atomic sidecar write (no torn files) | unit | `.venv/bin/python -m pytest tests/test_board_spec.py -x` | ❌ W0 | ⬜ pending |
-| 205-01-03 | 01 | 1 | META-02, META-03, META-06 | — | Raw-writer mutation, round-trip fidelity | unit | `.venv/bin/python -c "from kicad_agent.ops.pcb_raw_writer import PcbRawWriter; assert hasattr(PcbRawWriter, 'set_title_block_fields')"` | ❌ W0 | ⬜ pending |
+| 205-01-03 | 01 | 1 | META-02, META-03, META-06 | — | Raw-writer mutation, round-trip fidelity | unit | `.venv/bin/python -c "from volta.ops.pcb_raw_writer import PcbRawWriter; assert hasattr(PcbRawWriter, 'set_title_block_fields')"` | ❌ W0 | ⬜ pending |
 | 205-01-04 | 01 | 1 | META-01, META-02, META-03 | — | Registry/schema parity | unit | `.venv/bin/python -m pytest tests/test_registry.py -x` | ✅ | ⬜ pending |
 | 205-01-05 | 01 | 1 | META-01, META-02, META-03 | — | Read-only query (no mutation); Transaction-wrapped mutation | unit | `.venv/bin/python -m pytest tests/test_board_metadata_ops.py -x` | ❌ W0 | ⬜ pending |
 | 205-01-06 | 01 | 1 | META-01..03, META-06, META-07 | — | Round-trip + quoting variations | unit | `.venv/bin/python -m pytest tests/test_pcb_native_parser.py -k "title_block" -x` | ❌ W0 | ⬜ pending |

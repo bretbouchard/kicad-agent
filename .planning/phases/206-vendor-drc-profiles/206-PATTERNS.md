@@ -20,7 +20,7 @@ This document maps each file to be created/modified to its closest existing code
 
 ---
 
-## FILE 1 (CREATE): `src/kicad_agent/manufacturing/drc_profiles/__init__.py`
+## FILE 1 (CREATE): `src/volta/manufacturing/drc_profiles/__init__.py`
 
 **Role:** Package init + static-data registry. Resolves vendor name → bundled `.kicad_dru` path, and enumerates available profiles with capabilities metadata.
 
@@ -94,7 +94,7 @@ Return `list[VendorDrcProfileInfo]`, one entry per bundled `.kicad_dru` file (9 
 
 ---
 
-## FILE 2 (CREATE): `src/kicad_agent/manufacturing/drc_profiles/*.kicad_dru` (9 files)
+## FILE 2 (CREATE): `src/volta/manufacturing/drc_profiles/*.kicad_dru` (9 files)
 
 **Role:** Static data files (KiCad S-expression DRC rule format). Source of truth for vendor numeric limits; also loadable in the KiCad GUI for manual DRC.
 
@@ -153,7 +153,7 @@ Every file starts with this comment block:
 
 ---
 
-## FILE 3 (CREATE): `src/kicad_agent/manufacturing/vendor_drc.py`
+## FILE 3 (CREATE): `src/volta/manufacturing/vendor_drc.py`
 
 **Role:** Internal vendor DRC evaluator. Reads board geometry from `PcbIR` (via `NativeBoard`), compares against `ManufacturerProfile` numeric limits, returns `VendorDrcResult` with `Violation` instances.
 
@@ -270,9 +270,9 @@ def _create_pcb_with_title_block(tmpdir: Path) -> Path:
     return pcb_path
 
 def _build_ir(pcb_path: Path):
-    from kicad_agent.parser.pcb_parser import parse_pcb
-    from kicad_agent.ir.pcb_ir import PcbIR
-    from kicad_agent.parser.uuid_extractor import extract_uuids
+    from volta.parser.pcb_parser import parse_pcb
+    from volta.ir.pcb_ir import PcbIR
+    from volta.parser.uuid_extractor import extract_uuids
     result = parse_pcb(pcb_path)
     uuid_map = extract_uuids(result.raw_content, "pcb")
     return PcbIR(_parse_result=result, _uuid_map=uuid_map)
@@ -292,8 +292,8 @@ Suggested test cases:
 ### Importing `run_vendor_drc`
 
 ```python
-from kicad_agent.manufacturing.vendor_drc import run_vendor_drc, VendorDrcResult
-from kicad_agent.dfm.profiles import load_profile
+from volta.manufacturing.vendor_drc import run_vendor_drc, VendorDrcResult
+from volta.dfm.profiles import load_profile
 ```
 
 ### IR-registry fixture
@@ -334,7 +334,7 @@ def test_file_mtime_unchanged_after_query(self, arduino_pcb_tmp):
 ### Closest analog for handler-direct testing: `test_board_metadata_ops.py:52-63`
 
 ```python
-from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+from volta.ops.handlers.query import _QUERY_HANDLERS
 handler = _QUERY_HANDLERS["read_board_metadata"]
 result = handler(ReadBoardMetadataOp(target_file="test_meta.kicad_pcb"), ir, pcb_path)
 ```
@@ -361,7 +361,7 @@ Reuse the `arduino_pcb_tmp` fixture pattern from `test_connectivity_query.py:29-
 
 ---
 
-## FILE 6 (MODIFY): `src/kicad_agent/dfm/profiles.py`
+## FILE 6 (MODIFY): `src/volta/dfm/profiles.py`
 
 **Role:** Add `drc_rules_path` field to `ManufacturerProfile`, update existing built-in profiles to reference DRU files, add new vendor profiles, correct annular-ring values (DRC-07).
 
@@ -384,7 +384,7 @@ This creates a circular import risk: `profiles.py` would call `get_drc_profile_p
 **Safest approach (avoid import cycle):** Set `drc_rules_path` as a post-construction assignment at module load time, after importing the resolver:
 
 ```python
-from kicad_agent.manufacturing.drc_profiles import get_drc_profile_path
+from volta.manufacturing.drc_profiles import get_drc_profile_path
 
 _JLCPCB_STANDARD = ManufacturerProfile(
     name="JLCPCB Standard 2-Layer",
@@ -443,7 +443,7 @@ Add to `_PROFILES` dict (line 181): `"advanced_circuits": _ADVANCED_CIRCUITS`, `
 
 ---
 
-## FILE 7 (MODIFY): `src/kicad_agent/ops/_schema_pcb.py`
+## FILE 7 (MODIFY): `src/volta/ops/_schema_pcb.py`
 
 **Role:** Define `DrcVendorOp` and `ListVendorDrcProfilesOp` Pydantic models.
 
@@ -492,11 +492,11 @@ class ListVendorDrcProfilesOp(BaseModel):
 
 ### Imports already present
 
-`_schema_pcb.py:8-11` imports `TargetFile` and `_validate_sexpr_safe_string` from `kicad_agent.ops.schema`. `Literal`, `Optional`, `BaseModel`, `Field` are all imported (line 2-6). No new imports needed unless adding a pattern validator.
+`_schema_pcb.py:8-11` imports `TargetFile` and `_validate_sexpr_safe_string` from `volta.ops.schema`. `Literal`, `Optional`, `BaseModel`, `Field` are all imported (line 2-6). No new imports needed unless adding a pattern validator.
 
 ---
 
-## FILE 8 (MODIFY): `src/kicad_agent/ops/schema.py`
+## FILE 8 (MODIFY): `src/volta/ops/schema.py`
 
 **Role:** Add the 2 new Op classes to the `Operation` discriminated union + the import/re-export section + `__all__`.
 
@@ -505,7 +505,7 @@ class ListVendorDrcProfilesOp(BaseModel):
 **Edit A — add to the `_schema_pcb` import block** (schema.py:239-283). The existing import already pulls `ReadBoardMetadataOp`, `SetBoardMetadataOp`, `SetBoardRevisionOp`. Append the two new ones:
 
 ```python
-from kicad_agent.ops._schema_pcb import (  # noqa: E402
+from volta.ops._schema_pcb import (  # noqa: E402
     ...existing...
     ReadBoardMetadataOp,
     SetBoardMetadataOp,
@@ -542,7 +542,7 @@ The union uses `|` between types. Adding new types is mechanical but error-prone
 
 ---
 
-## FILE 9 (MODIFY): `src/kicad_agent/ops/registry.py`
+## FILE 9 (MODIFY): `src/volta/ops/registry.py`
 
 **Role:** Add `_RAW_CATALOG` entries for the 2 new ops.
 
@@ -607,7 +607,7 @@ Both ops are correctly `is_readonly: True` — DRC reads the PCB and produces a 
 
 ---
 
-## FILE 10 (MODIFY): `src/kicad_agent/ops/handlers/query.py`
+## FILE 10 (MODIFY): `src/volta/ops/handlers/query.py`
 
 **Role:** Add `drc_vendor` and `list_vendor_drc_profiles` handlers via `@register_query`.
 
@@ -619,7 +619,7 @@ Both ops are correctly `is_readonly: True` — DRC reads the PCB and produces a 
 ```python
 @register_query("query_connectivity")
 def _handle_query_connectivity(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.connectivity_query import handle_connectivity_query
+    from volta.ops.connectivity_query import handle_connectivity_query
     return handle_connectivity_query(op, ir, file_path)
 ```
 
@@ -630,15 +630,15 @@ Handler signature is always `(op: Any, ir: PcbIR, file_path: Path) -> dict[str, 
 ```python
 @register_query("drc_vendor")
 def _handle_drc_vendor(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.dfm.profiles import load_profile
-    from kicad_agent.manufacturing.vendor_drc import run_vendor_drc
+    from volta.dfm.profiles import load_profile
+    from volta.manufacturing.vendor_drc import run_vendor_drc
 
     profile = load_profile(op.vendor)  # raises ValueError if unknown
     result = run_vendor_drc(ir, profile)
 
     kicad_drc_result = None
     if op.run_kicad_drc:
-        from kicad_agent.validation.erc_drc import run_drc
+        from volta.validation.erc_drc import run_drc
         drc = run_drc(file_path)
         kicad_drc_result = {
             "passed": drc.passed,
@@ -659,7 +659,7 @@ def _handle_drc_vendor(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
 @register_query("list_vendor_drc_profiles")
 def _handle_list_vendor_drc_profiles(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     from dataclasses import asdict
-    from kicad_agent.manufacturing.drc_profiles import list_drc_profiles
+    from volta.manufacturing.drc_profiles import list_drc_profiles
 
     profiles = [asdict(p) for p in list_drc_profiles()]
     return {"profiles": profiles, "count": len(profiles)}
@@ -720,7 +720,7 @@ Optional: add `assert "drc_vendor" in op_types` and `assert "list_vendor_drc_pro
 
 ### CRITICAL — current state (RESEARCH RQ8)
 
-`pyproject.toml` has NO `[tool.setuptools.package-data]` section, NO `include-package-data`, NO `MANIFEST.in`. Non-Python files in `src/kicad_agent/` are NOT included in built distributions. This will silently work in dev (editable install) and silently fail in production.
+`pyproject.toml` has NO `[tool.setuptools.package-data]` section, NO `include-package-data`, NO `MANIFEST.in`. Non-Python files in `src/volta/` are NOT included in built distributions. This will silently work in dev (editable install) and silently fail in production.
 
 ### The edit
 
@@ -728,10 +728,10 @@ Add after the `[tool.setuptools.packages.find]` block (line 90-91):
 
 ```toml
 [tool.setuptools.package-data]
-"kicad_agent.manufacturing.drc_profiles" = ["*.kicad_dru"]
+"volta.manufacturing.drc_profiles" = ["*.kicad_dru"]
 ```
 
-This is the exact form RESEARCH RQ8 recommends. The package key must match the full dotted package path (`kicad_agent.manufacturing.drc_profiles`), and the glob `*.kicad_dru` matches all 9 DRU files.
+This is the exact form RESEARCH RQ8 recommends. The package key must match the full dotted package path (`volta.manufacturing.drc_profiles`), and the glob `*.kicad_dru` matches all 9 DRU files.
 
 ### Verification
 

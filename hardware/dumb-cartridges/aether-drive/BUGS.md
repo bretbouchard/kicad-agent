@@ -50,7 +50,7 @@ Last updated: 2026-06-06
 - `route_with_freerouting()` — Run Freerouting with auto-detection
 - `import_ses()` — Import Freerouting results back to KiCad
 - `is_freerouting_available()` — Check if Freerouting is installed
-**Remaining:** Download Freerouting JAR to `~/.kicad-agent/tools/freerouting.jar` and set `FREEROUTING_JAR` env var.
+**Remaining:** Download Freerouting JAR to `~/.volta/tools/freerouting.jar` and set `FREEROUTING_JAR` env var.
 
 ### FEAT-002 — KiCad nightly CLI for validation/export
 **Priority:** HIGH

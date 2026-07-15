@@ -14,7 +14,7 @@ provides:
   - "RequirementCoverage report from IntentGate.catalog"
   - "MCPClient.governedCall<T> wrapping the full pipeline"
 affects:
-  - "macos-app/Sources/KiCadAgent/MCP/MCPClient.swift (added governedCall/governedCallRaw)"
+  - "macos-app/Sources/Volta/MCP/MCPClient.swift (added governedCall/governedCallRaw)"
 tech-stack:
   added: []
   patterns:
@@ -24,32 +24,32 @@ tech-stack:
     - "Notification posted synchronously (not via DispatchQueue.main.async) — async dispatch loses notifications under test runloops"
 key-files:
   created:
-    - "macos-app/Sources/KiCadAgent/Governance/WorkflowState.swift"
-    - "macos-app/Sources/KiCadAgent/Governance/WorkflowStateMachine.swift"
-    - "macos-app/Sources/KiCadAgent/Governance/IntentGate.swift"
-    - "macos-app/Sources/KiCadAgent/Governance/OpJournal.swift"
-    - "macos-app/Sources/KiCadAgent/Governance/DriftDetector.swift"
-    - "macos-app/Sources/KiCadAgent/Governance/EscalationLadder.swift"
-    - "macos-app/Sources/KiCadAgent/Governance/FindingResolution.swift"
-    - "macos-app/Sources/KiCadAgent/Governance/AutoLearner.swift"
-    - "macos-app/Sources/KiCadAgent/Governance/RequirementCoverage.swift"
-    - "macos-app/Sources/KiCadAgent/Governance/GovernedCall.swift"
-    - "macos-app/Tests/KiCadAgentTests/Governance/WorkflowStateMachineTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/Governance/IntentGateTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/Governance/OpJournalTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/Governance/EscalationLadderTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/Governance/FindingResolutionTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/Governance/AutoLearnerTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/Governance/RequirementCoverageTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/Governance/DriftDetectorTests.swift"
+    - "macos-app/Sources/Volta/Governance/WorkflowState.swift"
+    - "macos-app/Sources/Volta/Governance/WorkflowStateMachine.swift"
+    - "macos-app/Sources/Volta/Governance/IntentGate.swift"
+    - "macos-app/Sources/Volta/Governance/OpJournal.swift"
+    - "macos-app/Sources/Volta/Governance/DriftDetector.swift"
+    - "macos-app/Sources/Volta/Governance/EscalationLadder.swift"
+    - "macos-app/Sources/Volta/Governance/FindingResolution.swift"
+    - "macos-app/Sources/Volta/Governance/AutoLearner.swift"
+    - "macos-app/Sources/Volta/Governance/RequirementCoverage.swift"
+    - "macos-app/Sources/Volta/Governance/GovernedCall.swift"
+    - "macos-app/Tests/VoltaTests/Governance/WorkflowStateMachineTests.swift"
+    - "macos-app/Tests/VoltaTests/Governance/IntentGateTests.swift"
+    - "macos-app/Tests/VoltaTests/Governance/OpJournalTests.swift"
+    - "macos-app/Tests/VoltaTests/Governance/EscalationLadderTests.swift"
+    - "macos-app/Tests/VoltaTests/Governance/FindingResolutionTests.swift"
+    - "macos-app/Tests/VoltaTests/Governance/AutoLearnerTests.swift"
+    - "macos-app/Tests/VoltaTests/Governance/RequirementCoverageTests.swift"
+    - "macos-app/Tests/VoltaTests/Governance/DriftDetectorTests.swift"
   modified:
-    - "macos-app/Sources/KiCadAgent/MCP/MCPClient.swift"
+    - "macos-app/Sources/Volta/MCP/MCPClient.swift"
 decisions:
-  - "[Phase 169]: Swift-side governance layer, not Python — user task spec explicitly described Swift deliverables (`macos-app/Sources/KiCadAgent/Governance/`) and `swift build`/`swift test` verification; the plan file's Python paths were superseded by the user instruction."
+  - "[Phase 169]: Swift-side governance layer, not Python — user task spec explicitly described Swift deliverables (`macos-app/Sources/Volta/Governance/`) and `swift build`/`swift test` verification; the plan file's Python paths were superseded by the user instruction."
   - "[Phase 169]: Op catalog hardcoded in Swift (IntentGate.catalog) — Phase 170 will replace with dynamic tools/list from MCP daemon."
   - "[Phase 169]: Notifications posted synchronously (not DispatchQueue.main.async) — async dispatch causes test-runloop drops; synchronous posting is safe because observers are lock-protected."
   - "[Phase 169]: NSLock (not actor) for state machine — same pattern as KCCostLedger/KCRoutingNotifier from Phase 165 (Notification observers fire synchronously on the posting queue)."
-  - "[Phase 169]: AnyCodable visibility forced internal-only — public modifiers stripped from Governance files because AnyCodable (from MCPProtocol.swift) is internal-only and KiCadAgent is an executable target (no public API surface needed)."
+  - "[Phase 169]: AnyCodable visibility forced internal-only — public modifiers stripped from Governance files because AnyCodable (from MCPProtocol.swift) is internal-only and Volta is an executable target (no public API surface needed)."
 metrics:
   duration_seconds: 829
   completed_date: 2026-07-08
@@ -68,7 +68,7 @@ Swift port of bureaucracy.md §1-§7 state machine, op journal, drift detector, 
 
 ## What Shipped
 
-**8 governance components, all under `macos-app/Sources/KiCadAgent/Governance/`:**
+**8 governance components, all under `macos-app/Sources/Volta/Governance/`:**
 
 | Component | LOC | Requirement | Purpose |
 |-----------|-----|-------------|---------|
@@ -115,7 +115,7 @@ On any gate rejection, the call is journaled with `result_status="rejected"` bef
 
 ## Deviations from Plan
 
-**Plan file paths mismatched user instruction.** The plan file (`169-01-PLAN.md`) specifies Python files (`src/kicad_agent/daemon/obdurate_runtime.py`, etc.), but the user task description explicitly described Swift deliverables in `macos-app/Sources/KiCadAgent/Governance/` with `swift build`/`swift test` verification. The user instruction wins (per agent execution rules — explicit user directive overrides plan file). Recorded as deviation, not a bug.
+**Plan file paths mismatched user instruction.** The plan file (`169-01-PLAN.md`) specifies Python files (`src/volta/daemon/obdurate_runtime.py`, etc.), but the user task description explicitly described Swift deliverables in `macos-app/Sources/Volta/Governance/` with `swift build`/`swift test` verification. The user instruction wins (per agent execution rules — explicit user directive overrides plan file). Recorded as deviation, not a bug.
 
 ### Auto-fixed Issues
 
@@ -129,7 +129,7 @@ On any gate rejection, the call is journaled with `result_status="rejected"` bef
 **2. [Rule 1 Bug] Public modifiers conflicted with internal AnyCodable**
 - **Found during:** First build of governance files
 - **Issue:** All `public struct`/`public func` declarations failed because they reference `AnyCodable` (internal from MCPProtocol.swift)
-- **Fix:** Stripped `public` access modifiers from all Governance files (KiCadAgent is an executable target, not a framework — no public API surface needed)
+- **Fix:** Stripped `public` access modifiers from all Governance files (Volta is an executable target, not a framework — no public API surface needed)
 - **Files modified:** All 10 Governance source files
 - **Commit:** f498e5d0
 
@@ -158,16 +158,16 @@ On any gate rejection, the call is journaled with `result_status="rejected"` bef
 
 **Files created (verified exist):**
 
-- [x] macos-app/Sources/KiCadAgent/Governance/WorkflowState.swift (108 LOC)
-- [x] macos-app/Sources/KiCadAgent/Governance/WorkflowStateMachine.swift (221 LOC)
-- [x] macos-app/Sources/KiCadAgent/Governance/IntentGate.swift (240 LOC)
-- [x] macos-app/Sources/KiCadAgent/Governance/OpJournal.swift (316 LOC)
-- [x] macos-app/Sources/KiCadAgent/Governance/DriftDetector.swift (141 LOC)
-- [x] macos-app/Sources/KiCadAgent/Governance/EscalationLadder.swift (254 LOC)
-- [x] macos-app/Sources/KiCadAgent/Governance/FindingResolution.swift (287 LOC)
-- [x] macos-app/Sources/KiCadAgent/Governance/AutoLearner.swift (201 LOC)
-- [x] macos-app/Sources/KiCadAgent/Governance/RequirementCoverage.swift (110 LOC)
-- [x] macos-app/Sources/KiCadAgent/Governance/GovernedCall.swift (105 LOC)
+- [x] macos-app/Sources/Volta/Governance/WorkflowState.swift (108 LOC)
+- [x] macos-app/Sources/Volta/Governance/WorkflowStateMachine.swift (221 LOC)
+- [x] macos-app/Sources/Volta/Governance/IntentGate.swift (240 LOC)
+- [x] macos-app/Sources/Volta/Governance/OpJournal.swift (316 LOC)
+- [x] macos-app/Sources/Volta/Governance/DriftDetector.swift (141 LOC)
+- [x] macos-app/Sources/Volta/Governance/EscalationLadder.swift (254 LOC)
+- [x] macos-app/Sources/Volta/Governance/FindingResolution.swift (287 LOC)
+- [x] macos-app/Sources/Volta/Governance/AutoLearner.swift (201 LOC)
+- [x] macos-app/Sources/Volta/Governance/RequirementCoverage.swift (110 LOC)
+- [x] macos-app/Sources/Volta/Governance/GovernedCall.swift (105 LOC)
 
 **Test suites (verified pass):**
 
@@ -194,7 +194,7 @@ On any gate rejection, the call is journaled with `result_status="rejected"` bef
 
 3. **WorkflowStateMachine starts in `.questioning`** — UI flow should drive transitions via `try machine.transition(...)` at each stage boundary. Snapshot persistence for app restart is wired via `snapshot()` / `restore()`.
 
-4. **Journal file location:** `~/Library/Application Support/KiCadAgent/journal.jsonl` — created automatically on first append. Phase 170+ can add rotation/archival if the file grows large.
+4. **Journal file location:** `~/Library/Application Support/Volta/journal.jsonl` — created automatically on first append. Phase 170+ can add rotation/archival if the file grows large.
 
 5. **Escalation notifications** post synchronously on the calling queue — UI observers should register with `queue: .main` for thread-safe banner updates.
 

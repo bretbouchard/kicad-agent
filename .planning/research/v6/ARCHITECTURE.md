@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-The v6.0 architecture wraps the existing Python kicad-agent library (142 ops, validation gates, routing stack) in a native Swift/macOS+iPhone app that delivers closed-box conversational hardware design. The architecture follows a **compiler model** where conversation state is the source of truth and KiCad files (.kicad_sch, .kicad_pcb) are derived artifacts regenerated from an event-sourced journal.
+The v6.0 architecture wraps the existing Python volta library (142 ops, validation gates, routing stack) in a native Swift/macOS+iPhone app that delivers closed-box conversational hardware design. The architecture follows a **compiler model** where conversation state is the source of truth and KiCad files (.kicad_sch, .kicad_pcb) are derived artifacts regenerated from an event-sourced journal.
 
 **Key architectural principles:**
 1. **Daemon-spawned stdio MCP** — Swift app spawns Python daemon subprocess, communicates via JSON-RPC over stdio (no HTTP by default)
@@ -86,8 +86,8 @@ The v6.0 architecture wraps the existing Python kicad-agent library (142 ops, va
 ## Recommended Project Structure
 
 ```
-KiCadAgent/
-├── KiCadAgentApp.swift                  # App entry point
+Volta/
+├── VoltaApp.swift                  # App entry point
 ├── Models/                              # SwiftData models (Track E)
 │   ├── Project.swift                    # @Model project container
 │   ├── Conversation.swift               # @Model conversation state
@@ -160,7 +160,7 @@ KiCadAgent/
     └── MutationTests/                    # mull-xcode mutation tests
 
 PythonDaemon/ (bundled as app resource)
-├── kicad_agent/
+├── volta/
 │   ├── daemon/
 │   │   ├── mcp_server.py                # stdio MCP server (142 ops)
 │   │   ├── obdurate_runtime.py         # State machine + journal + gates
@@ -208,7 +208,7 @@ final class DaemonMCPClient: Sendable {
     
     func spawn() async throws {
         process.executableURL = Bundle.main.url(forResource: "python_daemon", withExtension: nil)
-        process.arguments = ["-m", "kicad_agent.daemon.mcp_server"]
+        process.arguments = ["-m", "volta.daemon.mcp_server"]
         
         // stdio pipes for JSON-RPC
         process.standardInput = stdinPipe
@@ -257,9 +257,9 @@ final class DaemonMCPClient: Sendable {
 # daemon/mcp_server.py
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from kicad_agent.ops.registry import get_all_operations
+from volta.ops.registry import get_all_operations
 
-app = Server("kicad-agent-daemon", version="6.0.0")
+app = Server("volta-daemon", version="6.0.0")
 
 @app.list_tools()
 async def list_tools() -> list[Tool]:
@@ -277,8 +277,8 @@ async def list_tools() -> list[Tool]:
 @app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Route to existing OperationExecutor."""
-    from kicad_agent.ops.executor import OperationExecutor
-    from kicad_agent.ops.schema import Operation
+    from volta.ops.executor import OperationExecutor
+    from volta.ops.schema import Operation
     
     executor = OperationExecutor(base_dir=Path.cwd())
     op = Operation.model_validate({"op_type": name, **arguments})
@@ -520,7 +520,7 @@ final class Project {
 
 // App entry point
 @main
-struct KiCadAgentApp: App {
+struct VoltaApp: App {
     let modelContainer: ModelContainer
     
     init() {
@@ -1039,11 +1039,11 @@ struct EscalationLadder {
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
-from kicad_agent.ops.registry import get_all_operations
-from kicad_agent.ops.executor import OperationExecutor
-from kicad_agent.ops.schema import Operation
+from volta.ops.registry import get_all_operations
+from volta.ops.executor import OperationExecutor
+from volta.ops.schema import Operation
 
-app = Server("kicad-agent-daemon", version="6.0.0")
+app = Server("volta-daemon", version="6.0.0")
 
 @app.list_tools()
 async def list_tools() -> list[Tool]:

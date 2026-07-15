@@ -11,8 +11,8 @@ provides:
   - "MCP-compliant daemon (initialize/tools-list/tools-call lifecycle)"
   - "StdioWatchdog with DAEM-02 audit-before-kill"
 affects:
-  - "macos-app/Sources/KiCadAgent/MCP/*"
-  - "macos-app/Sources/KiCadAgent/Daemon/StdioWatchdog.swift"
+  - "macos-app/Sources/Volta/MCP/*"
+  - "macos-app/Sources/Volta/Daemon/StdioWatchdog.swift"
   - "macos-app/daemon/handlers.py"
   - "macos-app/daemon/daemon_entry.py"
 tech-stack:
@@ -25,11 +25,11 @@ tech-stack:
     - "MCP content envelope {content:[{type:text,text:<json>}], isError:bool}"
 key-files:
   created:
-    - "macos-app/Sources/KiCadAgent/MCP/MCPProtocol.swift"
-    - "macos-app/Sources/KiCadAgent/MCP/MCPClient.swift"
-    - "macos-app/Sources/KiCadAgent/Daemon/StdioWatchdog.swift"
-    - "macos-app/Tests/KiCadAgentTests/MCPClientTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/StdioWatchdogTests.swift"
+    - "macos-app/Sources/Volta/MCP/MCPProtocol.swift"
+    - "macos-app/Sources/Volta/MCP/MCPClient.swift"
+    - "macos-app/Sources/Volta/Daemon/StdioWatchdog.swift"
+    - "macos-app/Tests/VoltaTests/MCPClientTests.swift"
+    - "macos-app/Tests/VoltaTests/StdioWatchdogTests.swift"
     - "macos-app/daemon/tests/test_mcp_lifecycle.py"
     - "macos-app/daemon/tests/test_mcp_tools.py"
   modified:
@@ -87,11 +87,11 @@ JSON-RPC 2.0 over real stdin/stdout pipes between Swift app and Python daemon, w
 ### Python (daemon side)
 
 **handlers.py** (+349 lines) — MCP lifecycle handlers:
-- `initialize` — returns `{protocolVersion: "2024-11-05", serverInfo: {name: "kicad-agent-daemon", version: "0.1.0"}, capabilities: {tools: {}}}`
+- `initialize` — returns `{protocolVersion: "2024-11-05", serverInfo: {name: "volta-daemon", version: "0.1.0"}, capabilities: {tools: {}}}`
 - `initialized` — notification (returns None → dispatch skips reply)
-- `tools/list` — returns 151 kicad-agent ops as MCP tool descriptors with `kicad.<op_type>` namespace, descriptions from `OpMeta`, JSON schemas from Pydantic
+- `tools/list` — returns 151 volta ops as MCP tool descriptors with `kicad.<op_type>` namespace, descriptions from `OpMeta`, JSON schemas from Pydantic
 - `tools/call` — validates name against registry, dispatches to `OperationExecutor.execute(Operation.model_validate(args))`, wraps result in MCP content envelope `{content:[{type:text,text:<json>}], isError:false}`
-- `_build_tool_descriptor` — maps `OpMeta` → MCP descriptor (graceful fallback if kicad_agent isn't importable)
+- `_build_tool_descriptor` — maps `OpMeta` → MCP descriptor (graceful fallback if volta isn't importable)
 - Handler registry extended with all 4 MCP methods
 
 **daemon_entry.py** (+5 lines):
@@ -163,7 +163,7 @@ $ echo '{"jsonrpc":"2.0","id":"test1","method":"ping","params":{}}' | \
 ```
 $ printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05"}}\n{"jsonrpc":"2.0","method":"initialized","params":{}}\n{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}\n' | \
     python -u macos-app/daemon/daemon_entry.py
-{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","serverInfo":{"name":"kicad-agent-daemon","version":"0.1.0"},"capabilities":{"tools":{}}}}
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2024-11-05","serverInfo":{"name":"volta-daemon","version":"0.1.0"},"capabilities":{"tools":{}}}}
 {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"kicad.add_arc_track","description":"Add a single arc track segment to a PCB (KiCad 10 net format)","inputSchema":{...}}, ...151 entries...]}}
 ```
 
@@ -173,24 +173,24 @@ $ printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersi
 
 ### Auto-fixed Issues
 
-**1. [Rule 1 - Bug] Regenerated stale kicad-agent-daemon.sha256 sidecar**
+**1. [Rule 1 - Bug] Regenerated stale volta-daemon.sha256 sidecar**
 - **Found during:** Task 5 (Swift test runs)
-- **Issue:** The PyInstaller binary at `macos-app/daemon/dist/kicad-agent-daemon/kicad-agent-daemon` had been rebuilt but the `.sha256` sidecar was stale, causing `ProcessManagerError.checksumMismatch` for end-to-end spawn tests.
-- **Fix:** Ran `shasum -a 256 kicad-agent-daemon > kicad-agent-daemon.sha256` to regenerate the sidecar.
-- **Files modified:** `macos-app/daemon/dist/kicad-agent-daemon/kicad-agent-daemon.sha256` (not committed — gitignored).
+- **Issue:** The PyInstaller binary at `macos-app/daemon/dist/volta-daemon/volta-daemon` had been rebuilt but the `.sha256` sidecar was stale, causing `ProcessManagerError.checksumMismatch` for end-to-end spawn tests.
+- **Fix:** Ran `shasum -a 256 volta-daemon > volta-daemon.sha256` to regenerate the sidecar.
+- **Files modified:** `macos-app/daemon/dist/volta-daemon/volta-daemon.sha256` (not committed — gitignored).
 - **Note:** Pre-existing issue also affected `ProcessManagerTests.swift` tests at lines 120 and 145 (Phase 162 tests).
 
 **2. [Rule 1 - Bug] Removed broken NSNumber int/double discriminator code**
 - **Found during:** Task 1 (initial MCPProtocol.swift draft)
 - **Issue:** Initial implementation used `UnsafePointer` extensions for NSNumber objCType inspection that were syntactically invalid.
 - **Fix:** Replaced with direct `String(cString: number.objCType)` check against known type chars ("q", "i", "l", "s").
-- **Files modified:** `macos-app/Sources/KiCadAgent/MCP/MCPProtocol.swift`
+- **Files modified:** `macos-app/Sources/Volta/MCP/MCPProtocol.swift`
 
 **3. [Rule 3 - Blocking] Swift 6 strict concurrency forced continuation-based timeout**
 - **Found during:** Task 2 (MCPClient.callRaw)
 - **Issue:** Initial implementation used `withThrowingTaskGroup` with a `@MainActor` task arm that captured `[String: Any]` params (not Sendable). Swift 6 sendability checker rejected it.
 - **Fix:** Switched to `withCheckedThrowingContinuation` with two child Tasks (one @MainActor for the messenger call, one nonisolated for the timeout sleep). Used `SendableBox` (already defined in DaemonMessenger.swift) for the success payload.
-- **Files modified:** `macos-app/Sources/KiCadAgent/MCP/MCPClient.swift`
+- **Files modified:** `macos-app/Sources/Volta/MCP/MCPClient.swift`
 
 ## Known Stubs
 
@@ -230,11 +230,11 @@ Phase 168 should:
 ## Self-Check: PASSED
 
 **Files created (verified exists):**
-- FOUND: macos-app/Sources/KiCadAgent/MCP/MCPProtocol.swift
-- FOUND: macos-app/Sources/KiCadAgent/MCP/MCPClient.swift
-- FOUND: macos-app/Sources/KiCadAgent/Daemon/StdioWatchdog.swift
-- FOUND: macos-app/Tests/KiCadAgentTests/MCPClientTests.swift
-- FOUND: macos-app/Tests/KiCadAgentTests/StdioWatchdogTests.swift
+- FOUND: macos-app/Sources/Volta/MCP/MCPProtocol.swift
+- FOUND: macos-app/Sources/Volta/MCP/MCPClient.swift
+- FOUND: macos-app/Sources/Volta/Daemon/StdioWatchdog.swift
+- FOUND: macos-app/Tests/VoltaTests/MCPClientTests.swift
+- FOUND: macos-app/Tests/VoltaTests/StdioWatchdogTests.swift
 - FOUND: macos-app/daemon/tests/test_mcp_lifecycle.py
 - FOUND: macos-app/daemon/tests/test_mcp_tools.py
 

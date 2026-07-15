@@ -15,15 +15,15 @@ requirements: [DRC-01, DRC-02, DRC-03, DRC-04, DRC-05, DRC-06, DRC-07, DRC-08]
 
 | # | Must_Have | Status | Evidence |
 |---|-----------|--------|----------|
-| 1 | 9 `.kicad_dru` files exist with attribution headers | ✓ | `ls src/kicad_agent/manufacturing/drc_profiles/*.kicad_dru` returns 9 files (pcbway, jlcpcb, aisler_2/4/6/8layer, oshpark, advanced_circuits, generic). Each file has `^# Source:` (count 1) and `^# Last verified:` (count 1). |
-| 2 | `ManufacturerProfile` has `drc_rules_path` field | ✓ | `src/kicad_agent/dfm/profiles.py:57` — `drc_rules_path: Path \| None = Field(default=None, ...)`. Wired on all 10 profiles (9 DRU-backed + uses `get_drc_profile_path`). |
+| 1 | 9 `.kicad_dru` files exist with attribution headers | ✓ | `ls src/volta/manufacturing/drc_profiles/*.kicad_dru` returns 9 files (pcbway, jlcpcb, aisler_2/4/6/8layer, oshpark, advanced_circuits, generic). Each file has `^# Source:` (count 1) and `^# Last verified:` (count 1). |
+| 2 | `ManufacturerProfile` has `drc_rules_path` field | ✓ | `src/volta/dfm/profiles.py:57` — `drc_rules_path: Path \| None = Field(default=None, ...)`. Wired on all 10 profiles (9 DRU-backed + uses `get_drc_profile_path`). |
 | 3 | PCBWay annular ring is 0.15mm (DRC-07) | ✓ | `load_profile('pcbway').min_annular_ring_mm == 0.15` confirmed. JLCPCB also 0.15. AISLER 0.2mm (hard limit). |
 | 4 | Internal evaluator (`run_vendor_drc`) detects violations | ✓ | `manufacturing/vendor_drc.py` defines `run_vendor_drc(board, profile) -> VendorDrcResult`. Runs all 5 checks (track_width, drill_size, annular_ring, via_diameter, clearance). Silent-pass guard tests pass: `TestTrackWidthCheck::test_track_width_below_limit_violation` and `TestClearanceCheck::test_clearance_below_limit_violation` both assert `passed is False` + specific violation type. |
 | 5 | `drc_vendor` op registered (count == 156) | ✓ | `len(OPERATION_REGISTRY) == 156`; `'drc_vendor' in OPERATION_REGISTRY`. |
 | 6 | `list_vendor_drc_profiles` op registered | ✓ | `'list_vendor_drc_profiles' in OPERATION_REGISTRY`; both handlers in `_QUERY_HANDLERS`. |
 | 7 | `validate_registry_completeness()` passes | ✓ | Returns 3 pre-existing missing ops only (`add_design_note`, `apply_floor_plan`, `place_and_wire_power_units`) — no new gaps introduced by Phase 206. |
-| 8 | Handler uses `NativeParser.parse_pcb` (NOT `ir.board`) | ✓ | `src/kicad_agent/ops/handlers/query.py:107` — `board = NativeParser.parse_pcb(file_path)`. Handler comment explicitly documents the dual-path re-parse (same as Phase 205 pattern). |
-| 9 | No `--custom-rules` invocation anywhere | ✓ | `grep -rn "custom-rules\|custom_rules" src/kicad_agent/` — only matches are comments/docstrings explaining the pivot (e.g. `vendor_drc.py:6` "has no `--custom-rules` flag"). Zero subprocess/cmd invocations. |
+| 8 | Handler uses `NativeParser.parse_pcb` (NOT `ir.board`) | ✓ | `src/volta/ops/handlers/query.py:107` — `board = NativeParser.parse_pcb(file_path)`. Handler comment explicitly documents the dual-path re-parse (same as Phase 205 pattern). |
+| 9 | No `--custom-rules` invocation anywhere | ✓ | `grep -rn "custom-rules\|custom_rules" src/volta/` — only matches are comments/docstrings explaining the pivot (e.g. `vendor_drc.py:6` "has no `--custom-rules` flag"). Zero subprocess/cmd invocations. |
 | 10 | Full test suite green for phase files | ✓ | 86 passed across `test_vendor_drc.py` + `test_drc_vendor_ops.py` + `test_drc_profiles.py` + `test_registry.py`. Plus 38 passed in modified `test_dfm_checker.py`. |
 
 ## Per-Requirement Verification
@@ -82,13 +82,13 @@ Silent-pass guard tests (explicit re-run):
 
 ## Files Verified
 
-- `src/kicad_agent/manufacturing/drc_profiles/__init__.py` (package + resolver + capabilities registry)
-- `src/kicad_agent/manufacturing/drc_profiles/*.kicad_dru` (9 DRU files)
-- `src/kicad_agent/manufacturing/vendor_drc.py` (internal evaluator)
-- `src/kicad_agent/dfm/profiles.py` (`drc_rules_path` field + corrected annular rings + 5 new profiles)
-- `src/kicad_agent/ops/_schema_pcb.py` (`DrcVendorOp`, `ListVendorDrcProfilesOp`)
-- `src/kicad_agent/ops/schema.py` (union + `__all__`)
-- `src/kicad_agent/ops/registry.py` (`_RAW_CATALOG` entries)
-- `src/kicad_agent/ops/handlers/query.py` (`_handle_drc_vendor` uses `NativeParser.parse_pcb`; `_handle_list_vendor_drc_profiles`)
+- `src/volta/manufacturing/drc_profiles/__init__.py` (package + resolver + capabilities registry)
+- `src/volta/manufacturing/drc_profiles/*.kicad_dru` (9 DRU files)
+- `src/volta/manufacturing/vendor_drc.py` (internal evaluator)
+- `src/volta/dfm/profiles.py` (`drc_rules_path` field + corrected annular rings + 5 new profiles)
+- `src/volta/ops/_schema_pcb.py` (`DrcVendorOp`, `ListVendorDrcProfilesOp`)
+- `src/volta/ops/schema.py` (union + `__all__`)
+- `src/volta/ops/registry.py` (`_RAW_CATALOG` entries)
+- `src/volta/ops/handlers/query.py` (`_handle_drc_vendor` uses `NativeParser.parse_pcb`; `_handle_list_vendor_drc_profiles`)
 - `pyproject.toml` (`[tool.setuptools.package-data]` declares `*.kicad_dru`)
 - `tests/test_vendor_drc.py`, `tests/test_drc_vendor_ops.py`, `tests/test_drc_profiles.py`, `tests/test_registry.py`, `tests/test_dfm_checker.py`

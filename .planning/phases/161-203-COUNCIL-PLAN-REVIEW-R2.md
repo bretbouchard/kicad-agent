@@ -43,7 +43,7 @@ Line 113:
 > `<done>PyInstaller spec file configured with code signing, entitlements, hidden imports (kicad-cli NOT bundled per GPL compliance)</done>`
 
 Line 167:
-> "Daemon bundles only Python stdlib + kicad-agent library + ops/registry + PyInstaller runtime. NO kicad-cli bundled — external install required per Phase 163."
+> "Daemon bundles only Python stdlib + volta library + ops/registry + PyInstaller runtime. NO kicad-cli bundled — external install required per Phase 163."
 
 **Resolution state:** IMPLEMENTED — verified in plan, no further action.
 

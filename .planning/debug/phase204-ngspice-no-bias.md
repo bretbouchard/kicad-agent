@@ -28,9 +28,9 @@ verification:
 - Pre-existing unrelated failure (tests/test_knowledge.py::TestOpSectionMapCoverage::test_category_defaults_cover_all_categories — `_CATEGORY_DEFAULTS missing 'autolayout'`) confirmed to exist BEFORE my changes; not a regression.
 
 files_changed:
-- src/kicad_agent/sim/eurorack.py (emit VCC/VEE sources before .GLOBAL)
-- src/kicad_agent/spice/testbench.py (RLOAD for DC path + default freq_stop=1e9)
-- src/kicad_agent/sim/optimizer.py (freq_stop 1e6 → 1e9)
+- src/volta/sim/eurorack.py (emit VCC/VEE sources before .GLOBAL)
+- src/volta/spice/testbench.py (RLOAD for DC path + default freq_stop=1e9)
+- src/volta/sim/optimizer.py (freq_stop 1e6 → 1e9)
 - scripts/demo_closed_box.py (freq_stop 1e6 → 1e9, honest timing in docstring + help)
 - tests/sim/conftest.py (fixture freq_stop 1e6 → 1e9)
 - tests/sim/test_eurorack_circuit.py (test_emitted_netlist_is_valid_spice wraps with .OP testbench)

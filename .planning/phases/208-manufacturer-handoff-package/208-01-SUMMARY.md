@@ -28,16 +28,16 @@ tech-stack:
 
 key-files:
   created:
-    - src/kicad_agent/manufacturing/handoff.py
+    - src/volta/manufacturing/handoff.py
     - tests/test_handoff.py
   modified:
-    - src/kicad_agent/dfm/profiles.py
-    - src/kicad_agent/validation/gates/manufacturing_manifest.py
-    - src/kicad_agent/export/bom.py
-    - src/kicad_agent/ops/_schema_pcb.py
-    - src/kicad_agent/ops/schema.py
-    - src/kicad_agent/ops/registry.py
-    - src/kicad_agent/ops/handlers/build.py
+    - src/volta/dfm/profiles.py
+    - src/volta/validation/gates/manufacturing_manifest.py
+    - src/volta/export/bom.py
+    - src/volta/ops/_schema_pcb.py
+    - src/volta/ops/schema.py
+    - src/volta/ops/registry.py
+    - src/volta/ops/handlers/build.py
     - tests/test_registry.py
 
 key-decisions:
@@ -97,15 +97,15 @@ Each task was committed atomically:
 _Note: Tasks 3 & 4 were committed together because `_generate_readme` (Task 4) is a private function within the handoff.py module created in Task 3._
 
 ## Files Created/Modified
-- `src/kicad_agent/manufacturing/handoff.py` - CREATED: export_handoff orchestrator, HandoffResult/HandoffValidation dataclasses, _generate_readme, tri-state validation, streaming zip
+- `src/volta/manufacturing/handoff.py` - CREATED: export_handoff orchestrator, HandoffResult/HandoffValidation dataclasses, _generate_readme, tri-state validation, streaming zip
 - `tests/test_handoff.py` - CREATED: 21 tests (BOM profile formatter + handoff orchestrator + readme generation), all use monkeypatch stubs (run in CI without kicad-cli)
-- `src/kicad_agent/export/bom.py` - MODIFIED: added export_bom_profile + _sanitize_csv_cell (TM-5), refactored export_jlcpcb_bom to delegate
-- `src/kicad_agent/dfm/profiles.py` - MODIFIED: +4 output-format fields on ManufacturerProfile, set on _JLCPCB_STANDARD + _JLCPCB_4LAYER
-- `src/kicad_agent/validation/gates/manufacturing_manifest.py` - MODIFIED: +5 validation fields, to_json/load round-trip
-- `src/kicad_agent/ops/_schema_pcb.py` - MODIFIED: +BuildHandoffExportOp (Phase 208 section, vendor pattern TM-3)
-- `src/kicad_agent/ops/schema.py` - MODIFIED: +import, +union, +__all__ (3 edits)
-- `src/kicad_agent/ops/registry.py` - MODIFIED: +build_handoff_export _RAW_CATALOG entry
-- `src/kicad_agent/ops/handlers/build.py` - MODIFIED: +_handle_build_handoff_export handler
+- `src/volta/export/bom.py` - MODIFIED: added export_bom_profile + _sanitize_csv_cell (TM-5), refactored export_jlcpcb_bom to delegate
+- `src/volta/dfm/profiles.py` - MODIFIED: +4 output-format fields on ManufacturerProfile, set on _JLCPCB_STANDARD + _JLCPCB_4LAYER
+- `src/volta/validation/gates/manufacturing_manifest.py` - MODIFIED: +5 validation fields, to_json/load round-trip
+- `src/volta/ops/_schema_pcb.py` - MODIFIED: +BuildHandoffExportOp (Phase 208 section, vendor pattern TM-3)
+- `src/volta/ops/schema.py` - MODIFIED: +import, +union, +__all__ (3 edits)
+- `src/volta/ops/registry.py` - MODIFIED: +build_handoff_export _RAW_CATALOG entry
+- `src/volta/ops/handlers/build.py` - MODIFIED: +_handle_build_handoff_export handler
 - `tests/test_registry.py` - MODIFIED: count 159->160, +1 readonly entry
 
 ## Decisions Made
@@ -122,8 +122,8 @@ _Note: Tasks 3 & 4 were committed together because `_generate_readme` (Task 4) i
 - **Found during:** Task 1 (data model extension)
 - **Issue:** Plan critical-context item #15 noted that `_JLCPCB_4LAYER` should also get `bom_columns` since it's the same vendor, but the main action steps only listed `_JLCPCB_STANDARD`.
 - **Fix:** Added `bom_columns`, `bom_filename_pattern`, `cpl_filename_pattern` to `_JLCPCB_4LAYER` in addition to `_JLCPCB_STANDARD`.
-- **Files modified:** src/kicad_agent/dfm/profiles.py
-- **Verification:** `.venv/bin/python -c "from kicad_agent.dfm.profiles import load_profile; p=load_profile('jlcpcb-4layer'); assert p.bom_columns==('Comment','Designator','Footprint','LCSC')"` passes.
+- **Files modified:** src/volta/dfm/profiles.py
+- **Verification:** `.venv/bin/python -c "from volta.dfm.profiles import load_profile; p=load_profile('jlcpcb-4layer'); assert p.bom_columns==('Comment','Designator','Footprint','LCSC')"` passes.
 - **Committed in:** `267a17d` (Task 1 commit)
 
 ---

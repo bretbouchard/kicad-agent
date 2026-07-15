@@ -6,13 +6,13 @@ tags: [optuna, gpsampler, bayesian-optimization, e12, eurorack, bjt, ngspice, th
 
 requires:
   - phase: 158-spice-pipeline
-    provides: "src/kicad_agent/spice/ (run_simulation, generate_ac_testbench, get_model, AnalysisType)"
+    provides: "src/volta/spice/ (run_simulation, generate_ac_testbench, get_model, AnalysisType)"
   - phase: 204-01
     provides: "optuna 4.9.0 in [sim] extras, 2N3904 Gummel-Poon .MODEL, tests/sim/ BLK-1 conftest"
   - phase: 204-02
-    provides: "src/kicad_agent/sim/eurorack.py (build_preamp_circuit + circuit_to_spice_netlist)"
+    provides: "src/volta/sim/eurorack.py (build_preamp_circuit + circuit_to_spice_netlist)"
 provides:
-  - "src/kicad_agent/sim/optimizer.py — Optuna GPSampler objective + optimize_preamp entry point"
+  - "src/volta/sim/optimizer.py — Optuna GPSampler objective + optimize_preamp entry point"
   - "objective(trial) -> float — per-trial evaluator: build circuit → SPICE netlist → ngspice → (gain_db-20)^2 + 0.001*ic_ma"
   - "optimize_preamp(n_trials=50, seed=42, study_name) -> optuna.Study — sqlite-backed resumable Bayesian optimization"
   - "E12_RESISTORS (48 values 100Ω-820kΩ) + E12_CAPS (84 values 1nF-820µF) module-level tuples"
@@ -30,10 +30,10 @@ tech-stack:
 
 key-files:
   created:
-    - src/kicad_agent/sim/optimizer.py
+    - src/volta/sim/optimizer.py
     - tests/sim/test_optimizer.py
   modified:
-    - src/kicad_agent/sim/__init__.py  # APPEND objective, optimize_preamp exports
+    - src/volta/sim/__init__.py  # APPEND objective, optimize_preamp exports
 
 key-decisions:
   - "threading.Thread(daemon=True) + join(timeout=TRIAL_TIMEOUT_S) replaces ThreadPoolExecutor — ThreadPoolExecutor's context-manager __exit__ joins the worker thread, defeating future.result(timeout=...) when ngspice hangs. Direct daemon threading lets us abandon the worker without blocking."
@@ -129,7 +129,7 @@ These tests fail at setup with the autouse `_require_ngspice` fixture because ng
 ### Public API (8 exports total — 6 from Plan 02 + 2 new)
 
 ```python
-from kicad_agent.sim import (
+from volta.sim import (
     # Plan 02:
     build_preamp_circuit,      # (r1,r2,r3,r4,c_in,c_out,c_emit) -> skidl.Circuit
     circuit_to_spice_netlist,  # (circuit) -> str
@@ -150,11 +150,11 @@ from kicad_agent.sim import (
 ## Files Created/Modified
 
 ### Created
-- `src/kicad_agent/sim/optimizer.py` — 169 LOC (under 200 budget)
+- `src/volta/sim/optimizer.py` — 169 LOC (under 200 budget)
 - `tests/sim/test_optimizer.py` — 283 LOC (13 tests: 9 unit + 4 slow)
 
 ### Modified
-- `src/kicad_agent/sim/__init__.py` — added 2 imports + 2 `__all__` entries (objective, optimize_preamp)
+- `src/volta/sim/__init__.py` — added 2 imports + 2 `__all__` entries (objective, optimize_preamp)
 
 ## Decisions Made
 
@@ -170,7 +170,7 @@ from kicad_agent.sim import (
 - **Found during:** Task 1 verification — `test_objective_times_out_on_slow_sim`
 - **Issue:** Plan code used `concurrent.futures.ThreadPoolExecutor` with `future.result(timeout=TRIAL_TIMEOUT_S)`. While `future.result(timeout=10)` correctly raises `TimeoutError` at 10s, the surrounding `with pool:` context manager's `__exit__` calls `pool.shutdown(wait=True)`, which joins the worker thread. With a 15s monkeypatched sleep, observed wall time was 18.4s — exceeding the test's 12s assertion.
 - **Fix:** Replaced with `threading.Thread(target=_worker, daemon=True)` + `worker.join(timeout=TRIAL_TIMEOUT_S)`. Daemon threads don't block interpreter exit; `worker.is_alive()` check after `join(timeout=...)` cleanly detects timeout. Removed `concurrent.futures` import; added `import threading`.
-- **Files modified:** `src/kicad_agent/sim/optimizer.py`
+- **Files modified:** `src/volta/sim/optimizer.py`
 - **Verification:** `test_objective_times_out_on_slow_sim` now passes — 15s sleep → objective returns inf in 13.4s (3.2s skidl setup + 10s timeout + slack).
 - **Committed in:** cbc54c74
 
@@ -208,7 +208,7 @@ None. All code paths in optimizer.py are exercised. The "heuristic Ic" calculati
 
 ## Self-Check: PASSED
 
-All 3 task files verified present (`ls src/kicad_agent/sim/optimizer.py`, `ls tests/sim/test_optimizer.py`, `grep optimize_preamp src/kicad_agent/sim/__init__.py`). Task 1 commit `cbc54c74` verified in `git log`. Phase 158 regression check: 18/20 pass (2 pre-existing ngspice failures). All 8 plan grep checks pass (def objective, def optimize_preamp, GPSampler, E12_RESISTORS, TRIAL_TIMEOUT_S, IC_SATURATION_LIMIT_MA, threading, range(-9, -2)).
+All 3 task files verified present (`ls src/volta/sim/optimizer.py`, `ls tests/sim/test_optimizer.py`, `grep optimize_preamp src/volta/sim/__init__.py`). Task 1 commit `cbc54c74` verified in `git log`. Phase 158 regression check: 18/20 pass (2 pre-existing ngspice failures). All 8 plan grep checks pass (def objective, def optimize_preamp, GPSampler, E12_RESISTORS, TRIAL_TIMEOUT_S, IC_SATURATION_LIMIT_MA, threading, range(-9, -2)).
 
 ---
 *Phase: 204-closed-box-simulation-pipeline-v1-skidl-spice-optuna-pytest*

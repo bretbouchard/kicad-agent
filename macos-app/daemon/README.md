@@ -1,4 +1,4 @@
-# kicad-agent Daemon (PyInstaller Bundle)
+# volta Daemon (PyInstaller Bundle)
 
 Phase 162 — Python Daemon Bundling.
 
@@ -14,7 +14,7 @@ daemon/
 ├── protocol.py                  # JSON-RPC 2.0 envelopes, RpcError, parse_request
 ├── handlers.py                  # ping, list_operations, health_check, shutdown
 ├── audit_log.py                 # append-only JSONL audit trail with fsync
-├── kicad-agent-daemon.spec      # PyInstaller spec (one-folder mode)
+├── volta-daemon.spec      # PyInstaller spec (one-folder mode)
 ├── requirements-daemon.txt      # Python deps pinned for the bundle
 ├── README.md                    # this file
 ├── tests/                       # pytest suite (97 tests)
@@ -25,9 +25,9 @@ daemon/
 │   └── test_dispatch.py         # End-to-end dispatch tests
 ├── build/                       # PyInstaller intermediate artifacts (gitignored)
 └── dist/
-    └── kicad-agent-daemon/
-        ├── kicad-agent-daemon   # executable
-        ├── kicad-agent-daemon.sha256
+    └── volta-daemon/
+        ├── volta-daemon   # executable
+        ├── volta-daemon.sha256
         └── _internal/           # Python runtime + libraries
 ```
 
@@ -48,18 +48,18 @@ independently testable:
 ```bash
 # From repo root — uses the project's .venv (Python 3.11) so versions match.
 cd macos-app/daemon
-/Users/bretbouchard/apps/kicad-agent/.venv/bin/pyinstaller --noconfirm \
-    kicad-agent-daemon.spec
+/Users/bretbouchard/apps/volta/.venv/bin/pyinstaller --noconfirm \
+    volta-daemon.spec
 ```
 
-Output: `macos-app/daemon/dist/kicad-agent-daemon/`.
+Output: `macos-app/daemon/dist/volta-daemon/`.
 
 ## Verify
 
 ```bash
 # Run the daemon against a `ping` request.
 echo '{"jsonrpc":"2.0","id":"1","method":"ping","params":{}}' | \
-    ./dist/kicad-agent-daemon/kicad-agent-daemon
+    ./dist/volta-daemon/volta-daemon
 # Expect: {"jsonrpc":"2.0","id":"1","result":{"pong":true,"epoch":...}}
 ```
 
@@ -67,7 +67,7 @@ echo '{"jsonrpc":"2.0","id":"1","method":"ping","params":{}}' | \
 
 ```bash
 cd macos-app/daemon
-/Users/bretbouchard/apps/kicad-agent/.venv/bin/python -m pytest tests/ -v
+/Users/bretbouchard/apps/volta/.venv/bin/python -m pytest tests/ -v
 # Expect: 97 passed in <1s
 ```
 
@@ -82,11 +82,11 @@ The test suite covers:
 After a successful build, emit a SHA-256 next to the executable:
 
 ```bash
-cd dist/kicad-agent-daemon
-shasum -a 256 kicad-agent-daemon > kicad-agent-daemon.sha256
+cd dist/volta-daemon
+shasum -a 256 volta-daemon > volta-daemon.sha256
 ```
 
-`ProcessManager.spawn()` reads `kicad-agent-daemon.sha256` and compares it
+`ProcessManager.spawn()` reads `volta-daemon.sha256` and compares it
 to a SHA-256 computed over the bundled executable. On mismatch the
 `DaemonSupervisor` transitions to `.failed(.checksumMismatch)` and the
 recovery UI surfaces a "Re-download daemon" prompt.
@@ -102,19 +102,19 @@ builds pass a Developer ID via the env var:
 
 ```bash
 CODESIGN_IDENTITY="Developer ID Application: ..." \
-    /Users/bretbouchard/apps/kicad-agent/.venv/bin/pyinstaller \
-    --noconfirm kicad-agent-daemon.spec
+    /Users/bretbouchard/apps/volta/.venv/bin/pyinstaller \
+    --noconfirm volta-daemon.spec
 ```
 
 Phase 203 (Fastlane match) automates this.
 
 ### Verifying every embedded dylib
 
-Before shipping, every dylib under `dist/kicad-agent-daemon/_internal/` must
+Before shipping, every dylib under `dist/volta-daemon/_internal/` must
 show "valid on disk":
 
 ```bash
-find dist/kicad-agent-daemon -name "*.dylib" -print0 | \
+find dist/volta-daemon -name "*.dylib" -print0 | \
     while IFS= read -r -d '' lib; do
         echo "--- $lib ---"
         codesign -dv --verbose=4 "$lib" 2>&1 | grep -E "(valid on disk|Authority)"
@@ -125,7 +125,7 @@ If any dylib is unsigned, sign it before packaging:
 
 ```bash
 codesign --force --options runtime --sign "$CODESIGN_IDENTITY" \
-    dist/kicad-agent-daemon/_internal/<lib>.dylib
+    dist/volta-daemon/_internal/<lib>.dylib
 ```
 
 ## What's NOT bundled

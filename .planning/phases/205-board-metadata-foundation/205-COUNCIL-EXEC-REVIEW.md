@@ -75,7 +75,7 @@ since that phase will exercise the title_block write path more heavily.
 
 | ID | Severity | Finding | Status |
 |----|----------|---------|--------|
-| QUAL-1 | HIGH | Wrong `extract_uuids` import path + missing `SMD_TEST_BOARD` constant | **FIXED** — `tests/test_board_metadata_ops.py:46` uses correct import `from kicad_agent.parser.uuid_extractor import extract_uuids`. `SMD_TEST_BOARD` references resolved to inline content strings (no module constant needed). |
+| QUAL-1 | HIGH | Wrong `extract_uuids` import path + missing `SMD_TEST_BOARD` constant | **FIXED** — `tests/test_board_metadata_ops.py:46` uses correct import `from volta.parser.uuid_extractor import extract_uuids`. `SMD_TEST_BOARD` references resolved to inline content strings (no module constant needed). |
 | KCAD-1 | MEDIUM | `SurfaceFinish` enum had `IMPEG` (typo) + `ENIPIG` (non-standard spelling) | **FIXED** — `board_spec.py:17-24` has clean enum: `HASL, ENIG, HASL_LEAD_FREE, HARD_GOLD, OSP, ENEPIG`. `IMPEG` dropped, `ENIPIG` renamed to canonical `ENEPIG`. |
 | ARCH-1 | MEDIUM | Dual-path asymmetry needs code comment | **FIXED** — `handlers/query.py:33-38` docstring documents "CRITICAL: execute_query uses kiutils path". |
 | ARCH-2 | LOW | Set handler return value inconsistent with read handler | **ACCEPT** — Tests sidestep via re-read. Minor, documented. |
@@ -274,7 +274,7 @@ string terminator, not as an escaped quote. This affects all 3 read paths
 - The write path is correct (doubled-quote output is valid KiCad).
 - kicad-cli can load the file correctly (it understands doubled quotes).
 - The bug only manifests when re-reading a title that contains `"` via the
-  kicad-agent read path.
+  volta read path.
 
 **Recommendation:** Add a test that documents this limitation
 (`test_title_with_embedded_quotes_round_trip`, expected to fail or assert the
@@ -397,7 +397,7 @@ but clutters the working tree.
 
 All 7 requirements implemented and verified. META-06/META-07 have a narrow
 gap (Q-1): embedded double-quote characters in title fields do not round-trip
-correctly through the kicad-agent read path due to `sexpdata` limitations.
+correctly through the volta read path due to `sexpdata` limitations.
 This does not invalidate the requirement coverage because KiCad itself handles
 the files correctly and the write path is correct.
 
@@ -418,7 +418,7 @@ the files correctly and the write path is correct.
 
 1. **(HIGH, before Phase 207)** Fix W-01 / S-1: anchor the 3 regexes in
    `set_title_block_fields` to line start with `^[ \t]*` + `re.MULTILINE`.
-   Files: `src/kicad_agent/ops/pcb_raw_writer.py` lines 1017, 1029, 1035.
+   Files: `src/volta/ops/pcb_raw_writer.py` lines 1017, 1029, 1035.
    One-line fix per regex. Add a test for `(title_block)` appearing inside a
    quoted string to prevent regression.
 

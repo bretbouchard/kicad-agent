@@ -1,6 +1,6 @@
 # Technology Stack -- v5.0 SPICE Simulation Pipeline
 
-**Project:** kicad-agent -- SPICE testbench generation, simulation, and reward-signal extraction
+**Project:** volta -- SPICE testbench generation, simulation, and reward-signal extraction
 **Milestone:** v5.0 (SPICE simulation pipeline)
 **Researched:** 2026-07-03
 **Confidence:** HIGH (all claims verified by live execution: ngspice 45.2 runs, spicelib parses output, skidl/InSpice export path confirmed)
@@ -37,7 +37,7 @@ The single biggest **gap is SPICE models for the custom ICs**. The repo has zero
 
 This is the architectural keystone, so it comes first.
 
-### What the existing `kicad_agent/ltspice/` module actually is
+### What the existing `volta/ltspice/` module actually is
 
 The module is **misleadingly named**: it is really a *KiCad-schematic ↔ SPICE-schematic bridge*, not an LTspice simulator. Of its 7 files:
 
@@ -55,9 +55,9 @@ The module is **misleadingly named**: it is really a *KiCad-schematic ↔ SPICE-
 
 The three "reusable" files (`sim_commands.py`, `types.py`, `raw_reader.py`) form a **simulation-command + simulation-result** layer that is engine-agnostic. The four `.asc`/`.asy` files are an **LTspice-schematic-bridge** layer. v5.0 should:
 
-1. **Extract a new `spice/` package** (e.g. `kicad_agent/spice/`) holding the engine-agnostic pieces: `sim_commands.py` (move or re-export), `types.py` (move or re-export), and a **generalized `raw_reader.py`** that takes an optional `dialect` (`"ltspice"` | `"ngspice"`, default auto-detect).
-2. **Keep `kicad_agent/ltspice/`** as the `.asc`/`.asy` schematic bridge, importing from the new `spice/` package. This avoids breaking the v2.0 Phase 11/14 callers.
-3. **Add `kicad_agent/spice/ngspice_runner.py`** -- the new ngspice batch-execution + testbench-generation layer (the v5.0 work).
+1. **Extract a new `spice/` package** (e.g. `volta/spice/`) holding the engine-agnostic pieces: `sim_commands.py` (move or re-export), `types.py` (move or re-export), and a **generalized `raw_reader.py`** that takes an optional `dialect` (`"ltspice"` | `"ngspice"`, default auto-detect).
+2. **Keep `volta/ltspice/`** as the `.asc`/`.asy` schematic bridge, importing from the new `spice/` package. This avoids breaking the v2.0 Phase 11/14 callers.
+3. **Add `volta/spice/ngspice_runner.py`** -- the new ngspice batch-execution + testbench-generation layer (the v5.0 work).
 
 This mirrors how spicelib itself is organized: one `raw/raw_read.py` reads *both* dialects, separate `simulators/{ltspice,ngspice,qspice,xyce}_simulator.py` run *each* engine.
 
@@ -123,7 +123,7 @@ These are how you build a *simulation-only* circuit in skidl (sources + loads + 
 
 ### Recommendation: a `models/` registry
 
-Create `kicad_agent/spice/models/` holding curated `.lib` files + a Python registry mapping `lib_id → (model_name, lib_file, pin_map)`. This mirrors `symbol_mapper.py`'s pattern but for SPICE. Priority order: NE5532 (most-used, 5×/channel), THAT340 (discrete BJT models, trivial), DG413 (utility switching), THAT4301 (compressor). AK4619VN gets an explicit `UNSIMULATABLE` entry that the testbench generator handles by substituting an ideal source.
+Create `volta/spice/models/` holding curated `.lib` files + a Python registry mapping `lib_id → (model_name, lib_file, pin_map)`. This mirrors `symbol_mapper.py`'s pattern but for SPICE. Priority order: NE5532 (most-used, 5×/channel), THAT340 (discrete BJT models, trivial), DG413 (utility switching), THAT4301 (compressor). AK4619VN gets an explicit `UNSIMULATABLE` entry that the testbench generator handles by substituting an ideal source.
 
 ---
 
@@ -475,16 +475,16 @@ Two changes: document `skidl`/`InSpice` in a new `spice` optional group (they ma
 
 - Live execution: `ngspice --version` (45.2, KLU solver); RC lowpass `.ac` batch sim → valid `.raw`; THD `.four` → parseable log; Monte Carlo `.control repeat` → per-run raws.
 - Live import: `spicelib` 1.5.1 (`RawRead` ngspice dialect ✓, `NGspiceSimulator` ✓, `SimRunner` ✓); `skidl` 2.2.3 (`Circuit.generate_netlist` ✓, `tools/spice/spice.py:gen_netlist` ✓); `InSpice` 1.6.3.3 (PySpice fork, importable); `PySpice` → **ModuleNotFoundError**.
-- `src/kicad_agent/ltspice/sim_commands.py` — SPICE-syntax parser (`.tran/.ac/.dc/.noise/.op`), frozen dataclasses, `parse_eng_value()`.
-- `src/kicad_agent/ltspice/raw_reader.py` — `RawRead(path, dialect="ltspice")`, `SimulationResult`/`LTspiceTrace` types.
-- `src/kicad_agent/ltspice/types.py` — engine-agnostic result containers.
-- `src/kicad_agent/ltspice/{asc_parser,asc_writer,symbol_mapper,net_graph}.py` — LTspice-schematic-specific bridge.
+- `src/volta/ltspice/sim_commands.py` — SPICE-syntax parser (`.tran/.ac/.dc/.noise/.op`), frozen dataclasses, `parse_eng_value()`.
+- `src/volta/ltspice/raw_reader.py` — `RawRead(path, dialect="ltspice")`, `SimulationResult`/`LTspiceTrace` types.
+- `src/volta/ltspice/types.py` — engine-agnostic result containers.
+- `src/volta/ltspice/{asc_parser,asc_writer,symbol_mapper,net_graph}.py` — LTspice-schematic-specific bridge.
 - `analog-ecosystem/.../mono-arch/parts.py` — custom IC wrappers; THAT4301/AK4619VN/XMOS modeled as generic connectors (no SPICE behavior); NE5532/DG413 as real KiCad symbols (no `.pyspice`).
 - `analog-ecosystem/.../CIRCUIT-DESIGN.md` — explicit targets: EIN -128dBu (§4.3), gain +18dB (§4.3), THD 0.5-2% windowed (§7), EQ ±18dB (§8), rail noise <50µVrms (§9.3).
-- `src/kicad_agent/training/board_reward.py` — existing `BoardRewardSignal`/`BoardChainReward` pattern; `LegibilityRewardAdapter` precedent for reward adapters.
+- `src/volta/training/board_reward.py` — existing `BoardRewardSignal`/`BoardChainReward` pattern; `LegibilityRewardAdapter` precedent for reward adapters.
 - `.planning/research/STACK.md` (v3.0) — `spatial/impedance.py` (Hammerstad-Jensen microstrip) planned; reuse for closed-form parasitics.
 - `find analog-ecosystem -iname "*.lib"` → zero SPICE model files (no models in-repo).
 
 ---
-*Stack research for: kicad-agent milestone v5.0 SPICE simulation pipeline*
+*Stack research for: volta milestone v5.0 SPICE simulation pipeline*
 *Researched: 2026-07-03*

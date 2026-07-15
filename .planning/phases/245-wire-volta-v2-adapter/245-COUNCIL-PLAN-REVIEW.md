@@ -27,11 +27,11 @@ $ grep -c "Models/MLXLocalProvider.swift" 245-01-PLAN.md
 
 ### Minor
 
-1. **Acceptance criteria line 266**: The path `macos-app/Sources/KiCadAgent/Models/Providers/MLXLocalProvider.swift` is now consistent across all acceptance criteria. No changes needed.
+1. **Acceptance criteria line 266**: The path `macos-app/Sources/Volta/Models/Providers/MLXLocalProvider.swift` is now consistent across all acceptance criteria. No changes needed.
 
 ## Verdict: APPROVED
 
-All acceptance criteria paths now correctly reference `Providers/MLXLocalProvider.swift` under `macos-app/Sources/KiCadAgent/Models/Providers/`.
+All acceptance criteria paths now correctly reference `Providers/MLXLocalProvider.swift` under `macos-app/Sources/Volta/Models/Providers/`.
 
 The plan is ready for execution phase.
 
@@ -40,8 +40,8 @@ The plan is ready for execution phase.
 **Decision: APPROVED**
 
 Verification of acceptance criteria path corrections:
-- Line ~267: `grep -n "LLMModelFactory\|loadModel" macos-app/Sources/KiCadAgent/Models/Providers/MLXLocalProvider.swift` - VERIFIED
-- Line ~268: `grep -n "adapterURL\|adapter_model.safetensors" macos-app/Sources/KiCadAgent/Models/Providers/MLXLocalProvider.swift` - VERIFIED
-- Line ~270: `grep -n "displayName" macos-app/Sources/KiCadAgent/Models/Providers/MLXLocalProvider.swift` - VERIFIED
+- Line ~267: `grep -n "LLMModelFactory\|loadModel" macos-app/Sources/Volta/Models/Providers/MLXLocalProvider.swift` - VERIFIED
+- Line ~268: `grep -n "adapterURL\|adapter_model.safetensors" macos-app/Sources/Volta/Models/Providers/MLXLocalProvider.swift` - VERIFIED
+- Line ~270: `grep -n "displayName" macos-app/Sources/Volta/Models/Providers/MLXLocalProvider.swift` - VERIFIED
 
 All paths now correctly use `Providers/MLXLocalProvider.swift`. The plan proceeds to execution.

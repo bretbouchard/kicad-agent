@@ -1,6 +1,6 @@
 # Technology Stack -- v3.0 Full-Stack EDA
 
-**Project:** kicad-agent -- Constraint propagation, PCB spatial model, layout-aware placement, DRC intelligence, DFM
+**Project:** volta -- Constraint propagation, PCB spatial model, layout-aware placement, DRC intelligence, DFM
 **Milestone:** v3.0-full-stack-eda
 **Researched:** 2026-06-01
 **Confidence:** HIGH
@@ -165,7 +165,7 @@ No constraint solver library (z3-solver, python-constraint) is needed. The const
 kiutils does not parse `.kicad_dru` files. This is the most critical integration gap. The parser follows the same sexpdata pattern used in `PcbIR`:
 
 ```
-New file: src/kicad_agent/parser/dru_parser.py
+New file: src/volta/parser/dru_parser.py
 
 Dependencies: sexpdata (existing)
 Pattern: Same as PcbIR raw S-expression manipulation
@@ -294,16 +294,16 @@ pip install -e ".[dev,eda,mcp]"
 
 - Live inspection: scipy 1.11.4, shapely 2.1.1, numpy 1.26.4, networkx 3.6.1, sexpdata 1.0.0, pydantic 2.12.5
 - PyPI latest: scipy 1.17.1, scikit-fem 12.0.1
-- Codebase: `src/kicad_agent/spatial/primitives.py` (SpatialRegion entity_type supports "zone", "keepout", "copper_pour", "net_class_region")
-- Codebase: `src/kicad_agent/ir/pcb_ir.py` (PcbIR board access, raw S-expression manipulation)
-- Codebase: `src/kicad_agent/analysis/net_classifier.py` (SignalIntegrity, NetImportance, ordered rules)
-- Codebase: `src/kicad_agent/analysis/design_rule_engine.py` (DesignRuleEngine, DesignRule ABC)
-- Codebase: `src/kicad_agent/placement/engine.py` (HybridPlacementEngine, PlacementRequest/Output)
-- Codebase: `src/kicad_agent/validation/spatial_drc.py` (SpatialViolation, enrich_drc_result)
+- Codebase: `src/volta/spatial/primitives.py` (SpatialRegion entity_type supports "zone", "keepout", "copper_pour", "net_class_region")
+- Codebase: `src/volta/ir/pcb_ir.py` (PcbIR board access, raw S-expression manipulation)
+- Codebase: `src/volta/analysis/net_classifier.py` (SignalIntegrity, NetImportance, ordered rules)
+- Codebase: `src/volta/analysis/design_rule_engine.py` (DesignRuleEngine, DesignRule ABC)
+- Codebase: `src/volta/placement/engine.py` (HybridPlacementEngine, PlacementRequest/Output)
+- Codebase: `src/volta/validation/spatial_drc.py` (SpatialViolation, enrich_drc_result)
 - Codebase: `pyproject.toml` (current dependencies and optional groups)
 - KiCad format: net classes in .kicad_dru (verified: kiutils DesignRules class has no content parsing)
 - KiCad format: Board.setup.stackup contains epsilon_r and loss_tangent (verified via PcbIR)
 
 ---
-*Stack research for: kicad-agent milestone v3.0-full-stack-eda*
+*Stack research for: volta milestone v3.0-full-stack-eda*
 *Researched: 2026-06-01*

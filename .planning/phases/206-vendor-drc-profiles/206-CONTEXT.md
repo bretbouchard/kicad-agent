@@ -10,7 +10,7 @@
 Phase 206 ships verified `.kicad_dru` files for 5+ PCB manufacturers and adds the ability to run DRC against a specific vendor's manufacturing limits as a pre-flight gate. This is independent of Phase 205 (can be worked in parallel) but feeds into Phase 208 (Handoff Package) which uses vendor DRC in its pre-handoff validation gate.
 
 **What ships:**
-- 8+ static `.kicad_dru` files in `src/kicad_agent/manufacturing/drc_profiles/` (PCBWay, JLCPCB, AISLER 2/4/6/8L, OSH Park, Advanced Circuits, generic) — shipped as reference artifacts for GUI use and as source of truth for numeric limits
+- 8+ static `.kicad_dru` files in `src/volta/manufacturing/drc_profiles/` (PCBWay, JLCPCB, AISLER 2/4/6/8L, OSH Park, Advanced Circuits, generic) — shipped as reference artifacts for GUI use and as source of truth for numeric limits
 - Source attribution header comments in each profile file (repo URL, license, last-verified date)
 - `ManufacturerProfile` extended with `drc_rules_path: Path | None` field (DRC-05)
 - **Internal vendor DRC evaluator** in `manufacturing/vendor_drc.py` — reads board geometry from `PcbIR` and checks against `ManufacturerProfile` numeric limits (track width, clearance, drill size, annular ring) in Python. Returns `DrcResult`-shaped structure with violations for any feature below vendor limits.
@@ -60,7 +60,7 @@ Phase 206 ships verified `.kicad_dru` files for 5+ PCB manufacturers and adds th
 
 ### .kicad_dru File Location and Package Structure
 
-- **Directory:** `src/kicad_agent/manufacturing/drc_profiles/` (creates `drc_profiles/` subpackage under the `manufacturing/` package from Phase 205)
+- **Directory:** `src/volta/manufacturing/drc_profiles/` (creates `drc_profiles/` subpackage under the `manufacturing/` package from Phase 205)
 - **Files:** `pcbway.kicad_dru`, `jlcpcb.kicad_dru`, `aisler_2layer.kicad_dru`, `aisler_4layer.kicad_dru`, `aisler_6layer.kicad_dru`, `aisler_8layer.kicad_dru`, `oshpark.kicad_dru`, `advanced_circuits.kicad_dru`, `generic.kicad_dru`
 - **Package init:** `manufacturing/drc_profiles/__init__.py` — exports `get_drc_profile_path(vendor: str) -> Path` and `list_drc_profiles() -> list[VendorDrcProfileInfo]`
 - **Profile resolution:** `get_drc_profile_path(vendor)` resolves a vendor name string to the bundled `.kicad_dru` file path. Uses `importlib.resources` or `Path(__file__).parent / f"{vendor}.kicad_dru"` for bundled file access.
@@ -85,7 +85,7 @@ Phase 206 ships verified `.kicad_dru` files for 5+ PCB manufacturers and adds th
 
 **CRITICAL:** `kicad-cli pcb drc --custom-rules` does NOT exist in KiCad 10 (verified empirically in RESEARCH RQ1). Instead of extending `run_drc()`, we build an **internal evaluator** that checks board geometry against vendor limits.
 
-- **New file:** `src/kicad_agent/manufacturing/vendor_drc.py`
+- **New file:** `src/volta/manufacturing/vendor_drc.py`
 - **Function:** `run_vendor_drc(ir: PcbIR, profile: ManufacturerProfile) -> VendorDrcResult`
   - Walks `PcbIR` native board to extract actual geometry:
     - Track/segment widths from `NativeSegment.width`
@@ -204,22 +204,22 @@ Phase 206 ships verified `.kicad_dru` files for 5+ PCB manufacturers and adds th
 **Downstream agents MUST read these before planning or implementing.**
 
 ### Profile Model
-- `src/kicad_agent/dfm/profiles.py` — `ManufacturerProfile` pydantic BaseModel (line 24), `_PROFILES` dict (line 181), `load_profile` function (line 200), `get_builtin_profiles` (line 190)
+- `src/volta/dfm/profiles.py` — `ManufacturerProfile` pydantic BaseModel (line 24), `_PROFILES` dict (line 181), `load_profile` function (line 200), `get_builtin_profiles` (line 190)
 
 ### DRC Runner (for standard DRC alongside vendor checks)
-- `src/kicad_agent/validation/erc_drc.py` — `run_drc()` (line 322), `DrcResult` frozen dataclass (line 91), `Violation` frozen dataclass (line 47), `Severity` enum (line 39), `_parse_violations()` (line 137)
+- `src/volta/validation/erc_drc.py` — `run_drc()` (line 322), `DrcResult` frozen dataclass (line 91), `Violation` frozen dataclass (line 47), `Severity` enum (line 39), `_parse_violations()` (line 137)
 
 ### PcbIR (for internal vendor DRC evaluator)
-- `src/kicad_agent/ir/pcb_ir.py` — `PcbIR` class wrapping `NativeBoard`
-- `src/kicad_agent/parser/pcb_native_types.py` — `NativeSegment` (width field), `NativeVia` (size, drill fields), `NativePad` (drill field), `NativeFootprint` (pads tuple)
-- `src/kicad_agent/cli_resolver.py` — `find_kicad_cli()` (line 104), `CliInfo` frozen dataclass (line 31)
+- `src/volta/ir/pcb_ir.py` — `PcbIR` class wrapping `NativeBoard`
+- `src/volta/parser/pcb_native_types.py` — `NativeSegment` (width field), `NativeVia` (size, drill fields), `NativePad` (drill field), `NativeFootprint` (pads tuple)
+- `src/volta/cli_resolver.py` — `find_kicad_cli()` (line 104), `CliInfo` frozen dataclass (line 31)
 
 ### Operation Patterns
-- `src/kicad_agent/ops/_schema_query.py` — `QueryConnectivityOp` literal-discriminator pattern (line 41), `@model_validator` cross-field validation (line 69)
-- `src/kicad_agent/ops/handlers/query.py` — `register_query` decorator (line 17), `_QUERY_HANDLERS` dict (line 14), handler signature `(op, ir, file_path) -> dict`
-- `src/kicad_agent/ops/execution.py` — `execute_query` (line 193), `dispatch_query` (line 233) — read-only dispatch, no Transaction/write
-- `src/kicad_agent/ops/registry.py` — `OpMeta` fields (line 17), `_RAW_CATALOG` (line 47), query op entry pattern (`query_connectivity` line 309)
-- `src/kicad_agent/ops/schema.py` — `Operation` discriminated union, `TargetFile` validator, import/re-export section
+- `src/volta/ops/_schema_query.py` — `QueryConnectivityOp` literal-discriminator pattern (line 41), `@model_validator` cross-field validation (line 69)
+- `src/volta/ops/handlers/query.py` — `register_query` decorator (line 17), `_QUERY_HANDLERS` dict (line 14), handler signature `(op, ir, file_path) -> dict`
+- `src/volta/ops/execution.py` — `execute_query` (line 193), `dispatch_query` (line 233) — read-only dispatch, no Transaction/write
+- `src/volta/ops/registry.py` — `OpMeta` fields (line 17), `_RAW_CATALOG` (line 47), query op entry pattern (`query_connectivity` line 309)
+- `src/volta/ops/schema.py` — `Operation` discriminated union, `TargetFile` validator, import/re-export section
 
 ### Test Patterns
 - `tests/test_registry.py` — count assertion (currently `== 154` after Phase 205), `validate_registry_completeness`
@@ -229,8 +229,8 @@ Phase 206 ships verified `.kicad_dru` files for 5+ PCB manufacturers and adds th
 - `.planning/research/PITFALLS.md` — Pitfall 1 (stale DRC values), Pitfall 6 (profile licensing/attribution)
 
 ### Phase 205 (Prior Phase)
-- `src/kicad_agent/manufacturing/__init__.py` — manufacturing package created
-- `src/kicad_agent/manufacturing/board_spec.py` — BoardSpec model (sibling pattern for drc_profiles package)
+- `src/volta/manufacturing/__init__.py` — manufacturing package created
+- `src/volta/manufacturing/board_spec.py` — BoardSpec model (sibling pattern for drc_profiles package)
 
 </canonical_refs>
 

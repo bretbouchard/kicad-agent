@@ -24,7 +24,7 @@ This document maps each file to be created/modified to its closest existing code
 
 ---
 
-## FILE 1 (CREATE): `src/kicad_agent/manufacturing/build.py`
+## FILE 1 (CREATE): `src/volta/manufacturing/build.py`
 
 **Role:** Core build data model — `Build` frozen dataclass, `BuildStatus` enum, `BuildDiff`, `_get_git_sha` helper, build-dir creation utilities, `diff_builds` function.
 
@@ -143,11 +143,11 @@ This is a pure utility function (not a handler, not an op). Return tuples sorted
 
 ### Imports
 
-`from dataclasses import dataclass, field, replace`, `from datetime import datetime, timezone`, `from enum import Enum`, `from pathlib import Path`, `import subprocess, uuid`, and `from kicad_agent.validation.gates.manufacturing_manifest import ManufacturingArtifact, ManufacturingManifest`.
+`from dataclasses import dataclass, field, replace`, `from datetime import datetime, timezone`, `from enum import Enum`, `from pathlib import Path`, `import subprocess, uuid`, and `from volta.validation.gates.manufacturing_manifest import ManufacturingArtifact, ManufacturingManifest`.
 
 ---
 
-## FILE 2 (CREATE): `src/kicad_agent/ops/handlers/build.py`
+## FILE 2 (CREATE): `src/volta/ops/handlers/build.py`
 
 **Role:** Three `@register_query` handlers (`build_create`, `build_list`, `build_show`) + the module's own `_BUILD_HANDLERS` registry dict + `register_build` decorator, merged into `_QUERY_HANDLERS` in FILE 8.
 
@@ -194,7 +194,7 @@ def register_query(op_type: str) -> Callable:
 
 @register_query("query_connectivity")
 def _handle_query_connectivity(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.connectivity_query import handle_connectivity_query
+    from volta.ops.connectivity_query import handle_connectivity_query
     return handle_connectivity_query(op, ir, file_path)
 ```
 
@@ -245,7 +245,7 @@ This is the canonical pattern for testing a query handler by building a PcbIR fr
 ```python
 @pytest.fixture(autouse=True)
 def _clear_ir_registry():
-    from kicad_agent.ir.base import _clear_registry
+    from volta.ir.base import _clear_registry
     _clear_registry()
     yield
     _clear_registry()
@@ -261,9 +261,9 @@ def _create_pcb_with_title_block(tmpdir: Path) -> Path:
     return pcb_path
 
 def _build_ir(pcb_path: Path):
-    from kicad_agent.parser.pcb_parser import parse_pcb
-    from kicad_agent.ir.pcb_ir import PcbIR
-    from kicad_agent.parser.uuid_extractor import extract_uuids
+    from volta.parser.pcb_parser import parse_pcb
+    from volta.ir.pcb_ir import PcbIR
+    from volta.parser.uuid_extractor import extract_uuids
     result = parse_pcb(pcb_path)
     uuid_map = extract_uuids(result.raw_content, "pcb")
     return PcbIR(_parse_result=result, _uuid_map=uuid_map)
@@ -271,7 +271,7 @@ def _build_ir(pcb_path: Path):
 
 For build ops, handler invocation goes through the merged registry:
 ```python
-from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+from volta.ops.handlers.query import _QUERY_HANDLERS
 handler = _QUERY_HANDLERS["build_create"]
 result = handler(BuildCreateOp(target_file="test.kicad_pcb", skip_validation=True), ir, pcb_path)
 ```
@@ -283,7 +283,7 @@ The cleanest pattern for asserting a serialization round-trip is lossless.
 
 **Excerpt — round-trip test shape** (`test_training_manifest.py:1-60`):
 ```python
-from kicad_agent.training.manifest import DataManifest
+from volta.training.manifest import DataManifest
 
 class TestDataManifestFromDirectory:
     def test_round_trip(self, tmp_path):
@@ -344,7 +344,7 @@ Reuse the `_clear_ir_registry` autouse fixture. For the git tests, use `tmp_path
 
 ---
 
-## FILE 4 (MODIFY): `src/kicad_agent/validation/gates/manufacturing_manifest.py`
+## FILE 4 (MODIFY): `src/volta/validation/gates/manufacturing_manifest.py`
 
 **Role:** Add serialization methods to the existing frozen dataclasses (`ManufacturingArtifact`, `ManufacturingManifest`). No change to existing fields, constructors, `from_file`, `generate_manifest`, or `validate_manifest`.
 
@@ -413,7 +413,7 @@ def to_json(self) -> str:
 
 **Excerpt — atomic_write usage** (`manufacturing/board_spec.py:81-83`):
 ```python
-from kicad_agent.io.atomic_write import atomic_write
+from volta.io.atomic_write import atomic_write
 atomic_write(sidecar, spec.model_dump_json(indent=2))
 ```
 
@@ -445,7 +445,7 @@ def load(cls, path: Path) -> ManufacturingManifest:
 
 ### New imports needed in this file
 
-`import json` (line 14 area) and `from kicad_agent.io.atomic_write import atomic_write`. `hashlib`, `datetime`, `Path`, `dataclass/field` are already imported (lines 12-16).
+`import json` (line 14 area) and `from volta.io.atomic_write import atomic_write`. `hashlib`, `datetime`, `Path`, `dataclass/field` are already imported (lines 12-16).
 
 ### Backwards compatibility
 
@@ -457,7 +457,7 @@ The existing `generate_manifest` (line 60) and `validate_manifest` (line 79) fun
 
 ---
 
-## FILE 5 (MODIFY): `src/kicad_agent/ops/_schema_pcb.py`
+## FILE 5 (MODIFY): `src/volta/ops/_schema_pcb.py`
 
 **Role:** Define `BuildCreateOp`, `BuildListOp`, `BuildShowOp` Pydantic models.
 
@@ -511,7 +511,7 @@ Add after `ListVendorDrcProfilesOp` (line 1280), under a new `# Phase 207: Build
 
 ---
 
-## FILE 6 (MODIFY): `src/kicad_agent/ops/schema.py`
+## FILE 6 (MODIFY): `src/volta/ops/schema.py`
 
 **Role:** Add the 3 new Op classes to the `Operation` discriminated union + the import/re-export section + `__all__`. Three edits, mirroring exactly how Phase 205/206 ops were added.
 
@@ -557,7 +557,7 @@ Add under a new comment block near the existing Phase 205/206 entries (around li
 
 ---
 
-## FILE 7 (MODIFY): `src/kicad_agent/ops/registry.py`
+## FILE 7 (MODIFY): `src/volta/ops/registry.py`
 
 **Role:** Add 3 `_RAW_CATALOG` entries.
 
@@ -618,7 +618,7 @@ The dict comprehension at registry.py:1464-1467 (`OpMeta(op_type=op_type, **data
 
 ---
 
-## FILE 8 (MODIFY): `src/kicad_agent/ops/handlers/__init__.py`
+## FILE 8 (MODIFY): `src/volta/ops/handlers/__init__.py`
 
 **Role:** Import `_BUILD_HANDLERS` + `register_build` from the new module, and merge `_BUILD_HANDLERS` into `_QUERY_HANDLERS`.
 

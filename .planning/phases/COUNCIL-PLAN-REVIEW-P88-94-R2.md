@@ -63,14 +63,14 @@ The two previously REJECTED phases (89, 92) have been adequately revised with co
 |-----------|----------|--------|-------------------|
 | 88-02-H1 | HIGH | **RESOLVED** | `@field_validator("project_dir", mode="before")` added to both SetConstraintsOp and GetConstraintsOp schemas. Concrete code block matches `pcb_transfer.py:73-85` pattern: rejects null bytes, absolute paths, `..` traversal. Verified against actual pcb_transfer.py source -- pattern is identical. |
 | 88-02-M1 | MEDIUM | **RESOLVED** | Step 3 now includes concrete `register_gate()` code at module scope matching schematic_intent_gate.py:447-458. |
-| 88-02-M2 | MEDIUM | **RESOLVED** | GetConstraintsOp now reads from sidecar file `.kicad_agent/constraints.json`. SetConstraintsOp writes BOTH to `.kicad_dru` (via design_rules.py) AND the sidecar file. This eliminates the unreliable reverse-mapping problem. |
+| 88-02-M2 | MEDIUM | **RESOLVED** | GetConstraintsOp now reads from sidecar file `.volta/constraints.json`. SetConstraintsOp writes BOTH to `.kicad_dru` (via design_rules.py) AND the sidecar file. This eliminates the unreliable reverse-mapping problem. |
 | 88-02-L1 | LOW | **RESOLVED** | Test count increased from 5+ to 6+ with 7 specific test cases enumerated (one more than the minimum). |
 | CPC-2 | MEDIUM | **RESOLVED** | Covered by M1 fix -- concrete register_gate() code added. |
 
 **Phase 88-02 Verdict**: **APPROVE** -- all 5 findings resolved.
 
 **NEW Finding**:
-- **88-02-R2-1 (LOW)**: The sidecar file `.kicad_agent/constraints.json` introduces a new file in the project directory. The plan should specify that the `.kicad_agent/` directory already exists (or should be created if absent) before writing the sidecar file. This is a minor implementation detail that will surface during execution but does not block the plan.
+- **88-02-R2-1 (LOW)**: The sidecar file `.volta/constraints.json` introduces a new file in the project directory. The plan should specify that the `.volta/` directory already exists (or should be created if absent) before writing the sidecar file. This is a minor implementation detail that will surface during execution but does not block the plan.
 
 ---
 
@@ -78,7 +78,7 @@ The two previously REJECTED phases (89, 92) have been adequately revised with co
 
 | Finding ID | Severity | Status | Verification Notes |
 |-----------|----------|--------|-------------------|
-| 89-C1 | CRITICAL | **RESOLVED** | Task 0 added to create `ComponentTypeClassifier` at `src/kicad_agent/validation/gates/component_classifier.py`. Defines `ComponentRole` enum (IC, DECOUPLING_CAP, BULK_CAP, POWER_REGULATOR, THERMAL_IC, RESISTOR, CAPACITOR, INDUCTOR, DIODE, TRANSISTOR, CONNECTOR, CRYSTAL, FUSE, MISC). Classification algorithm: calls existing `_classify_component_type()` (verified at topology_graph.py:110) for base type, then enriches with net-intent-aware logic. Decoupling vs bulk determined by `SMALL_PACKAGES` set + power/ground net connection. Power regulators via `REGULATOR_PATTERNS` list (LM7805, LM317, AMS1117, etc.). This is a well-specified, executable design. |
+| 89-C1 | CRITICAL | **RESOLVED** | Task 0 added to create `ComponentTypeClassifier` at `src/volta/validation/gates/component_classifier.py`. Defines `ComponentRole` enum (IC, DECOUPLING_CAP, BULK_CAP, POWER_REGULATOR, THERMAL_IC, RESISTOR, CAPACITOR, INDUCTOR, DIODE, TRANSISTOR, CONNECTOR, CRYSTAL, FUSE, MISC). Classification algorithm: calls existing `_classify_component_type()` (verified at topology_graph.py:110) for base type, then enriches with net-intent-aware logic. Decoupling vs bulk determined by `SMALL_PACKAGES` set + power/ground net connection. Power regulators via `REGULATOR_PATTERNS` list (LM7805, LM317, AMS1117, etc.). This is a well-specified, executable design. |
 | 89-H1 | HIGH | **RESOLVED** | Gate context dict now requires `schematic_ir` key. Plan specifies gate extracts net classifications via `NetIntentExtractor.extract_nets(schematic_ir)`. Verified: `NetIntentExtractor` exists at `validation/gates/net_intent.py:99`, `extract_nets()` at line 111 returns `dict[str, NetClassification]`. Dependency chain is sound. |
 | 89-H2 | HIGH | **RESOLVED** | Task 1 added to extend PcbIR with `board_outline_polygon()`, `footprint_bounds(ref)`, `courtyard_geometry(ref)`, `footprint_position(ref)`. Methods marked NEEDS ADD in prerequisites. `courtyard_geometry()` has fallback: if courtyard layer not parsed, returns `footprint_bounds` converted to rectangle polygon. Pragmatic approach. |
 | 89-H3 | HIGH | **RESOLVED** | Fixture board count increased from 4 to 7: added `placement_thermal_violation.kicad_pcb`, `placement_connector_wrong.kicad_pcb`, `placement_dense_blocked.kicad_pcb`. Each fixture maps to specific sub-check failures. |
@@ -174,7 +174,7 @@ Both CRITICAL security findings are resolved with mechanically enforced specific
 
 | Finding ID | Severity | Status | Verification Notes |
 |-----------|----------|--------|-------------------|
-| 93-H1 | HIGH | **RESOLVED** | Plan now notes fixtures should be created using the kicad-agent operation pipeline (add_component, add_net, place_footprint, route_wire) rather than hand-authoring S-expressions. Step 3 added: verify all fixture boards pass ERC (`kicad-cli sch erc`) and DRC (`kicad-cli pcb drc`) before running integration tests. |
+| 93-H1 | HIGH | **RESOLVED** | Plan now notes fixtures should be created using the volta operation pipeline (add_component, add_net, place_footprint, route_wire) rather than hand-authoring S-expressions. Step 3 added: verify all fixture boards pass ERC (`kicad-cli sch erc`) and DRC (`kicad-cli pcb drc`) before running integration tests. |
 | 93-H2 | HIGH | **RESOLVED** | Cross-phase dependency documented: repair loop tests require Phase 92 fix providers. If not available, tests marked `pytest.mark.xfail(reason="Phase 92 fix providers not available")`. Plan explicitly says "Do NOT skip these tests -- they document the expected behavior." |
 | 93-M1 | MEDIUM | **RESOLVED** | Test time budget changed from "<30 seconds" to "<120 seconds". Acknowledges kicad-cli DRC can take 5-10 seconds per board. |
 | 93-M2 | MEDIUM | **RESOLVED** | Expected artifacts table added mapping each board to Gerbers/Drill/BOM/CPL/STEP requirements. 6 valid boards + 1 broken board. MCU and 4-layer require STEP; others do not. Broken board has no artifacts. |
@@ -276,7 +276,7 @@ All NEW findings are LOW severity. None are blocking.
 
 | ID | Phase | Severity | Finding | Recommendation |
 |----|-------|----------|---------|----------------|
-| 88-02-R2-1 | 88-02 | LOW | Sidecar file `.kicad_agent/constraints.json` requires `.kicad_agent/` directory to exist | Ensure implementation creates directory if absent before writing sidecar |
+| 88-02-R2-1 | 88-02 | LOW | Sidecar file `.volta/constraints.json` requires `.volta/` directory to exist | Ensure implementation creates directory if absent before writing sidecar |
 | 89-R2-1 | 89 | LOW | THERMAL_IC role vs is_thermal() method relationship ambiguous | Clarify during implementation: POWER_REGULATOR is primary role, is_thermal() is predicate |
 | 89-R2-2 | 89 | LOW | Plan references `_is_native` property but PcbIR uses `_native_board` attribute | Verify correct attribute name during implementation |
 | 92-R2-1 | 92 | LOW | Human review workflow for external_llm proposals not specified | Note as deferred -- Phase 92 scope is deterministic providers only |

@@ -22,7 +22,7 @@ by an automated test.
 
 | File | Change |
 |------|--------|
-| `macos-app/Tests/KiCadAgentTests/ChatPipelineE2ETests.swift` | NEW — 11-test suite |
+| `macos-app/Tests/VoltaTests/ChatPipelineE2ETests.swift` | NEW — 11-test suite |
 
 ## Tests (all 11 passing)
 

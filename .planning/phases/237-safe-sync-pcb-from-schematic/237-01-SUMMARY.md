@@ -14,7 +14,7 @@ reference, and returns the full delta: added, removed, updated.
 
 ## What Changed
 
-**File:** `macos-app/Sources/KiCadAgent/Parsing/VoltaEngineRemaining.swift`
+**File:** `macos-app/Sources/Volta/Parsing/VoltaEngineRemaining.swift`
 
 **Before** (stub):
 ```swift

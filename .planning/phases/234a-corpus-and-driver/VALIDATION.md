@@ -18,7 +18,7 @@ created: 2026-07-14
 | Property | Value |
 |----------|-------|
 | **Framework** | pytest 7.x (Python) + XCTest (Swift) |
-| **Config file** | `/Users/bretbouchard/apps/kicad-agent/pytest.ini` |
+| **Config file** | `/Users/bretbouchard/apps/volta/pytest.ini` |
 | **Quick run command** | `pytest scripts/test_parity_thresholds.py -x` |
 | **Full suite command** | `pytest .planning/tests/ --tb=short` |
 | **Estimated runtime** | ~10 minutes for 1000-schematic batch |

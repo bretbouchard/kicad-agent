@@ -5,14 +5,14 @@ type: execute
 wave: 1
 depends_on: []
 files_modified:
-  - src/kicad_agent/ops/pre_analysis.py
+  - src/volta/ops/pre_analysis.py
   - tests/test_pre_analysis.py
 autonomous: true
 requirements: [QUICK-LABEL-VALIDATION]
 ---
 
 <objective>
-Add a `validate_labels` pre-flight check to the PreAnalysisGate that prevents duplicate global labels from being created on the same net. Currently kicad-agent has no validation preventing operations (add_label, batch_connect, regenerate_wiring, place_net_labels) from creating conflicting global labels — ERC catches it after the damage is done. This check detects duplicates BEFORE any write operation, blocking at creation time instead of discovery time.
+Add a `validate_labels` pre-flight check to the PreAnalysisGate that prevents duplicate global labels from being created on the same net. Currently volta has no validation preventing operations (add_label, batch_connect, regenerate_wiring, place_net_labels) from creating conflicting global labels — ERC catches it after the damage is done. This check detects duplicates BEFORE any write operation, blocking at creation time instead of discovery time.
 
 Purpose: Prevent a class of ERC errors (duplicate global labels on same net) at pre-flight time, saving the cost of a write + ERC cycle and catching the error before the file is mutated.
 
@@ -28,14 +28,14 @@ Output: New `_analyze_label_operation` method in PreAnalysisGate, wired into the
 @.planning/STATE.md
 @.claude/CLAUDE.md
 
-@src/kicad_agent/ops/pre_analysis.py
-@src/kicad_agent/ir/schematic_ir.py
-@src/kicad_agent/ops/validation_gates.py
+@src/volta/ops/pre_analysis.py
+@src/volta/ir/schematic_ir.py
+@src/volta/ops/validation_gates.py
 
 <interfaces>
 <!-- Key types and contracts the executor needs. -->
 
-From src/kicad_agent/ops/pre_analysis.py:
+From src/volta/ops/pre_analysis.py:
 
 ```python
 class PreAnalysisGate:
@@ -62,7 +62,7 @@ class PreAnalysisResult:
     def blocked(self) -> bool: ...
 ```
 
-From src/kicad_agent/ir/schematic_ir.py:
+From src/volta/ir/schematic_ir.py:
 
 ```python
 class SchematicIR:
@@ -81,7 +81,7 @@ sch.labels        # list[LocalLabel]  -- each has .text, .position.X, .position.
 sch.hierarchicalLabels  # list[HierarchicalLabel]
 ```
 
-From src/kicad_agent/ops/_schema_wire.py:
+From src/volta/ops/_schema_wire.py:
 
 ```python
 class AddLabelOp(BaseModel):
@@ -93,7 +93,7 @@ class AddLabelOp(BaseModel):
     shape: str  # "input", "output", "bidirectional", etc.
 ```
 
-From src/kicad_agent/ops/_schema_schematic_routing.py:
+From src/volta/ops/_schema_schematic_routing.py:
 
 ```python
 class BatchConnectOp(BaseModel):
@@ -107,7 +107,7 @@ class GlobalLabelDef(BaseModel):
     shape: str = "bidirectional"
 ```
 
-From src/kicad_agent/ops/handlers/schematic.py:
+From src/volta/ops/handlers/schematic.py:
 - `batch_connect` handler calls `ir.add_label(name=gl["name"], label_type="global", ...)` for each global label in the result
 - `regenerate_wiring` handler similarly creates global labels from the wiring engine output
 - `place_net_labels` handler creates local and global labels from net definitions
@@ -118,7 +118,7 @@ From src/kicad_agent/ops/handlers/schematic.py:
 
 <task type="auto" tdd="true">
   <name>Task 1: Implement _analyze_label_operation with duplicate global label detection</name>
-  <files>src/kicad_agent/ops/pre_analysis.py, tests/test_pre_analysis.py</files>
+  <files>src/volta/ops/pre_analysis.py, tests/test_pre_analysis.py</files>
   <behavior>
     - Test: add_label with label_type="global" and a name that already exists as a global label in the schematic → result.blocked is True, blocker category is "duplicate_global_label"
     - Test: add_label with label_type="global" and a name that does NOT exist as a global label → result.blocked is False (no blocker)

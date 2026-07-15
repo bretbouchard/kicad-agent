@@ -38,7 +38,7 @@ Success criteria:
 - Fix only discrepancies affecting >=5 schematics (per must_haves)
 
 ### Locked (from project policy)
-- All edits via kicad-agent operations, never raw file edits
+- All edits via volta operations, never raw file edits
 - Beads tracking via `bd` for any issues found
 - Run validation gates after fixes (kicad-cli ERC for sanity check)
 </decisions>
@@ -47,8 +47,8 @@ Success criteria:
 ## Existing Code Insights
 
 - `scripts/batch_erc_parity.py` exists from Phase 234A (committed in `42797d3`)
-- Swift ERC engine at `macos-app/Sources/KiCadAgent/Validation/` (Phase 218 native engine, 18 checks)
-- Python ERC engine at `src/kicad_agent/validation/` (50 DFM checks + parity-tested native_erc)
+- Swift ERC engine at `macos-app/Sources/Volta/Validation/` (Phase 218 native engine, 18 checks)
+- Python ERC engine at `src/volta/validation/` (50 DFM checks + parity-tested native_erc)
 - Phase 234B plan (`234b-01-PLAN.md`) defines exact files_modified and must_haves
 - 212 Python daemon tests + 355 Swift tests currently green
 </code_context>

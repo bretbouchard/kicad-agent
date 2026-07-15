@@ -2,9 +2,9 @@
 
 ## Context
 
-kicad-agent needs an MCP server so AI agents (Claude, etc.) can search for electronic components and retrieve CAD data without leaving the conversation. The existing `EasyEdaClient` in `src/kicad_agent/crawler/easyeda_api.py` already provides anonymous JLCPCB search and EasyEDA CAD data retrieval — the heavy lifting is done. This plan wraps that client in an MCP server with a clean tool interface.
+volta needs an MCP server so AI agents (Claude, etc.) can search for electronic components and retrieve CAD data without leaving the conversation. The existing `EasyEdaClient` in `src/volta/crawler/easyeda_api.py` already provides anonymous JLCPCB search and EasyEDA CAD data retrieval — the heavy lifting is done. This plan wraps that client in an MCP server with a clean tool interface.
 
-**Bead:** kicad-agent-4 (open)
+**Bead:** volta-4 (open)
 **Prerequisite research:** LCSC/EasyEDA API (anonymous, high-volume) + Octopart/Nexar (deferred — requires API key)
 
 ## Architecture
@@ -15,7 +15,7 @@ Claude/LLM → MCP protocol (stdio) → ComponentSearchServer → EasyEdaClient 
 
 - **Transport:** stdio (standard for Claude Code MCP servers)
 - **Framework:** `mcp` Python SDK (official Anthropic package)
-- **Entry point:** `kicad-agent component-search` CLI subcommand + standalone `kicad-component-search` script
+- **Entry point:** `volta component-search` CLI subcommand + standalone `kicad-component-search` script
 - **Reuse:** Existing `EasyEdaClient` from `crawler/easyeda_api.py` — no new HTTP code needed
 
 ## MCP Tools (4 tools)
@@ -56,10 +56,10 @@ Output: List of {lcsc, name, package, stock}
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `src/kicad_agent/mcp/__init__.py` | NEW | Package init |
-| `src/kicad_agent/mcp/server.py` | NEW | MCP server implementation (~150 lines) |
-| `src/kicad_agent/mcp/tools.py` | NEW | Tool definitions, input schemas, response formatting (~200 lines) |
-| `src/kicad_agent/cli.py` | MODIFY | Add `component-search` subcommand |
+| `src/volta/mcp/__init__.py` | NEW | Package init |
+| `src/volta/mcp/server.py` | NEW | MCP server implementation (~150 lines) |
+| `src/volta/mcp/tools.py` | NEW | Tool definitions, input schemas, response formatting (~200 lines) |
+| `src/volta/cli.py` | MODIFY | Add `component-search` subcommand |
 | `pyproject.toml` | MODIFY | Add `mcp` optional dependency + entry point |
 | `tests/test_mcp_server.py` | NEW | Tests for all 4 MCP tools |
 | `skills/prompt.md` | MODIFY | Document MCP server usage |
@@ -79,10 +79,10 @@ Add entry point:
 
 ```toml
 [project.scripts]
-kicad-component-search = "kicad_agent.mcp.server:main"
+kicad-component-search = "volta.mcp.server:main"
 ```
 
-## Step 2: Tool Definitions — `src/kicad_agent/mcp/tools.py`
+## Step 2: Tool Definitions — `src/volta/mcp/tools.py`
 
 Four functions, each:
 1. Accept typed parameters
@@ -91,10 +91,10 @@ Four functions, each:
 
 Key patterns:
 - `EasyEdaClient` instantiated once at server startup, reused across calls
-- File-based cache via `EasyEdaClient(cache_dir=Path("~/.cache/kicad-agent/components"))` to avoid repeated API hits
+- File-based cache via `EasyEdaClient(cache_dir=Path("~/.cache/volta/components"))` to avoid repeated API hits
 - Pin type mapping: EasyEDA int → human-readable string (`{0: "unspecified", 1: "input", 2: "output", 3: "bidirectional", 4: "power"}`)
 
-## Step 3: MCP Server — `src/kicad_agent/mcp/server.py`
+## Step 3: MCP Server — `src/volta/mcp/server.py`
 
 ```python
 from mcp.server import Server

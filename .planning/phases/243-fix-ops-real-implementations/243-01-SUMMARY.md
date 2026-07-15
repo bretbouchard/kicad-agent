@@ -14,7 +14,7 @@ to `BreakWireShortsGenOp` and remain as-is (verified to compile).
 
 ## What Changed
 
-**File:** `macos-app/Sources/KiCadAgent/Parsing/VoltaEngineRemaining.swift`
+**File:** `macos-app/Sources/Volta/Parsing/VoltaEngineRemaining.swift`
 
 ### Before (stubs)
 ```swift

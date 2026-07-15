@@ -3,12 +3,12 @@
 **Status:** Complete
 **Purpose:** Map every Phase 209 file (CREATE/MODIFY) to its closest proven analog in the codebase, so implementation follows established conventions rather than inventing new ones.
 
-## CREATE: `src/kicad_agent/manufacturing/manufacturer_client.py`
+## CREATE: `src/volta/manufacturing/manufacturer_client.py`
 
 **Closest analogs:**
-- `src/kicad_agent/dfm/checker.py:99` — `DfmCheck(ABC)` with `@abstractmethod`. Class-level docstring, typed method signatures, abstract method only (no implementation body beyond docstring).
-- `src/kicad_agent/analysis/design_rules.py:102` — `DesignRule(ABC)`. Second ABC reference for the same idiom.
-- `src/kicad_agent/manufacturing/board_spec.py` — frozen dataclass in the same target package (`manufacturing/`). Use as the frozen-dataclass model for `Quote`/`OrderResult`/`OrderStatus`.
+- `src/volta/dfm/checker.py:99` — `DfmCheck(ABC)` with `@abstractmethod`. Class-level docstring, typed method signatures, abstract method only (no implementation body beyond docstring).
+- `src/volta/analysis/design_rules.py:102` — `DesignRule(ABC)`. Second ABC reference for the same idiom.
+- `src/volta/manufacturing/board_spec.py` — frozen dataclass in the same target package (`manufacturing/`). Use as the frozen-dataclass model for `Quote`/`OrderResult`/`OrderStatus`.
 
 **What to copy:**
 - ABC declaration: `class ManufacturerClient(ABC):` with module + class docstrings.
@@ -28,7 +28,7 @@
 - Any ABC test that asserts `abstractmethod` enforcement via `pytest.raises(TypeError)` on direct instantiation.
 
 **What to test:**
-1. Import smoke: `from kicad_agent.manufacturing.manufacturer_client import ManufacturerClient, Quote, OrderResult, OrderStatus` succeeds with no network imports.
+1. Import smoke: `from volta.manufacturing.manufacturer_client import ManufacturerClient, Quote, OrderResult, OrderStatus` succeeds with no network imports.
 2. The 3 dataclasses are frozen (`Quote(...)` constructs; `dataclasses.fields(Quote)` shows `frozen=True`).
 3. `ManufacturerClient` cannot be instantiated directly (`pytest.raises(TypeError)` — abstractmethods unimplemented).
 4. A trivial stub subclass implementing all 3 methods CAN be instantiated and returns the right types.
@@ -46,19 +46,19 @@
 **What to test:**
 1. The 4 new subcommand names are present in `_SUBCOMMANDS` and route (no "Unknown command" error).
 2. `build`/`drc-vendor`/`board-metadata` nested subcommands (create/list/show; vendor/list; read/set-rev/set) parse correctly — at minimum that a missing required arg prints help + exits non-zero (matching `_handle_dfm` `sys.exit(2)` on no `func`).
-3. `handoff <pcb>` constructs the right op and dispatches (mock `handle_operation` via `monkeypatch` on `kicad_agent.cli.handle_operation` to avoid needing a real KiCad install).
+3. `handoff <pcb>` constructs the right op and dispatches (mock `handle_operation` via `monkeypatch` on `volta.cli.handle_operation` to avoid needing a real KiCad install).
 4. JSON output goes to stdout on success, errors to stderr (matching `_handle_route`'s `format_result(result), file=sys.stderr`).
 
 **Pattern:** prefer in-process `main([...])` + `monkeypatch` + `capsys` for unit-level coverage; reserve subprocess `_run` for routing/help smoke tests. Do NOT invoke real `kicad-cli` or real operations — `handle_operation` is the seam to mock.
 
 ---
 
-## MODIFY: `src/kicad_agent/cli.py`
+## MODIFY: `src/volta/cli.py`
 
 **Closest analogs:**
 - **Routing** — `main()` at `cli.py:1204` + `_SUBCOMMANDS` set at `cli.py:38`. Add `"build", "handoff", "drc-vendor", "board-metadata"` to the set and 4 `elif` branches (lines ~1242+).
 - **Nested-subcommand handler** — `_handle_dfm` at `cli.py:688` (uses `parser.add_subparsers()` + delegated register function). Use this shape for `build`, `drc-vendor`, `board-metadata` (which have sub-actions).
-- **Operation-dispatch handler** — `_handle_route` at `cli.py:443` and `_handle_review_schematic` at `cli.py:755` (build op dict → `handle_operation(op_json)` → `format_result`). **This is the dispatch mechanism for all 4 new handlers**, since they wrap kicad-agent operations, not the KiCad binary.
+- **Operation-dispatch handler** — `_handle_route` at `cli.py:443` and `_handle_review_schematic` at `cli.py:755` (build op dict → `handle_operation(op_json)` → `format_result`). **This is the dispatch mechanism for all 4 new handlers**, since they wrap volta operations, not the KiCad binary.
 - **Flat handler** — `_handle_drc` at `cli.py:290` (argparse + single action). Use this shape for `handoff` (no sub-actions).
 
 **Exact changes:**
@@ -71,7 +71,7 @@
 
 ---
 
-## MODIFY: `src/kicad_agent/crossfile/project_context.py`
+## MODIFY: `src/volta/crossfile/project_context.py`
 
 **Closest analog:** itself — `ProjectContext` dataclass (`project_context.py:27`) and `discover_project()` (`project_context.py:85`). This is an additive extension of an existing file, so the analog is the file's own conventions.
 
@@ -125,7 +125,7 @@
 | `manufacturing/manufacturer_client.py` | CREATE | `dfm/checker.py:99` + `manufacturing/board_spec.py` | ABC + frozen dataclasses (CR-01) |
 | `tests/test_manufacturer_client.py` | CREATE | `test_crossfile_submodules.py:41` | Import-smoke + interface-shape tests |
 | `tests/test_cli_integration.py` | CREATE | `test_cli.py:171` | In-process `main([...])` + monkeypatch + capsys |
-| `src/kicad_agent/cli.py` | MODIFY | `_handle_dfm` (cli.py:688) + `_handle_route` (cli.py:443) | argparse subparsers + `handle_operation` dispatch |
+| `src/volta/cli.py` | MODIFY | `_handle_dfm` (cli.py:688) + `_handle_route` (cli.py:443) | argparse subparsers + `handle_operation` dispatch |
 | `crossfile/project_context.py` | MODIFY | itself (project_context.py:27,85) | additive frozen-dataclass fields + glob discovery |
 | `tests/test_crossfile_submodules.py` | MODIFY | `test_discover_project` (line 56) | tmp_path fake-project + assert fields |
 | `tests/test_registry.py` | VERIFY | itself | no change (count already 160) |

@@ -89,8 +89,8 @@ class RemoveJunctionOp(BaseModel):
 - `tests/test_registry.py:166` — Add `"snap_components_to_grid"` to component category expected list
 - `README.md` — Update operation count
 - `skills/SKILL.md` — Update operation count
-- `src/kicad_agent/ops/registry.py:3` — Update docstring count
-- `src/kicad_agent/ops/schema.py` — Update docstring if it has a count
+- `src/volta/ops/registry.py:3` — Update docstring count
+- `src/volta/ops/schema.py` — Update docstring if it has a count
 
 ---
 
@@ -98,9 +98,9 @@ class RemoveJunctionOp(BaseModel):
 
 | File | Change |
 |------|--------|
-| `src/kicad_agent/ops/_schema_remove.py` | Fix corrupted RemoveJunctionOp class declaration |
-| `src/kicad_agent/ops/schema.py` | Import + union + __all__ for both ops |
-| `src/kicad_agent/ops/registry.py` | Add both catalog entries |
+| `src/volta/ops/_schema_remove.py` | Fix corrupted RemoveJunctionOp class declaration |
+| `src/volta/ops/schema.py` | Import + union + __all__ for both ops |
+| `src/volta/ops/registry.py` | Add both catalog entries |
 | `tests/test_registry.py` | Count 90→92, update expected sets |
 | `README.md` | Count 90→92 |
 | `skills/SKILL.md` | Count 90→92 |
@@ -110,6 +110,6 @@ class RemoveJunctionOp(BaseModel):
 ## Verification
 
 1. `python3 -m pytest tests/test_registry.py -x -q` — registry completeness passes
-2. `python3 -c "from kicad_agent.ops.schema import Operation; print('OK')"` — imports work
+2. `python3 -c "from volta.ops.schema import Operation; print('OK')"` — imports work
 3. Full test suite: `python3 -m pytest tests/ -x -q`
 4. Close GitHub issues #19 and #22

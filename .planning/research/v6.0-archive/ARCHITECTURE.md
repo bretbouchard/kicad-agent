@@ -1,14 +1,14 @@
 # Architecture: Full-Stack EDA Integration Layer
 
-**Domain:** Extending kicad-agent's schematic intelligence to PCB layout with constraint propagation, spatial modeling, layout-aware placement, DRC intelligence, and DFM.
+**Domain:** Extending volta's schematic intelligence to PCB layout with constraint propagation, spatial modeling, layout-aware placement, DRC intelligence, and DFM.
 **Researched:** 2026-06-01
 **Confidence:** HIGH (direct codebase analysis of 15+ source files, existing patterns well established)
 
 ## Executive Summary
 
-The kicad-agent codebase has a clean, layered architecture with clear integration points for extending schematic intelligence into the PCB domain. The key insight is that the infrastructure already exists -- PcbIR, spatial primitives, SpatialQueryEngine, placement engine with SA refinement, and DRC result parsing -- but it operates in isolation from the schematic analysis layer. The five new feature areas (constraint propagation, PCB spatial model, layout-aware placement, DRC intelligence, DFM) are not five separate modules to bolt on; they form a **pipeline** that bridges `analysis/` outputs through `ir/pcb_ir.py` to `validation/` and `placement/`.
+The volta codebase has a clean, layered architecture with clear integration points for extending schematic intelligence into the PCB domain. The key insight is that the infrastructure already exists -- PcbIR, spatial primitives, SpatialQueryEngine, placement engine with SA refinement, and DRC result parsing -- but it operates in isolation from the schematic analysis layer. The five new feature areas (constraint propagation, PCB spatial model, layout-aware placement, DRC intelligence, DFM) are not five separate modules to bolt on; they form a **pipeline** that bridges `analysis/` outputs through `ir/pcb_ir.py` to `validation/` and `placement/`.
 
-The recommended architecture introduces four new modules inside `src/kicad_agent/` and extends three existing ones. The constraint propagation layer is the keystone -- it sits between `analysis/topology_graph.py` and `placement/engine.py`, translating schematic intent into PCB constraints. The PCB spatial model extends the existing `spatial/extractor.py` with net-class-aware geometry, copper zone topology, and layer stackup metadata. DRC intelligence wraps the existing `validation/erc_drc.py` DrcResult with spatial enrichment and fix-suggestion logic. DFM is a new module that parallels `analysis/builtin_rules.py` but operates on PCB data rather than schematic topology.
+The recommended architecture introduces four new modules inside `src/volta/` and extends three existing ones. The constraint propagation layer is the keystone -- it sits between `analysis/topology_graph.py` and `placement/engine.py`, translating schematic intent into PCB constraints. The PCB spatial model extends the existing `spatial/extractor.py` with net-class-aware geometry, copper zone topology, and layer stackup metadata. DRC intelligence wraps the existing `validation/erc_drc.py` DrcResult with spatial enrichment and fix-suggestion logic. DFM is a new module that parallels `analysis/builtin_rules.py` but operates on PCB data rather than schematic topology.
 
 The build order is dictated by data dependencies: PCB spatial model first (everything else queries it), then constraint propagation (consumes topology, produces constraints), then layout-aware placement (consumes constraints), then DRC intelligence (consumes spatial data), and finally DFM (consumes spatial data and DRC results).
 
@@ -174,7 +174,7 @@ The full pipeline for a typical "schematic-to-PCB" workflow:
 **New module.** This is the bridge between schematic intelligence and PCB layout.
 
 ```
-src/kicad_agent/constraints/
+src/volta/constraints/
     __init__.py
     types.py           # PCBConstraint frozen dataclass hierarchy
     propagator.py       # ConstraintPropagator orchestrator
@@ -247,7 +247,7 @@ class ThermalConstraint(PCBConstraint):
 **New file in existing `spatial/` module.** Extends the existing `extractor.py` primitives with net-class awareness, layer stackup, and copper connectivity.
 
 ```
-src/kicad_agent/spatial/
+src/volta/spatial/
     (existing files unchanged)
     pcb_model.py       # PcbSpatialModel: enriched spatial representation
     layer_stackup.py    # LayerStackup: dielectric/copper layer metadata
@@ -338,7 +338,7 @@ class PcbSpatialModel:
 **New file in existing `placement/` module.** Extends `HybridPlacementEngine` with constraint-driven placement.
 
 ```
-src/kicad_agent/placement/
+src/volta/placement/
     (existing files unchanged)
     layout_aware.py    # LayoutAwarePlacer: constraint-driven placement
     signal_flow.py     # SignalFlowGrouper: groups components by subcircuit
@@ -407,7 +407,7 @@ class LayoutAwarePlacer:
 **New file in existing `validation/` module.** Enriches kicad-cli DRC results with spatial context and fix suggestions.
 
 ```
-src/kicad_agent/validation/
+src/volta/validation/
     (existing files unchanged)
     drc_intel.py       # IntelligentDrcAnalyzer: spatial enrichment + fix suggestions
     fix_suggest.py     # FixSuggester: generate actionable fix recommendations
@@ -461,7 +461,7 @@ class IntelligentDrcReport:
 **New module.** Manufacturing readiness checks that go beyond DRC.
 
 ```
-src/kicad_agent/dfm/
+src/volta/dfm/
     __init__.py
     types.py           # DfmViolation, DfmReport frozen dataclasses
     checker.py          # DfmChecker orchestrator

@@ -61,8 +61,8 @@
 ### H4: `route_diff_pair` signature - DOCUMENTED (DELTA vs Phase 108 plan)
 
 **Location:**
-- Schema: `src/kicad_agent/ops/_schema_pcb.py:528` (`RouteDiffPairOp`)
-- Handler: `src/kicad_agent/ops/handlers/pcb.py:825` (`_handle_route_diff_pair`)
+- Schema: `src/volta/ops/_schema_pcb.py:528` (`RouteDiffPairOp`)
+- Handler: `src/volta/ops/handlers/pcb.py:825` (`_handle_route_diff_pair`)
 
 **Actual signature:**
 
@@ -115,7 +115,7 @@ class RouteDiffPairOp(BaseModel):
 
 ### L1: `place_no_connect` op - GAP DOCUMENTED (workable alternatives exist)
 
-**Finding:** No op named exactly `place_no_connect` is registered. The string appears only as an alias mapping in `src/kicad_agent/ops/erc_auto_fix.py:144` (`"place_no_connect": "place_no_connects_from_erc"`).
+**Finding:** No op named exactly `place_no_connect` is registered. The string appears only as an alias mapping in `src/volta/ops/erc_auto_fix.py:144` (`"place_no_connect": "place_no_connects_from_erc"`).
 
 **Available alternatives (all verified working):**
 
@@ -155,13 +155,13 @@ class RouteDiffPairOp(BaseModel):
 ## Files Modified Across All 7 Plans
 
 **Source (6 files, ~1500 LoC added):**
-- `src/kicad_agent/ops/_schema_pcb.py` (+340) - 9 new op schemas
-- `src/kicad_agent/ops/handlers/pcb.py` (+286) - 9 new handlers
-- `src/kicad_agent/ops/pcb_raw_writer.py` (+686) - track/via/lock/stitching builders
-- `src/kicad_agent/ops/pcb_ops.py` (+67) - IR-level helpers
-- `src/kicad_agent/ops/pre_analysis_pcb.py` (+17) - pre-analysis hooks
-- `src/kicad_agent/ops/registry.py` (+108) - 12 new op registrations
-- `src/kicad_agent/ops/schema.py` (+36) - union type updates
+- `src/volta/ops/_schema_pcb.py` (+340) - 9 new op schemas
+- `src/volta/ops/handlers/pcb.py` (+286) - 9 new handlers
+- `src/volta/ops/pcb_raw_writer.py` (+686) - track/via/lock/stitching builders
+- `src/volta/ops/pcb_ops.py` (+67) - IR-level helpers
+- `src/volta/ops/pre_analysis_pcb.py` (+17) - pre-analysis hooks
+- `src/volta/ops/registry.py` (+108) - 12 new op registrations
+- `src/volta/ops/schema.py` (+36) - union type updates
 
 **Tests (5 new files, ~2300 LoC):**
 - `tests/test_pcb_track_via_ops.py` (+454)

@@ -1,6 +1,6 @@
 # Council of Ricks: All Hands Deep-Dive Audit
 
-**Project:** kicad-agent
+**Project:** volta
 **Date:** 2026-05-28
 **Mode:** All Hands (6 specialists)
 **Verdict:** CONDITIONAL PASS -- 5 Critical, 12 High, 23 Medium, 16 Low
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-kicad-agent is a 44K-line Python project implementing structural editing of KiCad EDA files with an LLM-driven operation pipeline, SFT/GRPO training, and MCP integration. The core architecture (parser, IR, operations, handler, serializer) is sound, and transactional integrity is robust. The project has 2737 tests across 106 files.
+volta is a 44K-line Python project implementing structural editing of KiCad EDA files with an LLM-driven operation pipeline, SFT/GRPO training, and MCP integration. The core architecture (parser, IR, operations, handler, serializer) is sound, and transactional integrity is robust. The project has 2737 tests across 106 files.
 
 However, the Council identified **56 findings** across 6 review dimensions. The most urgent issues are:
 

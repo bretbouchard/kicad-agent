@@ -2,7 +2,7 @@
 
 ## Context
 
-`place_missing_units` in kicad-agent had three bugs. Bug A (graphic wrapper) fixed in `aeeca58`. Bug B (unit identification) is fixed and tested. Bug C (position) requires connectivity tracing beyond simple wire-endpoint matching.
+`place_missing_units` in volta had three bugs. Bug A (graphic wrapper) fixed in `aeeca58`. Bug B (unit identification) is fixed and tested. Bug C (position) requires connectivity tracing beyond simple wire-endpoint matching.
 
 **Why Bug C can't be solved with spatial matching alone:**
 - NE5532 units 1 and 2 have **identical pin offset patterns** (same 3 offset pairs, different pin numbers)
@@ -13,10 +13,10 @@
 
 **Decision:** Ship Bug B (correct unit identification). Bug C deferred to a future phase that builds a connectivity tracer.
 
-## Step 1: Commit Bug B fix to kicad-agent
+## Step 1: Commit Bug B fix to volta
 
 ### Files modified:
-- `src/kicad_agent/ops/repair.py` — core fix + 3 new helpers
+- `src/volta/ops/repair.py` — core fix + 3 new helpers
 - `tests/test_schematic_repair.py` — 10 new tests
 
 ### Changes in `repair.py`:
@@ -44,7 +44,7 @@
 ## Step 2: Verify
 
 ```bash
-cd /Users/bretbouchard/apps/kicad-agent
+cd /Users/bretbouchard/apps/volta
 python -m pytest tests/test_schematic_repair.py -x -q   # 42 passed
 python -m pytest tests/ -x -q                            # 3171 passed (full suite)
 ```
@@ -70,7 +70,7 @@ kicad-cli sch erc hardware/network-io/channel-strip/analog-board.kicad_sch  # ex
 ## Step 4: Commit
 
 ```
-fix(kicad-agent): correct unit identification in place_missing_units
+fix(volta): correct unit identification in place_missing_units
 
 Bug B fix: uses KiCad unit numbers from sub-symbol names instead of
 sequential array indices. Sets comp.unit on clones so the correct

@@ -8,7 +8,7 @@ status: complete
 
 ## Status: COMPLETE
 
-Added `macos-app/Tests/KiCadAgentTests/VoltaOpRegistryTests.swift` with 9 tests
+Added `macos-app/Tests/VoltaTests/VoltaOpRegistryTests.swift` with 9 tests
 covering the 268-op Volta registry and the most critical ops (ERC + safe_sync).
 
 ## Test Coverage
@@ -52,10 +52,10 @@ Remaining 262 ops need individual tests. Recommended follow-up:
 
 - `swiftc -parse` passed (syntax check)
 - Uses Swift Testing (`@Test`, `#expect`, `@Suite`) — same as existing tests
-- Uses `@testable import KiCadAgent` — same as existing tests
+- Uses `@testable import Volta` — same as existing tests
 - Uses `@MainActor` for engine — same as existing tests
 - No new dependencies
 
 ## File
 
-`macos-app/Tests/KiCadAgentTests/VoltaOpRegistryTests.swift` (188 lines)
+`macos-app/Tests/VoltaTests/VoltaOpRegistryTests.swift` (188 lines)

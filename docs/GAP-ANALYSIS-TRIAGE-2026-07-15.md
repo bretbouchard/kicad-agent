@@ -73,7 +73,7 @@ P0/P1 deferrals. Compliance achieved.
 
 Phases 248-257 referenced in triage table. Currently:
 - 248 (naming reconcile) — PLAN exists
-- 249 (rename kicad-agent → Volta) — PLAN exists
+- 249 (rename volta → Volta) — PLAN exists
 - 250 (portable build setup) — PLAN exists
 - 251-257 — not yet planned (added to roadmap as part of phase 247)
 

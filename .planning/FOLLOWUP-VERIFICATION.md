@@ -25,7 +25,7 @@ All fixes are genuine code changes, not commit-message theater. Every fix has an
 
 ## Phase 0 — Stack Assessment
 
-- **Project Type**: Python (kicad-agent library, KiCad 10+ structural editing)
+- **Project Type**: Python (volta library, KiCad 10+ structural editing)
 - **Python**: 3.11.13 (project venv at `.venv/`)
 - **Frameworks**: kiutils 1.4.8, pydantic, pytest
 - **Council stack match**: KiCad Rick (mandatory), PCB Vision Rick (spatial), Sentinel Rick (auto-loop / agent safety — pipeline runs autonomously)
@@ -38,9 +38,9 @@ All fixes are genuine code changes, not commit-message theater. Every fix has an
 
 | ID | Claimed Fix | Verified In | Genuine? | Evidence |
 |----|-------------|-------------|----------|----------|
-| LO-04 | rollback_net single SES parse + raw content cache | `src/kicad_agent/routing/orchestrator.py:606-654` | YES | Single `raw = pcb_path.read_text()` at L612, single `NativeParser.parse_pcb_content(raw, ...)` at L619, `raw` reused for both undo_stack.push (L616, L654) and `atomic_write(pcb_path, raw)` at L649. No double I/O. |
+| LO-04 | rollback_net single SES parse + raw content cache | `src/volta/routing/orchestrator.py:606-654` | YES | Single `raw = pcb_path.read_text()` at L612, single `NativeParser.parse_pcb_content(raw, ...)` at L619, `raw` reused for both undo_stack.push (L616, L654) and `atomic_write(pcb_path, raw)` at L649. No double I/O. |
 | LO-05 | Regression test locking "0 warnings" invariant | `tests/test_phase100_strategy.py:241-292` | YES | `# LO-05: DeterministicStrategy must not emit noisy warnings during population` + acceptance assertion "zero WARNING records from strategy module". |
-| H-1 / ME-05 | strategy_notes field in RoutingAuditEntry, ai_fallback: prefix reaches JSONL | `src/kicad_agent/routing/audit.py:47-66`, `orchestrator.py:307-328` | YES | Field defined with docstring explaining ai_fallback semantics; serialized in `_entry_to_dict` (L86); deserialized in `_dict_to_entry` (L120); populated at orchestrator L327 from `strategy_result.routing_notes`. JSONL round-trip programmatically verified. |
+| H-1 / ME-05 | strategy_notes field in RoutingAuditEntry, ai_fallback: prefix reaches JSONL | `src/volta/routing/audit.py:47-66`, `orchestrator.py:307-328` | YES | Field defined with docstring explaining ai_fallback semantics; serialized in `_entry_to_dict` (L86); deserialized in `_dict_to_entry` (L120); populated at orchestrator L327 from `strategy_result.routing_notes`. JSONL round-trip programmatically verified. |
 
 ### Phase 98 (9 findings)
 
@@ -49,10 +49,10 @@ All fixes are genuine code changes, not commit-message theater. Every fix has an
 | ME-01 | Removed dead model_output_chars field (YAGNI) | grep returns 0 matches in `scripts/phase98_eval.py`, `ai_strategy.py` | YES | Field is gone across all routing code. |
 | ME-02 | SC-2 tie masking — short-circuit on parse_success=False | `scripts/phase98_eval.py:330-334` | YES | `if not ai.parse_success: ...` block explicitly documented with ME-02 rationale, prevents 100%-fallback runs masking as perfect SC-2. |
 | ME-03 | DRC path collision — added tag parameter | `scripts/phase98_eval.py:90,137,155,172` | YES | `drc_tag` parameter threaded through `run_ai_pipeline`, `run_drc(tag=...)`, output path `pcb_path.with_suffix(f".{tag}.drc.json")`. Both callers pass distinct tags (`"det"` L487, `"ai"` L503). |
-| ME-04 | Exception sanitization — truncate + collapse newlines, 200 chars, single-line | `src/kicad_agent/routing/ai_strategy.py:178-187` | YES | `safe_msg = str(exc).replace("\n"," ").replace("\r"," ").strip()[:200]` + `routing_notes=f"ai_fallback: {type(exc).__name__}: {safe_msg}"`. Keeps exception type (trusted), sanitizes message (untrusted). |
-| IN-01 | Net name escaping in prompt | `src/kicad_agent/routing/strategy_prompts.py:16-41` | YES | `_sanitize_net_name()` collapses backslashes, escapes double-quotes, strips newlines. Documented as defensive against hostile/malformed net names. |
-| IN-02 | O(n²) brace parser → single-pass O(n) | `src/kicad_agent/routing/strategy_parser.py:82-122` | YES | Single-pass stack-based implementation. Each character visited exactly once. String-literal-aware (escapes handled). Programmatically verified correctness on nested + string-with-brace input. |
-| IN-03 | Removed dead ValidationResult class | grep returns 0 matches across `src/kicad_agent/` | YES | Class is gone. |
+| ME-04 | Exception sanitization — truncate + collapse newlines, 200 chars, single-line | `src/volta/routing/ai_strategy.py:178-187` | YES | `safe_msg = str(exc).replace("\n"," ").replace("\r"," ").strip()[:200]` + `routing_notes=f"ai_fallback: {type(exc).__name__}: {safe_msg}"`. Keeps exception type (trusted), sanitizes message (untrusted). |
+| IN-01 | Net name escaping in prompt | `src/volta/routing/strategy_prompts.py:16-41` | YES | `_sanitize_net_name()` collapses backslashes, escapes double-quotes, strips newlines. Documented as defensive against hostile/malformed net names. |
+| IN-02 | O(n²) brace parser → single-pass O(n) | `src/volta/routing/strategy_parser.py:82-122` | YES | Single-pass stack-based implementation. Each character visited exactly once. String-literal-aware (escapes handled). Programmatically verified correctness on nested + string-with-brace input. |
+| IN-03 | Removed dead ValidationResult class | grep returns 0 matches across `src/volta/` | YES | Class is gone. |
 | IN-04 | Test robustness — tightened f4 assertion to specific violation | Commit `c54a1a3`, test files updated | YES | Tests pass (280 total). |
 | IN-05 | Test robustness — argparse exit code docs | Commit `7ea7eac`, `FreerouteBatch.java:30` narrows `throws Exception` to specific catches | YES | Tests pass. Java side narrowed per IN-05 comment. |
 
@@ -60,12 +60,12 @@ All fixes are genuine code changes, not commit-message theater. Every fix has an
 
 | ID | Claimed Fix | Verified In | Genuine? | Evidence |
 |----|-------------|-------------|----------|----------|
-| MD-01 | erc_auto_fix raw S-expr rewrite, no to_file() anywhere | `src/kicad_agent/ops/erc_auto_fix.py:32-71` (`_persist_ir_raw`), L389/L407/L426/L437/L458/L576 | YES | New `_persist_ir_raw()` reads raw text, applies `SchematicRawWriter.apply_mutations()`, writes via `atomic_write`. **Zero `to_file()` calls in any persistence path.** All 6 persistence call sites in erc_auto_fix.py route through `_persist_ir_raw`. PWR_FLAG placement handled by `SchematicRawWriter._ensure_lib_symbol_exists` (top-level lib_symbols container). |
-| MD-01 (module) | New SchematicRawWriter module | `src/kicad_agent/ops/schematic_raw_writer.py` (17.2 KB) | YES | 14 well-named methods: `build_no_connect_sexp`, `insert_no_connect`, `build_junction_sexp`, `insert_junction`, `_ensure_lib_symbol_exists`, `build_power_flag_symbol_sexp`, `insert_power_flag`, `remove_wire_by_position`, `apply_mutation`, `apply_mutations`. Pure string transforms, no kiutils re-serialization. |
-| LO-01 | Removed list schema normalization | `src/kicad_agent/ops/repair_wires.py:494-551` | YES | Comment markers `# LO-01 fix:` document the removed normalization. Schema simplified. |
-| LO-02 | dry_run double-count fix | `src/kicad_agent/ops/repair_wires.py:467,496,536,551` | YES | Single `flagged_indices` set populated in both dry_run and mutate branches. Dedup is structural, not by re-counting. |
-| LO-03 | ERC fallback observability | `src/kicad_agent/ops/repair_wires.py:569-600` | YES | `erc_fallback_used` flag surfaced in return dict when trust_erc=True and ERC failed. Callers can now distinguish "ERC found nothing" from "ERC failed to run". |
-| Pre-existing | generate_bom wired into _SCHEMATIC_QUERY_HANDLERS | `src/kicad_agent/ops/handlers/schematic_query.py:253-262` | YES | `@register_schematic_query("generate_bom")` decorator present. Programmatically verified dispatch table contains the key. |
+| MD-01 | erc_auto_fix raw S-expr rewrite, no to_file() anywhere | `src/volta/ops/erc_auto_fix.py:32-71` (`_persist_ir_raw`), L389/L407/L426/L437/L458/L576 | YES | New `_persist_ir_raw()` reads raw text, applies `SchematicRawWriter.apply_mutations()`, writes via `atomic_write`. **Zero `to_file()` calls in any persistence path.** All 6 persistence call sites in erc_auto_fix.py route through `_persist_ir_raw`. PWR_FLAG placement handled by `SchematicRawWriter._ensure_lib_symbol_exists` (top-level lib_symbols container). |
+| MD-01 (module) | New SchematicRawWriter module | `src/volta/ops/schematic_raw_writer.py` (17.2 KB) | YES | 14 well-named methods: `build_no_connect_sexp`, `insert_no_connect`, `build_junction_sexp`, `insert_junction`, `_ensure_lib_symbol_exists`, `build_power_flag_symbol_sexp`, `insert_power_flag`, `remove_wire_by_position`, `apply_mutation`, `apply_mutations`. Pure string transforms, no kiutils re-serialization. |
+| LO-01 | Removed list schema normalization | `src/volta/ops/repair_wires.py:494-551` | YES | Comment markers `# LO-01 fix:` document the removed normalization. Schema simplified. |
+| LO-02 | dry_run double-count fix | `src/volta/ops/repair_wires.py:467,496,536,551` | YES | Single `flagged_indices` set populated in both dry_run and mutate branches. Dedup is structural, not by re-counting. |
+| LO-03 | ERC fallback observability | `src/volta/ops/repair_wires.py:569-600` | YES | `erc_fallback_used` flag surfaced in return dict when trust_erc=True and ERC failed. Callers can now distinguish "ERC found nothing" from "ERC failed to run". |
+| Pre-existing | generate_bom wired into _SCHEMATIC_QUERY_HANDLERS | `src/volta/ops/handlers/schematic_query.py:253-262` | YES | `@register_schematic_query("generate_bom")` decorator present. Programmatically verified dispatch table contains the key. |
 
 ### Phase 99 Regression (1 finding)
 

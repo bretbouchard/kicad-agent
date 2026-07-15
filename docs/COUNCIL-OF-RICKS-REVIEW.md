@@ -1,4 +1,4 @@
-# Council of Ricks — kicad-agent Full Review
+# Council of Ricks — volta Full Review
 
 **Date:** 2025-05-24
 **Reviewers:** 5 specialists (ML Pipeline, Architecture, KiCad Domain, Code Quality, User Experience)
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-kicad-agent is a well-structured Python library for AI-safe KiCad file editing with 142 source files, 92 test files, and solid transaction/rollback safety. The Council identified three systemic themes:
+volta is a well-structured Python library for AI-safe KiCad file editing with 142 source files, 92 test files, and solid transaction/rollback safety. The Council identified three systemic themes:
 
 1. **Routing engine is disconnected** — architecturally impressive but can't write results to PCB files
 2. **GRPO training is circular** — reward model = policy model, no generative LM, trains nothing
@@ -85,7 +85,7 @@ kicad-agent is a well-structured Python library for AI-safe KiCad file editing w
 | ID | Finding | File |
 |----|---------|------|
 | H22 | Bus operations (`add_bus`/`remove_bus`) are stubs — return success but do nothing | `executor.py:285-289` |
-| H23 | Skill SKILL.md references `kicad_agent.executor.execute_operation` — ImportError | `skills/SKILL.md:59` |
+| H23 | Skill SKILL.md references `volta.executor.execute_operation` — ImportError | `skills/SKILL.md:59` |
 | H24 | No undo/redo — only rollback via Transaction, no user-facing history | System-wide |
 | H25 | Export, ERC/DRC, Placement not exposed as CLI commands or operations | Multiple |
 | H26 | Schematic `add_wire` requires exact coordinates — no pin-to-pin routing | `operations/` |
@@ -151,10 +151,10 @@ Either:
 ### 3. Add human-friendly CLI subcommands
 Expose the 35 operations, ERC/DRC, export, and placement as subcommands:
 ```
-kicad-agent erc board.kicad_sch
-kicad-agent drc board.kicad_pcb
-kicad-agent export gerber board.kicad_pcb
-kicad-agent context /path/to/project
+volta erc board.kicad_sch
+volta drc board.kicad_pcb
+volta export gerber board.kicad_pcb
+volta context /path/to/project
 ```
 
 **Effort:** ~1 file modification, ~100 lines of argparse additions.

@@ -9,7 +9,7 @@
 
 ## 0. Critical context: the app does NOT use `.glassEffect()` yet
 
-The most important finding for any SwiftUI work on this codebase: `macos-app/Sources/KiCadAgent/Theme/LiquidGlassModifiers.swift` explicitly documents that the app runs on the **macOS 26.x SDK**, where `.background(.regularMaterial)` produces the canonical material. The dedicated `.glassEffect()` modifier ships with the **macOS 27 SDK**, which has not landed yet. The three custom modifiers are the single source of truth:
+The most important finding for any SwiftUI work on this codebase: `macos-app/Sources/Volta/Theme/LiquidGlassModifiers.swift` explicitly documents that the app runs on the **macOS 26.x SDK**, where `.background(.regularMaterial)` produces the canonical material. The dedicated `.glassEffect()` modifier ships with the **macOS 27 SDK**, which has not landed yet. The three custom modifiers are the single source of truth:
 
 - `.liquidGlassPanel(corner:)` — standard cards, chat bubbles, sidebar items. Material: `.regular`.
 - `.liquidGlassHero(corner:)` — sheets, modals, hero cards. Material: `.ultraThin`.
@@ -57,7 +57,7 @@ ManufacturingWorkspaceView          // top-level tab/section per project
 
 ## 2. BoardSpec editor — surface finish picker, color pickers, impedance table
 
-The `BoardSpec` model (`src/kicad_agent/manufacturing/board_spec.py`) has these editable dimensions:
+The `BoardSpec` model (`src/volta/manufacturing/board_spec.py`) has these editable dimensions:
 - `surface_finish`: enum of 6 (HASL, ENIG, HASL_LEAD_FREE, HARD_GOLD, OSP, ENEPIG)
 - `copper_weight_outer_oz` / `copper_weight_inner_oz`: floats > 0
 - `soldermask_color`: enum of 8 (GREEN, RED, BLUE, BLACK, WHITE, YELLOW, PURPLE, MATTE_BLACK)

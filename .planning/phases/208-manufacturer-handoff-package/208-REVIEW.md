@@ -9,10 +9,10 @@ verdict: APPROVED (with 2 LOW notes + 1 pre-existing INFO)
 
 # Phase 208 — Code Review (208-REVIEW.md)
 
-**Scope:** `src/kicad_agent/manufacturing/handoff.py`, `src/kicad_agent/export/bom.py`,
-`src/kicad_agent/dfm/profiles.py`, `src/kicad_agent/validation/gates/manufacturing_manifest.py`,
-`src/kicad_agent/ops/_schema_pcb.py`, `src/kicad_agent/ops/registry.py`,
-`src/kicad_agent/ops/schema.py`, `src/kicad_agent/ops/handlers/build.py`,
+**Scope:** `src/volta/manufacturing/handoff.py`, `src/volta/export/bom.py`,
+`src/volta/dfm/profiles.py`, `src/volta/validation/gates/manufacturing_manifest.py`,
+`src/volta/ops/_schema_pcb.py`, `src/volta/ops/registry.py`,
+`src/volta/ops/schema.py`, `src/volta/ops/handlers/build.py`,
 `tests/test_handoff.py`, `tests/test_registry.py`.
 
 ## Summary
@@ -77,7 +77,7 @@ guaranteed. `test_handoff_blocks_on_drc_failure` and `test_handoff_no_partial_st
 confirm.
 
 ### Profile-driven BOM (Pitfall 3) — PASS
-`grep export_jlcpcb_bom src/kicad_agent/manufacturing/` returns 0 matches. The orchestrator
+`grep export_jlcpcb_bom src/volta/manufacturing/` returns 0 matches. The orchestrator
 calls `export_bom_profile` (`handoff.py:456`), never the hard-coded function. `export_jlcpcb_bom`
 is reduced to a delegate (`bom.py:431-473`) that calls `export_bom_profile(..., load_profile("jlcpcb"))`.
 
@@ -187,7 +187,7 @@ asymmetric — a comment noting the type divergence would aid future maintainers
 ## Verification Commands Run
 - `pytest tests/test_handoff.py tests/test_registry.py tests/test_build_system.py tests/test_export_bom.py` -> 97 passed.
 - All plan acceptance-criteria smoke tests (profile fields, registry meta, handler merge, imports) -> pass.
-- `grep export_jlcpcb_bom src/kicad_agent/manufacturing/` -> 0 matches (Pitfall 3).
+- `grep export_jlcpcb_bom src/volta/manufacturing/` -> 0 matches (Pitfall 3).
 
 ## Verdict
 

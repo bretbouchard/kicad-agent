@@ -12,9 +12,9 @@ provides:
   - External HTTP MCP opt-in (DAEM-07, DAEM-08)
   - App Store review notes documenting GPLv3 compliance
 affects:
-  - macos-app/Sources/KiCadAgent/KiCadAgentApp.swift
-  - macos-app/Sources/KiCadAgent/Views/AppRootView.swift
-  - macos-app/Sources/KiCadAgent/Views/LiquidGlassShell.swift
+  - macos-app/Sources/Volta/VoltaApp.swift
+  - macos-app/Sources/Volta/Views/AppRootView.swift
+  - macos-app/Sources/Volta/Views/LiquidGlassShell.swift
   - macos-app/daemon/handlers.py
 tech-stack:
   added:
@@ -28,18 +28,18 @@ tech-stack:
     - AppStorage/UserDefaults for persistent user preferences
 key-files:
   created:
-    - macos-app/Sources/KiCadAgent/KiCad/KiCadInstallStatus.swift
-    - macos-app/Sources/KiCadAgent/KiCad/KiCadCLIDetector.swift
-    - macos-app/Sources/KiCadAgent/Views/Onboarding/KiCadInstallView.swift
-    - macos-app/Sources/KiCadAgent/Daemon/ExternalMCPSettings.swift
-    - macos-app/Sources/KiCadAgent/Views/Settings/ExternalMCPSettingsView.swift
-    - macos-app/Tests/KiCadAgentTests/KiCadCLIDetectorTests.swift
+    - macos-app/Sources/Volta/KiCad/KiCadInstallStatus.swift
+    - macos-app/Sources/Volta/KiCad/KiCadCLIDetector.swift
+    - macos-app/Sources/Volta/Views/Onboarding/KiCadInstallView.swift
+    - macos-app/Sources/Volta/Daemon/ExternalMCPSettings.swift
+    - macos-app/Sources/Volta/Views/Settings/ExternalMCPSettingsView.swift
+    - macos-app/Tests/VoltaTests/KiCadCLIDetectorTests.swift
     - macos-app/daemon/tests/test_kicad_cli_and_http.py
     - macos-app/APP_STORE_REVIEW_NOTES.md
   modified:
-    - macos-app/Sources/KiCadAgent/KiCadAgentApp.swift
-    - macos-app/Sources/KiCadAgent/Views/AppRootView.swift
-    - macos-app/Sources/KiCadAgent/Views/LiquidGlassShell.swift
+    - macos-app/Sources/Volta/VoltaApp.swift
+    - macos-app/Sources/Volta/Views/AppRootView.swift
+    - macos-app/Sources/Volta/Views/LiquidGlassShell.swift
     - macos-app/daemon/handlers.py
 decisions:
   - "KiCad CLI is NOT bundled — GPLv3 blocks App Store (PROJECT.md locked exclusion)"
@@ -93,9 +93,9 @@ Sheet shown whenever status ≠ `.ready`. Three states render distinct copy and 
 
 Download button opens `https://www.kicad.org/download/macos/` in default browser via `NSWorkspace.shared.open`. Sheet is `.interactiveDismissDisabled(true)` — user cannot proceed without resolving the install. The Check Again button also triggers a 30s auto-poll so users don't have to keep clicking.
 
-### 3. App Integration (`KiCadAgentApp.swift`, `AppRootView.swift`)
+### 3. App Integration (`VoltaApp.swift`, `AppRootView.swift`)
 
-- `KiCadAgentApp` instantiates `KiCadCLIDetector` as `@State`, calls `detect()` on launch, and injects it via `.environment()` so views can `@Environment` it.
+- `VoltaApp` instantiates `KiCadCLIDetector` as `@State`, calls `detect()` on launch, and injects it via `.environment()` so views can `@Environment` it.
 - `AppRootView` shows `KiCadInstallView` as a sheet gated by `kiCadOnboardingBinding`. Workflow is blocked: `createProject()` refuses to insert a new Project when status ≠ `.ready`, surfacing the onboarding sheet instead.
 - A "Check KiCad Install" item was added to the `CommandGroup(after: .newItem)` app menu so users can manually re-trigger detection from the menu bar.
 

@@ -11,7 +11,7 @@
 ## Reproduction
 
 ```bash
-PYTHONPATH=/Users/bretbouchard/apps/kicad-agent/src /opt/homebrew/bin/python3.11 -m kicad_agent.cli '{
+PYTHONPATH=/Users/bretbouchard/apps/volta/src /opt/homebrew/bin/python3.11 -m volta.cli '{
   "op": "place_no_connects_from_erc",
   "target_file": "hardware/backplane/codecs.kicad_sch"
 }'
@@ -36,7 +36,7 @@ KiCad ERC reports pin positions in sheet-absolute coordinates, but symbol pins a
 
 ## Fix path
 
-1. Inspect `place_no_connects_from_erc` handler in `src/kicad_agent/ops/handlers/`
+1. Inspect `place_no_connects_from_erc` handler in `src/volta/ops/handlers/`
 2. Find the pin position calculation
 3. Verify against actual pin position in schematic by:
    - Loading symbol

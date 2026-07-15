@@ -32,13 +32,13 @@ One-shot execution successfully shipped the Volta v2 LoRA adapter to HuggingFace
 
 ## Key Files Modified
 
-- `macos-app/Sources/KiCadAgent/Models/ModelDownloader.swift` - v1→v2 adapter swap, fixed isAdapterPresent bug
-- `macos-app/Sources/KiCadAgent/Models/LocalModelManager.swift` - state enum migration
-- `macos-app/Sources/KiCadAgent/Models/LocalModelStatus.swift` - NEW: lifecycle state enum
-- `macos-app/Sources/KiCadAgent/Models/Providers/MLXLocalProvider.swift` - displayName update
-- `macos-app/Sources/KiCadAgent/Views/Settings/ModelDownloadView.swift` - failure state UI
-- `macos-app/Tests/KiCadAgentTests/LocalModelPathTests.swift` - NEW: 4 path resolution tests
-- `macos-app/Tests/KiCadAgentTests/LocalModelFailureTests.swift` - NEW: 2 failure state tests
+- `macos-app/Sources/Volta/Models/ModelDownloader.swift` - v1→v2 adapter swap, fixed isAdapterPresent bug
+- `macos-app/Sources/Volta/Models/LocalModelManager.swift` - state enum migration
+- `macos-app/Sources/Volta/Models/LocalModelStatus.swift` - NEW: lifecycle state enum
+- `macos-app/Sources/Volta/Models/Providers/MLXLocalProvider.swift` - displayName update
+- `macos-app/Sources/Volta/Views/Settings/ModelDownloadView.swift` - failure state UI
+- `macos-app/Tests/VoltaTests/LocalModelPathTests.swift` - NEW: 4 path resolution tests
+- `macos-app/Tests/VoltaTests/LocalModelFailureTests.swift` - NEW: 2 failure state tests
 
 ## Key Decisions
 

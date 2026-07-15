@@ -3,7 +3,7 @@
 **Date:** 2026-05-31
 **From:** Bret (with strategic context from external consultation)
 **To:** Cicada team
-**Project:** kicad-agent v2.5 Benchmark Suite
+**Project:** volta v2.5 Benchmark Suite
 
 ---
 
@@ -34,7 +34,7 @@ The external consultation confirmed our direction and identified two critical ga
 
 ### 1. Benchmarks (Currently 2/10)
 
-We have no standardized way to measure kicad-agent's intelligence. This is the #1 blocker for professional credibility.
+We have no standardized way to measure volta's intelligence. This is the #1 blocker for professional credibility.
 
 **What we need:** A "PCB MMLU" — multi-choice circuit analysis questions that test understanding of:
 - Component selection and function
@@ -47,7 +47,7 @@ We have no standardized way to measure kicad-agent's intelligence. This is the #
 
 ### 2. Domain Intelligence (Currently 2/10)
 
-kicad-agent edits schematics without understanding what the circuit DOES. It can place a resistor, but doesn't know if it's a pull-up, feedback, or bias resistor.
+volta edits schematics without understanding what the circuit DOES. It can place a resistor, but doesn't know if it's a pull-up, feedback, or bias resistor.
 
 **What comes after benchmarks:** Phases 45-48 in STRATEGIC-EXPANSION-PLAN.md
 
@@ -65,7 +65,7 @@ Every failed AI EDA startup tried to design circuits. We review, fix, and valida
 
 ## v2.5 Benchmark Suite — Phases 41-44 (SHIPPED)
 
-**Milestone goal:** Create a standardized circuit intelligence benchmark suite that measures kicad-agent's understanding of electronics design. Publish baseline scores. Integrate regression detection into CI. **COMPLETED — 148 benchmark tests, 500+ MMLU questions, 2000+ QA pairs, 750+ adversarial tests, CI regression workflow. Council CONDITIONAL APPROVE.**
+**Milestone goal:** Create a standardized circuit intelligence benchmark suite that measures volta's understanding of electronics design. Publish baseline scores. Integrate regression detection into CI. **COMPLETED — 148 benchmark tests, 500+ MMLU questions, 2000+ QA pairs, 750+ adversarial tests, CI regression workflow. Council CONDITIONAL APPROVE.**
 
 **Execution order:** 41 -> 42 -> 43 -> 44 (dependency chain)
 
@@ -106,7 +106,7 @@ Every failed AI EDA startup tried to design circuits. We review, fix, and valida
 | Wave | 2 (depends on 41-01) |
 | Files created | `benchmarks/runner.py`, `benchmarks/models.py`, `benchmarks/__main__.py`, `tests/test_benchmark_runner.py` |
 | Key classes | `BenchmarkRunner`, `BaselineRandomModel`, `BaselineHeuristicModel`, `LocalLoRAModel`, `APIModel` |
-| CLI | `python -m kicad_agent.benchmarks --dataset benchmarks/pcb-mmlu-v1.json --model random --output results.json` |
+| CLI | `python -m volta.benchmarks --dataset benchmarks/pcb-mmlu-v1.json --model random --output results.json` |
 | Test assertions | Random ~25% ±10%, heuristic >25%, BenchmarkResult validates, category accuracy for all categories |
 
 **Expected baselines:**
@@ -177,17 +177,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: pip install -e .
-      - run: python -m kicad_agent.benchmarks --dataset benchmarks/pcb-mmlu-v1.json --model heuristic --output /tmp/results.json
-      - run: python -m kicad_agent.benchmarks --regression-check --baseline benchmarks/results/baseline.json --current /tmp/results.json
+      - run: python -m volta.benchmarks --dataset benchmarks/pcb-mmlu-v1.json --model heuristic --output /tmp/results.json
+      - run: python -m volta.benchmarks --regression-check --baseline benchmarks/results/baseline.json --current /tmp/results.json
 ```
 
 ---
 
 ### Phase 44: Adversarial Test Generation (1 plan)
 
-**Goal:** Three types of adversarial testing — mutation, property-based, fuzzing. Proves kicad-agent handles edge cases and broken inputs correctly.
+**Goal:** Three types of adversarial testing — mutation, property-based, fuzzing. Proves volta handles edge cases and broken inputs correctly.
 
-**Why this matters:** Benchmarks measure understanding. Adversarial tests prove robustness. The combination gives confidence that kicad-agent doesn't just pass happy-path tests.
+**Why this matters:** Benchmarks measure understanding. Adversarial tests prove robustness. The combination gives confidence that volta doesn't just pass happy-path tests.
 
 **Plan 44-01: Adversarial Test Suite (BENCH-05)**
 | Item | Detail |
@@ -229,9 +229,9 @@ Wave 3: 43-01 (regression) + 44-01 (adversarial) — parallel (both depend on 41
 ## New Package Structure (Phases 41-44 create this)
 
 ```
-src/kicad_agent/benchmarks/
+src/volta/benchmarks/
 ├── __init__.py               # Package init
-├── __main__.py               # CLI: python -m kicad_agent.benchmarks
+├── __main__.py               # CLI: python -m volta.benchmarks
 ├── schemas.py                # BenchmarkQuestion, BenchmarkDataset
 ├── question_generator.py     # Template-based question generation (8 categories)
 ├── dataset_builder.py        # Orchestrates generation from real schematics
@@ -259,7 +259,7 @@ benchmarks/
 ### Existing modules that benchmarks integrate with
 
 ```
-src/kicad_agent/
+src/volta/
 ├── schematic_routing/
 │   └── schematic_graph.py    # SchematicGraph.from_file() for subcircuit extraction
 ├── ops/
@@ -275,7 +275,7 @@ src/kicad_agent/
 ### Schema files (existing pattern)
 
 ```
-src/kicad_agent/ops/
+src/volta/ops/
 ├── _schema_erc_smart.py      # Phase 40: ClassifyViolationsOp, DiagnoseViolationsOp, ErcAutoFixOp
 ├── _schema_schematic_routing.py  # Phase 38: Routing op schemas
 ├── _schema_schematic_intel.py    # Phase 39: Intelligence op schemas

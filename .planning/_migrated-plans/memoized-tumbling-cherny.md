@@ -27,9 +27,9 @@ The analog board has 9 `multiple_net_names` ERC violations where physical wire s
 
 | File | Change |
 |------|--------|
-| `src/kicad_agent/ops/_schema_repair.py` | Add `BreakWireShortsOp` schema |
-| `src/kicad_agent/ops/repair.py` | Add `break_wire_shorts()` handler + `find_bridge_wires()` helper |
-| `src/kicad_agent/ops/executor.py` | Register handler (hook will auto-generate) |
+| `src/volta/ops/_schema_repair.py` | Add `BreakWireShortsOp` schema |
+| `src/volta/ops/repair.py` | Add `break_wire_shorts()` handler + `find_bridge_wires()` helper |
+| `src/volta/ops/executor.py` | Register handler (hook will auto-generate) |
 | `tests/test_erc_auto_fix.py` | Add tests for schema + handler |
 | `tests/test_slc_compliance.py` | Update op count 62 → 63 |
 

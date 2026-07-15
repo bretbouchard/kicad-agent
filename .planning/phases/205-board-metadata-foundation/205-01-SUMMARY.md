@@ -27,19 +27,19 @@ tech-stack:
 
 key-files:
   created:
-    - src/kicad_agent/manufacturing/__init__.py
-    - src/kicad_agent/manufacturing/board_spec.py
+    - src/volta/manufacturing/__init__.py
+    - src/volta/manufacturing/board_spec.py
     - tests/test_board_spec.py
     - tests/test_board_metadata_ops.py
   modified:
-    - src/kicad_agent/parser/pcb_native_types.py
-    - src/kicad_agent/parser/pcb_native_parser.py
-    - src/kicad_agent/ops/pcb_raw_writer.py
-    - src/kicad_agent/ops/_schema_pcb.py
-    - src/kicad_agent/ops/schema.py
-    - src/kicad_agent/ops/registry.py
-    - src/kicad_agent/ops/handlers/query.py
-    - src/kicad_agent/ops/handlers/pcb.py
+    - src/volta/parser/pcb_native_types.py
+    - src/volta/parser/pcb_native_parser.py
+    - src/volta/ops/pcb_raw_writer.py
+    - src/volta/ops/_schema_pcb.py
+    - src/volta/ops/schema.py
+    - src/volta/ops/registry.py
+    - src/volta/ops/handlers/query.py
+    - src/volta/ops/handlers/pcb.py
     - tests/test_pcb_native_parser.py
     - tests/test_registry.py
 
@@ -99,16 +99,16 @@ Each task was committed atomically:
 6. **Task 6: Parser + operation tests** - `77962e7` (test)
 
 ## Files Created/Modified
-- `src/kicad_agent/parser/pcb_native_types.py` - NativeTitleBlock frozen dataclass + field on NativeBoard
-- `src/kicad_agent/parser/pcb_native_parser.py` - _extract_title_block extractor, removed from _UNSUPPORTED_ELEMENTS, added to _KNOWN_TOP_LEVEL
-- `src/kicad_agent/manufacturing/__init__.py` - manufacturing package init (new)
-- `src/kicad_agent/manufacturing/board_spec.py` - BoardSpec model + enums + load/save (new)
-- `src/kicad_agent/ops/pcb_raw_writer.py` - set_title_block_fields block-level rebuild method
-- `src/kicad_agent/ops/_schema_pcb.py` - ReadBoardMetadataOp, SetBoardMetadataOp, SetBoardRevisionOp
-- `src/kicad_agent/ops/schema.py` - 3 classes in import/union/__all__
-- `src/kicad_agent/ops/registry.py` - 3 _RAW_CATALOG entries (read_board_metadata uses category "query")
-- `src/kicad_agent/ops/handlers/query.py` - read_board_metadata handler (parses ir.raw_content)
-- `src/kicad_agent/ops/handlers/pcb.py` - set_board_metadata + set_board_revision handlers
+- `src/volta/parser/pcb_native_types.py` - NativeTitleBlock frozen dataclass + field on NativeBoard
+- `src/volta/parser/pcb_native_parser.py` - _extract_title_block extractor, removed from _UNSUPPORTED_ELEMENTS, added to _KNOWN_TOP_LEVEL
+- `src/volta/manufacturing/__init__.py` - manufacturing package init (new)
+- `src/volta/manufacturing/board_spec.py` - BoardSpec model + enums + load/save (new)
+- `src/volta/ops/pcb_raw_writer.py` - set_title_block_fields block-level rebuild method
+- `src/volta/ops/_schema_pcb.py` - ReadBoardMetadataOp, SetBoardMetadataOp, SetBoardRevisionOp
+- `src/volta/ops/schema.py` - 3 classes in import/union/__all__
+- `src/volta/ops/registry.py` - 3 _RAW_CATALOG entries (read_board_metadata uses category "query")
+- `src/volta/ops/handlers/query.py` - read_board_metadata handler (parses ir.raw_content)
+- `src/volta/ops/handlers/pcb.py` - set_board_metadata + set_board_revision handlers
 - `tests/test_board_spec.py` - 6 BoardSpec model + sidecar tests (new)
 - `tests/test_board_metadata_ops.py` - 8 operation + round-trip tests (new)
 - `tests/test_pcb_native_parser.py` - TestTitleBlock class with 6 parser tests
@@ -128,7 +128,7 @@ Each task was committed atomically:
 - **Found during:** Task 6 (operation round-trip tests)
 - **Issue:** The raw writer passed `start + 1` to `_find_matching_close`, but the helper counts depth starting at 0 and increments on the first `(`. Passing `start + 1` (the char after `(`) skipped the opening paren, so depth never reached 1 for the title_block itself — the method returned at the first inner closing paren (e.g. after `(title "...")`), leaving the remaining old fields dangling after the new block. This produced unbalanced S-expressions.
 - **Fix:** Pass `start` (the `(` position) directly to `_find_matching_close`, matching the `assign_net_class` call site convention (line 394).
-- **Files modified:** src/kicad_agent/ops/pcb_raw_writer.py
+- **Files modified:** src/volta/ops/pcb_raw_writer.py
 - **Verification:** `sexpdata.loads(result)` succeeds; all 8 operation round-trip tests pass.
 - **Committed in:** 77962e7 (Task 6 commit)
 

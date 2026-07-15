@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-The v6.0 KiCad Agent is a **native SwiftUI app** that wraps the existing Python kicad-agent library (142 operations, validation gates, routing stack) in a closed-box conversational interface. The architecture follows a **compiler model**: conversation state is the source of truth, KiCad files (.kicad_sch, .kicad_pcb) are derived artifacts regenerated from an event-sourced journal. Key differentiator: **pure BYOK (Bring Your Own API Key)** with direct provider connections — the developer has zero liability for user AI bills.
+The v6.0 KiCad Agent is a **native SwiftUI app** that wraps the existing Python volta library (142 operations, validation gates, routing stack) in a closed-box conversational interface. The architecture follows a **compiler model**: conversation state is the source of truth, KiCad files (.kicad_sch, .kicad_pcb) are derived artifacts regenerated from an event-sourced journal. Key differentiator: **pure BYOK (Bring Your Own API Key)** with direct provider connections — the developer has zero liability for user AI bills.
 
 **Recommended approach:** Apple-native first. SwiftUI + FoundationModels (built-in, free, macOS 27+) + MLX-Swift (local Metal-accelerated models) + SwiftData + CloudKit (zero infra sync). Python daemon bundled via PyInstaller, communicates via stdio MCP (line-delimited JSON-RPC, no HTTP by default). Collaboration via CKShare + Group Activities (4-participant cap, FaceTime-style sessions). No server infrastructure — Apple handles CloudKit scale, HF Hub handles models, users pay providers directly.
 
@@ -36,9 +36,9 @@ The v6.0 KiCad Agent is a **native SwiftUI app** that wraps the existing Python 
 - **MCP Swift SDK** — Stdio MCP client for Python daemon communication, line-delimited JSON-RPC over stdin/stdout
 
 **Python daemon (bundled):**
-- **mcp 1.28.1** — MCP server exposing 142 kicad-agent operations as tools, `mcp.run(transport="stdio")`
+- **mcp 1.28.1** — MCP server exposing 142 volta operations as tools, `mcp.run(transport="stdio")`
 - **PyInstaller v6.21.0** — Python → .app bundling, code signing with `--osx-hardened-runtime`, entitlements for file/system access
-- **kicad-agent** — Existing 142 operations, AST mutation, validation gates (unchanged)
+- **volta** — Existing 142 operations, AST mutation, validation gates (unchanged)
 
 **Critical constraint:** macOS 27.0+ required (FoundationModels dependency). This is intentional — clean break from legacy APIs, access to built-in on-device AI.
 
@@ -81,7 +81,7 @@ The v6.0 KiCad Agent is a **native SwiftUI app** that wraps the existing Python 
 
 ### Architecture Approach
 
-The architecture wraps the existing Python kicad-agent library in a native Swift app with **compiler-model semantics**: conversation state is source of truth, KiCad files are derived artifacts regenerated from event-sourced journal.
+The architecture wraps the existing Python volta library in a native Swift app with **compiler-model semantics**: conversation state is source of truth, KiCad files are derived artifacts regenerated from event-sourced journal.
 
 **Major components:**
 1. **SwiftUI UI Surfaces** — Liquid Glass app shell, inline rendering (SVG/PNG), GSD Conversation Engine, Approval Gates UI

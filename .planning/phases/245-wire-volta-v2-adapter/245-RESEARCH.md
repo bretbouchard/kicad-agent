@@ -23,7 +23,7 @@ pass would duplicate context.
 
 - `huggingface-cli` is the canonical upload path. Two-step:
   1. `huggingface-cli repo create bretbouchard/volta-pcb-adapter-v2 --type model --private`
-  2. `huggingface-cli upload bretbouchard/volta-pcb-adapter-v2 /Volumes/Storage/models/kicad-agent/adapters/volta-12b-v2/ .`
+  2. `huggingface-cli upload bretbouchard/volta-pcb-adapter-v2 /Volumes/Storage/models/volta/adapters/volta-12b-v2/ .`
 - Auth: `huggingface-cli login` reads token from keychain or `HF_TOKEN` env var
 - Resumable: yes (built into huggingface_hub)
 - Bandwidth: ~5 GB; expect ~2-15 min depending on uplink

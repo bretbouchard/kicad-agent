@@ -1,6 +1,6 @@
 # API Reference
 
-kicad-agent exposes a Python API organized into subpackages by responsibility. Each module has a specific role in the pipeline:
+volta exposes a Python API organized into subpackages by responsibility. Each module has a specific role in the pipeline:
 
 ```
 Parser -> IR -> Ops -> Serializer
@@ -32,20 +32,20 @@ Parser -> IR -> Ops -> Serializer
 The top-level package exposes:
 
 ```python
-import kicad_agent
+import volta
 
-kicad_agent.__version__  # Package version string
+volta.__version__  # Package version string
 ```
 
 The two main entry points for programmatic usage are:
 
-- **`kicad_agent.handler`** -- Validate and execute operations
-- **`kicad_agent.cli`** -- Command-line interface
+- **`volta.handler`** -- Validate and execute operations
+- **`volta.cli`** -- Command-line interface
 
 ## Usage Pattern
 
 ```python
-from kicad_agent.handler import validate_operation, handle_operation, format_result
+from volta.handler import validate_operation, handle_operation, format_result
 
 # Validate an operation
 valid, errors = validate_operation(json_str)

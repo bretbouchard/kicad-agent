@@ -8,13 +8,13 @@
 ## Scope
 
 Files reviewed:
-- `src/kicad_agent/manufacturing/build.py` (new)
-- `src/kicad_agent/ops/handlers/build.py` (new)
-- `src/kicad_agent/validation/gates/manufacturing_manifest.py` (modified)
-- `src/kicad_agent/ops/_schema_pcb.py` (modified — 3 Op classes)
-- `src/kicad_agent/ops/handlers/__init__.py` (modified)
-- `src/kicad_agent/ops/registry.py` (modified)
-- `src/kicad_agent/ops/schema.py` (modified)
+- `src/volta/manufacturing/build.py` (new)
+- `src/volta/ops/handlers/build.py` (new)
+- `src/volta/validation/gates/manufacturing_manifest.py` (modified)
+- `src/volta/ops/_schema_pcb.py` (modified — 3 Op classes)
+- `src/volta/ops/handlers/__init__.py` (modified)
+- `src/volta/ops/registry.py` (modified)
+- `src/volta/ops/schema.py` (modified)
 - `tests/test_build_system.py` (new)
 - `tests/test_registry.py` (modified)
 - `.gitignore` (modified)
@@ -42,7 +42,7 @@ Files reviewed:
 
 - **#1 Path traversal via project_dir:** Mitigated. The handler checks `".." in Path(op.project_dir).parts` and rejects with a clear error. Source-file discovery additionally uses `candidate.resolve().is_relative_to(resolved_project)` as defense-in-depth, so even a symlinked source file cannot escape the project root. Board rev is sanitized via `re.sub(r"[^A-Za-z0-9._-]", "_", board_rev)[:64]` before interpolation into the directory name. The `test_build_create_rejects_path_traversal` test covers the `..` case.
 
-  - **CR-MED-1 (absolute path not rejected):** The traversal check rejects `..` but NOT absolute paths. `Path("/etc/passwd").parts == ('/', 'etc', 'passwd')` contains no `..`, so `project_dir="/etc"` would pass the check and cause `build_create` to write `builds/` under `/etc`. On macOS/Linux this would fail at `mkdir` for non-root users (permission denied), but a user running as root, or a project_dir under a writable absolute path, could create build artifacts outside the intended tree. Recommend adding `if op.project_dir and Path(op.project_dir).is_absolute():` rejection, matching the `TargetFile` pattern (`_validate_target_file` rejects `v.startswith("/")`). Low exploitability in the kicad-agent single-user model, but it is a gap relative to the threat model's intent.
+  - **CR-MED-1 (absolute path not rejected):** The traversal check rejects `..` but NOT absolute paths. `Path("/etc/passwd").parts == ('/', 'etc', 'passwd')` contains no `..`, so `project_dir="/etc"` would pass the check and cause `build_create` to write `builds/` under `/etc`. On macOS/Linux this would fail at `mkdir` for non-root users (permission denied), but a user running as root, or a project_dir under a writable absolute path, could create build artifacts outside the intended tree. Recommend adding `if op.project_dir and Path(op.project_dir).is_absolute():` rejection, matching the `TargetFile` pattern (`_validate_target_file` rejects `v.startswith("/")`). Low exploitability in the volta single-user model, but it is a gap relative to the threat model's intent.
 
 - **#2 Subprocess injection via project_dir:** Correctly mitigated. `subprocess.run(["git", "rev-parse", "HEAD"], cwd=...)` uses an argument list (no `shell=True`), so command injection is impossible. Wrapped in `try/except (subprocess.SubprocessError, FileNotFoundError, OSError)` returning `"unknown"`. `_get_git_sha` never raises. The `test_git_sha_unknown_when_not_a_repo` and `test_git_sha_from_repo` tests cover both paths.
 
@@ -104,4 +104,4 @@ One test gap: no test asserts that `build_create` on a board that fails a real v
 
 ## Verdict
 
-**APPROVE.** The implementation is clean, well-tested (35 passing tests), security threat models are addressed (with one medium finding on absolute-path rejection worth a follow-up), manifest round-trip is lossless, and the handler correctly uses the re-parse path for board_rev. The findings are all minor/non-blocking. CR-MED-1 is recommended for a follow-up fix but does not block Phase 207 because the single-user kicad-agent threat model limits exploitability.
+**APPROVE.** The implementation is clean, well-tested (35 passing tests), security threat models are addressed (with one medium finding on absolute-path rejection worth a follow-up), manifest round-trip is lossless, and the handler correctly uses the re-parse path for board_rev. The findings are all minor/non-blocking. CR-MED-1 is recommended for a follow-up fix but does not block Phase 207 because the single-user volta threat model limits exploitability.

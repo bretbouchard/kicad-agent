@@ -16,7 +16,7 @@
 
 ### Current implementation
 
-File: `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/validation/erc_drc.py`
+File: `/Users/bretbouchard/apps/volta/src/volta/validation/erc_drc.py`
 
 `run_drc()` at **line 322**:
 ```python
@@ -63,7 +63,7 @@ There is **no** `--custom-rules`, `--rules`, `--rule-file`, `--dru`, or `--prese
 
 ### Empirical proof (4 tests, all negative)
 
-Tested on the installed `kicad-cli 10.0.3` using `/Users/bretbouchard/apps/kicad-agent/tests/fixtures/smd_test_board.kicad_pcb` and `Arduino_Mega.kicad_pcb`:
+Tested on the installed `kicad-cli 10.0.3` using `/Users/bretbouchard/apps/volta/tests/fixtures/smd_test_board.kicad_pcb` and `Arduino_Mega.kicad_pcb`:
 
 1. **Sidecar DRU file (same-name convention).** Placed `smd_test_board.kicad_dru` alongside `smd_test_board.kicad_pcb` with a `(constraint track_width (min 5.0mm))` rule that would produce hundreds of violations if applied. Result: 0 track-width violations. The DRC produced identical output to a baseline run with no DRU file (8 violations, all `lib_footprint_issues` warnings).
 
@@ -105,7 +105,7 @@ This sidesteps `kicad-cli` entirely for vendor-specific checks, uses infrastruct
 
 ### Handler registry
 
-File: `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/ops/handlers/query.py`
+File: `/Users/bretbouchard/apps/volta/src/volta/ops/handlers/query.py`
 
 The `_QUERY_HANDLERS` dict at **line 14** maps `op_type` strings to callables. The `register_query` decorator at **line 17** registers handlers:
 
@@ -123,7 +123,7 @@ Handler signature: `(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]`. Tw
 
 ### Dispatch requires a valid PCB file
 
-File: `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/ops/execution.py`
+File: `/Users/bretbouchard/apps/volta/src/volta/ops/execution.py`
 
 `execute_query` at **line 193** always calls `parse_pcb(file_path)` and builds a `PcbIR` before dispatching via `_QUERY_HANDLERS` lookup in `dispatch_query` at **line 233**. There is no early-skip path for ops that don't need the IR. The CONTEXT.md acknowledges this at line 128-131 and accepts that `list_vendor_drc_profiles` must receive a `target_file` even though it ignores the IR.
 
@@ -134,7 +134,7 @@ File: `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/ops/execution.py`
 
 ### Schema union and registry parity
 
-File: `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/ops/schema.py`
+File: `/Users/bretbouchard/apps/volta/src/volta/ops/schema.py`
 
 The `Operation` discriminated union at **line 397** currently ends with Phase 205 ops. Adding `DrcVendorOp` and `ListVendorDrcProfilesOp` requires:
 1. Defining the two Op classes in `_schema_pcb.py`.
@@ -143,7 +143,7 @@ The `Operation` discriminated union at **line 397** currently ends with Phase 20
 
 The `TargetFile` validator at **line 143** already allows `.kicad_dru` as a valid extension, which is relevant if any op ever targets a DRU file directly (not needed for the current design, but good to know).
 
-File: `/Users/bretbouchard/apps/kicad-agent/tests/test_registry.py`
+File: `/Users/bretbouchard/apps/volta/tests/test_registry.py`
 
 The count assertion at **line 27** is currently:
 ```python
@@ -169,7 +169,7 @@ All values verified July 2026. Sources cited inline.
 | Blind/buried vias | Yes | |
 | Castellated holes | Yes | |
 
-**DRC-07 correction:** The existing `_PCBWAY_STANDARD` profile at `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/dfm/profiles.py` **line 146** currently has `min_annular_ring_mm=0.1`. This should be updated to `0.15` to match PCBWay's published 0.15mm (6mil) spec. (Note: `0.1` is more permissive than PCBWay's actual limit — it would pass designs that PCBWay would reject.)
+**DRC-07 correction:** The existing `_PCBWAY_STANDARD` profile at `/Users/bretbouchard/apps/volta/src/volta/dfm/profiles.py` **line 146** currently has `min_annular_ring_mm=0.1`. This should be updated to `0.15` to match PCBWay's published 0.15mm (6mil) spec. (Note: `0.1` is more permissive than PCBWay's actual limit — it would pass designs that PCBWay would reject.)
 
 ### JLCPCB (https://jlcpcb.com/capabilities/pcb-capabilities)
 
@@ -380,7 +380,7 @@ Per CONTEXT.md lines 48-55, every file starts with:
 
 ### File list and locations
 
-Directory: `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/manufacturing/drc_profiles/`
+Directory: `/Users/bretbouchard/apps/volta/src/volta/manufacturing/drc_profiles/`
 
 9 files (per CONTEXT.md line 62):
 - `pcbway.kicad_dru` — pull from Cimos (MIT), verify annular=0.15mm
@@ -401,7 +401,7 @@ Plus `__init__.py` exporting `get_drc_profile_path`, `list_drc_profiles`, `Vendo
 
 ### Current state
 
-`DrcResult` at `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/validation/erc_drc.py` **line 91** is a frozen dataclass with tuple fields:
+`DrcResult` at `/Users/bretbouchard/apps/volta/src/volta/validation/erc_drc.py` **line 91** is a frozen dataclass with tuple fields:
 
 ```python
 @dataclass(frozen=True)
@@ -457,7 +457,7 @@ Alternatively, the handler can do the conversion inline. Either way, the `Path` 
 
 ### Current package-data configuration
 
-File: `/Users/bretbouchard/apps/kicad-agent/pyproject.toml`
+File: `/Users/bretbouchard/apps/volta/pyproject.toml`
 
 The project uses:
 ```toml
@@ -465,11 +465,11 @@ The project uses:
 where = ["src"]
 ```
 
-There is **no** `[tool.setuptools.package-data]` section, **no** `include-package-data` setting, and **no** `MANIFEST.in` file. This means non-Python files inside `src/kicad_agent/` are **not automatically included** in the built distribution unless explicitly configured.
+There is **no** `[tool.setuptools.package-data]` section, **no** `include-package-data` setting, and **no** `MANIFEST.in` file. This means non-Python files inside `src/volta/` are **not automatically included** in the built distribution unless explicitly configured.
 
 ### Existing data file patterns in the codebase
 
-1. **`part-mappings.yaml`** at `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/ops/handlers/pcb_bom.py` **line 37**:
+1. **`part-mappings.yaml`** at `/Users/bretbouchard/apps/volta/src/volta/ops/handlers/pcb_bom.py` **line 37**:
    ```python
    _BUNDLED_MAPPINGS_PATH = Path(__file__).parent.parent.parent.parent.parent / "data" / "part-mappings.yaml"
    ```
@@ -498,7 +498,7 @@ def get_drc_profile_path(vendor: str) -> Path:
 
 ```toml
 [tool.setuptools.package-data]
-"kicad_agent.manufacturing.drc_profiles" = ["*.kicad_dru"]
+"volta.manufacturing.drc_profiles" = ["*.kicad_dru"]
 ```
 
 Without this, `pip install` and wheel builds will **not include** the `.kicad_dru` files. They will work in development (editable install / running from source) but fail in production. This is the single most likely integration pitfall for this phase.
@@ -506,7 +506,7 @@ Without this, `pip install` and wheel builds will **not include** the `.kicad_dr
 **Alternative (more robust):** Use `importlib.resources.files()`:
 ```python
 from importlib.resources import files
-import kicad_agent.manufacturing.drc_profiles as drc_pkg
+import volta.manufacturing.drc_profiles as drc_pkg
 
 def get_drc_profile_path(vendor: str) -> Path:
     path = files(drc_pkg) / f"{vendor}.kicad_dru"

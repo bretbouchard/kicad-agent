@@ -14,7 +14,7 @@ coverage than Python daemon's native_erc. Promotion is justified.
 
 ## Next steps
 
-- Audit `macos-app/Sources/KiCadAgent/Validation/` for existing wiring
+- Audit `macos-app/Sources/Volta/Validation/` for existing wiring
 - Update ChatView.swift to display Swift results first
 - Add fallback UI marker for Python daemon
 - Add integration test

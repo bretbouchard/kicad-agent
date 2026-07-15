@@ -7,7 +7,7 @@ Walk through template board generation, iterative refinement, and manufacturing 
 Generate a PCB from a template specification.
 
 ```python
-from kicad_agent.generation import generate_board
+from volta.generation import generate_board
 
 # Generate from a template specification
 spec = {
@@ -30,7 +30,7 @@ result = generate_board(spec, project_dir="/path/to/project")
 Use an LLM to critique and refine a generated design.
 
 ```python
-from kicad_agent.generation import critique_design
+from volta.generation import critique_design
 
 # Critique a design and get improvement suggestions
 findings = critique_design(
@@ -55,7 +55,7 @@ The design critic evaluates:
 The generation pipeline supports iterative refinement where the LLM critiques the design, fixes are applied, and the cycle repeats until convergence.
 
 ```python
-from kicad_agent.generation import refine_design
+from volta.generation import refine_design
 
 result = refine_design(
     design_path="/path/to/board.kicad_pcb",
@@ -73,7 +73,7 @@ print(f"Final quality score: {result.quality_score}")
 Export manufacturing artifacts from a completed design.
 
 ```python
-from kicad_agent.export import export_gerbers, export_bom
+from volta.export import export_gerbers, export_bom
 
 # Generate Gerber files
 gerber_result = export_gerbers(

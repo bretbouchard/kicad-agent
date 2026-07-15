@@ -10,7 +10,7 @@ We also need more data. Current 1,509 repos yielded 1,407 samples. Targeting 10K
 
 ## Part 1: Hard Negatives
 
-**File:** `src/kicad_agent/training/board_chains.py`
+**File:** `src/volta/training/board_chains.py`
 
 ### 5 new corruption functions (after line 381)
 
@@ -39,7 +39,7 @@ We also need more data. Current 1,509 repos yielded 1,407 samples. Targeting 10K
 
 ## Part 2: 10K Crawl
 
-**File:** `src/kicad_agent/crawler/github_discovery.py`
+**File:** `src/volta/crawler/github_discovery.py`
 
 ### Expand curated orgs (line 57)
 

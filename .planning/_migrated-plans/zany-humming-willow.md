@@ -10,7 +10,7 @@ Bug #66 reports that `resolve_pin_positions` returns the pin **tip** (body + pin
 
 ### Files to modify
 
-#### 1. `src/kicad_agent/schematic_routing/pin_resolver.py` (lines 303-305)
+#### 1. `src/volta/schematic_routing/pin_resolver.py` (lines 303-305)
 **Swap `"position"` and add `"tip_position"`.**
 ```python
 # Before:
@@ -29,7 +29,7 @@ pin_data[pin_number] = {
 ```
 Note: Keep `body_position` as-is for backward compat — it's already correct.
 
-#### 2. `src/kicad_agent/schematic_routing/net_connector.py` (line 128)
+#### 2. `src/volta/schematic_routing/net_connector.py` (line 128)
 **Change tip reference from `"position"` to `"tip_position"`.**
 ```python
 # Before:
@@ -39,7 +39,7 @@ wx, wy = pin_info["tip_position"]
 ```
 This module uses both body and tip to compute label offset direction vectors — it needs the tip, just via the correct key name.
 
-#### 3. `src/kicad_agent/ops/handlers/schematic_query.py` (line 156)
+#### 3. `src/volta/ops/handlers/schematic_query.py` (line 156)
 No change needed — handler returns `result.get("pins", {})` which will now contain the corrected `"position"`.
 
 ### Test files to update
@@ -60,9 +60,9 @@ Collision detector uses `"position"` for pin overlap detection. Now that `"posit
 Update mock data: swap `"position"` values from tip to body, add `"tip_position"` with the old tip values. Also update label position assertions (lines 394, 410, 424) which compute from tip — these should stay the same since `net_connector.py` will use `"tip_position"`.
 
 ### Files NOT modified
-- `src/kicad_agent/ir/schematic_ir.py:get_pin_positions()` — already returns body coords via kiutils `pin_def.position.X/Y`. Correct.
-- `src/kicad_agent/ops/violation_classifier.py` — uses `pin.get("position")` on data from `SchematicIR.get_pin_positions()` which already returns body. Unaffected.
-- `src/kicad_agent/schematic_routing/collision_detector.py` — uses `pin_info["position"]` from PinResolver. After fix, `"position"` will be body, which is correct for overlap detection.
+- `src/volta/ir/schematic_ir.py:get_pin_positions()` — already returns body coords via kiutils `pin_def.position.X/Y`. Correct.
+- `src/volta/ops/violation_classifier.py` — uses `pin.get("position")` on data from `SchematicIR.get_pin_positions()` which already returns body. Unaffected.
+- `src/volta/schematic_routing/collision_detector.py` — uses `pin_info["position"]` from PinResolver. After fix, `"position"` will be body, which is correct for overlap detection.
 
 ## Verification
 

@@ -15,9 +15,9 @@ provides:
   - "MockProvider — test-only provider for previews/tests"
 affects:
   - "macos-app/Package.swift — added mlx-swift 0.31.6 dependency"
-  - "macos-app/Sources/KiCadAgent/Models/Providers/ — new directory, 8 files"
-  - "macos-app/Sources/KiCadAgent/Views/ProviderBanner.swift — new file"
-  - "macos-app/Tests/KiCadAgentTests/ — 5 new test files"
+  - "macos-app/Sources/Volta/Models/Providers/ — new directory, 8 files"
+  - "macos-app/Sources/Volta/Views/ProviderBanner.swift — new file"
+  - "macos-app/Tests/VoltaTests/ — 5 new test files"
 tech-stack:
   added:
     - "MLX-Swift 0.31.6 (MLX + MLXNN)"
@@ -30,26 +30,26 @@ tech-stack:
     - "Metal.recommendedMaxWorkingSetSize for VRAM gating"
 key-files:
   created:
-    - "macos-app/Sources/KiCadAgent/Models/Providers/KiCadModelProvider.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/KCPrompt.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/KCMessage.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/KCAttachment.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/KCToken.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/KCUsage.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/KCDoneReason.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/KCProviderKind.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/KCProviderAvailability.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/AppleLocalProvider.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/MLXLocalProvider.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/HFHubModelCatalog.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/ProviderRegistry.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Providers/MockProvider.swift"
-    - "macos-app/Sources/KiCadAgent/Views/ProviderBanner.swift"
-    - "macos-app/Tests/KiCadAgentTests/KiCadModelProviderProtocolTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/AppleLocalProviderTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/MLXLocalProviderTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/HFHubModelCatalogTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/ProviderBannerTests.swift"
+    - "macos-app/Sources/Volta/Models/Providers/KiCadModelProvider.swift"
+    - "macos-app/Sources/Volta/Models/Providers/KCPrompt.swift"
+    - "macos-app/Sources/Volta/Models/Providers/KCMessage.swift"
+    - "macos-app/Sources/Volta/Models/Providers/KCAttachment.swift"
+    - "macos-app/Sources/Volta/Models/Providers/KCToken.swift"
+    - "macos-app/Sources/Volta/Models/Providers/KCUsage.swift"
+    - "macos-app/Sources/Volta/Models/Providers/KCDoneReason.swift"
+    - "macos-app/Sources/Volta/Models/Providers/KCProviderKind.swift"
+    - "macos-app/Sources/Volta/Models/Providers/KCProviderAvailability.swift"
+    - "macos-app/Sources/Volta/Models/Providers/AppleLocalProvider.swift"
+    - "macos-app/Sources/Volta/Models/Providers/MLXLocalProvider.swift"
+    - "macos-app/Sources/Volta/Models/Providers/HFHubModelCatalog.swift"
+    - "macos-app/Sources/Volta/Models/Providers/ProviderRegistry.swift"
+    - "macos-app/Sources/Volta/Models/Providers/MockProvider.swift"
+    - "macos-app/Sources/Volta/Views/ProviderBanner.swift"
+    - "macos-app/Tests/VoltaTests/KiCadModelProviderProtocolTests.swift"
+    - "macos-app/Tests/VoltaTests/AppleLocalProviderTests.swift"
+    - "macos-app/Tests/VoltaTests/MLXLocalProviderTests.swift"
+    - "macos-app/Tests/VoltaTests/HFHubModelCatalogTests.swift"
+    - "macos-app/Tests/VoltaTests/ProviderBannerTests.swift"
   modified:
     - "macos-app/Package.swift"
 decisions:
@@ -73,7 +73,7 @@ One unified Swift protocol — `KiCadModelProvider` — abstracts every AI provi
 
 ## What Shipped
 
-### Protocol + value types (`macos-app/Sources/KiCadAgent/Models/Providers/`)
+### Protocol + value types (`macos-app/Sources/Volta/Models/Providers/`)
 
 - `KiCadModelProvider` — the protocol. `stream()` returns `AsyncThrowingStream<KCToken, Error>`. `generateJSON<T>()` decodes structured output. `availability`, `displayName`, `kind` drive Router (Phase 165) and Settings UI.
 - `KCPrompt` — message envelope with systemPrompt, temperature, maxTokens, attachments, preferredModel.
@@ -166,21 +166,21 @@ Each variant's `errorDescription` tells the user what's wrong and what to do (re
 - **Found during:** Task 3 implementation
 - **Issue:** Plan's example showed `MLXLM` product import, but `mlx-swift` package only contains `MLX`, `MLXNN`, `MLXRandom`, `MLXOptimizers`, `MLXFFT`, `MLXLinalg`, `MLXFast`. `MLXLM` (the LLM module set) lives in the separate `mlx-swift-extras` repo.
 - **Fix:** Added `MLX` + `MLXNN` only. Scoped the generation loop to Phase 165 (which adds mlx-swift-extras when wiring the Provider Router). MLXLocalProvider today does real validation, real VRAM check, real safetensors load — the autoregressive forward pass is a separately-versioned dependency.
-- **Files modified:** `macos-app/Package.swift`, `macos-app/Sources/KiCadAgent/Models/Providers/MLXLocalProvider.swift`
+- **Files modified:** `macos-app/Package.swift`, `macos-app/Sources/Volta/Models/Providers/MLXLocalProvider.swift`
 - **Commit:** 37602367
 
 **2. [Rule 3 — Blocking issue] Swift 6 Mutex non-Copyable**
 - **Found during:** Task 3 implementation
 - **Issue:** `Mutex<T>` in Swift 6.3 is non-Copyable and cannot be a stored property of a Copyable struct. Original design used `Mutex<MLXModelMetadata?>` for the lazy cache.
 - **Fix:** Replaced with a small private `actor MetadataCache`. Same semantics, Swift 6 idiomatic, no behavioral change.
-- **Files modified:** `macos-app/Sources/KiCadAgent/Models/Providers/MLXLocalProvider.swift`
+- **Files modified:** `macos-app/Sources/Volta/Models/Providers/MLXLocalProvider.swift`
 - **Commit:** 37602367
 
 **3. [Rule 3 — Blocking issue] NSLock from async context**
 - **Found during:** MockProvider implementation
 - **Issue:** `NSLock.lock()` is unavailable from async contexts in Swift 6. Original MockProvider used NSLock for stream call counter.
 - **Fix:** Replaced with a small private `actor Counter`. MockProvider is `@unchecked Sendable` and the counter is the only mutable state.
-- **Files modified:** `macos-app/Sources/KiCadAgent/Models/Providers/MockProvider.swift`
+- **Files modified:** `macos-app/Sources/Volta/Models/Providers/MockProvider.swift`
 - **Commit:** 37602367
 
 None of these are architectural (Rule 4) — all are idiomatic Swift 6 adjustments. No user-facing deviation from the plan.
@@ -198,13 +198,13 @@ None. Every file ships real, compiling, working code:
 ## Recommendations for Phase 165 (Provider Router)
 
 1. **Add `mlx-swift-extras` package** to Package.swift. Replace `MLXProviderError.llmLoopRequiresPhase165Router` with real autoregressive generation loop using `LLMModelFactory`.
-2. **Wire `ProviderRegistry` into app environment** via `@State` in `KiCadAgentApp` and `@Environment` in `AppRootView`. Add the registry alongside `daemonSupervisor` and `kicadDetector`.
+2. **Wire `ProviderRegistry` into app environment** via `@State` in `VoltaApp` and `@Environment` in `AppRootView`. Add the registry alongside `daemonSupervisor` and `kicadDetector`.
 3. **Surface `ProviderBanner` in `LiquidGlassShell`** above the content area. Use `ProviderRegistry.availableProviders()` to compute `BannerState`.
 4. **Implement `Router`** that selects provider per request based on:
    - Privacy mode (MOD-02: local-only mode forces `.appleLocal` or `.mlxLocal`)
    - Vision required (forces cloud vision model or Gemma 4 V2 MLX)
    - User preference per task type (MOD-10)
-5. **Add `MLXModelDownloader`** with HTTP Range resume support (T-164-04 mitigation completes here). Cache in `~/Library/Application Support/KiCadAgent/models/<id>/`.
+5. **Add `MLXModelDownloader`** with HTTP Range resume support (T-164-04 mitigation completes here). Cache in `~/Library/Application Support/Volta/models/<id>/`.
 6. **Token usage surfacing** — wire `KCToken.usage` events to a per-message token + cost display in the chat UI (MOD-12).
 
 ## Self-Check
@@ -212,9 +212,9 @@ None. Every file ships real, compiling, working code:
 Files verified to exist (all 20 created + 1 modified):
 
 - `macos-app/Package.swift` — MLX+MLXNN deps present
-- `macos-app/Sources/KiCadAgent/Models/Providers/*.swift` — 9 type files + 5 provider files
-- `macos-app/Sources/KiCadAgent/Views/ProviderBanner.swift` — present
-- `macos-app/Tests/KiCadAgentTests/*Tests.swift` — 5 new test files
+- `macos-app/Sources/Volta/Models/Providers/*.swift` — 9 type files + 5 provider files
+- `macos-app/Sources/Volta/Views/ProviderBanner.swift` — present
+- `macos-app/Tests/VoltaTests/*Tests.swift` — 5 new test files
 
 Commits verified via `git log --oneline`:
 - `43fdfdd0` — Task 1 (protocol + types)

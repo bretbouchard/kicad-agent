@@ -15,8 +15,8 @@
 
 ## Search order
 
-1. `/Volumes/Storage/models/kicad-agent/adapters/kicad-vision-v2` (Storage mount, legacy name)
-2. `/Volumes/Storage/models/kicad-agent/adapters/volta-pcb-adapter-v2` (Storage mount, canonical)
+1. `/Volumes/Storage/models/volta/adapters/kicad-vision-v2` (Storage mount, legacy name)
+2. `/Volumes/Storage/models/volta/adapters/volta-pcb-adapter-v2` (Storage mount, canonical)
 3. `~/Library/Application Support/VoltaPCB/models/volta-pcb-adapter-v2/` (app cache)
 4. `~/.cache/huggingface/hub/bretbouchard--volta-pcb-adapter-v2/` (HF cache)
 5. Optional HuggingFace download (with `--download`)
@@ -27,7 +27,7 @@
 [1/3] Verifying environment...
   python: OK (3.11.11)
   kicad-cli: OK (/usr/local/bin/kicad-cli)
-  adapter-symlink: OK -> /Volumes/Storage/models/kicad-agent/adapters/kicad-vision-v2
+  adapter-symlink: OK -> /Volumes/Storage/models/volta/adapters/kicad-vision-v2
 ```
 
 ## Use cases covered

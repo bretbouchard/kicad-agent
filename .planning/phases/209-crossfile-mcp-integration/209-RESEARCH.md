@@ -6,7 +6,7 @@
 
 ## R1. MCP Auto-Generation — CONFIRMED FREE
 
-`_generate_operation_tools()` at `src/kicad_agent/mcp/edit_server.py:133`:
+`_generate_operation_tools()` at `src/volta/mcp/edit_server.py:133`:
 
 ```python
 def _generate_operation_tools() -> list[types.Tool]:
@@ -49,7 +49,7 @@ Total variants: 163
 
 ## R2. CLI Subcommand Pattern
 
-`_SUBCOMMANDS` set at `src/kicad_agent/cli.py:38`:
+`_SUBCOMMANDS` set at `src/volta/cli.py:38`:
 
 ```python
 _SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze",
@@ -58,7 +58,7 @@ _SUBCOMMANDS = {"collect", "erc", "drc", "export", "context", "route", "analyze"
                 "workflow", "critique", "check-conventions"}
 ```
 
-`main()` routing at `src/kicad_agent/cli.py:1204`:
+`main()` routing at `src/volta/cli.py:1204`:
 
 ```python
 def main(argv: list[str] | None = None) -> None:
@@ -79,13 +79,13 @@ def main(argv: list[str] | None = None) -> None:
 
 1. **kicad-cli passthrough** (`_handle_drc`, `_handle_export` at `cli.py:290, 312`): build a `kicad-cli` argv list, call `_run_kicad_cli(cmd)`. Used for ops that delegate to the KiCad binary.
 
-2. **Operation dispatch** (`_handle_route` at `cli.py:443`, `_handle_review_schematic` at `cli.py:755`): build an op dict, call `handle_operation(op_json, project_dir=...)`, print `format_result(result)`. **This is the pattern the 4 new subcommands must use** — they wrap native kicad-agent operations, not the KiCad binary.
+2. **Operation dispatch** (`_handle_route` at `cli.py:443`, `_handle_review_schematic` at `cli.py:755`): build an op dict, call `handle_operation(op_json, project_dir=...)`, print `format_result(result)`. **This is the pattern the 4 new subcommands must use** — they wrap native volta operations, not the KiCad binary.
 
 Operation-dispatch skeleton (from `_handle_route`):
 
 ```python
 op_json = json.dumps({"op_type": "auto_route", "target_file": target_file, ...})
-from kicad_agent.handler import handle_operation, format_result
+from volta.handler import handle_operation, format_result
 result = handle_operation(op_json)
 if result.success:
     print(...)            # human-readable success summary
@@ -95,7 +95,7 @@ else:
 sys.exit(0)
 ```
 
-**`handle_operation` signature** (`src/kicad_agent/handler.py:112`):
+**`handle_operation` signature** (`src/volta/handler.py:112`):
 
 ```python
 def handle_operation(
@@ -112,8 +112,8 @@ Accepts a JSON string (or dict — `validate_operation` handles both). Returns `
 
 ```python
 def _handle_dfm(argv: list[str]) -> None:
-    from kicad_agent.dfm.cli import register_dfm_parser, dfm_command
-    parser = argparse.ArgumentParser(prog="kicad-agent dfm", description="...")
+    from volta.dfm.cli import register_dfm_parser, dfm_command
+    parser = argparse.ArgumentParser(prog="volta dfm", description="...")
     subparsers = parser.add_subparsers()
     register_dfm_parser(subparsers)
     args = parser.parse_args(argv)
@@ -124,7 +124,7 @@ def _handle_dfm(argv: list[str]) -> None:
 
 ## R3. ProjectContext Fields + discover_project()
 
-`ProjectContext` at `src/kicad_agent/crossfile/project_context.py:27` — **frozen dataclass**:
+`ProjectContext` at `src/volta/crossfile/project_context.py:27` — **frozen dataclass**:
 
 ```python
 @dataclass(frozen=True)
@@ -151,7 +151,7 @@ class ProjectContext:
 
 ## R4. ManufacturerClient ABC Pattern
 
-The codebase's standard ABC pattern is `DfmCheck(ABC)` at `src/kicad_agent/dfm/checker.py:99`:
+The codebase's standard ABC pattern is `DfmCheck(ABC)` at `src/volta/dfm/checker.py:99`:
 
 ```python
 class DfmCheck(ABC):
@@ -187,13 +187,13 @@ validate_registry_completeness():
 ## R6. File Existence Check
 
 Target files that must be CREATED (do not exist yet):
-- `src/kicad_agent/manufacturing/manufacturer_client.py` — confirmed missing
+- `src/volta/manufacturing/manufacturer_client.py` — confirmed missing
 - `tests/test_manufacturer_client.py` — confirmed missing
 - `tests/test_cli_integration.py` — confirmed missing
 
 Target files that must be MODIFIED (exist):
-- `src/kicad_agent/cli.py` — exists; add 4 entries to `_SUBCOMMANDS` + 4 elif branches in `main()` + 4 `_handle_*` functions
-- `src/kicad_agent/crossfile/project_context.py` — exists; add 2 fields + 2 discovery lines
+- `src/volta/cli.py` — exists; add 4 entries to `_SUBCOMMANDS` + 4 elif branches in `main()` + 4 `_handle_*` functions
+- `src/volta/crossfile/project_context.py` — exists; add 2 fields + 2 discovery lines
 - `tests/test_registry.py` — exists; **count already 160, no change required** (verify only)
 
 **No `tests/test_project_context.py` exists.** ProjectContext tests live in `tests/test_crossfile_submodules.py` (class `TestProjectContextModule`) and `tests/test_crossfile_coverage.py`. The plan must extend one of these (prefer `test_crossfile_submodules.py` which already has the `discover_project` real-project test) rather than create a new test file.

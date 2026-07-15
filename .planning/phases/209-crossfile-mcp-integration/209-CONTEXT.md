@@ -36,21 +36,21 @@ Phase 209 is the final active phase of v7.0 — it wires all new operations into
 Add 4 new subcommands to `cli.py`:
 
 1. **`build`** — wraps build_create, build_list, build_show
-   - `kicad-agent build create <pcb>` → build_create op
-   - `kicad-agent build list <pcb>` → build_list op
-   - `kicad-agent build show <pcb> --id <build_id>` → build_show op
+   - `volta build create <pcb>` → build_create op
+   - `volta build list <pcb>` → build_list op
+   - `volta build show <pcb> --id <build_id>` → build_show op
 
 2. **`handoff`** — wraps build_handoff_export
-   - `kicad-agent handoff <pcb> [--vendor <name>] [--no-step]` → build_handoff_export op
+   - `volta handoff <pcb> [--vendor <name>] [--no-step]` → build_handoff_export op
 
 3. **`drc-vendor`** — wraps drc_vendor
-   - `kicad-agent drc-vendor <pcb> --vendor <name>` → drc_vendor op
-   - `kicad-agent drc-vendor <pcb> --list` → list_vendor_drc_profiles op
+   - `volta drc-vendor <pcb> --vendor <name>` → drc_vendor op
+   - `volta drc-vendor <pcb> --list` → list_vendor_drc_profiles op
 
 4. **`board-metadata`** — wraps read_board_metadata, set_board_metadata, set_board_revision
-   - `kicad-agent board-metadata read <pcb>` → read_board_metadata op
-   - `kicad-agent board-metadata set-rev <pcb> <rev>` → set_board_revision op
-   - `kicad-agent board-metadata set <pcb> [--title <t>] [--company <c>] [--date <d>]` → set_board_metadata op
+   - `volta board-metadata read <pcb>` → read_board_metadata op
+   - `volta board-metadata set-rev <pcb> <rev>` → set_board_revision op
+   - `volta board-metadata set <pcb> [--title <t>] [--company <c>] [--date <d>]` → set_board_metadata op
 
 - **Pattern:** Follow existing `_handle_dfm` / `_handle_drc` pattern — parse argv, construct op dict, call `OperationExecutor`, print JSON result
 - **Add to `_SUBCOMMANDS` set** and create `_handle_build`, `_handle_handoff`, `_handle_drc_vendor`, `_handle_board_metadata` functions
@@ -71,7 +71,7 @@ Add 4 new subcommands to `cli.py`:
 
 ### ManufacturerClient ABC (INTEG-05, Pitfall 8)
 
-- **New file:** `src/kicad_agent/manufacturing/manufacturer_client.py`
+- **New file:** `src/volta/manufacturing/manufacturer_client.py`
 - **ABC definition:**
   ```python
   from abc import ABC, abstractmethod
@@ -160,25 +160,25 @@ Add 4 new subcommands to `cli.py`:
 ## Canonical References
 
 ### MCP Tool Generation
-- `src/kicad_agent/mcp/edit_server.py` — `_generate_operation_tools()` (line 133), reads from `Operation` union via `get_args(ann)`, auto-generates one MCP tool per variant
+- `src/volta/mcp/edit_server.py` — `_generate_operation_tools()` (line 133), reads from `Operation` union via `get_args(ann)`, auto-generates one MCP tool per variant
 
 ### CLI Structure
-- `src/kicad_agent/cli.py` — `_SUBCOMMANDS` set (line 38), `_handle_dfm` (line 688) as the closest analog for a subcommand that delegates to operations, `_handle_drc` (line 290) for a simpler pattern, `main(argv)` routing (line ~1204)
+- `src/volta/cli.py` — `_SUBCOMMANDS` set (line 38), `_handle_dfm` (line 688) as the closest analog for a subcommand that delegates to operations, `_handle_drc` (line 290) for a simpler pattern, `main(argv)` routing (line ~1204)
 
 ### ProjectContext
-- `src/kicad_agent/crossfile/project_context.py` — `ProjectContext` class (line 27), `discover_project()` (line 85), `detect_project_root()` (line 52)
+- `src/volta/crossfile/project_context.py` — `ProjectContext` class (line 27), `discover_project()` (line 85), `detect_project_root()` (line 52)
 
 ### ABC Pattern
-- `src/kicad_agent/dfm/checker.py` — `DfmCheck(ABC)` (line 99) with `@abstractmethod` (line 113) — the codebase's standard ABC pattern
-- `src/kicad_agent/analysis/design_rules.py` — `DesignRule(ABC)` (line 102)
-- `src/kicad_agent/conventions/base.py` — another ABC example
+- `src/volta/dfm/checker.py` — `DfmCheck(ABC)` (line 99) with `@abstractmethod` (line 113) — the codebase's standard ABC pattern
+- `src/volta/analysis/design_rules.py` — `DesignRule(ABC)` (line 102)
+- `src/volta/conventions/base.py` — another ABC example
 
 ### Handler Registry
-- `src/kicad_agent/ops/handlers/__init__.py` — handler merge pattern (lines 28-35), `_BUILD_HANDLERS` already merged (line 35)
+- `src/volta/ops/handlers/__init__.py` — handler merge pattern (lines 28-35), `_BUILD_HANDLERS` already merged (line 35)
 
 ### Registry Validation
 - `tests/test_registry.py` — count assertion (line ~26), `validate_registry_completeness()`
-- `src/kicad_agent/ops/registry.py` — `OPERATION_REGISTRY`, `_RAW_CATALOG`
+- `src/volta/ops/registry.py` — `OPERATION_REGISTRY`, `_RAW_CATALOG`
 
 ### Pitfalls
 - `.planning/research/PITFALLS.md` — Pitfall 8 (API adapter scope creep — guarded by DEFERRED status + quote-only scope rule)
@@ -189,7 +189,7 @@ Add 4 new subcommands to `cli.py`:
 ## Specific Ideas
 
 - MCP auto-exposure is the "free" win of this phase — the auto-generation design means all 9 new ops are already MCP tools without writing any MCP code. This is a verification-only task.
-- The CLI subcommands make the v7.0 features accessible to users who don't use MCP — `kicad-agent handoff board.kicad_pcb --vendor jlcpcb` is the one-command manufacturing handoff.
+- The CLI subcommands make the v7.0 features accessible to users who don't use MCP — `volta handoff board.kicad_pcb --vendor jlcpcb` is the one-command manufacturing handoff.
 - ProjectContext extension is small but important — it means build operations can discover the project's build history and BoardSpec without the user specifying paths.
 - ManufacturerClient ABC is the seed for v7.1 — it defines the interface that future API adapters will implement. The quote-only scope guard (Pitfall 8) is baked into the docstring.
 - The `Quote` dataclass is vendor-neutral — it carries price, quantity, lead time, and currency. Any vendor adapter can populate it.

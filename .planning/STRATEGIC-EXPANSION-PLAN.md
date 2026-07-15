@@ -1,4 +1,4 @@
-# kicad-agent Strategic Expansion Plan
+# volta Strategic Expansion Plan
 
 **Date:** 2026-05-31
 **Status:** DRAFT
@@ -104,7 +104,7 @@ Phases 38-40 are already planned and will lift Validation to 10/10.
 
 | Phase | Name | Target Score | Deliverable |
 |-------|------|-------------|-------------|
-| 49 | One-Command Demo | 8/10 | `npx kicad-agent demo` → generates, validates, and renders a schematic |
+| 49 | One-Command Demo | 8/10 | `npx volta demo` → generates, validates, and renders a schematic |
 | 50 | Visual Output Showcase | 9/10 | Auto-generate SVG renders of before/after, annotated ERC reports |
 | 51 | Interactive Playground | 10/10 | Web-based playground for exploring operations without setup |
 
@@ -122,7 +122,7 @@ Phase 51 details:
 - Web UI with operation palette
 - Drag-and-drop KiCad files
 - Real-time operation execution with visual feedback
-- Hosted at kicad-agent.dev (or similar)
+- Hosted at volta.dev (or similar)
 
 #### Tier 3: Near-Complete (Score ≥ 8) — Polish
 
@@ -189,7 +189,7 @@ Based on Pertama Partners data: successful AI projects spend **47% of budget on 
 
 ### Current Architecture Assessment
 
-kicad-agent's architecture is:
+volta's architecture is:
 
 ```
 JSON Intent → Operation Executor → AST Mutation → Format-Specific Writer → Validation
@@ -238,7 +238,7 @@ This means the multi-format expansion requires:
 
 #### Phase 1: Abstract AST (Phase 55)
 
-**Goal:** Extract format-agnostic representation from kicad-agent's internals.
+**Goal:** Extract format-agnostic representation from volta's internals.
 
 ```
 AbstractCircuit:
@@ -264,7 +264,7 @@ AbstractCircuit:
   sheets: list[AbstractSheet]  # for hierarchical designs
 ```
 
-**Effort:** 4-6 weeks. kicad-agent already has much of this internally — it's a refactoring exercise.
+**Effort:** 4-6 weeks. volta already has much of this internally — it's a refactoring exercise.
 
 #### Phase 2: EasyEDA Support (Phase 56)
 
@@ -322,7 +322,7 @@ After multi-format expansion, the same operations work across all formats:
 
 ```python
 # Same API, any format
-kicad-agent '{
+volta '{
   "op": "erc_auto_fix",
   "target_file": "compressor.sch",  # .kicad_sch, .SchDoc, .sch (Eagle), .json (EasyEDA)
   "mode": "root_cause"
@@ -357,9 +357,9 @@ The Pertama Partners data is instructive:
 - **95% of GenAI pilots fail to scale** (MIT Sloan 2025)
 - Successful projects: **47% of budget on foundations**, **clear pre-approval metrics**, **executive sponsorship**
 
-kicad-agent's advantages over typical AI projects:
+volta's advantages over typical AI projects:
 
-| Risk Factor | Typical AI Project | kicad-agent | Assessment |
+| Risk Factor | Typical AI Project | volta | Assessment |
 |-------------|-------------------|-------------|------------|
 | Clear metrics | Often vague | ERC violation count, test pass rate | STRONG |
 | Data readiness | Often poor | 57K+ lines of source, 139 test files | STRONG |
@@ -369,7 +369,7 @@ kicad-agent's advantages over typical AI projects:
 | Executive buy-in | Often missing | We ARE the executive | STRONG |
 | Scalability | Often fails here | Local model (Qwen2.5-0.5B), no cloud deps | STRONG |
 
-**kicad-agent is in the 19.7% that succeeds** because:
+**volta is in the 19.7% that succeeds** because:
 1. Binary success criteria — file is valid or it isn't
 2. Deep domain specificity — not general-purpose AI
 3. Foundation-first investment — 37 phases before expansion
@@ -385,7 +385,7 @@ kicad-agent's advantages over typical AI projects:
 | **Celus** | AI-assisted circuit design | Enterprise relationships | Black box, expensive |
 | **Synopsys DSO.ai** | AI for chip design | Enormous budget | ASIC-only, not PCB |
 | **Cadence Allegro AI** | AI-assisted layout | Industry standard | Enterprise-only, $100K+ |
-| **kicad-agent** | AI engineering review for KiCad | Open, local, measurable | KiCad-only (for now) |
+| **volta** | AI engineering review for KiCad | Open, local, measurable | KiCad-only (for now) |
 
 **Our positioning: "Engineering review system, not AI designer."**
 
@@ -411,7 +411,7 @@ This is critical. The market is skeptical of AI that *designs* circuits. But AI 
 
 ### Pertama Partners Risk Mitigation
 
-Applied to kicad-agent specifically:
+Applied to volta specifically:
 
 | Pertama Risk | Mitigation | Status |
 |--------------|------------|--------|
@@ -423,7 +423,7 @@ Applied to kicad-agent specifically:
 | Insufficient foundation investment | 47% allocation to benchmarks + domain intelligence | Planned |
 | Unrealistic expectations | Binary success: valid file or not | Active |
 
-**Key insight:** kicad-agent avoids the top 3 failure modes by design:
+**Key insight:** volta avoids the top 3 failure modes by design:
 1. **No scaling problem** — runs locally, no cloud infrastructure
 2. **Measurable value** — reduces ERC violations by X% (trackable)
 3. **No executive buy-in needed** — we ARE the buyer and the builder

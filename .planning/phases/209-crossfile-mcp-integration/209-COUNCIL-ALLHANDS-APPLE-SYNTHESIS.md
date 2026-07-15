@@ -28,13 +28,13 @@ The v7.0 Python manufacturing layer is architecturally sound, secure, and comple
 
 ### CRITICAL-1: IntentGate catalog missing all manufacturing ops (Apple Elitist Rick)
 
-The Mac app's `IntentGate.validate` (`macos-app/Sources/KiCadAgent/Governance/IntentGate.swift`) has a hardcoded 23-op catalog. None of the 10 v7.0 manufacturing ops are in it. Any governed call from the Mac app to `build_handoff_export`, `drc_vendor`, etc. will throw `unknownOp` before reaching the daemon.
+The Mac app's `IntentGate.validate` (`macos-app/Sources/Volta/Governance/IntentGate.swift`) has a hardcoded 23-op catalog. None of the 10 v7.0 manufacturing ops are in it. Any governed call from the Mac app to `build_handoff_export`, `drc_vendor`, etc. will throw `unknownOp` before reaching the daemon.
 
 **Fix:** Add the 10 manufacturing ops to the catalog — read-only ops under `GOV-11`, mutating ops under a new `MFG-01` requirement. ~6-line Swift patch. This is Phase 211 work since that's when the Mac app starts calling these ops.
 
 ### CRITICAL-2: App sandbox blocks handoff workflow (Apple Elitist Rick)
 
-`KiCadAgent.entitlements` grants only `files.user-selected.read-write`. But `handoff.py` does `mkdir(project_dir / "builds")` and `board_spec.py` writes a sidecar next to the PCB — both outside the user-selected-file grant. The PyInstaller daemon subprocess has even fewer entitlements.
+`Volta.entitlements` grants only `files.user-selected.read-write`. But `handoff.py` does `mkdir(project_dir / "builds")` and `board_spec.py` writes a sidecar next to the PCB — both outside the user-selected-file grant. The PyInstaller daemon subprocess has even fewer entitlements.
 
 **Fix:** Make the `.kicadagent` bundle (Phase 190's `KicadAgentDocument: FileDocument`) own the `builds/` directory. Opening the bundle grants directory-scoped access. Track for Phase 211 or a dedicated sandbox-hardening phase.
 

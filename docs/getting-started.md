@@ -5,30 +5,30 @@
 ### From PyPI (recommended)
 
 ```bash
-pip install kicad-agent
+pip install volta
 ```
 
 ### With optional dependencies
 
 ```bash
 # Documentation build tools
-pip install "kicad-agent[docs]"
+pip install "volta[docs]"
 
 # Development tools (pytest, mypy, ruff)
-pip install "kicad-agent[dev]"
+pip install "volta[dev]"
 
 # LLM integration (Anthropic API)
-pip install "kicad-agent[llm]"
+pip install "volta[llm]"
 
 # Everything
-pip install "kicad-agent[dev,docs,llm]"
+pip install "volta[dev,docs,llm]"
 ```
 
 ### From source
 
 ```bash
-git clone https://github.com/bretbouchard/kicad-agent.git
-cd kicad-agent
+git clone https://github.com/bretbouchard/volta.git
+cd volta
 pip install .
 ```
 
@@ -39,7 +39,7 @@ pip install .
 
 ## Design Stages
 
-kicad-agent enforces a stage-safe PCB flow. Every board progresses through
+volta enforces a stage-safe PCB flow. Every board progresses through
 five design stages, and gates enforce that each stage is complete before
 advancing to the next.
 
@@ -68,7 +68,7 @@ schematic issues.
 ### Check gate status
 
 ```bash
-kicad-agent gate status -p /path/to/project
+volta gate status -p /path/to/project
 ```
 
 Shows the current design stage, registered gates, last gate results, and
@@ -77,7 +77,7 @@ suggested next actions.
 ### Run a specific gate
 
 ```bash
-kicad-agent gate run pre_pcb_schematic -p /path/to/project
+volta gate run pre_pcb_schematic -p /path/to/project
 ```
 
 ### Gate result format
@@ -116,7 +116,7 @@ be reviewed:
 
 ### Repair Loop
 
-When a gate fails, kicad-agent can attempt automatic fixes through the
+When a gate fails, volta can attempt automatic fixes through the
 repair loop. The repair loop:
 
 1. Classifies each blocker
@@ -137,7 +137,7 @@ See [Gate Repair Workflow](examples/gate-repair-workflow.md) for examples.
 ### 1. Create a schematic
 
 ```bash
-kicad-agent '{
+volta '{
   "op_type": "add_component",
   "target_file": "my_board.kicad_sch",
   "library_id": "Device:R_Small_US",
@@ -150,33 +150,33 @@ kicad-agent '{
 ### 2. Run schematic intent gate
 
 ```bash
-kicad-agent gate run pre_pcb_schematic -p /path/to/project
+volta gate run pre_pcb_schematic -p /path/to/project
 ```
 
 ### 3. Check status before placement
 
 ```bash
-kicad-agent gate status -p /path/to/project
+volta gate status -p /path/to/project
 ```
 
 ### 4. Run DRC after routing
 
 ```bash
-kicad-agent drc my_board.kicad_pcb
+volta drc my_board.kicad_pcb
 ```
 
 ### 5. Run manufacturing readiness gate
 
 ```bash
-kicad-agent gate run manufacturing_readiness -p /path/to/project
+volta gate run manufacturing_readiness -p /path/to/project
 ```
 
 ### 6. Export for manufacturing
 
 ```bash
-kicad-agent export gerber my_board.kicad_pcb -o gerbers/
-kicad-agent export bom my_board.kicad_pcb -o gerbers/
-kicad-agent export position my_board.kicad_pcb -o gerbers/
+volta export gerber my_board.kicad_pcb -o gerbers/
+volta export bom my_board.kicad_pcb -o gerbers/
+volta export position my_board.kicad_pcb -o gerbers/
 ```
 
 ## Dry-Run Validation
@@ -184,12 +184,12 @@ kicad-agent export position my_board.kicad_pcb -o gerbers/
 Before executing any operation, validate it without modifying files:
 
 ```bash
-kicad-agent --dry-run operation.json
+volta --dry-run operation.json
 ```
 
 ## Deterministic Checks vs AI Suggestions
 
-kicad-agent distinguishes between deterministic validation (always produces
+volta distinguishes between deterministic validation (always produces
 the same result) and AI-assisted suggestions (may vary between runs).
 
 See [Deterministic Checks vs AI Suggestions](deterministic-checks-vs-ai-suggestions.md)

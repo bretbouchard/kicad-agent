@@ -15,7 +15,7 @@ AttributeError: 'Symbol' object has no attribute 'name'
 ## Reproduction
 
 ```bash
-PYTHONPATH=/Users/bretbouchard/apps/kicad-agent/src /opt/homebrew/bin/python3.11 -m kicad_agent.cli '{
+PYTHONPATH=/Users/bretbouchard/apps/volta/src /opt/homebrew/bin/python3.11 -m volta.cli '{
   "op": "update_symbols_from_library",
   "target_file": "hardware/backplane/codecs.kicad_sch"
 }'
@@ -31,7 +31,7 @@ Blocks Phase 126 (library symbol reconciliation) on analog-ecosystem backplane. 
 
 Same pattern likely affects:
 - All dumb-cartridge builds (Phase 26+)
-- All future multi-sheet KiCad 10 projects using kicad-agent
+- All future multi-sheet KiCad 10 projects using volta
 
 ## Suspected root cause
 
@@ -39,7 +39,7 @@ The op iterates lib_symbols and accesses `.name` attribute, but the `Symbol` cla
 
 ## Fix path
 
-1. Inspect `src/kicad_agent/symbols/<symbol_class>.py` — find the `Symbol` class
+1. Inspect `src/volta/symbols/<symbol_class>.py` — find the `Symbol` class
 2. Identify the attribute access pattern that uses `.name`
 3. Either:
    - Add `name` property returning `lib_id`
@@ -53,4 +53,4 @@ Manual per-sheet RC4 fix script (`hardware/fix_lib_symbols_graphics.py`) handles
 ## Related
 
 - Discovered alongside P0-002 through P0-005 during backplane cleanup
-- Project memory: `kicad-agent-pcb-limitations.md` (similar pattern for PCB ops)
+- Project memory: `volta-pcb-limitations.md` (similar pattern for PCB ops)

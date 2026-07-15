@@ -51,7 +51,7 @@ tests/test_drc_profiles.py tests/test_registry.py
 **Severity: HIGH** (advertised feature is broken end-to-end; test gap hides it)
 
 The `drc_vendor` handler resolves the profile via `load_profile(op.vendor)`
-(`src/kicad_agent/dfm/profiles.py`), but every other layer advertises a
+(`src/volta/dfm/profiles.py`), but every other layer advertises a
 different key for OSH Park:
 
 | Layer | OSH Park key |
@@ -100,10 +100,10 @@ Then add a handler-resolution test that loops over every
 without `ValueError`.
 
 **Files:**
-- `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/dfm/profiles.py:260` (`_PROFILES` dict, key `osh_park`)
-- `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/manufacturing/drc_profiles/__init__.py:125` (`oshpark`)
-- `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/ops/handlers/query.py:106` (`load_profile(op.vendor)`)
-- `/Users/bretbouchard/apps/kicad-agent/tests/test_drc_vendor_ops.py:111` (test gap)
+- `/Users/bretbouchard/apps/volta/src/volta/dfm/profiles.py:260` (`_PROFILES` dict, key `osh_park`)
+- `/Users/bretbouchard/apps/volta/src/volta/manufacturing/drc_profiles/__init__.py:125` (`oshpark`)
+- `/Users/bretbouchard/apps/volta/src/volta/ops/handlers/query.py:106` (`load_profile(op.vendor)`)
+- `/Users/bretbouchard/apps/volta/tests/test_drc_vendor_ops.py:111` (test gap)
 
 ---
 
@@ -149,7 +149,7 @@ string-only (`net "NAME"`) and KiCad 9 (`net N "NAME"`) formats
 (`tests/test_vendor_drc.py:161`) deliberately uses `net 0` and `net 1`,
 so the false positive never surfaces.
 
-**File:** `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/manufacturing/vendor_drc.py:404-423`
+**File:** `/Users/bretbouchard/apps/volta/src/volta/manufacturing/vendor_drc.py:404-423`
 
 ---
 
@@ -169,7 +169,7 @@ board) for every vendor key and assert no `ValueError`:
 
 ```python
 def test_all_advertised_vendors_resolve_via_handler(self, tmp_path):
-    from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+    from volta.ops.handlers.query import _QUERY_HANDLERS
     pcb_path = _write_clean_pcb(tmp_path)
     ir = _build_ir(pcb_path)
     handler = _QUERY_HANDLERS["drc_vendor"]
@@ -182,7 +182,7 @@ def test_all_advertised_vendors_resolve_via_handler(self, tmp_path):
 
 This single test would have caught HIGH-1.
 
-**File:** `/Users/bretbouchard/apps/kicad-agent/tests/test_drc_vendor_ops.py:111`
+**File:** `/Users/bretbouchard/apps/volta/tests/test_drc_vendor_ops.py:111`
 
 ---
 
@@ -201,7 +201,7 @@ keyed `jlcpcb-4layer` with a hyphen, which the op schema pattern
 `^[a-z0-9_]+$` rejects — see LOW-2 — so it is currently unreachable via
 `drc_vendor` regardless.)
 
-**File:** `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/dfm/profiles.py:130`
+**File:** `/Users/bretbouchard/apps/volta/src/volta/dfm/profiles.py:130`
 
 ---
 
@@ -218,7 +218,7 @@ and the pattern both predate it), and the new DRU set does not include a
 two vendor-name namespaces (`load_profile` keys vs op `vendor` keys) now
 have two divergences (this + HIGH-1). A future cleanup should align them.
 
-**File:** `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/dfm/profiles.py:258`
+**File:** `/Users/bretbouchard/apps/volta/src/volta/dfm/profiles.py:258`
 
 ---
 
@@ -235,7 +235,7 @@ clearance checks. This is consistent with the "v1" framing, but it is a
 silent skip of a real copper feature — worth at least a docstring note
 that arc tracks are out of scope, and ideally a follow-up to parse them.
 
-**File:** `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/manufacturing/vendor_drc.py:114-116` (and `parser/pcb_native_parser.py:380`)
+**File:** `/Users/bretbouchard/apps/volta/src/volta/manufacturing/vendor_drc.py:114-116` (and `parser/pcb_native_parser.py:380`)
 
 ---
 
@@ -251,7 +251,7 @@ perpetuated the stale method name that has drifted since at least Phase
 name stayed "98"). Rename to `test_registry_op_count` or
 `test_registry_has_156_operations` to stop the drift.
 
-**File:** `/Users/bretbouchard/apps/kicad-agent/tests/test_registry.py:23`
+**File:** `/Users/bretbouchard/apps/volta/tests/test_registry.py:23`
 
 ---
 
@@ -268,7 +268,7 @@ and this matches the pre-existing `read_board_metadata` /
 agent/MCP layer ever serializes without `default=str`, it will surface
 here first. No action required for this phase; noted for awareness.
 
-**File:** `/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/ops/handlers/query.py:123`
+**File:** `/Users/bretbouchard/apps/volta/src/volta/ops/handlers/query.py:123`
 
 ---
 

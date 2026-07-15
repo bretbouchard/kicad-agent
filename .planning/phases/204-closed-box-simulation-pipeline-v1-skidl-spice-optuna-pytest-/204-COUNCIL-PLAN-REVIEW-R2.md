@@ -31,7 +31,7 @@
 **Detected project stack:** unchanged from R1.
 - **Project type:** Python (3.11+)
 - **Domain:** EDA — SPICE simulation pipeline
-- **Foundation:** Phase 158 (`src/kicad_agent/spice/`), Phase 156 (`src/kicad_agent/circuit_ir/_ensure_skidl_env`)
+- **Foundation:** Phase 158 (`src/volta/spice/`), Phase 156 (`src/volta/circuit_ir/_ensure_skidl_env`)
 - **New deps:** optuna>=4.5, pandas>=2.0, matplotlib>=3.7 (all pinned in Plan 01)
 - **External CLI:** ngspice (brew/apt)
 
@@ -56,9 +56,9 @@
    ```python
    # CR-01 (Council R2 P0): Phase 156 pitfall #6 guard — KICAD_SYMBOL_DIR must be
    # set BEFORE the first skidl symbol lookup, otherwise skidl silently produces
-   # no-pin Parts (see src/kicad_agent/circuit_ir/__init__.py). The guard runs at
+   # no-pin Parts (see src/volta/circuit_ir/__init__.py). The guard runs at
    # module import so any downstream `import skidl` resolves symbols correctly.
-   from kicad_agent.circuit_ir import _ensure_skidl_env
+   from volta.circuit_ir import _ensure_skidl_env
    _ensure_skidl_env()
    ```
    The guard runs at module import (preferred over function entry per R1 fix recommendation, because it covers all downstream skidl symbol lookups once per process). The `import skidl` is correctly deferred to inside `build_preamp_circuit` (line 480) — the env var is set before any skidl import occurs.
@@ -77,11 +77,11 @@
            if saved is not None:
                os.environ["KICAD_SYMBOL_DIR"] = saved
    ```
-   The test design is correct: pop the env var going in (proves the function sets it, not the test environment), assert non-empty coming out, restore the original value in `finally` (no test pollution). Test is added to the `behavior` block (Test 12, line 216) and to the `done` criteria (line 663: "`grep _ensure_skidl_env src/kicad_agent/sim/eurorack.py` returns a match").
+   The test design is correct: pop the env var going in (proves the function sets it, not the test environment), assert non-empty coming out, restore the original value in `finally` (no test pollution). Test is added to the `behavior` block (Test 12, line 216) and to the `done` criteria (line 663: "`grep _ensure_skidl_env src/volta/sim/eurorack.py` returns a match").
 
 3. **Frontmatter audit trail** (Plan 02 line 25): `council_r2_notes` field documents the fix with CR ID, severity, and summary.
 
-4. **Cross-check against Phase 156:** Verified `src/kicad_agent/circuit_ir/__init__.py:45` defines `_ensure_skidl_env`, and `__all__:98` exports it. The import `from kicad_agent.circuit_ir import _ensure_skidl_env` will resolve.
+4. **Cross-check against Phase 156:** Verified `src/volta/circuit_ir/__init__.py:45` defines `_ensure_skidl_env`, and `__all__:98` exports it. The import `from volta.circuit_ir import _ensure_skidl_env` will resolve.
 
 **Resolution state:** ✅ **IMPLEMENTED** (in plan structure — will land in Plan 02 Task 1 execution).
 

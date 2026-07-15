@@ -1,4 +1,4 @@
-# kicad-agent
+# volta
 
 **Design real circuit boards by describing what you want.**
 
@@ -10,14 +10,14 @@ Type *"I need a preamp with 18dB gain"* — get a manufacturable PCB. No EDA exp
 Natural Language → SKIDL code → KiCad schematic → PCB → Gerbers → Order from JLCPCB
 ```
 
-[![PyPI version](https://img.shields.io/pypi/v/kicad-agent.svg)](https://pypi.org/project/kicad-agent/)
+[![PyPI version](https://img.shields.io/pypi/v/volta.svg)](https://pypi.org/project/volta/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-6000%2B-green.svg)]()
 [![KiCad](https://img.shields.io/badge/KiCad-10%2B-blue.svg)](https://www.kicad.org/)
 
 ## What This Does
 
-kicad-agent is an AI-native EDA platform. It takes a natural-language circuit request and produces a complete, manufacturable PCB design — schematic, layout, routing, and manufacturing files. Along the way, every stage has hard validation gates: ERC (electrical rules), SPICE (analog simulation), and DRC (design rules). Bad designs never advance.
+volta is an AI-native EDA platform. It takes a natural-language circuit request and produces a complete, manufacturable PCB design — schematic, layout, routing, and manufacturing files. Along the way, every stage has hard validation gates: ERC (electrical rules), SPICE (analog simulation), and DRC (design rules). Bad designs never advance.
 
 **The pipeline:**
 1. **NL → SKIDL** — A Gemma 4 12B multimodal model generates SKIDL Python code (the circuit's DNA)
@@ -79,7 +79,7 @@ if __name__ == "__main__":
 ### Install
 
 ```bash
-pip install kicad-agent
+pip install volta
 ```
 
 **Requires:** Python 3.11+, KiCad 10+ (for ERC/DRC validation)
@@ -132,7 +132,7 @@ Apple Silicon; slower hardware may need `--n-trials 20` or lower.
 
 ```bash
 # Add a 10k resistor via JSON operation
-kicad-agent '{"root": {"op_type": "add_component", "target_file": "board.kicad_sch", "library_id": "Device:R", "reference": "R1", "value": "10k", "position": {"x": 50, "y": 30}}}'
+volta '{"root": {"op_type": "add_component", "target_file": "board.kicad_sch", "library_id": "Device:R", "reference": "R1", "value": "10k", "position": {"x": 50, "y": 30}}}'
 
 # Run ERC after edits
 kicad-cli sch erc board.kicad_sch
@@ -147,23 +147,23 @@ kicad-cli pcb export gerbers board.kicad_pcb -o gerbers/
 ### Use as Claude Code Skill
 
 ```bash
-/kicad-agent add a 10uF decoupling capacitor next to U1
-/kicad-agent convert this schematic to SKIDL
-/kicad-agent run ERC and fix any errors
+/volta add a 10uF decoupling capacitor next to U1
+/volta convert this schematic to SKIDL
+/volta run ERC and fix any errors
 ```
 
 ### Analyze a PCB with AI
 
 ```bash
 # Local analysis — no API key, runs on Apple Silicon
-kicad-agent analyze board.kicad_pcb
+volta analyze board.kicad_pcb
 ```
 
 ### Search Components
 
 ```bash
 # Search JLCPCB/EasyEDA — 50K+ parts, no API key
-kicad-agent component-search "ESP32-S3 WROOM"
+volta component-search "ESP32-S3 WROOM"
 ```
 
 ## Full Pipeline (NL → Manufacturing)

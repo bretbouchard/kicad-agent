@@ -33,7 +33,7 @@ Phase 207 creates a versioned build system that snapshots source files, records 
 
 ### Build Data Model (BUILD-02, BUILD-03)
 
-- **New file:** `src/kicad_agent/manufacturing/build.py`
+- **New file:** `src/volta/manufacturing/build.py`
 - **`BuildStatus` enum** (`str, Enum`): `DRAFT`, `VALIDATED`, `EXPORTED`, `HANDED_OFF`
   - Transitions: DRAFT → VALIDATED (gate passes) → EXPORTED (artifacts generated) → HANDED_OFF (zip created in Phase 208)
   - `Build` has a `transition_to(new_status)` method that validates allowed transitions
@@ -161,7 +161,7 @@ Phase 207 creates a versioned build system that snapshots source files, records 
 
 ### Handler Registry (Integration Pitfall IP-3)
 
-- New handler module: `src/kicad_agent/ops/handlers/build.py` with `_BUILD_HANDLERS` dict + `register_build` decorator
+- New handler module: `src/volta/ops/handlers/build.py` with `_BUILD_HANDLERS` dict + `register_build` decorator
 - Merge in `handlers/__init__.py`: `_QUERY_HANDLERS.update(_BUILD_HANDLERS)` (build handlers ARE query handlers — read-only, no file mutation)
 - This follows the `_FILL_ZONES_HANDLERS` merge pattern
 
@@ -188,30 +188,30 @@ Phase 207 creates a versioned build system that snapshots source files, records 
 **Downstream agents MUST read these before planning or implementing.**
 
 ### Manifest Classes (to promote)
-- `src/kicad_agent/validation/gates/manufacturing_manifest.py` — `ManufacturingArtifact` (line 19, frozen dataclass, `from_file` helper), `ManufacturingManifest` (line 45, frozen dataclass), `generate_manifest` (line 60), `validate_manifest` (line 79)
+- `src/volta/validation/gates/manufacturing_manifest.py` — `ManufacturingArtifact` (line 19, frozen dataclass, `from_file` helper), `ManufacturingManifest` (line 45, frozen dataclass), `generate_manifest` (line 60), `validate_manifest` (line 79)
 
 ### Manufacturing Readiness Gate
-- `src/kicad_agent/validation/gates/manufacturing_gate.py` — `ManufacturingReadinessGate` (line 38), `run(context)` method (line 52), 5 checks: `_check_drc_clean` (111), `_check_dfm_pass` (133), `_check_required_exports` (157), `_check_layer_completeness` (180), `_check_bom_completeness` (196)
-- `src/kicad_agent/validation/gate_types.py` — `GateResult` type
+- `src/volta/validation/gates/manufacturing_gate.py` — `ManufacturingReadinessGate` (line 38), `run(context)` method (line 52), 5 checks: `_check_drc_clean` (111), `_check_dfm_pass` (133), `_check_required_exports` (157), `_check_layer_completeness` (180), `_check_bom_completeness` (196)
+- `src/volta/validation/gate_types.py` — `GateResult` type
 
 ### Phase 205 (title_block)
-- `src/kicad_agent/parser/pcb_native_types.py` — `NativeTitleBlock.rev` (line 353), `NativeBoard.title_block` (line 392)
-- `src/kicad_agent/parser/pcb_native_parser.py` — `_extract_title_block` (line 1260)
+- `src/volta/parser/pcb_native_types.py` — `NativeTitleBlock.rev` (line 353), `NativeBoard.title_block` (line 392)
+- `src/volta/parser/pcb_native_parser.py` — `_extract_title_block` (line 1260)
 
 ### Atomic Write
-- `src/kicad_agent/io/atomic_write.py` — `atomic_write(file_path: Path, content: str) -> None` (line 15)
+- `src/volta/io/atomic_write.py` — `atomic_write(file_path: Path, content: str) -> None` (line 15)
 
 ### Operation Patterns
-- `src/kicad_agent/ops/handlers/query.py` — `register_query` decorator (line 17), handler signature `(op, ir, file_path) -> dict`
-- `src/kicad_agent/ops/handlers/__init__.py` — handler merge pattern (`_FILL_ZONES_HANDLERS` merge)
-- `src/kicad_agent/ops/_schema_pcb.py` — Op class pattern with `Literal` discriminator
-- `src/kicad_agent/ops/registry.py` — `_RAW_CATALOG`, `OpMeta` fields
-- `src/kicad_agent/ops/schema.py` — `Operation` discriminated union
+- `src/volta/ops/handlers/query.py` — `register_query` decorator (line 17), handler signature `(op, ir, file_path) -> dict`
+- `src/volta/ops/handlers/__init__.py` — handler merge pattern (`_FILL_ZONES_HANDLERS` merge)
+- `src/volta/ops/_schema_pcb.py` — Op class pattern with `Literal` discriminator
+- `src/volta/ops/registry.py` — `_RAW_CATALOG`, `OpMeta` fields
+- `src/volta/ops/schema.py` — `Operation` discriminated union
 
 ### Manufacturing Package (prior phases)
-- `src/kicad_agent/manufacturing/__init__.py` — package init
-- `src/kicad_agent/manufacturing/board_spec.py` — Phase 205 BoardSpec (atomic_write usage precedent)
-- `src/kicad_agent/manufacturing/vendor_drc.py` — Phase 206 evaluator
+- `src/volta/manufacturing/__init__.py` — package init
+- `src/volta/manufacturing/board_spec.py` — Phase 205 BoardSpec (atomic_write usage precedent)
+- `src/volta/manufacturing/vendor_drc.py` — Phase 206 evaluator
 
 ### Test Patterns
 - `tests/test_board_metadata_ops.py` — Phase 205 handler test pattern

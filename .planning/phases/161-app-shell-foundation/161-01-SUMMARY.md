@@ -28,20 +28,20 @@ tech-stack:
 key-files:
   created:
     - "macos-app/Package.swift"
-    - "macos-app/Sources/KiCadAgent/KiCadAgentApp.swift"
-    - "macos-app/Sources/KiCadAgent/DaemonSupervisor.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Project.swift"
-    - "macos-app/Sources/KiCadAgent/Models/Conversation.swift"
-    - "macos-app/Sources/KiCadAgent/Theme/DesignTokens.swift"
-    - "macos-app/Sources/KiCadAgent/Theme/LiquidGlassModifiers.swift"
-    - "macos-app/Sources/KiCadAgent/Utilities/Logger.swift"
-    - "macos-app/Sources/KiCadAgent/Views/AppRootView.swift"
-    - "macos-app/Sources/KiCadAgent/Views/ChatPlaceholderView.swift"
-    - "macos-app/Sources/KiCadAgent/Views/LiquidGlassShell.swift"
-    - "macos-app/Sources/KiCadAgent/Views/ProjectSidebar.swift"
-    - "macos-app/Tests/KiCadAgentTests/ProjectTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/ConversationTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/AppRootViewSnapshotTests.swift"
+    - "macos-app/Sources/Volta/VoltaApp.swift"
+    - "macos-app/Sources/Volta/DaemonSupervisor.swift"
+    - "macos-app/Sources/Volta/Models/Project.swift"
+    - "macos-app/Sources/Volta/Models/Conversation.swift"
+    - "macos-app/Sources/Volta/Theme/DesignTokens.swift"
+    - "macos-app/Sources/Volta/Theme/LiquidGlassModifiers.swift"
+    - "macos-app/Sources/Volta/Utilities/Logger.swift"
+    - "macos-app/Sources/Volta/Views/AppRootView.swift"
+    - "macos-app/Sources/Volta/Views/ChatPlaceholderView.swift"
+    - "macos-app/Sources/Volta/Views/LiquidGlassShell.swift"
+    - "macos-app/Sources/Volta/Views/ProjectSidebar.swift"
+    - "macos-app/Tests/VoltaTests/ProjectTests.swift"
+    - "macos-app/Tests/VoltaTests/ConversationTests.swift"
+    - "macos-app/Tests/VoltaTests/AppRootViewSnapshotTests.swift"
     - "macos-app/README.md"
     - "macos-app/.gitignore"
 decisions:
@@ -81,7 +81,7 @@ $ swift test
 ```
 **Binary deployment target:**
 ```
-$ otool -l KiCadAgent | grep -A 5 LC_BUILD_VERSION
+$ otool -l Volta | grep -A 5 LC_BUILD_VERSION
       cmd LC_BUILD_VERSION
   cmdsize 32
  platform 1
@@ -96,7 +96,7 @@ $ otool -l KiCadAgent | grep -A 5 LC_BUILD_VERSION
 | File | Responsibility | Lines |
 |------|----------------|-------|
 | `Package.swift` | SPM manifest, macOS 27 target via unsafeFlags | 50 |
-| `KiCadAgentApp.swift` | `@main` App, WindowGroup scene, daemon lifecycle hook | 66 |
+| `VoltaApp.swift` | `@main` App, WindowGroup scene, daemon lifecycle hook | 66 |
 | `DaemonSupervisor.swift` | `@MainActor @Observable` lifecycle state machine | 128 |
 | `Models/Project.swift` | SwiftData `@Model` — top-level container | 75 |
 | `Models/Conversation.swift` | SwiftData `@Model` — conversation envelope | 66 |
@@ -177,7 +177,7 @@ Full 100% enforcement kicks in at Phase 192 (Track H — Quality). Phase 161 est
 - **Found during:** Task 3 (LiquidGlassShell implementation)
 - **Issue:** The dedicated `.glassEffect()` SwiftUI modifier ships with the macOS 27 SDK. SDK 26.5 (shipped with Xcode 26.5) does not include the symbol — calling it fails to compile.
 - **Fix:** Used `.background(.regularMaterial)` — the canonical translucent system material available since macOS 12. This produces the Liquid Glass visual baseline. Created `liquidGlassPanel`, `liquidGlassHero`, `liquidGlassToolbar` reusable modifiers.
-- **Files modified:** `macos-app/Sources/KiCadAgent/Theme/LiquidGlassModifiers.swift`
+- **Files modified:** `macos-app/Sources/Volta/Theme/LiquidGlassModifiers.swift`
 - **Commit:** c064ecd1
 - **Future cleanup:** When macOS 27 SDK lands, add `.glassEffect()` variants alongside `.regularMaterial`. Tracked as DEFERRED-TO-NAMED-TARGET (target: Xcode 27 release).
 
@@ -185,7 +185,7 @@ Full 100% enforcement kicks in at Phase 192 (Track H — Quality). Phase 161 est
 - **Found during:** Task 3 (build failure)
 - **Issue:** OSLog `Logger` API uses `.warning` not `.warn`.
 - **Fix:** Renamed `Logger.appShell.warn(...)` → `Logger.appShell.warning(...)`.
-- **Files modified:** `macos-app/Sources/KiCadAgent/DaemonSupervisor.swift`
+- **Files modified:** `macos-app/Sources/Volta/DaemonSupervisor.swift`
 - **Commit:** c064ecd1
 
 **4. [Rule 1 - Bug] `@MainActor` isolation in Swift 6**
@@ -199,7 +199,7 @@ Full 100% enforcement kicks in at Phase 192 (Track H — Quality). Phase 161 est
 - **Found during:** Task 2 (precondition test failure)
 - **Issue:** Planned to use `#expect(crashes:)` to verify empty-name precondition. The macro doesn't exist in swift-testing — the actual API is `#expect(processExitsWith:)` which spawns a subprocess (heavy for a smoke test).
 - **Fix:** Dropped the precondition-crash tests. The precondition is the safety net; the UI guard (ProjectForm in Phase 165) is the primary defense.
-- **Files modified:** `macos-app/Tests/KiCadAgentTests/ProjectTests.swift`, `ConversationTests.swift`
+- **Files modified:** `macos-app/Tests/VoltaTests/ProjectTests.swift`, `ConversationTests.swift`
 - **Commit:** c064ecd1
 
 **6. [Rule 3 - Blocking] gpg unavailable on host**
@@ -227,12 +227,12 @@ Building for production...
 [snip]
 Build complete! (115.51s)          ← ZERO warnings
 
-$ otool -l .build/debug/KiCadAgent | grep -A 5 LC_BUILD_VERSION
+$ otool -l .build/debug/Volta | grep -A 5 LC_BUILD_VERSION
       cmd LC_BUILD_VERSION
     minos 27.0                     ← macOS 27.0 deployment target
       sdk 26.5
 
-$ .build/debug/KiCadAgent &        ← App launched, stayed running
+$ .build/debug/Volta &        ← App launched, stayed running
 STILL_RUNNING — sending terminate
 ```
 
@@ -273,20 +273,20 @@ STILL_RUNNING — sending terminate
 
 **Files created (verified exist):**
 - ✅ macos-app/Package.swift
-- ✅ macos-app/Sources/KiCadAgent/KiCadAgentApp.swift
-- ✅ macos-app/Sources/KiCadAgent/DaemonSupervisor.swift
-- ✅ macos-app/Sources/KiCadAgent/Models/Project.swift
-- ✅ macos-app/Sources/KiCadAgent/Models/Conversation.swift
-- ✅ macos-app/Sources/KiCadAgent/Theme/DesignTokens.swift
-- ✅ macos-app/Sources/KiCadAgent/Theme/LiquidGlassModifiers.swift
-- ✅ macos-app/Sources/KiCadAgent/Utilities/Logger.swift
-- ✅ macos-app/Sources/KiCadAgent/Views/AppRootView.swift
-- ✅ macos-app/Sources/KiCadAgent/Views/ChatPlaceholderView.swift
-- ✅ macos-app/Sources/KiCadAgent/Views/LiquidGlassShell.swift
-- ✅ macos-app/Sources/KiCadAgent/Views/ProjectSidebar.swift
-- ✅ macos-app/Tests/KiCadAgentTests/ProjectTests.swift
-- ✅ macos-app/Tests/KiCadAgentTests/ConversationTests.swift
-- ✅ macos-app/Tests/KiCadAgentTests/AppRootViewSnapshotTests.swift
+- ✅ macos-app/Sources/Volta/VoltaApp.swift
+- ✅ macos-app/Sources/Volta/DaemonSupervisor.swift
+- ✅ macos-app/Sources/Volta/Models/Project.swift
+- ✅ macos-app/Sources/Volta/Models/Conversation.swift
+- ✅ macos-app/Sources/Volta/Theme/DesignTokens.swift
+- ✅ macos-app/Sources/Volta/Theme/LiquidGlassModifiers.swift
+- ✅ macos-app/Sources/Volta/Utilities/Logger.swift
+- ✅ macos-app/Sources/Volta/Views/AppRootView.swift
+- ✅ macos-app/Sources/Volta/Views/ChatPlaceholderView.swift
+- ✅ macos-app/Sources/Volta/Views/LiquidGlassShell.swift
+- ✅ macos-app/Sources/Volta/Views/ProjectSidebar.swift
+- ✅ macos-app/Tests/VoltaTests/ProjectTests.swift
+- ✅ macos-app/Tests/VoltaTests/ConversationTests.swift
+- ✅ macos-app/Tests/VoltaTests/AppRootViewSnapshotTests.swift
 - ✅ macos-app/README.md
 - ✅ macos-app/.gitignore
 
@@ -301,16 +301,16 @@ STILL_RUNNING — sending terminate
 - ✅ `swift test` — 12 tests passed in 3 suites
 
 **Deployment target (verified):**
-- ✅ `otool -l KiCadAgent | grep minos` — `27.0`
+- ✅ `otool -l Volta | grep minos` — `27.0`
 
 **Plan minimums met:**
-- ✅ `KiCadAgentApp.swift` 66 lines (min 30)
+- ✅ `VoltaApp.swift` 66 lines (min 30)
 - ✅ `LiquidGlassShell.swift` 250 lines (min 50)
 - ✅ `Project.swift` 75 lines (min 20)
 - ✅ `Conversation.swift` 66 lines (min 20)
 
 **Plan key_links satisfied:**
-- ✅ `WindowGroup` → `AppRootView` (KiCadAgentApp.swift)
+- ✅ `WindowGroup` → `AppRootView` (VoltaApp.swift)
 - ✅ `AppRootView` → `LiquidGlassShell` (via NavigationSplitView detail)
 - ✅ `LiquidGlassShell` ← `@Query Project` (AppRootView queries, passes selected project via `@Bindable`)
 

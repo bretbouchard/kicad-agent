@@ -21,16 +21,16 @@ execution + security trace + pattern comparison):
 
 | File | Changes | Status |
 |------|---------|--------|
-| `src/kicad_agent/manufacturing/__init__.py` | New package init | OK |
-| `src/kicad_agent/manufacturing/board_spec.py` | New: BoardSpec model + enums + load/save | OK |
-| `src/kicad_agent/ops/_schema_pcb.py` | +3 Op classes | OK (council M-1 resolved) |
-| `src/kicad_agent/ops/handlers/pcb.py` | +2 new handlers | OK |
-| `src/kicad_agent/ops/handlers/query.py` | +1 new handler | OK |
-| `src/kicad_agent/ops/pcb_raw_writer.py` | +set_title_block_fields | OK (council M-3 resolved) |
-| `src/kicad_agent/ops/registry.py` | +3 _RAW_CATALOG entries | OK |
-| `src/kicad_agent/ops/schema.py` | +3 union members + imports + __all__ | OK |
-| `src/kicad_agent/parser/pcb_native_parser.py` | +_extract_title_block | OK |
-| `src/kicad_agent/parser/pcb_native_types.py` | +NativeTitleBlock dataclass | OK |
+| `src/volta/manufacturing/__init__.py` | New package init | OK |
+| `src/volta/manufacturing/board_spec.py` | New: BoardSpec model + enums + load/save | OK |
+| `src/volta/ops/_schema_pcb.py` | +3 Op classes | OK (council M-1 resolved) |
+| `src/volta/ops/handlers/pcb.py` | +2 new handlers | OK |
+| `src/volta/ops/handlers/query.py` | +1 new handler | OK |
+| `src/volta/ops/pcb_raw_writer.py` | +set_title_block_fields | OK (council M-3 resolved) |
+| `src/volta/ops/registry.py` | +3 _RAW_CATALOG entries | OK |
+| `src/volta/ops/schema.py` | +3 union members + imports + __all__ | OK |
+| `src/volta/parser/pcb_native_parser.py` | +_extract_title_block | OK |
+| `src/volta/parser/pcb_native_types.py` | +NativeTitleBlock dataclass | OK |
 | `tests/test_board_metadata_ops.py` | New: 8 operation tests | OK |
 | `tests/test_board_spec.py` | New: 6 model tests | OK |
 | `tests/test_pcb_native_parser.py` | +6 title_block parser tests | OK |
@@ -56,7 +56,7 @@ execution + security trace + pattern comparison):
 
 ### W-01 [warning] — Regex false-match on `(title_block` inside quoted strings
 
-**File:** `src/kicad_agent/ops/pcb_raw_writer.py:1017`
+**File:** `src/volta/ops/pcb_raw_writer.py:1017`
 
 ```python
 match = re.search(r"\(title_block\b", content)
@@ -99,7 +99,7 @@ appear inside string values.
 
 ### W-02 [warning] — `_find_matching_close` offset convention inconsistency
 
-**Files:** `src/kicad_agent/ops/pcb_raw_writer.py:1024` (new) vs `:188, :212` (existing)
+**Files:** `src/volta/ops/pcb_raw_writer.py:1024` (new) vs `:188, :212` (existing)
 
 The new `set_title_block_fields` passes `start` (position of the opening paren)
 to `_find_matching_close`:
@@ -135,9 +135,9 @@ paren" but the existing callers pass the position AFTER the opening paren).
 ### I-01 [info] — Duplicated title_block comment-parsing logic (3 locations)
 
 **Files:**
-- `src/kicad_agent/parser/pcb_native_parser.py:1275-1287` (tuple output)
-- `src/kicad_agent/ops/pcb_raw_writer.py:976-987` (list output)
-- `src/kicad_agent/ops/handlers/query.py:60-71` (list output)
+- `src/volta/parser/pcb_native_parser.py:1275-1287` (tuple output)
+- `src/volta/ops/pcb_raw_writer.py:976-987` (list output)
+- `src/volta/ops/handlers/query.py:60-71` (list output)
 
 The numbered-comment extraction logic (iterate items, match `(comment N "text")`,
 build `comments_map`, expand to sequential list/tuple with gaps as empty strings)
@@ -153,7 +153,7 @@ consumer appears.
 
 ### I-02 [info] — `comments` field lacks per-element length validation
 
-**File:** `src/kicad_agent/ops/_schema_pcb.py:1213`
+**File:** `src/volta/ops/_schema_pcb.py:1213`
 
 ```python
 comments: Optional[list[str]] = Field(default=None)
@@ -174,7 +174,7 @@ the intentional omission.
 
 ### I-03 [info] — `paper_match` regex truncates on paren-containing paper values
 
-**File:** `src/kicad_agent/ops/pcb_raw_writer.py:1029`
+**File:** `src/volta/ops/pcb_raw_writer.py:1029`
 
 ```python
 paper_match = re.search(r"\(paper\b[^)]*\)", content)
@@ -194,7 +194,7 @@ would be more robust but is not warranted for Phase 205.
 
 ### I-04 [info] — `sexpdata.loads` in query handler without depth pre-scan
 
-**File:** `src/kicad_agent/ops/handlers/query.py:47`
+**File:** `src/volta/ops/handlers/query.py:47`
 
 The query handler calls `sexpdata.loads(ir.raw_content)` directly, without the
 `_pre_scan_depth` guard that the native parser uses (`pcb_native_parser.py`

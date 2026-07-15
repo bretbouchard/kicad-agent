@@ -59,7 +59,7 @@ No `eval`/`exec`/`subprocess`/`os.system` added. No new network imports. No cred
 - **Consistency:** New handlers match existing CLI idioms (`_handle_drc` missing-file guard, `_handle_dfm` nested-subparser shape, `_handle_route` dispatch+format+exit pattern).
 - **Typing:** `ManufacturerClient` uses `Any` for `board_spec` (correct for an interface seed). `from __future__ import annotations` present where needed.
 - **Docstrings:** Module and class docstrings explain *why* (interface-only, Pitfall 8, TM-4 purity), not just *what*.
-- **Test quality:** Monkeypatch seam (`kicad_agent.handler.handle_operation`) is the correct target given the helper's lazy local import. The `sys.modules`-delta approach for TM-4 is more robust than global-absence (holds across full-suite runs).
+- **Test quality:** Monkeypatch seam (`volta.handler.handle_operation`) is the correct target given the helper's lazy local import. The `sys.modules`-delta approach for TM-4 is more robust than global-absence (holds across full-suite runs).
 
 Minor nits (non-blocking, documented in `209-REVIEW.md`): test-stub `# type: ignore`, double `Path` wrap, dead `readouterr()` call.
 

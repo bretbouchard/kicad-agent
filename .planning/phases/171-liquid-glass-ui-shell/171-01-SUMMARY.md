@@ -16,7 +16,7 @@ commit: 077b2658
 | `Views/ToolbarView.swift` | Extracted toolbar (4 actions: New Project / New Window / Share / Settings) + ToolbarButton + LiquidGlassAnimation tokens | 110 |
 | `Views/LiquidGlassShell.swift` | Refactored: WindowManager integration (register on appear, unregister on disappear), Reduce Motion/Transparency observation | +25/-15 |
 | `Theme/LiquidGlassModifiers.swift` | Centralized `LiquidGlassPanelModifier` — 3 prominence levels, accessibilityReduceTransparency swaps material → opaque | +95/-50 |
-| `KiCadAgentApp.swift` | WindowManager injected at scene level via `.environment(windowManager)` | +3 |
+| `VoltaApp.swift` | WindowManager injected at scene level via `.environment(windowManager)` | +3 |
 | `Tests/LiquidGlassShellTests.swift` | 4-variant trait tests (light/dark/XXXL/a11y) + 7 WindowManager tests | 169 |
 
 ## Requirements Closed

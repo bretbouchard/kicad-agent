@@ -2,7 +2,7 @@
 
 **Domain:** Adding constraint propagation, PCB spatial intelligence, layout-aware placement, DRC intelligence, and DFM checks to an existing KiCad automation tool
 **Researched:** 2026-06-01
-**Context:** kicad-agent has 85+ operations, deep schematic understanding, limited PCB understanding. This document covers pitfalls SPECIFIC to adding PCB layout intelligence to this existing codebase.
+**Context:** volta has 85+ operations, deep schematic understanding, limited PCB understanding. This document covers pitfalls SPECIFIC to adding PCB layout intelligence to this existing codebase.
 **Confidence:** HIGH (verified against codebase analysis: PcbIR, spatial primitives, placement engine, crossfile propagation, design rule engine, net classifier, erc_drc module, routing constraints)
 
 ---
@@ -189,7 +189,7 @@ Compare placement results using estimated sizes vs. actual footprint sizes on th
 DFM checks (minimum trace width, minimum drill size, minimum annular ring, solder mask expansion, minimum clearance, board thickness constraints) vary significantly between manufacturers. JLCPCB has different capabilities than PCBWay, which has different capabilities than OSH Park. Hardcoding JLCPCB's rules (which the codebase might default to since the component search MCP uses JLCPCB/EasyEDA) means the DFM system produces false failures for boards destined for other fabs, or misses real failures for boards going to fabs with tighter constraints.
 
 **Why it happens:**
-The existing component search MCP server is JLCPCB-specific. The developer naturally gravitates toward JLCPCB's design rules as defaults. But DFM is fundamentally a per-manufacturer concern, and the kicad-agent tool positions itself as "works across any KiCad 10+ project."
+The existing component search MCP server is JLCPCB-specific. The developer naturally gravitates toward JLCPCB's design rules as defaults. But DFM is fundamentally a per-manufacturer concern, and the volta tool positions itself as "works across any KiCad 10+ project."
 
 **Consequences:**
 - DFM reports are wrong for non-JLCPCB boards
@@ -310,7 +310,7 @@ KiCad's net class system was designed for basic routing rules, not for high-spee
 
 **Prevention:**
 1. Clearly separate constraints into two categories: "KiCad net class constraints" (trace width, clearance, via size) and "extended constraints" (differential pair, impedance, length matching)
-2. Extended constraints should be stored in a custom metadata system (e.g., a `.kicad-agent-constraints.json` sidecar file or design rule file), not in KiCad's net class definitions
+2. Extended constraints should be stored in a custom metadata system (e.g., a `.volta-constraints.json` sidecar file or design rule file), not in KiCad's net class definitions
 3. The constraint propagation API should have two methods: `propagate_net_class_rules(schematic_ir, pcb_ir)` for KiCad-native rules, and `propagate_extended_constraints(schematic_ir) -> ExtendedConstraints` for non-native rules
 4. Document which constraints map to KiCad net classes and which require extended storage
 5. The existing `add_design_rule` operation in `_PROJECT_HANDLERS` may be the right place for extended constraints
@@ -469,20 +469,20 @@ Based on pitfall severity and dependency:
 
 ## Sources
 
-- Direct codebase analysis: `src/kicad_agent/ir/pcb_ir.py` (812 lines), `src/kicad_agent/spatial/primitives.py` (165 lines), `src/kicad_agent/spatial/query.py` (251 lines)
-- Direct codebase analysis: `src/kicad_agent/placement/engine.py` (416 lines), `src/kicad_agent/placement/graph.py` (368 lines), `src/kicad_agent/placement/validation.py` (415 lines)
-- Direct codebase analysis: `src/kicad_agent/validation/erc_drc.py` (461 lines), `src/kicad_agent/validation/spatial_drc.py` (253 lines)
-- Direct codebase analysis: `src/kicad_agent/crossfile/propagation.py` (182 lines), `src/kicad_agent/crossfile/atomic.py` (203 lines)
-- Direct codebase analysis: `src/kicad_agent/analysis/design_rules.py` (135 lines), `src/kicad_agent/analysis/design_rule_engine.py` (148 lines)
-- Direct codebase analysis: `src/kicad_agent/analysis/net_classifier.py` (220 lines), `src/kicad_agent/analysis/intent_schemas.py` (83 lines)
-- Direct codebase analysis: `src/kicad_agent/routing/constraints.py` (115 lines)
-- Direct codebase analysis: `src/kicad_agent/analysis/connectivity.py` (132 lines)
-- Direct codebase analysis: `src/kicad_agent/validation/constants.py` (22 lines)
+- Direct codebase analysis: `src/volta/ir/pcb_ir.py` (812 lines), `src/volta/spatial/primitives.py` (165 lines), `src/volta/spatial/query.py` (251 lines)
+- Direct codebase analysis: `src/volta/placement/engine.py` (416 lines), `src/volta/placement/graph.py` (368 lines), `src/volta/placement/validation.py` (415 lines)
+- Direct codebase analysis: `src/volta/validation/erc_drc.py` (461 lines), `src/volta/validation/spatial_drc.py` (253 lines)
+- Direct codebase analysis: `src/volta/crossfile/propagation.py` (182 lines), `src/volta/crossfile/atomic.py` (203 lines)
+- Direct codebase analysis: `src/volta/analysis/design_rules.py` (135 lines), `src/volta/analysis/design_rule_engine.py` (148 lines)
+- Direct codebase analysis: `src/volta/analysis/net_classifier.py` (220 lines), `src/volta/analysis/intent_schemas.py` (83 lines)
+- Direct codebase analysis: `src/volta/routing/constraints.py` (115 lines)
+- Direct codebase analysis: `src/volta/analysis/connectivity.py` (132 lines)
+- Direct codebase analysis: `src/volta/validation/constants.py` (22 lines)
 - Context7: kiutils PCB parsing documentation (`Board.from_file`, `to_file`, Position handling)
 - Context7: Shapely STRtree immutability, query predicates, coordinate handling
 - Existing project memory: PCB training data sources, component search API research
 
 ---
-*Full-stack EDA pitfalls research for: kicad-agent milestone v3.0 full-stack-eda*
+*Full-stack EDA pitfalls research for: volta milestone v3.0 full-stack-eda*
 *Researched: 2026-06-01*
 *Confidence: HIGH (all pitfalls verified against source code)*

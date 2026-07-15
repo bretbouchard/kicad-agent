@@ -1,11 +1,11 @@
 # CLI Reference
 
-The `kicad-agent` command-line interface provides schema export, dry-run validation, and operation execution.
+The `volta` command-line interface provides schema export, dry-run validation, and operation execution.
 
 ## Synopsis
 
 ```
-kicad-agent [OPTIONS] [OPERATION]
+volta [OPTIONS] [OPERATION]
 ```
 
 ## Arguments
@@ -23,7 +23,7 @@ The operation argument can be either an inline JSON string or a path to a JSON f
 Print the complete operation JSON Schema and exit. The schema defines all 46 operation types, their required and optional fields, value constraints, and validation rules.
 
 ```bash
-kicad-agent --schema
+volta --schema
 ```
 
 Use this output to configure LLM tool definitions or generate documentation. The schema is a valid JSON Schema draft-07 document.
@@ -33,7 +33,7 @@ Use this output to configure LLM tool definitions or generate documentation. The
 Validate the operation without executing it. Checks schema compliance, file existence, and structural constraints without modifying any files.
 
 ```bash
-kicad-agent --dry-run operation.json
+volta --dry-run operation.json
 ```
 
 ### `--project-dir`, `-p`
@@ -41,7 +41,7 @@ kicad-agent --dry-run operation.json
 Set the project directory for resolving relative file paths in operations. Default is the current working directory.
 
 ```bash
-kicad-agent --project-dir /path/to/kicad-project operation.json
+volta --project-dir /path/to/kicad-project operation.json
 ```
 
 ### `--verbose`, `-v`
@@ -49,7 +49,7 @@ kicad-agent --project-dir /path/to/kicad-project operation.json
 Enable verbose output with detailed operation information including validation results, mutation details, and execution timing.
 
 ```bash
-kicad-agent --verbose operation.json
+volta --verbose operation.json
 ```
 
 ## Exit Codes
@@ -64,39 +64,39 @@ kicad-agent --verbose operation.json
 ### Print schema for LLM tool definition
 
 ```bash
-kicad-agent --schema > kicad-operation-schema.json
+volta --schema > kicad-operation-schema.json
 ```
 
 ### Execute an inline operation
 
 ```bash
-kicad-agent '{"root": {"op_type": "add_component", "target_file": "board.kicad_sch", "library_id": "Device:R_Small_US", "position": {"x": 50.0, "y": 30.0}}}'
+volta '{"root": {"op_type": "add_component", "target_file": "board.kicad_sch", "library_id": "Device:R_Small_US", "position": {"x": 50.0, "y": 30.0}}}'
 ```
 
 ### Execute from a file
 
 ```bash
-kicad-agent my-operation.json
+volta my-operation.json
 ```
 
 ### Validate before executing
 
 ```bash
-kicad-agent --dry-run --verbose operation.json
+volta --dry-run --verbose operation.json
 ```
 
 ### Specify project directory
 
 ```bash
-kicad-agent -p ~/projects/motor-driver add-resistor.json
+volta -p ~/projects/motor-driver add-resistor.json
 ```
 
 ## Programmatic Usage
 
-For Python usage, see the [Handler API Reference](api/handler.md). The CLI is a thin wrapper around `kicad_agent.handler`:
+For Python usage, see the [Handler API Reference](api/handler.md). The CLI is a thin wrapper around `volta.handler`:
 
 ```python
-from kicad_agent.handler import handle_operation, format_result
+from volta.handler import handle_operation, format_result
 
 result = handle_operation(json_str, project_dir="/path/to/project")
 print(format_result(result))

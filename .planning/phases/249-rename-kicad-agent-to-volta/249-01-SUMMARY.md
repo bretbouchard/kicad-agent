@@ -1,4 +1,4 @@
-# Phase 249 — Project Rename: kicad-agent → Volta
+# Phase 249 — Project Rename: volta → Volta
 
 **Date:** 2026-07-15
 **Plan:** 249-01-PLAN.md
@@ -8,10 +8,10 @@
 
 Per the plan, full rename requires touching:
 - pyproject.toml name field (1 file)
-- Source directory `src/kicad_agent/` → `src/volta/` (886 import statements across ~886 files)
-- Swift types `KiCadAgent` → `Volta` (100+ files in `macos-app/Sources/KiCadAgent/`)
-- Swift package name `KiCadAgent` → `Volta` (project.yml, Package.swift)
-- CLI command `kicad-agent` → `volta` (pyproject.toml entry_points)
+- Source directory `src/volta/` → `src/volta/` (886 import statements across ~886 files)
+- Swift types `Volta` → `Volta` (100+ files in `macos-app/Sources/Volta/`)
+- Swift package name `Volta` → `Volta` (project.yml, Package.swift)
+- CLI command `volta` → `volta` (pyproject.toml entry_points)
 - Documentation references (README.md, CLAUDE.md, AGENTS.md, all .planning/ docs)
 - Test files (~355 Swift + 212 Python = 567 test files)
 - Build scripts, fastlane config, GitHub workflows
@@ -23,7 +23,7 @@ breaking 6300+ tests.
 
 ## What shipped (this session)
 
-- **pyproject.toml:** Project name `kicad-agent` → `volta`
+- **pyproject.toml:** Project name `volta` → `volta`
 - **Description:** Notes the codename transition
 
 ## What's deferred (follow-up sub-phases)
@@ -33,9 +33,9 @@ build/test pipeline:
 
 | Sub-phase | Scope | Effort |
 |-----------|-------|--------|
-| 249a — Python package rename | `src/kicad_agent/` → `src/volta/` + 886 import statements | M |
-| 249b — Swift module rename | `KiCadAgent` → `Volta` in 100+ Swift files | M |
-| 249c — CLI command rename | `kicad-agent` → `volta` in pyproject entry_points + swift CLI | S |
+| 249a — Python package rename | `src/volta/` → `src/volta/` + 886 import statements | M |
+| 249b — Swift module rename | `Volta` → `Volta` in 100+ Swift files | M |
+| 249c — CLI command rename | `volta` → `volta` in pyproject entry_points + swift CLI | S |
 | 249d — Doc sweep | All .md files, README, CLAUDE.md, AGENTS.md, .planning/ | S |
 | 249e — Test migration | Update 567 test files to match new imports | M |
 | 249f — Build + CI | fastlane, GitHub Actions, XcodeGen project.yml | S |
@@ -54,8 +54,8 @@ build/test pipeline:
 A full sed-based bulk rename across 886 Python files + 100+ Swift files
 without breaking 6300+ tests requires:
 
-1. Coordinated directory move (`src/kicad_agent` → `src/volta`)
-2. Coordinated type rename in Swift (`KiCadAgent` → `Volta`)
+1. Coordinated directory move (`src/volta` → `src/volta`)
+2. Coordinated type rename in Swift (`Volta` → `Volta`)
 3. Coordinated module rename in XcodeGen project.yml
 4. Coordinated test setup updates
 5. Coordinated build/CI updates
@@ -78,6 +78,6 @@ autonomous session.
 ## Compliance
 
 - Project name field updated ✓
-- Backwards-compat alias not removed (legacy `kicad-agent` references still
+- Backwards-compat alias not removed (legacy `volta` references still
   work for now) ✓
 - No silent deferral — followed up with explicit sub-phase plan ✓

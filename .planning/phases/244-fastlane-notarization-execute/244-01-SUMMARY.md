@@ -56,10 +56,10 @@ Ruby version have been added.
 - Phase 196.1 will replace with real XCUITest capture
 
 ### `build_daemon`
-- PyInstaller builds `kicad-agent-daemon` (onedir)
+- PyInstaller builds `volta-daemon` (onedir)
 - Re-signs every dylib/so via `Scripts/resign_kicad_daemon.sh`
 - `codesign --force --deep --options runtime` if `DEVELOPER_ID` is set
-- Output: `kicad_agent-0.1.0/dist/kicad-agent-daemon`
+- Output: `volta-0.1.0/dist/volta-daemon`
 
 ## Release Workflow
 
@@ -69,7 +69,7 @@ Ruby version have been added.
 
 Per-lane artifact uploads:
 - `macos-app` — `.app`/`.pkg`/`.zip` from `build/`
-- `kicad-agent-daemon` — daemon binary (only for `build_daemon` or tagged releases)
+- `volta-daemon` — daemon binary (only for `build_daemon` or tagged releases)
 - `app-store-screenshots` — PNGs (only for `snapshot` or tagged releases)
 
 14-day retention, ready for `gh release upload` post-build.

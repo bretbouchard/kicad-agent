@@ -32,7 +32,7 @@
 
 ### C-01: `_handle_playground` function deleted -- playground subcommand crashes
 
-**File**: `src/kicad_agent/cli.py:786`
+**File**: `src/volta/cli.py:786`
 **Severity**: CRITICAL (regression)
 **Status**: RESOLVED (prior commit)
 
@@ -44,7 +44,7 @@ The `def _handle_playground(argv: list[str]) -> None:` function header was lost 
 
 ### H-01: Race condition in `_write_entry` -- sequence number not thread-safe
 
-**File**: `src/kicad_agent/ops/persistent_undo.py:220-222`
+**File**: `src/volta/ops/persistent_undo.py:220-222`
 **Severity**: HIGH (data loss under concurrency)
 **Status**: RESOLVED (prior commit)
 
@@ -52,7 +52,7 @@ The `def _handle_playground(argv: list[str]) -> None:` function header was lost 
 
 ### H-02: Manifest does not persist `seq` field -- breaks sequence continuity across restarts
 
-**File**: `src/kicad_agent/ops/persistent_undo.py:174-175`
+**File**: `src/volta/ops/persistent_undo.py:174-175`
 **Severity**: HIGH (data integrity)
 **Status**: RESOLVED (prior commit)
 
@@ -60,7 +60,7 @@ The `def _handle_playground(argv: list[str]) -> None:` function header was lost 
 
 ### H-03: `_load_pin_map("auto")` merge order is nondeterministic by design
 
-**File**: `src/kicad_agent/ops/net_label_placer.py:172-184`
+**File**: `src/volta/ops/net_label_placer.py:172-184`
 **Severity**: HIGH (silent incorrect behavior)
 **Status**: RESOLVED (prior commit)
 
@@ -72,7 +72,7 @@ Auto-merge now sorts profiles alphabetically and logs a warning on IC conflicts.
 
 ### M-01: `_validate_entry_path` only checks for `..` as substring -- insufficient path traversal defense
 
-**File**: `src/kicad_agent/ops/persistent_undo.py:97`
+**File**: `src/volta/ops/persistent_undo.py:97`
 **Severity**: MEDIUM (defense-in-depth)
 **Status**: RESOLVED (`411f606`)
 
@@ -80,7 +80,7 @@ Added null byte check (`\x00`), kept path separator check (`/` and `\`), and `is
 
 ### M-02: `_make_entry_filename` and `_write_entry` duplicate filename generation logic
 
-**File**: `src/kicad_agent/ops/persistent_undo.py:208-212`
+**File**: `src/volta/ops/persistent_undo.py:208-212`
 **Severity**: MEDIUM (maintenance burden)
 **Status**: RESOLVED (`411f606`)
 
@@ -100,7 +100,7 @@ Replaced tautological assertion with precise `assert result["labels_placed"] == 
 
 ### L-01: `_ensure_gitignore` silently swallows `OSError`
 
-**File**: `src/kicad_agent/ops/persistent_undo.py:89`
+**File**: `src/volta/ops/persistent_undo.py:89`
 **Severity**: LOW (observability)
 **Status**: RESOLVED (`411f606`)
 
@@ -108,7 +108,7 @@ Changed `except OSError: pass` to `except OSError as exc: logger.debug(...)`.
 
 ### L-02: `_BUILTIN_PROFILES` uses `dict[str, dict[str, str | None]]` type alias would improve readability
 
-**File**: `src/kicad_agent/ops/net_label_placer.py:33`
+**File**: `src/volta/ops/net_label_placer.py:33`
 **Severity**: LOW (readability)
 **Status**: RESOLVED (`411f606`)
 

@@ -26,26 +26,26 @@ tech-stack:
 
 key-files:
   created:
-    - src/kicad_agent/manufacturing/drc_profiles/__init__.py
-    - src/kicad_agent/manufacturing/vendor_drc.py
-    - src/kicad_agent/manufacturing/drc_profiles/pcbway.kicad_dru
-    - src/kicad_agent/manufacturing/drc_profiles/jlcpcb.kicad_dru
-    - src/kicad_agent/manufacturing/drc_profiles/aisler_2layer.kicad_dru
-    - src/kicad_agent/manufacturing/drc_profiles/aisler_4layer.kicad_dru
-    - src/kicad_agent/manufacturing/drc_profiles/aisler_6layer.kicad_dru
-    - src/kicad_agent/manufacturing/drc_profiles/aisler_8layer.kicad_dru
-    - src/kicad_agent/manufacturing/drc_profiles/oshpark.kicad_dru
-    - src/kicad_agent/manufacturing/drc_profiles/advanced_circuits.kicad_dru
-    - src/kicad_agent/manufacturing/drc_profiles/generic.kicad_dru
+    - src/volta/manufacturing/drc_profiles/__init__.py
+    - src/volta/manufacturing/vendor_drc.py
+    - src/volta/manufacturing/drc_profiles/pcbway.kicad_dru
+    - src/volta/manufacturing/drc_profiles/jlcpcb.kicad_dru
+    - src/volta/manufacturing/drc_profiles/aisler_2layer.kicad_dru
+    - src/volta/manufacturing/drc_profiles/aisler_4layer.kicad_dru
+    - src/volta/manufacturing/drc_profiles/aisler_6layer.kicad_dru
+    - src/volta/manufacturing/drc_profiles/aisler_8layer.kicad_dru
+    - src/volta/manufacturing/drc_profiles/oshpark.kicad_dru
+    - src/volta/manufacturing/drc_profiles/advanced_circuits.kicad_dru
+    - src/volta/manufacturing/drc_profiles/generic.kicad_dru
     - tests/test_vendor_drc.py
     - tests/test_drc_profiles.py
     - tests/test_drc_vendor_ops.py
   modified:
-    - src/kicad_agent/dfm/profiles.py
-    - src/kicad_agent/ops/_schema_pcb.py
-    - src/kicad_agent/ops/schema.py
-    - src/kicad_agent/ops/registry.py
-    - src/kicad_agent/ops/handlers/query.py
+    - src/volta/dfm/profiles.py
+    - src/volta/ops/_schema_pcb.py
+    - src/volta/ops/schema.py
+    - src/volta/ops/registry.py
+    - src/volta/ops/handlers/query.py
     - pyproject.toml
     - tests/test_dfm_checker.py
     - tests/test_registry.py
@@ -111,19 +111,19 @@ Each task was committed atomically:
 ## Files Created/Modified
 
 **Created:**
-- `src/kicad_agent/manufacturing/drc_profiles/__init__.py` - Package init, `VendorDrcProfileInfo` dataclass, `_PROFILE_INFOS` registry (9 entries), `get_drc_profile_path()` with path-traversal defense, `list_drc_profiles()`
-- `src/kicad_agent/manufacturing/vendor_drc.py` - Internal DRC evaluator: `run_vendor_drc(board, profile) -> VendorDrcResult` with 5 checks (`_check_track_width`, `_check_drill_size`, `_check_annular_ring`, `_check_via_diameter`, `_check_clearance`) plus geometry helpers (`_pos_xy`, `_segment_gap`, `_point_to_segment_dist`, `_segments_intersect`)
-- `src/kicad_agent/manufacturing/drc_profiles/*.kicad_dru` (9 files) - KiCad DRU rule files with attribution headers and constraint blocks
+- `src/volta/manufacturing/drc_profiles/__init__.py` - Package init, `VendorDrcProfileInfo` dataclass, `_PROFILE_INFOS` registry (9 entries), `get_drc_profile_path()` with path-traversal defense, `list_drc_profiles()`
+- `src/volta/manufacturing/vendor_drc.py` - Internal DRC evaluator: `run_vendor_drc(board, profile) -> VendorDrcResult` with 5 checks (`_check_track_width`, `_check_drill_size`, `_check_annular_ring`, `_check_via_diameter`, `_check_clearance`) plus geometry helpers (`_pos_xy`, `_segment_gap`, `_point_to_segment_dist`, `_segments_intersect`)
+- `src/volta/manufacturing/drc_profiles/*.kicad_dru` (9 files) - KiCad DRU rule files with attribution headers and constraint blocks
 - `tests/test_vendor_drc.py` - 19 evaluator tests (one per check + robustness + frozen-result + vendor-specific)
 - `tests/test_drc_profiles.py` - Attribution headers, annular values, registry completeness, path-traversal defense
 - `tests/test_drc_vendor_ops.py` - Schema validation, handler-direct tests, read-only mtime verification
 
 **Modified:**
-- `src/kicad_agent/dfm/profiles.py` - Added `drc_rules_path` field, corrected JLCPCB/PCBWay annular 0.1→0.15mm, added Advanced Circuits + AISLER 2/4/6/8L profiles (catalog 5→10)
-- `src/kicad_agent/ops/_schema_pcb.py` - Added `DrcVendorOp` (vendor pattern `^[a-z0-9_]+$`) and `ListVendorDrcProfilesOp`
-- `src/kicad_agent/ops/schema.py` - Added both ops to import, `Operation` root union, and `__all__`
-- `src/kicad_agent/ops/registry.py` - Added `_RAW_CATALOG` entries (both readonly, category=query, file_types=[.kicad_pcb])
-- `src/kicad_agent/ops/handlers/query.py` - `_handle_drc_vendor` (re-parses via NativeParser, runs evaluator, optional graceful kicad DRC) and `_handle_list_vendor_drc_profiles`
+- `src/volta/dfm/profiles.py` - Added `drc_rules_path` field, corrected JLCPCB/PCBWay annular 0.1→0.15mm, added Advanced Circuits + AISLER 2/4/6/8L profiles (catalog 5→10)
+- `src/volta/ops/_schema_pcb.py` - Added `DrcVendorOp` (vendor pattern `^[a-z0-9_]+$`) and `ListVendorDrcProfilesOp`
+- `src/volta/ops/schema.py` - Added both ops to import, `Operation` root union, and `__all__`
+- `src/volta/ops/registry.py` - Added `_RAW_CATALOG` entries (both readonly, category=query, file_types=[.kicad_pcb])
+- `src/volta/ops/handlers/query.py` - `_handle_drc_vendor` (re-parses via NativeParser, runs evaluator, optional graceful kicad DRC) and `_handle_list_vendor_drc_profiles`
 - `pyproject.toml` - Added `[tool.setuptools.package-data]` declaring `*.kicad_dru` so they survive pip install/wheels
 - `tests/test_dfm_checker.py` - Updated profile-count assertion (5→10), JLCPCB annular (0.1→0.15), reworked annular differentiator test to use AISLER 0.2mm vs JLCPCB 0.15mm
 - `tests/test_registry.py` - Updated count (154→156), added both new ops to `expected_readonly` set

@@ -37,7 +37,7 @@ Key existing modules relevant to v7.0:
 ### 1. DRC Profiles Directory
 
 ```
-src/kicad_agent/manufacturing/
+src/volta/manufacturing/
 ├── __init__.py
 ├── drc_profiles/                    # Static .kicad_dru files (data, not code)
 │   ├── pcbway.kicad_dru             # from pcbway/PCBWay-Design-Rules
@@ -54,7 +54,7 @@ src/kicad_agent/manufacturing/
 ### 2. Build Record + Manifest
 
 ```
-src/kicad_agent/manufacturing/
+src/volta/manufacturing/
 ├── build.py                         # Build record (version, source SHA, artifacts, status)
 ├── manifest.py                      # Extends ManufacturingManifest with serialization
 └── handoff.py                       # Orchestrator: exports → validation → zip → readme

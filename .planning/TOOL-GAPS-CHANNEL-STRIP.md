@@ -2,7 +2,7 @@
 
 **Source:** Analog Ecosystem channel strip (hardware/network-io/channel-strip/)
 **Date:** 2026-06-01
-**Context:** 193 ERC violations across 15-sheet hierarchical schematic. Agent attempted to build custom tools instead of using kicad-agent, revealing capability gaps.
+**Context:** 193 ERC violations across 15-sheet hierarchical schematic. Agent attempted to build custom tools instead of using volta, revealing capability gaps.
 
 ---
 
@@ -32,7 +32,7 @@
 **Problem:** "What net names are at position (x,y)?" and "Are these two points on the same net?"
 **Input:** Schematic file + point(s)
 **Output:** Net names, connected points, component pins on the net
-**Note:** kicad-agent has internal union-find but may not expose it as a query API
+**Note:** volta has internal union-find but may not expose it as a query API
 
 ## Priority 2: Repair Operations
 
@@ -67,12 +67,12 @@
 **Bug A (FIXED): `_extract_positions` in `erc_parser.py` — ×100 unit mismatch**
 - **Root cause:** KiCad 10's `kicad-cli --format json` outputs positions in a unit 100× smaller than mm (e.g., `97.79mm` appears as `0.9779`). The parser returned raw values without conversion.
 - **Fix applied:** Multiplied positions by 100 in `_extract_positions()`. Verified: parser now returns `(97.79, 44.45)` instead of `(0.9779, 0.4445)`.
-- **Status:** Fixed in `src/kicad_agent/ops/erc_parser.py`.
+- **Status:** Fixed in `src/volta/ops/erc_parser.py`.
 
 **Bug B (FIXED): Cross-sheet violation filtering in erc_auto_fix**
 - **Root cause:** Not a coordinate system mismatch. ERC reports violations from ALL sheets in a hierarchical schematic, but `erc_auto_fix` operates on one sheet's IR at a time. When run on the root sheet, it tried to fix sub-sheet violations (12 pin_not_connected, 7 power_pin_not_driven) using root-sheet pin/label positions. The positions didn't match because they're in different sheet coordinate spaces → no_connect_dangling and missing-label regressions.
 - **Fix applied:** Added `sheet_filter` parameter (default `"/"`) to `erc_auto_fix`, `erc_auto_fix_root_cause`, and `extract_violation_positions`. Violations are now filtered to the current sheet before repair dispatch. Pass `sheet_filter=None` to include all sheets (for callers that iterate sheets).
-- **Status:** Fixed in `src/kicad_agent/ops/erc_auto_fix.py` and `src/kicad_agent/ops/erc_parser.py`. Verified on channel-strip analog-board (193 violations): root sheet now correctly shows 0 pin_not_connected and 0 power_pin_not_driven to fix (those are all in sub-sheets).
+- **Status:** Fixed in `src/volta/ops/erc_auto_fix.py` and `src/volta/ops/erc_parser.py`. Verified on channel-strip analog-board (193 violations): root sheet now correctly shows 0 pin_not_connected and 0 power_pin_not_driven to fix (those are all in sub-sheets).
 
 **Bug C (OPEN): `break_wire_shorts` can't find sub-sheet shorts**
 - **Problem:** `multiple_net_names` violations are reported on root sheet but the shorting wires are in sub-sheets. `break_wire_shorts` only operates on the target file's IR, so it finds 0 shorts.
@@ -93,10 +93,10 @@
 **Result:** 23 units placed with correct unit numbers and references. Positions need manual adjustment in GUI.
 
 ### 9. `erc_auto_fix` / kiutils Serializer Reformatting (HIGH)
-**Problem:** Both kicad-agent and kiutils `to_file()` rewrite the entire file with different whitespace/formatting. Diff shows thousands of lines changed even for a single component addition.
+**Problem:** Both volta and kiutils `to_file()` rewrite the entire file with different whitespace/formatting. Diff shows thousands of lines changed even for a single component addition.
 **Impact:** Running any write operation on sub-sheets causes ERC regressions. Only safe approach is raw S-expression insertion (appending before the last `)` parenthesis) which preserves formatting exactly.
 **Workaround:** Bypass kiutils serialization — insert raw sexpr strings directly into the file.
-**Fix needed:** kiutils and kicad-agent should preserve original formatting for unchanged portions of the file.
+**Fix needed:** kiutils and volta should preserve original formatting for unchanged portions of the file.
 
 ### 10. `remove_wire` — Requires UUID Not Coordinates (MEDIUM)
 **Problem:** `remove_wire` operation requires the wire's UUID, but the ERC report and most workflows provide coordinates. There's no lookup operation to find a wire UUID by coordinate.

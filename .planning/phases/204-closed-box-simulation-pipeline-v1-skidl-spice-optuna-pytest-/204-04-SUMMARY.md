@@ -8,9 +8,9 @@ requires:
   - phase: 204-01
     provides: "ngspice/brave install + 2N3904 Gummel-Poon .MODEL + tests/sim/ BLK-1 conftest"
   - phase: 204-02
-    provides: "src/kicad_agent/sim/{eurorack,bom,plot,dataframe}.py (build_preamp_circuit, circuit_to_spice_netlist, circuit_to_bom_markdown, plot_bode)"
+    provides: "src/volta/sim/{eurorack,bom,plot,dataframe}.py (build_preamp_circuit, circuit_to_spice_netlist, circuit_to_bom_markdown, plot_bode)"
   - phase: 204-03
-    provides: "src/kicad_agent/sim/optimizer.py (optimize_preamp, objective, E12_RESISTORS, E12_CAPS)"
+    provides: "src/volta/sim/optimizer.py (optimize_preamp, objective, E12_RESISTORS, E12_CAPS)"
 provides:
   - "scripts/demo_closed_box.py — one-command end-to-end magic demo (136 LOC, executable)"
   - "tests/sim/test_demo.py — 4 tests: 1 fast unit (WR-05) + 3 @pytest.mark.slow integration"
@@ -38,7 +38,7 @@ key-files:
     - .claude/CLAUDE.md
 
 key-decisions:
-  - "check_ngspice() runs BEFORE any kicad_agent.sim/spice imports. Optuna import alone takes ~1.5s; if ngspice is missing, we want sub-100ms failure with actionable message, not a 3s wait followed by a stack trace."
+  - "check_ngspice() runs BEFORE any volta.sim/spice imports. Optuna import alone takes ~1.5s; if ngspice is missing, we want sub-100ms failure with actionable message, not a 3s wait followed by a stack trace."
   - "WR-05 R2 refactor replaced a subprocess + cleared-PATH test with monkeypatch + importlib.spec_from_file_location. The R1 test was logically unreachable: the autouse _require_ngspice conftest fixture fails collection when ngspice is missing, so the R1 'missing ngspice' assertion could never fire. R2 unit test imports the module directly and calls check_ngspice() in isolation — logically sound, runs in <100ms, no conftest conflict."
   - ".claude/CLAUDE.md is the actual project-instructions CLAUDE.md (312 LOC, has Tool Inventory). Root ./CLAUDE.md is a 77-LOC beads-tracker stub. Plan said 'CLAUDE.md' — interpreted as the file with the Tool Inventory, which is .claude/CLAUDE.md. The `!.claude/CLAUDE.md` gitignore negation keeps it tracked; git add -f required because the directory-level .claude/ ignore wins for git add's path-expansion."
   - "*.png added to .gitignore globally. Verified zero tracked PNGs in repo (git ls-files '*.png' = 0). Demo regenerates bode.png per run; tracking it would cause uncommitted-artifact noise."
@@ -162,7 +162,7 @@ PASS: check_ngspice raised SystemExit(2) as expected
 **.claude/CLAUDE.md** — new "### SPICE Simulation (Phase 204)" subsection in Tool Inventory (before Workflow Stages):
 - ngspice CLI batch mode (`ngspice -b -o output.log input.cir`)
 - spicelib SimRunner pattern (deferred to 204b)
-- Python SPICE stack table (kicad_agent.spice, kicad_agent.sim, optuna, pandas, matplotlib, spicelib)
+- Python SPICE stack table (volta.spice, volta.sim, optuna, pandas, matplotlib, spicelib)
 - Closed-box demo command
 - Key files list (8 files: ngspice_runner, testbench, model_registry, eurorack, optimizer, plot, bom, demo_closed_box)
 
@@ -190,7 +190,7 @@ PASS: check_ngspice raised SystemExit(2) as expected
 
 ## Decisions Made
 
-- **Late imports in demo script**: `from kicad_agent.sim import ...` happens AFTER `check_ngspice()`. Optuna import alone is ~1.5s; if ngspice is missing, we want sub-100ms failure with actionable message, not 3s wait + traceback.
+- **Late imports in demo script**: `from volta.sim import ...` happens AFTER `check_ngspice()`. Optuna import alone is ~1.5s; if ngspice is missing, we want sub-100ms failure with actionable message, not 3s wait + traceback.
 - **CLAUDE.md location**: `.claude/CLAUDE.md` (312 LOC, has Tool Inventory) is the actual project-instructions file. Root `./CLAUDE.md` (77 LOC) is a beads-tracker stub. Plan's "CLAUDE.md" reference interpreted as the file with the Tool Inventory. Required `git add -f` because `.claude/` is gitignored at directory level (the `!.claude/CLAUDE.md` negation keeps the file tracked but git add is cautious).
 - **`*.png` global ignore**: Verified zero tracked PNGs in repo (`git ls-files '*.png'` = 0). Demo regenerates bode.png per run; tracking would cause uncommitted-artifact noise on every demo run.
 

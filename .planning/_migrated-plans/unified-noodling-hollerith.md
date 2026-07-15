@@ -2,11 +2,11 @@
 
 ## Context
 
-The merged training dataset has 10,008 board graph samples, but 2,903 (29%) are schematic-only records with zero spatial data (`box_count=0, path_count=0`). The spatial extractor in `src/kicad_agent/spatial/extractor.py` only handles `PcbIR` — it skips schematics entirely. KiCad schematics DO have spatial data (symbol positions, pin positions, wire endpoints, label positions) already exposed via `SchematicIR` methods. We need to add schematic spatial extraction so all 10K samples are usable for spatial reasoning training.
+The merged training dataset has 10,008 board graph samples, but 2,903 (29%) are schematic-only records with zero spatial data (`box_count=0, path_count=0`). The spatial extractor in `src/volta/spatial/extractor.py` only handles `PcbIR` — it skips schematics entirely. KiCad schematics DO have spatial data (symbol positions, pin positions, wire endpoints, label positions) already exposed via `SchematicIR` methods. We need to add schematic spatial extraction so all 10K samples are usable for spatial reasoning training.
 
 ## Changes
 
-### 1. Add `extract_schematic_points()` to `src/kicad_agent/spatial/extractor.py`
+### 1. Add `extract_schematic_points()` to `src/volta/spatial/extractor.py`
 
 Uses `SchematicIR.get_pin_positions()` + `get_label_positions()` to create `SpatialPoint` instances.
 
@@ -14,7 +14,7 @@ Uses `SchematicIR.get_pin_positions()` + `get_label_positions()` to create `Spat
 - Label positions → `entity_type="label"`, `entity_id=label_name`, `net=net_name`
 - Component symbol positions (no pins) → `entity_type="symbol"`, `entity_id=ref`
 
-### 2. Add `extract_schematic_boxes()` to `src/kicad_agent/spatial/extractor.py`
+### 2. Add `extract_schematic_boxes()` to `src/volta/spatial/extractor.py`
 
 Computes bounding boxes for schematic symbols from their pin positions. Group pins by reference, compute min/max x,y, add small margin (1.0mm like PCB extractor).
 
@@ -22,18 +22,18 @@ Computes bounding boxes for schematic symbols from their pin positions. Group pi
 - Symbols with no pins get a default 2mm×2mm box at symbol position
 - `entity_type="symbol"`, `reference=ref`
 
-### 3. Add `extract_schematic_paths()` to `src/kicad_agent/spatial/extractor.py`
+### 3. Add `extract_schematic_paths()` to `src/volta/spatial/extractor.py`
 
 Uses `SchematicIR.get_wire_endpoints()` to create `SpatialPath` instances.
 
 - Each wire segment → `SpatialPath(points=((start_x,start_y),(end_x,end_y)))`, `entity_type="wire"`
 - Multi-point wires (polyline connections) → single path with all vertices
 
-### 4. Add `extract_schematic_all()` to `src/kicad_agent/spatial/extractor.py`
+### 4. Add `extract_schematic_all()` to `src/volta/spatial/extractor.py`
 
 Wrapper function mirroring `extract_all()` but for `SchematicIR`. Returns `{"points": [...], "boxes": [...], "paths": [...]}`. No regions (schematics don't have zones).
 
-### 5. Wire schematic extraction into `build_board_graph()` in `src/kicad_agent/training/graph_builder.py`
+### 5. Wire schematic extraction into `build_board_graph()` in `src/volta/training/graph_builder.py`
 
 Currently at line 314: `spatial_data = extract_all(pcb_ir)` only extracts from PCB. Add schematic spatial extraction and merge results. Also add spatial attributes (x_mm, y_mm) to component nodes from schematic symbol positions (lines 357-386 only use PCB footprint positions — components without PCB footprints get no position).
 
@@ -51,15 +51,15 @@ After the code changes, re-process the 2,903 schematic-only records from `traini
 
 ## Critical Files
 
-- `src/kicad_agent/spatial/extractor.py` — add 3 extraction functions + 1 wrapper
-- `src/kicad_agent/spatial/primitives.py` — no changes needed (existing types work)
-- `src/kicad_agent/ir/schematic_ir.py` — no changes needed (methods already exist)
-- `src/kicad_agent/training/graph_builder.py` — wire schematic extraction into build flow (lines 314, 357-386, 393)
+- `src/volta/spatial/extractor.py` — add 3 extraction functions + 1 wrapper
+- `src/volta/spatial/primitives.py` — no changes needed (existing types work)
+- `src/volta/ir/schematic_ir.py` — no changes needed (methods already exist)
+- `src/volta/training/graph_builder.py` — wire schematic extraction into build flow (lines 314, 357-386, 393)
 - `scripts/process_pairs.py` — run targeted re-processing of schematic records
 
 ## Verification
 
-1. `python3 -c "from kicad_agent.spatial.extractor import extract_schematic_all"` — imports work
+1. `python3 -c "from volta.spatial.extractor import extract_schematic_all"` — imports work
 2. Run on a test schematic from staging: verify non-zero box_count, path_count, point_count
 3. Re-process 2,903 schematic records: confirm all get spatial data
 4. Final dataset check: all 10,008 records should have `box_count > 0` or `path_count > 0`

@@ -69,7 +69,7 @@ Verified test: comments at positions 1, 3, 9 all extracted correctly by iteratin
 
 ### Existing Parser Helper Compatibility (Verified)
 
-The helpers at `src/kicad_agent/parser/pcb_native_parser.py:77-172` work correctly for title_block extraction:
+The helpers at `src/volta/parser/pcb_native_parser.py:77-172` work correctly for title_block extraction:
 
 | Helper | Location | Works for title_block? |
 |--------|----------|----------------------|
@@ -96,7 +96,7 @@ This converts to the tuple representation (index 0 = comment 1, index 1 = commen
 
 ### CRITICAL: Query Path Does NOT Use Native Parser
 
-The `execute_query` function in `src/kicad_agent/ops/execution.py:193-230` builds PcbIR via the **legacy kiutils path**, NOT the native parser:
+The `execute_query` function in `src/volta/ops/execution.py:193-230` builds PcbIR via the **legacy kiutils path**, NOT the native parser:
 
 ```python
 # execution.py lines 217-223
@@ -107,7 +107,7 @@ ir = PcbIR(_parse_result=parse_result, _uuid_map=uuid_map)
 
 This means `ir.board` returns the kiutils `Board` object (NOT `NativeBoard`), so `ir.board.title_block` will not exist even after the native parser is extended.
 
-**However:** `ir.raw_content` is ALWAYS available (from `BaseIR` at `src/kicad_agent/ir/base.py:137-139`), so the `read_board_metadata` query handler can parse the title_block from raw content using the native parser's helper functions directly. The query handler does NOT need a NativeBoard — it just needs to call `_find_symbol(sexpdata.loads(ir.raw_content), "title_block")`.
+**However:** `ir.raw_content` is ALWAYS available (from `BaseIR` at `src/volta/ir/base.py:137-139`), so the `read_board_metadata` query handler can parse the title_block from raw content using the native parser's helper functions directly. The query handler does NOT need a NativeBoard — it just needs to call `_find_symbol(sexpdata.loads(ir.raw_content), "title_block")`.
 
 Alternatively, `execute_pcb` (line 470+) DOES use the native parser via `try_native_parse` (line 496), so mutating handlers will have `ir.board` as a NativeBoard with the new `title_block` field.
 
@@ -117,7 +117,7 @@ Alternatively, `execute_pcb` (line 470+) DOES use the native parser via `try_nat
 
 ### CRITICAL FINDING: Serializer Does NOT Emit Typed title_block
 
-The PCB serializer at `src/kicad_agent/serializer/pcb_ser.py:24-83` uses `kiutils_obj.to_file()` to serialize. It operates on `ParseResult.kiutils_obj`, which is the **kiutils Board** object — NOT the NativeBoard from the native parser.
+The PCB serializer at `src/volta/serializer/pcb_ser.py:24-83` uses `kiutils_obj.to_file()` to serialize. It operates on `ParseResult.kiutils_obj`, which is the **kiutils Board** object — NOT the NativeBoard from the native parser.
 
 ```python
 # pcb_ser.py lines 64-66 (the serialization call)
@@ -129,7 +129,7 @@ The native parser's `NativeBoard` (with its `title_block` field) is NEVER passed
 
 ### How raw_content Survives (The Preservation Mechanism)
 
-In `src/kicad_agent/ir/pcb_ir.py`, the mutation path uses `commit_raw_content()` (line 1109) for raw S-expression mutations. This writes the modified raw content directly to disk via `atomic_write`, sets `_raw_written = True`, and the executor skips kiutils serialization:
+In `src/volta/ir/pcb_ir.py`, the mutation path uses `commit_raw_content()` (line 1109) for raw S-expression mutations. This writes the modified raw content directly to disk via `atomic_write`, sets `_raw_written = True`, and the executor skips kiutils serialization:
 
 ```python
 # execution.py lines 533-534
@@ -143,7 +143,7 @@ When `raw_written` is True (after `commit_raw_content`), the executor does NOT c
 
 **Option A (native-path mutation via `replace(self._native_board, title_block=new_tb)`) will NOT work** because the serializer (`serialize_pcb`) does not emit NativeBoard fields — it uses `kiutils_obj.to_file()`. Even if we update the NativeBoard's `title_block` field, the serializer would not write it.
 
-**Option B (raw S-expression writer + `commit_raw_content`) is the correct approach.** This matches the `assign_net_class` handler pattern (`src/kicad_agent/ops/pcb_ops.py:349-380`):
+**Option B (raw S-expression writer + `commit_raw_content`) is the correct approach.** This matches the `assign_net_class` handler pattern (`src/volta/ops/pcb_ops.py:349-380`):
 
 ```python
 # The assign_net_class pattern (pcb_ops.py lines 366-370)
@@ -181,7 +181,7 @@ Modified the title_block on `Arduino_Mega.kicad_pcb` (added title, rev, company,
 
 ### Existing Round-trip Test Pattern
 
-`src/kicad_agent/validation/roundtrip.py` provides `round_trip_stable(path, tmp_dir)` and `round_trip_compare(path, tmp_dir)`. However, these test kiutils parse→serialize stability, which is NOT the path used for title_block mutations (raw writer path).
+`src/volta/validation/roundtrip.py` provides `round_trip_stable(path, tmp_dir)` and `round_trip_compare(path, tmp_dir)`. However, these test kiutils parse→serialize stability, which is NOT the path used for title_block mutations (raw writer path).
 
 For title_block round-trip testing, the pattern should be:
 1. Parse original → extract title_block fields
@@ -257,7 +257,7 @@ With defaults only (no args):
 
 The sidecar file path convention: for `board.kicad_pcb`, the sidecar is `board.kicad_build_spec.json` (replaces `.kicad_pcb` extension with `.kicad_build_spec.json`).
 
-No existing sidecar pattern in the codebase for JSON files. The closest is `.kicad_dru` (S-expression, in `src/kicad_agent/project/design_rules.py`) and `.floorplan.yaml` (referenced in floorplan module). Neither is a JSON sidecar — BoardSpec's JSON sidecar is a new pattern.
+No existing sidecar pattern in the codebase for JSON files. The closest is `.kicad_dru` (S-expression, in `src/volta/project/design_rules.py`) and `.floorplan.yaml` (referenced in floorplan module). Neither is a JSON sidecar — BoardSpec's JSON sidecar is a new pattern.
 
 ---
 
@@ -265,7 +265,7 @@ No existing sidecar pattern in the codebase for JSON files. The closest is `.kic
 
 ### Existing Pattern (Verified)
 
-`src/kicad_agent/io/atomic_write.py:15-43` provides the canonical atomic write function used across the codebase:
+`src/volta/io/atomic_write.py:15-43` provides the canonical atomic write function used across the codebase:
 
 ```python
 def atomic_write(file_path: Path, content: str) -> None:
@@ -291,16 +291,16 @@ def atomic_write(file_path: Path, content: str) -> None:
 ```
 
 This is used by:
-- `PcbIR.commit_raw_content()` at `src/kicad_agent/ir/pcb_ir.py:1120`
-- `serialize_pcb()` at `src/kicad_agent/serializer/pcb_ser.py:81`
-- Snapshot restore at `src/kicad_agent/daemon/snapshot.py` (Phase 170)
+- `PcbIR.commit_raw_content()` at `src/volta/ir/pcb_ir.py:1120`
+- `serialize_pcb()` at `src/volta/serializer/pcb_ser.py:81`
+- Snapshot restore at `src/volta/daemon/snapshot.py` (Phase 170)
 
 ### Recommended Pattern for BoardSpec Sidecar
 
 The `save_board_spec` function should use `atomic_write` directly:
 
 ```python
-from kicad_agent.io.atomic_write import atomic_write
+from volta.io.atomic_write import atomic_write
 
 def save_board_spec(pcb_path: Path, spec: BoardSpec) -> Path:
     sidecar_path = pcb_path.with_suffix(".kicad_build_spec.json")
@@ -321,8 +321,8 @@ The prefix `.kicad_` in `atomic_write` is PCB-specific but harmless for JSON fil
 
 | Metric | CONTEXT.md says | ACTUAL | Location |
 |--------|----------------|--------|----------|
-| Registry entries | 142 | **151** | `src/kicad_agent/ops/registry.py` `_RAW_CATALOG` |
-| Schema union variants | (not stated) | **154** | `src/kicad_agent/ops/schema.py:402` `oneOf` |
+| Registry entries | 142 | **151** | `src/volta/ops/registry.py` `_RAW_CATALOG` |
+| Schema union variants | (not stated) | **154** | `src/volta/ops/schema.py:402` `oneOf` |
 | Test assertion | `== 142` | `== 142` (STALE) | `tests/test_registry.py:26` |
 | Missing from registry | 0 | **3** | `add_design_note`, `apply_floor_plan`, `place_and_wire_power_units` |
 
@@ -341,7 +341,7 @@ Adding `read_board_metadata`, `set_board_metadata`, `set_board_revision`:
 ### Planner Action Items
 
 1. **Update `tests/test_registry.py:26`** — change `assert len(OPERATION_REGISTRY) == 142` to the correct count (154 after adding 3 ops, assuming the 3 missing ops are pre-existing tech debt not in scope).
-2. **Add 3 ops to `_RAW_CATALOG`** in `src/kicad_agent/ops/registry.py` — follow the `set_board_outline` entry pattern (lines 372-380).
+2. **Add 3 ops to `_RAW_CATALOG`** in `src/volta/ops/registry.py` — follow the `set_board_outline` entry pattern (lines 372-380).
 3. **Add 3 Op classes to `_schema_pcb.py`** — follow `SetBoardOutlineOp` (lines 98-111) for mutating ops, `ListNetClassesOp` (lines 283-294) for read-only.
 4. **Add 3 classes to the `Operation.root` union** in `schema.py:402` — add to the `oneOf` list.
 5. **Import/re-export the 3 new Op classes** in `schema.py` (~line 173).
@@ -350,7 +350,7 @@ Adding `read_board_metadata`, `set_board_metadata`, `set_board_revision`:
 
 ### Schema Union Structure
 
-The `Operation` model at `src/kicad_agent/ops/schema.py:394-557` uses:
+The `Operation` model at `src/volta/ops/schema.py:394-557` uses:
 
 ```python
 class Operation(BaseModel):
@@ -368,19 +368,19 @@ This is a discriminated union with `op_type` as the discriminator. Each Op class
 
 ### Package Does NOT Exist (Confirmed)
 
-`src/kicad_agent/manufacturing/` does NOT exist. It must be created.
+`src/volta/manufacturing/` does NOT exist. It must be created.
 
 ### Existing Package Pattern (dfm/ as reference)
 
-`src/kicad_agent/dfm/__init__.py` shows the pattern: docstring + imports + `__all__` list:
+`src/volta/dfm/__init__.py` shows the pattern: docstring + imports + `__all__` list:
 
 ```python
 """Design for Manufacturing module.
 
 DFM-01 through DFM-05: Pluggable DFM check framework...
 """
-from kicad_agent.dfm.checker import DfmChecker, DfmCheck, ...
-from kicad_agent.dfm.profiles import ManufacturerProfile, load_profile, ...
+from volta.dfm.checker import DfmChecker, DfmCheck, ...
+from volta.dfm.profiles import ManufacturerProfile, load_profile, ...
 
 __all__ = [
     "DfmChecker", "ManufacturerProfile", ...
@@ -394,7 +394,7 @@ For Phase 205, the `manufacturing/__init__.py` should be:
 
 Phase 205: BoardSpec model + sidecar JSON persistence.
 """
-from kicad_agent.manufacturing.board_spec import (
+from volta.manufacturing.board_spec import (
     BoardSpec,
     ImpedanceRequirement,
     SurfaceFinish,
@@ -426,7 +426,7 @@ __all__ = [
 
 ### Relationship to dfm/profiles.py
 
-`ManufacturerProfile` in `src/kicad_agent/dfm/profiles.py:24-54` is a **separate concern** from `BoardSpec`:
+`ManufacturerProfile` in `src/volta/dfm/profiles.py:24-54` is a **separate concern** from `BoardSpec`:
 - `ManufacturerProfile` = what a fab house CAN do (capabilities/constraints for DFM checking)
 - `BoardSpec` = what we WANT for THIS board (our manufacturing requirements)
 
@@ -510,7 +510,7 @@ This validates that modifications produce structurally valid KiCad files.
 
 4. **Registry count: ACTUAL is 151, not 142** — The test assertion at `tests/test_registry.py:26` is stale. After adding 3 ops: 154 registry entries, 157 schema union variants. Planner must update the assertion. (RQ6)
 
-5. **Atomic write: use existing `atomic_write`** from `src/kicad_agent/io/atomic_write.py`. No new pattern needed. (RQ5)
+5. **Atomic write: use existing `atomic_write`** from `src/volta/io/atomic_write.py`. No new pattern needed. (RQ5)
 
 6. **No `PcbRawWriter` title_block methods exist** — Must be added during implementation. Follow `find_zone_block` + `modify_zone_field` pattern. (RQ2)
 
@@ -522,23 +522,23 @@ This validates that modifications produce structurally valid KiCad files.
 
 | Purpose | File Path | Key Lines |
 |---------|-----------|-----------|
-| Parser (add `_extract_title_block`) | `src/kicad_agent/parser/pcb_native_parser.py` | `_UNSUPPORTED_ELEMENTS` line 62, `_KNOWN_TOP_LEVEL` line 379, `_extract_setup` pattern lines 1234-1255, helpers lines 77-172 |
-| Native types (add `NativeTitleBlock`) | `src/kicad_agent/parser/pcb_native_types.py` | `NativeGeneral` pattern line 296, `NativeBoard` line 349, `__all__` line 394 |
-| PCB IR (`commit_raw_content`) | `src/kicad_agent/ir/pcb_ir.py` | `commit_raw_content` line 1109, `add_net` mutation pattern line 198 |
-| Raw writer (add title_block methods) | `src/kicad_agent/ops/pcb_raw_writer.py` | `_find_matching_close` line 938, `find_zone_block` line 167, `modify_zone_field` line 221 |
-| PCB serializer (does NOT emit title_block) | `src/kicad_agent/serializer/pcb_ser.py` | `kiutils_obj.to_file()` line 65 |
-| Schema (add 3 Op classes) | `src/kicad_agent/ops/_schema_pcb.py` | `SetBoardOutlineOp` line 98, `ListNetClassesOp` line 283 |
-| Schema union (add 3 variants) | `src/kicad_agent/ops/schema.py` | `Operation.root` oneOf line 402 |
-| Registry (add 3 entries) | `src/kicad_agent/ops/registry.py` | `_RAW_CATALOG` line 47, `set_board_outline` entry line 372 |
-| Handler (query) | `src/kicad_agent/ops/handlers/query.py` | `register_query` line 17 |
-| Handler (pcb mutating) | `src/kicad_agent/ops/handlers/pcb.py` | `register_pcb` line 19, `set_board_outline` handler line 209 |
-| Handler init (merge) | `src/kicad_agent/ops/handlers/__init__.py` | merge pattern line 27 |
-| Execution dispatch | `src/kicad_agent/ops/execution.py` | `execute_query` line 193, `execute_pcb` line 470 |
-| ManufacturerProfile (reference) | `src/kicad_agent/dfm/profiles.py` | `BaseModel` pattern line 24 |
-| Atomic write | `src/kicad_agent/io/atomic_write.py` | line 15 |
+| Parser (add `_extract_title_block`) | `src/volta/parser/pcb_native_parser.py` | `_UNSUPPORTED_ELEMENTS` line 62, `_KNOWN_TOP_LEVEL` line 379, `_extract_setup` pattern lines 1234-1255, helpers lines 77-172 |
+| Native types (add `NativeTitleBlock`) | `src/volta/parser/pcb_native_types.py` | `NativeGeneral` pattern line 296, `NativeBoard` line 349, `__all__` line 394 |
+| PCB IR (`commit_raw_content`) | `src/volta/ir/pcb_ir.py` | `commit_raw_content` line 1109, `add_net` mutation pattern line 198 |
+| Raw writer (add title_block methods) | `src/volta/ops/pcb_raw_writer.py` | `_find_matching_close` line 938, `find_zone_block` line 167, `modify_zone_field` line 221 |
+| PCB serializer (does NOT emit title_block) | `src/volta/serializer/pcb_ser.py` | `kiutils_obj.to_file()` line 65 |
+| Schema (add 3 Op classes) | `src/volta/ops/_schema_pcb.py` | `SetBoardOutlineOp` line 98, `ListNetClassesOp` line 283 |
+| Schema union (add 3 variants) | `src/volta/ops/schema.py` | `Operation.root` oneOf line 402 |
+| Registry (add 3 entries) | `src/volta/ops/registry.py` | `_RAW_CATALOG` line 47, `set_board_outline` entry line 372 |
+| Handler (query) | `src/volta/ops/handlers/query.py` | `register_query` line 17 |
+| Handler (pcb mutating) | `src/volta/ops/handlers/pcb.py` | `register_pcb` line 19, `set_board_outline` handler line 209 |
+| Handler init (merge) | `src/volta/ops/handlers/__init__.py` | merge pattern line 27 |
+| Execution dispatch | `src/volta/ops/execution.py` | `execute_query` line 193, `execute_pcb` line 470 |
+| ManufacturerProfile (reference) | `src/volta/dfm/profiles.py` | `BaseModel` pattern line 24 |
+| Atomic write | `src/volta/io/atomic_write.py` | line 15 |
 | Test fixture (date-only title_block) | `tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_pcb` | line 10 |
 | Test registry (update count) | `tests/test_registry.py` | line 26 |
 | Test PCB ops (extend) | `tests/test_pcb_ops.py` | `_create_minimal_pcb` line 26 |
-| Round-trip validator (reference) | `src/kicad_agent/validation/roundtrip.py` | line 106 |
-| Manufacturing package (CREATE) | `src/kicad_agent/manufacturing/board_spec.py` | new file |
-| Manufacturing init (CREATE) | `src/kicad_agent/manufacturing/__init__.py` | new file |
+| Round-trip validator (reference) | `src/volta/validation/roundtrip.py` | line 106 |
+| Manufacturing package (CREATE) | `src/volta/manufacturing/board_spec.py` | new file |
+| Manufacturing init (CREATE) | `src/volta/manufacturing/__init__.py` | new file |

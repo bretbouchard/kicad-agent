@@ -66,7 +66,7 @@ Two independent mechanisms enforce project scoping:
 
 ### VERIFIED
 
-`src/kicad_agent/manufacturing/manufacturer_client.py` defines:
+`src/volta/manufacturing/manufacturer_client.py` defines:
 - **`ManufacturerClient(ABC)`** with 3 `@abstractmethod`s: `quote()`, `place_order()`, `get_status()` — exact signatures from the plan's CONTEXT spec.
 - **3 frozen dataclasses** (`Quote`, `OrderResult`, `OrderStatus`) with the documented fields and defaults.
 - **Interface-only:** method bodies are docstrings; no implementation. No concrete subclass in `src/`.
@@ -122,10 +122,10 @@ $ .venv/bin/python -m pytest tests/test_cli.py ...
 ## Scope Integrity (no scope creep)
 
 `git diff 65d90e9..HEAD --stat` for the guarded files returns **empty**:
-- `src/kicad_agent/ops/registry.py` — unchanged
-- `src/kicad_agent/ops/schema.py` — unchanged
-- `src/kicad_agent/ops/handlers/` — unchanged
-- `src/kicad_agent/mcp/edit_server.py` — unchanged
+- `src/volta/ops/registry.py` — unchanged
+- `src/volta/ops/schema.py` — unchanged
+- `src/volta/ops/handlers/` — unchanged
+- `src/volta/mcp/edit_server.py` — unchanged
 
 Phase 209 added exactly: 1 new module (ManufacturerClient ABC), 4 CLI handlers, 2 ProjectContext fields, 4 test files. Zero new ops, zero new handlers, zero schema changes. The integration-only mandate is honored.
 

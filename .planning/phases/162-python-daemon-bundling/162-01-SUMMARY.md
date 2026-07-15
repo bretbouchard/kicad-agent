@@ -25,7 +25,7 @@ tech-stack:
   patterns:
     - "JSON-RPC 2.0 line-delimited over stdio (\\n terminator, UTF-8)"
     - "Module split by concern: protocol/handlers/audit/entry (200-400 LOC each)"
-    - "Lazy executor init — ping works even if kicad_agent.ops.registry is broken"
+    - "Lazy executor init — ping works even if volta.ops.registry is broken"
     - "fsync on every audit write (crash durability)"
     - "Never-raise audit logger (broken stream cannot kill daemon)"
     - "@MainActor @Observable for ProcessManager + DaemonSupervisor"
@@ -38,7 +38,7 @@ key-files:
     - "macos-app/daemon/handlers.py"
     - "macos-app/daemon/audit_log.py"
     - "macos-app/daemon/daemon_entry.py (refactored to consume new modules)"
-    - "macos-app/daemon/kicad-agent-daemon.spec"
+    - "macos-app/daemon/volta-daemon.spec"
     - "macos-app/daemon/requirements-daemon.txt"
     - "macos-app/daemon/README.md"
     - "macos-app/daemon/tests/__init__.py"
@@ -47,12 +47,12 @@ key-files:
     - "macos-app/daemon/tests/test_handlers.py (24 tests)"
     - "macos-app/daemon/tests/test_audit_log.py (32 tests)"
     - "macos-app/daemon/tests/test_dispatch.py (12 tests)"
-    - "macos-app/Sources/KiCadAgent/Daemon/ProcessManager.swift"
-    - "macos-app/Sources/KiCadAgent/Daemon/DaemonMessenger.swift"
-    - "macos-app/Tests/KiCadAgentTests/ProcessManagerTests.swift"
-    - "macos-app/Tests/KiCadAgentTests/DaemonMessengerTests.swift"
+    - "macos-app/Sources/Volta/Daemon/ProcessManager.swift"
+    - "macos-app/Sources/Volta/Daemon/DaemonMessenger.swift"
+    - "macos-app/Tests/VoltaTests/ProcessManagerTests.swift"
+    - "macos-app/Tests/VoltaTests/DaemonMessengerTests.swift"
   modified:
-    - "macos-app/Sources/KiCadAgent/DaemonSupervisor.swift (wired to real ProcessManager)"
+    - "macos-app/Sources/Volta/DaemonSupervisor.swift (wired to real ProcessManager)"
     - "macos-app/.gitignore (PyInstaller artifacts)"
 decisions:
   - "Module split per project rule MANY SMALL FILES > FEW LARGE FILES — daemon_entry.py was 386 LOC monolith, now 4 focused modules"
@@ -60,7 +60,7 @@ decisions:
   - "PyInstaller one-folder COLLECT mode (not one-file) — faster cold start, smaller .app delta"
   - "audit_log default sink is stderr — Phase 168 wires per-project file logger for cross-process durability"
   - "Health alias: both 'health' and 'health_check' methods resolve to same handler (Swift uses both)"
-  - "kicad_agent.ops.registry export is OPERATION_REGISTRY (not OPERATIONS) — handlers.py tolerates both"
+  - "volta.ops.registry export is OPERATION_REGISTRY (not OPERATIONS) — handlers.py tolerates both"
   - "ProcessManager spawns dev-mode (.venv/bin/python daemon_entry.py) when binary absent — faster iteration"
 metrics:
   duration: "~75 minutes"
@@ -77,11 +77,11 @@ metrics:
 
 # Phase 162 Plan 01: Python Daemon Bundling Summary
 
-**One-liner:** PyInstaller-bundled Python daemon that speaks JSON-RPC 2.0 over stdio with audit-log durability, wired to a real Swift ProcessManager + DaemonMessenger — 97 Python tests + 23 Swift tests green, 151 kicad-agent operations exposed.
+**One-liner:** PyInstaller-bundled Python daemon that speaks JSON-RPC 2.0 over stdio with audit-log durability, wired to a real Swift ProcessManager + DaemonMessenger — 97 Python tests + 23 Swift tests green, 151 volta operations exposed.
 
 ## What Was Built
 
-A bundled Python daemon at `macos-app/daemon/` that ships inside the macOS app and exposes the kicad-agent operation layer via line-delimited JSON-RPC 2.0 over stdin/stdout. The daemon is built with PyInstaller (one-folder mode, arm64), code-signed ad-hoc for local dev, and verified end-to-end against a real `ping`/`list_operations`/`health_check` cycle.
+A bundled Python daemon at `macos-app/daemon/` that ships inside the macOS app and exposes the volta operation layer via line-delimited JSON-RPC 2.0 over stdin/stdout. The daemon is built with PyInstaller (one-folder mode, arm64), code-signed ad-hoc for local dev, and verified end-to-end against a real `ping`/`list_operations`/`health_check` cycle.
 
 The Swift side (`ProcessManager` + `DaemonMessenger`) was already in the tree from earlier Phase 161/162 prep — this plan completes the work by:
 
@@ -133,7 +133,7 @@ The Swift side (`ProcessManager` + `DaemonMessenger`) was already in the tree fr
 ### Python tests (97/97 passing in 0.47s)
 
 ```bash
-$ cd macos-app/daemon && /Users/bretbouchard/apps/kicad-agent/.venv/bin/python -m pytest tests/ -v
+$ cd macos-app/daemon && /Users/bretbouchard/apps/volta/.venv/bin/python -m pytest tests/ -v
 ============================= 97 passed in 0.47s ==============================
 ```
 
@@ -158,18 +158,18 @@ $ cd macos-app && swift test
 
 ```bash
 $ echo '{"jsonrpc":"2.0","id":"1","method":"ping","params":{}}' | \
-    ./macos-app/daemon/dist/kicad-agent-daemon/kicad-agent-daemon
+    ./macos-app/daemon/dist/volta-daemon/volta-daemon
 {"ts":"2026-07-07T22:08:15.537Z","event":"daemon_start","pid":24880,"python":"3.11.13"}
 {"ts":"2026-07-07T22:08:15.538Z","event":"rpc","method":"ping","id":"1","duration_ms":0.32}
 {"jsonrpc":"2.0","id":"1","result":{"pong":true,"epoch":1783462095.538}}
 {"ts":"2026-07-07T22:08:15.538Z","event":"stdin_eof"}
 ```
 
-`list_operations` exposes all 151 kicad-agent operations:
+`list_operations` exposes all 151 volta operations:
 
 ```bash
 $ printf '%s\n' '{"jsonrpc":"2.0","id":"2","method":"list_operations","params":{}}' | \
-    ./macos-app/daemon/dist/kicad-agent-daemon/kicad-agent-daemon 2>/dev/null
+    ./macos-app/daemon/dist/volta-daemon/volta-daemon 2>/dev/null
 {"jsonrpc":"2.0","id":"2","result":{"count":151,"operations":[
   "add_arc_track","add_component","add_copper_zone","add_design_rule",
   "add_junction","add_keepout_area","add_label","add_lib_entry",
@@ -180,7 +180,7 @@ $ printf '%s\n' '{"jsonrpc":"2.0","id":"2","method":"list_operations","params":{
 
 ```bash
 $ codesign -dv --verbose=4 \
-    macos-app/daemon/dist/kicad-agent-daemon/kicad-agent-daemon 2>&1 | head -5
+    macos-app/daemon/dist/volta-daemon/volta-daemon 2>&1 | head -5
 Format=Mach-O thin (arm64)
 CodeDirectory v=20400 size=161300 flags=0x2(adhoc) hashes=5034+2 location=embedded
 Hash type=sha256 size=32
@@ -200,7 +200,7 @@ All dylibs under `_internal/` signed with ad-hoc identity. Production builds wil
 
 5. **Health method alias.** Both `health` and `health_check` resolve to the same handler. Swift code uses both interchangeably across files; the alias keeps backwards-compat as the API stabilizes.
 
-6. **OPERATION_REGISTRY (not OPERATIONS).** The current kicad_agent.ops.registry exports the dict as `OPERATION_REGISTRY`. handlers.py tolerates both names plus list-shaped registries for forward compatibility.
+6. **OPERATION_REGISTRY (not OPERATIONS).** The current volta.ops.registry exports the dict as `OPERATION_REGISTRY`. handlers.py tolerates both names plus list-shaped registries for forward compatibility.
 
 7. **ProcessManager dev-mode fallback.** When the PyInstaller binary is absent, ProcessManager falls back to `.venv/bin/python -u daemon_entry.py`. This makes iteration 10x faster — no 90s rebuild cycle.
 
@@ -210,7 +210,7 @@ All dylibs under `_internal/` signed with ad-hoc identity. Production builds wil
 
 **1. [Rule 1 - Bug] OPERATIONS → OPERATION_REGISTRY**
 - **Found during:** Initial smoke test of refactored daemon
-- **Issue:** `_registered_operations()` imported `OPERATIONS` from `kicad_agent.ops.registry`, but the actual export is `OPERATION_REGISTRY`. Result was `count: 0` instead of the real 151 operations.
+- **Issue:** `_registered_operations()` imported `OPERATIONS` from `volta.ops.registry`, but the actual export is `OPERATION_REGISTRY`. Result was `count: 0` instead of the real 151 operations.
 - **Fix:** Updated `handlers.py::_registered_operations` to try `OPERATION_REGISTRY` first, then `OPERATIONS` as legacy alias. Tolerates dict, list, and tuple shapes.
 - **Files modified:** `macos-app/daemon/handlers.py`
 - **Commit:** `041b4095`
@@ -226,8 +226,8 @@ All dylibs under `_internal/` signed with ad-hoc identity. Production builds wil
 **3. [Rule 2 - Missing critical functionality] PyInstaller hidden imports**
 - **Found during:** Refactor
 - **Issue:** New modules (protocol, handlers, audit_log) wouldn't be captured by PyInstaller's static analysis because `daemon_entry.py` imports them dynamically after sys.path bootstrap.
-- **Fix:** Added them to `HIDDEN_IMPORTS` in `kicad-agent-daemon.spec`.
-- **Files modified:** `macos-app/daemon/kicad-agent-daemon.spec`
+- **Fix:** Added them to `HIDDEN_IMPORTS` in `volta-daemon.spec`.
+- **Files modified:** `macos-app/daemon/volta-daemon.spec`
 - **Commit:** `041b4095`
 
 **4. [Rule 3 - Blocking issue] Stale git index lock**
@@ -273,15 +273,15 @@ None. The threat model in the plan is fully mitigated:
 - `FOUND: macos-app/daemon/handlers.py`
 - `FOUND: macos-app/daemon/audit_log.py`
 - `FOUND: macos-app/daemon/daemon_entry.py`
-- `FOUND: macos-app/daemon/kicad-agent-daemon.spec`
+- `FOUND: macos-app/daemon/volta-daemon.spec`
 - `FOUND: macos-app/daemon/tests/test_protocol.py`
 - `FOUND: macos-app/daemon/tests/test_handlers.py`
 - `FOUND: macos-app/daemon/tests/test_audit_log.py`
 - `FOUND: macos-app/daemon/tests/test_dispatch.py`
-- `FOUND: macos-app/Sources/KiCadAgent/Daemon/ProcessManager.swift`
-- `FOUND: macos-app/Sources/KiCadAgent/Daemon/DaemonMessenger.swift`
-- `FOUND: macos-app/Tests/KiCadAgentTests/ProcessManagerTests.swift`
-- `FOUND: macos-app/Tests/KiCadAgentTests/DaemonMessengerTests.swift`
+- `FOUND: macos-app/Sources/Volta/Daemon/ProcessManager.swift`
+- `FOUND: macos-app/Sources/Volta/Daemon/DaemonMessenger.swift`
+- `FOUND: macos-app/Tests/VoltaTests/ProcessManagerTests.swift`
+- `FOUND: macos-app/Tests/VoltaTests/DaemonMessengerTests.swift`
 
 ### Commits verified
 

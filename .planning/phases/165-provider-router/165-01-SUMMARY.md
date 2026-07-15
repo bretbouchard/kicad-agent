@@ -13,7 +13,7 @@ dependency_graph:
     - KCRoutingNotifier (deduped fallback notifications)
     - ProviderRoutingSettingsView (Settings UI)
   affects:
-    - macos-app/Sources/KiCadAgent/Models/Providers/MockProvider.swift (kind: let -> var)
+    - macos-app/Sources/Volta/Models/Providers/MockProvider.swift (kind: let -> var)
 tech_stack:
   added: []
   patterns:
@@ -24,18 +24,18 @@ tech_stack:
     - "one-time-per-shape notification dedupe"
 key_files:
   created:
-    - macos-app/Sources/KiCadAgent/Models/Providers/KCTask.swift
-    - macos-app/Sources/KiCadAgent/Models/Providers/KCTaskClassifier.swift
-    - macos-app/Sources/KiCadAgent/Models/Providers/KCCostLedger.swift
-    - macos-app/Sources/KiCadAgent/Models/Providers/KCRoutingNotification.swift
-    - macos-app/Sources/KiCadAgent/Models/Providers/KiCadModelRouter.swift
-    - macos-app/Sources/KiCadAgent/Views/Settings/ProviderRoutingSettingsView.swift
-    - macos-app/Tests/KiCadAgentTests/KiCadModelRouterTests.swift
-    - macos-app/Tests/KiCadAgentTests/KCTaskClassifierTests.swift
-    - macos-app/Tests/KiCadAgentTests/KCCostLedgerTests.swift
-    - macos-app/Tests/KiCadAgentTests/ProviderRoutingSettingsViewTests.swift
+    - macos-app/Sources/Volta/Models/Providers/KCTask.swift
+    - macos-app/Sources/Volta/Models/Providers/KCTaskClassifier.swift
+    - macos-app/Sources/Volta/Models/Providers/KCCostLedger.swift
+    - macos-app/Sources/Volta/Models/Providers/KCRoutingNotification.swift
+    - macos-app/Sources/Volta/Models/Providers/KiCadModelRouter.swift
+    - macos-app/Sources/Volta/Views/Settings/ProviderRoutingSettingsView.swift
+    - macos-app/Tests/VoltaTests/KiCadModelRouterTests.swift
+    - macos-app/Tests/VoltaTests/KCTaskClassifierTests.swift
+    - macos-app/Tests/VoltaTests/KCCostLedgerTests.swift
+    - macos-app/Tests/VoltaTests/ProviderRoutingSettingsViewTests.swift
   modified:
-    - macos-app/Sources/KiCadAgent/Models/Providers/MockProvider.swift (kind: let -> var, added init param)
+    - macos-app/Sources/Volta/Models/Providers/MockProvider.swift (kind: let -> var, added init param)
 decisions:
   - Task classification uses keyword heuristics (not LLM) — routing must be O(1) and free
   - Cost ledger uses Decimal, never Double (Pitfall 6 / T-165-03 mitigation)
@@ -173,8 +173,8 @@ Phase 164's `AppleLocalProvider` already uses the 4-chars-per-token heuristic (m
 
 **1. [Rule 1 Bug] Plan file paths mismatched actual SPM structure**
 - **Found during:** Task 1 file creation
-- **Issue:** Plan referenced `KiCadAgentApp/Providers/ProviderRouter.swift` and `KiCadAgentApp/Models/ProviderSettings.swift`, but the actual Phase 164 SPM structure is `macos-app/Sources/KiCadAgent/Models/Providers/`. Same for tests + UI.
-- **Fix:** Used the actual paths established by Phase 164. Files landed at `macos-app/Sources/KiCadAgent/Models/Providers/` for source and `macos-app/Tests/KiCadAgentTests/` for tests. Phase 164 was the source of truth.
+- **Issue:** Plan referenced `VoltaApp/Providers/ProviderRouter.swift` and `VoltaApp/Models/ProviderSettings.swift`, but the actual Phase 164 SPM structure is `macos-app/Sources/Volta/Models/Providers/`. Same for tests + UI.
+- **Fix:** Used the actual paths established by Phase 164. Files landed at `macos-app/Sources/Volta/Models/Providers/` for source and `macos-app/Tests/VoltaTests/` for tests. Phase 164 was the source of truth.
 - **Files affected:** All created files (10 created, 1 modified).
 
 **2. [Rule 1 Bug] `Logger.warn` is not an OSLog API**
@@ -263,17 +263,17 @@ No stubs. Every file ships real, compiling, working code:
 ## Self-Check: PASSED
 
 **Files verified present:**
-- FOUND: macos-app/Sources/KiCadAgent/Models/Providers/KCTask.swift
-- FOUND: macos-app/Sources/KiCadAgent/Models/Providers/KCTaskClassifier.swift
-- FOUND: macos-app/Sources/KiCadAgent/Models/Providers/KCCostLedger.swift
-- FOUND: macos-app/Sources/KiCadAgent/Models/Providers/KCRoutingNotification.swift
-- FOUND: macos-app/Sources/KiCadAgent/Models/Providers/KiCadModelRouter.swift
-- FOUND: macos-app/Sources/KiCadAgent/Views/Settings/ProviderRoutingSettingsView.swift
-- FOUND: macos-app/Tests/KiCadAgentTests/KiCadModelRouterTests.swift
-- FOUND: macos-app/Tests/KiCadAgentTests/KCTaskClassifierTests.swift
-- FOUND: macos-app/Tests/KiCadAgentTests/KCCostLedgerTests.swift
-- FOUND: macos-app/Tests/KiCadAgentTests/ProviderRoutingSettingsViewTests.swift
-- FOUND (modified): macos-app/Sources/KiCadAgent/Models/Providers/MockProvider.swift
+- FOUND: macos-app/Sources/Volta/Models/Providers/KCTask.swift
+- FOUND: macos-app/Sources/Volta/Models/Providers/KCTaskClassifier.swift
+- FOUND: macos-app/Sources/Volta/Models/Providers/KCCostLedger.swift
+- FOUND: macos-app/Sources/Volta/Models/Providers/KCRoutingNotification.swift
+- FOUND: macos-app/Sources/Volta/Models/Providers/KiCadModelRouter.swift
+- FOUND: macos-app/Sources/Volta/Views/Settings/ProviderRoutingSettingsView.swift
+- FOUND: macos-app/Tests/VoltaTests/KiCadModelRouterTests.swift
+- FOUND: macos-app/Tests/VoltaTests/KCTaskClassifierTests.swift
+- FOUND: macos-app/Tests/VoltaTests/KCCostLedgerTests.swift
+- FOUND: macos-app/Tests/VoltaTests/ProviderRoutingSettingsViewTests.swift
+- FOUND (modified): macos-app/Sources/Volta/Models/Providers/MockProvider.swift
 
 **Commit verified present:**
 - FOUND: a57eebbb (feat(models): add phase 165 provider router and cost ledger)

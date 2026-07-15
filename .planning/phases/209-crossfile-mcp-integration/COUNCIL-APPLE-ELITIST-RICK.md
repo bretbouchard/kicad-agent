@@ -22,7 +22,7 @@ the Apple integration earns a hard REJECT.
 ## Executive Summary — The Hard Truth
 
 The v7.0 manufacturing layer (Phases 205-209) shipped 6 Python modules in
-`src/kicad_agent/manufacturing/`, 4 CLI subcommands, a `ManufacturerClient` ABC,
+`src/volta/manufacturing/`, 4 CLI subcommands, a `ManufacturerClient` ABC,
 and verified MCP auto-exposure via the Operation-union generator. All of that is
 clean, well-tested Python. I am not reviewing the Python — the exec reviewer
 already approved it and I agree with that verdict.
@@ -42,7 +42,7 @@ is: **they don't.** There is:
   `build_create`, `build_list`, `build_show`, `drc_vendor`, `set_board_metadata`)
   are **not in that catalog**. A governed call to manufacture a board will throw
   before it ever reaches the daemon.
-- **A sandbox wall.** `KiCadAgent.entitlements` grants only
+- **A sandbox wall.** `Volta.entitlements` grants only
   `files.user-selected.read-write`. `export_handoff` writes
   `builds/handoff_<timestamp>/` under an arbitrary `project_dir`. In a sandboxed
   app (which this is — `com.apple.security.app-sandbox` is `true`), the daemon
@@ -64,7 +64,7 @@ app's governed pipeline are two different things, and only the first is true.
 
 **It doesn't. There is no UI.**
 
-I read every Swift file under `macos-app/Sources/KiCadAgent/Views/` (33 view
+I read every Swift file under `macos-app/Sources/Volta/Views/` (33 view
 files). Not one references board metadata, vendor DRC, builds, handoff, gerbers,
 or manufacturing. The closest the app gets to acknowledging manufacturing exists
 is a placeholder string in `ChatPlaceholderView.swift:48`:
@@ -84,7 +84,7 @@ There is no:
 - Handoff export button or progress UI
 - Manifest viewer
 
-The entire manufacturing layer is reachable only via the CLI (`kicad-agent
+The entire manufacturing layer is reachable only via the CLI (`volta
 handoff <pcb>`) or by a raw `MCPClient.call("kicad.build_handoff_export", ...)`
 that nobody in the Swift codebase calls. For a milestone whose entire purpose is
 "send boards to ANY manufacturer," the Mac app cannot send a board to anyone.
@@ -99,7 +99,7 @@ The good news: `edit_server.py:133` (`_generate_operation_tools`) reflects the
 Pydantic `Operation` discriminated union, and I confirmed all six manufacturing
 ops (`build_handoff_export`, `build_create`, `drc_vendor`, `read_board_metadata`,
 `set_board_metadata`, `set_board_revision`) are members of that union in
-`src/kicad_agent/ops/schema.py:566-574`. So `tools/list` will advertise them and
+`src/volta/ops/schema.py:566-574`. So `tools/list` will advertise them and
 `MCPClient.callRaw("tools/call", ...)` will reach the daemon.
 
 The bad news: the Mac app's actual op-execution path is `governedCall`, not
@@ -159,9 +159,9 @@ correct architecturally; option (a) is the SLC patch.
 need a Swift-native API layer. Period.**
 
 The CLI subcommands (`handoff`, `build`, `drc-vendor`, `board-metadata` in
-`src/kicad_agent/cli.py:731-917`) are well-structured — flat handlers that build
+`src/volta/cli.py:731-917`) are well-structured — flat handlers that build
 an op dict and dispatch through `handle_operation`. Good for CI, good for
-scripting, good for the `/kicad-agent` skill. I have no complaints about the CLI
+scripting, good for the `/volta` skill. I have no complaints about the CLI
 itself.
 
 But a Mac app should never shell out to a CLI for a core workflow. The correct
@@ -214,7 +214,7 @@ credible Mac UI for manufacturing.
 **Yes. This is the second CRITICAL finding. The handoff workflow is impossible
 under the current sandbox configuration.**
 
-`macos-app/Resources/KiCadAgent.entitlements`:
+`macos-app/Resources/Volta.entitlements`:
 
 ```xml
 <key>com.apple.security.app-sandbox</key>        <true/>
@@ -466,7 +466,7 @@ angle).
 
 But since the question is asked, I audited the Mac app's daemon integration layer
 (`ProcessManager.swift`, `DaemonMessenger.swift`, `MCPClient.swift`,
-`KiCadAgentApp.swift`) for general Apple-platform health, since that's the layer
+`VoltaApp.swift`) for general Apple-platform health, since that's the layer
 manufacturing would ride on. Findings:
 
 **GOOD (these are correct):**
@@ -480,9 +480,9 @@ manufacturing would ride on. Findings:
 - `Info.plist` has `LSMinimumSystemVersion: 27.0`. ✅
 
 **MINOR FLAGS (not manufacturing-specific, but I am an elitist):**
-- `KiCadAgentApp.swift:89` uses `.modelContainer(for: ModelSchemaRegistry.v600Schema)` — correct SwiftData, but the schema is a frozen `[any PersistentModel.Type]` array. When you add `BoardSpecRecord` to SwiftData for manufacturing metadata, you MUST bump to a `VersionedSchema` per the Phase 177 CloudKit constraint noted in the file. Do not silently append to `v600Schema`.
+- `VoltaApp.swift:89` uses `.modelContainer(for: ModelSchemaRegistry.v600Schema)` — correct SwiftData, but the schema is a frozen `[any PersistentModel.Type]` array. When you add `BoardSpecRecord` to SwiftData for manufacturing metadata, you MUST bump to a `VersionedSchema` per the Phase 177 CloudKit constraint noted in the file. Do not silently append to `v600Schema`.
 - `LiquidGlassShell.swift:192` `ShareLink(item: project.name)` — works, but once you share files you need `ShareLink(item: URL)` with `SharePreview`. The current form shares text only.
-- `ProcessManager.swift:160` hardcodes `/Users/bretbouchard/apps/kicad-agent/...` as a dev-mode path. Fine for now (dev fallback), but it will ship in the binary — strip it for release or gate it behind `#if DEBUG`.
+- `ProcessManager.swift:160` hardcodes `/Users/bretbouchard/apps/volta/...` as a dev-mode path. Fine for now (dev fallback), but it will ship in the binary — strip it for release or gate it behind `#if DEBUG`.
 - The `Package.swift` now declares dependencies on `mlx-swift-lm` and `swift-huggingface` (Phase 210) but the manufacturing milestone is Phase 209/210 of a *different* roadmap (v7.0 vs the MLX phases). Confirm these deps are actually needed for the current build target — pulling HuggingFace tokenizers into a binary that only needs manufacturing is bloat.
 
 **DEPRECATION CHECK:** No `GCGamepad`, no `OpenGL`, no `UIWebView`, no
@@ -590,7 +590,7 @@ To be clear about what is **not** broken:
 ### v7.0 Patch (before declaring the milestone "Mac-ready")
 
 1. **Add the 6 manufacturing ops to `IntentGate.catalog`** in
-   `macos-app/Sources/KiCadAgent/Governance/IntentGate.swift`. Correct metadata:
+   `macos-app/Sources/Volta/Governance/IntentGate.swift`. Correct metadata:
    - `read_board_metadata`, `list_vendor_drc_profiles` → readonly, `GOV-11`
    - `drc_vendor` → readonly (runs checks), `GOV-11`
    - `build_list`, `build_show` → readonly, `GOV-11`
@@ -613,7 +613,7 @@ To be clear about what is **not** broken:
    `HandoffValidation`, `Quote`, `OrderResult`, `OrderStatus`, `DrcResult`,
    `VendorProfile` — all as `Codable, Sendable, Equatable` structs mirroring the
    Python models. One Swift file per concept, in a new
-   `Sources/KiCadAgent/Manufacturing/` directory.
+   `Sources/Volta/Manufacturing/` directory.
 
 5. **`ManufacturingService` (@MainActor).** Wraps `MCPClient.governedCall` with
    typed results. One method per manufacturing op. No `AnyCodable` leaks.

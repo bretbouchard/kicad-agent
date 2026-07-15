@@ -14,7 +14,7 @@ Last updated: 2026-06-07
 - **RESOLVED** — Phase 28: `add_sheet`, `add_sheet_pin`, `navigate_hierarchy` implemented
 
 ### H-2: MCP Server Missing Editing Operations
-- **RESOLVED** — Phase 30-31: All 57 operations + 4 meta-tools exposed via MCP server (`kicad-agent-edit`)
+- **RESOLVED** — Phase 30-31: All 57 operations + 4 meta-tools exposed via MCP server (`volta-edit`)
 
 ### M-1: Cross-file Infrastructure Not Wired
 - **RESOLVED** — Phase 29: `propagate_symbol_change` via AtomicOperation

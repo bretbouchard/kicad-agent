@@ -19,10 +19,10 @@ python: .venv/bin/python
 
 | # | must_have | Status | Evidence |
 |---|-----------|--------|----------|
-| 1 | `NativeTitleBlock` exists as a frozen dataclass | PASS | `is_dataclass=True`, `__dataclass_params__.frozen=True`; fields `['title','date','rev','company','comments']` in `src/kicad_agent/parser/pcb_native_types.py` |
+| 1 | `NativeTitleBlock` exists as a frozen dataclass | PASS | `is_dataclass=True`, `__dataclass_params__.frozen=True`; fields `['title','date','rev','company','comments']` in `src/volta/parser/pcb_native_types.py` |
 | 2 | `NativeBoard.title_block` field exists (default `None`) | PASS | `hasattr(NativeBoard(), 'title_block')` → `True`; default value is `None` |
 | 3 | Parser extracts title_block (Arduino_Mega date) | PASS | `NativeParser.parse_pcb(Arduino_Mega).title_block.date == 'mar. 31 mars 2015'`; `smd_test_board` (no title_block) → `None` |
-| 4 | BoardSpec model exists with required fields | PASS | Fields present: `surface_finish`, `copper_weight_outer_oz`, `copper_weight_inner_oz`, `soldermask_color`, `silkscreen_color`, `impedance_requirements` (`src/kicad_agent/manufacturing/board_spec.py`) |
+| 4 | BoardSpec model exists with required fields | PASS | Fields present: `surface_finish`, `copper_weight_outer_oz`, `copper_weight_inner_oz`, `soldermask_color`, `silkscreen_color`, `impedance_requirements` (`src/volta/manufacturing/board_spec.py`) |
 | 5 | Sidecar JSON persists via atomic_write | PASS | `save_board_spec` imports + calls `atomic_write` (canonical tempfile+os.replace); writes `.kicad_build_spec.json`; `load_board_spec` restores spec exactly (`loaded == spec`); missing sidecar returns `None` |
 | 6 | 3 operations registered (count == 154) | PASS | `len(OPERATION_REGISTRY) == 154`; `read_board_metadata` (category=query, readonly=True), `set_board_metadata` (pcb, mutating), `set_board_revision` (pcb, mutating) all present |
 | 7 | `validate_registry_completeness()` passes | PASS | Returns `missing_from_registry: ['add_design_note','apply_floor_plan','place_and_wire_power_units']` — 3 pre-existing tech-debt ops unrelated to Phase 205; `extra_in_registry: []`; test asserts this tolerated state |
@@ -112,7 +112,7 @@ All 7 requirement IDs in PLAN frontmatter are accounted for in REQUIREMENTS.md (
 1. **Raw-writer mutation path (not native-path):** Confirmed — both mutating handlers use `PcbRawWriter.set_title_block_fields` + `ir.commit_raw_content`. The PLAN's RESEARCH RQ2 rationale (PCB serializer ignores `NativeBoard.title_block`) is honored. No `replace(` native-path mutation is used for title_block.
 2. **Query reads from `ir.raw_content`:** Confirmed — `read_board_metadata` parses via `sexpdata.loads(ir.raw_content)` because `execute_query` builds PcbIR via the kiutils path (`ir.board.title_block` does not exist). Docstring documents this clearly.
 3. **Block-level rebuild for title_block:** Confirmed — `set_title_block_fields` rebuilds the entire `(title_block ...)` block (not field-level regex), which correctly handles non-sequential numbered comments.
-4. **Sidecar JSON via canonical `atomic_write`:** Confirmed — `save_board_spec` imports and uses `atomic_write` from `kicad_agent.io.atomic_write` (tempfile + `os.replace`), not a custom implementation.
+4. **Sidecar JSON via canonical `atomic_write`:** Confirmed — `save_board_spec` imports and uses `atomic_write` from `volta.io.atomic_write` (tempfile + `os.replace`), not a custom implementation.
 
 ---
 

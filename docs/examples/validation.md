@@ -8,10 +8,10 @@ Validate an operation without executing it. This checks schema compliance, file 
 
 ```bash
 # Validate an inline operation
-kicad-agent --dry-run '{"root": {"op_type": "add_component", "target_file": "board.kicad_sch", "library_id": "Device:R_Small_US", "position": {"x": 50.0, "y": 30.0}}}'
+volta --dry-run '{"root": {"op_type": "add_component", "target_file": "board.kicad_sch", "library_id": "Device:R_Small_US", "position": {"x": 50.0, "y": 30.0}}}'
 
 # Validate from a file
-kicad-agent --dry-run operation.json
+volta --dry-run operation.json
 ```
 
 Dry-run catches:
@@ -30,9 +30,9 @@ to the next PCB design stage.
 
 ### When validation runs
 
-1. Run `kicad-agent pre-pcb-gate <root.kicad_sch>` before transferring to PCB.
-2. Run `kicad-agent erc <root.kicad_sch>` after schematic edits.
-3. Run `kicad-agent drc <board.kicad_pcb>` after PCB/layout edits.
+1. Run `volta pre-pcb-gate <root.kicad_sch>` before transferring to PCB.
+2. Run `volta erc <root.kicad_sch>` after schematic edits.
+3. Run `volta drc <board.kicad_pcb>` after PCB/layout edits.
 4. Mutation operations use transaction rollback for execution failures.
 
 ### Pre-PCB schematic gate
@@ -43,8 +43,8 @@ references, connected power pins, footprint assignments, grid alignment, symbol
 copy consistency, and hierarchical sheet-pin consistency.
 
 ```bash
-kicad-agent pre-pcb-gate path/to/root.kicad_sch
-kicad-agent pre-pcb-gate path/to/root.kicad_sch --json
+volta pre-pcb-gate path/to/root.kicad_sch
+volta pre-pcb-gate path/to/root.kicad_sch --json
 ```
 
 ## Gate-based validation workflow
@@ -57,13 +57,13 @@ current stage.
 
 ```bash
 # Check what stage you're at and what gates are available
-kicad-agent gate status -p /path/to/project
+volta gate status -p /path/to/project
 
 # Run the schematic intent gate before PCB layout
-kicad-agent gate run pre_pcb_schematic -p /path/to/project
+volta gate run pre_pcb_schematic -p /path/to/project
 
 # Run manufacturing readiness before sending to fab
-kicad-agent gate run manufacturing_readiness -p /path/to/project
+volta gate run manufacturing_readiness -p /path/to/project
 ```
 
 ### Gate results
@@ -108,7 +108,7 @@ UUIDs are extracted before parsing and re-injected after serialization to preser
 ## Validation via Handler API
 
 ```python
-from kicad_agent.handler import validate_operation
+from volta.handler import validate_operation
 
 # Validate without executing
 json_str = '{"root": {"op_type": "add_component", "target_file": "board.kicad_sch", "library_id": "Device:R_Small_US", "position": {"x": 50.0, "y": 30.0}}}'
@@ -126,7 +126,7 @@ else:
 Export the complete operation schema for LLM tool definitions or documentation:
 
 ```bash
-kicad-agent --schema > operation-schema.json
+volta --schema > operation-schema.json
 ```
 
 The schema is a valid JSON Schema draft-07 document defining all 19 operation types with their fields, constraints, and validation rules.

@@ -17,7 +17,7 @@ Gate 'pre_pcb_schematic': FAIL
 **Resolution:** Add a footprint assignment to R3 in the schematic.
 
 ```bash
-kicad-agent '{
+volta '{
   "op_type": "assign_footprint",
   "target_file": "board.kicad_sch",
   "reference": "R3",
@@ -28,7 +28,7 @@ kicad-agent '{
 Rerun the gate:
 
 ```bash
-kicad-agent gate run pre_pcb_schematic -p /path/to/project
+volta gate run pre_pcb_schematic -p /path/to/project
 # Gate 'pre_pcb_schematic': PASS
 ```
 

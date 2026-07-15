@@ -1,4 +1,4 @@
-# kicad-agent — Feature & Ability Inventory
+# volta — Feature & Ability Inventory
 
 **v6.0 · 2026-07-14**
 
@@ -18,44 +18,44 @@ This is the exhaustive, honest list. Every row cites a file path and a represent
 
 | View | Path | Status | Purpose | Wired in? |
 |------|------|--------|---------|-----------|
-| AppRootView | `macos-app/Sources/KiCadAgent/Views/AppRootView.swift:1-140` | ✅ | Root NavigationSplitView, project sidebar + main detail | App entry point |
-| ProjectSidebar | `macos-app/Sources/KiCadAgent/Views/ProjectSidebar.swift:1-86` | ✅ | List + create + delete projects | Sidebar in AppRootView |
-| ChatPlaceholderView | `macos-app/Sources/KiCadAgent/Views/ChatPlaceholderView.swift` | ✅ | Empty state when no project selected | In AppRootView |
-| LiquidGlassShell | `macos-app/Sources/KiCadAgent/Views/LiquidGlassShell.swift:1-562` | ✅ | Main chat window (header, content, compose, validation) | Detail view in AppRootView |
-| ProviderBanner | `macos-app/Sources/KiCadAgent/Views/ProviderBanner.swift` | ✅ | Shows current LLM provider + model | In AppRootView header |
-| KiCadInstallView | `macos-app/Sources/KiCadAgent/Views/Onboarding/KiCadInstallView.swift` | 🟠 | KiCad install prompt | **Orphaned** (Phase 220 removed the install path; file still on disk) |
+| AppRootView | `macos-app/Sources/Volta/Views/AppRootView.swift:1-140` | ✅ | Root NavigationSplitView, project sidebar + main detail | App entry point |
+| ProjectSidebar | `macos-app/Sources/Volta/Views/ProjectSidebar.swift:1-86` | ✅ | List + create + delete projects | Sidebar in AppRootView |
+| ChatPlaceholderView | `macos-app/Sources/Volta/Views/ChatPlaceholderView.swift` | ✅ | Empty state when no project selected | In AppRootView |
+| LiquidGlassShell | `macos-app/Sources/Volta/Views/LiquidGlassShell.swift:1-562` | ✅ | Main chat window (header, content, compose, validation) | Detail view in AppRootView |
+| ProviderBanner | `macos-app/Sources/Volta/Views/ProviderBanner.swift` | ✅ | Shows current LLM provider + model | In AppRootView header |
+| KiCadInstallView | `macos-app/Sources/Volta/Views/Onboarding/KiCadInstallView.swift` | 🟠 | KiCad install prompt | **Orphaned** (Phase 220 removed the install path; file still on disk) |
 
 ### 1.2 Chat pipeline
 
 | View | Path | Status | Purpose | Wired in? |
 |------|------|--------|---------|-----------|
-| ChatView | `macos-app/Sources/KiCadAgent/Views/Chat/ChatView.swift` | ✅ | Streaming chat with message list + compose | In LiquidGlassShell |
-| MessageBubbleView | `macos-app/Sources/KiCadAgent/Views/Chat/MessageBubbleView.swift` | ✅ | Single message render (user / assistant / system) | In ChatView |
-| ConversationListView | `macos-app/Sources/KiCadAgent/Views/Chat/ConversationListView.swift` | 🟡 | Lists conversations for a project | Available via view dependency |
-| ImageAttachmentView | `macos-app/Sources/KiCadAgent/Views/Chat/ImageAttachmentView.swift` | 🟡 | Displays attached image thumbnails | **UI wire-up pending** (Phase 196) |
-| RouterStreamProvider | `macos-app/Sources/KiCadAgent/Views/Chat/RouterStreamProvider.swift:1-184` | ✅ | Bridges router → ChatView (echo stripping, chunking) | Production stream provider |
-| OperationExecutor | `macos-app/Sources/KiCadAgent/Views/Chat/OperationExecutor.swift` | ✅ | Runs LLM-emitted JSON op sequences | In LiquidGlassShell |
+| ChatView | `macos-app/Sources/Volta/Views/Chat/ChatView.swift` | ✅ | Streaming chat with message list + compose | In LiquidGlassShell |
+| MessageBubbleView | `macos-app/Sources/Volta/Views/Chat/MessageBubbleView.swift` | ✅ | Single message render (user / assistant / system) | In ChatView |
+| ConversationListView | `macos-app/Sources/Volta/Views/Chat/ConversationListView.swift` | 🟡 | Lists conversations for a project | Available via view dependency |
+| ImageAttachmentView | `macos-app/Sources/Volta/Views/Chat/ImageAttachmentView.swift` | 🟡 | Displays attached image thumbnails | **UI wire-up pending** (Phase 196) |
+| RouterStreamProvider | `macos-app/Sources/Volta/Views/Chat/RouterStreamProvider.swift:1-184` | ✅ | Bridges router → ChatView (echo stripping, chunking) | Production stream provider |
+| OperationExecutor | `macos-app/Sources/Volta/Views/Chat/OperationExecutor.swift` | ✅ | Runs LLM-emitted JSON op sequences | In LiquidGlassShell |
 
 ### 1.3 Validation & inline preview
 
 | View | Path | Status | Purpose | Wired in? |
 |------|------|--------|---------|-----------|
-| ValidationPanel | `macos-app/Sources/KiCadAgent/Views/ValidationPanel.swift` | ✅ | ERC + DRC run + display | Conditional in LiquidGlassShell |
+| ValidationPanel | `macos-app/Sources/Volta/Views/ValidationPanel.swift` | ✅ | ERC + DRC run + display | Conditional in LiquidGlassShell |
 | ValidationResultsPanel | (inline in LiquidGlassShell) | ✅ | Renders violation list | In ValidationPanel |
-| SchematicPreviewView | `macos-app/Sources/KiCadAgent/Views/InlineRendering/SchematicPreviewView.swift` | 🟠 | Schematic render from IR | Mock-only |
-| PCBPreviewView | `macos-app/Sources/KiCadAgent/Views/InlineRendering/PCBPreviewView.swift` | 🟠 | PCB render from IR | Mock-only |
-| SwiftSVGRenderer | `macos-app/Sources/KiCadAgent/Views/InlineRendering/SwiftSVGRenderer.swift:1-150` | ✅ | SVG → NSImage rendering | Powers SchematicPreviewView |
-| FullScreenInspector | `macos-app/Sources/KiCadAgent/Views/InlineRendering/FullScreenInspector.swift` | 🟠 | Full-screen canvas | Not wired |
-| MockPreviewRenderer | `macos-app/Sources/KiCadAgent/Views/InlineRendering/MockPreviewRenderer.swift` | ✅ | Test renderer (previews/tests) | For previews |
+| SchematicPreviewView | `macos-app/Sources/Volta/Views/InlineRendering/SchematicPreviewView.swift` | 🟠 | Schematic render from IR | Mock-only |
+| PCBPreviewView | `macos-app/Sources/Volta/Views/InlineRendering/PCBPreviewView.swift` | 🟠 | PCB render from IR | Mock-only |
+| SwiftSVGRenderer | `macos-app/Sources/Volta/Views/InlineRendering/SwiftSVGRenderer.swift:1-150` | ✅ | SVG → NSImage rendering | Powers SchematicPreviewView |
+| FullScreenInspector | `macos-app/Sources/Volta/Views/InlineRendering/FullScreenInspector.swift` | 🟠 | Full-screen canvas | Not wired |
+| MockPreviewRenderer | `macos-app/Sources/Volta/Views/InlineRendering/MockPreviewRenderer.swift` | ✅ | Test renderer (previews/tests) | For previews |
 
 ### 1.4 Settings
 
 | View | Path | Status | Purpose | Wired in? |
 |------|------|--------|---------|-----------|
 | SettingsSheet (root) | `LiquidGlassShell.swift:630-682` | 🟡 | Tabbed settings UI | In toolbar |
-| ProviderRoutingSettingsView | `macos-app/Sources/KiCadAgent/Views/Settings/ProviderRoutingSettingsView.swift` | ✅ | Configure LLM provider fallback chain | SettingsTab.providers |
-| BYOKSettingsView | `macos-app/Sources/KiCadAgent/Views/Settings/BYOKSettingsView.swift` | ✅ | API key storage (Keychain) | SettingsTab.pending |
-| ExternalMCPSettingsView | `macos-app/Sources/KiCadAgent/Views/Settings/ExternalMCPSettingsView.swift` | ✅ | External MCP server config | SettingsTab.externalMCP |
+| ProviderRoutingSettingsView | `macos-app/Sources/Volta/Views/Settings/ProviderRoutingSettingsView.swift` | ✅ | Configure LLM provider fallback chain | SettingsTab.providers |
+| BYOKSettingsView | `macos-app/Sources/Volta/Views/Settings/BYOKSettingsView.swift` | ✅ | API key storage (Keychain) | SettingsTab.pending |
+| ExternalMCPSettingsView | `macos-app/Sources/Volta/Views/Settings/ExternalMCPSettingsView.swift` | ✅ | External MCP server config | SettingsTab.externalMCP |
 | MemorySettingsTab | `LiquidGlassShell.swift:684-702` | 🟠 | Memory / time-travel settings | SettingsTab.memory |
 | CollaborationSettingsTab | `LiquidGlassShell.swift:704-731` | 🟠 | Collaboration settings | SettingsTab.collaboration |
 
@@ -63,11 +63,11 @@ This is the exhaustive, honest list. Every row cites a file path and a represent
 
 | View | Path | Status | Purpose | Wired in? |
 |------|------|--------|---------|-----------|
-| TimeTravelView | `macos-app/Sources/KiCadAgent/Views/Memory/TimeTravelView.swift` | 🟠 | Back/forward time navigation | Placeholder text |
-| DecisionTimelineView | `macos-app/Sources/KiCadAgent/Views/Memory/DecisionTimelineView.swift` | 🟠 | Decision history | Placeholder |
-| ChapterSegmentationView | `macos-app/Sources/KiCadAgent/Views/Memory/ChapterSegmentationView.swift` | 🟠 | Chapter markers in timeline | Not wired |
-| ProjectGenealogyView | `macos-app/Sources/KiCadAgent/Views/Collaboration/ProjectGenealogyView.swift` | 🟠 | Version history | Placeholder text |
-| CollaborationActivityFeed | `macos-app/Sources/KiCadAgent/Views/Collaboration/CollaborationActivityFeed.swift` | 🟠 | Real-time activity feed | Placeholder |
+| TimeTravelView | `macos-app/Sources/Volta/Views/Memory/TimeTravelView.swift` | 🟠 | Back/forward time navigation | Placeholder text |
+| DecisionTimelineView | `macos-app/Sources/Volta/Views/Memory/DecisionTimelineView.swift` | 🟠 | Decision history | Placeholder |
+| ChapterSegmentationView | `macos-app/Sources/Volta/Views/Memory/ChapterSegmentationView.swift` | 🟠 | Chapter markers in timeline | Not wired |
+| ProjectGenealogyView | `macos-app/Sources/Volta/Views/Collaboration/ProjectGenealogyView.swift` | 🟠 | Version history | Placeholder text |
+| CollaborationActivityFeed | `macos-app/Sources/Volta/Views/Collaboration/CollaborationActivityFeed.swift` | 🟠 | Real-time activity feed | Placeholder |
 
 ### 1.6 User actions (per view)
 
@@ -289,8 +289,8 @@ Same as schematic reads above where applicable (lists, gets). Plus:
 
 | Engine | File | Status | Checks | Latency |
 |---|---|---|---|---|
-| **NativeERC (Swift)** | `macos-app/Sources/KiCadAgent/Validation/NativeERC.swift` | ✅ Phase 231 | Pin-type compatibility (11x11 matrix), power net, no-connect, dangling wires | 10-20 ms / 100 parts |
-| **NativeERC (Python)** | `kicad_agent-0.1.0/src/kicad_agent/validation/native_erc.py:1-363` | ✅ | Same checks as Swift | 50-100 ms / 100 parts |
+| **NativeERC (Swift)** | `macos-app/Sources/Volta/Validation/NativeERC.swift` | ✅ Phase 231 | Pin-type compatibility (11x11 matrix), power net, no-connect, dangling wires | 10-20 ms / 100 parts |
+| **NativeERC (Python)** | `volta-0.1.0/src/volta/validation/native_erc.py:1-363` | ✅ | Same checks as Swift | 50-100 ms / 100 parts |
 | **kicad-cli ERC** | (external) | ✅ | Reference: ground truth, slower (process spawn) | 1-3 s / file |
 
 **Swift and Python ERC passed 50/50 parity** against kicad-cli reference (`Phase 218` summary). Phase 231 wired Swift as the primary (instant, no daemon roundtrip).
@@ -299,15 +299,15 @@ Same as schematic reads above where applicable (lists, gets). Plus:
 
 | Engine | File | Status | Checks | Latency |
 |---|---|---|---|---|
-| **NativeDRC (Swift)** | `macos-app/Sources/KiCadAgent/Validation/NativeDRC.swift` | 🟡 Partial | Track-to-track spacing, pad-to-track, track width | TBD |
-| **NativeDRC (Python)** | `kicad_agent-0.1.0/src/kicad_agent/validation/native_drc.py:1-551` | ✅ Phase 232 | Copper spacing (O(n log n) via SpatialHash), netclass width, courtyard overlap, hole-to-hole, annular ring | 50-200 ms / 1000 traces |
+| **NativeDRC (Swift)** | `macos-app/Sources/Volta/Validation/NativeDRC.swift` | 🟡 Partial | Track-to-track spacing, pad-to-track, track width | TBD |
+| **NativeDRC (Python)** | `volta-0.1.0/src/volta/validation/native_drc.py:1-551` | ✅ Phase 232 | Copper spacing (O(n log n) via SpatialHash), netclass width, courtyard overlap, hole-to-hole, annular ring | 50-200 ms / 1000 traces |
 | **kicad-cli DRC** | (external) | ✅ | Reference: ground truth | 1-5 s / file |
 
 ### 3.3 SpatialHash
 
 | Component | File | Status | Purpose |
 |---|---|---|---|
-| `SpatialHash<(Int, ItemGeom)>` | `macos-app/Sources/KiCadAgent/Validation/SpatialHash.swift` (and Python twin) | ✅ Phase 232 | O(n log n) copper spacing queries, makes DRC scale to real boards |
+| `SpatialHash<(Int, ItemGeom)>` | `macos-app/Sources/Volta/Validation/SpatialHash.swift` (and Python twin) | ✅ Phase 232 | O(n log n) copper spacing queries, makes DRC scale to real boards |
 
 ### 3.4 Gate system
 
@@ -367,7 +367,7 @@ Protocol: `KiCadModelProvider: Sendable` with `stream()`, `generateJSON()`, `ava
 
 ## 5. Python Daemon
 
-### 5.1 CLI subcommands (`kicad-agent <subcommand>`)
+### 5.1 CLI subcommands (`volta <subcommand>`)
 
 | Subcommand | Status | What it does |
 |---|---|---|
@@ -399,7 +399,7 @@ Protocol: `KiCadModelProvider: Sendable` with `stream()`, `generateJSON()`, `ava
 
 ### 5.2 IPC handler
 
-`kicad-agent-0.1.0/src/kicad_agent/handler.py:1-214`
+`volta-0.1.0/src/volta/handler.py:1-214`
 - Validates operation JSON against Pydantic schema
 - Dispatches to OperationExecutor
 - Provides actionable error messages with line numbers
@@ -430,9 +430,9 @@ Protocol: `KiCadModelProvider: Sendable` with `stream()`, `generateJSON()`, `ava
 
 | Component | File | Status |
 |---|---|---|
-| A* pathfinding | `kicad_agent/routing/` | ✅ |
+| A* pathfinding | `volta/routing/` | ✅ |
 | Manhattan router | `VoltaEngineRemaining.swift` | ✅ Basic |
-| Freerouting integration | `kicad_agent/routing/freerouting/` | ✅ DSN/SES |
+| Freerouting integration | `volta/routing/freerouting/` | ✅ DSN/SES |
 | `auto_route` | `VoltaEngineRemaining.swift` | ✅ Star topology |
 | `auto_route_manhattan` | `VoltaEngineRemaining.swift` | ✅ |
 | `auto_route_freerouting` | `VoltaEngineRemaining.swift` | ✅ |
@@ -441,11 +441,11 @@ Protocol: `KiCadModelProvider: Sendable` with `stream()`, `generateJSON()`, `ava
 
 | Component | File | Status |
 |---|---|---|
-| KiCad netlist | `kicad_agent/circuit_ir/` | ✅ |
-| SPICE netlist | `kicad_agent/spice/netlist_to_spice.py` | ✅ |
-| ngspice bridge | `kicad_agent/spice/ngspice_bridge.py` | ✅ |
-| Optuna GPSampler | `kicad_agent/spice/optuna_runner.py` | ✅ |
-| LTspice integration | `kicad_agent/ltspice/` | ✅ |
+| KiCad netlist | `volta/circuit_ir/` | ✅ |
+| SPICE netlist | `volta/spice/netlist_to_spice.py` | ✅ |
+| ngspice bridge | `volta/spice/ngspice_bridge.py` | ✅ |
+| Optuna GPSampler | `volta/spice/optuna_runner.py` | ✅ |
+| LTspice integration | `volta/ltspice/` | ✅ |
 
 ---
 
@@ -485,7 +485,7 @@ Each profile defines: minimum trace width, minimum clearance, annular ring, dril
 
 ## 8. Tests by Area
 
-### 8.1 macOS app tests (`macos-app/Tests/KiCadAgentTests/`)
+### 8.1 macOS app tests (`macos-app/Tests/VoltaTests/`)
 
 | Category | Files | Coverage |
 |---|---|---|
@@ -524,12 +524,12 @@ Each profile defines: minimum trace width, minimum clearance, annular ring, dril
 
 | Adapter | Path | Framework | Status |
 |---|---|---|---|
-| v5 (47K multi-task) | `/Volumes/Storage/models/kicad-agent/adapters/v5/` | PEFT/MLX | ✅ Trained, loss 0.10 |
-| v2 Volta 12B (in training) | `/Volumes/Storage/models/kicad-agent/adapters/volta-12b-v2/` (NOT YET DOWNLOADED) | PEFT | ⏳ Step 2773/3000 |
+| v5 (47K multi-task) | `/Volumes/Storage/models/volta/adapters/v5/` | PEFT/MLX | ✅ Trained, loss 0.10 |
+| v2 Volta 12B (in training) | `/Volumes/Storage/models/volta/adapters/volta-12b-v2/` (NOT YET DOWNLOADED) | PEFT | ⏳ Step 2773/3000 |
 | Qwen 2.5 0.5B (bundled) | `macos-app/Resources/Models/` | MLX | ✅ Starter model |
 | Gemma 4 12B V2 (when downloaded) | HuggingFace `bretbouchard/volta-pcb-adapter-v2` | MLX | ⏳ Pending |
 
-Local model management: `kicad_agent/inference/model_downloader.py`
+Local model management: `volta/inference/model_downloader.py`
 
 ---
 
@@ -551,7 +551,7 @@ Local model management: `kicad_agent/inference/model_downloader.py`
 | Detect pin-type conflicts? | ✅ NativeERC (Swift + Python) | NativeERC |
 | Detect power net issues? | ✅ NativeERC | NativeERC |
 | Detect dangling wires? | ✅ NativeERC | NativeERC |
-| Run ERC in CI? | ✅ `kicad-agent erc <file>` | CLI |
+| Run ERC in CI? | ✅ `volta erc <file>` | CLI |
 
 ### PCB layout
 
@@ -576,12 +576,12 @@ Local model management: `kicad_agent/inference/model_downloader.py`
 
 | Q | A | Evidence |
 |---|---|---|
-| Export Gerbers? | ✅ Per-layer RS-274X | `kicad-agent export` |
-| Export drill files? | ✅ Excellon | `kicad-agent export` |
+| Export Gerbers? | ✅ Per-layer RS-274X | `volta export` |
+| Export drill files? | ✅ Excellon | `volta export` |
 | Export BOM? | ✅ CSV, per-vendor columns | `generate_bom` |
 | Export pick-and-place? | ✅ CSV | `export_positions` |
-| Export STEP 3D? | ✅ | `kicad-agent export --format step` |
-| Export netlist? | ✅ KiCad + SPICE | `kicad_agent/spice/` |
+| Export STEP 3D? | ✅ | `volta export --format step` |
+| Export netlist? | ✅ KiCad + SPICE | `volta/spice/` |
 | Build complete handoff zip? | ✅ `build_handoff_export(vendor=...)` | Phase 208 |
 | Validate against JLCPCB rules? | ✅ `drc_vendor --vendor jlcpcb` | Phase 206 |
 | Validate against PCBWay rules? | ✅ `drc_vendor --vendor pcbway` | Phase 206 |
@@ -682,9 +682,9 @@ Local model management: `kicad_agent/inference/model_downloader.py`
 ## 11. Repo Layout
 
 ```
-kicad-agent/
+volta/
 ├── macos-app/                    # Swift 6.2 / SwiftUI app
-│   ├── Sources/KiCadAgent/
+│   ├── Sources/Volta/
 │   │   ├── Views/                # SwiftUI views (43 files)
 │   │   ├── Parsing/              # Volta engine (3 files, 268 ops)
 │   │   ├── Validation/           # NativeERC, NativeDRC, SpatialHash
@@ -693,8 +693,8 @@ kicad-agent/
 │   │   ├── State/                # SwiftData persistence
 │   │   └── DesignSystem/         # Liquid Glass tokens
 │   └── Tests/                    # Swift tests (~25 files)
-├── kicad-agent-0.1.0/            # Python daemon + training
-│   ├── src/kicad_agent/
+├── volta-0.1.0/            # Python daemon + training
+│   ├── src/volta/
 │   │   ├── handler.py            # IPC dispatcher
 │   │   ├── ops/                  # Operation implementations
 │   │   ├── validation/           # native_erc.py, native_drc.py

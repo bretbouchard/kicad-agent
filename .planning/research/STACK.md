@@ -28,9 +28,9 @@ All required dependencies are already installed and verified in the codebase. v7
 ## Integration Points
 
 1. **kicad-cli DRC** — `kicad-cli pcb drc <file.kicad_pcb> --custom-rules <profile.kicad_dru>` already supports custom rule files. v7.0 wires up vendor profiles directly.
-2. **Existing export wrappers** (`src/kicad_agent/export/`) — gerber, drill, bom, pos, step, netlist, pdf, render all exist. v7.0 orchestrates them into a single bundle.
-3. **Existing ops registry** (`src/kicad_agent/ops/registry.py`) — 142 ops with a clear extension pattern (add schema class + registry entry + handler). v7.0 adds ~8 new ops.
-4. **Existing MCP auto-generation** (`src/kicad_agent/mcp/edit_server.py:133`) — new ops in the Operation union are auto-exposed as MCP tools. Zero MCP wiring needed.
+2. **Existing export wrappers** (`src/volta/export/`) — gerber, drill, bom, pos, step, netlist, pdf, render all exist. v7.0 orchestrates them into a single bundle.
+3. **Existing ops registry** (`src/volta/ops/registry.py`) — 142 ops with a clear extension pattern (add schema class + registry entry + handler). v7.0 adds ~8 new ops.
+4. **Existing MCP auto-generation** (`src/volta/mcp/edit_server.py:133`) — new ops in the Operation union are auto-exposed as MCP tools. Zero MCP wiring needed.
 
 ## Version Compatibility Notes
 

@@ -2,7 +2,7 @@
 
 **Researched:** 2026-07-10
 **Answers:** "What do I need to know to PLAN this phase well?"
-**Source:** Codebase analysis of src/kicad_agent/ against 207-CONTEXT.md, REQUIREMENTS.md, ROADMAP.md, PITFALLS.md
+**Source:** Codebase analysis of src/volta/ against 207-CONTEXT.md, REQUIREMENTS.md, ROADMAP.md, PITFALLS.md
 
 ---
 
@@ -10,7 +10,7 @@
 
 ### Current class definitions
 
-Both are `@dataclass(frozen=True)` in `src/kicad_agent/validation/gates/manufacturing_manifest.py`:
+Both are `@dataclass(frozen=True)` in `src/volta/validation/gates/manufacturing_manifest.py`:
 
 ```python
 @dataclass(frozen=True)
@@ -46,7 +46,7 @@ Partially. `asdict()` DOES recurse into nested dataclasses and converts them to 
 
 ### Serialization precedent: `training/manifest.py`
 
-`DataManifest` (`src/kicad_agent/training/manifest.py:27`) is the closest precedent — a `@dataclass(frozen=True)` with `save(path)` (classmethod-free, writes JSON via `json.dump`) and `load(path)` (classmethod, reads JSON and reconstructs via `cls(...)`). Key differences from what Phase 207 needs:
+`DataManifest` (`src/volta/training/manifest.py:27`) is the closest precedent — a `@dataclass(frozen=True)` with `save(path)` (classmethod-free, writes JSON via `json.dump`) and `load(path)` (classmethod, reads JSON and reconstructs via `cls(...)`). Key differences from what Phase 207 needs:
 
 - `DataManifest` has NO nested dataclass fields (only `dict`, `int`, `str`). Phase 207's manifest nests `ManufacturingArtifact`, so we must map the artifacts list back to tuples of dataclass instances.
 - `DataManifest.save` uses plain `open()` + `json.dump`. Phase 207 should use `atomic_write` (already used by `board_spec.save_board_spec` at `manufacturing/board_spec.py:81`).
@@ -206,7 +206,7 @@ Note the test method is still named `test_registry_has_98_operations` (stale nam
 ### Schema union sync (IP-2)
 
 `validate_registry_completeness()` cross-checks registry op_types against the `Operation` discriminated union in `schema.py:407-567`. Adding to the union requires adding `BuildCreateOp`, `BuildListOp`, `BuildShowOp` to BOTH:
-- The `from kicad_agent.ops._schema_pcb import (...)` re-export block (schema.py:239-285)
+- The `from volta.ops._schema_pcb import (...)` re-export block (schema.py:239-285)
 - The `Annotated[ ... | BuildCreateOp | BuildListOp | BuildShowOp, Field(discriminator="op_type")]` union (schema.py:562-566, add before the closing)
 - The `__all__` list (schema.py:581-785)
 
@@ -218,7 +218,7 @@ Forgetting any of the three causes `validate_registry_completeness` to report dr
 
 ### Is `subprocess` imported in manufacturing/ or gates/?
 
-**No.** No file under `src/kicad_agent/manufacturing/` or `src/kicad_agent/validation/gates/` imports subprocess. The only validation-path subprocess usage is `src/kicad_agent/validation/erc_drc.py:27` (`import subprocess`) for running `kicad-cli`. Phase 207 will add the first subprocess import to `manufacturing/`.
+**No.** No file under `src/volta/manufacturing/` or `src/volta/validation/gates/` imports subprocess. The only validation-path subprocess usage is `src/volta/validation/erc_drc.py:27` (`import subprocess`) for running `kicad-cli`. Phase 207 will add the first subprocess import to `manufacturing/`.
 
 ### Safest capture without raising
 
@@ -277,7 +277,7 @@ This matches INTEG-04 (project-scoped) and keeps builds adjacent to source.
 
 ### Atomic directory creation (race conditions)
 
-`Path.mkdir(parents=True, exist_ok=True)` is the standard idiom and is race-safe in practice for the single-process kicad-agent model (the executor is explicitly NOT concurrency-safe per `execution.py:9` O-BUG-008 note). The directory name includes a second-precision timestamp + a UUID4 `build_id`, so collisions are effectively impossible. Two layers:
+`Path.mkdir(parents=True, exist_ok=True)` is the standard idiom and is race-safe in practice for the single-process volta model (the executor is explicitly NOT concurrency-safe per `execution.py:9` O-BUG-008 note). The directory name includes a second-precision timestamp + a UUID4 `build_id`, so collisions are effectively impossible. Two layers:
 1. `(project_dir / "builds").mkdir(parents=True, exist_ok=True)` — idempotent.
 2. `build_dir.mkdir(parents=True, exist_ok=False)` — raises `FileExistsError` only on timestamp collision (sub-second); the UUID in the manifest disambiguates even if the dir name collides. If collision is a concern, append a short UUID suffix to the dir name.
 

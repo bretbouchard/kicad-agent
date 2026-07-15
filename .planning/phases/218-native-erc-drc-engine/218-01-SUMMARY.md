@@ -10,10 +10,10 @@
 - Swift ValidationPanel calls native checks
 
 ## Files created
-- `src/kicad_agent/validation/native_erc.py` (362 lines)
-- `src/kicad_agent/validation/native_drc.py` (487 lines)
-- `src/kicad_agent/validation/native_drc_advanced.py` (547 lines)
-- `src/kicad_agent/validation/native_drc_runner.py` (113 lines)
+- `src/volta/validation/native_erc.py` (362 lines)
+- `src/volta/validation/native_drc.py` (487 lines)
+- `src/volta/validation/native_drc_advanced.py` (547 lines)
+- `src/volta/validation/native_drc_runner.py` (113 lines)
 
 ## Test results
 - 50 schematics tested against kicad-cli ground truth

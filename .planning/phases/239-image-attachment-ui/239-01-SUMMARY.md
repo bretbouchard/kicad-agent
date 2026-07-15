@@ -27,12 +27,12 @@ Gap A5 from `GAP-ANALYSIS-CURRENT.md` closed.
 
 | File | Change |
 |------|--------|
-| `macos-app/Sources/KiCadAgent/Views/Chat/ImageAttachmentFactory.swift` | NEW — `ImageAttachmentFactory.make(from:)` URL → `ImageAttachment` with magic-byte sniffing and pixel-dimension detection |
-| `macos-app/Sources/KiCadAgent/Views/Chat/ImageAttachmentCompressor.swift` | NEW — CGContext resize to 2048px + `CGImageDestination` re-encode as JPEG (strips EXIF) |
-| `macos-app/Sources/KiCadAgent/Views/Chat/RouterStreamProvider.swift` | MODIFIED — `buildKCPrompt` reads `ImageAttachment.url` and emits `KCAttachment` for each; bad-file errors logged + skipped, never poison the stream |
-| `macos-app/Sources/KiCadAgent/Views/Chat/ChatView.swift` | MODIFIED — `attachButton` → real `NSOpenPanel`; `.onDrop` on compose bar; `NSEvent` local monitor for Cmd+V; `attachError` banner; helper methods `presentOpenPanel`, `handleDrop`, `installPasteMonitor`, `writeClipboardImageToTemp`, `attachImage` |
-| `macos-app/Sources/KiCadAgent/KiCadAgentApp.swift` | MODIFIED — added `static let stream` to `Logger` extension (used by `RouterStreamProvider` for attachment read failures) |
-| `macos-app/Tests/KiCadAgentTests/ImageAttachmentPipelineTests.swift` | NEW — 12 tests |
+| `macos-app/Sources/Volta/Views/Chat/ImageAttachmentFactory.swift` | NEW — `ImageAttachmentFactory.make(from:)` URL → `ImageAttachment` with magic-byte sniffing and pixel-dimension detection |
+| `macos-app/Sources/Volta/Views/Chat/ImageAttachmentCompressor.swift` | NEW — CGContext resize to 2048px + `CGImageDestination` re-encode as JPEG (strips EXIF) |
+| `macos-app/Sources/Volta/Views/Chat/RouterStreamProvider.swift` | MODIFIED — `buildKCPrompt` reads `ImageAttachment.url` and emits `KCAttachment` for each; bad-file errors logged + skipped, never poison the stream |
+| `macos-app/Sources/Volta/Views/Chat/ChatView.swift` | MODIFIED — `attachButton` → real `NSOpenPanel`; `.onDrop` on compose bar; `NSEvent` local monitor for Cmd+V; `attachError` banner; helper methods `presentOpenPanel`, `handleDrop`, `installPasteMonitor`, `writeClipboardImageToTemp`, `attachImage` |
+| `macos-app/Sources/Volta/VoltaApp.swift` | MODIFIED — added `static let stream` to `Logger` extension (used by `RouterStreamProvider` for attachment read failures) |
+| `macos-app/Tests/VoltaTests/ImageAttachmentPipelineTests.swift` | NEW — 12 tests |
 
 ## Three attach paths, one pipeline
 
@@ -71,7 +71,7 @@ clear message instead of a silent rejection.
 3. Draws into a new RGB `CGContext` (alpha dropped — JPEG has none).
 4. Re-encodes via `CGImageDestinationCreateWithURL` + `UTType.jpeg` at 0.85
    quality. ImageIO drops EXIF on re-encode.
-5. Writes to `temporaryDirectory/kicad-agent-attachments/<UUID>.jpg`.
+5. Writes to `temporaryDirectory/volta-attachments/<UUID>.jpg`.
 
 `compressIfNeeded` is a no-op for small files (returns `nil`); the
 chat pipeline only swaps in the compressed attachment when the size

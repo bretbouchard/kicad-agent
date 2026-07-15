@@ -16,7 +16,7 @@
 
 ### Per-sheet variant:
 ```bash
-PYTHONPATH=/Users/bretbouchard/apps/kicad-agent/src /opt/homebrew/bin/python3.11 -m kicad_agent.cli '{
+PYTHONPATH=/Users/bretbouchard/apps/volta/src /opt/homebrew/bin/python3.11 -m volta.cli '{
   "op": "erc_auto_fix",
   "target_file": "hardware/backplane/codecs.kicad_sch"
 }'
@@ -25,7 +25,7 @@ Result on codecs.kicad_sch: 202 → 204 violations (+2 net, introduced new error
 
 ### Hierarchical variant:
 ```bash
-PYTHONPATH=/Users/bretbouchard/apps/kicad-agent/src /opt/homebrew/bin/python3.11 -m kicad_agent.cli '{
+PYTHONPATH=/Users/bretbouchard/apps/volta/src /opt/homebrew/bin/python3.11 -m volta.cli '{
   "op": "erc_auto_fix_hierarchical",
   "target_file": "hardware/backplane/slot-connectors.kicad_sch"
 }'
@@ -36,7 +36,7 @@ Result on slot-connectors.kicad_sch: **file corrupted** — kicad-cli reports "F
 
 This op is actively dangerous. It should never be used on production schematics without explicit backup. Phase 123 had to revert Wave 3 because of this.
 
-Affects all KiCad 10 projects using kicad-agent — any call to `erc_auto_fix` risks file corruption.
+Affects all KiCad 10 projects using volta — any call to `erc_auto_fix` risks file corruption.
 
 ## Suspected root cause
 

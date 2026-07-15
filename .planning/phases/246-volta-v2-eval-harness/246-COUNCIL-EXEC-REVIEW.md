@@ -70,9 +70,9 @@ resolution_taxonomy:
 - `is_pass()` - correctly compares against 0.70 threshold
 
 **Files Reviewed:**
-- `/Users/bretbouchard/apps/kicad-agent/tests/eval/metrics.py`
-- `/Users/bretbouchard/apps/kicad-agent/tests/eval/volta_v2_harness.py`
-- `/Users/bretbouchard/apps/kicad-agent/tests/eval/testset.py`
+- `/Users/bretbouchard/apps/volta/tests/eval/metrics.py`
+- `/Users/bretbouchard/apps/volta/tests/eval/volta_v2_harness.py`
+- `/Users/bretbouchard/apps/volta/tests/eval/testset.py`
 
 ---
 

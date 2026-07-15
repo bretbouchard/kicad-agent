@@ -4,13 +4,13 @@
 **Status:** Complete
 **Purpose:** Answer "What do I need to know to PLAN Phase 208 well?"
 
-Source files verified by direct read (paths absolute under `/Users/bretbouchard/apps/kicad-agent`).
+Source files verified by direct read (paths absolute under `/Users/bretbouchard/apps/volta`).
 
 ---
 
 ## RQ1: Export Wrapper Signatures and Return Types
 
-All wrappers live under `src/kicad_agent/export/`. Two result types are used: `ExportResult` (file-list exports) and `BomResult` (BOM-specific). `render_pcb` uses a separate `RenderResult` (not needed for handoff).
+All wrappers live under `src/volta/export/`. Two result types are used: `ExportResult` (file-list exports) and `BomResult` (BOM-specific). `render_pcb` uses a separate `RenderResult` (not needed for handoff).
 
 ### ExportResult (`export/gerber.py:30`)
 
@@ -138,7 +138,7 @@ Logic:
 
 ### Existing zip creation code: NONE
 
-Grep for `zipfile` in `src/kicad_agent/` found exactly one module: `src/kicad_agent/project/adi_library/cache.py` — and it only **reads** zips (`zipfile.ZipFile(zip_path, "r")` at line 228). No code anywhere writes zips. Phase 208 introduces the first zip-creation code in the codebase.
+Grep for `zipfile` in `src/volta/` found exactly one module: `src/volta/project/adi_library/cache.py` — and it only **reads** zips (`zipfile.ZipFile(zip_path, "r")` at line 228). No code anywhere writes zips. Phase 208 introduces the first zip-creation code in the codebase.
 
 ### Correct Python streaming pattern
 
@@ -319,9 +319,9 @@ The full change in `test_registry.py`:
 ### Registry catalog + schema union additions (IP-1, IP-2)
 
 Three files must change atomically for `build_handoff_export`:
-1. `src/kicad_agent/ops/_schema_pcb.py` — add `BuildHandoffExportOp` class (after `BuildShowOp`, line 1361)
-2. `src/kicad_agent/ops/schema.py` — add `BuildHandoffExportOp` to imports (line ~287), to the `Operation` union (line ~572), and to `__all__` (line ~791)
-3. `src/kicad_agent/ops/registry.py` — add `"build_handoff_export"` entry to `_RAW_CATALOG` (after `build_show`, line ~1489)
+1. `src/volta/ops/_schema_pcb.py` — add `BuildHandoffExportOp` class (after `BuildShowOp`, line 1361)
+2. `src/volta/ops/schema.py` — add `BuildHandoffExportOp` to imports (line ~287), to the `Operation` union (line ~572), and to `__all__` (line ~791)
+3. `src/volta/ops/registry.py` — add `"build_handoff_export"` entry to `_RAW_CATALOG` (after `build_show`, line ~1489)
 
 The registry entry pattern (mirroring `build_create`):
 ```python

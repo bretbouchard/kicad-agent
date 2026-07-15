@@ -9,7 +9,7 @@
 | **Maker** | Hobbyist, educator | KiCad (basic), EasyEDA, Fritzing | 1-2 layers, through-hole + basic SMD | 1-100 units |
 | **Curious** | Has an idea, no tools | Nothing — or asks someone else | Doesn't know where to start | 1 unit |
 
-**kicad-agent targets the gap between Maker and Curious.** We make it possible for someone with ZERO EDA experience to produce a real, manufacturable PCB. The Pro and Prosumer tiers are future expansion.
+**volta targets the gap between Maker and Curious.** We make it possible for someone with ZERO EDA experience to produce a real, manufacturable PCB. The Pro and Prosumer tiers are future expansion.
 
 ---
 
@@ -83,7 +83,7 @@ The gap is NOT just features — it's **workflow and risk tolerance**:
 | **Volume** | 1K-1M units | 1-10 units |
 | **Tools** | $5K-50K/seat/year | Free or $0 |
 
-**kicad-agent's positioning:** "Professional-quality output at hobbyist accessibility." We can't compete with Altium on features, but we can give a hobbyist a board that WORKS without learning any EDA tool.
+**volta's positioning:** "Professional-quality output at hobbyist accessibility." We can't compete with Altium on features, but we can give a hobbyist a board that WORKS without learning any EDA tool.
 
 ---
 

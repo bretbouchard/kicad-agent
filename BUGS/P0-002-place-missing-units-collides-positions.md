@@ -11,7 +11,7 @@
 ## Reproduction
 
 ```bash
-PYTHONPATH=/Users/bretbouchard/apps/kicad-agent/src /opt/homebrew/bin/python3.11 -m kicad_agent.cli '{
+PYTHONPATH=/Users/bretbouchard/apps/volta/src /opt/homebrew/bin/python3.11 -m volta.cli '{
   "op": "place_missing_units",
   "target_file": "hardware/backplane/audio-buffers.kicad_sch"
 }'
@@ -33,7 +33,7 @@ The op computes a position based on the parent unit (unit A) but doesn't dedupli
 
 ## Fix path
 
-1. Inspect `place_missing_units` handler in `src/kicad_agent/ops/handlers/`
+1. Inspect `place_missing_units` handler in `src/volta/ops/handlers/`
 2. Track placed positions per call — refuse to place at coordinates already used
 3. When collision detected, offset by component body width + clearance (e.g., +10mm X)
 4. Add unit test exercising op on a sheet with 4+ instances of same multi-unit component

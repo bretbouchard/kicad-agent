@@ -1,4 +1,4 @@
-# kicad-agent — Current Gap Analysis
+# volta — Current Gap Analysis
 
 **v6.0 · 2026-07-14 · based on actual code review**
 
@@ -23,7 +23,7 @@ Things that exist but don't work right. Fix these first — they're the worst si
 | Field | Value |
 |---|---|
 | **Category** | Quality |
-| **Evidence** | `macos-app/Tests/KiCadAgentTests/` has no Volta op tests; `tests/ops/` covers some Python-side ops but not Swift parity |
+| **Evidence** | `macos-app/Tests/VoltaTests/` has no Volta op tests; `tests/ops/` covers some Python-side ops but not Swift parity |
 | **Impact** | Every time we add an op, we risk breaking existing ones silently. Council reviews catch the obvious ones; regressions in routing or PCB nets only show when a user runs a real board. |
 | **Fix** | Property-test every op: pick a real `.kicad_sch`, apply op, parse result, assert invariants. Use swift-snapshot-testing for IR diffs. |
 | **Effort** | M |
@@ -89,7 +89,7 @@ Things that exist but don't work right. Fix these first — they're the worst si
 | Field | Value |
 |---|---|
 | **Category** | Quality |
-| **Evidence** | `macos-app/Tests/KiCadAgentTests/ProviderBannerTests.swift` is the only view test; ~40 other views have no test coverage |
+| **Evidence** | `macos-app/Tests/VoltaTests/ProviderBannerTests.swift` is the only view test; ~40 other views have no test coverage |
 | **Impact** | Refactoring a view (e.g. Liquid Glass shell) is high-risk. Visual regressions ship. |
 | **Fix** | swift-snapshot-testing for each top-level view; accessibility tests for chat; interaction tests for validation panel. |
 | **Effort** | M |
@@ -162,7 +162,7 @@ Things the user reasonably expects but the app doesn't have. Fix in priority ord
 |---|---|
 | **Category** | PCB layout |
 | **Evidence** | No impedance calc, no length matching beyond reporting skew, no eye diagram, no SI simulation |
-| **Impact** | DDR / PCIe / HDMI / SerDes users cannot use kicad-agent. We're stuck at "audio + slow digital" boards. |
+| **Impact** | DDR / PCIe / HDMI / SerDes users cannot use volta. We're stuck at "audio + slow digital" boards. |
 | **Fix** | Calc service: trace width for target impedance (microstrip / stripline / coplanar waveguide), length matching engine that actually does the routing (not just reports skew), optional integration with Simbeor / Ansys. |
 | **Effort** | XL |
 | **Priority** | P2 |

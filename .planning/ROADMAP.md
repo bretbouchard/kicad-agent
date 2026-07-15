@@ -56,7 +56,7 @@ The handoff package is the universal fallback — it works with every fab (3 wit
 **Requirements:** DRC-01, DRC-02, DRC-03, DRC-04, DRC-05, DRC-06, DRC-07, DRC-08
 
 **Key work:**
-- Create `src/kicad_agent/manufacturing/drc_profiles/` with static `.kicad_dru` files:
+- Create `src/volta/manufacturing/drc_profiles/` with static `.kicad_dru` files:
   - `pcbway.kicad_dru` — from PCBWay official repo, updated to current capabilities (annular ring 0.15mm, not stale 0.25mm from 2023) — Pitfall 1 + DRC-07
   - `jlcpcb.kicad_dru` — from Cimos/KiCad-DesignRules (MIT) — Pitfall 6 cleanest source
   - `aisler_2layer.kicad_dru`, `aisler_4layer.kicad_dru`, `aisler_6layer.kicad_dru`, `aisler_8layer.kicad_dru` — from AislerHQ/aisler-support
@@ -186,7 +186,7 @@ The handoff package is the universal fallback — it works with every fab (3 wit
 
 **Requirements:** FUTURE-API-01, FUTURE-API-02, FUTURE-API-03, FUTURE-API-04, FUTURE-API-05
 
-**Deferred rationale:** API keys are partner-gated (PCBWay: anson@pcbway.com) or account-gated (MacroFab: factory.macrofab.com). Endpoint docs for MacroFab are behind an authenticated portal. No Python libraries exist for any of these — kicad-agent would write the first wrappers. The handoff package (Phase 208) is the universal fallback that works with all vendors, including those with APIs. API adapters are accelerators, not requirements.
+**Deferred rationale:** API keys are partner-gated (PCBWay: anson@pcbway.com) or account-gated (MacroFab: factory.macrofab.com). Endpoint docs for MacroFab are behind an authenticated portal. No Python libraries exist for any of these — volta would write the first wrappers. The handoff package (Phase 208) is the universal fallback that works with all vendors, including those with APIs. API adapters are accelerators, not requirements.
 
 **Scope guard (Pitfall 8):** If this phase is ever activated, scope it to QUOTE ONLY first (no order placement) — quoting is read-only and safe; ordering has financial consequences.
 
@@ -262,7 +262,7 @@ Phase 206 (DRC) ────────┴────────────�
 | 208. Manufacturer Handoff Package | 1/1 | Complete    | 2026-07-11 |
 | 209. Crossfile + MCP Integration | 1/1 | Complete    | 2026-07-11 |
 | 210. Vendor API Adapters (DEFERRED) | 0/0 | Deferred | - |
-| 230. Train Both Models | 0/? | In Progress | (Vast.ai training, bead kicad-agent-h7q) |
+| 230. Train Both Models | 0/? | In Progress | (Vast.ai training, bead volta-h7q) |
 | 231. Wire Swift ERC as Primary Validation | 1/1 | Complete    | 2026-07-14 |
 | 232. Spatial Index for DRC Performance | 1/1 | Complete    | 2026-07-14 |
 | 233. Swift Schematic SVG Renderer | 1/1 | Complete    | 2026-07-14 |
@@ -401,7 +401,7 @@ Created 2026-07-14 to close the 8 high-priority gaps identified in `docs/GAP-ANA
 - Replace `MLXLocalProvider` placeholder with real PEFT inference on `google/gemma-4-12b-it`
 - Adapter: rank=64, alpha=128, dropout=0.05, 7 target modules, peft 0.19.1
 - Trained 3000 steps on 48.5M tokens (loss 0.0288, accuracy 98.66%)
-- Source adapter at `/Volumes/Storage/models/kicad-agent/adapters/volta-12b-v2/` (5.0 GB, SHA256 cbc121cc… verified)
+- Source adapter at `/Volumes/Storage/models/volta/adapters/volta-12b-v2/` (5.0 GB, SHA256 cbc121cc… verified)
 - **Publish to HF**: create `bretbouchard/volta-pcb-adapter-v2` repo + upload the 5.0 GB so the app's `ModelDownloader.adapterRepo` can fetch it
 - **Flip the swap gate**: change `ModelDownloader.swift:65` from `volta-pcb-adapter-v1` → `volta-pcb-adapter-v2`. Remove the v1 smoke-test path entirely (no value keeping it)
 - Load via `PeftModel.from_pretrained(base, adapter_path)` in Python daemon; bridge to Swift via existing `LocalProvider` protocol
@@ -437,12 +437,12 @@ Created 2026-07-14 to close the 8 high-priority gaps identified in `docs/GAP-ANA
 - Document canonical paths in `CLAUDE.md`
 - Plan: `.planning/phases/248-reconcile-volta-naming/248-01-PLAN.md`
 
-### Phase 249: Project-wide rename kicad-agent → Volta
-- Rename Python package `kicad_agent` → `volta`
-- Rename Swift types `KicadAgent` → `Volta`, CLI command `kicad-agent` → `volta`
+### Phase 249: Project-wide rename volta → Volta
+- Rename Python package `volta` → `volta`
+- Rename Swift types `KicadAgent` → `Volta`, CLI command `volta` → `volta`
 - Update all docs, paths, settings keys, environment variables
 - Preserve all 6300+ tests
-- Plan: `.planning/phases/249-rename-kicad-agent-to-volta/249-01-PLAN.md`
+- Plan: `.planning/phases/249-rename-volta-to-volta/249-01-PLAN.md`
 
 ### Phase 250: Portable build setup
 - `scripts/setup_local.py` creates `volta-12b-v2` symlink at repo root, resolves or downloads canonical adapter

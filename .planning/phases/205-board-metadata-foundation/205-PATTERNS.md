@@ -9,10 +9,10 @@
 
 ---
 
-## 1. CREATE: `src/kicad_agent/manufacturing/__init__.py`
+## 1. CREATE: `src/volta/manufacturing/__init__.py`
 
 **Role:** Package init — exports public API.
-**Closest analog:** `src/kicad_agent/dfm/__init__.py` (lines 1-31).
+**Closest analog:** `src/volta/dfm/__init__.py` (lines 1-31).
 
 **Pattern excerpt** (`dfm/__init__.py`):
 ```python
@@ -20,8 +20,8 @@
 
 DFM-01 through DFM-05: Pluggable DFM check framework with manufacturer profiles...
 """
-from kicad_agent.dfm.checker import DfmChecker, DfmCheck, DfmReport, DfmFinding, DfmSeverity
-from kicad_agent.dfm.profiles import ManufacturerProfile, load_profile, get_builtin_profiles
+from volta.dfm.checker import DfmChecker, DfmCheck, DfmReport, DfmFinding, DfmSeverity
+from volta.dfm.profiles import ManufacturerProfile, load_profile, get_builtin_profiles
 
 __all__ = [
     "DfmChecker", "DfmCheck", "DfmReport", "DfmFinding", "DfmSeverity",
@@ -35,7 +35,7 @@ __all__ = [
 
 Phase 205: BoardSpec model + sidecar JSON persistence.
 """
-from kicad_agent.manufacturing.board_spec import (
+from volta.manufacturing.board_spec import (
     BoardSpec, ImpedanceRequirement,
     SurfaceFinish, SoldermaskColor, SilkscreenColor,
     load_board_spec, save_board_spec,
@@ -49,11 +49,11 @@ __all__ = [
 
 ---
 
-## 2. CREATE: `src/kicad_agent/manufacturing/board_spec.py`
+## 2. CREATE: `src/volta/manufacturing/board_spec.py`
 
 **Role:** Pydantic model + enums + sidecar JSON load/save functions.
-**Closest analog (model):** `src/kicad_agent/dfm/profiles.py` `ManufacturerProfile` (lines 24-102) — pydantic `BaseModel` with `Field(...)` constraints + `from_json`/`from_dict` classmethods.
-**Closest analog (atomic write):** `src/kicad_agent/io/atomic_write.py` `atomic_write` (lines 15-43).
+**Closest analog (model):** `src/volta/dfm/profiles.py` `ManufacturerProfile` (lines 24-102) — pydantic `BaseModel` with `Field(...)` constraints + `from_json`/`from_dict` classmethods.
+**Closest analog (atomic write):** `src/volta/io/atomic_write.py` `atomic_write` (lines 15-43).
 
 ### 2a. Model + Enum pattern
 
@@ -84,7 +84,7 @@ class ManufacturerProfile(BaseModel):
 from enum import Enum
 from pathlib import Path
 from pydantic import BaseModel, Field
-from kicad_agent.io.atomic_write import atomic_write
+from volta.io.atomic_write import atomic_write
 
 class SurfaceFinish(str, Enum):
     HASL = "HASL"
@@ -159,7 +159,7 @@ def save_board_spec(pcb_path: Path, spec: BoardSpec) -> Path:
 ```python
 @pytest.fixture(autouse=True)
 def _clear_ir_registry():
-    from kicad_agent.ir.base import _clear_registry
+    from volta.ir.base import _clear_registry
     _clear_registry()
     yield
     _clear_registry()
@@ -204,7 +204,7 @@ def test_sidecar_missing_returns_none(tmp_path):
 **Excerpt** (`tests/test_pcb_ops.py:35-68` — minimal PCB helper):
 ```python
 def _create_minimal_pcb(tmpdir: Path, name: str = "test.kicad_pcb") -> tuple[Path, PcbIR]:
-    from kicad_agent.ir.base import _clear_registry
+    from volta.ir.base import _clear_registry
     _clear_registry()
     pcb_path = tmpdir / name
     board = Board.create_new()
@@ -234,7 +234,7 @@ def test_set_board_revision_round_trip(tmp_path):
 
 ---
 
-## 5. MODIFY: `src/kicad_agent/parser/pcb_native_types.py`
+## 5. MODIFY: `src/volta/parser/pcb_native_types.py`
 
 **Role:** Add `NativeTitleBlock` frozen dataclass + add field to `NativeBoard` + export.
 **Closest analog:** `NativeGeneral` (lines 295-304) — flat frozen dataclass with simple typed fields and defaults.
@@ -279,7 +279,7 @@ class NativeTitleBlock:
 
 ---
 
-## 6. MODIFY: `src/kicad_agent/parser/pcb_native_parser.py`
+## 6. MODIFY: `src/volta/parser/pcb_native_parser.py`
 
 **Role:** Remove `title_block` from `_UNSUPPORTED_ELEMENTS`, add to `_KNOWN_TOP_LEVEL`, add `_extract_title_block`, wire into `_build_board`.
 **Closest analog:** `_extract_setup` classmethod (lines 1234-1255) — uses `_find_symbol` to find a block, extracts children, returns typed dataclass or None.
@@ -384,7 +384,7 @@ return NativeBoard(
 
 ---
 
-## 7. MODIFY: `src/kicad_agent/ops/_schema_pcb.py`
+## 7. MODIFY: `src/volta/ops/_schema_pcb.py`
 
 **Role:** Add 3 Op classes: `ReadBoardMetadataOp` (read-only), `SetBoardMetadataOp` (mutating, partial update), `SetBoardRevisionOp` (mutating).
 **Closest analog (read-only):** `ListNetClassesOp` (lines 283-294).
@@ -462,7 +462,7 @@ class SetBoardRevisionOp(BaseModel):
 
 ---
 
-## 8. MODIFY: `src/kicad_agent/ops/schema.py`
+## 8. MODIFY: `src/volta/ops/schema.py`
 
 **Role:** Add 3 Op classes to the `Operation.root` discriminated union + import + `__all__`.
 **Three touch points:**
@@ -470,7 +470,7 @@ class SetBoardRevisionOp(BaseModel):
 ### 8a. Import block (line 239-268 area)
 **Excerpt** (`schema.py:239-248`):
 ```python
-from kicad_agent.ops._schema_pcb import (  # noqa: E402
+from volta.ops._schema_pcb import (  # noqa: E402
     AddNetClassOp,
     AddDesignRuleOp,
     AddCopperZoneOp,
@@ -511,7 +511,7 @@ class Operation(BaseModel):
 
 ---
 
-## 9. MODIFY: `src/kicad_agent/ops/registry.py`
+## 9. MODIFY: `src/volta/ops/registry.py`
 
 **Role:** Add 3 `_RAW_CATALOG` entries.
 **Closest analog:** `set_board_outline` entry (lines 372-380) for mutating; `list_net_classes` entry (lines 525-533) for read-only.
@@ -574,7 +574,7 @@ class Operation(BaseModel):
 
 ---
 
-## 10. MODIFY: `src/kicad_agent/ops/handlers/query.py`
+## 10. MODIFY: `src/volta/ops/handlers/query.py`
 
 **Role:** Add `read_board_metadata` handler via `@register_query`.
 **Closest analog:** the existing `query_connectivity` handler (lines 25-28).
@@ -591,7 +591,7 @@ def register_query(op_type: str) -> Callable:
 
 @register_query("query_connectivity")
 def _handle_query_connectivity(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.connectivity_query import handle_connectivity_query
+    from volta.ops.connectivity_query import handle_connectivity_query
     return handle_connectivity_query(op, ir, file_path)
 ```
 **Apply:**
@@ -602,13 +602,13 @@ def _handle_read_board_metadata(op: Any, ir: PcbIR, file_path: Path) -> dict[str
     CRITICAL: execute_query uses kiutils path, NOT native parser.
     Parse title_block from ir.raw_content using native parser helpers directly.
     """
-    from kicad_agent.parser.pcb_native_parser import NativeParser, _find_symbol, _find_string_child, _sym
+    from volta.parser.pcb_native_parser import NativeParser, _find_symbol, _find_string_child, _sym
     import sexpdata
     tree = sexpdata.loads(ir.raw_content)
     tb = _find_symbol(tree, "title_block")
     # ... extract fields, build result dict ...
     # Also load board_spec sidecar if present:
-    from kicad_agent.manufacturing.board_spec import load_board_spec
+    from volta.manufacturing.board_spec import load_board_spec
     spec = load_board_spec(file_path)
     result = {"title": ..., "date": ..., "rev": ..., "company": ..., "comments": [...],
               "board_spec": spec.model_dump() if spec else None}
@@ -618,7 +618,7 @@ def _handle_read_board_metadata(op: Any, ir: PcbIR, file_path: Path) -> dict[str
 
 ---
 
-## 11. MODIFY: `src/kicad_agent/ops/handlers/pcb.py`
+## 11. MODIFY: `src/volta/ops/handlers/pcb.py`
 
 **Role:** Add `set_board_metadata` and `set_board_revision` handlers via `@register_pcb`.
 **Closest analog:** `move_footprint` handler (lines 225-245) — the raw-writer + `commit_raw_content` mutation pattern.
@@ -628,7 +628,7 @@ def _handle_read_board_metadata(op: Any, ir: PcbIR, file_path: Path) -> dict[str
 @register_pcb("move_footprint")
 def _handle_move_footprint(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     """Move a footprint via PcbRawWriter (Council C-01: returns content, executor writes)."""
-    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+    from volta.ops.pcb_raw_writer import PcbRawWriter
     raw = ir.raw_content
     new_content = PcbRawWriter.modify_footprint_position(raw, op.reference, op.x, op.y, op.angle)
     if new_content == raw:
@@ -640,7 +640,7 @@ def _handle_move_footprint(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any
 ```python
 @register_pcb("set_board_metadata")
 def _handle_set_board_metadata(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+    from volta.ops.pcb_raw_writer import PcbRawWriter
     raw = ir.raw_content
     new_content = PcbRawWriter.set_title_block_fields(
         raw, title=op.title, date=op.date, rev=op.rev, company=op.company, comments=op.comments
@@ -650,7 +650,7 @@ def _handle_set_board_metadata(op: Any, ir: PcbIR, file_path: Path) -> dict[str,
 
 @register_pcb("set_board_revision")
 def _handle_set_board_revision(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
-    from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+    from volta.ops.pcb_raw_writer import PcbRawWriter
     new_content = PcbRawWriter.set_title_block_fields(ir.raw_content, rev=op.rev)
     ir.commit_raw_content(new_content)
     return {"rev": op.rev}
@@ -659,7 +659,7 @@ def _handle_set_board_revision(op: Any, ir: PcbIR, file_path: Path) -> dict[str,
 
 ---
 
-## 12. MODIFY: `src/kicad_agent/ops/pcb_raw_writer.py`
+## 12. MODIFY: `src/volta/ops/pcb_raw_writer.py`
 
 **Role:** Add title_block modification methods to `PcbRawWriter`.
 **Closest analog (block find + replace):** `find_zone_block` (lines 167-194) + `modify_zone_field` (lines 221-279).

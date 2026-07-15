@@ -6,7 +6,7 @@ tags: [spice, ngspice, optuna, pytest, bjt, gummel-poon]
 
 requires:
   - phase: 158-spice-pipeline
-    provides: "src/kicad_agent/spice/model_registry.SPICE_MODELS dict + get_model/is_simulatable API"
+    provides: "src/volta/spice/model_registry.SPICE_MODELS dict + get_model/is_simulatable API"
 provides:
   - "pyproject.toml [project.optional-dependencies] sim group (optuna>=4.5, pandas>=2.0, matplotlib>=3.7)"
   - "2N3904 Gummel-Poon .MODEL card in SPICE_MODELS — referenced by every Wave 1+ Eurorack testbench"
@@ -23,7 +23,7 @@ key-files:
     - tests/sim/conftest.py
   modified:
     - pyproject.toml
-    - src/kicad_agent/spice/model_registry.py
+    - src/volta/spice/model_registry.py
     - tests/spice/test_spice.py
 
 key-decisions:
@@ -76,7 +76,7 @@ Each task was committed atomically:
 
 ## Files Created/Modified
 - `pyproject.toml` — Added `sim = ["optuna>=4.5", "pandas>=2.0", "matplotlib>=3.7"]` block after `docs`
-- `src/kicad_agent/spice/model_registry.py` — Added `"2N3904"` key to SPICE_MODELS dict (now 101 LOC, ≤110 budget)
+- `src/volta/spice/model_registry.py` — Added `"2N3904"` key to SPICE_MODELS dict (now 101 LOC, ≤110 budget)
 - `tests/spice/test_spice.py` — Appended `Test2N3904Model` class (4 tests)
 - `tests/sim/__init__.py` — Package marker docstring
 - `tests/sim/conftest.py` — Session-scoped autouse `_require_ngspice` fixture (28 LOC)
@@ -106,7 +106,7 @@ Until ngspice is on PATH, Plan 02 integration tests in tests/sim/ will fail at t
 
 ## Next Phase Readiness
 - **Plan 02 (Closed-box Eurorack tests)**: Ready. tests/sim/ package exists, BLK-1 conftest ready to extend with `eurorack_preamp` session fixture. Blocker: ngspice CLI must be on PATH.
-- **Plan 03 (Optuna sweep)**: Ready. optuna 4.9.0 installed, GPSampler available. Will create `src/kicad_agent/sim/optimizer.py` consuming Phase 158's `run_simulation`.
+- **Plan 03 (Optuna sweep)**: Ready. optuna 4.9.0 installed, GPSampler available. Will create `src/volta/sim/optimizer.py` consuming Phase 158's `run_simulation`.
 - **Plan 04 (Docs + demo script)**: Blocked by Plans 02/03 completion. Will add ngspice install instructions to README + CLAUDE.md tool inventory.
 
 ---

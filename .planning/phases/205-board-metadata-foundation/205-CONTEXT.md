@@ -59,7 +59,7 @@ Phase 205 adds the ability to read and write board metadata (revision, title, da
 
 ### BoardSpec Manufacturing Model (META-04, META-05)
 
-- **New file: `src/kicad_agent/manufacturing/board_spec.py`** (creates `manufacturing/` package — add `manufacturing/__init__.py`)
+- **New file: `src/volta/manufacturing/board_spec.py`** (creates `manufacturing/` package — add `manufacturing/__init__.py`)
 - **Pydantic `BaseModel`** (NOT frozen dataclass — matches `ManufacturerProfile` in `dfm/profiles.py`, the existing manufacturing-capability model convention)
 - **Fields:**
   - `surface_finish: SurfaceFinish = SurfaceFinish.HASL` — enum (HASL, ENIG, HASL_LEAD_FREE, HARD_GOLD, OSP, ENEPIG)
@@ -140,22 +140,22 @@ Phase 205 adds the ability to read and write board metadata (revision, title, da
 **Downstream agents MUST read these before planning or implementing.**
 
 ### Parser Patterns
-- `src/kicad_agent/parser/pcb_native_parser.py` — `_UNSUPPORTED_ELEMENTS` (line 62), `_KNOWN_TOP_LEVEL` (line 379), `_extract_setup` pattern (lines 1234-1255), helper functions `_find_symbol`/`_find_first_value`/`_find_string_child` (lines 77-172)
-- `src/kicad_agent/parser/pcb_native_types.py` — `NativeGeneral` pattern (line 295), `NativeStackup` pattern (line 322), `NativeBoard` fields (line 348), `__all__` export list (lines 394-410), immutability contract (lines 1-43)
+- `src/volta/parser/pcb_native_parser.py` — `_UNSUPPORTED_ELEMENTS` (line 62), `_KNOWN_TOP_LEVEL` (line 379), `_extract_setup` pattern (lines 1234-1255), helper functions `_find_symbol`/`_find_first_value`/`_find_string_child` (lines 77-172)
+- `src/volta/parser/pcb_native_types.py` — `NativeGeneral` pattern (line 295), `NativeStackup` pattern (line 322), `NativeBoard` fields (line 348), `__all__` export list (lines 394-410), immutability contract (lines 1-43)
 
 ### IR Mutation Patterns
-- `src/kicad_agent/ir/pcb_ir.py` — `add_net` (lines 198-205), `remove_net` (lines 230-252) showing `dataclasses.replace` + `_record_mutation` pattern, `commit_raw_content` (line 1109) for raw-string mutation path
+- `src/volta/ir/pcb_ir.py` — `add_net` (lines 198-205), `remove_net` (lines 230-252) showing `dataclasses.replace` + `_record_mutation` pattern, `commit_raw_content` (line 1109) for raw-string mutation path
 
 ### Operation Patterns
-- `src/kicad_agent/ops/_schema_pcb.py` — `SetBoardOutlineOp` (lines 98-111) mutating op pattern, `ListNetClassesOp` (lines 283-294) read-only op pattern
-- `src/kicad_agent/ops/schema.py` — `Operation` discriminated union (lines 394-557), `TargetFile` validator (lines 153-166), import/re-export section (~line 173)
-- `src/kicad_agent/ops/registry.py` — `OpMeta` fields (lines 17-40), `_RAW_CATALOG` entry pattern, existing `set_board_outline` entry (lines 372-380)
-- `src/kicad_agent/ops/handlers/pcb.py` — `register_pcb` decorator + `_PCB_HANDLERS` dict (lines 16-24)
-- `src/kicad_agent/ops/handlers/query.py` — `register_query` decorator + `_QUERY_HANDLERS` dict (lines 14-22)
-- `src/kicad_agent/ops/execution.py` — `execute_query` (line 193) read-only dispatch, `execute_pcb` (line 470) mutating dispatch, `CROSS_FILE_OP_TYPES` (line 112)
+- `src/volta/ops/_schema_pcb.py` — `SetBoardOutlineOp` (lines 98-111) mutating op pattern, `ListNetClassesOp` (lines 283-294) read-only op pattern
+- `src/volta/ops/schema.py` — `Operation` discriminated union (lines 394-557), `TargetFile` validator (lines 153-166), import/re-export section (~line 173)
+- `src/volta/ops/registry.py` — `OpMeta` fields (lines 17-40), `_RAW_CATALOG` entry pattern, existing `set_board_outline` entry (lines 372-380)
+- `src/volta/ops/handlers/pcb.py` — `register_pcb` decorator + `_PCB_HANDLERS` dict (lines 16-24)
+- `src/volta/ops/handlers/query.py` — `register_query` decorator + `_QUERY_HANDLERS` dict (lines 14-22)
+- `src/volta/ops/execution.py` — `execute_query` (line 193) read-only dispatch, `execute_pcb` (line 470) mutating dispatch, `CROSS_FILE_OP_TYPES` (line 112)
 
 ### Manufacturing Model Patterns
-- `src/kicad_agent/dfm/profiles.py` — `ManufacturerProfile` pydantic BaseModel (line 24), `from_yaml`/`from_json`/`from_dict` classmethods, `_PROFILES` dict (lines 181-187)
+- `src/volta/dfm/profiles.py` — `ManufacturerProfile` pydantic BaseModel (line 24), `from_yaml`/`from_json`/`from_dict` classmethods, `_PROFILES` dict (lines 181-187)
 
 ### Test Patterns
 - `tests/test_pcb_native_parser.py` — Module-scoped fixture pattern (lines 38-47), existing stackup/setup tests (lines 362-378)

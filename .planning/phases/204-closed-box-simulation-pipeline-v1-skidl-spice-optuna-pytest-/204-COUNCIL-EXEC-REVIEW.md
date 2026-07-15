@@ -21,7 +21,7 @@ The closed-box simulation pipeline ships clean. SLC strict-clean. Security clean
 ## Stack Assessment
 
 **Detected project stack:**
-- **Project type:** Python library + macOS app (kicad-agent)
+- **Project type:** Python library + macOS app (volta)
 - **Domain:** KiCad 10+ structural editing + closed-box SPICE simulation
 - **Phase 204 subsystems:** simulation, optimization, plotting, BOM, demo
 - **New dependencies:** `optuna>=4.5` (4.9.0 installed), `pandas>=2.0` (3.0.3), `matplotlib>=3.7` (3.10.9)
@@ -57,16 +57,16 @@ The closed-box simulation pipeline ships clean. SLC strict-clean. Security clean
 ### SLC Anti-Pattern Search Results
 
 ```
-grep -rn "TODO|FIXME|XXX" src/kicad_agent/sim/ tests/sim/ scripts/demo_closed_box.py
+grep -rn "TODO|FIXME|XXX" src/volta/sim/ tests/sim/ scripts/demo_closed_box.py
 → 0 results
 
-grep -rn "workaround|hack|temporary" src/kicad_agent/sim/ tests/sim/ scripts/demo_closed_box.py
+grep -rn "workaround|hack|temporary" src/volta/sim/ tests/sim/ scripts/demo_closed_box.py
 → 0 results
 
-grep -rn "NotImplementedError|UnimplementedError" src/kicad_agent/sim/ tests/sim/ scripts/demo_closed_box.py
+grep -rn "NotImplementedError|UnimplementedError" src/volta/sim/ tests/sim/ scripts/demo_closed_box.py
 → 0 results
 
-grep -rn "return null|return undefined|return \"\"|^\\s*pass$|^\\s*\\.\\.\\.$" src/kicad_agent/sim/
+grep -rn "return null|return undefined|return \"\"|^\\s*pass$|^\\s*\\.\\.\\.$" src/volta/sim/
 → 0 results
 ```
 
@@ -95,7 +95,7 @@ grep -rn "return null|return undefined|return \"\"|^\\s*pass$|^\\s*\\.\\.\\.$" s
 
 ### Subprocess Boundary
 
-Phase 158's `src/kicad_agent/spice/ngspice_runner.py` is the ONLY subprocess boundary:
+Phase 158's `src/volta/spice/ngspice_runner.py` is the ONLY subprocess boundary:
 - `subprocess.run(cmd, capture_output=True, text=True, timeout=_NGSPICE_TIMEOUT)` — line 54
 - `cmd = ["ngspice", "-b", "-o", str(log_path), str(cir_path)]` — list form, no shell=True
 - Netlist written to `tempfile.NamedTemporaryFile` (Phase 158 design — no shell injection surface)
@@ -115,7 +115,7 @@ No external input crosses a trust boundary. All file paths are either caller-sup
 ### Secrets Scan
 
 ```
-grep -rn "API_KEY|api_key|password|secret|token" src/kicad_agent/sim/ scripts/demo_closed_box.py
+grep -rn "API_KEY|api_key|password|secret|token" src/volta/sim/ scripts/demo_closed_box.py
 → 0 results
 ```
 
@@ -129,9 +129,9 @@ grep -rn "API_KEY|api_key|password|secret|token" src/kicad_agent/sim/ scripts/de
 
 ### Architecture (Phase 158 Foundation Consumed, Not Rewritten)
 
-✓ Phase 158 `src/kicad_agent/spice/` (types, ngspice_runner, testbench, model_registry) consumed as-is
-✓ Phase 204 `src/kicad_agent/sim/` is a sibling package (clean separation: "run a SPICE sim" vs "optimize + analyze + demo")
-✓ Public API: 8 exports via `src/kicad_agent/sim/__init__.py`
+✓ Phase 158 `src/volta/spice/` (types, ngspice_runner, testbench, model_registry) consumed as-is
+✓ Phase 204 `src/volta/sim/` is a sibling package (clean separation: "run a SPICE sim" vs "optimize + analyze + demo")
+✓ Public API: 8 exports via `src/volta/sim/__init__.py`
 ✓ No circular imports (sim imports spice, never the reverse)
 
 ### Immutability
@@ -144,12 +144,12 @@ grep -rn "API_KEY|api_key|password|secret|token" src/kicad_agent/sim/ scripts/de
 
 | File | LOC | Budget | Status |
 |------|-----|--------|--------|
-| `src/kicad_agent/sim/__init__.py` | 22 | — | ✓ |
-| `src/kicad_agent/sim/eurorack.py` | 204 | 220 | ✓ |
-| `src/kicad_agent/sim/dataframe.py` | 66 | 80 | ✓ |
-| `src/kicad_agent/sim/bom.py` | 57 | 60 | ✓ |
-| `src/kicad_agent/sim/plot.py` | 102 | 100 | ✓ (1 over — WR-04 honest stub branch, justified) |
-| `src/kicad_agent/sim/optimizer.py` | 170 | 200 | ✓ |
+| `src/volta/sim/__init__.py` | 22 | — | ✓ |
+| `src/volta/sim/eurorack.py` | 204 | 220 | ✓ |
+| `src/volta/sim/dataframe.py` | 66 | 80 | ✓ |
+| `src/volta/sim/bom.py` | 57 | 60 | ✓ |
+| `src/volta/sim/plot.py` | 102 | 100 | ✓ (1 over — WR-04 honest stub branch, justified) |
+| `src/volta/sim/optimizer.py` | 170 | 200 | ✓ |
 | `scripts/demo_closed_box.py` | 138 | 200 | ✓ |
 
 All files under 400 LOC hard limit per coding-style.md.
@@ -211,7 +211,7 @@ Phase 204 is a CLI library + demo script. No SwiftUI, no React, no Liquid Glass 
 - **Category:** code (dependency management)
 - **Historical Context:** Optuna import is ~1.5s. If ngspice missing, demo should fail in <100ms with actionable message, not wait 1.5s+ then traceback.
 - **Pattern Compliance:** ✅ Follows
-- **Explanation:** `scripts/demo_closed_box.py` calls `check_ngspice()` BEFORE any `from kicad_agent.sim import ...`. User-stupid guardrail fires first; magic-stupid zero friction preserved (no waiting on heavy imports just to fail).
+- **Explanation:** `scripts/demo_closed_box.py` calls `check_ngspice()` BEFORE any `from volta.sim import ...`. User-stupid guardrail fires first; magic-stupid zero friction preserved (no waiting on heavy imports just to fail).
 - **Recommendation:** Pattern followed.
 - **Action Items:** None.
 
@@ -271,7 +271,7 @@ before the `.GLOBAL` declarations. Without these, the +12V/-12V nets float, the 
 
 Verified by direct Python invocation:
 ```
-$ python -c "from kicad_agent.sim.eurorack import *; ..."
+$ python -c "from volta.sim.eurorack import *; ..."
 VCC +12V 0 DC 12
 VEE -12V 0 DC -12
 .GLOBAL +12V
@@ -300,7 +300,7 @@ The fix is correct and complete.
 
 Phase 158 v1 measures `vdb(out)` (real-valued dB magnitude), NOT `vp(out)` (complex phase). Calling `np.angle()` on real values returns flat 0 — misleading.
 
-`src/kicad_agent/sim/plot.py` lines 81-94 emit an honest "Phase data not available" stub instead of misleading flat-0 phase data. The stub text:
+`src/volta/sim/plot.py` lines 81-94 emit an honest "Phase data not available" stub instead of misleading flat-0 phase data. The stub text:
 ```
 Phase data not available
 (Phase 158 v1 measures magnitude only;
@@ -431,9 +431,9 @@ All findings from `204-COUNCIL-PLAN-REVIEW.md` (R1) and `204-COUNCIL-PLAN-REVIEW
 
 - **Severity:** LOW
 - **Category:** determinism
-- **Location:** `src/kicad_agent/sim/optimizer.py:147`
+- **Location:** `src/volta/sim/optimizer.py:147`
 - **Description:** Default `OPTUNA_STORAGE = "sqlite:///sweeps/eurorack_preamp.db"` is relative to current working directory. Running the demo from different directories creates different DBs — sweep results don't carry over.
-- **Why This Is Suboptimal:** A more deterministic path would be `~/.kicad-agent/sweeps/eurorack_preamp.db` (matches the existing `~/.kicad-agent/tools/` convention from CLAUDE.md routing stack section). But for v1 demo purposes, cwd-relative is fine — the demo always runs from repo root per README.
+- **Why This Is Suboptimal:** A more deterministic path would be `~/.volta/sweeps/eurorack_preamp.db` (matches the existing `~/.volta/tools/` convention from CLAUDE.md routing stack section). But for v1 demo purposes, cwd-relative is fine — the demo always runs from repo root per README.
 - **Fix:** Defer to v2 when a UI shell needs to locate the sweeps DB programmatically.
 - **Resolution State:** **DEFERRED-TO-NAMED-TARGET** — Phase 204b / v2 when the macOS app shell needs deterministic DB location. Readiness signal: app shell UI consumes sweep results. Documented in ROADMAP "## Deferred" section (added below).
 - **Impact:** Minor — demo behavior is correct from repo root. Test isolation uses `tmp_path` correctly.
@@ -442,7 +442,7 @@ All findings from `204-COUNCIL-PLAN-REVIEW.md` (R1) and `204-COUNCIL-PLAN-REVIEW
 
 - **Severity:** LOW
 - **Category:** numerical-approximation
-- **Location:** `src/kicad_agent/sim/optimizer.py:117-118`
+- **Location:** `src/volta/sim/optimizer.py:117-118`
 - **Description:** `ic_ma = (12.0 - 0.2) / r1 * 1000.0` is a v1 approximation that ignores base current and assumes Vce_sat = 0.2V. Real Ic depends on the bias network (R2/R3 divider, β, Vbe). The approximation is conservative — overestimates Ic slightly, which biases the optimizer toward higher R1 (lower current).
 - **Why This Is Acceptable:** The approximation is documented in code comment ("Vce_sat=0.2 — approximation; full .OP analysis deferred to v2"). The IC_SATURATION_LIMIT_MA guard (50mA) has 4× margin to 2N3904 Ic_max (200mA), so overestimation doesn't cause false rejects.
 - **Fix:** Replace heuristic with actual `result.get_analysis(AnalysisType.OP).collector_current_ma` once Phase 158 adds .OP result parsing.
@@ -453,7 +453,7 @@ All findings from `204-COUNCIL-PLAN-REVIEW.md` (R1) and `204-COUNCIL-PLAN-REVIEW
 
 - **Severity:** LOW
 - **Category:** feature-gap (documented)
-- **Location:** `src/kicad_agent/sim/plot.py:81-94`
+- **Location:** `src/volta/sim/plot.py:81-94`
 - **Description:** Phase subplot emits "Phase data not available" stub instead of real phase data. Phase 158 v1 measures `vdb(out)` (real-valued dB magnitude), NOT `vp(out)` (complex phase).
 - **Why This Is Correct:** WR-04 R2 fix — calling `np.angle()` on real values returns flat 0, which would imply the circuit has zero phase shift (physically impossible for CE preamp, ~180° inversion at midband). The honest stub is the correct engineering decision.
 - **Fix:** Restore `phase = np.angle(np.array(ac.traces[1].values), deg=True)` when Phase 158 v2 produces a complex `vp(out)` trace.

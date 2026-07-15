@@ -16,7 +16,7 @@ kicad-cli sch erc hardware/backplane/codecs.kicad_sch --output /tmp/erc.rpt
 grep -c "wire_dangling" /tmp/erc.rpt
 # (returns 30+)
 
-PYTHONPATH=/Users/bretbouchard/apps/kicad-agent/src /opt/homebrew/bin/python3.11 -m kicad_agent.cli '{
+PYTHONPATH=/Users/bretbouchard/apps/volta/src /opt/homebrew/bin/python3.11 -m volta.cli '{
   "op": "remove_dangling_wires",
   "target_file": "hardware/backplane/codecs.kicad_sch"
 }'

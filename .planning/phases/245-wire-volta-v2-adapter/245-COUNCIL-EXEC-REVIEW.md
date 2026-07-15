@@ -54,7 +54,7 @@ All acceptance criteria verified. 0 P0/P1 findings.
 
 ### 1. P3: TODO(245) in MLXLocalProvider.swift Line 190
 
-**Location**: `macos-app/Sources/KiCadAgent/Models/Providers/MLXLocalProvider.swift:190`
+**Location**: `macos-app/Sources/Volta/Models/Providers/MLXLocalProvider.swift:190`
 
 **Issue**: TODO comment documents potential MLXLLM LoRA loading failure with fallback to base model.
 

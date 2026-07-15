@@ -1,8 +1,8 @@
-# Plan: Add `update_footprint_from_library` Operation to kicad-agent
+# Plan: Add `update_footprint_from_library` Operation to volta
 
 ## Context
 
-KiCad's "Update Footprints from Library" GUI command is the only way to fix `lib_footprint_mismatch` DRC violations. Neither `kicad-cli` nor the existing kicad-agent `swap_footprint` op actually reloads footprint geometry from library files — `swap_footprint` only updates the libId string. We need a new operation that:
+KiCad's "Update Footprints from Library" GUI command is the only way to fix `lib_footprint_mismatch` DRC violations. Neither `kicad-cli` nor the existing volta `swap_footprint` op actually reloads footprint geometry from library files — `swap_footprint` only updates the libId string. We need a new operation that:
 
 1. Reads the current footprint from the PCB (preserving position, rotation, net assignments, reference)
 2. Loads the fresh footprint from the library `.kicad_mod` file
@@ -12,11 +12,11 @@ KiCad's "Update Footprints from Library" GUI command is the only way to fix `lib
 
 | File | Change |
 |------|--------|
-| `~/apps/kicad-agent/src/kicad_agent/ops/schema.py` | Add `UpdateFootprintFromLibraryOp` class + add to `Operation` union |
-| `~/apps/kicad-agent/src/kicad_agent/ir/pcb_ir.py` | Add `update_footprint_from_library()` method |
-| `~/apps/kicad-agent/src/kicad_agent/ops/executor.py` | Add PCB file-type branching + dispatch for new op |
-| `~/apps/kicad-agent/src/kicad_agent/lib_resolver.py` | **New file** — resolve `lib_id` to `.kicad_mod` file path |
-| `~/.claude/skills/kicad-agent/prompt.md` | Document new operation |
+| `~/apps/volta/src/volta/ops/schema.py` | Add `UpdateFootprintFromLibraryOp` class + add to `Operation` union |
+| `~/apps/volta/src/volta/ir/pcb_ir.py` | Add `update_footprint_from_library()` method |
+| `~/apps/volta/src/volta/ops/executor.py` | Add PCB file-type branching + dispatch for new op |
+| `~/apps/volta/src/volta/lib_resolver.py` | **New file** — resolve `lib_id` to `.kicad_mod` file path |
+| `~/.claude/skills/volta/prompt.md` | Document new operation |
 
 ## Implementation
 

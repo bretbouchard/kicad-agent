@@ -6,7 +6,7 @@
 
 ## Summary
 
-Phase 204 builds the optimization + testing + dataframe + demo layer on top of Phase 158's existing `src/kicad_agent/spice/` foundation. The goal is a closed-box demo: "give me a 20 dB Eurorack preamp" → Optuna sweeps E12 resistor values → ngspice verifies → pytest asserts → Bode PNG + BOM markdown emit. Phase 158's foundation is solid (14/16 tests passing, BLK-1 strict pattern established, frozen dataclasses, subprocess-based ngspice runner) and is consumed as-is.
+Phase 204 builds the optimization + testing + dataframe + demo layer on top of Phase 158's existing `src/volta/spice/` foundation. The goal is a closed-box demo: "give me a 20 dB Eurorack preamp" → Optuna sweeps E12 resistor values → ngspice verifies → pytest asserts → Bode PNG + BOM markdown emit. Phase 158's foundation is solid (14/16 tests passing, BLK-1 strict pattern established, frozen dataclasses, subprocess-based ngspice runner) and is consumed as-is.
 
 **Three critical discoveries reshaped the plan:**
 
@@ -16,13 +16,13 @@ Phase 204 builds the optimization + testing + dataframe + demo layer on top of P
 
 3. **ngspice CLI + Optuna are NOT installed in the dev environment** `[VERIFIED: `command -v ngspice` fails, `.venv/bin/python -c "import optuna"` fails]`. This blocks the demo script end-to-end and blocks 2 of the new tests. The plan MUST include: (a) `brew install ngspice` documentation in README and CLAUDE.md tool inventory, (b) `optuna>=4.5` added to `pyproject.toml` `[project.optional-dependencies] sim = [...]`, (c) tests that gracefully fail-with-clear-message (not silently skip) when ngspice is missing.
 
-**Primary recommendation:** New package `src/kicad_agent/sim/` as sibling to `src/kicad_agent/spice/`. Four modules: `eurorack.py` (~150 LOC circuit builder + SPICE netlist emitter), `optimizer.py` (~120 LOC Optuna objective + sweep runner), `dataframe.py` (~80 LOC pandas adapter), `bom.py` (~50 LOC BOM markdown generator). Plus `scripts/demo_closed_box.py` (~150 LOC) and `tests/sim/` (~200 LOC, 5-7 tests). Single demo command: `python3 scripts/demo_closed_box.py` produces `bode.png` + `bom.md` + stdout summary in <60 s.
+**Primary recommendation:** New package `src/volta/sim/` as sibling to `src/volta/spice/`. Four modules: `eurorack.py` (~150 LOC circuit builder + SPICE netlist emitter), `optimizer.py` (~120 LOC Optuna objective + sweep runner), `dataframe.py` (~80 LOC pandas adapter), `bom.py` (~50 LOC BOM markdown generator). Plus `scripts/demo_closed_box.py` (~150 LOC) and `tests/sim/` (~200 LOC, 5-7 tests). Single demo command: `python3 scripts/demo_closed_box.py` produces `bode.png` + `bom.md` + stdout summary in <60 s.
 
 ## User Constraints (from CONTEXT.md)
 
 ### Locked Decisions (from `204-CONTEXT.md` `<decisions>`)
 
-- **Reuse, don't rewrite.** Phase 204 builds on `src/kicad_agent/spice/`. New package is `src/kicad_agent/sim/` (sibling, not child — clean separation between "run a SPICE sim" and "optimize + analyze + demo a SPICE sim").
+- **Reuse, don't rewrite.** Phase 204 builds on `src/volta/spice/`. New package is `src/volta/sim/` (sibling, not child — clean separation between "run a SPICE sim" and "optimize + analyze + demo a SPICE sim").
 - **Subprocess, not PySpice.** PySpice is dead (last release 2021, broken on ngspice 41+). Phase 158's `ngspice_runner.run_simulation()` is the only SPICE entry point.
 - **Optuna GPSampler primary.** v4.5+ shipped Sep 2025. `trial.suggest_categorical("r1", E12_SERIES)` solves discrete-value constraint natively.
 - **Pareto via Optuna NSGA-IISampler.** Multi-objective (gain vs current) in v1 — Optuna's built-in NSGA-II is sufficient. Defer pymoo to v2.
@@ -39,7 +39,7 @@ Phase 204 builds the optimization + testing + dataframe + demo layer on top of P
 
 - Internal Optuna trial allocation strategy (GPSampler hyperparameters, n_trials, parallel jobs) — **researched below, recommendation provided**
 - Exact matplotlib style/seaborn-style choices for Bode plot — **researched below, recommendation provided**
-- Exact docstring format — **Google-style inferred from existing `src/kicad_agent/spice/`**
+- Exact docstring format — **Google-style inferred from existing `src/volta/spice/`**
 - Internal helper function decomposition in optimizer.py / dataframe.py
 - Whether to extend `model_registry.py` to add `2N3904` model or rely on ngspice's built-in (`Q2N3904`) — **researched below, recommendation provided**
 
@@ -59,7 +59,7 @@ This phase is gap-fill (no formal REQ-IDs in REQUIREMENTS.md). Source of truth i
 
 | ID | Description (derived from CONTEXT.md) | Research Support |
 |----|--------------------------------------|------------------|
-| P204-01 | `src/kicad_agent/sim/` package as sibling to `src/kicad_agent/spice/` | Standard Stack §, Architecture Patterns § |
+| P204-01 | `src/volta/sim/` package as sibling to `src/volta/spice/` | Standard Stack §, Architecture Patterns § |
 | P204-02 | `circuit_to_spice_netlist()` helper — skidl Circuit → SPICE `.cir` lines | Critical Integration Gap §, Code Examples § |
 | P204-03 | Optuna GPSampler objective for 4 E12 resistors + 3 E12 caps | Optuna GPSampler §, Code Examples § |
 | P204-04 | 2N3904 Gummel-Poon `.MODEL` card added to `model_registry.SPICE_MODELS` | 2N3904 SPICE Model § |
@@ -189,7 +189,7 @@ Outputs: bode.png, bom.md, sweeps/eurorack.db
 ### Recommended Project Structure
 
 ```
-src/kicad_agent/
+src/volta/
   sim/                              # NEW (Phase 204)
     __init__.py                     # Public API (~25 LOC)
     eurorack.py                     # build_preamp_circuit + circuit_to_spice_netlist (~180 LOC)
@@ -227,10 +227,10 @@ All files 200-400 LOC per `~/.claude/rules/coding-style.md`. Total Phase 204 foo
 
 **When to use:** Inside the Optuna objective — every trial builds a fresh circuit.
 
-**Source:** Modeled on `src/kicad_agent/circuit_ir/skidl_circuit.py:90-166` (Phase 156) `[VERIFIED: codebase]`.
+**Source:** Modeled on `src/volta/circuit_ir/skidl_circuit.py:90-166` (Phase 156) `[VERIFIED: codebase]`.
 
 ```python
-# Source: derived from src/kicad_agent/circuit_ir/skidl_circuit.py pattern
+# Source: derived from src/volta/circuit_ir/skidl_circuit.py pattern
 import skidl
 
 def build_preamp_circuit(
@@ -438,7 +438,7 @@ This is **not** SPICE syntax. Phase 158's `generate_ac_testbench(netlist, ...)` 
 
 **Implication:** Phase 204's `eurorack.py` MUST include a `circuit_to_spice_netlist()` function (see Pattern 2 above). This is THE primary new capability in Phase 204. Without it, the closed-box demo cannot work — the Optuna objective builds a skidl Circuit per trial, but cannot feed it to ngspice without this bridge.
 
-**Approximate effort:** 80-120 LOC. The walker pattern already exists in `src/kicad_agent/circuit_ir/skidl_circuit.py:124-166` (Phase 156 builds a `CircuitIR` from a Circuit — similar traversal, different output format).
+**Approximate effort:** 80-120 LOC. The walker pattern already exists in `src/volta/circuit_ir/skidl_circuit.py:124-166` (Phase 156 builds a `CircuitIR` from a Circuit — similar traversal, different output format).
 
 ## Don't Hand-Roll
 
@@ -446,8 +446,8 @@ This is **not** SPICE syntax. Phase 158's `generate_ac_testbench(netlist, ...)` 
 |---------|-------------|-------------|-----|
 | Bayesian optimization over E12 values | Custom Gaussian-process sampler | `optuna.samplers.GPSampler` (v4.5+) | Years of numerical tuning; supports `suggest_categorical` natively for discrete E12 values |
 | Multi-objective Pareto (gain vs current) | Custom NSGA-II implementation | `optuna.samplers.NSGAIISampler` | Production-hardened; deferred to v2 alternative (pymoo) by CONTEXT.md |
-| Running ngspice | Direct subprocess + manual log parsing | `kicad_agent.spice.run_simulation` (Phase 158) | Already handles timeout, error parsing, version extraction |
-| AC/TRAN testbench generation | Manual f-string testbench | `kicad_agent.spice.generate_ac_testbench` (Phase 158) | Already correct for ngspice `.CONTROL ... .ENDC` block |
+| Running ngspice | Direct subprocess + manual log parsing | `volta.spice.run_simulation` (Phase 158) | Already handles timeout, error parsing, version extraction |
+| AC/TRAN testbench generation | Manual f-string testbench | `volta.spice.generate_ac_testbench` (Phase 158) | Already correct for ngspice `.CONTROL ... .ENDC` block |
 | Gain/bandwidth extraction from ngspice log | Regex from scratch | Phase 158 already parses `gain_db` and `bw_3db` from log | Duplicated logic; see `ngspice_runner._parse_ac` |
 | skidl Part creation | Manual `skidl.Part(...)` calls in objective | `build_preamp_circuit()` helper in `eurorack.py` | BLK-1: one topology, one place to change |
 | DataFrame from SimulationResult | Manual dict-of-lists | `dataframe.to_dataframe()` adapter | Adapter keeps `SimulationResult` canonical (frozen dataclass) |
@@ -465,7 +465,7 @@ This is **not** SPICE syntax. Phase 158's `generate_ac_testbench(netlist, ...)` 
 
 **How to avoid:**
 - Always use `skidl.Part("Device", "Q_NPN", value="2N3904")` — NOT `Q_NPN_ECB` or `Q_NPN_CBE`.
-- Route through `kicad_agent.circuit_ir._ensure_skidl_env()` (Phase 156) — it auto-discovers KiCad's symbol dir at `/Applications/KiCad/KiCad.app/Contents/SharedSupport/symbols` on macOS `[VERIFIED: codebase]`.
+- Route through `volta.circuit_ir._ensure_skidl_env()` (Phase 156) — it auto-discovers KiCad's symbol dir at `/Applications/KiCad/KiCad.app/Contents/SharedSupport/symbols` on macOS `[VERIFIED: codebase]`.
 - Wire by pin NAME (`q1["B"]`, `q1["C"]`, `q1["E"]`) — not pin number — to be agnostic to symbol variant.
 
 **Warning signs:** `skidl` raises `Unable to find part`; or `q1.pins` is empty after construction.
@@ -539,8 +539,8 @@ r1 = trial.suggest_categorical("r1", E12_DECADES)  # e.g. 4.7k
 ```python
 # Source: derived from tests/spice/test_spice.py BLK-1 pattern + CONTEXT.md specifics
 import pytest
-from kicad_agent.sim.eurorack import build_preamp_circuit, circuit_to_spice_netlist
-from kicad_agent.spice import (
+from volta.sim.eurorack import build_preamp_circuit, circuit_to_spice_netlist
+from volta.spice import (
     AnalysisType, SimulationResult, run_simulation,
     generate_ac_testbench, get_model,
 )
@@ -596,8 +596,8 @@ def test_eurorack_preamp_meets_target_bandwidth(eurorack_preamp) -> None:
 ```python
 # Source: Optuna 4.5+ docs (samplers reference) + CONTEXT.md <specifics>
 import optuna
-from kicad_agent.spice import run_simulation, generate_ac_testbench, get_model, AnalysisType
-from kicad_agent.sim.eurorack import build_preamp_circuit, circuit_to_spice_netlist
+from volta.spice import run_simulation, generate_ac_testbench, get_model, AnalysisType
+from volta.sim.eurorack import build_preamp_circuit, circuit_to_spice_netlist
 
 E12 = [1.0, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2]
 E12_R = [v * 10**e for e in range(2, 6) for v in E12]  # 100Ω .. 820kΩ
@@ -654,7 +654,7 @@ def optimize_preamp(n_trials: int = 50, seed: int = 42) -> optuna.Study:
 # Source: derived from Phase 158 types.py + CONTEXT.md <specifics>
 import pandas as pd
 import optuna
-from kicad_agent.spice import SimulationResult, AnalysisType
+from volta.spice import SimulationResult, AnalysisType
 
 
 def to_dataframe(result: SimulationResult) -> pd.DataFrame:
@@ -692,7 +692,7 @@ def study_to_dataframe(study: optuna.Study) -> pd.DataFrame:
 # Source: matplotlib 3.10 docs + standard Bode plot convention
 import matplotlib.pyplot as plt
 import numpy as np
-from kicad_agent.spice import SimulationResult, AnalysisType
+from volta.spice import SimulationResult, AnalysisType
 
 
 def plot_bode(result: SimulationResult, save_path: str = "bode.png") -> None:
@@ -937,7 +937,7 @@ See Code Examples § for the implementation.
 
 **Critical:** See "Critical Integration Gap" section above. skidl's `generate_netlist()` produces KiCad `.net`, not SPICE `.cir`. Phase 204 must implement `circuit_to_spice_netlist()`.
 
-**Existing pattern at `src/kicad_agent/circuit_ir/skidl_circuit.py:39-180` (Phase 156):** This builds a `CircuitIR` (not SPICE) from a `.kicad_sch` file. It uses skidl.Circuit as an intermediate. Phase 204 can mirror this traversal pattern but emits SPICE lines instead of building a CircuitIR.
+**Existing pattern at `src/volta/circuit_ir/skidl_circuit.py:39-180` (Phase 156):** This builds a `CircuitIR` (not SPICE) from a `.kicad_sch` file. It uses skidl.Circuit as an intermediate. Phase 204 can mirror this traversal pattern but emits SPICE lines instead of building a CircuitIR.
 
 **Differences from Phase 156:**
 - Phase 156: KiCad `.kicad_sch` → skidl.Circuit → CircuitIR (immutable IR)
@@ -989,7 +989,7 @@ This is the user-stupid guardrail. Tests use the pytest.fail pattern (above).
 
 ## Runtime State Inventory
 
-> Phase 204 is primarily additive (new package `src/kicad_agent/sim/`). No rename/refactor/migration triggers apply in the strict sense. However, the §2.5 categories below are explicitly answered for completeness.
+> Phase 204 is primarily additive (new package `src/volta/sim/`). No rename/refactor/migration triggers apply in the strict sense. However, the §2.5 categories below are explicitly answered for completeness.
 
 | Category | Items Found | Action Required |
 |----------|-------------|-----------------|
@@ -997,7 +997,7 @@ This is the user-stupid guardrail. Tests use the pytest.fail pattern (above).
 | Live service config | None — Phase 204 is a library + script, not a service. No n8n workflows, no Datadog dashboards. | None |
 | OS-registered state | None — no LaunchAgents, no Task Scheduler entries. | None |
 | Secrets/env vars | None — no API keys, no auth tokens. ngspice is local CLI. | None |
-| Build artifacts | None — `src/kicad_agent/sim/` is new; no `egg-info` to update. `pyproject.toml` will need new `[project.optional-dependencies] sim = [...]` entry. | Update pyproject.toml (planner task) |
+| Build artifacts | None — `src/volta/sim/` is new; no `egg-info` to update. `pyproject.toml` will need new `[project.optional-dependencies] sim = [...]` entry. | Update pyproject.toml (planner task) |
 
 ## Environment Availability
 
@@ -1114,8 +1114,8 @@ This is the user-stupid guardrail. Tests use the pytest.fail pattern (above).
 ### Primary (HIGH confidence)
 
 - **Codebase inspection (this session):**
-  - `src/kicad_agent/spice/__init__.py`, `types.py`, `ngspice_runner.py`, `testbench.py`, `model_registry.py` — Phase 158 foundation verified
-  - `src/kicad_agent/circuit_ir/skidl_circuit.py`, `__init__.py` — Phase 156 skidl integration pattern verified
+  - `src/volta/spice/__init__.py`, `types.py`, `ngspice_runner.py`, `testbench.py`, `model_registry.py` — Phase 158 foundation verified
+  - `src/volta/circuit_ir/skidl_circuit.py`, `__init__.py` — Phase 156 skidl integration pattern verified
   - `tests/spice/test_spice.py` — BLK-1 strict test pattern verified
   - `.planning/phases/158-spice-pipeline/SUMMARY.md` — Phase 158 closeout verified
   - `pyproject.toml` — current dependencies verified

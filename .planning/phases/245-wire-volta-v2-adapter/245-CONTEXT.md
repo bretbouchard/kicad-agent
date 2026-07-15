@@ -19,7 +19,7 @@ sheet pull the v2 adapter (not v1) and inference generates real PCB output.
 
 ### Adapter source
 - **HF repo**: `bretbouchard/volta-pcb-adapter-v2` (does not exist yet — must be created)
-- **Source of truth (canonical)**: `/Volumes/Storage/models/kicad-agent/adapters/volta-12b-v2/`
+- **Source of truth (canonical)**: `/Volumes/Storage/models/volta/adapters/volta-12b-v2/`
   - 5.0 GB, SHA256 `cbc121ccdc43cf9b8f29ca20bdd2837bee196d6cf76bc2491d07de74b6f150ab`
   - 39 files: final adapter, 3 checkpoints (2000/2500/3000), tokenizer, configs
   - 656 bfloat16 LoRA tensors across 48 layers × 7 target modules (q/k/v/o/gate/up/down_proj)
@@ -54,16 +54,16 @@ sheet pull the v2 adapter (not v1) and inference generates real PCB output.
 ## Canonical References (downstream agents must read)
 
 ### Source-of-truth files
-- `macos-app/Sources/KiCadAgent/Models/LocalModelManager.swift` — current `scanAndRegister()`, where `MLXLocalProvider` is registered. Lines 36-70.
-- `macos-app/Sources/KiCadAgent/Models/ModelDownloader.swift` — current v1 wire-up. Line 65 = the swap gate.
-- `macos-app/Sources/KiCadAgent/Views/Settings/ModelDownloadView.swift` — download sheet UI; needs the failure-state branch.
-- `macos-app/Sources/KiCadAgent/Models/MLXLocalProvider.swift` — placeholder, needs real PEFT inference
-- `macos-app/Sources/KiCadAgent/Models/ProviderRegistry.swift` — provider registration; new local model name
+- `macos-app/Sources/Volta/Models/LocalModelManager.swift` — current `scanAndRegister()`, where `MLXLocalProvider` is registered. Lines 36-70.
+- `macos-app/Sources/Volta/Models/ModelDownloader.swift` — current v1 wire-up. Line 65 = the swap gate.
+- `macos-app/Sources/Volta/Views/Settings/ModelDownloadView.swift` — download sheet UI; needs the failure-state branch.
+- `macos-app/Sources/Volta/Models/MLXLocalProvider.swift` — placeholder, needs real PEFT inference
+- `macos-app/Sources/Volta/Models/ProviderRegistry.swift` — provider registration; new local model name
 
 ### Tests that must keep passing
-- `macos-app/Tests/KiCadAgentTests/StreamingChatE2ETests.swift` (Phase 241) — streaming invariants
-- `macos-app/Tests/KiCadAgentTests/OnboardingFlowTests.swift` (Phase 242) — onboarding
-- `macos-app/Tests/KiCadAgentTests/ImageAttachmentPipelineTests.swift` (Phase 239) — attachment pipeline
+- `macos-app/Tests/VoltaTests/StreamingChatE2ETests.swift` (Phase 241) — streaming invariants
+- `macos-app/Tests/VoltaTests/OnboardingFlowTests.swift` (Phase 242) — onboarding
+- `macos-app/Tests/VoltaTests/ImageAttachmentPipelineTests.swift` (Phase 239) — attachment pipeline
 
 ### Reference patterns
 - `python/daemon/...` — Python daemon's PEFT loading code (if exists) — patterns to mirror in Swift's MLX binding
@@ -72,7 +72,7 @@ sheet pull the v2 adapter (not v1) and inference generates real PCB output.
 ## Specific Ideas
 
 - After uploading to HF, verify by hitting `https://huggingface.co/api/models/bretbouchard/volta-pcb-adapter-v2` and confirming the file list includes `adapter_model.safetensors`
-- Use `huggingface-cli upload bretbouchard/volta-pcb-adapter-v2 /Volumes/Storage/models/kicad-agent/adapters/volta-12b-v2/` (CLI handles resumable multi-GB upload)
+- Use `huggingface-cli upload bretbouchard/volta-pcb-adapter-v2 /Volumes/Storage/models/volta/adapters/volta-12b-v2/` (CLI handles resumable multi-GB upload)
 - For the Swift test side, add a `LocalModelLoadTests` that verifies the
   download path resolution + failure-state presentation, without actually
   requiring the 5 GB model to be present

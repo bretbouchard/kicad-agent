@@ -38,9 +38,9 @@ The v6.0 stack is **Apple-native first** — SwiftUI + FoundationModels + MLX-Sw
 
 | Package | Version | Purpose | Why |
 |---------|---------|---------|-----|
-| **mcp** | 1.28.1 | MCP server implementation | `mcp.run(transport="stdio")` exposes 142+ kicad-agent operations as MCP tools. Line-delimited JSON-RPC over stdin/stdout. |
+| **mcp** | 1.28.1 | MCP server implementation | `mcp.run(transport="stdio")` exposes 142+ volta operations as MCP tools. Line-delimited JSON-RPC over stdin/stdout. |
 | **PyInstaller** | v6.21.0 | Python → .app bundling | Generates standalone `MyApp.app` with Python daemon + kicad-cli inside `MacOS/`. `--codesign-identity` + `--osx-entitlements-file` for code signing. |
-| **kicad-agent** | Local Python library | Core KiCad automation | Existing 142 operations, AST mutation, validation gates. Bundled as daemon subprocess (not LaunchAgent). |
+| **volta** | Local Python library | Core KiCad automation | Existing 142 operations, AST mutation, validation gates. Bundled as daemon subprocess (not LaunchAgent). |
 
 ### Development Tools
 
@@ -205,7 +205,7 @@ let transport = StdioClientTransport(
 let mcpClient = McpClient.sync(transport).build()
 try mcpClient.initialize()
 
-// 4. List kicad-agent tools (142 operations)
+// 4. List volta tools (142 operations)
 let tools = try mcpClient.listTools()
 
 // 5. Call tool
@@ -230,7 +230,7 @@ let result = try mcpClient.callTool(
 # spec file for PyInstaller
 app = BUNDLE(
     coll,
-    name='KiCadAgent.app',
+    name='Volta.app',
     icon=None,
     bundle_identifier='com.kicadagent.app',
     version='1.0.0',
@@ -281,7 +281,7 @@ dependencies: [
 
 targets: [
   .target(
-    name: "KiCadAgentApp",
+    name: "VoltaApp",
     dependencies: [
       .product(name: "SwiftAISDK", package: "swift-ai-sdk"),
       .product(name: "OpenAIProvider", package: "swift-ai-sdk"),
@@ -306,18 +306,18 @@ pyinstaller \
   --osx-entitlements-file entitlements.plist \
   --osx-hardened-runtime \
   --add-data "/usr/local/bin/kicad-cli:kicad-cli" \
-  --hidden-import kicad_agent.ops.executor \
-  src/kicad_agent/ops/mcp_server.py
+  --hidden-import volta.ops.executor \
+  src/volta/ops/mcp_server.py
 
 # Copy into macOS app bundle
-cp dist/daemon KiCadAgent.app/Contents/MacOS/
-cp /usr/local/bin/kicad-cli KiCadAgent.app/Contents/MacOS/
+cp dist/daemon Volta.app/Contents/MacOS/
+cp /usr/local/bin/kicad-cli Volta.app/Contents/MacOS/
 
 # Sign the entire app
-codesign --force --deep --sign "Developer ID Application: Your Team" KiCadAgent.app
+codesign --force --deep --sign "Developer ID Application: Your Team" Volta.app
 
 # Notarize (required for distribution)
-xcrun notarytool submit KiCadAgent.app --apple-id "your@email.com" --password "app-specific-password" --team-id "TEAM_ID" --wait
+xcrun notarytool submit Volta.app --apple-id "your@email.com" --password "app-specific-password" --team-id "TEAM_ID" --wait
 ```
 
 ### Development Tools
@@ -399,7 +399,7 @@ mull-cxx -test-framework=SwiftTesting --coverage-info=coverage.info
 | FoundationModels | macOS 27.0+ / iOS 27.0+ | **Hard requirement**. Clean break from legacy macOS versions. |
 | SwiftData | macOS 14+ / iOS 17+ | Requires `@Model` macro support (Xcode 15+). |
 | MCP Swift SDK | Swift 5.9+ | Uses `Sendable` concurrency. |
-| PyInstaller v6.21.0 | Python 3.11+ | Tested with kicad-agent Python 3.11.11 runtime. |
+| PyInstaller v6.21.0 | Python 3.11+ | Tested with volta Python 3.11.11 runtime. |
 | swift-testing swift-6.3.2-RELEASE | Swift 6.0+ | Swift 6 language mode required for full feature set. |
 
 ## Key Decision Rationale

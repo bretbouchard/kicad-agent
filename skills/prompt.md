@@ -1,6 +1,6 @@
 # KiCad Agent -- Operation Reference
 
-This reference documents all operations supported by kicad-agent. Claude uses these schemas to construct valid JSON operations that the Python backend validates and executes against KiCad files.
+This reference documents all operations supported by volta. Claude uses these schemas to construct valid JSON operations that the Python backend validates and executes against KiCad files.
 
 **Key principle:** The LLM never touches raw S-expressions. It emits structured JSON intents, and the Python tool layer mutates the AST, serializes valid KiCad files, and validates via ERC/DRC gates.
 
@@ -1648,7 +1648,7 @@ Net names reject whitespace-only strings. If a name is `"   "` (spaces only), th
 
 ## Component Search MCP Server
 
-kicad-agent includes an MCP server for searching electronic components via JLCPCB/EasyEDA. This allows AI agents to find parts, retrieve pin/pad data, and get datasheet URLs without leaving the conversation.
+volta includes an MCP server for searching electronic components via JLCPCB/EasyEDA. This allows AI agents to find parts, retrieve pin/pad data, and get datasheet URLs without leaving the conversation.
 
 ### Setup
 
@@ -1664,7 +1664,7 @@ Add to your MCP settings (Claude Code or Claude Desktop):
 }
 ```
 
-Or via the CLI: `kicad-agent component-search`
+Or via the CLI: `volta component-search`
 
 No API key required — all endpoints are anonymous.
 
@@ -1721,7 +1721,7 @@ limit: Maximum suggestions (default: 5)
 
 Analyze a KiCad PCB or schematic file using the fine-tuned spatial reasoning model.
 
-**Usage:** `/kicad-agent analyze <path-to-kicad-file>`
+**Usage:** `/volta analyze <path-to-kicad-file>`
 
 **What it does:**
 1. Parses the KiCad file to extract board statistics (components, nets, dimensions)

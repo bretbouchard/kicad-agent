@@ -41,7 +41,7 @@ Python's stdout is block-buffered when not a TTY. Swift subprocess reads stdout 
 
 **How to avoid:**
 - Force line buffering on Python side: `export PYTHONUNBUFFERED=1` OR `sys.stdout.reconfigure(line_buffering=True)` at process start
-- Run Python with `-u` flag: `process.executableURL = pythonURL; process.arguments = ["-u", "-m", "kicad_agent.mcp.server"]`
+- Run Python with `-u` flag: `process.executableURL = pythonURL; process.arguments = ["-u", "-m", "volta.mcp.server"]`
 - Use `\n` delimited protocol (JSON-RPC requires newlines anyway)
 - Add watchdog timer in Swift: if no stdout response in 30 seconds, kill and restart daemon
 - Never mix binary and text output — choose one and stick to it

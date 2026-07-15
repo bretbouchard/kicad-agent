@@ -119,7 +119,7 @@ See: `.planning/phases/161-app-shell-foundation/161-01-SUMMARY.md`
 - 4 focused modules: protocol.py, handlers.py, audit_log.py, daemon_entry.py
 - ProcessManager.swift (482 LOC) + DaemonMessenger.swift (216 LOC) — Swift integration
 - DaemonSupervisor wired to real ProcessManager (removes Phase 161 stub)
-- 151 kicad-agent operations exposed via list_operations
+- 151 volta operations exposed via list_operations
 - All stupid-proof augmentations: APP-03 checksum, APP-05 SIGTERM→SIGKILL, DAEM-01/05 wake health check, DAEM-02 unbuffered stdout + 30s watchdog, DAEM-06 crash-loop halt
 
 **Architecture decisions:**
@@ -227,11 +227,11 @@ See: `.planning/phases/165-provider-router/165-01-SUMMARY.md`
 
 - WorkflowState + WorkflowStateMachine: GSD transition table (questioning → specGenerated → roadmapApproved → executing → verifying → complete) with hard guards — review→execute needs planApproved, verifying→complete needs verificationPassed. GOV-02.
 - IntentGate: validates every op against catalog, requires non-empty requirementId on mutating ops (GOV-07), sanitizes secrets (password/token/api_key prefixes redacted). Static op catalog mirrored from Python `ops/registry.py` for 23 common ops. GOV-01.
-- OpJournal: JSONL+fsync append-only audit trail at `~/Library/Application Support/KiCadAgent/journal.jsonl`. Mirrors Python `routing/audit.py` H5 pattern with truncated-line recovery. Queryable by op, requirement, actor, date, operationId. GOV-06.
+- OpJournal: JSONL+fsync append-only audit trail at `~/Library/Application Support/Volta/journal.jsonl`. Mirrors Python `routing/audit.py` H5 pattern with truncated-line recovery. Queryable by op, requirement, actor, date, operationId. GOV-06.
 - DriftDetector: compares target files against approved scope per requirementId. Permissive (warn) by default, strict mode rejects. GOV-07.
 - EscalationLadder: T1 (1 failure) → T2 (2+) → T3 (3+) → T4 (5+) per bureaucracy.md §4. Posts `kcEscalation` notification synchronously on tier increase. `humanInputRequired()` at T4. GOV-08.
 - FindingResolution: four-state taxonomy (IMPLEMENTED / ADDED-AS-PHASE / SUPERSEDED-BY-ALTERNATIVE / DEFERRED-TO-NAMED-TARGET). P0/P1 cannot defer. Validates evidence requirements per state. GOV-09.
-- AutoLearner: JSONL+fsync pattern/error_message store at `~/Library/Application Support/KiCadAgent/learnings.jsonl`. Queryable by op for similar-success / similar-failure retrieval. GOV-10.
+- AutoLearner: JSONL+fsync pattern/error_message store at `~/Library/Application Support/Volta/learnings.jsonl`. Queryable by op for similar-success / similar-failure retrieval. GOV-10.
 - RequirementCoverage: report generator from IntentGate.catalog. Validates every op mapped + every declared GOV requirement covered. GOV-11.
 - GovernedCall + MCPClient.governedCall<T>: full pipeline IntentGate → DriftDetector → WorkflowStateMachine → MCPClient.call → OpJournal.append → AutoLearner.store → EscalationLadder.recordSuccess. Failures journal + escalate + auto-learn. Rejects journal with `result_status="rejected"` before throwing.
 
@@ -241,7 +241,7 @@ See: `.planning/phases/165-provider-router/165-01-SUMMARY.md`
 - Op catalog hardcoded in Swift (Phase 170 replaces with dynamic tools/list from MCP daemon)
 - Notifications posted synchronously, not via DispatchQueue.main.async — async dispatch loses notifications under test runloops; synchronous posting is safe because observers are lock-protected
 - NSLock (not actor) for state machine — same pattern as KCCostLedger/KCRoutingNotifier (Phase 165)
-- Stripped public modifiers from Governance files — AnyCodable (MCPProtocol.swift) is internal-only and KiCadAgent is an executable target (no public API surface)
+- Stripped public modifiers from Governance files — AnyCodable (MCPProtocol.swift) is internal-only and Volta is an executable target (no public API surface)
 
 **Deviations:**
 
@@ -285,7 +285,7 @@ See: `.planning/phases/170-verification-loop-integration/170-01-SUMMARY.md`
 
 ## Phase 204 — Closed-Box Simulation Pipeline v1 (SHIPPED 2026-07-07, parallel track)
 
-**Files:** 6 source modules in `src/kicad_agent/sim/` (eurorack.py, dataframe.py, bom.py, plot.py, optimizer.py, __init__.py) + 8 test files in `tests/sim/` + `scripts/demo_closed_box.py` (136 LOC) + Phase 158 2N3904 model + `[sim]` extras in pyproject.toml
+**Files:** 6 source modules in `src/volta/sim/` (eurorack.py, dataframe.py, bom.py, plot.py, optimizer.py, __init__.py) + 8 test files in `tests/sim/` + `scripts/demo_closed_box.py` (136 LOC) + Phase 158 2N3904 model + `[sim]` extras in pyproject.toml
 **Build:** `.venv/bin/python -m pytest tests/sim/ tests/spice/ -q` — 64/64 passing
 **Tests:** 64 total (was 18 pre-ngspice). All BLK-1 strict, no skip-guards.
 **Demo:** `python3 scripts/demo_closed_box.py` exit 0 — gain_db=19.84 (target 20±3), bandwidth 104 MHz, bode.png 45.7 KB, bom.md 8 E12 parts
@@ -303,7 +303,7 @@ See: `.planning/phases/170-verification-loop-integration/170-01-SUMMARY.md`
 
 **Architecture decisions:**
 
-- `src/kicad_agent/sim/` as sibling to (not child of) `src/kicad_agent/spice/` — clean separation between "run a SPICE sim" (Phase 158) and "optimize + analyze + demo a SPICE sim" (Phase 204)
+- `src/volta/sim/` as sibling to (not child of) `src/volta/spice/` — clean separation between "run a SPICE sim" (Phase 158) and "optimize + analyze + demo a SPICE sim" (Phase 204)
 - ngspice CLI subprocess (NOT PySpice — dead project per memory pyspice-dead-use-ngspice-cli)
 - Optuna GPSampler (4.5+, shipped Aug 2025) for BO over E12 categorical space
 - `_ensure_skidl_env()` called at module top + per-call (CR-01 Phase 156 pitfall #6 guard)
@@ -319,13 +319,13 @@ See: `.planning/phases/170-verification-loop-integration/170-01-SUMMARY.md`
 
 **Bug reports (7 total, all RESOLVED):**
 
-- `kicad-agent-e2b` (P3): RESOLVED. Default trials reduced from 50 to 20 (~100s total).
-- `kicad-agent-obp` (P3): RESOLVED. AC parser uses spicelib.RawRead on .raw binary, not regex.
-- `kicad-agent-233` (P4): RESOLVED. Optuna sqlite storage in stable user-data dir.
-- `kicad-agent-qss` (P4): RESOLVED. Bode phase plots real vp(out) from RawRead.
-- `kicad-agent-w1f` (P4): RESOLVED. TL072 JFET-input buffered preamp gives real 1 Mohm input Z.
-- `kicad-agent-cjl` (P4): RESOLVED. 2N3904 model room-temp limitation documented.
-- `kicad-agent-8vv` (P4): RESOLVED. .OP parser added to ngspice_runner.
+- `volta-e2b` (P3): RESOLVED. Default trials reduced from 50 to 20 (~100s total).
+- `volta-obp` (P3): RESOLVED. AC parser uses spicelib.RawRead on .raw binary, not regex.
+- `volta-233` (P4): RESOLVED. Optuna sqlite storage in stable user-data dir.
+- `volta-qss` (P4): RESOLVED. Bode phase plots real vp(out) from RawRead.
+- `volta-w1f` (P4): RESOLVED. TL072 JFET-input buffered preamp gives real 1 Mohm input Z.
+- `volta-cjl` (P4): RESOLVED. 2N3904 model room-temp limitation documented.
+- `volta-8vv` (P4): RESOLVED. .OP parser added to ngspice_runner.
 
 **Strategic impact:**
 
@@ -393,7 +393,7 @@ Phase 156 (SKIDL Converter) — not started (roadmap defined). Absorbed into v6.
 - Phase 156 added: SKIDL Converter — bidirectional KiCad↔SKIDL bridge. Builds the missing KiCad→SKIDL read-back path (SchematicIR + extract_nets → skidl.Circuit) and makes SKIDL→KiCad a first-class op. SKIDL becomes the canonical IR for all circuit operations (SchGen Code-L1 validation: 82% valid circuits vs 32% raw KiCad). Depends on Phases 108-111.
 - Phase 157 added: Floor Planner — declarative YAML floor-plan spec (`.floorplan.yaml`) compiled by `apply_floor_plan` into existing `LayoutAwarePlacer` vectors. Post-populate, pre-Quilter stage. Depends on Phase 156 (module-aware hierarchy metadata).
 - Phase 158 added: SPICE Pipeline — headless ngspice testbench pipeline (AC/transient/noise/THD) with structured JSON results as reward signal. Zero new deps (ngspice 45.2, spicelib, skidl+InSpice installed). Independent of Phase 156 (parallel-eligible).
-- Phase 158 SHIPPED 2026-07-04 (commits 08c5e7a9, 46ed4b3b) — 5 files in src/kicad_agent/spice/, 14/16 tests passing (2 failures are ngspice-not-installed environment only). Retroactively closed 2026-07-07 with SUMMARY.md after audit revealed phase never got directory or formal tracking.
+- Phase 158 SHIPPED 2026-07-04 (commits 08c5e7a9, 46ed4b3b) — 5 files in src/volta/spice/, 14/16 tests passing (2 failures are ngspice-not-installed environment only). Retroactively closed 2026-07-07 with SUMMARY.md after audit revealed phase never got directory or formal tracking.
 - Phase 159 added: AI Training Data — 71K repos → SKIDL + NL SFT pairs; placement→routing quality pairs; SPICE pre/post-route delta as reward signal. Qwen text + Gemma vision adapters. Depends on Phases 156, 157, 158.
 - Phase 160 added: NL Circuit Generation — fine-tuned LLM generates SKIDL from NL → ERC → SPICE → floor plan → PCB → Quilter. Full pipeline to manufacturing (SchGen/pcbGPT stop at schematic). Depends on Phase 159.
 - Phase 204 added: Closed-Box Simulation Pipeline v1 — SKiDL → spicelib SimRunner → Optuna sweep → pytest assertions → pandas DataFrames, proven end-to-end on common-emitter BJT amplifier auto-sized for target gain. Closes the three broken links in the v6.0 "Closed Box" vision (SPICE execution, circuit optimization, hardware-as-code tests). Uses existing spicelib 1.5.1 (NOT PySpice — dead project) + Optuna 4.5+ GPSampler + ngspice CLI subprocess.
@@ -598,7 +598,7 @@ Recent decisions affecting current work:
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 260616-wqd | Build a validate_labels pre-flight check in kicad-agent | 2026-06-17 | ee47896 | [260616-wqd-build-a-validate-labels-pre-flight-check](./quick/260616-wqd-build-a-validate-labels-pre-flight-check/) |
+| 260616-wqd | Build a validate_labels pre-flight check in volta | 2026-06-17 | ee47896 | [260616-wqd-build-a-validate-labels-pre-flight-check](./quick/260616-wqd-build-a-validate-labels-pre-flight-check/) |
 | Phase 101 P04 | 5m | 2 tasks | 4 files |
 | Phase 102 P02 | 9m | 3 tasks | 8 files |
 | Phase 102 P03 | 3m | 2 tasks | 5 files |
@@ -615,9 +615,9 @@ None.
 
 - **WR-07** (Medium, Council Exec Review 99): **RESOLVED 2026-06-25 (subsumed by CR-01 closure above).** `PcbIR.remove_net` now rebuilds pads via `dataclasses.replace(pad, net_name="", net_number=0)` and rebuilds the footprint and board via replace chain. Tags: council-deferred,immutability,phase-99,wr-07.
 
-- **Out-of-scope finding (2026-06-25, surfaced during Phase 101 regression check)**: **RESOLVED 2026-06-25 (Phase 101 followup).** `generate_bom` is registered as a readonly op (`src/kicad_agent/ops/registry.py:1221`) but missing from query handler dispatch. Fix: added `_handle_generate_bom` wrapper in `schematic_query.py` that delegates to existing handler in `pcb_bom.py`. Test now passes (9/9 in `test_schematic_query_dispatch.py`). Commit: e9113fe.
+- **Out-of-scope finding (2026-06-25, surfaced during Phase 101 regression check)**: **RESOLVED 2026-06-25 (Phase 101 followup).** `generate_bom` is registered as a readonly op (`src/volta/ops/registry.py:1221`) but missing from query handler dispatch. Fix: added `_handle_generate_bom` wrapper in `schematic_query.py` that delegates to existing handler in `pcb_bom.py`. Test now passes (9/9 in `test_schematic_query_dispatch.py`). Commit: e9113fe.
 
-- **MD-02 (Medium, Council Exec Review 101 — out-of-scope Bead)**: `tests/test_place_no_connects_power_aware.py:314, 359, 419, 467` patch `kicad_agent.ops.repair.NetPositionIndex` but `repair_erc.py:17` binds the class directly (`from kicad_agent.schematic_routing.net_extractor import NetPositionIndex`). The patch targets the wrong namespace. Tests pass only because `NetPositionIndex.from_file()` raises on minimal test schematics, hitting the `except: net_index = None` branch. If a future change makes `from_file()` succeed on minimal fixtures, the patch would silently fail. **Resolution:** Change patch target from `kicad_agent.ops.repair.NetPositionIndex` to `kicad_agent.ops.repair_erc.NetPositionIndex` at lines 314, 359, 419, 467. Pre-existing issue — NOT introduced by Phase 101. Out-of-scope per bureaucracy §7. Labels: `out-of-scope,test-reliability`. Priority: 2.
+- **MD-02 (Medium, Council Exec Review 101 — out-of-scope Bead)**: `tests/test_place_no_connects_power_aware.py:314, 359, 419, 467` patch `volta.ops.repair.NetPositionIndex` but `repair_erc.py:17` binds the class directly (`from volta.schematic_routing.net_extractor import NetPositionIndex`). The patch targets the wrong namespace. Tests pass only because `NetPositionIndex.from_file()` raises on minimal test schematics, hitting the `except: net_index = None` branch. If a future change makes `from_file()` succeed on minimal fixtures, the patch would silently fail. **Resolution:** Change patch target from `volta.ops.repair.NetPositionIndex` to `volta.ops.repair_erc.NetPositionIndex` at lines 314, 359, 419, 467. Pre-existing issue — NOT introduced by Phase 101. Out-of-scope per bureaucracy §7. Labels: `out-of-scope,test-reliability`. Priority: 2.
 
 ## Session Continuity
 
