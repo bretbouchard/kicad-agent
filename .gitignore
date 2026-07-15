@@ -44,6 +44,10 @@ tests/fixtures/*/freerouting/
 output/
 .auto-loop/
 
+# Machine-local symlink to canonical Volta v2 adapter (created by setup script)
+# See .planning/phases/250-portable-build-setup/ for portability phase
+/volta-12b-v2
+
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db
