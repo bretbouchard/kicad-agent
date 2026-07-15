@@ -389,6 +389,7 @@ Phase 156 (SKIDL Converter) — not started (roadmap defined). Absorbed into v6.
 - Phase 159 added: AI Training Data — 71K repos → SKIDL + NL SFT pairs; placement→routing quality pairs; SPICE pre/post-route delta as reward signal. Qwen text + Gemma vision adapters. Depends on Phases 156, 157, 158.
 - Phase 160 added: NL Circuit Generation — fine-tuned LLM generates SKIDL from NL → ERC → SPICE → floor plan → PCB → Quilter. Full pipeline to manufacturing (SchGen/pcbGPT stop at schematic). Depends on Phase 159.
 - Phase 204 added: Closed-Box Simulation Pipeline v1 — SKiDL → spicelib SimRunner → Optuna sweep → pytest assertions → pandas DataFrames, proven end-to-end on common-emitter BJT amplifier auto-sized for target gain. Closes the three broken links in the v6.0 "Closed Box" vision (SPICE execution, circuit optimization, hardware-as-code tests). Uses existing spicelib 1.5.1 (NOT PySpice — dead project) + Optuna 4.5+ GPSampler + ngspice CLI subprocess.
+- Phase 245 added: Wire Volta v2 LoRA adapter into macOS app — replace MLXLocalProvider placeholder with real PEFT inference on google/gemma-4-12b-it. Adapter at `output/volta-pcb-adapter-v2-upload/adapter_model.safetensors` (524MB, SHA256 cbc121cc... verified, 656 bfloat16 tensors across 48 layers, 7 target modules). Training: step 3000/3000, loss 0.0288, accuracy 98.66%, 48.5M tokens, A100 80GB, 19.2h, zero crashes. Instance 44774137 destroyed. Eval harness + additional gap closure to follow as separate phases.
 
 ### v4.1 Stage-Safe PCB Flow (Phases 85-94)
 

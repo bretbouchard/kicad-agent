@@ -319,6 +319,10 @@ Phase 206 (DRC) ────────┴────────────�
 - Fully implement the 78 scaffold ops in `VoltaEngineRemaining.swift`
 - Priority: `safe_sync_pcb_from_schematic`, `auto_route`, `fill_zones`, `match_lengths`, `place_components_sch`
 - Each op gets real algorithm implementation
+- **Status re-opened 2026-07-14:** Marked Complete but the priority ops remain stubs. `safe_sync_pcb_from_schematic` (line 933-942), `fix_net_short` (line 862-868), `fix_pin_type_mismatches` (line 870-876) all return placeholder messages. Re-opened and split into dedicated phases:
+  - Phase 237: `safe_sync_pcb_from_schematic` real impl
+  - Phase 243: fix ops (fix_net_short, fix_pin_type_mismatches, fix_shorted_nets, strip_shorts) real impl
+- Remaining 74 ops in VoltaEngineRemaining.swift verified real and unchanged
 
 ### Phase 236: Vision Input (Camera → Schematic)
 - Photo picker for schematic/breadboard images
@@ -328,6 +332,109 @@ Phase 206 (DRC) ────────┴────────────�
 
 ---
 
-**Last updated:** 2026-07-10 — v7.0 roadmap created. Phase numbering continues from v6.0's last phase (204).
+## v11.0 — Gap-Closure Phases (237-244)
+
+Created 2026-07-14 to close the 8 high-priority gaps identified in `docs/GAP-ANALYSIS-CURRENT.md` that the v11.0 phases (230-236) and v7.0 phases (205-210) did not address. Ordered roughly by user-impact priority.
+
+### Phase 237: Real safe_sync_pcb_from_schematic
+- Replace the stub return-message with a real diff-and-replay algorithm
+- `SchematicPcbDiffer` (matches components by ref, emits add/remove/move/update ops)
+- `SchematicPcbSync` (journals sync as a single transaction; one-shot undo)
+- Closes gap A2 — the iterate loop is currently broken
+- Plan: `.planning/phases/237-safe-sync-pcb-from-schematic/237-01-PLAN.md`
+
+### Phase 238: Real preview wire-up
+- SchematicPreviewView and PCBPreviewView currently render mock data
+- Wire to real `SchematicIR` / `PCBIR` via `SwiftSVGRenderer`
+- PCB option: extend renderer with PCB → SVG path (preferred) OR shell out to `kicad-cli pcb render`
+- Add 250ms debounced file watcher for live updates
+- Closes gaps A4 + B8 — App Store inline-preview claim becomes true
+- Plan: `.planning/phases/238-real-preview-wire-up/238-01-PLAN.md`
+
+### Phase 239: Image attachment UI wiring
+- Chat compose bar gets paperclip button + drop target + paste handler
+- `RouterStreamProvider.buildKCPrompt` reads `ImageAttachment.url` bytes, constructs `KCAttachment`
+- 10MB size limit, 2048px auto-compression, EXIF strip
+- Closes gaps A5 + E1 — vision-capable model gets the input
+- Plan: `.planning/phases/239-image-attachment-ui/239-01-PLAN.md`
+
+### Phase 240: Volta op registry tests
+- Coverage test: iterate `VoltaOpRegistry.allOpTypes`, assert every op has a test
+- 20+ `.kicad_sch` fixtures covering common topologies
+- Property tests for read-only ops; round-trip tests for write ops
+- CI gate blocks merge if coverage < 80%
+- Closes gap A1 — the 268-op registry currently has zero tests
+- Plan: `.planning/phases/240-volta-op-registry-tests/240-01-PLAN.md`
+
+### Phase 241: Streaming chat pipeline E2E test
+- NoopChatStream → RouterStreamProvider → ContentChunker → MessageBubbleView, end-to-end
+- Canned fixtures: echo response (regression for the echo bug), clean response, loop response
+- Verify echo stripping, boundary chunking, loop collapse, cost callback
+- Closes gap A8 — exactly the gap that allowed the echo bug this session fixed
+- Plan: `.planning/phases/241-streaming-chat-e2e-test/241-01-PLAN.md`
+
+### Phase 242: First-run onboarding
+- 3-step guided tour: pick starter (LED blinker / ESP32 / op-amp), run a chat, view result
+- SwiftData-persisted state (dismissed, completed, currentStep)
+- Skip button always visible; returning user with project skips the tour
+- Delete orphaned `KiCadInstallView.swift` (Phase 220 already removed the install path)
+- Closes gap F3 — first-time users currently land on a blank sidebar
+- Plan: `.planning/phases/242-first-run-onboarding/242-01-PLAN.md`
+
+### Phase 243: Real fix op implementations
+- Replace `fix_net_short` and `fix_pin_type_mismatches` stub return-messages
+- New `SchematicNets.swift` utility: findShorts, findPinTypeMismatches, findShortedNets, isInPinTypeMatrix
+- Verify + harden `fix_shorted_nets` and `strip_shorts` (currently delegate to `BreakWireShortsGenOp`)
+- All four ops journaled as transactions (one-shot undo)
+- Closes gap A3 — same paper-completion as Phase 235
+- Plan: `.planning/phases/243-fix-ops-real-implementations/243-01-PLAN.md`
+
+### Phase 244: Fastlane notarization execute
+- Phase 203 (203-01-PLAN.md, 2026-07-07) shipped a comprehensive plan but was never executed
+- Execute the plan: match, Appfile, Fastfile, snapshot, build_daemon, CI wiring
+- One command: `fastlane mac beta` → build, sign, notarize, upload to TestFlight
+- PyInstaller daemon hardened-runtime signed alongside the app
+- Closes gap F2 — no notarized build artifact exists for v6
+- Plan: `.planning/phases/244-fastlane-notarization-execute/244-01-PLAN.md`
+
+### Phase 245: Wire Volta v2 LoRA adapter into macOS app + publish to HF
+- Replace `MLXLocalProvider` placeholder with real PEFT inference on `google/gemma-4-12b-it`
+- Adapter: rank=64, alpha=128, dropout=0.05, 7 target modules, peft 0.19.1
+- Trained 3000 steps on 48.5M tokens (loss 0.0288, accuracy 98.66%)
+- Source adapter at `/Volumes/Storage/models/kicad-agent/adapters/volta-12b-v2/` (5.0 GB, SHA256 cbc121cc… verified)
+- **Publish to HF**: create `bretbouchard/volta-pcb-adapter-v2` repo + upload the 5.0 GB so the app's `ModelDownloader.adapterRepo` can fetch it
+- **Flip the swap gate**: change `ModelDownloader.swift:65` from `volta-pcb-adapter-v1` → `volta-pcb-adapter-v2`. Remove the v1 smoke-test path entirely (no value keeping it)
+- Load via `PeftModel.from_pretrained(base, adapter_path)` in Python daemon; bridge to Swift via existing `LocalProvider` protocol
+- `ProviderRegistry` resolves `volta-pcb-v2` as the local provider, served through `KiCadModelRouter`
+- Preserve the streaming + multi-turn contract that Phase 175/241 built (no regressions to the E2E test)
+- **Failure guard**: if HF repo is down or 404s, download sheet must show a clear "v2 not yet available — check status" state, not silently fall back to v1 (which no longer exists)
+- Plan: `.planning/phases/245-wire-volta-v2-adapter/245-01-PLAN.md`
+
+---
+
+## v11.0 Execution Order
+
+User's instruction: "move to phase 234a and all other phases." Suggested order:
+
+1. **Phase 230** (Train Both Models) — in flight, ~1h 26m to step 3000
+2. **Phase 234A** (Corpus Acquisition + Parity Driver) — plan ready, next concrete deliverable
+3. **Phase 234B** (Parity Execution + Report + Fix) — depends on 234A
+4. **Phase 237** (safe_sync_pcb_from_schematic) — P0 gap, restores iterate loop
+5. **Phase 238** (real preview wire-up) — P0, App Store claim becomes true
+6. **Phase 239** (image attachment UI) — P1, vision input path
+7. **Phase 241** (streaming chat E2E) — P0, regression guard for the bug just fixed
+8. **Phase 240** (op registry tests) — P0, prevents silent regressions
+9. **Phase 243** (fix ops real impl) — P1, paired with 237
+10. **Phase 242** (onboarding) — P1, first-impressions
+11. **Phase 244** (fastlane notarization) — P0, ships v6 to App Store
+12. **Phase 245** (wire Volta v2 LoRA adapter) — enables real local PCB inference, prerequisite for eval harness
+13. **Phase 236** (Vision Input camera) — L effort, do last
+14. **Phase 235** (Complex Op Implementations) — already partially shipped, audit + close the 4 known stubs via 237/243
+
+---
+
+**Last updated:** 2026-07-14 — v7.0 roadmap created. Phase numbering continues from v6.0's last phase (204).
 v11.0 phases (230-236) appended 2026-07-14 to seed Phase 231 planning.
+Gap-closure phases (237-244) added 2026-07-14 to track the 8 high-priority gaps from docs/GAP-ANALYSIS-CURRENT.md. Phase 235 re-opened as partial.
+Phase 245 (wire Volta v2 LoRA adapter) added 2026-07-14 after training completed: step 3000, loss 0.0288, accuracy 98.66%. Adapter downloaded and SHA256-verified; instance 44774137 destroyed.
 
