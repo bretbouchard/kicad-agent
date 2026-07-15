@@ -1,0 +1,11 @@
+# Eval harness for Volta v2 (Phase 246)
+# Pin to the versions used for training
+transformers==5.13.4
+peft==0.19.1
+torch==2.12.1
+bitsandbytes==0.45.0   # 4-bit quantization for 24GB GPU
+accelerate==1.0.1
+nltk==3.9.1            # BLEU
+rouge_score==0.1.2     # ROUGE-L
+sentencepiece==0.2.0   # gemma tokenizer
+safetensors==0.4.5

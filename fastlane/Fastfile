@@ -190,3 +190,163 @@ lane :bootstrap do |options|
   UI.message("")
   UI.message("Once complete, run: fastlane beta")
 end
+
+# =============================================================================
+# Lane: build — Debug build, no signing
+# =============================================================================
+# Phase 244: Debug build, no signing. Used for local dev iteration.
+desc "Debug build with no signing (local dev)"
+lane :build do |options|
+  UI.message("Phase 244 — Debug build, no signing")
+
+  repo_root = File.expand_path("..", __dir__)
+
+  # Generate Xcode project if missing.
+  Dir.chdir("#{repo_root}/macos-app") do
+    sh("xcodegen generate") unless File.exist?("VoltaPCB.xcodeproj")
+  end
+
+  build_app(
+    scheme: "VoltaPCB",
+    project: "#{repo_root}/macos-app/VoltaPCB.xcodeproj",
+    configuration: "Debug",
+    skip_codesigning: true,
+    skip_archive: true,
+    skip_package_pkg: true,
+    output_directory: "#{repo_root}/build",
+    xcargs: "CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO"
+  )
+
+  UI.success("Debug build complete → #{repo_root}/build")
+end
+
+# =============================================================================
+# Lane: build_release — Release build, signed, NOT notarized
+# =============================================================================
+# Phase 244: Release configuration, signed with match, no notarization
+# (separate from beta which adds TestFlight upload).
+desc "Release build, signed with match, not notarized"
+lane :build_release do |options|
+  UI.message("Phase 244 — Release build, signed")
+
+  repo_root = File.expand_path("..", __dir__)
+
+  # Generate Xcode project if missing.
+  Dir.chdir("#{repo_root}/macos-app") do
+    sh("xcodegen generate") unless File.exist?("VoltaPCB.xcodeproj")
+  end
+
+  # Sync signing certs from match repo
+  if ENV["MATCH_PASSWORD"].nil?
+    UI.important("MATCH_PASSWORD not set — running in cert-less mode")
+  else
+    match(
+      type: "appstore",
+      platform: "macos",
+      app_identifier: default_bundle_id,
+      readonly: true
+    )
+  end
+
+  build_app(
+    scheme: "VoltaPCB",
+    project: "#{repo_root}/macos-app/VoltaPCB.xcodeproj",
+    configuration: "Release",
+    export_method: "app-store",
+    output_directory: "#{repo_root}/build",
+    xcargs: "-allowProvisioningUpdates -skipMacroValidation -skipPackagePluginValidation"
+  )
+
+  UI.success("Release build complete → #{repo_root}/build")
+end
+
+# =============================================================================
+# Lane: snapshot — Generate App Store screenshots
+# =============================================================================
+# Phase 244: Capture screenshots for App Store metadata.
+# Currently generates placeholder screenshots; UI test capture is Phase 196.1.
+desc "Generate App Store screenshots"
+lane :snapshot do |options|
+  UI.message("Phase 244 — Screenshot generation")
+
+  repo_root = File.expand_path("..", __dir__)
+  output_dir = "#{repo_root}/fastlane/screenshots"
+  FileUtils.mkdir_p(output_dir)
+
+  # Try XCUITest-driven capture first.
+  if Dir.exist?("#{repo_root}/macos-app/UITests")
+    snapshot(
+      scheme: "KiCadAgentUITests",
+      devices: ["Mac"],
+      languages: ["en-US"],
+      output_directory: output_dir
+    )
+  else
+    # Placeholder mode: generate 5 PNG stubs (one per required size).
+    # Phase 196.1 replaces this with real XCUITest capture.
+    UI.important("UITests not found — generating placeholder screenshots")
+    sizes = [
+      ["1280x800", 1280, 800],
+      ["1440x900", 1440, 900],
+      ["1680x1050", 1680, 1050],
+      ["1920x1080", 1920, 1080],
+      ["2560x1600", 2560, 1600],
+    ]
+    sizes.each_with_index do |(name, w, h), i|
+      path = "#{output_dir}/en-US/#{w}x#{h}.png"
+      FileUtils.mkdir_p(File.dirname(path))
+      # Minimal 1×1 PNG (placeholder). Phase 196.1 will replace.
+      png_bytes = [
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,  # signature
+        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,  # IHDR
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,  # 1x1
+        0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89,
+        0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41, 0x54,
+        0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05,
+        0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4,
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,
+        0xAE, 0x42, 0x60, 0x82,
+      ]
+      File.binwrite(path, png_bytes.pack("C*"))
+      UI.message("  → #{path}")
+    end
+  end
+
+  UI.success("Screenshots complete → #{output_dir}")
+end
+
+# =============================================================================
+# Lane: build_daemon — PyInstaller daemon build + codesign
+# =============================================================================
+# Phase 244: Build the kicad-agent-daemon via PyInstaller, then apply hardened
+# runtime + Developer ID signature.
+desc "Build the kicad-agent-daemon with PyInstaller and codesign"
+lane :build_daemon do |options|
+  UI.message("Phase 244 — Build + sign kicad-agent-daemon")
+
+  repo_root = File.expand_path("..", __dir__)
+
+  # Run PyInstaller
+  Dir.chdir("#{repo_root}/kicad_agent-0.1.0") do
+    sh("pyinstaller --noconfirm --onedir --name kicad-agent-daemon src/kicad_agent/daemon/main.py") ||
+      UI.user_error!("PyInstaller build failed")
+  end
+
+  # Re-sign the binary + every dylib inside _internal/ with a single identity
+  # (see Scripts/resign_kicad_daemon.sh for why)
+  sh("bash #{repo_root}/Scripts/resign_kicad_daemon.sh") ||
+    UI.user_error!("Re-sign failed")
+
+  # Hardened-runtime + Developer ID signature
+  if ENV["DEVELOPER_ID"].nil?
+    UI.important("DEVELOPER_ID not set — skipping codesign")
+  else
+    sh(
+      "codesign --force --deep --options runtime " \
+      "--sign \"#{ENV['DEVELOPER_ID']}\" " \
+      "#{repo_root}/kicad_agent-0.1.0/dist/kicad-agent-daemon"
+    )
+  end
+
+  UI.success("Daemon built + signed → dist/kicad-agent-daemon")
+end
