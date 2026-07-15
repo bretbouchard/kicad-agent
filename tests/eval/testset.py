@@ -23,6 +23,7 @@ set_default_tool(KICAD)
 @dataclass
 class TestCase:
     """A single test case with gold standard reference."""
+    __test__ = False  # Not a pytest test class despite Test* name
     id: str
     category: str
     prompt: str
@@ -38,6 +39,7 @@ class TestCase:
 
 class TestSet:
     """50-intent held-out test set for Volta v2 adapter evaluation."""
+    __test__ = False  # Not a pytest test class despite Test* name
 
     def __init__(self, cases: list[TestCase]):
         self.cases = cases

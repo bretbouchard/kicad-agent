@@ -32,7 +32,7 @@ except ImportError:
     ROUGE_AVAILABLE = False
 
 try:
-    from skidl import Part, Net, generate_netlist, KICAD, erc
+    from skidl import Part, Net, generate_netlist, KICAD, ERC, set_default_tool
     SKIDL_AVAILABLE = True
 except ImportError:
     SKIDL_AVAILABLE = False
@@ -91,8 +91,9 @@ def erc_pass_rate(prediction: str, gold) -> MetricResult:
             "Part": Part,
             "Net": Net,
             "generate_netlist": generate_netlist,
-            "erc": erc,
+            "ERC": ERC,
             "KICAD": KICAD,
+            "set_default_tool": set_default_tool,
             "__builtins__": __builtins__,
         }
 
@@ -103,8 +104,8 @@ def erc_pass_rate(prediction: str, gold) -> MetricResult:
         exec(prediction, ns)
 
         # Step 3: Run ERC
-        erc()
-        # SKIDL erc() returns None when no errors
+        ERC()
+        # SKIDL ERC() returns None when no errors
         # If we get here without exception, assume pass
         return MetricResult(1.0, None)
 
