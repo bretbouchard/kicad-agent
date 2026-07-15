@@ -409,6 +409,27 @@ Created 2026-07-14 to close the 8 high-priority gaps identified in `docs/GAP-ANA
 - Preserve the streaming + multi-turn contract that Phase 175/241 built (no regressions to the E2E test)
 - **Failure guard**: if HF repo is down or 404s, download sheet must show a clear "v2 not yet available — check status" state, not silently fall back to v1 (which no longer exists)
 - Plan: `.planning/phases/245-wire-volta-v2-adapter/245-01-PLAN.md`
+- **Status:** Complete (2026-07-15) — 2 commits (942dcf0, ca6ddb1), 8/8 must-haves passed, 0 P0/P1 Council findings
+
+### Phase 246: Python eval harness for Volta v2 adapter
+- Load `bretbouchard/volta-pcb-adapter-v2` directly via `peft + transformers` (Python) to measure PCB generation quality against a held-out test set
+- Test set: ≥50 NL circuit intents → SKiDL or schematic output, scored on:
+  - ERC pass rate (skidl 2.2.3 ERC, zero errors)
+  - Syntactic correctness (parses as valid SKiDL or netlist)
+  - Schema completeness (has all required components for the intent)
+  - Reference fidelity vs hand-crafted gold answers (BLEU/ROUGE + semantic)
+- Use the same test set as Phase 234A corpus (or carve out a 50-sample holdout)
+- Output: `output/volta-v2-eval-report.json` + `output/volta-v2-eval-summary.md` with pass/fail per sample + aggregate score
+- CI gate: score must be ≥ baseline (TBD — current Phase 230 v2 metrics set the floor)
+- Plan: `.planning/phases/246-volta-v2-eval-harness/246-01-PLAN.md`
+
+### Phase 247: Gap closure against docs/GAP-ANALYSIS-CURRENT.md
+- Read `docs/GAP-ANALYSIS-CURRENT.md` and triage all open gaps
+- Apply the four-state resolution taxonomy (IMPLEMENTED / ADDED-AS-PHASE / SUPERSEDED-BY-ALTERNATIVE / DEFERRED-TO-NAMED-TARGET) to each gap
+- Includes: MLXLLM `TODO(245)` LoRA-load API gap (the only intentional degradation left in Phase 245)
+- P0/P1 gaps must be IMPLEMENTED in this phase or ADDED-AS-PHASE; defer only with named trigger
+- Verifier re-runs after closure; updated gap file goes to `docs/GAP-ANALYSIS-CURRENT.md` with status column
+- Plan: `.planning/phases/247-gap-closure-vol11/247-01-PLAN.md`
 
 ---
 
@@ -427,14 +448,17 @@ User's instruction: "move to phase 234a and all other phases." Suggested order:
 9. **Phase 243** (fix ops real impl) — P1, paired with 237
 10. **Phase 242** (onboarding) — P1, first-impressions
 11. **Phase 244** (fastlane notarization) — P0, ships v6 to App Store
-12. **Phase 245** (wire Volta v2 LoRA adapter) — enables real local PCB inference, prerequisite for eval harness
-13. **Phase 236** (Vision Input camera) — L effort, do last
-14. **Phase 235** (Complex Op Implementations) — already partially shipped, audit + close the 4 known stubs via 237/243
+12. **Phase 245** (wire Volta v2 LoRA adapter) — ✅ DONE 2026-07-15 — enables real local PCB inference, prerequisite for eval harness
+13. **Phase 246** (Python eval harness) — next, measures v2 quality on held-out test set
+14. **Phase 247** (gap closure) — after eval, addresses remaining gaps + MLXLLM TODO
+15. **Phase 236** (Vision Input camera) — L effort, do last
+16. **Phase 235** (Complex Op Implementations) — already partially shipped, audit + close the 4 known stubs via 237/243
 
 ---
 
 **Last updated:** 2026-07-14 — v7.0 roadmap created. Phase numbering continues from v6.0's last phase (204).
 v11.0 phases (230-236) appended 2026-07-14 to seed Phase 231 planning.
 Gap-closure phases (237-244) added 2026-07-14 to track the 8 high-priority gaps from docs/GAP-ANALYSIS-CURRENT.md. Phase 235 re-opened as partial.
-Phase 245 (wire Volta v2 LoRA adapter) added 2026-07-14 after training completed: step 3000, loss 0.0288, accuracy 98.66%. Adapter downloaded and SHA256-verified; instance 44774137 destroyed.
+Phase 245 (wire Volta v2 LoRA adapter) added 2026-07-14 after training completed: step 3000, loss 0.0288, accuracy 98.66%. Adapter downloaded and SHA256-verified; instance 44774137 destroyed. Phase 245 marked complete 2026-07-15: 2 commits (942dcf0, ca6ddb1), HF repo live at bretbouchard/volta-pcb-adapter-v2, 8/8 must-haves passed.
+Phases 246 (Python eval harness) + 247 (gap closure) added 2026-07-15 per user instruction "eval first, then gaps". Eval harness measures v2 quality on held-out test set; gap closure addresses remaining docs/GAP-ANALYSIS-CURRENT.md items including MLXLLM TODO(245).
 
