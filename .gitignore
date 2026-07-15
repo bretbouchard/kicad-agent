@@ -11,6 +11,7 @@ builds/
 .ruff_cache/
 htmlcov/
 .coverage
+.coverage.*
 coverage.xml
 *.kicad_prl
 .env
