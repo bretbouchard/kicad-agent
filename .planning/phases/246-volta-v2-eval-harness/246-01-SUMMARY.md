@@ -23,7 +23,7 @@ Built a Python eval harness that measures Volta v2 LoRA adapter quality against 
 | REQ-246-03 | Model loading: HF cache + 3-attempt retry + SHA256 + `--offline` | PASSED — `load_model_with_retry()` with backoff; SHA256 verify against `adapter_config.json` hash |
 | REQ-246-04 | Hardware: 4-bit + A100 40GB default; CPU fallback | PASSED — `--device`, `--quantization` CLI flags; OOM halving; low-VRAM guard |
 | REQ-246-05 | Pass gate: 0.4*erc + 0.3*schema + 0.2*syntactic + 0.1*bleu_rouge; >= 0.70 | PASSED — `aggregate_score()` + `is_pass()` + `PASS_GATE = 0.70` |
-| REQ-246-06 | Error taxonomy (6 classes) | PASSED — `model_timeout`, `model_oom`, `model_emit_non_skid`, `model_emit_syntax_error`, `skidl_erc_failed`, `gold_erc_failed` |
+| REQ-246-06 | Error taxonomy (6 classes) | PASSED — `model_timeout`, `model_oom`, `model_emit_non_skidl`, `model_emit_syntax_error`, `skidl_erc_failed`, `gold_erc_failed` |
 | REQ-246-07 | Reproducibility (5 RNG seeds, default 42) | PASSED — `set_all_seeds()` covers torch, numpy, random, transformers |
 | REQ-246-08 | Output: JSON + markdown report | PASSED — `write_report()` emits `volta-v2-eval-report.json` + `volta-v2-eval-summary.md` |
 | REQ-246-09 | HF availability check (prerequisite) | PASSED — `verify_hf_availability.py` checks 5 required files + 524MB safetensors size |

@@ -228,7 +228,7 @@ def test_is_pass_threshold():
 def test_error_taxonomy_defined():
     """Task 2: ERROR_TAXONOMY has all 6 named error classes."""
     from tests.eval.metrics import ERROR_TAXONOMY
-    expected_classes = ["model_timeout", "model_oom", "model_emit_non_skid",
+    expected_classes = ["model_timeout", "model_oom", "model_emit_non_skidl",
                         "model_emit_syntax_error", "skidl_erc_failed", "gold_erc_failed"]
     for cls in expected_classes:
         assert cls in ERROR_TAXONOMY, f"Missing error class: {cls}"
@@ -410,3 +410,61 @@ def test_metrics_importable():
     assert callable(aggregate_score)
     assert callable(is_pass)
     assert isinstance(PASS_GATE, float)
+
+
+# ============================================================================
+# Security regression: CR-01 sandbox must block dangerous imports
+# ============================================================================
+
+def test_sandbox_blocks_os_import():
+    """CR-01 regression: eval sandbox must reject 'import os' / '__import__("os")'."""
+    from tests.eval.metrics import erc_pass_rate
+
+    # Attempt 1: import os at top level
+    pred1 = "import os\nos.system('echo PWNED')"
+    gold = MockGold()
+    r1 = erc_pass_rate(pred1, gold)
+    assert r1.score == 0.0, "Sandbox must block 'import os'"
+    assert r1.error_class is not None, "Must report an error_class for blocked import"
+    assert "skidl_erc_failed" in r1.error_class or "Import" in r1.error_class or "not permitted" in (r1.error_class or ""), (
+        f"Expected sandbox-blocked error_class, got {r1.error_class!r}"
+    )
+
+
+def test_sandbox_blocks_subprocess_via_dunder_import():
+    """CR-01 regression: '__import__("subprocess")' must be blocked at exec time."""
+    from tests.eval.metrics import erc_pass_rate
+
+    pred = "__import__('subprocess').run(['echo', 'PWNED'])"
+    gold = MockGold()
+    r = erc_pass_rate(pred, gold)
+    assert r.score == 0.0, "Sandbox must block __import__('subprocess')"
+    assert "not permitted" in (r.error_class or ""), (
+        f"Expected 'not permitted' in error_class, got {r.error_class!r}"
+    )
+
+
+def test_sandbox_allows_skidl_import():
+    """CR-01 regression: 'from skidl import ...' must still work (whitelisted)."""
+    from tests.eval.metrics import erc_pass_rate
+
+    pred = "from skidl import Part, Net, generate_netlist\nR1 = Part('Device', 'R', value='1k')"
+    gold = MockGold()
+    r = erc_pass_rate(pred, gold)
+    # Should not fail with 'not permitted' for the skidl import
+    assert "not permitted" not in (r.error_class or ""), (
+        f"skidl import was wrongly blocked: {r.error_class!r}"
+    )
+
+
+def test_sandbox_blocks_socket_import():
+    """CR-01 regression: network access via socket must be blocked."""
+    from tests.eval.metrics import erc_pass_rate
+
+    pred = "import socket\nsocket.socket()"
+    gold = MockGold()
+    r = erc_pass_rate(pred, gold)
+    assert r.score == 0.0, "Sandbox must block 'import socket'"
+    assert "not permitted" in (r.error_class or ""), (
+        f"Expected 'not permitted' in error_class, got {r.error_class!r}"
+    )

@@ -128,16 +128,37 @@ def load_model_with_retry(adapter_path: str | None, device: str,
 
 def run_inference(pipe, prompt: str, max_new_tokens: int = 512, timeout: int = 60) -> str:
     """Generate SKiDL code; raise model_timeout on exceed."""
+    import threading
     formatted = f"### Intent\n{prompt}\n\n### SKiDL\n"
     t0 = time.time()
-    try:
-        out = pipe(formatted, max_new_tokens=max_new_tokens, do_sample=False, return_full_text=False)
-        if time.time() - t0 > timeout:
-            raise TimeoutError(f"Inference exceeded {timeout}s")
-        return out[0]["generated_text"]
-    except torch.cuda.OutOfMemoryError as e:
-        torch.cuda.empty_cache()
-        raise MemoryError(f"GPU OOM: {e}") from e
+
+    # WR-01 fix: enforce timeout DURING inference, not after.
+    # Run pipe() in a worker thread and join with timeout. If the join times out
+    # (huggingface pipeline hangs on network stall or GPU stall), the inference
+    # daemon thread is left running but we exit promptly with TimeoutError.
+    result_box = [None]
+    error_box = [None]
+
+    def _target():
+        try:
+            result_box[0] = pipe(formatted, max_new_tokens=max_new_tokens,
+                                 do_sample=False, return_full_text=False)
+        except Exception as e:
+            error_box[0] = e
+
+    th = threading.Thread(target=_target, daemon=True)
+    th.start()
+    th.join(timeout=timeout)
+
+    if th.is_alive():
+        raise TimeoutError(f"Inference exceeded {timeout}s")
+    if error_box[0] is not None:
+        err = error_box[0]
+        if isinstance(err, torch.cuda.OutOfMemoryError):
+            torch.cuda.empty_cache()
+            raise MemoryError(f"GPU OOM: {err}") from err
+        raise err
+    return result_box[0][0]["generated_text"]
 
 
 def evaluate_one(pipe, case, device: str) -> dict:

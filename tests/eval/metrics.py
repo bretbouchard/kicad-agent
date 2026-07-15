@@ -6,7 +6,7 @@ MetricResult(score: float, error_class: str | None).
 Error taxonomy (REQ-246-06):
 - model_timeout: inference exceeded 60s
 - model_oom: GPU out of memory
-- model_emit_non_skid: model emitted text that wasn't Python
+- model_emit_non_skidl: model emitted text that wasn't Python
 - model_emit_syntax_error: model emitted invalid Python
 - skidl_erc_failed: model emitted valid Python but ERC raised an exception
 - gold_erc_failed: gold standard error (construction time, not per-case)
@@ -43,7 +43,7 @@ log = logging.getLogger(__name__)
 ERROR_TAXONOMY = {
     "model_timeout": "Inference exceeded 60s",
     "model_oom": "GPU out of memory",
-    "model_emit_non_skid": "Model emitted text that wasn't Python",
+    "model_emit_non_skidl": "Model emitted text that wasn't SKiDL Python",
     "model_emit_syntax_error": "Model emitted invalid Python",
     "skidl_erc_failed": "Model emitted valid Python but ERC raised exception",
     "gold_erc_failed": "Gold standard error (construction time)",
@@ -86,7 +86,17 @@ def erc_pass_rate(prediction: str, gold) -> MetricResult:
         return MetricResult(0.0, "model_emit_syntax_error")
 
     try:
-        # Step 2: Execute in sandboxed namespace
+        # Step 2: Execute in sandboxed namespace with whitelisted builtins.
+        # CR-01 fix: __import__ is restricted to skidl.* modules only.
+        # This prevents os.system / subprocess / socket / open while still
+        # allowing `from skidl import ...` statements in model output.
+        def _safe_import(name, *args, **kwargs):
+            if not (name == "skidl" or name.startswith("skidl.")):
+                raise ImportError(
+                    f"Import of '{name}' is not permitted in eval sandbox"
+                )
+            return __import__(name, *args, **kwargs)
+
         ns = {
             "Part": Part,
             "Net": Net,
@@ -94,7 +104,10 @@ def erc_pass_rate(prediction: str, gold) -> MetricResult:
             "ERC": ERC,
             "KICAD": KICAD,
             "set_default_tool": set_default_tool,
-            "__builtins__": __builtins__,
+            "__builtins__": {
+                "__import__": _safe_import,
+                # True/False/None are keywords, not builtins — provided by default
+            },
         }
 
         # Configure SKIDL for KICAD
