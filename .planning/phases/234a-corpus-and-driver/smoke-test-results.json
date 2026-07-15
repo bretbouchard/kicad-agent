@@ -1,0 +1,2831 @@
+{
+  "timestamp": "2026-07-14T22:30:40.029733Z",
+  "sample_count": 3,
+  "engine": {
+    "python": "kicad_agent.validation.native_erc.run_native_erc",
+    "swift": "NativeERC.run (Phase 234A: pending wire-up)"
+  },
+  "results": [
+    {
+      "schematic": "output/legibility/20260704_141538/S5_esp32_breakout.kicad_sch",
+      "python": {
+        "ok": true,
+        "violations": [
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "warning",
+            "ref": "U1/U1",
+            "net": "Net_2",
+            "message": ""
+          }
+        ],
+        "error_count": 0,
+        "warning_count": 378,
+        "passed": false,
+        "checks_run": [
+          "schematic_graph",
+          "topology_resolution",
+          "pin_type_conflicts",
+          "power_net_validation",
+          "no_connect_validation",
+          "dangling_wires"
+        ],
+        "checks_skipped": []
+      },
+      "swift": {
+        "ok": false,
+        "error": "swift_erc_not_wired: Phase 234B will build the Swift CLI harness",
+        "violations": [],
+        "error_count": 0,
+        "warning_count": 0,
+        "passed": false,
+        "pending": true
+      },
+      "comparison": {
+        "agreed": true,
+        "python_passed": false,
+        "swift_passed": false,
+        "error_count_match": true,
+        "warning_count_match": false,
+        "violation_overlap": 0,
+        "fp_count": 0,
+        "fn_count": 1,
+        "notes": "swift engine not yet wired (Phase 234B); warning_count diff: py=378 sw=0"
+      }
+    },
+    {
+      "schematic": "kicad_agent-0.1.0/tests/fixtures/safe_annotate/multi_sheet_root.kicad_sch",
+      "python": {
+        "ok": true,
+        "violations": [],
+        "error_count": 0,
+        "warning_count": 0,
+        "passed": false,
+        "checks_run": [
+          "schematic_graph",
+          "topology_resolution",
+          "pin_type_conflicts",
+          "power_net_validation",
+          "no_connect_validation",
+          "dangling_wires"
+        ],
+        "checks_skipped": []
+      },
+      "swift": {
+        "ok": false,
+        "error": "swift_erc_not_wired: Phase 234B will build the Swift CLI harness",
+        "violations": [],
+        "error_count": 0,
+        "warning_count": 0,
+        "passed": false,
+        "pending": true
+      },
+      "comparison": {
+        "agreed": true,
+        "python_passed": false,
+        "swift_passed": false,
+        "error_count_match": true,
+        "warning_count_match": true,
+        "violation_overlap": 0,
+        "fp_count": 0,
+        "fn_count": 0,
+        "notes": "swift engine not yet wired (Phase 234B)"
+      }
+    },
+    {
+      "schematic": "output/legibility/20260704_143722/S3_opamp_preamp.kicad_sch",
+      "python": {
+        "ok": true,
+        "violations": [
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "error",
+            "ref": "U1/U1",
+            "net": "U1_V+",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "error",
+            "ref": "U1/U1",
+            "net": "U1_V+",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "error",
+            "ref": "U1/U1",
+            "net": "U1_V+",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "error",
+            "ref": "U1/U1",
+            "net": "U1_V+",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_PIN_CONFLICT",
+            "severity": "error",
+            "ref": "U1/U1",
+            "net": "U1_V+",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_WIRE_DANGLING",
+            "severity": "warning",
+            "ref": "",
+            "net": "",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_WIRE_DANGLING",
+            "severity": "warning",
+            "ref": "",
+            "net": "",
+            "message": ""
+          },
+          {
+            "check_id": "ERC_WIRE_DANGLING",
+            "severity": "warning",
+            "ref": "",
+            "net": "",
+            "message": ""
+          }
+        ],
+        "error_count": 5,
+        "warning_count": 3,
+        "passed": false,
+        "checks_run": [
+          "schematic_graph",
+          "topology_resolution",
+          "pin_type_conflicts",
+          "power_net_validation",
+          "no_connect_validation",
+          "dangling_wires"
+        ],
+        "checks_skipped": []
+      },
+      "swift": {
+        "ok": false,
+        "error": "swift_erc_not_wired: Phase 234B will build the Swift CLI harness",
+        "violations": [],
+        "error_count": 0,
+        "warning_count": 0,
+        "passed": false,
+        "pending": true
+      },
+      "comparison": {
+        "agreed": false,
+        "python_passed": false,
+        "swift_passed": false,
+        "error_count_match": false,
+        "warning_count_match": false,
+        "violation_overlap": 0,
+        "fp_count": 0,
+        "fn_count": 2,
+        "notes": "swift engine not yet wired (Phase 234B); error_count diff: py=5 sw=0; warning_count diff: py=3 sw=0"
+      }
+    }
+  ]
+}
