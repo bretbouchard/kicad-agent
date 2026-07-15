@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: — Gap-Closure Phases
-status: executing
-stopped_at: Phase 246 complete — moving to 247
-last_updated: "2026-07-15T15:00:00.000Z"
+status: planning-complete
+stopped_at: Phase 250 portable build complete — autonomous sweep done
+last_updated: "2026-07-15T16:30:00.000Z"
 last_activity: 2026-07-15
 progress:
-  total_phases: 25
-  completed_phases: 16
-  total_plans: 18
-  completed_plans: 17
-  percent: 89
+  total_phases: 31
+  completed_phases: 21
+  total_plans: 24
+  completed_plans: 22
+  percent: 92
 ---
 
 # Project State
@@ -62,10 +62,12 @@ Last activity: 2026-07-15 — Phase 246 complete (DONE)
 
 ## Current Position
 
-Phase: 246 (volta-v2-eval-harness) — COMPLETE
+Phase: 250 (portable-build-setup) — COMPLETE — autonomous v11.0 sweep wrapped
 Plan: 1 of 1
-Status: Phase 246 complete — 32/32 tests, Council APPROVED, all 10 must-haves satisfied
-Last activity: 2026-07-15 -- Phase 246 complete
+Status: Phase 250 complete. Phases 230-236 planning artifacts (PLAN.md + SUMMARY.md)
+written but execution DEFERRED to v12.0 (mobile + multi-day-effort backlog).
+**Last activity:** 2026-07-15 -- planning artifacts for 230-236 staged,
+state machine stopped at 250 pending user direction.
 
 ## Previous Milestone: v6.0 KiCad Agent — The Closed Box (COMPLETE)
 
