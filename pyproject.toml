@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "volta"
 version = "0.1.0"
-description = "AI-safe structural editing of KiCad schematic, PCB, symbol, and footprint files. (Project codename: Volta — formerly kicad-agent.)"
+description = "AI-safe structural editing of KiCad schematic, PCB, symbol, and footprint files. (Project codename: Volta — formerly volta.)"
 readme = {file = "README.md", content-type = "text/markdown"}
 license = "MIT"
 requires-python = ">=3.11"
@@ -77,15 +77,15 @@ sim = [
 ]
 
 [project.scripts]
-kicad-agent = "kicad_agent.cli:main"
-kicad-component-search = "kicad_agent.mcp.server:main"
-kicad-agent-edit = "kicad_agent.mcp.edit_server:main"
+volta = "volta.cli:main"
+volta-component-search = "volta.mcp.server:main"
+volta-edit = "volta.mcp.edit_server:main"
 
 [project.urls]
-Homepage = "https://github.com/bretbouchard/kicad-agent"
-Documentation = "https://bretbouchard.github.io/kicad-agent"
-Repository = "https://github.com/bretbouchard/kicad-agent"
-Issues = "https://github.com/bretbouchard/kicad-agent/issues"
+Homepage = "https://github.com/bretbouchard/volta"
+Documentation = "https://bretbouchard.github.io/volta"
+Repository = "https://github.com/bretbouchard/volta"
+Issues = "https://github.com/bretbouchard/volta/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -94,7 +94,7 @@ where = ["src"]
 # Without this, .kicad_dru files work in editable/dev mode but vanish from wheels
 # (RESEARCH RQ8 — highest-frequency integration pitfall).
 [tool.setuptools.package-data]
-"kicad_agent.manufacturing.drc_profiles" = ["*.kicad_dru"]
+"volta.manufacturing.drc_profiles" = ["*.kicad_dru"]
 
 [tool.setuptools_scm]
 fallback_version = "0.0.0"
@@ -120,7 +120,7 @@ module = ["kiutils.*", "sexpdata.*", "networkx.*", "shapely.*", "mcp.*"]
 ignore_missing_imports = true
 
 [tool.coverage.run]
-source = ["kicad_agent"]
+source = ["volta"]
 
 [tool.coverage.report]
 fail_under = 80
