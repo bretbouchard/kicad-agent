@@ -1,0 +1,923 @@
+{
+  "version": "1.0",
+  "description": "50-intent held-out test set for Volta v2 adapter evaluation",
+  "categories": [
+    "passive_rc",
+    "active",
+    "power",
+    "digital",
+    "connector",
+    "analog",
+    "protection"
+  ],
+  "stratification": {
+    "difficulty": {
+      "easy": 20,
+      "medium": 20,
+      "hard": 10
+    },
+    "adversarial": 4
+  },
+  "cases": [
+    {
+      "id": "intent-001",
+      "category": "passive_rc",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category passive_rc difficulty easy",
+      "gold_reference": "Reference for passive_rc easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for passive_rc",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-002",
+      "category": "active",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category active difficulty easy",
+      "gold_reference": "Reference for active easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for active",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-003",
+      "category": "power",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category power difficulty easy",
+      "gold_reference": "Reference for power easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for power",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-004",
+      "category": "digital",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category digital difficulty easy",
+      "gold_reference": "Reference for digital easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for digital",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-005",
+      "category": "connector",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category connector difficulty easy",
+      "gold_reference": "Reference for connector easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for connector",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-006",
+      "category": "analog",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category analog difficulty easy",
+      "gold_reference": "Reference for analog easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for analog",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-007",
+      "category": "protection",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category protection difficulty easy",
+      "gold_reference": "Reference for protection easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for protection",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-008",
+      "category": "passive_rc",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category passive_rc difficulty easy",
+      "gold_reference": "Reference for passive_rc easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for passive_rc",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-009",
+      "category": "active",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category active difficulty easy",
+      "gold_reference": "Reference for active easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for active",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-010",
+      "category": "power",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category power difficulty easy",
+      "gold_reference": "Reference for power easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for power",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-011",
+      "category": "digital",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category digital difficulty easy",
+      "gold_reference": "Reference for digital easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for digital",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-012",
+      "category": "connector",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category connector difficulty easy",
+      "gold_reference": "Reference for connector easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for connector",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-013",
+      "category": "analog",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category analog difficulty easy",
+      "gold_reference": "Reference for analog easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for analog",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-014",
+      "category": "protection",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category protection difficulty easy",
+      "gold_reference": "Reference for protection easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for protection",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-015",
+      "category": "passive_rc",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category passive_rc difficulty easy",
+      "gold_reference": "Reference for passive_rc easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for passive_rc",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-016",
+      "category": "active",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category active difficulty easy",
+      "gold_reference": "Reference for active easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for active",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-017",
+      "category": "power",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category power difficulty easy",
+      "gold_reference": "Reference for power easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for power",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-018",
+      "category": "digital",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category digital difficulty easy",
+      "gold_reference": "Reference for digital easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for digital",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-019",
+      "category": "connector",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category connector difficulty easy",
+      "gold_reference": "Reference for connector easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for connector",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-020",
+      "category": "analog",
+      "difficulty": "easy",
+      "prompt": "Design a circuit for category analog difficulty easy",
+      "gold_reference": "Reference for analog easy circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for analog",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-021",
+      "category": "protection",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category protection difficulty medium",
+      "gold_reference": "Reference for protection medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for protection",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-022",
+      "category": "passive_rc",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category passive_rc difficulty medium",
+      "gold_reference": "Reference for passive_rc medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for passive_rc",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-023",
+      "category": "active",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category active difficulty medium",
+      "gold_reference": "Reference for active medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for active",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-024",
+      "category": "power",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category power difficulty medium",
+      "gold_reference": "Reference for power medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for power",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-025",
+      "category": "digital",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category digital difficulty medium",
+      "gold_reference": "Reference for digital medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for digital",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-026",
+      "category": "connector",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category connector difficulty medium",
+      "gold_reference": "Reference for connector medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for connector",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-027",
+      "category": "analog",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category analog difficulty medium",
+      "gold_reference": "Reference for analog medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for analog",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-028",
+      "category": "protection",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category protection difficulty medium",
+      "gold_reference": "Reference for protection medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for protection",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-029",
+      "category": "passive_rc",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category passive_rc difficulty medium",
+      "gold_reference": "Reference for passive_rc medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for passive_rc",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-030",
+      "category": "active",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category active difficulty medium",
+      "gold_reference": "Reference for active medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for active",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-031",
+      "category": "power",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category power difficulty medium",
+      "gold_reference": "Reference for power medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for power",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-032",
+      "category": "digital",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category digital difficulty medium",
+      "gold_reference": "Reference for digital medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for digital",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-033",
+      "category": "connector",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category connector difficulty medium",
+      "gold_reference": "Reference for connector medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for connector",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-034",
+      "category": "analog",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category analog difficulty medium",
+      "gold_reference": "Reference for analog medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for analog",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-035",
+      "category": "protection",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category protection difficulty medium",
+      "gold_reference": "Reference for protection medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for protection",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-036",
+      "category": "passive_rc",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category passive_rc difficulty medium",
+      "gold_reference": "Reference for passive_rc medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for passive_rc",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-037",
+      "category": "active",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category active difficulty medium",
+      "gold_reference": "Reference for active medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for active",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-038",
+      "category": "power",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category power difficulty medium",
+      "gold_reference": "Reference for power medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for power",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-039",
+      "category": "digital",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category digital difficulty medium",
+      "gold_reference": "Reference for digital medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for digital",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-040",
+      "category": "connector",
+      "difficulty": "medium",
+      "prompt": "Design a circuit for category connector difficulty medium",
+      "gold_reference": "Reference for connector medium circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for connector",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-041",
+      "category": "analog",
+      "difficulty": "hard",
+      "prompt": "Design a circuit for category analog difficulty hard",
+      "gold_reference": "Reference for analog hard circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for analog",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-042",
+      "category": "protection",
+      "difficulty": "hard",
+      "prompt": "Design a circuit for category protection difficulty hard",
+      "gold_reference": "Reference for protection hard circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for protection",
+      "volta_v2_failure_mode": true
+    },
+    {
+      "id": "intent-043",
+      "category": "passive_rc",
+      "difficulty": "hard",
+      "prompt": "Design a circuit for category passive_rc difficulty hard",
+      "gold_reference": "Reference for passive_rc hard circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for passive_rc",
+      "volta_v2_failure_mode": true
+    },
+    {
+      "id": "intent-044",
+      "category": "active",
+      "difficulty": "hard",
+      "prompt": "Design a circuit for category active difficulty hard",
+      "gold_reference": "Reference for active hard circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for active",
+      "volta_v2_failure_mode": true
+    },
+    {
+      "id": "intent-045",
+      "category": "power",
+      "difficulty": "hard",
+      "prompt": "Design a circuit for category power difficulty hard",
+      "gold_reference": "Reference for power hard circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for power",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-046",
+      "category": "digital",
+      "difficulty": "hard",
+      "prompt": "Design a circuit for category digital difficulty hard",
+      "gold_reference": "Reference for digital hard circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for digital",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-047",
+      "category": "connector",
+      "difficulty": "hard",
+      "prompt": "Design a circuit for category connector difficulty hard",
+      "gold_reference": "Reference for connector hard circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for connector",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-048",
+      "category": "analog",
+      "difficulty": "hard",
+      "prompt": "Design a circuit for category analog difficulty hard",
+      "gold_reference": "Reference for analog hard circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for analog",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-049",
+      "category": "protection",
+      "difficulty": "hard",
+      "prompt": "Design a circuit for category protection difficulty hard",
+      "gold_reference": "Reference for protection hard circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for protection",
+      "volta_v2_failure_mode": false
+    },
+    {
+      "id": "intent-050",
+      "category": "passive_rc",
+      "difficulty": "hard",
+      "prompt": "Design a circuit for category passive_rc difficulty hard",
+      "gold_reference": "Reference for passive_rc hard circuit",
+      "gold_skidl": "from skidl import Part, Net, generate_netlist, KICAD, erc\nset_default_tool(KICAD)\nR1 = Part('Device', 'R', value='1k')\ngenerate_netlist()",
+      "required_components": [
+        "R"
+      ],
+      "required_nets": [
+        "IN",
+        "OUT",
+        "GND"
+      ],
+      "rationale": "Test case for passive_rc",
+      "volta_v2_failure_mode": true
+    }
+  ]
+}
