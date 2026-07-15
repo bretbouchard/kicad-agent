@@ -2,7 +2,7 @@
 
 import pytest
 
-from kicad_agent.analysis.connectivity import NetGraph
+from volta.analysis.connectivity import NetGraph
 
 
 class TestNetGraphDetailed:

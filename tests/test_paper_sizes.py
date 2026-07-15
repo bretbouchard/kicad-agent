@@ -5,8 +5,8 @@ integration tests in test_autolayout_srs.py. Fast (no fixture I/O).
 """
 from __future__ import annotations
 
-from kicad_agent.schematic_autolayout import SugiyamaLayout, paper_sizes
-from kicad_agent.schematic_autolayout.sugiyama import (
+from volta.schematic_autolayout import SugiyamaLayout, paper_sizes
+from volta.schematic_autolayout.sugiyama import (
     DEFAULT_LAYER_SPACING_MM,
     DEFAULT_NODE_SPACING_MM,
 )
@@ -113,7 +113,7 @@ def test_fit_to_page_accepts_layout_coordinate_namedtuples() -> None:
     The handler path passes (x, y) tuples; the engine path passes
     LayoutCoordinate NamedTuples. Both must work.
     """
-    from kicad_agent.schematic_autolayout import LayoutCoordinate
+    from volta.schematic_autolayout import LayoutCoordinate
 
     layout = SugiyamaLayout()
     tuple_positions = {"A": (10.0, 10.0)}

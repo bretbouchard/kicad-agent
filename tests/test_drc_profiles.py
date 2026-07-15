@@ -1,13 +1,13 @@
 """Tests for bundled vendor DRC profile files and the drc_profiles package (DRC-02, DRC-03, DRC-06, DRC-07, DRC-08)."""
 import pytest
 
-from kicad_agent.manufacturing.drc_profiles import (
+from volta.manufacturing.drc_profiles import (
     VendorDrcProfileInfo,
     get_drc_profile_path,
     list_drc_profiles,
 )
 
-_PROFILES_DIR = "src/kicad_agent/manufacturing/drc_profiles"
+_PROFILES_DIR = "src/volta/manufacturing/drc_profiles"
 
 # The 9 expected vendor files.
 _EXPECTED_VENDORS = {

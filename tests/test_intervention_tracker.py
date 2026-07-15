@@ -4,7 +4,7 @@ import dataclasses
 
 import pytest
 
-from kicad_agent.ai_tracking.tracker import InterventionEvent, InterventionTracker
+from volta.ai_tracking.tracker import InterventionEvent, InterventionTracker
 
 
 def _make_event(**overrides) -> InterventionEvent:

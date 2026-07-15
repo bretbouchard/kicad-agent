@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.spatial.primitives import SpatialBox
+from volta.spatial.primitives import SpatialBox
 
 
 # Reuse mock helpers from test_schematic_readability
@@ -30,7 +30,7 @@ class TestReviewSchematicOp:
 
     def test_default_values(self):
         """Op has sensible defaults."""
-        from kicad_agent.ops._schema_readability import ReviewSchematicOp
+        from volta.ops._schema_readability import ReviewSchematicOp
 
         op = ReviewSchematicOp(target_file="test.kicad_sch")
         assert op.op_type == "review_schematic"
@@ -40,7 +40,7 @@ class TestReviewSchematicOp:
 
     def test_all_fields_set(self):
         """Op accepts all fields."""
-        from kicad_agent.ops._schema_readability import ReviewSchematicOp
+        from volta.ops._schema_readability import ReviewSchematicOp
 
         op = ReviewSchematicOp(
             target_file="test.kicad_sch",
@@ -54,7 +54,7 @@ class TestReviewSchematicOp:
 
     def test_invalid_format_rejected(self):
         """Op rejects invalid output_format."""
-        from kicad_agent.ops._schema_readability import ReviewSchematicOp
+        from volta.ops._schema_readability import ReviewSchematicOp
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError):
@@ -71,7 +71,7 @@ class TestVisionFindingParsing:
 
     def test_parses_bullet_points(self):
         """Bullet-point items become VisionFindings."""
-        from kicad_agent.analysis.schematic_reviewer import SchematicReviewer
+        from volta.analysis.schematic_reviewer import SchematicReviewer
 
         text = """
 - Critical: Component U1 overlaps with R2
@@ -86,7 +86,7 @@ class TestVisionFindingParsing:
 
     def test_parses_numbered_items(self):
         """Numbered items are parsed as findings."""
-        from kicad_agent.analysis.schematic_reviewer import SchematicReviewer
+        from volta.analysis.schematic_reviewer import SchematicReviewer
 
         text = """
 1. Critical issue with spacing
@@ -98,14 +98,14 @@ class TestVisionFindingParsing:
 
     def test_empty_text_returns_empty(self):
         """Empty review text produces no findings."""
-        from kicad_agent.analysis.schematic_reviewer import SchematicReviewer
+        from volta.analysis.schematic_reviewer import SchematicReviewer
 
         findings = SchematicReviewer._parse_vision_findings("")
         assert len(findings) == 0
 
     def test_plain_text_no_bullets_no_findings(self):
         """Plain prose without bullet/number markers produces no findings."""
-        from kicad_agent.analysis.schematic_reviewer import SchematicReviewer
+        from volta.analysis.schematic_reviewer import SchematicReviewer
 
         text = "This schematic looks great. Overall readability: excellent."
         findings = SchematicReviewer._parse_vision_findings(text)
@@ -122,7 +122,7 @@ class TestSchematicReviewer:
 
     def test_review_returns_report(self):
         """review() returns a SchematicReviewReport."""
-        from kicad_agent.analysis.schematic_reviewer import (
+        from volta.analysis.schematic_reviewer import (
             SchematicReviewer,
             SchematicReviewReport,
         )
@@ -138,7 +138,7 @@ class TestSchematicReviewer:
 
     def test_review_with_overlapping_components(self):
         """Overlapping components produce rule violations."""
-        from kicad_agent.analysis.schematic_reviewer import SchematicReviewer
+        from volta.analysis.schematic_reviewer import SchematicReviewer
 
         ir = _make_mock_ir(components=COMPONENTS_OVERLAP)
         reviewer = SchematicReviewer(ir)
@@ -148,7 +148,7 @@ class TestSchematicReviewer:
 
     def test_review_captures_file_path(self):
         """Report includes file_path from IR."""
-        from kicad_agent.analysis.schematic_reviewer import SchematicReviewer
+        from volta.analysis.schematic_reviewer import SchematicReviewer
 
         ir = _make_mock_ir(components=COMPONENTS_CLEAN)
         ir.file_path = "/path/to/test.kicad_sch"
@@ -157,11 +157,11 @@ class TestSchematicReviewer:
 
         assert report.file_path == "/path/to/test.kicad_sch"
 
-    @patch("kicad_agent.analysis.schematic_reviewer.SchematicReviewer.render_schematic")
-    @patch("kicad_agent.analysis.schematic_reviewer.SchematicReviewer.vision_review")
+    @patch("volta.analysis.schematic_reviewer.SchematicReviewer.render_schematic")
+    @patch("volta.analysis.schematic_reviewer.SchematicReviewer.vision_review")
     def test_review_with_vision_calls_render(self, mock_vision, mock_render):
         """review(vision=True) calls render_schematic and vision_review."""
-        from kicad_agent.analysis.schematic_reviewer import SchematicReviewer
+        from volta.analysis.schematic_reviewer import SchematicReviewer
 
         mock_render.return_value = "/tmp/rendered.pdf"
         mock_vision.return_value = ()
@@ -174,10 +174,10 @@ class TestSchematicReviewer:
         mock_vision.assert_called_once_with("/tmp/rendered.pdf")
         assert report.rendered_path == "/tmp/rendered.pdf"
 
-    @patch("kicad_agent.analysis.schematic_reviewer.SchematicReviewer.render_schematic")
+    @patch("volta.analysis.schematic_reviewer.SchematicReviewer.render_schematic")
     def test_review_vision_handles_render_failure(self, mock_render):
         """If render fails, vision findings stay empty."""
-        from kicad_agent.analysis.schematic_reviewer import SchematicReviewer
+        from volta.analysis.schematic_reviewer import SchematicReviewer
 
         mock_render.return_value = None
 
@@ -190,7 +190,7 @@ class TestSchematicReviewer:
 
     def test_review_with_disabled_rules(self):
         """Disabled rules are excluded from report."""
-        from kicad_agent.analysis.schematic_reviewer import SchematicReviewer
+        from volta.analysis.schematic_reviewer import SchematicReviewer
 
         ir = _make_mock_ir(components=COMPONENTS_OVERLAP)
         reviewer = SchematicReviewer(ir)
@@ -213,7 +213,7 @@ class TestExecutorQueryHandler:
 
     def test_schema_validates(self):
         """ReviewSchematicOp validates correctly."""
-        from kicad_agent.ops._schema_readability import ReviewSchematicOp
+        from volta.ops._schema_readability import ReviewSchematicOp
 
         op = ReviewSchematicOp(
             op_type="review_schematic",
@@ -223,7 +223,7 @@ class TestExecutorQueryHandler:
 
     def test_query_handler_registered(self):
         """review_schematic query handler exists in executor registry."""
-        from kicad_agent.ops.executor import _SCHEMATIC_QUERY_HANDLERS
+        from volta.ops.executor import _SCHEMATIC_QUERY_HANDLERS
 
         assert "review_schematic" in _SCHEMATIC_QUERY_HANDLERS
 
@@ -238,6 +238,6 @@ class TestCLIRegistration:
 
     def test_cmd_module_importable(self):
         """review_schematic_cmd module is importable."""
-        from kicad_agent.cli.review_schematic_cmd import review_schematic_command, register_parser
+        from volta.cli.review_schematic_cmd import review_schematic_command, register_parser
         assert callable(review_schematic_command)
         assert callable(register_parser)

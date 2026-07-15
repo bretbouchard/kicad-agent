@@ -23,18 +23,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.training.real_dataset import RealBoardDataset  # noqa: E402
-from kicad_agent.training.board_chains import (  # noqa: E402
+from volta.training.real_dataset import RealBoardDataset  # noqa: E402
+from volta.training.board_chains import (  # noqa: E402
     synthesize_board_chain,
     synthesize_corrupted_board_chain,
     _compute_chain_labels,
 )
-from kicad_agent.training.reward_model import (  # noqa: E402
+from volta.training.reward_model import (  # noqa: E402
     RewardModel,
     predict_reward,
     train_reward_model,
 )
-from kicad_agent.training.tokenizer import ChainTokenizer  # noqa: E402
+from volta.training.tokenizer import ChainTokenizer  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,

@@ -7,7 +7,7 @@ import pytest
 import pydantic
 from pathlib import Path
 
-from kicad_agent.training.vision_lora_trainer import (
+from volta.training.vision_lora_trainer import (
     KiCadVisionSFTConfig,
     _build_lora_args,
 )

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.project import (
+from volta.project import (
     DesignRule as ProjectDesignRule,
     DesignRulesFile,
     LibEntry,
@@ -132,6 +132,6 @@ class TestProjectImports:
 
     def test_all_exports_importable(self):
         """All __all__ exports can be imported."""
-        from kicad_agent import project
+        from volta import project
         for name in project.__all__:
             assert hasattr(project, name), f"Missing export: {name}"

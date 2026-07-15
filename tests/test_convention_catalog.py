@@ -24,8 +24,8 @@ from typing import Any
 
 import pytest
 
-from kicad_agent.conventions.base import Convention, Violation
-from kicad_agent.conventions.layout_view import ComponentView, LayoutView, WireView
+from volta.conventions.base import Convention, Violation
+from volta.conventions.layout_view import ComponentView, LayoutView, WireView
 
 
 # ---------------------------------------------------------------------------
@@ -35,7 +35,7 @@ from kicad_agent.conventions.layout_view import ComponentView, LayoutView, WireV
 
 def test_get_v1_catalog_returns_10_to_15_conventions():
     """D-01: v1 catalog size is 10-15 conventions."""
-    from kicad_agent.conventions.catalog import get_v1_catalog
+    from volta.conventions.catalog import get_v1_catalog
 
     catalog = get_v1_catalog()
     assert 10 <= len(catalog) <= 15, f"v1 catalog must be 10-15, got {len(catalog)}"
@@ -43,7 +43,7 @@ def test_get_v1_catalog_returns_10_to_15_conventions():
 
 def test_get_v1_catalog_includes_6_readability_adapters_plus_4_new():
     """6 adapters (Phase 48.5) + 4 new IEEE 315 conventions = 10 total."""
-    from kicad_agent.conventions.catalog import get_v1_catalog
+    from volta.conventions.catalog import get_v1_catalog
 
     catalog = get_v1_catalog()
     names = {c.rule_id for c in catalog}
@@ -58,7 +58,7 @@ def test_get_v1_catalog_includes_6_readability_adapters_plus_4_new():
 
 def test_all_catalog_rule_ids_match_phase48_regex():
     """P0-3: every catalog rule_id matches ^[A-Z][A-Z0-9_]*\\d{2}$."""
-    from kicad_agent.conventions.catalog import get_v1_catalog
+    from volta.conventions.catalog import get_v1_catalog
 
     catalog = get_v1_catalog()
     pattern = re.compile(r"^[A-Z][A-Z0-9_]*\d{2}$")
@@ -73,7 +73,7 @@ def test_all_catalog_rule_ids_match_phase48_regex():
 
 
 def test_signal_flow_direction_01_class_level_attrs():
-    from kicad_agent.conventions.catalog.signal_flow import SIGNAL_FLOW_DIRECTION_01
+    from volta.conventions.catalog.signal_flow import SIGNAL_FLOW_DIRECTION_01
 
     assert SIGNAL_FLOW_DIRECTION_01.rule_id == "SIGNAL_FLOW_DIRECTION_01"
     assert SIGNAL_FLOW_DIRECTION_01.severity in ("error", "warning", "info")
@@ -81,7 +81,7 @@ def test_signal_flow_direction_01_class_level_attrs():
 
 
 def test_ieee315_pin_orientation_01_class_level_attrs():
-    from kicad_agent.conventions.catalog.pin_orientation import (
+    from volta.conventions.catalog.pin_orientation import (
         IEEE315_PIN_ORIENTATION_01,
     )
 
@@ -91,7 +91,7 @@ def test_ieee315_pin_orientation_01_class_level_attrs():
 
 
 def test_grid_alignment_01_class_level_attrs():
-    from kicad_agent.conventions.catalog.grid_alignment import GRID_ALIGNMENT_01
+    from volta.conventions.catalog.grid_alignment import GRID_ALIGNMENT_01
 
     assert GRID_ALIGNMENT_01.rule_id == "GRID_ALIGNMENT_01"
     assert GRID_ALIGNMENT_01.severity in ("error", "warning", "info")
@@ -99,7 +99,7 @@ def test_grid_alignment_01_class_level_attrs():
 
 
 def test_wire_orthogonality_01_class_level_attrs():
-    from kicad_agent.conventions.catalog.wire_orthogonality import (
+    from volta.conventions.catalog.wire_orthogonality import (
         WIRE_ORTHOGONALITY_01,
     )
 
@@ -110,12 +110,12 @@ def test_wire_orthogonality_01_class_level_attrs():
 
 def test_each_new_convention_check_returns_list_on_empty_layout():
     """Defensive: check() never raises on empty layout; returns []."""
-    from kicad_agent.conventions.catalog.grid_alignment import GRID_ALIGNMENT_01
-    from kicad_agent.conventions.catalog.pin_orientation import (
+    from volta.conventions.catalog.grid_alignment import GRID_ALIGNMENT_01
+    from volta.conventions.catalog.pin_orientation import (
         IEEE315_PIN_ORIENTATION_01,
     )
-    from kicad_agent.conventions.catalog.signal_flow import SIGNAL_FLOW_DIRECTION_01
-    from kicad_agent.conventions.catalog.wire_orthogonality import (
+    from volta.conventions.catalog.signal_flow import SIGNAL_FLOW_DIRECTION_01
+    from volta.conventions.catalog.wire_orthogonality import (
         WIRE_ORTHOGONALITY_01,
     )
 
@@ -138,7 +138,7 @@ def test_signal_flow_direction_01_flags_backward_facing_components():
     with orientation in (90, 270) are flagged as 'backward-facing' for
     signal flow (input pins typically on left for 0° canonical orientation).
     """
-    from kicad_agent.conventions.catalog.signal_flow import SIGNAL_FLOW_DIRECTION_01
+    from volta.conventions.catalog.signal_flow import SIGNAL_FLOW_DIRECTION_01
 
     ic = ComponentView(
         ref="U1",
@@ -162,7 +162,7 @@ def test_pin_orientation_01_v1_is_read_only_apply_is_identity():
     (apply = identity); document writer extension as DEFERRED-TO-NAMED-TARGET
     Phase 115.
     """
-    from kicad_agent.conventions.catalog.pin_orientation import (
+    from volta.conventions.catalog.pin_orientation import (
         IEEE315_PIN_ORIENTATION_01,
     )
 
@@ -183,7 +183,7 @@ def test_pin_orientation_01_v1_is_read_only_apply_is_identity():
 
 def test_pin_orientation_01_check_flags_non_canonical_passive_orientation():
     """Check-only: flags passives (R/C/L) at non-canonical angles (not 0/90/180/270)."""
-    from kicad_agent.conventions.catalog.pin_orientation import (
+    from volta.conventions.catalog.pin_orientation import (
         IEEE315_PIN_ORIENTATION_01,
     )
 
@@ -212,7 +212,7 @@ def test_pin_orientation_01_check_flags_non_canonical_passive_orientation():
 
 def test_grid_alignment_01_check_flags_off_grid_components():
     """Components off the 2.54mm grid are flagged."""
-    from kicad_agent.conventions.catalog.grid_alignment import GRID_ALIGNMENT_01
+    from volta.conventions.catalog.grid_alignment import GRID_ALIGNMENT_01
 
     off_grid = ComponentView(
         ref="R1",
@@ -238,7 +238,7 @@ def test_grid_alignment_01_check_flags_off_grid_components():
 
 def test_grid_alignment_01_apply_snaps_to_grid_and_returns_new_layout():
     """TRANSFORM convention: apply() returns NEW LayoutView with snapped positions."""
-    from kicad_agent.conventions.catalog.grid_alignment import GRID_ALIGNMENT_01
+    from volta.conventions.catalog.grid_alignment import GRID_ALIGNMENT_01
 
     off_grid = ComponentView(
         ref="R1",
@@ -263,7 +263,7 @@ def test_grid_alignment_01_apply_snaps_to_grid_and_returns_new_layout():
 
 def test_wire_orthogonality_01_flags_non_orthogonal_bends():
     """Read-only: flags wire bends that aren't 90°."""
-    from kicad_agent.conventions.catalog.wire_orthogonality import (
+    from volta.conventions.catalog.wire_orthogonality import (
         WIRE_ORTHOGONALITY_01,
     )
 
@@ -283,7 +283,7 @@ def test_wire_orthogonality_01_flags_non_orthogonal_bends():
 
 def test_wire_orthogonality_01_apply_is_identity():
     """Read-only convention: apply() returns layout unchanged."""
-    from kicad_agent.conventions.catalog.wire_orthogonality import (
+    from volta.conventions.catalog.wire_orthogonality import (
         WIRE_ORTHOGONALITY_01,
     )
 
@@ -294,12 +294,12 @@ def test_wire_orthogonality_01_apply_is_identity():
 
 def test_check_output_has_no_coordinate_fields():
     """LO-04: Violation.model_fields contract from Plan 01 — no coordinate names."""
-    from kicad_agent.conventions.catalog.grid_alignment import GRID_ALIGNMENT_01
-    from kicad_agent.conventions.catalog.pin_orientation import (
+    from volta.conventions.catalog.grid_alignment import GRID_ALIGNMENT_01
+    from volta.conventions.catalog.pin_orientation import (
         IEEE315_PIN_ORIENTATION_01,
     )
-    from kicad_agent.conventions.catalog.signal_flow import SIGNAL_FLOW_DIRECTION_01
-    from kicad_agent.conventions.catalog.wire_orthogonality import (
+    from volta.conventions.catalog.signal_flow import SIGNAL_FLOW_DIRECTION_01
+    from volta.conventions.catalog.wire_orthogonality import (
         WIRE_ORTHOGONALITY_01,
     )
 
@@ -324,7 +324,7 @@ def test_transform_conventions_use_dataclasses_replace():
 
     Verified by checking apply() returns a different object identity (not is).
     """
-    from kicad_agent.conventions.catalog.grid_alignment import GRID_ALIGNMENT_01
+    from volta.conventions.catalog.grid_alignment import GRID_ALIGNMENT_01
 
     off_grid = ComponentView(
         ref="R1",

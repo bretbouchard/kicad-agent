@@ -20,8 +20,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.routing.ai_strategy import AiRoutingStrategy
-from kicad_agent.routing.strategy import (
+from volta.routing.ai_strategy import AiRoutingStrategy
+from volta.routing.strategy import (
     BoardState,
     DeterministicStrategy,
     Pin,
@@ -29,7 +29,7 @@ from kicad_agent.routing.strategy import (
     RoutingStrategy,
     RoutingStrategyResult,
 )
-from kicad_agent.routing.strategy_validator import StrategyValidator
+from volta.routing.strategy_validator import StrategyValidator
 
 
 def _make_board_state(total_nets: int = 3) -> BoardState:

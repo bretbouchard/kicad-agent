@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.validation.gates.proposal import (
+from volta.validation.gates.proposal import (
     FixSource,
     Proposal,
     ProposalValidator,

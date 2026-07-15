@@ -12,8 +12,8 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.ir.schematic_ir import SchematicIR
+from volta.ir.pcb_ir import PcbIR
+from volta.ir.schematic_ir import SchematicIR
 
 import pytest
 
@@ -25,19 +25,19 @@ import pytest
 
 def test_safe_sync_registered_as_crossfile_handler():
     """The handler must be in _CROSSFILE_HANDLERS for execute() dispatch."""
-    from kicad_agent.ops.handlers.crossfile import _CROSSFILE_HANDLERS
+    from volta.ops.handlers.crossfile import _CROSSFILE_HANDLERS
     assert "safe_sync_pcb_from_schematic" in _CROSSFILE_HANDLERS
 
 
 def test_safe_sync_in_cross_file_op_types():
     """execution.py must route safe_sync through the cross_file path."""
-    from kicad_agent.ops.execution import CROSS_FILE_OP_TYPES
+    from volta.ops.execution import CROSS_FILE_OP_TYPES
     assert "safe_sync_pcb_from_schematic" in CROSS_FILE_OP_TYPES
 
 
 def test_safe_sync_in_operation_registry():
     """registry.py must have the op metadata entry."""
-    from kicad_agent.ops.registry import OPERATION_REGISTRY
+    from volta.ops.registry import OPERATION_REGISTRY
     assert "safe_sync_pcb_from_schematic" in OPERATION_REGISTRY
     entry = OPERATION_REGISTRY["safe_sync_pcb_from_schematic"]
     assert entry.category == "crossfile"
@@ -46,7 +46,7 @@ def test_safe_sync_in_operation_registry():
 
 def test_safe_sync_schema_validates_target_files():
     """Schema requires exactly one .kicad_pcb + one .kicad_sch in target_files."""
-    from kicad_agent.ops._schema_crossfile import SafeSyncPcbFromSchematicOp
+    from volta.ops._schema_crossfile import SafeSyncPcbFromSchematicOp
     import pydantic
 
     # Valid
@@ -76,7 +76,7 @@ def test_handler_does_not_use_kiutils_to_file():
 
     Grep acceptance test per ae-26 spec.
     """
-    from kicad_agent.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
+    from volta.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
     src = inspect.getsource(_handle_safe_sync_pcb_from_schematic)
     # Check for actual to_file() CALL (not mention in docstring/comments)
     import ast
@@ -90,7 +90,7 @@ def test_handler_does_not_use_kiutils_to_file():
 
 def test_handler_uses_raw_sexpr_sync():
     """Handler must delegate to sync_pcb_from_netlist (raw S-expr manipulation)."""
-    from kicad_agent.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
+    from volta.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
     src = inspect.getsource(_handle_safe_sync_pcb_from_schematic)
     assert "sync_pcb_from_netlist" in src, (
         "Handler must use sync_pcb_from_netlist for raw S-expr mutation"
@@ -104,8 +104,8 @@ def test_handler_uses_raw_sexpr_sync():
 
 def test_preserve_routing_assertion_fires_on_violation():
     """If sync_pcb_from_netlist accidentally adds/removes segments, handler must assert."""
-    from kicad_agent.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
-    from kicad_agent.crossfile.schematic_sync import SyncResult
+    from volta.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
+    from volta.crossfile.schematic_sync import SyncResult
 
     # Mock: sync returns content with DIFFERENT segment count (simulates bug)
     mock_pcb_ir = MagicMock(spec=PcbIR)
@@ -116,9 +116,9 @@ def test_preserve_routing_assertion_fires_on_violation():
     fake_sync_result = SyncResult(pad_net_updates=1, updated_nets=["GND"])
 
     with patch(
-        "kicad_agent.ops.handlers.crossfile.sync_pcb_from_netlist"
+        "volta.ops.handlers.crossfile.sync_pcb_from_netlist"
     ) if False else patch(
-        "kicad_agent.crossfile.schematic_sync.sync_pcb_from_netlist"
+        "volta.crossfile.schematic_sync.sync_pcb_from_netlist"
     ) as mock_sync:
         mock_sync.return_value = ("(kicad_pcb (segment 1) (segment 2))", fake_sync_result)
         op = MagicMock()
@@ -143,8 +143,8 @@ def test_preserve_routing_assertion_fires_on_violation():
 
 def test_preserve_zones_assertion_fires_on_violation():
     """If sync accidentally adds/removes zones, handler must assert."""
-    from kicad_agent.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
-    from kicad_agent.crossfile.schematic_sync import SyncResult
+    from volta.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
+    from volta.crossfile.schematic_sync import SyncResult
 
     mock_pcb_ir = MagicMock(spec=PcbIR)
     mock_pcb_ir._parse_result = MagicMock()
@@ -154,7 +154,7 @@ def test_preserve_zones_assertion_fires_on_violation():
     fake_sync_result = SyncResult(pad_net_updates=1)
 
     with patch(
-        "kicad_agent.crossfile.schematic_sync.sync_pcb_from_netlist"
+        "volta.crossfile.schematic_sync.sync_pcb_from_netlist"
     ) as mock_sync:
         mock_sync.return_value = ("(kicad_pcb (segment 1) (via 1))", fake_sync_result)
         op = MagicMock()
@@ -183,8 +183,8 @@ def test_preserve_zones_assertion_fires_on_violation():
 
 def test_dry_run_returns_contract_no_mutation():
     """dry_run=True returns has_changes status without committing."""
-    from kicad_agent.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
-    from kicad_agent.crossfile.schematic_sync import SyncResult
+    from volta.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
+    from volta.crossfile.schematic_sync import SyncResult
 
     mock_pcb_ir = MagicMock(spec=PcbIR)
     mock_pcb_ir._parse_result = MagicMock()
@@ -194,7 +194,7 @@ def test_dry_run_returns_contract_no_mutation():
     fake_sync_result = SyncResult(pad_net_updates=5, updated_nets=["GND", "VCC"])
 
     with patch(
-        "kicad_agent.crossfile.schematic_sync.sync_pcb_from_netlist"
+        "volta.crossfile.schematic_sync.sync_pcb_from_netlist"
     ) as mock_sync:
         mock_sync.return_value = ("(kicad_pcb (segment 1) (via 1) (zone 1))", fake_sync_result)
         op = MagicMock()
@@ -229,8 +229,8 @@ def test_dry_run_returns_contract_no_mutation():
 
 def test_happy_path_commits_when_changes_exist():
     """When sync finds changes and dry_run=False, handler commits via commit_raw_content."""
-    from kicad_agent.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
-    from kicad_agent.crossfile.schematic_sync import SyncResult
+    from volta.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
+    from volta.crossfile.schematic_sync import SyncResult
 
     original = "(kicad_pcb (segment 1) (via 1) (zone 1))"
     modified = "(kicad_pcb (segment 1) (via 1) (zone 1) (net 5 \"GND\"))"
@@ -246,7 +246,7 @@ def test_happy_path_commits_when_changes_exist():
     )
 
     with patch(
-        "kicad_agent.crossfile.schematic_sync.sync_pcb_from_netlist"
+        "volta.crossfile.schematic_sync.sync_pcb_from_netlist"
     ) as mock_sync:
         mock_sync.return_value = (modified, fake_sync_result)
         op = MagicMock()
@@ -277,8 +277,8 @@ def test_happy_path_commits_when_changes_exist():
 
 def test_no_changes_no_commit():
     """When sync finds no changes, handler does NOT commit."""
-    from kicad_agent.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
-    from kicad_agent.crossfile.schematic_sync import SyncResult
+    from volta.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
+    from volta.crossfile.schematic_sync import SyncResult
 
     content = "(kicad_pcb (segment 1) (via 1) (zone 1))"
     mock_pcb_ir = MagicMock(spec=PcbIR)
@@ -289,7 +289,7 @@ def test_no_changes_no_commit():
     empty_result = SyncResult()  # has_changes = False
 
     with patch(
-        "kicad_agent.crossfile.schematic_sync.sync_pcb_from_netlist"
+        "volta.crossfile.schematic_sync.sync_pcb_from_netlist"
     ) as mock_sync:
         mock_sync.return_value = (content, empty_result)
         op = MagicMock()
@@ -315,7 +315,7 @@ def test_no_changes_no_commit():
 
 def test_missing_schematic_ir_raises():
     """Handler raises ValueError when no SchematicIR is provided."""
-    from kicad_agent.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
+    from volta.ops.handlers.crossfile import _handle_safe_sync_pcb_from_schematic
 
     mock_pcb_ir = MagicMock(spec=PcbIR)
     mock_pcb_ir._parse_result = MagicMock()

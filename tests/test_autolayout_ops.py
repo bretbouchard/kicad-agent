@@ -9,7 +9,7 @@ Tests are organized by Task:
 TDD flow: this file is committed FIRST (RED), then schemas/handlers land (GREEN).
 
 Council fixes verified by tests:
-  - HIGH-1: TargetFile imported from kicad_agent.ops.schema (NOT _schema_common)
+  - HIGH-1: TargetFile imported from volta.ops.schema (NOT _schema_common)
   - HIGH-4: mutation dicts use "op" key (not "kind"); "kind" must NOT work
   - HIGH-6: read-after-write — route_wires_sch reads post-placement positions
   - NEW-MED-1: uses verified SchematicGraph API (.pins, .ref_to_libid, get_sheet_refs),
@@ -30,8 +30,8 @@ FIXTURES = Path(__file__).parent / "fixtures" / "safe_annotate"
 
 def _execute_op(op_json: dict, base_dir: Path) -> dict:
     """Execute an op via OperationExecutor. Returns the full result dict."""
-    from kicad_agent.ops.executor import OperationExecutor
-    from kicad_agent.ops.schema import Operation
+    from volta.ops.executor import OperationExecutor
+    from volta.ops.schema import Operation
 
     executor = OperationExecutor(base_dir=base_dir)
     op = Operation.model_validate({"root": op_json})
@@ -48,7 +48,7 @@ class TestAutolayoutSchemas:
 
     def test_place_components_sch_constructs(self):
         """Test 1: PlaceComponentsSchOp constructs with discriminator literal."""
-        from kicad_agent.ops._schema_autolayout import PlaceComponentsSchOp
+        from volta.ops._schema_autolayout import PlaceComponentsSchOp
 
         op = PlaceComponentsSchOp(
             op_type="place_components_sch",
@@ -59,7 +59,7 @@ class TestAutolayoutSchemas:
 
     def test_dry_run_default_false_on_each_schema(self):
         """Test 2: dry_run defaults to False on all 3 schemas."""
-        from kicad_agent.ops._schema_autolayout import (
+        from volta.ops._schema_autolayout import (
             PlaceComponentsSchOp,
             RouteWiresSchOp,
             ApplyLabelsSchOp,
@@ -74,7 +74,7 @@ class TestAutolayoutSchemas:
 
     def test_schemas_reject_wrong_discriminator(self):
         """Test 3: Each schema rejects unknown op_type via discriminator."""
-        from kicad_agent.ops._schema_autolayout import PlaceComponentsSchOp
+        from volta.ops._schema_autolayout import PlaceComponentsSchOp
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError):
@@ -85,7 +85,7 @@ class TestAutolayoutSchemas:
 
     def test_all_3_ops_in_registry_catalog(self):
         """Test 4: All 3 ops in OPERATION_REGISTRY with category='autolayout'."""
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
 
         for op_type in ("place_components_sch", "route_wires_sch", "apply_labels_sch"):
             assert op_type in OPERATION_REGISTRY, f"{op_type} missing from catalog"
@@ -98,7 +98,7 @@ class TestAutolayoutSchemas:
 
     def test_executor_union_accepts_all_3_op_types(self):
         """Test 5: Operation discriminated union accepts all 3 op types."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         for op_type, target in [
             ("place_components_sch", "a.kicad_sch"),
@@ -111,17 +111,17 @@ class TestAutolayoutSchemas:
             assert op.root.op_type == op_type
 
     def test_targetfile_import_from_schema_module(self):
-        """Test 6 (HIGH-1 regression guard): TargetFile imports from kicad_agent.ops.schema.
+        """Test 6 (HIGH-1 regression guard): TargetFile imports from volta.ops.schema.
 
         The plan originally claimed TargetFile lived in _schema_common (which does
         not exist). This test pins the correct location.
         """
-        from kicad_agent.ops.schema import TargetFile  # noqa: F401
+        from volta.ops.schema import TargetFile  # noqa: F401
 
         # Also confirm _schema_common does NOT exist (defensive)
         import importlib
         with pytest.raises(ModuleNotFoundError):
-            importlib.import_module("kicad_agent.ops._schema_common")
+            importlib.import_module("volta.ops._schema_common")
 
 
 # ============================================================================
@@ -202,7 +202,7 @@ class TestPlaceComponentsSch:
 
     def test_place_components_sch_no_kiutils_to_file(self):
         """Test 5 (P101-INV-01): handler source has ZERO to_file() Call nodes."""
-        from kicad_agent.ops.handlers.autolayout import _handle_place_components_sch
+        from volta.ops.handlers.autolayout import _handle_place_components_sch
 
         source = inspect.getsource(_handle_place_components_sch)
         tree = ast.parse(source)
@@ -219,7 +219,7 @@ class TestPlaceComponentsSch:
 
     def test_subcircuit_split_default_true(self):
         """Test 7 (group separation): subcircuit_split defaults True per D-02."""
-        from kicad_agent.ops._schema_autolayout import PlaceComponentsSchOp
+        from volta.ops._schema_autolayout import PlaceComponentsSchOp
 
         op = PlaceComponentsSchOp(
             op_type="place_components_sch",
@@ -229,7 +229,7 @@ class TestPlaceComponentsSch:
 
     def test_move_symbol_branch_updates_symbol_at(self):
         """Test 8 (HIGH-4): apply_mutation with op='move_symbol' updates (at X Y)."""
-        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+        from volta.ops.schematic_raw_writer import SchematicRawWriter
 
         content = '''  (symbol (lib_id "Device:R") (at 50.0 50.0 0) (unit 1)
     (property "Reference" "R1" (at 52.0 50.0 0))
@@ -247,7 +247,7 @@ class TestPlaceComponentsSch:
 
     def test_move_symbol_unknown_op_returns_unchanged(self):
         """Test 9: apply_mutation with unknown op returns content unchanged."""
-        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+        from volta.ops.schematic_raw_writer import SchematicRawWriter
 
         content = '  (symbol (lib_id "Device:R") (at 50.0 50.0 0))\n'
         result = SchematicRawWriter.apply_mutation(content, {"op": "nonexistent_op"})
@@ -259,7 +259,7 @@ class TestPlaceComponentsSch:
         The dispatcher reads mutation.get('op') or mutation.get('type') — NEVER
         'kind'. A future contributor using 'kind' would silently no-op.
         """
-        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+        from volta.ops.schematic_raw_writer import SchematicRawWriter
 
         content = '''  (symbol (lib_id "Device:R") (at 50.0 50.0 0) (unit 1)
     (property "Reference" "R1" (at 52.0 50.0 0))
@@ -304,7 +304,7 @@ class TestRouteWiresSch:
 
     def test_route_wires_sch_no_kiutils_to_file(self):
         """Test (P101-INV-01): handler source has ZERO to_file() Call nodes."""
-        from kicad_agent.ops.handlers.autolayout import _handle_route_wires_sch
+        from volta.ops.handlers.autolayout import _handle_route_wires_sch
 
         source = inspect.getsource(_handle_route_wires_sch)
         tree = ast.parse(source)
@@ -395,7 +395,7 @@ class TestApplyLabelsSch:
 
     def test_apply_labels_sch_no_kiutils_to_file(self):
         """Test (P101-INV-01): handler source has ZERO to_file() Call nodes."""
-        from kicad_agent.ops.handlers.autolayout import _handle_apply_labels_sch
+        from volta.ops.handlers.autolayout import _handle_apply_labels_sch
 
         source = inspect.getsource(_handle_apply_labels_sch)
         tree = ast.parse(source)
@@ -457,7 +457,7 @@ class TestSchematicRawWriterExtensions:
 
     def test_insert_wire_branch_adds_wire_sexp(self):
         """insert_wire branch produces a (wire (pts ...)) S-expression."""
-        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+        from volta.ops.schematic_raw_writer import SchematicRawWriter
 
         content = '(kicad_sch (version 1)\n  (paper "A4")\n)\n'
         result = SchematicRawWriter.apply_mutation(content, {
@@ -471,7 +471,7 @@ class TestSchematicRawWriterExtensions:
 
     def test_insert_label_branch_adds_local_label(self):
         """insert_label branch produces a (label "NAME" ...) S-expression."""
-        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+        from volta.ops.schematic_raw_writer import SchematicRawWriter
 
         content = '(kicad_sch (version 1)\n  (paper "A4")\n)\n'
         result = SchematicRawWriter.apply_mutation(content, {
@@ -489,7 +489,7 @@ class TestSchematicRawWriterExtensions:
 
     def test_insert_label_branch_global_label(self):
         """insert_label with is_global=True produces a (global_label ...)."""
-        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+        from volta.ops.schematic_raw_writer import SchematicRawWriter
 
         content = '(kicad_sch (version 1)\n  (paper "A4")\n)\n'
         result = SchematicRawWriter.apply_mutation(content, {
@@ -507,7 +507,7 @@ class TestSchematicRawWriterExtensions:
 
     def test_insert_wire_and_label_via_apply_mutations(self):
         """apply_mutations with both op types in sequence works."""
-        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+        from volta.ops.schematic_raw_writer import SchematicRawWriter
 
         content = '(kicad_sch (version 1)\n  (paper "A4")\n)\n'
         mutations = [
@@ -541,7 +541,7 @@ class TestSchematicRawWriterExtensions:
 #   - CRITICAL-1: NO `pass` statement, NO TODO-FOLLOW-UP comment in handler
 #                 body (function-scoped AST grep). Result.hierarchy_promoted
 #                 == False honestly in v1.
-#   - HIGH-1: TargetFile from kicad_agent.ops.schema (TestAutolayoutSchemas
+#   - HIGH-1: TargetFile from volta.ops.schema (TestAutolayoutSchemas
 #             already covers; AutoLayoutSchOp inherits the import).
 #   - HIGH-5: OperationExecutor constructed with base_dir= keyword.
 #             execute_batch takes list[Operation]. Results extracted from
@@ -559,8 +559,8 @@ class TestAutoLayoutSch:
         shutil.copy(FIXTURES / "single_sheet_annotated_clean.kicad_sch", tmp_path)
         sch = tmp_path / "single_sheet_annotated_clean.kicad_sch"
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=tmp_path)
         op = Operation.model_validate({"root": {
@@ -589,8 +589,8 @@ class TestAutoLayoutSch:
         shutil.copy(FIXTURES / "single_sheet_annotated_clean.kicad_sch", tmp_path)
         sch = tmp_path / "single_sheet_annotated_clean.kicad_sch"
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=tmp_path)
         op = Operation.model_validate({"root": {
@@ -619,8 +619,8 @@ class TestAutoLayoutSch:
         shutil.copy(FIXTURES / "single_sheet_annotated_clean.kicad_sch", tmp_path)
         sch = tmp_path / "single_sheet_annotated_clean.kicad_sch"
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=tmp_path)
         op = Operation.model_validate({"root": {
@@ -643,8 +643,8 @@ class TestAutoLayoutSch:
         sch = tmp_path / "single_sheet_annotated_clean.kicad_sch"
         original = sch.read_text()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=tmp_path)
         op = Operation.model_validate({"root": {
@@ -658,7 +658,7 @@ class TestAutoLayoutSch:
 
     def test_auto_layout_sch_registered_in_catalog(self):
         """Test 5: auto_layout_sch in registry with category='autolayout'."""
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
 
         meta = OPERATION_REGISTRY.get("auto_layout_sch")
         assert meta is not None, "auto_layout_sch must be in OPERATION_REGISTRY"
@@ -682,8 +682,8 @@ class TestAutoLayoutSch:
               base_dir as a positional arg (constructor signature guard).
         """
         import inspect
-        from kicad_agent.ops.handlers import _SCHEMATIC_HANDLERS
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.handlers import _SCHEMATIC_HANDLERS
+        from volta.ops.executor import OperationExecutor
 
         # (a) All 3 child ops are registered — required for direct dispatch.
         for op_type in (
@@ -712,7 +712,7 @@ class TestAutoLayoutSch:
 
     def test_auto_layout_sch_handler_no_kiutils_to_file(self):
         """Test 7: P101-INV-01 — zero kiutils.to_file() in handler source."""
-        from kicad_agent.ops.handlers.autolayout import _handle_auto_layout_sch
+        from volta.ops.handlers.autolayout import _handle_auto_layout_sch
 
         source = inspect.getsource(_handle_auto_layout_sch)
         tree = ast.parse(source)
@@ -739,7 +739,7 @@ class TestAutoLayoutSch:
         children — the Bead-creation fallback legitimately uses `pass` inside
         an except block.
         """
-        from kicad_agent.ops.handlers.autolayout import _handle_auto_layout_sch
+        from volta.ops.handlers.autolayout import _handle_auto_layout_sch
 
         source = inspect.getsource(_handle_auto_layout_sch)
         # Substring regression (CRITICAL-1 literal)
@@ -785,7 +785,7 @@ class TestAutoLayoutSch:
         Source inspection: the label string in the handler source must not
         contain the 'follup' typo. Must contain 'phase-108-followup'.
         """
-        from kicad_agent.ops.handlers.autolayout import _handle_auto_layout_sch
+        from volta.ops.handlers.autolayout import _handle_auto_layout_sch
 
         source = inspect.getsource(_handle_auto_layout_sch)
         assert "phase-108-follup" not in source, (

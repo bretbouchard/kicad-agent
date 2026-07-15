@@ -2,12 +2,12 @@
 
 import pytest
 
-from kicad_agent.validation.gate_types import (
+from volta.validation.gate_types import (
     DesignStage,
     GateDefinition,
     GateResult,
 )
-from kicad_agent.validation.gate_runner import GateRunner, get_gate_runner, register_gate
+from volta.validation.gate_runner import GateRunner, get_gate_runner, register_gate
 
 
 def _passing_gate(ctx: dict) -> GateResult:

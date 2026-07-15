@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.spice import (
+from volta.spice import (
     AnalysisType,
     SimulationResult,
     AnalysisResult,

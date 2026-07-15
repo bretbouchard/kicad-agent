@@ -7,10 +7,10 @@ from pathlib import Path
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
-from kicad_agent.spice import (
+from volta.spice import (
     AnalysisResult, AnalysisType, SimulationResult,
 )
-from kicad_agent.sim.optimizer import (
+from volta.sim.optimizer import (
     E12_BASE, E12_RESISTORS, E12_CAPS, TARGET_GAIN_DB, CURRENT_PENALTY,
     objective, optimize_preamp,
 )
@@ -36,7 +36,7 @@ def test_e12_caps_include_audio_band_values() -> None:
 
 def test_objective_returns_inf_on_failed_sim(monkeypatch: MonkeyPatch) -> None:
     """If ngspice fails, objective returns float('inf') — Optuna marks infeasible."""
-    from kicad_agent.sim import optimizer as opt_mod
+    from volta.sim import optimizer as opt_mod
 
     def fake_run(cir, name, analyses):
         ac = AnalysisResult(
@@ -56,7 +56,7 @@ def test_objective_returns_inf_on_failed_sim(monkeypatch: MonkeyPatch) -> None:
 
 def test_objective_zero_squared_when_gain_hits_target(monkeypatch: MonkeyPatch) -> None:
     """When gain_db == TARGET_GAIN_DB, squared error is 0; objective = lambda*ic."""
-    from kicad_agent.sim import optimizer as opt_mod
+    from volta.sim import optimizer as opt_mod
 
     def fake_run(cir, name, analyses):
         ac = AnalysisResult(
@@ -89,7 +89,7 @@ def test_objective_times_out_on_slow_sim(monkeypatch: MonkeyPatch) -> None:
     TRIAL_TIMEOUT_S (default 10s) and returns float('inf') on timeout.
     """
     import time as _time
-    from kicad_agent.sim import optimizer as opt_mod
+    from volta.sim import optimizer as opt_mod
 
     def slow_run(cir, name, analyses):
         # Simulate a convergence hang — ngspice retries internally.
@@ -131,7 +131,7 @@ def test_objective_rejects_current_saturation(monkeypatch: MonkeyPatch) -> None:
     'passing' high-gain result (which it might, since the bias point is
     technically valid), the objective rejects it.
     """
-    from kicad_agent.sim import optimizer as opt_mod
+    from volta.sim import optimizer as opt_mod
 
     def fake_run(cir, name, analyses):
         # ngspice reports a passing sim — but the bias point is destructive.
@@ -162,7 +162,7 @@ def test_objective_penalizes_gain_below_target(monkeypatch: MonkeyPatch) -> None
     When gain_db=15 (5 dB below TARGET_GAIN_DB=20), squared error = (15-20)^2 = 25.
     Combined with the current penalty: objective = 25 + 0.001 * ic_ma.
     """
-    from kicad_agent.sim import optimizer as opt_mod
+    from volta.sim import optimizer as opt_mod
 
     def fake_run(cir, name, analyses):
         ac = AnalysisResult(
@@ -268,8 +268,8 @@ def test_optimize_best_trial_meets_floor_gain(tmp_path: Path, monkeypatch: Monke
 
     study = optimize_preamp(n_trials=10, seed=42)
     # Re-evaluate best trial to extract gain_db
-    from kicad_agent.sim import optimizer as opt_mod
-    from kicad_agent.spice import AnalysisType
+    from volta.sim import optimizer as opt_mod
+    from volta.spice import AnalysisType
 
     best = study.best_trial
     circuit = opt_mod.build_preamp_circuit(

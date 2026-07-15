@@ -17,8 +17,8 @@ import pytest
 
 # cli is a package that re-exports from the sibling cli.py module via _cli_impl.
 # Importing the package registers _cli_impl in sys.modules.
-import kicad_agent.cli  # noqa: F401
-from kicad_agent._cli_impl import (  # type: ignore[attr-defined]
+import volta.cli  # noqa: F401
+from volta._cli_impl import (  # type: ignore[attr-defined]
     _SUBCOMMANDS,
     _SUBCOMMAND_DESCRIPTIONS,
 )
@@ -31,11 +31,11 @@ from kicad_agent._cli_impl import (  # type: ignore[attr-defined]
 
 class TestRegistryEntry:
     def test_critique_sch_in_registry(self) -> None:
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
         assert "critique_sch" in OPERATION_REGISTRY
 
     def test_entry_attributes(self) -> None:
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
         meta = OPERATION_REGISTRY["critique_sch"]
         assert meta.category == "readability"
         assert meta.is_readonly is True
@@ -52,13 +52,13 @@ class TestRegistryEntry:
 
 class TestHandlerDispatch:
     def test_handler_in_query_handlers(self) -> None:
-        from kicad_agent.ops.handlers.schematic_query import (
+        from volta.ops.handlers.schematic_query import (
             _SCHEMATIC_QUERY_HANDLERS,
         )
         assert "critique_sch" in _SCHEMATIC_QUERY_HANDLERS
 
     def test_handler_is_callable(self) -> None:
-        from kicad_agent.ops.handlers.schematic_query import (
+        from volta.ops.handlers.schematic_query import (
             _SCHEMATIC_QUERY_HANDLERS,
         )
         handler = _SCHEMATIC_QUERY_HANDLERS["critique_sch"]
@@ -74,8 +74,8 @@ class TestHandlerExecution:
     """Handler integration tests with mocked rendering + critic dispatch."""
 
     def test_returns_critique_result_dict(self, tmp_path: Path) -> None:
-        from kicad_agent.ops.handlers.critique import handle_critique_sch
-        from kicad_agent.analysis.legibility_critic import CritiqueResult, Suggestion
+        from volta.ops.handlers.critique import handle_critique_sch
+        from volta.analysis.legibility_critic import CritiqueResult, Suggestion
 
         # Build a minimal .kicad_sch file
         sch_path = tmp_path / "test.kicad_sch"
@@ -100,9 +100,9 @@ class TestHandlerExecution:
             include_suggestions = True
 
         with patch(
-            "kicad_agent.ops.handlers.critique._render_schematic_to_image"
+            "volta.ops.handlers.critique._render_schematic_to_image"
         ) as mock_render, patch(
-            "kicad_agent.ops.handlers.critique._build_hybrid_critic"
+            "volta.ops.handlers.critique._build_hybrid_critic"
         ) as mock_build:
             from PIL import Image
             mock_render.return_value = Image.new("RGB", (4, 4))
@@ -124,7 +124,7 @@ class TestHandlerExecution:
         assert result["overall_srs"] == pytest.approx(0.78)
 
     def test_does_not_mutate_schematic_file(self, tmp_path: Path) -> None:
-        from kicad_agent.ops.handlers.critique import handle_critique_sch
+        from volta.ops.handlers.critique import handle_critique_sch
 
         sch_path = tmp_path / "test.kicad_sch"
         sch_path.write_text(_minimal_kicad_sch())
@@ -138,7 +138,7 @@ class TestHandlerExecution:
 
         # Even on R-6 fallback (render returns None), file must be unchanged
         with patch(
-            "kicad_agent.ops.handlers.critique._render_schematic_to_image",
+            "volta.ops.handlers.critique._render_schematic_to_image",
             return_value=None,
         ):
             handle_critique_sch(_Op(), ir=None, file_path=sch_path)
@@ -153,8 +153,8 @@ class TestHandlerExecution:
 
 class TestHandlerFlags:
     def test_include_suggestions_false_omits_suggestions(self, tmp_path: Path) -> None:
-        from kicad_agent.ops.handlers.critique import handle_critique_sch
-        from kicad_agent.analysis.legibility_critic import CritiqueResult, Suggestion
+        from volta.ops.handlers.critique import handle_critique_sch
+        from volta.analysis.legibility_critic import CritiqueResult, Suggestion
 
         fake_result = CritiqueResult(
             overall_srs=0.78,
@@ -177,9 +177,9 @@ class TestHandlerFlags:
         sch_path.write_text(_minimal_kicad_sch())
 
         with patch(
-            "kicad_agent.ops.handlers.critique._render_schematic_to_image"
+            "volta.ops.handlers.critique._render_schematic_to_image"
         ) as mock_render, patch(
-            "kicad_agent.ops.handlers.critique._build_hybrid_critic"
+            "volta.ops.handlers.critique._build_hybrid_critic"
         ) as mock_build:
             from PIL import Image
             mock_render.return_value = Image.new("RGB", (4, 4))
@@ -195,7 +195,7 @@ class TestHandlerFlags:
 
     def test_claude_only_propagates_to_hybrid(self, tmp_path: Path) -> None:
         """claude_only=True → HybridLegibilityCritic constructed with claude_only=True."""
-        from kicad_agent.ops.handlers.critique import handle_critique_sch
+        from volta.ops.handlers.critique import handle_critique_sch
 
         class _Op:
             target_file = "test.kicad_sch"
@@ -209,16 +209,16 @@ class TestHandlerFlags:
         captured_kwargs: dict = {}
 
         with patch(
-            "kicad_agent.ops.handlers.critique._render_schematic_to_image"
+            "volta.ops.handlers.critique._render_schematic_to_image"
         ) as mock_render, patch(
-            "kicad_agent.ops.handlers.critique._build_hybrid_critic"
+            "volta.ops.handlers.critique._build_hybrid_critic"
         ) as mock_build:
             from PIL import Image
             mock_render.return_value = Image.new("RGB", (4, 4))
 
             # _build_hybrid_critic reads op.claude_only internally; we just
             # verify it's called and returns a hybrid that yields a result.
-            from kicad_agent.analysis.legibility_critic import (
+            from volta.analysis.legibility_critic import (
                 CritiqueResult,
                 HybridLegibilityCritic,
             )
@@ -250,7 +250,7 @@ class TestHandlerFlags:
 class TestHandlerRenderFailure:
     def test_render_failure_returns_fallback(self, tmp_path: Path) -> None:
         """kicad-cli missing or PDF export fails → R-6 fallback dict."""
-        from kicad_agent.ops.handlers.critique import handle_critique_sch
+        from volta.ops.handlers.critique import handle_critique_sch
 
         class _Op:
             target_file = "test.kicad_sch"
@@ -263,7 +263,7 @@ class TestHandlerRenderFailure:
 
         # Mock render to raise FileNotFoundError (kicad-cli missing)
         with patch(
-            "kicad_agent.ops.handlers.critique._render_schematic_to_image",
+            "volta.ops.handlers.critique._render_schematic_to_image",
             side_effect=FileNotFoundError("kicad-cli not found"),
         ):
             result = handle_critique_sch(_Op(), ir=None, file_path=sch_path)
@@ -274,7 +274,7 @@ class TestHandlerRenderFailure:
 
     def test_render_returns_none_returns_fallback(self, tmp_path: Path) -> None:
         """Render returns None (no image) → R-6 fallback dict, NEVER raises."""
-        from kicad_agent.ops.handlers.critique import handle_critique_sch
+        from volta.ops.handlers.critique import handle_critique_sch
 
         class _Op:
             target_file = "test.kicad_sch"
@@ -286,7 +286,7 @@ class TestHandlerRenderFailure:
         sch_path.write_text(_minimal_kicad_sch())
 
         with patch(
-            "kicad_agent.ops.handlers.critique._render_schematic_to_image",
+            "volta.ops.handlers.critique._render_schematic_to_image",
             return_value=None,
         ):
             result = handle_critique_sch(_Op(), ir=None, file_path=sch_path)
@@ -308,7 +308,7 @@ class TestCLISubcommand:
 
     def test_help_exits_zero(self) -> None:
         result = subprocess.run(
-            [sys.executable, "-m", "kicad_agent.cli", "critique", "--help"],
+            [sys.executable, "-m", "volta.cli", "critique", "--help"],
             capture_output=True, text=True, timeout=15,
         )
         assert result.returncode == 0
@@ -325,7 +325,7 @@ class TestCLIJsonOutput:
         sch_path = tmp_path / "test.kicad_sch"
         sch_path.write_text(_minimal_kicad_sch())
 
-        from kicad_agent.analysis.legibility_critic import CritiqueResult
+        from volta.analysis.legibility_critic import CritiqueResult
         fake_result = CritiqueResult(
             overall_srs=0.78,
             factors={"density": 0.7, "clarity": 0.85, "spacing": 0.75, "organization": 0.8},
@@ -336,9 +336,9 @@ class TestCLIJsonOutput:
         )
 
         with patch(
-            "kicad_agent.ops.handlers.critique._render_schematic_to_image"
+            "volta.ops.handlers.critique._render_schematic_to_image"
         ) as mock_render, patch(
-            "kicad_agent.ops.handlers.critique._build_hybrid_critic"
+            "volta.ops.handlers.critique._build_hybrid_critic"
         ) as mock_build:
             from PIL import Image
             mock_render.return_value = Image.new("RGB", (4, 4))
@@ -349,7 +349,7 @@ class TestCLIJsonOutput:
             mock_build.return_value = _FakeHybrid()
 
             # Invoke the handler directly to get the JSON output
-            from kicad_agent.ops.handlers.critique import handle_critique_sch
+            from volta.ops.handlers.critique import handle_critique_sch
 
             class _Op:
                 target_file = "test.kicad_sch"
@@ -375,7 +375,7 @@ class TestCLIJsonOutput:
 class TestCLIDefaultOutput:
     def test_table_output_contains_srs_and_factors(self, tmp_path: Path) -> None:
         """Verify _print_critique_table produces SRS + factor names."""
-        from kicad_agent._cli_impl import _print_critique_table
+        from volta._cli_impl import _print_critique_table
         from io import StringIO
 
         details = {
@@ -403,7 +403,7 @@ class TestCLIDefaultOutput:
 
     def test_table_output_handles_empty_suggestions(self) -> None:
         """Table output should not crash when suggestions list is empty."""
-        from kicad_agent._cli_impl import _print_critique_table
+        from volta._cli_impl import _print_critique_table
         from unittest.mock import patch
 
         details = {

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.crossfile.project_context import (
+from volta.crossfile.project_context import (
     ProjectContext,
     detect_project_root,
     discover_project,

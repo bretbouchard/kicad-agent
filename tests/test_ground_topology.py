@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ops.ground_topology import (
+from volta.ops.ground_topology import (
     _classify_ground_domain,
     _find_ground_connections,
     _find_ground_nets,
@@ -54,7 +54,7 @@ def _make_net_pins() -> dict[str, set[tuple[str, str]]]:
 class TestFindGroundNets:
     """Tests for _find_ground_nets."""
 
-    @patch("kicad_agent.ops.net_short_detector._is_ground_net")
+    @patch("volta.ops.net_short_detector._is_ground_net")
     def test_auto_detect_filters_to_ground(self, mock_is_ground: MagicMock) -> None:
         mock_is_ground.side_effect = lambda n: n in {"GND", "GNDA", "AGND"}
         net_pins = _make_net_pins()
@@ -62,20 +62,20 @@ class TestFindGroundNets:
         assert set(result.keys()) == {"GND", "GNDA", "AGND"}
         assert result["GND"] == _make_net_pins()["GND"]
 
-    @patch("kicad_agent.ops.net_short_detector._is_ground_net")
+    @patch("volta.ops.net_short_detector._is_ground_net")
     def test_explicit_list_ignores_auto_detect(self, mock_is_ground: MagicMock) -> None:
         net_pins = _make_net_pins()
         result = _find_ground_nets(net_pins, explicit_list=["GND", "SDA"])
         assert set(result.keys()) == {"GND", "SDA"}
         mock_is_ground.assert_not_called()
 
-    @patch("kicad_agent.ops.net_short_detector._is_ground_net")
+    @patch("volta.ops.net_short_detector._is_ground_net")
     def test_explicit_list_missing_net_returns_empty(self, mock_is_ground: MagicMock) -> None:
         net_pins = _make_net_pins()
         result = _find_ground_nets(net_pins, explicit_list=["NONEXISTENT"])
         assert result == {}
 
-    @patch("kicad_agent.ops.net_short_detector._is_ground_net")
+    @patch("volta.ops.net_short_detector._is_ground_net")
     def test_no_grounds_returns_empty(self, mock_is_ground: MagicMock) -> None:
         mock_is_ground.return_value = False
         net_pins = {"SDA": {("R1", "1")}, "SCL": {("R2", "1")}}
@@ -239,13 +239,13 @@ class TestAnalyzeGroundTopologyOpSchema:
     """Tests for AnalyzeGroundTopologyOp Pydantic schema."""
 
     def test_default_fields(self) -> None:
-        from kicad_agent.ops._schema_schematic_intel import AnalyzeGroundTopologyOp
+        from volta.ops._schema_schematic_intel import AnalyzeGroundTopologyOp
         op = AnalyzeGroundTopologyOp(target_file="test.kicad_sch")
         assert op.op_type == "analyze_ground_topology"
         assert op.ground_nets is None
 
     def test_explicit_ground_nets(self) -> None:
-        from kicad_agent.ops._schema_schematic_intel import AnalyzeGroundTopologyOp
+        from volta.ops._schema_schematic_intel import AnalyzeGroundTopologyOp
         op = AnalyzeGroundTopologyOp(
             target_file="test.kicad_sch",
             ground_nets=["GND", "AGND"],
@@ -253,19 +253,19 @@ class TestAnalyzeGroundTopologyOpSchema:
         assert op.ground_nets == ["GND", "AGND"]
 
     def test_rejects_path_traversal(self) -> None:
-        from kicad_agent.ops._schema_schematic_intel import AnalyzeGroundTopologyOp
+        from volta.ops._schema_schematic_intel import AnalyzeGroundTopologyOp
         import pydantic
         with pytest.raises(pydantic.ValidationError):
             AnalyzeGroundTopologyOp(target_file="../etc/passwd")
 
     def test_rejects_absolute_path(self) -> None:
-        from kicad_agent.ops._schema_schematic_intel import AnalyzeGroundTopologyOp
+        from volta.ops._schema_schematic_intel import AnalyzeGroundTopologyOp
         import pydantic
         with pytest.raises(pydantic.ValidationError):
             AnalyzeGroundTopologyOp(target_file="/etc/passwd.kicad_sch")
 
     def test_rejects_too_many_ground_nets(self) -> None:
-        from kicad_agent.ops._schema_schematic_intel import AnalyzeGroundTopologyOp
+        from volta.ops._schema_schematic_intel import AnalyzeGroundTopologyOp
         import pydantic
         with pytest.raises(pydantic.ValidationError):
             AnalyzeGroundTopologyOp(
@@ -281,8 +281,8 @@ class TestAnalyzeGroundTopologyOpSchema:
 class TestAnalyzeGroundTopologyIntegration:
     """Integration tests with mocked kicad-cli and ERC."""
 
-    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._extract_erc_shorts")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_single_ground_no_shorts(self, mock_netlist: MagicMock, mock_erc: MagicMock) -> None:
         mock_netlist.return_value = {
             "GND": {("R1", "1"), ("C1", "2")},
@@ -296,8 +296,8 @@ class TestAnalyzeGroundTopologyIntegration:
         assert result["recommendation"] == "merge"
         assert result["ground_nets"]["GND"]["domain"] == "passive_only"
 
-    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._extract_erc_shorts")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_ground_short_with_recommendation(self, mock_netlist: MagicMock, mock_erc: MagicMock) -> None:
         mock_netlist.return_value = {
             "GND": {("R1", "1"), ("C1", "2")},
@@ -314,8 +314,8 @@ class TestAnalyzeGroundTopologyIntegration:
         assert conn["domain_a"] == "passive_only"
         assert conn["domain_b"] == "analog"
 
-    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._extract_erc_shorts")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_digital_analog_split_recommendation(self, mock_netlist: MagicMock, mock_erc: MagicMock) -> None:
         mock_netlist.return_value = {
             "DGND": {("U1STM32", "4"), ("C1", "1")},
@@ -326,8 +326,8 @@ class TestAnalyzeGroundTopologyIntegration:
         assert result["recommendation"] == "split"
         assert result["connections"][0]["recommendation"] == "split"
 
-    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._extract_erc_shorts")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_explicit_ground_nets_list(self, mock_netlist: MagicMock, mock_erc: MagicMock) -> None:
         mock_netlist.return_value = {
             "GND": {("R1", "1")},
@@ -339,8 +339,8 @@ class TestAnalyzeGroundTopologyIntegration:
         assert set(result["ground_nets"].keys()) == {"GND", "AGND"}
         assert "DGND" not in result["ground_nets"]
 
-    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._extract_erc_shorts")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_empty_netlist(self, mock_netlist: MagicMock, mock_erc: MagicMock) -> None:
         mock_netlist.return_value = {}
         mock_erc.return_value = []
@@ -349,8 +349,8 @@ class TestAnalyzeGroundTopologyIntegration:
         assert result["recommendation"] == "none"
         assert "No ground nets" in result["reason"]
 
-    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._extract_erc_shorts")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_pin_count_and_refs_in_output(self, mock_netlist: MagicMock, mock_erc: MagicMock) -> None:
         mock_netlist.return_value = {
             "GND": {("R1", "1"), ("C1", "2"), ("R2", "1")},
@@ -362,8 +362,8 @@ class TestAnalyzeGroundTopologyIntegration:
         assert result["ground_nets"]["GND"]["refs"] == ["C1", "R1", "R2"]
         assert result["ground_nets"]["AGND"]["pin_count"] == 1
 
-    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._extract_erc_shorts")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_kicad_cli_failure_returns_empty(self, mock_netlist: MagicMock, mock_erc: MagicMock) -> None:
         mock_netlist.return_value = {}
         mock_erc.return_value = []
@@ -380,13 +380,13 @@ class TestHandlerDispatch:
     """Tests for handler registration and dispatch."""
 
     def test_handler_registered(self) -> None:
-        from kicad_agent.ops.handlers.schematic_query import _SCHEMATIC_QUERY_HANDLERS
+        from volta.ops.handlers.schematic_query import _SCHEMATIC_QUERY_HANDLERS
         assert "analyze_ground_topology" in _SCHEMATIC_QUERY_HANDLERS
 
-    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._extract_erc_shorts")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_handler_calls_analyze(self, mock_netlist: MagicMock, mock_erc: MagicMock) -> None:
-        from kicad_agent.ops.handlers.schematic_query import _SCHEMATIC_QUERY_HANDLERS
+        from volta.ops.handlers.schematic_query import _SCHEMATIC_QUERY_HANDLERS
         mock_netlist.return_value = {"GND": {("R1", "1")}}
         mock_erc.return_value = []
         handler = _SCHEMATIC_QUERY_HANDLERS["analyze_ground_topology"]
@@ -404,9 +404,9 @@ class TestHandlerDispatch:
 class TestErcSupplement:
     """Tests for ERC supplement discovering ground nets not in netlist."""
 
-    @patch("kicad_agent.ops.net_tracer.trace_net_from_label")
-    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_tracer.trace_net_from_label")
+    @patch("volta.ops.net_short_detector._extract_erc_shorts")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_erc_discovers_missing_ground_net(
         self, mock_netlist: MagicMock, mock_erc: MagicMock,
         mock_trace: MagicMock,
@@ -430,9 +430,9 @@ class TestErcSupplement:
         assert "GND" in result["ground_nets"]
         assert result["ground_net_count"] == 3
 
-    @patch("kicad_agent.ops.net_tracer.trace_net_from_label")
-    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_tracer.trace_net_from_label")
+    @patch("volta.ops.net_short_detector._extract_erc_shorts")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_erc_non_ground_shorts_ignored(
         self, mock_netlist: MagicMock, mock_erc: MagicMock,
         mock_trace: MagicMock,
@@ -445,9 +445,9 @@ class TestErcSupplement:
         assert result["ground_net_count"] == 1
         assert "SDA" not in result["ground_nets"]
 
-    @patch("kicad_agent.ops.net_tracer.trace_net_from_label")
-    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_tracer.trace_net_from_label")
+    @patch("volta.ops.net_short_detector._extract_erc_shorts")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_trace_fills_zero_pin_ground_nets(
         self, mock_netlist: MagicMock, mock_erc: MagicMock,
         mock_trace: MagicMock,
@@ -474,9 +474,9 @@ class TestErcSupplement:
         assert "U1" in result["ground_nets"]["GNDA"]["refs"]
         assert "U2" in result["ground_nets"]["GNDA"]["refs"]
 
-    @patch("kicad_agent.ops.net_tracer.trace_net_from_label")
-    @patch("kicad_agent.ops.net_short_detector._extract_erc_shorts")
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_tracer.trace_net_from_label")
+    @patch("volta.ops.net_short_detector._extract_erc_shorts")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_trace_failure_falls_back_to_empty(
         self, mock_netlist: MagicMock, mock_erc: MagicMock,
         mock_trace: MagicMock,

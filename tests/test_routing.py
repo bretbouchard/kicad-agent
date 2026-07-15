@@ -11,27 +11,27 @@ import math
 
 import pytest
 
-from kicad_agent.routing.constraints import RoutingConstraints
-from kicad_agent.routing.bridge import TrackSegment
-from kicad_agent.routing.graph import RoutingGraph
-from kicad_agent.routing.diff_pair import (
+from volta.routing.constraints import RoutingConstraints
+from volta.routing.bridge import TrackSegment
+from volta.routing.graph import RoutingGraph
+from volta.routing.diff_pair import (
     DiffPairResult,
     _path_length,
     route_differential_pair,
 )
-from kicad_agent.routing.interactive import (
+from volta.routing.interactive import (
     InteractiveRoutingSession,
     RoutingSuggestion,
     SuggestionStatus,
 )
-from kicad_agent.routing.pathfinder import (
+from volta.routing.pathfinder import (
     RouteFailure,
     RouteResult,
     build_routing_graph,
     route_all_nets,
     route_net,
 )
-from kicad_agent.spatial.primitives import SpatialBox
+from volta.spatial.primitives import SpatialBox
 
 
 # ---------------------------------------------------------------------------
@@ -786,7 +786,7 @@ class TestRoutingBridge:
 
     def test_route_to_segments_basic(self) -> None:
         """route_to_segments converts routing results into TrackSegments."""
-        from kicad_agent.routing.bridge import route_to_segments
+        from volta.routing.bridge import route_to_segments
 
         results = {
             "VCC": RouteResult(
@@ -809,7 +809,7 @@ class TestRoutingBridge:
 
     def test_route_to_segments_skips_failed(self) -> None:
         """Failed routes are skipped."""
-        from kicad_agent.routing.bridge import route_to_segments
+        from volta.routing.bridge import route_to_segments
 
         results = {
             "VCC": RouteResult("VCC", ((0.0, 0.0),), 0.0, success=False),
@@ -821,7 +821,7 @@ class TestRoutingBridge:
 
     def test_route_to_segments_custom_layer(self) -> None:
         """Custom layer parameter is passed through."""
-        from kicad_agent.routing.bridge import route_to_segments
+        from volta.routing.bridge import route_to_segments
 
         results = {
             "SIG": RouteResult("SIG", ((0.0, 0.0), (10.0, 0.0)), 10.0, success=True),
@@ -831,7 +831,7 @@ class TestRoutingBridge:
 
     def test_track_segment_to_sexpr(self) -> None:
         """TrackSegment serializes to valid KiCad S-expression."""
-        from kicad_agent.routing.bridge import TrackSegment
+        from volta.routing.bridge import TrackSegment
 
         seg = TrackSegment(
             start_x=1.0, start_y=2.0,
@@ -849,7 +849,7 @@ class TestRoutingBridge:
 
     def test_segments_to_sexpr_block(self) -> None:
         """segments_to_sexpr produces a multi-segment S-expression block."""
-        from kicad_agent.routing.bridge import (
+        from volta.routing.bridge import (
             TrackSegment,
             route_to_segments,
             segments_to_sexpr,
@@ -865,7 +865,7 @@ class TestRoutingBridge:
 
     def test_track_segment_no_net(self) -> None:
         """TrackSegment with empty net omits net field."""
-        from kicad_agent.routing.bridge import TrackSegment
+        from volta.routing.bridge import TrackSegment
 
         seg = TrackSegment(
             start_x=0.0, start_y=0.0,
@@ -1290,7 +1290,7 @@ class TestPathfinding3D:
 
     def test_euclidean_heuristic_3d(self) -> None:
         """_euclidean_heuristic works with 3D tuples (ignores layer)."""
-        from kicad_agent.routing.pathfinder import _euclidean_heuristic
+        from volta.routing.pathfinder import _euclidean_heuristic
         d = _euclidean_heuristic((0.0, 0.0, "F.Cu"), (3.0, 4.0, "B.Cu"))
         assert abs(d - 5.0) < 1e-9
 
@@ -1322,7 +1322,7 @@ class TestViaSegment:
 
     def test_construction(self) -> None:
         """ViaSegment holds x, y, from_layer, to_layer, diameter, drill, net."""
-        from kicad_agent.routing.bridge import ViaSegment
+        from volta.routing.bridge import ViaSegment
         via = ViaSegment(
             x=5.0, y=10.0,
             from_layer="F.Cu", to_layer="B.Cu",
@@ -1334,14 +1334,14 @@ class TestViaSegment:
 
     def test_frozen(self) -> None:
         """ViaSegment is frozen."""
-        from kicad_agent.routing.bridge import ViaSegment
+        from volta.routing.bridge import ViaSegment
         via = ViaSegment(5.0, 5.0, "F.Cu", "B.Cu", 0.8, 0.4, "GND")
         with pytest.raises(AttributeError):
             via.x = 6.0  # type: ignore[misc]
 
     def test_to_sexpr(self) -> None:
         """ViaSegment.to_sexpr() produces valid KiCad via S-expression."""
-        from kicad_agent.routing.bridge import ViaSegment
+        from volta.routing.bridge import ViaSegment
         via = ViaSegment(5.0, 10.0, "F.Cu", "B.Cu", 0.8, 0.4, "VCC")
         sexpr = via.to_sexpr(uuid_tag="test-uuid")
         assert "(via" in sexpr
@@ -1355,7 +1355,7 @@ class TestViaSegment:
 
     def test_to_sexpr_no_net(self) -> None:
         """ViaSegment with empty net omits net field."""
-        from kicad_agent.routing.bridge import ViaSegment
+        from volta.routing.bridge import ViaSegment
         via = ViaSegment(5.0, 5.0, "F.Cu", "B.Cu", 0.8, 0.4, "")
         sexpr = via.to_sexpr()
         assert "(net" not in sexpr
@@ -1382,7 +1382,7 @@ class TestRouteToSegmentsMultilayer:
 
     def test_extracts_track_segments_with_layers(self) -> None:
         """Produces TrackSegments with correct layer from 3D path."""
-        from kicad_agent.routing.bridge import route_to_segments_multilayer
+        from volta.routing.bridge import route_to_segments_multilayer
         results = self._make_3d_results()
         segments = route_to_segments_multilayer(results)
         # Should have 3 track segments: (0,0,F)->(5,0,F), (5,0,F)->(5,0,B) is via,
@@ -1398,7 +1398,7 @@ class TestRouteToSegmentsMultilayer:
 
     def test_produces_via_segments(self) -> None:
         """Produces ViaSegments at layer transitions."""
-        from kicad_agent.routing.bridge import ViaSegment, route_to_segments_multilayer
+        from volta.routing.bridge import ViaSegment, route_to_segments_multilayer
         results = self._make_3d_results()
         segments = route_to_segments_multilayer(results)
         via_segs = [s for s in segments if isinstance(s, ViaSegment)]
@@ -1412,7 +1412,7 @@ class TestRouteToSegmentsMultilayer:
 
     def test_single_layer_no_vias(self) -> None:
         """Single-layer path produces no ViaSegments."""
-        from kicad_agent.routing.bridge import ViaSegment, route_to_segments_multilayer
+        from volta.routing.bridge import ViaSegment, route_to_segments_multilayer
         results = {
             "FLAT": RouteResult(
                 net_name="FLAT",
@@ -1433,7 +1433,7 @@ class TestRouteToSegmentsMultilayer:
 
     def test_effective_trace_width_per_layer(self) -> None:
         """Uses effective_trace_width for per-layer segment widths."""
-        from kicad_agent.routing.bridge import TrackSegment, route_to_segments_multilayer
+        from volta.routing.bridge import TrackSegment, route_to_segments_multilayer
         constraints = RoutingConstraints(
             trace_width_mm=0.25,
             layer_trace_widths={"F.Cu": 0.3, "B.Cu": 0.2},
@@ -1457,33 +1457,33 @@ class TestImpedance:
 
     def test_microstrip_known_value(self) -> None:
         """w=0.47mm microstrip on er=4.5 stackup gives ~50 ohm (within 5%)."""
-        from kicad_agent.routing.impedance import microstrip_z0
+        from volta.routing.impedance import microstrip_z0
         z0 = microstrip_z0(w=0.47, h=0.2, t=0.035, er=4.5)
         assert 47.5 <= z0 <= 52.5, f"Expected ~50 ohm, got {z0:.2f}"
 
     def test_stripline_known_value(self) -> None:
         """w=0.09mm symmetric stripline on er=4.5 gives ~50 ohm (within 5%)."""
-        from kicad_agent.routing.impedance import stripline_z0
+        from volta.routing.impedance import stripline_z0
         z0 = stripline_z0(w=0.09, h=0.15, t=0.035, er=4.5)
         assert 47.5 <= z0 <= 52.5, f"Expected ~50 ohm, got {z0:.2f}"
 
     def test_microstrip_decreases_with_width(self) -> None:
         """Wider trace has lower impedance."""
-        from kicad_agent.routing.impedance import microstrip_z0
+        from volta.routing.impedance import microstrip_z0
         z0_narrow = microstrip_z0(w=0.2, h=0.2, t=0.035, er=4.5)
         z0_wide = microstrip_z0(w=0.6, h=0.2, t=0.035, er=4.5)
         assert z0_wide < z0_narrow
 
     def test_stripline_decreases_with_width(self) -> None:
         """Wider stripline trace has lower impedance."""
-        from kicad_agent.routing.impedance import stripline_z0
+        from volta.routing.impedance import stripline_z0
         z0_narrow = stripline_z0(w=0.05, h=0.15, t=0.035, er=4.5)
         z0_wide = stripline_z0(w=0.3, h=0.15, t=0.035, er=4.5)
         assert z0_wide < z0_narrow
 
     def test_impedance_result_is_frozen(self) -> None:
         """ImpedanceResult is a frozen dataclass."""
-        from kicad_agent.routing.impedance import ImpedanceResult
+        from volta.routing.impedance import ImpedanceResult
         r = ImpedanceResult(
             trace_width_mm=0.47,
             target_z0=50.0,
@@ -1497,7 +1497,7 @@ class TestImpedance:
 
     def test_impedance_result_fields(self) -> None:
         """ImpedanceResult has all required fields."""
-        from kicad_agent.routing.impedance import ImpedanceResult
+        from volta.routing.impedance import ImpedanceResult
         r = ImpedanceResult(
             trace_width_mm=0.47,
             target_z0=50.0,
@@ -1515,7 +1515,7 @@ class TestImpedance:
 
     def test_solve_trace_width_microstrip(self) -> None:
         """Bisection solver finds ~0.47mm for 50-ohm microstrip target."""
-        from kicad_agent.routing.impedance import solve_trace_width
+        from volta.routing.impedance import solve_trace_width
         r = solve_trace_width(
             target_z0=50.0, h=0.2, t=0.035, er=4.5, model="microstrip"
         )
@@ -1525,7 +1525,7 @@ class TestImpedance:
 
     def test_solve_trace_width_stripline(self) -> None:
         """Bisection solver converges for stripline model."""
-        from kicad_agent.routing.impedance import solve_trace_width
+        from volta.routing.impedance import solve_trace_width
         r = solve_trace_width(
             target_z0=50.0, h=0.15, t=0.035, er=4.5, model="stripline",
             min_width=0.05,
@@ -1535,7 +1535,7 @@ class TestImpedance:
 
     def test_solve_trace_width_min_width_clamp(self) -> None:
         """Very high target impedance clamps to min_width=0.1mm."""
-        from kicad_agent.routing.impedance import solve_trace_width
+        from volta.routing.impedance import solve_trace_width
         r = solve_trace_width(
             target_z0=200.0, h=0.2, t=0.035, er=4.5, model="microstrip",
             min_width=0.1, max_width=2.0,
@@ -1544,7 +1544,7 @@ class TestImpedance:
 
     def test_solve_trace_width_unreachable_returns_invalid(self) -> None:
         """Unreachable impedance target returns valid=False."""
-        from kicad_agent.routing.impedance import solve_trace_width
+        from volta.routing.impedance import solve_trace_width
         r = solve_trace_width(
             target_z0=200.0, h=0.2, t=0.035, er=4.5, model="microstrip",
             min_width=0.1, max_width=0.15,
@@ -1554,7 +1554,7 @@ class TestImpedance:
 
     def test_solve_trace_width_valid_reflects_error(self) -> None:
         """ImpedanceResult.valid is True when error <= tolerance_percent."""
-        from kicad_agent.routing.impedance import solve_trace_width
+        from volta.routing.impedance import solve_trace_width
         r = solve_trace_width(
             target_z0=50.0, h=0.2, t=0.035, er=4.5, model="microstrip",
             tolerance_percent=1.0,
@@ -1566,7 +1566,7 @@ class TestImpedance:
 
     def test_solve_trace_width_validates_model(self) -> None:
         """Invalid model raises ValueError."""
-        from kicad_agent.routing.impedance import solve_trace_width
+        from volta.routing.impedance import solve_trace_width
         with pytest.raises(ValueError, match="model"):
             solve_trace_width(
                 target_z0=50.0, h=0.2, t=0.035, er=4.5, model="coaxial"
@@ -1574,7 +1574,7 @@ class TestImpedance:
 
     def test_solve_trace_width_validates_positive(self) -> None:
         """Negative parameters raise ValueError."""
-        from kicad_agent.routing.impedance import solve_trace_width
+        from volta.routing.impedance import solve_trace_width
         with pytest.raises(ValueError):
             solve_trace_width(
                 target_z0=-10.0, h=0.2, t=0.035, er=4.5
@@ -1591,7 +1591,7 @@ class TestSawtoothMatching:
 
     def test_sawtooth_extra_length_positive(self) -> None:
         """_sawtooth_extra_length returns positive value for nonzero amplitude."""
-        from kicad_agent.routing.length_matching import _sawtooth_extra_length
+        from volta.routing.length_matching import _sawtooth_extra_length
         extra = _sawtooth_extra_length(amplitude=1.0, half_pitch=0.5)
         expected = 2 * math.hypot(0.5, 1.0) - 2 * 0.5
         assert extra == pytest.approx(expected, rel=1e-6)
@@ -1599,13 +1599,13 @@ class TestSawtoothMatching:
 
     def test_sawtooth_extra_length_zero_amplitude(self) -> None:
         """_sawtooth_extra_length returns 0 when amplitude=0."""
-        from kicad_agent.routing.length_matching import _sawtooth_extra_length
+        from volta.routing.length_matching import _sawtooth_extra_length
         extra = _sawtooth_extra_length(amplitude=0.0, half_pitch=0.5)
         assert extra == pytest.approx(0.0, abs=1e-9)
 
     def test_zero_delta_returns_original(self) -> None:
         """target_delta_mm=0 returns original path unchanged."""
-        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        from volta.routing.length_matching import add_sawtooth_matching
         path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
         result = add_sawtooth_matching(path, target_delta_mm=0.0)
         assert result.path == path
@@ -1613,8 +1613,8 @@ class TestSawtoothMatching:
 
     def test_positive_delta_longer_path(self) -> None:
         """target_delta_mm > 0 returns path longer than original."""
-        from kicad_agent.routing.length_matching import add_sawtooth_matching
-        from kicad_agent.routing.geometry import _path_length
+        from volta.routing.length_matching import add_sawtooth_matching
+        from volta.routing.geometry import _path_length
         path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
         original_len = _path_length(path)
         result = add_sawtooth_matching(path, target_delta_mm=2.0)
@@ -1623,8 +1623,8 @@ class TestSawtoothMatching:
 
     def test_target_5mm_delta_on_20mm_path(self) -> None:
         """add_sawtooth_matching adds approximately 5mm on a 20mm path."""
-        from kicad_agent.routing.length_matching import add_sawtooth_matching
-        from kicad_agent.routing.geometry import _path_length
+        from volta.routing.length_matching import add_sawtooth_matching
+        from volta.routing.geometry import _path_length
         path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
         original_len = _path_length(path)
         result = add_sawtooth_matching(path, target_delta_mm=5.0)
@@ -1636,7 +1636,7 @@ class TestSawtoothMatching:
 
     def test_bumps_are_triangle_shaped(self) -> None:
         """Sawtooth bumps have 3 points per bump (start, peak, end)."""
-        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        from volta.routing.length_matching import add_sawtooth_matching
         path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
         result = add_sawtooth_matching(path, target_delta_mm=2.0, spacing_mm=1.0)
         # Each bump adds 3 points. Original path has 3 points + first/last
@@ -1647,7 +1647,7 @@ class TestSawtoothMatching:
 
     def test_amplitude_capped_by_detour_ratio(self) -> None:
         """Sawtooth amplitude does not exceed half_pitch * max_detour_ratio."""
-        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        from volta.routing.length_matching import add_sawtooth_matching
         path = ((0.0, 0.0), (10.0, 0.0), (20.0, 0.0))
         max_detour = 3.0
         result = add_sawtooth_matching(
@@ -1657,7 +1657,7 @@ class TestSawtoothMatching:
         # Even with large target, bumps should exist and amplitude is capped.
         # We can't directly inspect amplitude, but we verify the result
         # doesn't produce a path with absurd length.
-        from kicad_agent.routing.geometry import _path_length
+        from volta.routing.geometry import _path_length
         original_len = _path_length(path)
         max_possible_delta = result.num_bumps * _sawtooth_max_extra(
             spacing_mm=1.0, max_detour_ratio=max_detour,
@@ -1667,7 +1667,7 @@ class TestSawtoothMatching:
 
     def test_length_match_result_frozen(self) -> None:
         """LengthMatchResult is a frozen dataclass."""
-        from kicad_agent.routing.length_matching import LengthMatchResult
+        from volta.routing.length_matching import LengthMatchResult
         r = LengthMatchResult(
             path=((0.0, 0.0), (10.0, 0.0)),
             target_delta_mm=2.0,
@@ -1680,7 +1680,7 @@ class TestSawtoothMatching:
 
     def test_length_match_result_fields(self) -> None:
         """LengthMatchResult has all required fields."""
-        from kicad_agent.routing.length_matching import LengthMatchResult
+        from volta.routing.length_matching import LengthMatchResult
         r = LengthMatchResult(
             path=((0.0, 0.0), (10.0, 0.0)),
             target_delta_mm=2.0,
@@ -1696,7 +1696,7 @@ class TestSawtoothMatching:
 
     def test_short_path_returns_original(self) -> None:
         """Path shorter than bump_pitch returns original path."""
-        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        from volta.routing.length_matching import add_sawtooth_matching
         # 0.5mm path is shorter than bump_pitch (max(1.0, 0.5) = 1.0mm).
         path = ((0.0, 0.0), (0.5, 0.0))
         result = add_sawtooth_matching(path, target_delta_mm=2.0, spacing_mm=1.0)
@@ -1705,7 +1705,7 @@ class TestSawtoothMatching:
 
     def test_single_point_path_returns_original(self) -> None:
         """Single-point path returns original path."""
-        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        from volta.routing.length_matching import add_sawtooth_matching
         path = ((5.0, 5.0),)
         result = add_sawtooth_matching(path, target_delta_mm=2.0)
         assert result.path == path
@@ -1714,7 +1714,7 @@ class TestSawtoothMatching:
 
 def _sawtooth_max_extra(spacing_mm: float, max_detour_ratio: float) -> float:
     """Helper: max extra length per sawtooth bump at max amplitude."""
-    from kicad_agent.routing.length_matching import _sawtooth_extra_length
+    from volta.routing.length_matching import _sawtooth_extra_length
     half_pitch = spacing_mm * 0.5
     max_amplitude = half_pitch * max_detour_ratio
     return _sawtooth_extra_length(max_amplitude, half_pitch)
@@ -1730,7 +1730,7 @@ class TestAutoRouteOpSchema:
 
     def test_autorouteop_default_fields(self) -> None:
         """AutoRouteOp defaults: layers=[], impedance_target=None, length_match_pairs=None."""
-        from kicad_agent.ops._schema_pcb import AutoRouteOp
+        from volta.ops._schema_pcb import AutoRouteOp
 
         op = AutoRouteOp(target_file="test.kicad_pcb")
         assert op.layers == []
@@ -1741,7 +1741,7 @@ class TestAutoRouteOpSchema:
 
     def test_autorouteop_layers_valid(self) -> None:
         """AutoRouteOp accepts valid copper layer names in layers list."""
-        from kicad_agent.ops._schema_pcb import AutoRouteOp
+        from volta.ops._schema_pcb import AutoRouteOp
 
         op = AutoRouteOp(
             target_file="test.kicad_pcb",
@@ -1751,7 +1751,7 @@ class TestAutoRouteOpSchema:
 
     def test_autorouteop_layers_inner(self) -> None:
         """AutoRouteOp accepts inner layer names like In1.Cu."""
-        from kicad_agent.ops._schema_pcb import AutoRouteOp
+        from volta.ops._schema_pcb import AutoRouteOp
 
         op = AutoRouteOp(
             target_file="test.kicad_pcb",
@@ -1763,7 +1763,7 @@ class TestAutoRouteOpSchema:
         """AutoRouteOp rejects invalid layer name in layers list."""
         from pydantic import ValidationError
 
-        from kicad_agent.ops._schema_pcb import AutoRouteOp
+        from volta.ops._schema_pcb import AutoRouteOp
 
         with pytest.raises(ValidationError, match="Invalid layer name"):
             AutoRouteOp(
@@ -1773,7 +1773,7 @@ class TestAutoRouteOpSchema:
 
     def test_autorouteop_impedance_target_valid(self) -> None:
         """AutoRouteOp accepts valid impedance_target."""
-        from kicad_agent.ops._schema_pcb import AutoRouteOp
+        from volta.ops._schema_pcb import AutoRouteOp
 
         op = AutoRouteOp(
             target_file="test.kicad_pcb",
@@ -1785,7 +1785,7 @@ class TestAutoRouteOpSchema:
         """AutoRouteOp rejects impedance_target=0."""
         from pydantic import ValidationError
 
-        from kicad_agent.ops._schema_pcb import AutoRouteOp
+        from volta.ops._schema_pcb import AutoRouteOp
 
         with pytest.raises(ValidationError):
             AutoRouteOp(
@@ -1797,7 +1797,7 @@ class TestAutoRouteOpSchema:
         """AutoRouteOp rejects impedance_target > 200."""
         from pydantic import ValidationError
 
-        from kicad_agent.ops._schema_pcb import AutoRouteOp
+        from volta.ops._schema_pcb import AutoRouteOp
 
         with pytest.raises(ValidationError):
             AutoRouteOp(
@@ -1807,7 +1807,7 @@ class TestAutoRouteOpSchema:
 
     def test_autorouteop_length_match_pairs_valid(self) -> None:
         """AutoRouteOp accepts valid length_match_pairs."""
-        from kicad_agent.ops._schema_pcb import AutoRouteOp
+        from volta.ops._schema_pcb import AutoRouteOp
 
         op = AutoRouteOp(
             target_file="test.kicad_pcb",
@@ -1817,7 +1817,7 @@ class TestAutoRouteOpSchema:
 
     def test_autorouteop_length_match_pairs_multiple(self) -> None:
         """AutoRouteOp accepts multiple length match pairs."""
-        from kicad_agent.ops._schema_pcb import AutoRouteOp
+        from volta.ops._schema_pcb import AutoRouteOp
 
         op = AutoRouteOp(
             target_file="test.kicad_pcb",
@@ -1830,7 +1830,7 @@ class TestAutoRouteOpSchema:
 
     def test_autorouteop_all_fields_combined(self) -> None:
         """AutoRouteOp with all new fields validates correctly."""
-        from kicad_agent.ops._schema_pcb import AutoRouteOp
+        from volta.ops._schema_pcb import AutoRouteOp
 
         op = AutoRouteOp(
             target_file="test.kicad_pcb",
@@ -1844,7 +1844,7 @@ class TestAutoRouteOpSchema:
 
     def test_autorouteop_empty_layers_backward_compat(self) -> None:
         """AutoRouteOp with empty layers falls back to single-layer mode."""
-        from kicad_agent.ops._schema_pcb import AutoRouteOp
+        from volta.ops._schema_pcb import AutoRouteOp
 
         op = AutoRouteOp(target_file="test.kicad_pcb", layer="B.Cu")
         assert op.layers == []
@@ -1856,9 +1856,9 @@ class TestMultiLayerIntegration:
 
     def test_handle_auto_route_single_layer_backward_compat(self) -> None:
         """_handle_auto_route without new fields produces same result as before."""
-        from kicad_agent.routing.bridge import TrackSegment, route_to_segments
-        from kicad_agent.routing.constraints import RoutingConstraints
-        from kicad_agent.routing.pathfinder import RouteResult, route_all_nets
+        from volta.routing.bridge import TrackSegment, route_to_segments
+        from volta.routing.constraints import RoutingConstraints
+        from volta.routing.pathfinder import RouteResult, route_all_nets
 
         constraints = RoutingConstraints(grid_resolution_mm=1.0)
         graph = build_routing_graph(
@@ -1876,7 +1876,7 @@ class TestMultiLayerIntegration:
 
     def test_handle_auto_route_multilayer_produces_vias(self) -> None:
         """Multi-layer routing produces ViaSegments at layer transitions."""
-        from kicad_agent.routing.bridge import (
+        from volta.routing.bridge import (
             TrackSegment,
             ViaSegment,
             route_to_segments_multilayer,
@@ -1909,7 +1909,7 @@ class TestMultiLayerIntegration:
 
     def test_handle_auto_route_impedance_adjusts_width(self) -> None:
         """Impedance target produces trace width different from default."""
-        from kicad_agent.routing.impedance import solve_trace_width
+        from volta.routing.impedance import solve_trace_width
 
         constraints = RoutingConstraints()
         target_z0 = 50.0
@@ -1927,28 +1927,28 @@ class TestMultiLayerIntegration:
 
     def test_handle_auto_route_length_matching(self) -> None:
         """Length matching adjusts shorter net to match longer net."""
-        from kicad_agent.routing.constraints import RoutingConstraints
-        from kicad_agent.routing.length_matching import add_sawtooth_matching
+        from volta.routing.constraints import RoutingConstraints
+        from volta.routing.length_matching import add_sawtooth_matching
 
         path_short = ((0.0, 0.0), (5.0, 0.0))
         delta = 3.0
         result = add_sawtooth_matching(path_short, target_delta_mm=delta, spacing_mm=1.0)
         assert result.valid
-        from kicad_agent.routing.geometry import _path_length
+        from volta.routing.geometry import _path_length
         new_len = _path_length(result.path)
         original_len = _path_length(path_short)
         assert new_len > original_len
 
     def test_full_pipeline_multilayer_impedance_length_match(self) -> None:
         """Full pipeline: multi-layer graph + impedance + length matching."""
-        from kicad_agent.routing.bridge import (
+        from volta.routing.bridge import (
             TrackSegment,
             ViaSegment,
             route_to_segments_multilayer,
         )
-        from kicad_agent.routing.impedance import solve_trace_width
-        from kicad_agent.routing.length_matching import add_sawtooth_matching
-        from kicad_agent.routing.pathfinder import RouteResult, _path_length
+        from volta.routing.impedance import solve_trace_width
+        from volta.routing.length_matching import add_sawtooth_matching
+        from volta.routing.pathfinder import RouteResult, _path_length
 
         constraints = RoutingConstraints(
             grid_resolution_mm=1.0,

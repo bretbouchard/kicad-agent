@@ -11,7 +11,7 @@ class TestMatchLengthsOpSchema:
     """Schema validation tests for MatchLengthsOp."""
 
     def test_valid_minimal(self):
-        from kicad_agent.ops._schema_pcb import MatchLengthsOp, NetLengthPair
+        from volta.ops._schema_pcb import MatchLengthsOp, NetLengthPair
 
         op = MatchLengthsOp(
             target_file="board.kicad_pcb",
@@ -23,7 +23,7 @@ class TestMatchLengthsOpSchema:
         assert op.half_pitch_mm == 1.0
 
     def test_valid_multiple_pairs(self):
-        from kicad_agent.ops._schema_pcb import MatchLengthsOp, NetLengthPair
+        from volta.ops._schema_pcb import MatchLengthsOp, NetLengthPair
 
         op = MatchLengthsOp(
             target_file="board.kicad_pcb",
@@ -38,7 +38,7 @@ class TestMatchLengthsOpSchema:
         assert op.pattern == "accordion"
 
     def test_invalid_empty_pairs(self):
-        from kicad_agent.ops._schema_pcb import MatchLengthsOp
+        from volta.ops._schema_pcb import MatchLengthsOp
 
         with pytest.raises(ValidationError):
             MatchLengthsOp(
@@ -47,7 +47,7 @@ class TestMatchLengthsOpSchema:
             )
 
     def test_invalid_negative_tolerance(self):
-        from kicad_agent.ops._schema_pcb import MatchLengthsOp, NetLengthPair
+        from volta.ops._schema_pcb import MatchLengthsOp, NetLengthPair
 
         with pytest.raises(ValidationError):
             MatchLengthsOp(
@@ -56,7 +56,7 @@ class TestMatchLengthsOpSchema:
             )
 
     def test_invalid_pattern(self):
-        from kicad_agent.ops._schema_pcb import MatchLengthsOp, NetLengthPair
+        from volta.ops._schema_pcb import MatchLengthsOp, NetLengthPair
 
         with pytest.raises(ValidationError):
             MatchLengthsOp(
@@ -66,7 +66,7 @@ class TestMatchLengthsOpSchema:
             )
 
     def test_registry_entry_exists(self):
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
 
         assert "match_lengths" in OPERATION_REGISTRY
         meta = OPERATION_REGISTRY["match_lengths"]
@@ -74,7 +74,7 @@ class TestMatchLengthsOpSchema:
         assert meta.is_readonly is False
 
     def test_discriminated_union_accepts(self):
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -91,8 +91,8 @@ class TestExtractNetPath:
 
     def test_empty_board(self):
         """Empty board returns empty path."""
-        from kicad_agent.ir.pcb_ir import PcbIR
-        from kicad_agent.parser.pcb_native_types import NativeBoard
+        from volta.ir.pcb_ir import PcbIR
+        from volta.parser.pcb_native_types import NativeBoard
 
         board = NativeBoard()
         ir = _make_pcb_ir(board)
@@ -102,8 +102,8 @@ class TestExtractNetPath:
 
     def test_segment_chaining(self):
         """Segments chain into ordered path."""
-        from kicad_agent.ir.pcb_ir import PcbIR
-        from kicad_agent.parser.pcb_native_types import NativeBoard
+        from volta.ir.pcb_ir import PcbIR
+        from volta.parser.pcb_native_types import NativeBoard
 
         board = NativeBoard()
         # Simulate segments on the board.
@@ -139,7 +139,7 @@ class TestExtractNetPath:
 
 def _make_pcb_ir(board):
     """Create a minimal PcbIR for testing."""
-    from kicad_agent.ir.pcb_ir import PcbIR
+    from volta.ir.pcb_ir import PcbIR
 
     ir = PcbIR.__new__(PcbIR)
     ir._parse_result = type("PR", (), {

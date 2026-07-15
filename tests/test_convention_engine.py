@@ -20,9 +20,9 @@ from unittest import mock
 
 import pytest
 
-from kicad_agent.conventions.base import Convention, Violation
-from kicad_agent.conventions.layout_view import ComponentView, LayoutView
-from kicad_agent.conventions.loader import ConventionConfig
+from volta.conventions.base import Convention, Violation
+from volta.conventions.layout_view import ComponentView, LayoutView
+from volta.conventions.loader import ConventionConfig
 
 
 # ---------------------------------------------------------------------------
@@ -32,7 +32,7 @@ from kicad_agent.conventions.loader import ConventionConfig
 
 def test_wrap_readability_rule_returns_convention_subclass_with_class_level_attrs():
     """P0-3: factory returns a CLASS with class-level rule_id accessible pre-instantiation."""
-    from kicad_agent.conventions.catalog.readability_adapters import wrap_readability_rule
+    from volta.conventions.catalog.readability_adapters import wrap_readability_rule
 
     # Build a stub DesignRule mimicking Phase 48.5 class-level attrs.
     class _StubRule:
@@ -60,7 +60,7 @@ def test_wrapped_rule_check_calls_underlying_design_rule_check():
 
     P1-1: layout.schematic_ir.schematic is passed as topology to the wrapped rule.
     """
-    from kicad_agent.conventions.catalog.readability_adapters import wrap_readability_rule
+    from volta.conventions.catalog.readability_adapters import wrap_readability_rule
 
     call_log: list[Any] = []
 
@@ -85,7 +85,7 @@ def test_wrapped_rule_check_calls_underlying_design_rule_check():
 
 def test_wrapped_rule_check_returns_empty_when_schematic_ir_is_none():
     """When layout.schematic_ir is None (synthetic test layout), check() returns []."""
-    from kicad_agent.conventions.catalog.readability_adapters import wrap_readability_rule
+    from volta.conventions.catalog.readability_adapters import wrap_readability_rule
 
     class _StubRule:
         name = "STUB_RULE_01"
@@ -103,7 +103,7 @@ def test_wrapped_rule_check_returns_empty_when_schematic_ir_is_none():
 
 def test_wrapped_rule_apply_is_identity():
     """Read-only conventions: apply() returns layout unchanged."""
-    from kicad_agent.conventions.catalog.readability_adapters import wrap_readability_rule
+    from volta.conventions.catalog.readability_adapters import wrap_readability_rule
 
     class _StubRule:
         name = "STUB_RULE_01"
@@ -121,7 +121,7 @@ def test_wrapped_rule_apply_is_identity():
 
 def test_get_adapted_readability_rules_returns_six_convention_instances():
     """Phase 48.5 has 6 readability rules; all wrapped as Convention subclasses."""
-    from kicad_agent.conventions.catalog.readability_adapters import (
+    from volta.conventions.catalog.readability_adapters import (
         get_adapted_readability_rules,
     )
 
@@ -137,7 +137,7 @@ def test_get_adapted_readability_rules_returns_six_convention_instances():
 
 def test_adapter_rule_ids_match_phase48_readability_names():
     """All 6 Phase 48.5 names preserved through the adapter."""
-    from kicad_agent.conventions.catalog.readability_adapters import (
+    from volta.conventions.catalog.readability_adapters import (
         get_adapted_readability_rules,
     )
 
@@ -190,7 +190,7 @@ class _StubConvention(Convention):
 
 
 def test_engine_runs_all_enabled_conventions():
-    from kicad_agent.conventions.engine import ConventionEngine
+    from volta.conventions.engine import ConventionEngine
 
     convs = [_StubConvention(n=2, severity="warning"), _StubConvention(n=1, severity="info")]
     engine = ConventionEngine(conventions=convs)
@@ -199,7 +199,7 @@ def test_engine_runs_all_enabled_conventions():
 
 
 def test_engine_skips_disabled_conventions():
-    from kicad_agent.conventions.engine import ConventionEngine
+    from volta.conventions.engine import ConventionEngine
 
     a = _StubConvention(n=1, severity="warning")
     # rule_id collision is fine for this test — both use STUB_CONV_01
@@ -211,7 +211,7 @@ def test_engine_skips_disabled_conventions():
 
 def test_engine_passes_per_convention_thresholds_via_config():
     """P2-1: engine looks up per-convention thresholds in config.convention_configs."""
-    from kicad_agent.conventions.engine import ConventionEngine
+    from volta.conventions.engine import ConventionEngine
 
     received_configs: list[Any] = []
 
@@ -237,7 +237,7 @@ def test_engine_passes_per_convention_thresholds_via_config():
 
 def test_engine_catches_broken_convention_and_emits_meta_violation():
     """Broken convention → meta-Violation (severity=warning); engine continues."""
-    from kicad_agent.conventions.engine import ConventionEngine
+    from volta.conventions.engine import ConventionEngine
 
     broken = _StubConvention(raise_on_call=True)
     good = _StubConvention(n=1, severity="info")
@@ -252,7 +252,7 @@ def test_engine_catches_broken_convention_and_emits_meta_violation():
 
 def test_engine_sorts_violations_by_severity():
     """error → warning → info ordering."""
-    from kicad_agent.conventions.engine import ConventionEngine
+    from volta.conventions.engine import ConventionEngine
 
     convs = [
         _StubConvention(n=1, severity="info"),

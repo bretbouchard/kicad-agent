@@ -21,7 +21,7 @@ import pytest
 def test_compute_confidence_returns_all_fields() -> None:
     """compute_confidence() returns InferenceConfidence with agreement_ratio,
     score_variance, n_chains, and overall fields."""
-    from kicad_agent.inference.confidence_scorer import compute_confidence
+    from volta.inference.confidence_scorer import compute_confidence
 
     result = compute_confidence([0.5, 0.7, 0.6])
 
@@ -41,7 +41,7 @@ def test_compute_confidence_returns_all_fields() -> None:
 
 def test_identical_scores_high_agreement() -> None:
     """When all chains score identically, agreement_ratio is 1.0 and variance is 0.0."""
-    from kicad_agent.inference.confidence_scorer import compute_confidence
+    from volta.inference.confidence_scorer import compute_confidence
 
     result = compute_confidence([0.8, 0.8, 0.8, 0.8])
 
@@ -57,7 +57,7 @@ def test_identical_scores_high_agreement() -> None:
 
 def test_different_scores_lower_agreement() -> None:
     """When chains score differently, agreement_ratio < 1.0 and variance > 0.0."""
-    from kicad_agent.inference.confidence_scorer import compute_confidence
+    from volta.inference.confidence_scorer import compute_confidence
 
     result = compute_confidence([0.2, 0.5, 0.9])
 
@@ -72,7 +72,7 @@ def test_different_scores_lower_agreement() -> None:
 
 def test_single_chain_high_agreement() -> None:
     """compute_confidence() with single chain returns agreement_ratio=1.0."""
-    from kicad_agent.inference.confidence_scorer import compute_confidence
+    from volta.inference.confidence_scorer import compute_confidence
 
     result = compute_confidence([0.75])
 
@@ -88,7 +88,7 @@ def test_single_chain_high_agreement() -> None:
 
 def test_empty_chains_raises_value_error() -> None:
     """compute_confidence() with empty list raises ValueError."""
-    from kicad_agent.inference.confidence_scorer import compute_confidence
+    from volta.inference.confidence_scorer import compute_confidence
 
     with pytest.raises(ValueError, match="scores"):
         compute_confidence([])
@@ -112,13 +112,13 @@ def test_analyze_returns_confidence(tmp_path: Path) -> None:
     mock_result.raw_content = "(kicad_pcb)"
 
     def mock_predict(model, text):
-        from kicad_agent.training.reward_model import PredictedReward
+        from volta.training.reward_model import PredictedReward
         return PredictedReward(format_score=0.8, quality_score=0.7, accuracy_score=0.9)
 
-    with patch("kicad_agent.parser.pcb_parser.parse_pcb", return_value=mock_result), \
-         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict), \
-         patch("kicad_agent.training.reward_model.predict_reward", side_effect=mock_predict):
-        from kicad_agent.inference.wrapper import InferenceWrapper
+    with patch("volta.parser.pcb_parser.parse_pcb", return_value=mock_result), \
+         patch("volta.inference.best_of_n.predict_reward", side_effect=mock_predict), \
+         patch("volta.training.reward_model.predict_reward", side_effect=mock_predict):
+        from volta.inference.wrapper import InferenceWrapper
         wrapper = InferenceWrapper.__new__(InferenceWrapper)
         wrapper._model_name = "test"
         wrapper._adapter_dir = None
@@ -154,7 +154,7 @@ def test_analyze_returns_confidence(tmp_path: Path) -> None:
 
 def test_scored_chain_confidence_default_none() -> None:
     """ScoredChain.confidence defaults to None for backward compatibility."""
-    from kicad_agent.inference.best_of_n import ScoredChain
+    from volta.inference.best_of_n import ScoredChain
 
     chain = ScoredChain(
         chain_text="test",

@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.crossfile import AtomicOperation, AtomicResult
+from volta.crossfile import AtomicOperation, AtomicResult
 
 
 @pytest.fixture

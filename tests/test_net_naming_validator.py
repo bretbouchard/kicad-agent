@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from kicad_agent.analysis.gap_analyzer import BoardInfo, NetNamingIssue
-from kicad_agent.analysis.net_naming_validator import NetNamingValidator
+from volta.analysis.gap_analyzer import BoardInfo, NetNamingIssue
+from volta.analysis.net_naming_validator import NetNamingValidator
 
 
 @pytest.fixture
@@ -115,7 +115,7 @@ class TestAIValidation:
         mock_client.chat.return_value = '{"accept": true, "reason": "Good name"}'
 
         with patch(
-            "kicad_agent.llm.local_client.LocalLLMClient",
+            "volta.llm.local_client.LocalLLMClient",
             return_value=mock_client,
         ):
             validator = NetNamingValidator(target_file="test.kicad_pcb", use_ai=True)
@@ -129,7 +129,7 @@ class TestAIValidation:
         mock_client.chat.return_value = '{"accept": false, "reason": "Bad suggestion"}'
 
         with patch(
-            "kicad_agent.llm.local_client.LocalLLMClient",
+            "volta.llm.local_client.LocalLLMClient",
             return_value=mock_client,
         ):
             validator = NetNamingValidator(target_file="test.kicad_pcb", use_ai=True)
@@ -142,7 +142,7 @@ class TestAIValidation:
         mock_client.chat.side_effect = RuntimeError("Model not loaded")
 
         with patch(
-            "kicad_agent.llm.local_client.LocalLLMClient",
+            "volta.llm.local_client.LocalLLMClient",
             return_value=mock_client,
         ):
             validator = NetNamingValidator(target_file="test.kicad_pcb", use_ai=True)
@@ -156,7 +156,7 @@ class TestAIValidation:
         mock_client.chat.return_value = "not json at all"
 
         with patch(
-            "kicad_agent.llm.local_client.LocalLLMClient",
+            "volta.llm.local_client.LocalLLMClient",
             return_value=mock_client,
         ):
             validator = NetNamingValidator(target_file="test.kicad_pcb", use_ai=True)

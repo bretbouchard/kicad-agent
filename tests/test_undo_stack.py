@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ops.undo_stack import UndoEntry, UndoStack
+from volta.ops.undo_stack import UndoEntry, UndoStack
 
 
 # ---------------------------------------------------------------------------
@@ -293,7 +293,7 @@ class TestExecutorUndoIntegration:
 
     def _make_executor(self, undo_stack=None, cache=None):
         """Helper to create an OperationExecutor with undo stack."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
         return OperationExecutor(
             base_dir=self.fixture_dir,
             cache=cache,
@@ -302,7 +302,7 @@ class TestExecutorUndoIntegration:
 
     def test_schematic_operation_captures_snapshot(self):
         """Execute add_component, verify undo_stack.can_undo is True."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
         stack = UndoStack()
         executor = self._make_executor(undo_stack=stack)
 
@@ -322,7 +322,7 @@ class TestExecutorUndoIntegration:
 
     def test_undo_restores_file_content(self):
         """Execute add_component, undo, verify file content matches original."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
         stack = UndoStack()
         executor = self._make_executor(undo_stack=stack)
 
@@ -347,7 +347,7 @@ class TestExecutorUndoIntegration:
 
     def test_redo_restores_post_mutation_content(self):
         """After undo, redo restores file to post-mutation state."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
         stack = UndoStack()
         executor = self._make_executor(undo_stack=stack)
 
@@ -372,8 +372,8 @@ class TestExecutorUndoIntegration:
 
     def test_cache_invalidation_after_undo(self):
         """After undo, cache.get returns None for the affected file."""
-        from kicad_agent.ops.ir_cache import IRCache
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.ir_cache import IRCache
+        from volta.ops.schema import Operation
         cache = IRCache()
         stack = UndoStack()
         executor = self._make_executor(undo_stack=stack, cache=cache)
@@ -398,7 +398,7 @@ class TestExecutorUndoIntegration:
 
     def test_create_operations_not_captured(self):
         """Create operations do NOT push to undo stack."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
         stack = UndoStack()
         executor = self._make_executor(undo_stack=stack)
 
@@ -449,7 +449,7 @@ class TestExecutorUndoIntegration:
 
     def test_project_file_operation_captures_snapshot(self, tmp_path):
         """Project-file operation captures snapshot (M-04)."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
         stack = UndoStack()
         executor = self._make_executor(undo_stack=stack)
 
@@ -475,7 +475,7 @@ class TestExecutorUndoIntegration:
 
     def test_undo_returns_error_when_parent_dir_deleted(self):
         """Undo returns error when parent directory no longer exists (M-08)."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
         stack = UndoStack()
         executor = self._make_executor(undo_stack=stack)
 
@@ -507,7 +507,7 @@ class TestExecutorUndoIntegration:
 
     def test_undo_latest_without_target_file(self):
         """Undo with no target_file pops from latest across all files."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
         stack = UndoStack()
         executor = self._make_executor(undo_stack=stack)
 

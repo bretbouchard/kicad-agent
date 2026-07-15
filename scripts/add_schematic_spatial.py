@@ -23,10 +23,10 @@ logger = logging.getLogger(__name__)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.parser import parse_schematic
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.spatial.extractor import extract_schematic_all
-from kicad_agent.training.graph_builder import _build_spatial_summary
+from volta.parser import parse_schematic
+from volta.ir.schematic_ir import SchematicIR
+from volta.spatial.extractor import extract_schematic_all
+from volta.training.graph_builder import _build_spatial_summary
 
 
 def needs_spatial(record: dict) -> bool:

@@ -25,13 +25,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.training.real_dataset import (
+from volta.training.real_dataset import (
     RealBoardSample,
     RealBoardDataset,
     _graph_result_to_sample,
     filter_quality,
 )
-from kicad_agent.training.graph_builder import (
+from volta.training.graph_builder import (
     MIN_KICAD_VERSION,
     build_board_graph,
     detect_kicad_version,

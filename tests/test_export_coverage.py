@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.export import (
+from volta.export import (
     BomResult,
     ExportResult,
     RenderResult,
@@ -102,6 +102,6 @@ class TestExportImports:
 
     def test_all_exports_importable(self):
         """All __all__ exports can be imported."""
-        from kicad_agent import export
+        from volta import export
         for name in export.__all__:
             assert hasattr(export, name), f"Missing export: {name}"

@@ -17,8 +17,8 @@ from pathlib import Path
 import networkx as nx
 import pytest
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.training.graph_builder import (
+from volta.ir.base import _clear_registry
+from volta.training.graph_builder import (
     BoardGraphResult,
     build_board_graph,
     detect_kicad_version,
@@ -37,7 +37,7 @@ UHAT_PCB = FIXTURES_DIR / "RaspberryPi-uHAT" / "RaspberryPi-uHAT.kicad_pcb"
 MINIMAL_SCH = """\
 (kicad_sch
 \t(version 20230121)
-\t(generator "kicad_agent")
+\t(generator "volta")
 \t(uuid "00000000-0000-0000-0000-000000000001")
 \t(paper "A4")
 \t(lib_symbols
@@ -151,7 +151,7 @@ MINIMAL_SCH = """\
 MINIMAL_PCB = """\
 (kicad_pcb
 \t(version 20230101)
-\t(generator "kicad_agent")
+\t(generator "volta")
 \t(general
 \t\t(thickness 1.6)
 \t)
@@ -381,7 +381,7 @@ class TestBuildBoardGraph:
 
     def test_difficulty_grading_easy(self) -> None:
         """Difficulty 'easy' for <10 components."""
-        from kicad_agent.training.graph_builder import _grade_difficulty
+        from volta.training.graph_builder import _grade_difficulty
 
         assert _grade_difficulty(5) == "easy"
         assert _grade_difficulty(0) == "easy"
@@ -389,7 +389,7 @@ class TestBuildBoardGraph:
 
     def test_difficulty_grading_medium(self) -> None:
         """Difficulty 'medium' for 10-50 components."""
-        from kicad_agent.training.graph_builder import _grade_difficulty
+        from volta.training.graph_builder import _grade_difficulty
 
         assert _grade_difficulty(10) == "medium"
         assert _grade_difficulty(25) == "medium"
@@ -397,7 +397,7 @@ class TestBuildBoardGraph:
 
     def test_difficulty_grading_hard(self) -> None:
         """Difficulty 'hard' for 50+ components."""
-        from kicad_agent.training.graph_builder import _grade_difficulty
+        from volta.training.graph_builder import _grade_difficulty
 
         assert _grade_difficulty(51) == "hard"
         assert _grade_difficulty(100) == "hard"

@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from kicad_agent.validation.gates.constraint_schema import (
+from volta.validation.gates.constraint_schema import (
     DesignConstraints,
     DiffPairSpec,
     ElectricalConstraints,

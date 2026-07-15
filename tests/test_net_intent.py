@@ -84,19 +84,19 @@ class TestNetClassificationExtension:
     """Verify NetClassification has the new gate-specific values."""
 
     def test_has_high_current(self):
-        from kicad_agent.analysis.types import NetClassification
+        from volta.analysis.types import NetClassification
 
         assert hasattr(NetClassification, "HIGH_CURRENT")
         assert NetClassification.HIGH_CURRENT.value == "HIGH_CURRENT"
 
     def test_has_differential_pair(self):
-        from kicad_agent.analysis.types import NetClassification
+        from volta.analysis.types import NetClassification
 
         assert hasattr(NetClassification, "DIFFERENTIAL_PAIR")
         assert NetClassification.DIFFERENTIAL_PAIR.value == "DIFFERENTIAL_PAIR"
 
     def test_has_analog_digital(self):
-        from kicad_agent.analysis.types import NetClassification
+        from volta.analysis.types import NetClassification
 
         assert hasattr(NetClassification, "ANALOG")
         assert NetClassification.ANALOG.value == "ANALOG"
@@ -114,7 +114,7 @@ class TestNetClassificationPatterns:
 
     def test_power_and_clock_delegate_to_base_classifier(self):
         """POWER/GROUND/CLOCK from existing NetClassification are returned unchanged for known power/clock nets."""
-        from kicad_agent.validation.gates.net_intent import NetIntentExtractor
+        from volta.validation.gates.net_intent import NetIntentExtractor
 
         extractor = NetIntentExtractor()
 
@@ -132,7 +132,7 @@ class TestNetClassificationPatterns:
 
     def test_high_current_override(self):
         """HIGH_CURRENT category assigned to nets matching motor/heater patterns."""
-        from kicad_agent.validation.gates.net_intent import NetIntentExtractor
+        from volta.validation.gates.net_intent import NetIntentExtractor
 
         extractor = NetIntentExtractor()
 
@@ -149,7 +149,7 @@ class TestNetClassificationPatterns:
 
     def test_differential_pair_detection(self):
         """DIFFERENTIAL_PAIR category assigned to net name pairs ending in _P/_N or +/-."""
-        from kicad_agent.validation.gates.net_intent import NetIntentExtractor
+        from volta.validation.gates.net_intent import NetIntentExtractor
 
         extractor = NetIntentExtractor()
 
@@ -180,7 +180,7 @@ class TestHiddenPowerPins:
 
     def test_hidden_power_pins_detected(self):
         """Hidden power pins return list of (reference, pin_name) strings."""
-        from kicad_agent.validation.gates.net_intent import NetIntentExtractor
+        from volta.validation.gates.net_intent import NetIntentExtractor
 
         extractor = NetIntentExtractor()
 
@@ -222,7 +222,7 @@ class TestHiddenPowerPins:
 
     def test_no_hidden_power_pins(self):
         """Components with all power pins connected return empty list."""
-        from kicad_agent.validation.gates.net_intent import NetIntentExtractor
+        from volta.validation.gates.net_intent import NetIntentExtractor
 
         extractor = NetIntentExtractor()
 
@@ -252,7 +252,7 @@ class TestAmbiguousConnectors:
 
     def test_ambiguous_connectors_detected(self):
         """Connectors without pin-type assignments return list of references."""
-        from kicad_agent.validation.gates.net_intent import NetIntentExtractor
+        from volta.validation.gates.net_intent import NetIntentExtractor
 
         extractor = NetIntentExtractor()
 
@@ -283,7 +283,7 @@ class TestAmbiguousConnectors:
 
     def test_no_ambiguous_connectors(self):
         """Non-connector components return empty list."""
-        from kicad_agent.validation.gates.net_intent import NetIntentExtractor
+        from volta.validation.gates.net_intent import NetIntentExtractor
 
         extractor = NetIntentExtractor()
 
@@ -309,7 +309,7 @@ class TestStubSymbols:
 
     def test_stub_symbols_detected(self):
         """Symbols with zero pins return list of references."""
-        from kicad_agent.validation.gates.net_intent import NetIntentExtractor
+        from volta.validation.gates.net_intent import NetIntentExtractor
 
         extractor = NetIntentExtractor()
 
@@ -332,7 +332,7 @@ class TestStubSymbols:
 
     def test_no_stub_symbols(self):
         """Components with pins return empty list."""
-        from kicad_agent.validation.gates.net_intent import NetIntentExtractor
+        from volta.validation.gates.net_intent import NetIntentExtractor
 
         extractor = NetIntentExtractor()
 
@@ -365,7 +365,7 @@ class TestPatternConstants:
 
     def test_pattern_constants_exist(self):
         """Module-level pattern constants _HIGH_CURRENT_PATTERNS, _DIFF_PAIR_PATTERN, etc. exist."""
-        import kicad_agent.validation.gates.net_intent as module
+        import volta.validation.gates.net_intent as module
 
         assert hasattr(module, "_HIGH_CURRENT_PATTERNS")
         assert hasattr(module, "_DIFF_PAIR_PATTERN")
@@ -384,7 +384,7 @@ class TestGateIntegration:
 
     def test_full_gate_result_with_net_intent(self):
         """Full gate run produces correct combined result with net intent issues."""
-        from kicad_agent.validation.gates.schematic_intent_gate import (
+        from volta.validation.gates.schematic_intent_gate import (
             check_net_intent,
         )
 
@@ -439,7 +439,7 @@ class TestGateIntegration:
 
     def test_net_artifacts_in_gate_result(self):
         """Net classification results appear in GateResult.artifacts."""
-        from kicad_agent.validation.gates.schematic_intent_gate import (
+        from volta.validation.gates.schematic_intent_gate import (
             SchematicIntentGate,
         )
 
@@ -468,11 +468,11 @@ class TestGateIntegration:
 
         gate = SchematicIntentGate()
         with patch(
-            "kicad_agent.validation.gates.schematic_intent_gate.check_footprint_completeness"
+            "volta.validation.gates.schematic_intent_gate.check_footprint_completeness"
         ) as mock_fp, patch(
-            "kicad_agent.validation.gates.schematic_intent_gate.check_symbol_pin_count"
+            "volta.validation.gates.schematic_intent_gate.check_symbol_pin_count"
         ) as mock_pc, patch(
-            "kicad_agent.validation.gates.schematic_intent_gate.check_component_metadata"
+            "volta.validation.gates.schematic_intent_gate.check_component_metadata"
         ) as mock_md:
             mock_fp.return_value = ([], [])
             mock_pc.return_value = ([], [])

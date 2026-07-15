@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.export.gerber import ExportResult, COPPER_LAYERS_2, COPPER_LAYERS_4
-from kicad_agent.export.bom import BomResult, parse_bom_csv
-from kicad_agent.export.render import RenderResult
+from volta.export.gerber import ExportResult, COPPER_LAYERS_2, COPPER_LAYERS_4
+from volta.export.bom import BomResult, parse_bom_csv
+from volta.export.render import RenderResult
 
 
 class TestGerberConstants:
@@ -41,7 +41,7 @@ class TestGeneralExport:
 
     def test_import(self):
         """General export functions are importable."""
-        from kicad_agent.export.general import (
+        from volta.export.general import (
             export_netlist,
             export_position,
             export_step,

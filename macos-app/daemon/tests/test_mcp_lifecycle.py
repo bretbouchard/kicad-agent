@@ -27,7 +27,7 @@ Coverage:
         - Returns {tools: [...]} with 151 entries
         - Each tool has name, description, inputSchema
         - Names are prefixed with 'kicad.' namespace
-        - Names match the registered operations in kicad_agent.ops.registry
+        - Names match the registered operations in volta.ops.registry
 
     tools/call:
         - Rejects unknown name with INVALID_PARAMS

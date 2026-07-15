@@ -169,4 +169,4 @@ wires the Swift MCP client to use it.
 | `killed: 9` on launch                | Unsigned dylib (Pitfall 1)                    | Sign all dylibs per above                           |
 | App hangs waiting for first response | stdout block-buffered (Pitfall 2)             | Verify `PYTHONUNBUFFERED=1` is set in env           |
 | `Method not found`                   | Daemon version older than Swift client        | Rebuild daemon, redeploy bundle                     |
-| Crash loop on launch                 | kicad_agent library missing from hidden imports | Add module to `HIDDEN_IMPORTS` in spec              |
+| Crash loop on launch                 | volta library missing from hidden imports | Add module to `HIDDEN_IMPORTS` in spec              |

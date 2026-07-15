@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.serializer import (
+from volta.serializer import (
     normalize_kicad_output,
     reinject_uuids,
     serialize_footprint,
@@ -20,7 +20,7 @@ class TestSerializerImports:
 
     def test_all_exports_importable(self):
         """All __all__ exports can be imported."""
-        from kicad_agent import serializer
+        from volta import serializer
         for name in serializer.__all__:
             assert hasattr(serializer, name), f"Missing export: {name}"
 
@@ -95,7 +95,7 @@ class TestReinjectUuids:
 
     def test_reinject_empty_map(self):
         """reinject_uuids with empty UUIDMap entries returns content unchanged."""
-        from kicad_agent.parser.uuid_extractor import UUIDMap
+        from volta.parser.uuid_extractor import UUIDMap
         content = '(uuid "abc123")'
         uuid_map = UUIDMap()
         result = reinject_uuids(content, uuid_map)

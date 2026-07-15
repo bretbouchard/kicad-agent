@@ -16,9 +16,9 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops.schema import Operation
-from kicad_agent.result import OperationResult
-from kicad_agent.handler import handle_operation
+from volta.ops.schema import Operation
+from volta.result import OperationResult
+from volta.handler import handle_operation
 
 
 FIXTURE_DIR = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "Arduino_Mega"

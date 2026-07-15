@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from kiutils.footprint import Footprint
 
-from kicad_agent.parser.footprint_parser import parse_footprint, ParseResult
+from volta.parser.footprint_parser import parse_footprint, ParseResult
 
 
 class TestParseFootprint:

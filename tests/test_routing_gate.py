@@ -6,8 +6,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.validation.gate_types import GateResult
-from kicad_agent.validation.gates.routing_gate import (
+from volta.validation.gate_types import GateResult
+from volta.validation.gates.routing_gate import (
     PostRouteQualityGate,
     RoutingReadinessGate,
 )
@@ -202,15 +202,15 @@ class TestPostRouteQuality:
 
 class TestGateRegistration:
     def test_routing_readiness_registered(self) -> None:
-        import kicad_agent.validation  # noqa: ensure gates registered
-        from kicad_agent.validation.gate_runner import get_gate_runner
+        import volta.validation  # noqa: ensure gates registered
+        from volta.validation.gate_runner import get_gate_runner
 
         runner = get_gate_runner()
         assert runner.get_gate("routing_readiness") is not None
 
     def test_post_route_quality_registered(self) -> None:
-        import kicad_agent.validation  # noqa: ensure gates registered
-        from kicad_agent.validation.gate_runner import get_gate_runner
+        import volta.validation  # noqa: ensure gates registered
+        from volta.validation.gate_runner import get_gate_runner
 
         runner = get_gate_runner()
         assert runner.get_gate("post_route_quality") is not None

@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.analysis.benchmark_runner import (
+from volta.analysis.benchmark_runner import (
     BenchmarkReport,
     BenchmarkRunner,
     CategoryScore,
@@ -26,7 +26,7 @@ from kicad_agent.analysis.benchmark_runner import (
     _recommend_model,
     score_task,
 )
-from kicad_agent.analysis.spatial_benchmark import (
+from volta.analysis.spatial_benchmark import (
     BoardContext,
     Difficulty,
     SpatialReasoningTask,

@@ -26,7 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.crawler.easyeda_api import EasyEdaClient, JlcpcbComponent
+from volta.crawler.easyeda_api import EasyEdaClient, JlcpcbComponent
 
 logging.basicConfig(
     level=logging.INFO,

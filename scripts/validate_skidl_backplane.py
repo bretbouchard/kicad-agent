@@ -26,7 +26,7 @@ def main() -> None:
 
     print(f"=== CONV-10: Backplane Validation (16 sheets, 94 parts) ===")
 
-    from kicad_agent.circuit_ir import build_circuit
+    from volta.circuit_ir import build_circuit
 
     print("[1] Converting backplane to SKIDL...")
     circuit, circuit_ir = build_circuit(_BACKPLANE_SCH)

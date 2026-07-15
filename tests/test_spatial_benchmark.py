@@ -10,7 +10,7 @@ from collections import Counter
 
 import pytest
 
-from kicad_agent.analysis.spatial_benchmark import (
+from volta.analysis.spatial_benchmark import (
     BoardContext,
     Difficulty,
     SpatialReasoningTask,

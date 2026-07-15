@@ -13,9 +13,9 @@ from kiutils.schematic import Schematic
 from kiutils.items.schitems import Connection, LocalLabel, SchematicSymbol
 from kiutils.items.common import Position, Property
 
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.parser import parse_schematic
-from kicad_agent.ops.net_label_placer import (
+from volta.ir.schematic_ir import SchematicIR
+from volta.parser import parse_schematic
+from volta.ops.net_label_placer import (
     place_net_labels,
     _load_pin_map,
     _BUILTIN_PROFILES,

@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.routing.dsn_generator import generate_dsn
-from kicad_agent.routing.freerouting import export_dsn, route_with_freerouting
+from volta.routing.dsn_generator import generate_dsn
+from volta.routing.freerouting import export_dsn, route_with_freerouting
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _FIXTURE = _REPO_ROOT / "tests" / "fixtures" / "smd_test_board.kicad_pcb"

@@ -9,12 +9,12 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCHEMA_PATH = REPO_ROOT / "src" / "kicad_agent" / "ops" / "schema.py"
-SCHEMA_DIR = REPO_ROOT / "src" / "kicad_agent" / "ops"
-FORMAT_CONVERT_PATH = REPO_ROOT / "src" / "kicad_agent" / "ops" / "format_convert.py"
-BEST_OF_N_PATH = REPO_ROOT / "src" / "kicad_agent" / "inference" / "best_of_n.py"
-HANDLER_PATH = REPO_ROOT / "src" / "kicad_agent" / "handler.py"
-EXECUTOR_PATH = REPO_ROOT / "src" / "kicad_agent" / "ops" / "executor.py"
+SCHEMA_PATH = REPO_ROOT / "src" / "volta" / "ops" / "schema.py"
+SCHEMA_DIR = REPO_ROOT / "src" / "volta" / "ops"
+FORMAT_CONVERT_PATH = REPO_ROOT / "src" / "volta" / "ops" / "format_convert.py"
+BEST_OF_N_PATH = REPO_ROOT / "src" / "volta" / "inference" / "best_of_n.py"
+HANDLER_PATH = REPO_ROOT / "src" / "volta" / "handler.py"
+EXECUTOR_PATH = REPO_ROOT / "src" / "volta" / "ops" / "executor.py"
 
 
 # ---------------------------------------------------------------------------
@@ -26,18 +26,18 @@ class TestSchemaSplit:
     """Verify schema.py was split into sub-modules with re-exports."""
 
     def test_schema_imports_add_component(self) -> None:
-        """from kicad_agent.ops.schema import AddComponentOp still works."""
-        from kicad_agent.ops.schema import AddComponentOp
+        """from volta.ops.schema import AddComponentOp still works."""
+        from volta.ops.schema import AddComponentOp
         assert AddComponentOp is not None
 
     def test_schema_imports_operation(self) -> None:
-        """from kicad_agent.ops.schema import Operation still works."""
-        from kicad_agent.ops.schema import Operation
+        """from volta.ops.schema import Operation still works."""
+        from volta.ops.schema import Operation
         assert Operation is not None
 
     def test_operation_union_includes_all_op_types(self) -> None:
         """Operation discriminated union includes all expected op_types."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         schema = Operation.model_json_schema()
         # Get the discriminator values from the schema
@@ -75,7 +75,7 @@ class TestSchemaSplit:
 
     def test_get_operation_schema_works(self) -> None:
         """get_operation_schema() still works and returns correct schema."""
-        from kicad_agent.ops.schema import get_operation_schema
+        from volta.ops.schema import get_operation_schema
         schema = get_operation_schema()
         assert isinstance(schema, dict)
         assert "properties" in schema or "$defs" in schema
@@ -89,42 +89,42 @@ class TestSchemaSplit:
 
     def test_submodule_classes(self) -> None:
         """Each sub-module has the expected classes."""
-        from kicad_agent.ops._schema_component import (
+        from volta.ops._schema_component import (
             AddComponentOp, RemoveComponentOp, MoveComponentOp,
             ModifyPropertyOp, DuplicateComponentOp, ArrayReplicateOp,
         )
-        from kicad_agent.ops._schema_net import AddNetOp, RemoveNetOp, RenameNetOp
-        from kicad_agent.ops._schema_reference import (
+        from volta.ops._schema_net import AddNetOp, RemoveNetOp, RenameNetOp
+        from volta.ops._schema_reference import (
             RenumberRefsOp, ValidateRefsOp, AnnotateOp, CrossRefCheckOp,
         )
-        from kicad_agent.ops._schema_footprint import (
+        from volta.ops._schema_footprint import (
             AssignFootprintOp, SwapFootprintOp, ValidateFootprintOp,
             VerifyPinMapOp, UpdateFootprintFromLibraryOp,
         )
-        from kicad_agent.ops._schema_wire import (
+        from volta.ops._schema_wire import (
             AddWireOp, AddLabelOp, AddPowerOp, AddNoConnectOp, AddJunctionOp,
         )
-        from kicad_agent.ops._schema_library import AddLibEntryOp, RemoveLibEntryOp
-        from kicad_agent.ops._schema_pcb import (
+        from volta.ops._schema_library import AddLibEntryOp, RemoveLibEntryOp
+        from volta.ops._schema_pcb import (
             AddNetClassOp, AddDesignRuleOp, AddCopperZoneOp,
             SetBoardOutlineOp, AssignNetClassOp, AutoRouteOp,
         )
-        from kicad_agent.ops._schema_validation import (
+        from volta.ops._schema_validation import (
             ValidatePowerNetsOp, ValidateSchematicOp, ParseErcOp,
             ExtractViolationPositionsOp, ValidateHlabelsOp,
         )
-        from kicad_agent.ops._schema_create import (
+        from volta.ops._schema_create import (
             CreateSchematicOp, CreatePcbOp, CreateProjectOp,
             CreateSymbolOp, EmbedSymbolOp,
         )
-        from kicad_agent.ops._schema_repair import (
+        from volta.ops._schema_repair import (
             RepairSchematicOp, SnapToGridOp,
         )
-        from kicad_agent.ops._schema_component import SwapSymbolOp
-        from kicad_agent.ops._schema_create import ConvertKicad6To10Op
-        from kicad_agent.ops._schema_wire import AddPowerFlagOp
-        from kicad_agent.ops._schema_sheet import RebuildRootSheetOp
-        from kicad_agent.ops._schema_remove import (
+        from volta.ops._schema_component import SwapSymbolOp
+        from volta.ops._schema_create import ConvertKicad6To10Op
+        from volta.ops._schema_wire import AddPowerFlagOp
+        from volta.ops._schema_sheet import RebuildRootSheetOp
+        from volta.ops._schema_remove import (
             RemoveWireOp, RemoveLabelOp, RemoveJunctionOp, RemoveNoConnectOp,
         )
 
@@ -135,7 +135,7 @@ class TestSchemaSplit:
 
     def test_external_import_compatibility(self) -> None:
         """External code can import all Op types from schema."""
-        from kicad_agent.ops.schema import (
+        from volta.ops.schema import (
             AddComponentOp, RemoveComponentOp, MoveComponentOp,
             ModifyPropertyOp, DuplicateComponentOp, ArrayReplicateOp,
             AddNetOp, RemoveNetOp, RenameNetOp,
@@ -188,7 +188,7 @@ class TestDeadCodeRemoval:
 
     def test_best_of_n_raises_valueerror(self) -> None:
         """best_of_n_select raises ValueError when no valid chain found."""
-        from kicad_agent.inference.best_of_n import best_of_n_select
+        from volta.inference.best_of_n import best_of_n_select
         with pytest.raises(ValueError, match="chains list must not be empty"):
             best_of_n_select([], None)
 

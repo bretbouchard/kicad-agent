@@ -16,10 +16,10 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.ops.schema import (
+from volta.ir.base import _clear_registry
+from volta.ir.pcb_ir import PcbIR
+from volta.ir.schematic_ir import SchematicIR
+from volta.ops.schema import (
     AddComponentOp,
     ModifyPropertyOp,
     MoveComponentOp,
@@ -27,10 +27,10 @@ from kicad_agent.ops.schema import (
     PositionSpec,
     RemoveComponentOp,
 )
-from kicad_agent.parser import parse_pcb, parse_schematic
-from kicad_agent.parser.types import ParseResult
-from kicad_agent.parser.uuid_extractor import extract_uuids
-from kicad_agent.validation.structural import (
+from volta.parser import parse_pcb, parse_schematic
+from volta.parser.types import ParseResult
+from volta.parser.uuid_extractor import extract_uuids
+from volta.validation.structural import (
     StructuralResult,
     StructuralViolation,
     ViolationKind,

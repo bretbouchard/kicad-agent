@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ltspice.asc_parser import parse_asc
-from kicad_agent.ltspice.types import (
+from volta.ltspice.asc_parser import parse_asc
+from volta.ltspice.types import (
     LTspiceComponent,
     LTspiceDirective,
     LTspiceFlag,
@@ -97,7 +97,7 @@ class TestSimCommands:
 
     def test_8_tran_command(self) -> None:
         """.tran 0 1ms 0 1u returns TranCommand with correct values."""
-        from kicad_agent.ltspice.sim_commands import parse_simulation_command
+        from volta.ltspice.sim_commands import parse_simulation_command
 
         result = parse_simulation_command(".tran 0 1ms 0 1u")
         assert result is not None
@@ -108,7 +108,7 @@ class TestSimCommands:
 
     def test_9_ac_command(self) -> None:
         """.ac dec 10 1 100k returns AcCommand with correct values."""
-        from kicad_agent.ltspice.sim_commands import parse_simulation_command
+        from volta.ltspice.sim_commands import parse_simulation_command
 
         result = parse_simulation_command(".ac dec 10 1 100k")
         assert result is not None
@@ -119,7 +119,7 @@ class TestSimCommands:
 
     def test_10_dc_command(self) -> None:
         """.dc V1 0 5 0.1 returns DcCommand with correct values."""
-        from kicad_agent.ltspice.sim_commands import parse_simulation_command
+        from volta.ltspice.sim_commands import parse_simulation_command
 
         result = parse_simulation_command(".dc V1 0 5 0.1")
         assert result is not None
@@ -130,7 +130,7 @@ class TestSimCommands:
 
     def test_11_noise_command(self) -> None:
         """.noise V(out) V1 dec 10 1 100k returns NoiseCommand."""
-        from kicad_agent.ltspice.sim_commands import parse_simulation_command
+        from volta.ltspice.sim_commands import parse_simulation_command
 
         result = parse_simulation_command(".noise V(out) V1 dec 10 1 100k")
         assert result is not None
@@ -143,14 +143,14 @@ class TestSimCommands:
 
     def test_12_op_command(self) -> None:
         """.op returns OpCommand."""
-        from kicad_agent.ltspice.sim_commands import parse_simulation_command
+        from volta.ltspice.sim_commands import parse_simulation_command
 
         result = parse_simulation_command(".op")
         assert result is not None
 
     def test_13_unknown_command_returns_none(self) -> None:
         """Non-command text returns None."""
-        from kicad_agent.ltspice.sim_commands import parse_simulation_command
+        from volta.ltspice.sim_commands import parse_simulation_command
 
         result = parse_simulation_command("not a command")
         assert result is None
@@ -160,7 +160,7 @@ class TestSimCommands:
         result = parse_asc(BASIC_RC_ASC)
 
         assert len(result.simulation_commands) > 0
-        from kicad_agent.ltspice.sim_commands import TranCommand
+        from volta.ltspice.sim_commands import TranCommand
 
         tran = result.simulation_commands[0]
         assert isinstance(tran, TranCommand)

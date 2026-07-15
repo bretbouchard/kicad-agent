@@ -13,8 +13,8 @@ from pathlib import Path
 import pytest
 from kiutils.board import Board
 
-from kicad_agent.spatial.maze_generator import MazeBoard, generate_maze_board
-from kicad_agent.spatial.primitives import SpatialBox, SpatialPoint
+from volta.spatial.maze_generator import MazeBoard, generate_maze_board
+from volta.spatial.primitives import SpatialBox, SpatialPoint
 
 
 class TestMazeGeneration:

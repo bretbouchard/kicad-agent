@@ -73,7 +73,7 @@ except (AttributeError, ValueError):
     )
 
 # --- sys.path bootstrap ------------------------------------------------------
-# PyInstaller bundles the kicad_agent package via hidden imports; this path
+# PyInstaller bundles the volta package via hidden imports; this path
 # manipulation only matters during development (`python daemon_entry.py`).
 # At runtime under PyInstaller, the package is already importable from the
 # frozen stdlib path. This block is a no-op in frozen mode.
@@ -302,7 +302,7 @@ async def amain() -> int:
     # Construct handler context. Executor is lazy — only loaded when a
     # caller invokes a handler that needs it.
     def _executor_factory():  # type: ignore[no-untyped-def]
-        from kicad_agent.ops.executor import OperationExecutor  # type: ignore[import-not-found]
+        from volta.ops.executor import OperationExecutor  # type: ignore[import-not-found]
         return OperationExecutor()
 
     ctx = HandlerContext(executor_factory=_executor_factory, audit=audit)

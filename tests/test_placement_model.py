@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from kicad_agent.placement.model import BipartiteAttentionLayer, PlacementModel
+from volta.placement.model import BipartiteAttentionLayer, PlacementModel
 
 
 # ---------------------------------------------------------------------------
@@ -173,7 +173,7 @@ class TestPlacementPredictor:
 
     def test_predictor_from_graph(self, sample_placement_graph):
         """PlacementPredictor produces positions for all components."""
-        from kicad_agent.placement.predict import PlacementPredictor
+        from volta.placement.predict import PlacementPredictor
 
         predictor = PlacementPredictor(model_path=None)
         prediction = predictor.predict(sample_placement_graph)
@@ -190,7 +190,7 @@ class TestPlacementPredictor:
 
     def test_predictor_positions_in_bounds(self, sample_placement_graph):
         """Predicted (x, y) within [0, board_width] x [0, board_height]."""
-        from kicad_agent.placement.predict import PlacementPredictor
+        from volta.placement.predict import PlacementPredictor
 
         predictor = PlacementPredictor(model_path=None)
         prediction = predictor.predict(sample_placement_graph)
@@ -205,20 +205,20 @@ class TestPlacementPredictor:
 
     def test_predictor_lazy_import(self):
         """Import of PlacementPredictor succeeds (torch is installed)."""
-        from kicad_agent.placement.predict import PlacementPredictor
+        from volta.placement.predict import PlacementPredictor
 
         assert PlacementPredictor is not None
 
     def test_predictor_no_model_file(self):
         """PlacementPredictor(model_path=None) initializes with random weights."""
-        from kicad_agent.placement.predict import PlacementPredictor
+        from volta.placement.predict import PlacementPredictor
 
         predictor = PlacementPredictor(model_path=None)
         assert predictor.is_ready is True
 
     def test_predictor_raw_output_shape(self, sample_placement_graph):
         """Raw output has shape (n_comp, 3)."""
-        from kicad_agent.placement.predict import PlacementPredictor
+        from volta.placement.predict import PlacementPredictor
 
         predictor = PlacementPredictor(model_path=None)
         prediction = predictor.predict(sample_placement_graph)
@@ -227,7 +227,7 @@ class TestPlacementPredictor:
 
     def test_predictor_confidence_range(self, sample_placement_graph):
         """Model confidence is in [0, 1]."""
-        from kicad_agent.placement.predict import PlacementPredictor
+        from volta.placement.predict import PlacementPredictor
 
         predictor = PlacementPredictor(model_path=None)
         prediction = predictor.predict(sample_placement_graph)
@@ -236,7 +236,7 @@ class TestPlacementPredictor:
 
     def test_predictor_nonexistent_model_file(self):
         """PlacementPredictor with nonexistent path still initializes."""
-        from kicad_agent.placement.predict import PlacementPredictor
+        from volta.placement.predict import PlacementPredictor
 
         predictor = PlacementPredictor(model_path=Path("/nonexistent/model.pt"))
         assert predictor.is_ready is True

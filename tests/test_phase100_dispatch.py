@@ -13,7 +13,7 @@ The dispatch order matters: first match wins.
 
 from __future__ import annotations
 
-from kicad_agent.routing.strategy import (
+from volta.routing.strategy import (
     BoardState,
     DeterministicStrategy,
     Pin,

@@ -1,4 +1,4 @@
-"""Tests for HybridLLMClient (kicad_agent.llm.backend)."""
+"""Tests for HybridLLMClient (volta.llm.backend)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from kicad_agent.llm.backend import HybridLLMClient, HybridResponse, LLMBackend
+from volta.llm.backend import HybridLLMClient, HybridResponse, LLMBackend
 
 
 # ---------------------------------------------------------------------------

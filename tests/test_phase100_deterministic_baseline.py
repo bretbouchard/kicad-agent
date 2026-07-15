@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.routing.freerouting import is_freerouting_available
-from kicad_agent.routing.orchestrator import RoutingOrchestrator
+from volta.routing.freerouting import is_freerouting_available
+from volta.routing.orchestrator import RoutingOrchestrator
 
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "smd_test_board.kicad_pcb"

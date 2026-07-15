@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.analysis.design_rules import (
+from volta.analysis.design_rules import (
     DesignRuleReport,
     DesignRuleViolation,
     RuleSeverity,
@@ -84,7 +84,7 @@ class TestJsonReport:
 
     def test_generate_json_report_valid_json(self):
         """JSON report is valid JSON that parses."""
-        from kicad_agent.analysis.rule_report import generate_json_report
+        from volta.analysis.rule_report import generate_json_report
 
         output = generate_json_report(MOCK_REPORT)
         parsed = json.loads(output)
@@ -93,7 +93,7 @@ class TestJsonReport:
 
     def test_generate_json_report_matches_schema(self):
         """JSON report contains all DesignRuleReport fields."""
-        from kicad_agent.analysis.rule_report import generate_json_report
+        from volta.analysis.rule_report import generate_json_report
 
         output = generate_json_report(MOCK_REPORT)
         parsed = json.loads(output)
@@ -106,7 +106,7 @@ class TestJsonReport:
 
     def test_generate_json_report_violation_fields(self):
         """Each violation in JSON has all required fields."""
-        from kicad_agent.analysis.rule_report import generate_json_report
+        from volta.analysis.rule_report import generate_json_report
 
         output = generate_json_report(MOCK_REPORT)
         parsed = json.loads(output)
@@ -120,7 +120,7 @@ class TestJsonReport:
 
     def test_generate_json_report_roundtrip(self):
         """JSON report can be loaded back into DesignRuleReport."""
-        from kicad_agent.analysis.rule_report import generate_json_report
+        from volta.analysis.rule_report import generate_json_report
 
         output = generate_json_report(MOCK_REPORT)
         restored = DesignRuleReport.model_validate_json(output)
@@ -139,7 +139,7 @@ class TestMarkdownReport:
 
     def test_markdown_report_has_header(self):
         """Markdown report starts with proper header."""
-        from kicad_agent.analysis.rule_report import generate_markdown_report
+        from volta.analysis.rule_report import generate_markdown_report
 
         output = generate_markdown_report(MOCK_REPORT)
 
@@ -147,7 +147,7 @@ class TestMarkdownReport:
 
     def test_markdown_report_has_severity_badges(self):
         """Markdown report uses severity badges: [!!], [!], [>], [i]."""
-        from kicad_agent.analysis.rule_report import generate_markdown_report
+        from volta.analysis.rule_report import generate_markdown_report
 
         output = generate_markdown_report(MOCK_REPORT)
 
@@ -160,7 +160,7 @@ class TestMarkdownReport:
 
     def test_markdown_report_has_summary_table(self):
         """Markdown report has summary table with severity counts."""
-        from kicad_agent.analysis.rule_report import generate_markdown_report
+        from volta.analysis.rule_report import generate_markdown_report
 
         output = generate_markdown_report(MOCK_REPORT)
 
@@ -172,7 +172,7 @@ class TestMarkdownReport:
 
     def test_markdown_report_has_violation_details(self):
         """Markdown report lists each violation with details."""
-        from kicad_agent.analysis.rule_report import generate_markdown_report
+        from volta.analysis.rule_report import generate_markdown_report
 
         output = generate_markdown_report(MOCK_REPORT)
 
@@ -185,7 +185,7 @@ class TestMarkdownReport:
 
     def test_markdown_report_no_violations(self):
         """Markdown report for clean design shows no violations."""
-        from kicad_agent.analysis.rule_report import generate_markdown_report
+        from volta.analysis.rule_report import generate_markdown_report
 
         output = generate_markdown_report(CLEAN_REPORT)
 
@@ -194,7 +194,7 @@ class TestMarkdownReport:
 
     def test_markdown_report_includes_schematic_path(self):
         """Markdown report shows which schematic was checked."""
-        from kicad_agent.analysis.rule_report import generate_markdown_report
+        from volta.analysis.rule_report import generate_markdown_report
 
         output = generate_markdown_report(MOCK_REPORT)
 
@@ -212,7 +212,7 @@ class TestDesignRulesCommand:
     @staticmethod
     def _make_mock_topology() -> "CircuitTopology":
         """Create a minimal CircuitTopology for CLI tests."""
-        from kicad_agent.analysis.topology_graph import (
+        from volta.analysis.topology_graph import (
             CircuitTopology,
         )
         return CircuitTopology(
@@ -237,17 +237,17 @@ class TestDesignRulesCommand:
 
     def test_missing_schematic_returns_error(self):
         """CLI returns exit code 2 for missing schematic file."""
-        from kicad_agent.cli.design_rules_cmd import design_rules_command
+        from volta.cli.design_rules_cmd import design_rules_command
 
         args = self._make_args("/nonexistent/path.kicad_sch")
         result = design_rules_command(args)
 
         assert result == 2
 
-    @patch("kicad_agent.cli.design_rules_cmd._extract_topology")
+    @patch("volta.cli.design_rules_cmd._extract_topology")
     def test_json_format_output(self, mock_extract):
         """CLI produces JSON output when --format json."""
-        from kicad_agent.cli.design_rules_cmd import design_rules_command
+        from volta.cli.design_rules_cmd import design_rules_command
 
         mock_extract.return_value = self._make_mock_topology()
 
@@ -271,10 +271,10 @@ class TestDesignRulesCommand:
         finally:
             Path(sch_path).unlink(missing_ok=True)
 
-    @patch("kicad_agent.cli.design_rules_cmd._extract_topology")
+    @patch("volta.cli.design_rules_cmd._extract_topology")
     def test_markdown_format_output(self, mock_extract):
         """CLI produces Markdown output when --format markdown."""
-        from kicad_agent.cli.design_rules_cmd import design_rules_command
+        from volta.cli.design_rules_cmd import design_rules_command
 
         mock_extract.return_value = self._make_mock_topology()
 
@@ -295,10 +295,10 @@ class TestDesignRulesCommand:
         finally:
             Path(sch_path).unlink(missing_ok=True)
 
-    @patch("kicad_agent.cli.design_rules_cmd._extract_topology")
+    @patch("volta.cli.design_rules_cmd._extract_topology")
     def test_output_file_flag(self, mock_extract):
         """CLI writes report to file when --output is specified."""
-        from kicad_agent.cli.design_rules_cmd import design_rules_command
+        from volta.cli.design_rules_cmd import design_rules_command
 
         mock_extract.return_value = self._make_mock_topology()
 
@@ -323,11 +323,11 @@ class TestDesignRulesCommand:
             Path(sch_path).unlink(missing_ok=True)
             Path(out_path).unlink(missing_ok=True)
 
-    @patch("kicad_agent.cli.design_rules_cmd._extract_topology")
+    @patch("volta.cli.design_rules_cmd._extract_topology")
     def test_config_flag_with_valid_yaml(self, mock_extract, tmp_path: Path):
         """CLI accepts --config flag for YAML rule configuration."""
         import yaml
-        from kicad_agent.cli.design_rules_cmd import design_rules_command
+        from volta.cli.design_rules_cmd import design_rules_command
 
         mock_extract.return_value = self._make_mock_topology()
 
@@ -359,7 +359,7 @@ class TestDesignRulesCommand:
 
     def test_register_parser(self):
         """register_parser creates the design-rules subcommand."""
-        from kicad_agent.cli.design_rules_cmd import register_parser
+        from volta.cli.design_rules_cmd import register_parser
 
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers()

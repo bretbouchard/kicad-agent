@@ -20,14 +20,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.crawler.easyeda_api import (
+from volta.crawler.easyeda_api import (
     EasyEdaComponentData,
     EasyEdaFootprintPad,
     EasyEdaPin,
     EasyEdaClient,
     JlcpcbComponent,
 )
-from kicad_agent.mcp.tools import (
+from volta.mcp.tools import (
     ValidationError,
     get_component_details,
     get_component_suggestions,
@@ -209,7 +209,7 @@ class TestGetComponentDetails:
 
     def test_all_pin_type_mappings(self) -> None:
         """Verify the complete pin type mapping table."""
-        from kicad_agent.mcp.tools import _PIN_TYPE_MAP
+        from volta.mcp.tools import _PIN_TYPE_MAP
         assert _PIN_TYPE_MAP == {
             0: "passive",
             1: "input",

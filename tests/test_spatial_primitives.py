@@ -8,7 +8,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from kicad_agent.spatial.primitives import (
+from volta.spatial.primitives import (
     SpatialBox,
     SpatialPath,
     SpatialPoint,

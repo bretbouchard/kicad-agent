@@ -11,12 +11,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ops.net_tracer import (
+from volta.ops.net_tracer import (
     _assign_pins_to_labels,
     _MAX_LABEL_DISTANCE_MM,
     trace_net_from_label,
 )
-from kicad_agent.schematic_routing.schematic_graph import Label, PinPosition
+from volta.schematic_routing.schematic_graph import Label, PinPosition
 
 
 # ---------------------------------------------------------------------------
@@ -192,14 +192,14 @@ class TestTraceNetFromLabelOpSchema:
     """Tests for TraceNetFromLabelOp Pydantic schema."""
 
     def test_default_fields(self) -> None:
-        from kicad_agent.ops._schema_schematic_intel import TraceNetFromLabelOp
+        from volta.ops._schema_schematic_intel import TraceNetFromLabelOp
         op = TraceNetFromLabelOp(target_file="test.kicad_sch", label_name="GNDA")
         assert op.op_type == "trace_net_from_label"
         assert op.label_type == "all"
         assert op.stop_at_labels is True
 
     def test_all_fields(self) -> None:
-        from kicad_agent.ops._schema_schematic_intel import TraceNetFromLabelOp
+        from volta.ops._schema_schematic_intel import TraceNetFromLabelOp
         op = TraceNetFromLabelOp(
             target_file="test.kicad_sch", label_name="GNDA",
             label_type="global", stop_at_labels=False,
@@ -209,18 +209,18 @@ class TestTraceNetFromLabelOpSchema:
 
     @pytest.mark.parametrize("lt", ["label", "global", "hierarchical", "all"])
     def test_valid_label_types(self, lt: str) -> None:
-        from kicad_agent.ops._schema_schematic_intel import TraceNetFromLabelOp
+        from volta.ops._schema_schematic_intel import TraceNetFromLabelOp
         op = TraceNetFromLabelOp(target_file="t.kicad_sch", label_name="X", label_type=lt)
         assert op.label_type == lt
 
     def test_empty_label_rejected(self) -> None:
-        from kicad_agent.ops._schema_schematic_intel import TraceNetFromLabelOp
+        from volta.ops._schema_schematic_intel import TraceNetFromLabelOp
         import pydantic
         with pytest.raises(pydantic.ValidationError):
             TraceNetFromLabelOp(target_file="t.kicad_sch", label_name="")
 
     def test_path_traversal_rejected(self) -> None:
-        from kicad_agent.ops._schema_schematic_intel import TraceNetFromLabelOp
+        from volta.ops._schema_schematic_intel import TraceNetFromLabelOp
         import pydantic
         with pytest.raises(pydantic.ValidationError):
             TraceNetFromLabelOp(target_file="../etc/passwd", label_name="X")
@@ -234,7 +234,7 @@ class TestHandlerDispatch:
     """Tests for handler registration."""
 
     def test_handler_registered(self) -> None:
-        from kicad_agent.ops.handlers.schematic_query import _SCHEMATIC_QUERY_HANDLERS
+        from volta.ops.handlers.schematic_query import _SCHEMATIC_QUERY_HANDLERS
         assert "trace_net_from_label" in _SCHEMATIC_QUERY_HANDLERS
 
 
@@ -252,7 +252,7 @@ class TestTraceNetFromLabelIntegration:
         all_positions: set[tuple[float, float]],
     ) -> tuple[MagicMock, set[tuple[float, float]], dict, dict]:
         """Build a mock union-find where all positions are in one component."""
-        from kicad_agent.schematic_routing.net_extractor import _UnionFind
+        from volta.schematic_routing.net_extractor import _UnionFind
 
         uf = _UnionFind()
         for pos in all_positions:
@@ -273,9 +273,9 @@ class TestTraceNetFromLabelIntegration:
 
         return uf, all_positions, pin_pos_map, label_pos_map
 
-    @patch("kicad_agent.ops.ground_topology._classify_ground_domain")
-    @patch("kicad_agent.ops.net_tracer._build_union_find_components")
-    @patch("kicad_agent.ops.net_tracer.SchematicGraph")
+    @patch("volta.ops.ground_topology._classify_ground_domain")
+    @patch("volta.ops.net_tracer._build_union_find_components")
+    @patch("volta.ops.net_tracer.SchematicGraph")
     def test_single_label_no_shorts(
         self, mock_graph_cls: MagicMock, mock_build: MagicMock,
         mock_domain: MagicMock,
@@ -302,9 +302,9 @@ class TestTraceNetFromLabelIntegration:
         assert result["reachable_pins"][0]["ref"] == "R1"
         assert result["blocked_by"] == []
 
-    @patch("kicad_agent.ops.ground_topology._classify_ground_domain")
-    @patch("kicad_agent.ops.net_tracer._build_union_find_components")
-    @patch("kicad_agent.ops.net_tracer.SchematicGraph")
+    @patch("volta.ops.ground_topology._classify_ground_domain")
+    @patch("volta.ops.net_tracer._build_union_find_components")
+    @patch("volta.ops.net_tracer.SchematicGraph")
     def test_shorted_labels_with_boundary(
         self, mock_graph_cls: MagicMock, mock_build: MagicMock,
         mock_domain: MagicMock,
@@ -339,9 +339,9 @@ class TestTraceNetFromLabelIntegration:
         assert result["far_pin_count"] == 1
         assert result["far_pins"][0]["ref"] == "U20"
 
-    @patch("kicad_agent.ops.ground_topology._classify_ground_domain")
-    @patch("kicad_agent.ops.net_tracer._build_union_find_components")
-    @patch("kicad_agent.ops.net_tracer.SchematicGraph")
+    @patch("volta.ops.ground_topology._classify_ground_domain")
+    @patch("volta.ops.net_tracer._build_union_find_components")
+    @patch("volta.ops.net_tracer.SchematicGraph")
     def test_label_not_found(
         self, mock_graph_cls: MagicMock, mock_build: MagicMock,
         mock_domain: MagicMock,
@@ -365,9 +365,9 @@ class TestTraceNetFromLabelIntegration:
         assert result["label"] == "MISSING"
         assert result["pin_count"] == 0
 
-    @patch("kicad_agent.ops.ground_topology._classify_ground_domain")
-    @patch("kicad_agent.ops.net_tracer._build_union_find_components")
-    @patch("kicad_agent.ops.net_tracer.SchematicGraph")
+    @patch("volta.ops.ground_topology._classify_ground_domain")
+    @patch("volta.ops.net_tracer._build_union_find_components")
+    @patch("volta.ops.net_tracer.SchematicGraph")
     def test_stop_at_labels_false_returns_all(
         self, mock_graph_cls: MagicMock, mock_build: MagicMock,
         mock_domain: MagicMock,
@@ -400,9 +400,9 @@ class TestTraceNetFromLabelIntegration:
         assert "AGND" in result["blocked_by"]  # still lists labels in component
         assert result["far_pin_count"] == 0  # no far pins when stop_at_labels=False
 
-    @patch("kicad_agent.ops.ground_topology._classify_ground_domain")
-    @patch("kicad_agent.ops.net_tracer._build_union_find_components")
-    @patch("kicad_agent.ops.net_tracer.SchematicGraph")
+    @patch("volta.ops.ground_topology._classify_ground_domain")
+    @patch("volta.ops.net_tracer._build_union_find_components")
+    @patch("volta.ops.net_tracer.SchematicGraph")
     def test_far_pins_assigned_to_other_labels(
         self, mock_graph_cls: MagicMock, mock_build: MagicMock,
         mock_domain: MagicMock,

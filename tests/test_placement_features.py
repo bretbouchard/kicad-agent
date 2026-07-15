@@ -12,8 +12,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from kicad_agent.generation.intent import ComponentSpec, NetSpec, PositionSpec
-from kicad_agent.placement.features import (
+from volta.generation.intent import ComponentSpec, NetSpec, PositionSpec
+from volta.placement.features import (
     COMP_FEATURE_DIM,
     NET_FEATURE_DIM,
     _estimate_size,

@@ -18,9 +18,9 @@ from unittest import mock
 
 import pytest
 
-from kicad_agent.conventions.base import Convention, Violation
-from kicad_agent.conventions.layout_view import ComponentView, LayoutView
-from kicad_agent.conventions.loader import ConventionConfig
+from volta.conventions.base import Convention, Violation
+from volta.conventions.layout_view import ComponentView, LayoutView
+from volta.conventions.loader import ConventionConfig
 
 
 # ---------------------------------------------------------------------------
@@ -29,7 +29,7 @@ from kicad_agent.conventions.loader import ConventionConfig
 
 
 def test_load_returns_v1_catalog_instances():
-    from kicad_agent.conventions.autolayout_integration import (
+    from volta.conventions.autolayout_integration import (
         load_conventions_as_constraints,
     )
 
@@ -40,7 +40,7 @@ def test_load_returns_v1_catalog_instances():
 
 
 def test_load_skips_disabled_conventions():
-    from kicad_agent.conventions.autolayout_integration import (
+    from volta.conventions.autolayout_integration import (
         load_conventions_as_constraints,
     )
 
@@ -56,7 +56,7 @@ def test_load_skips_disabled_conventions():
 
 
 def test_load_with_none_config_returns_full_catalog():
-    from kicad_agent.conventions.autolayout_integration import (
+    from volta.conventions.autolayout_integration import (
         load_conventions_as_constraints,
     )
 
@@ -70,7 +70,7 @@ def test_load_with_none_config_returns_full_catalog():
 
 
 def test_evaluate_placement_runs_all_convention_checks():
-    from kicad_agent.conventions.autolayout_integration import evaluate_placement
+    from volta.conventions.autolayout_integration import evaluate_placement
 
     call_count = {"n": 0}
 
@@ -93,7 +93,7 @@ def test_evaluate_placement_runs_all_convention_checks():
 
 
 def test_evaluate_placement_never_raises_on_empty_layout():
-    from kicad_agent.conventions.autolayout_integration import (
+    from volta.conventions.autolayout_integration import (
         evaluate_placement,
         load_conventions_as_constraints,
     )
@@ -110,7 +110,7 @@ def test_evaluate_placement_never_raises_on_empty_layout():
 
 
 def test_suggest_placement_adjustments_returns_layout_view():
-    from kicad_agent.conventions.autolayout_integration import (
+    from volta.conventions.autolayout_integration import (
         suggest_placement_adjustments,
     )
 
@@ -125,7 +125,7 @@ def test_suggest_placement_adjustments_dedupes_by_rule_id():
     Verify by patching a convention's apply() with a counter and asserting
     count == 1 even when 10 violations share the rule_id.
     """
-    from kicad_agent.conventions.autolayout_integration import (
+    from volta.conventions.autolayout_integration import (
         suggest_placement_adjustments,
     )
 
@@ -163,7 +163,7 @@ def test_suggest_placement_adjustments_dedupes_by_rule_id():
 
 def test_suggest_placement_adjustments_skips_missing_conventions():
     """If a violation references a rule_id not in conventions, it's skipped."""
-    from kicad_agent.conventions.autolayout_integration import (
+    from volta.conventions.autolayout_integration import (
         suggest_placement_adjustments,
     )
 
@@ -184,10 +184,10 @@ def test_suggest_placement_adjustments_skips_missing_conventions():
 
 def test_suggest_placement_adjustments_runs_transform_once_per_convention():
     """GRID_ALIGNMENT_01 TRANSFORM: deduped — 3 violations = 1 apply call."""
-    from kicad_agent.conventions.autolayout_integration import (
+    from volta.conventions.autolayout_integration import (
         suggest_placement_adjustments,
     )
-    from kicad_agent.conventions.catalog.grid_alignment import GRID_ALIGNMENT_01
+    from volta.conventions.catalog.grid_alignment import GRID_ALIGNMENT_01
 
     off_grid_1 = ComponentView(
         ref="R1", lib_id="Device:R", position=(10.5, 10.7),
@@ -229,7 +229,7 @@ def test_suggest_placement_adjustments_runs_transform_once_per_convention():
 
 def test_disabled_conventions_skipped_in_both_load_and_evaluate():
     """Disabled conventions must not appear in evaluate_placement output."""
-    from kicad_agent.conventions.autolayout_integration import (
+    from volta.conventions.autolayout_integration import (
         evaluate_placement,
         load_conventions_as_constraints,
     )
@@ -249,13 +249,13 @@ def test_full_round_trip_with_arduino_mega_fixture():
     if not fixture.exists():
         pytest.skip("Arduino_Mega fixture not available")
 
-    from kicad_agent.conventions.autolayout_integration import (
+    from volta.conventions.autolayout_integration import (
         evaluate_placement,
         load_conventions_as_constraints,
     )
-    from kicad_agent.conventions.layout_view import LayoutView
-    from kicad_agent.ir.schematic_ir import SchematicIR
-    from kicad_agent.parser.schematic_parser import parse_schematic
+    from volta.conventions.layout_view import LayoutView
+    from volta.ir.schematic_ir import SchematicIR
+    from volta.parser.schematic_parser import parse_schematic
 
     parse_result = parse_schematic(fixture)
     ir = SchematicIR(_parse_result=parse_result)

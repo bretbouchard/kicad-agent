@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.routing.dsn_generator import generate_dsn
+from volta.routing.dsn_generator import generate_dsn
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 

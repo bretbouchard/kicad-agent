@@ -16,8 +16,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.placement.footprint_geometry import ComponentGeometry
-from kicad_agent.placement.thermal import (
+from volta.placement.footprint_geometry import ComponentGeometry
+from volta.placement.thermal import (
     _DEFAULT_THERMAL_MARGIN_MM,
     _POWER_SCALING_FACTOR,
     ThermalProfile,
@@ -217,7 +217,7 @@ class TestApplyThermalConstraints:
         """None thermal_profiles logs INFO fallback message and returns empty."""
         positions = {"U1": (50.0, 40.0, 0.0)}
 
-        with caplog.at_level(logging.INFO, logger="kicad_agent.placement.thermal"):
+        with caplog.at_level(logging.INFO, logger="volta.placement.thermal"):
             zones = apply_thermal_constraints(positions, None, None)
 
         assert zones == []
@@ -264,7 +264,7 @@ class TestApplyThermalConstraints:
             "U2": (50.0, 50.0, 0.0),
         }
 
-        with caplog.at_level(logging.INFO, logger="kicad_agent.placement.thermal"):
+        with caplog.at_level(logging.INFO, logger="volta.placement.thermal"):
             zones = apply_thermal_constraints(positions, None, profiles)
 
         assert len(zones) == 2

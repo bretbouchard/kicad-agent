@@ -11,14 +11,14 @@ Validates:
 
 import pytest
 
-from kicad_agent.generation.intent import ComponentSpec, PositionSpec, NetSpec
-from kicad_agent.placement.features import (
+from volta.generation.intent import ComponentSpec, PositionSpec, NetSpec
+from volta.placement.features import (
     COMP_FEATURE_DIM,
     NET_FEATURE_DIM,
     extract_component_features,
     extract_net_features,
 )
-from kicad_agent.placement.graph import (
+from volta.placement.graph import (
     PlacementGraph,
     netlist_to_placement_graph,
 )

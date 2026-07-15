@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.parser.pcb_native_parser import NativeParser
-from kicad_agent.routing.dsn_generator import generate_dsn
+from volta.parser.pcb_native_parser import NativeParser
+from volta.routing.dsn_generator import generate_dsn
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _FIXTURE = _REPO_ROOT / "tests" / "fixtures" / "Arduino_Mega" / "Arduino_Mega.kicad_pcb"

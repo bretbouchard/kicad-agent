@@ -1,6 +1,6 @@
 """Tests for schematic-to-PCB synchronization logic."""
 import pytest
-from kicad_agent.crossfile.schematic_sync import (
+from volta.crossfile.schematic_sync import (
     NetlistComponent, NetlistNet, SyncResult,
     _add_net_to_content, _extract_pcb_footprint_refs,
     _extract_pcb_net_names, _find_footprint_block,

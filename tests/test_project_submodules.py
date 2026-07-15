@@ -5,15 +5,15 @@ import tempfile
 
 import pytest
 
-from kicad_agent.project.lib_table import LibEntry, LibTable, parse_lib_table, serialize_lib_table
-from kicad_agent.project.design_rules import (
+from volta.project.lib_table import LibEntry, LibTable, parse_lib_table, serialize_lib_table
+from volta.project.design_rules import (
     DesignRule as ProjectDR,
     DesignRulesFile,
     NetClassDef,
     parse_design_rules,
     serialize_design_rules,
 )
-from kicad_agent.project.project_file import parse_project_file
+from volta.project.project_file import parse_project_file
 
 
 class TestLibEntryDetailed:

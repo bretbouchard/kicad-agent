@@ -19,7 +19,7 @@ from unittest.mock import patch
 
 import pytest
 
-from kicad_agent.ir.transaction import Transaction, TransactionResult
+from volta.ir.transaction import Transaction, TransactionResult
 
 
 @pytest.fixture
@@ -202,7 +202,7 @@ class TestTransactionSecurityLogs:
         self, test_file: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Council MEDIUM Finding 6: Auto-rollback without commit logs warning."""
-        with caplog.at_level(logging.WARNING, logger="kicad_agent.ir.transaction"):
+        with caplog.at_level(logging.WARNING, logger="volta.ir.transaction"):
             with Transaction(test_file):
                 test_file.write_text("modified", encoding="utf-8")
         assert any(
@@ -259,13 +259,13 @@ class TestLockError:
         self, tmp_path: Path
     ) -> None:
         """D-10: Lock file write failure raises LockError."""
-        from kicad_agent.ops.execution import LockError, _check_concurrent_access
+        from volta.ops.execution import LockError, _check_concurrent_access
         from unittest.mock import patch, MagicMock
 
         f = tmp_path / "test.kicad_sch"
         f.write_text("content", encoding="utf-8")
 
-        with patch("kicad_agent.ops.execution.Path.write_text", side_effect=OSError("Permission denied")):
+        with patch("volta.ops.execution.Path.write_text", side_effect=OSError("Permission denied")):
             with pytest.raises(LockError) as exc_info:
                 _check_concurrent_access(f)
             assert "Failed to create lock file" in str(exc_info.value)
@@ -274,14 +274,14 @@ class TestLockError:
         self, tmp_path: Path
     ) -> None:
         """LockError.__cause__ is set to the original OSError (L-02 pattern)."""
-        from kicad_agent.ops.execution import LockError, _check_concurrent_access
+        from volta.ops.execution import LockError, _check_concurrent_access
         from unittest.mock import patch
 
         f = tmp_path / "test.kicad_sch"
         f.write_text("content", encoding="utf-8")
 
         original_error = OSError("write failed")
-        with patch("kicad_agent.ops.execution.Path.write_text", side_effect=original_error):
+        with patch("volta.ops.execution.Path.write_text", side_effect=original_error):
             with pytest.raises(LockError) as exc_info:
                 _check_concurrent_access(f)
             assert exc_info.value.__cause__ is original_error
@@ -290,18 +290,18 @@ class TestLockError:
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         """M-02: Lock file read failure at site (1) does NOT raise LockError."""
-        from kicad_agent.ops.execution import LockError, _check_concurrent_access
+        from volta.ops.execution import LockError, _check_concurrent_access
         from unittest.mock import patch
 
         f = tmp_path / "test.kicad_sch"
         f.write_text("content", encoding="utf-8")
 
         # Create an existing lock file
-        lock_path = tmp_path / ".kicad_agent.lock"
+        lock_path = tmp_path / ".volta.lock"
         lock_path.write_text("existing:pid=999", encoding="utf-8")
 
         # Mock read_text to fail, but write_text to succeed
-        with patch("kicad_agent.ops.execution.Path.read_text", side_effect=OSError("read failed")):
+        with patch("volta.ops.execution.Path.read_text", side_effect=OSError("read failed")):
             with caplog.at_level(logging.WARNING):
                 _check_concurrent_access(f)
 
@@ -320,13 +320,13 @@ class TestLockError:
         self, tmp_path: Path
     ) -> None:
         """M-02: Lock read failure sets lock_content to '<unreadable>'."""
-        from kicad_agent.ops.execution import _check_concurrent_access
+        from volta.ops.execution import _check_concurrent_access
         from unittest.mock import patch
 
         f = tmp_path / "test.kicad_sch"
         f.write_text("content", encoding="utf-8")
 
-        lock_path = tmp_path / ".kicad_agent.lock"
+        lock_path = tmp_path / ".volta.lock"
         lock_path.write_text("existing:pid=999", encoding="utf-8")
 
         # Mock read to fail
@@ -334,7 +334,7 @@ class TestLockError:
         original_read = Path.read_text
 
         def _mock_read(self, *args, **kwargs):
-            if str(self).endswith(".kicad_agent.lock"):
+            if str(self).endswith(".volta.lock"):
                 raise OSError("read failed")
             return original_read(self, *args, **kwargs)
 
@@ -352,9 +352,9 @@ class TestSilentFailureHardening:
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         """D-11: NetPositionIndex build failure in repair_wires is logged at WARNING."""
-        from kicad_agent.ops.repair_wires import repair_wire_snapping
-        from kicad_agent.ir.schematic_ir import SchematicIR
-        from kicad_agent.parser import parse_schematic
+        from volta.ops.repair_wires import repair_wire_snapping
+        from volta.ir.schematic_ir import SchematicIR
+        from volta.parser import parse_schematic
 
         # Use Arduino_Mega fixture
         fixture = Path(__file__).parent / "fixtures" / "Arduino_Mega" / "Arduino_Mega.kicad_sch"
@@ -367,7 +367,7 @@ class TestSilentFailureHardening:
 
         with caplog.at_level(logging.WARNING):
             with patch(
-                "kicad_agent.ops.repair_wires.NetPositionIndex.from_file",
+                "volta.ops.repair_wires.NetPositionIndex.from_file",
                 side_effect=RuntimeError("mock net index failure"),
             ):
                 repair_wire_snapping(ir, dest)
@@ -382,7 +382,7 @@ class TestSilentFailureHardening:
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
         """D-11: Persistent undo entry load failure is logged at WARNING."""
-        from kicad_agent.ops.persistent_undo import PersistentUndoStack
+        from volta.ops.persistent_undo import PersistentUndoStack
 
         # Create project structure that PersistentUndoStack expects
         project_dir = tmp_path / "project"

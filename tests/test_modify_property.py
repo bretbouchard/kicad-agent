@@ -16,11 +16,11 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.ops.schema import ModifyPropertyOp, Operation
-from kicad_agent.parser import parse_schematic
-from kicad_agent.serializer import serialize_schematic
+from volta.ir.base import _clear_registry
+from volta.ir.schematic_ir import SchematicIR
+from volta.ops.schema import ModifyPropertyOp, Operation
+from volta.parser import parse_schematic
+from volta.serializer import serialize_schematic
 
 
 @pytest.fixture(autouse=True)
@@ -49,7 +49,7 @@ class TestModifyProperty:
 
     def test_modify_value(self, setup_schematic: dict) -> None:
         """modify_property updates an existing Value property."""
-        from kicad_agent.ops.modify_property import modify_property
+        from volta.ops.modify_property import modify_property
 
         # J1 has Value="GPIO" in the fixture
         op = ModifyPropertyOp(
@@ -68,7 +68,7 @@ class TestModifyProperty:
 
     def test_modify_footprint(self, setup_schematic: dict) -> None:
         """modify_property updates the Footprint property."""
-        from kicad_agent.ops.modify_property import modify_property
+        from volta.ops.modify_property import modify_property
 
         op = ModifyPropertyOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -84,7 +84,7 @@ class TestModifyProperty:
 
     def test_modify_reference(self, setup_schematic: dict) -> None:
         """modify_property updates the Reference property on the component."""
-        from kicad_agent.ops.modify_property import modify_property
+        from volta.ops.modify_property import modify_property
 
         op = ModifyPropertyOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -106,7 +106,7 @@ class TestModifyProperty:
         from kiutils.items.common import Property
         from kiutils.schematic import SymbolProjectInstance, SymbolProjectPath
 
-        from kicad_agent.ops.modify_property import modify_property
+        from volta.ops.modify_property import modify_property
 
         # Add a mock symbolInstance for J1 so we can verify it gets updated
         sch = setup_schematic["ir"]._parse_result.kiutils_obj
@@ -132,7 +132,7 @@ class TestModifyProperty:
 
     def test_add_custom_property(self, setup_schematic: dict) -> None:
         """modify_property adds a new custom property when it does not exist."""
-        from kicad_agent.ops.modify_property import modify_property
+        from volta.ops.modify_property import modify_property
 
         op = ModifyPropertyOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -149,7 +149,7 @@ class TestModifyProperty:
 
     def test_add_custom_property_has_id(self, setup_schematic: dict) -> None:
         """New custom property gets correct sequential id."""
-        from kicad_agent.ops.modify_property import modify_property
+        from volta.ops.modify_property import modify_property
 
         component = setup_schematic["ir"].get_component_by_ref("J1")
         assert component is not None
@@ -173,7 +173,7 @@ class TestModifyProperty:
 
     def test_modify_not_found_component(self, setup_schematic: dict) -> None:
         """modify_property raises ModifyPropertyError when reference not found."""
-        from kicad_agent.ops.modify_property import ModifyPropertyError, modify_property
+        from volta.ops.modify_property import ModifyPropertyError, modify_property
 
         op = ModifyPropertyOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -187,7 +187,7 @@ class TestModifyProperty:
 
     def test_modify_mutation_logged(self, setup_schematic: dict) -> None:
         """modify_property records mutation with old and new values."""
-        from kicad_agent.ops.modify_property import modify_property
+        from volta.ops.modify_property import modify_property
 
         initial_mutations = len(setup_schematic["ir"].mutation_log)
 
@@ -209,7 +209,7 @@ class TestModifyProperty:
 
     def test_modify_reparse(self, setup_schematic: dict) -> None:
         """After modification, re-parsing the serialized file shows the new value."""
-        from kicad_agent.ops.modify_property import modify_property
+        from volta.ops.modify_property import modify_property
 
         op = ModifyPropertyOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -231,7 +231,7 @@ class TestModifyProperty:
 
     def test_modify_preserves_other_properties(self, setup_schematic: dict) -> None:
         """Modifying Value does not change Footprint or other properties."""
-        from kicad_agent.ops.modify_property import modify_property
+        from volta.ops.modify_property import modify_property
 
         component = setup_schematic["ir"].get_component_by_ref("J1")
         assert component is not None
@@ -265,7 +265,7 @@ class TestModifyPropertyExecutor:
 
     def test_executor_dispatch(self, setup_schematic: dict) -> None:
         """OperationExecutor dispatches modify_property op_type correctly."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         executor = OperationExecutor(base_dir=setup_schematic["base_dir"])
 

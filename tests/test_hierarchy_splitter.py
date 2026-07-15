@@ -21,11 +21,11 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.analysis.subcircuit_detector import (
+from volta.analysis.subcircuit_detector import (
     Subcircuit,
     SubcircuitType,
 )
-from kicad_agent.schematic_autolayout.hierarchy_splitter import (
+from volta.schematic_autolayout.hierarchy_splitter import (
     MIN_GROUPS_FOR_SPLIT,
     HierarchicalSheetSplitter,
     SheetPlan,

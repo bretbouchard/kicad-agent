@@ -20,8 +20,8 @@ import pytest
 from kiutils.items.common import Position
 from kiutils.schematic import GlobalLabel, Schematic
 
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.ops.pre_analysis import (
+from volta.ir.schematic_ir import SchematicIR
+from volta.ops.pre_analysis import (
     PreAnalysisGate,
     PreAnalysisResult,
     PreAnalysisFinding,
@@ -29,8 +29,8 @@ from kicad_agent.ops.pre_analysis import (
     _estimated_bbox,
     _point_near_segment,
 )
-from kicad_agent.ops.schema import PositionSpec
-from kicad_agent.parser import parse_schematic
+from volta.ops.schema import PositionSpec
+from volta.parser import parse_schematic
 
 
 # ---------------------------------------------------------------------------
@@ -797,8 +797,8 @@ class TestDuplicateLabelExecutorIntegration:
 
     def test_executor_blocks_duplicate_global_label(self):
         """Adding a global label that already exists -> success=False, file unchanged."""
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         # Build a schematic with a pre-existing global label "SDA"
         sch = Schematic()
@@ -842,8 +842,8 @@ class TestDuplicateLabelExecutorIntegration:
 
     def test_executor_allows_new_global_label(self):
         """Adding a new global label name -> success=True."""
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         # Build a schematic with a pre-existing global label "SDA"
         sch = Schematic()
@@ -990,7 +990,7 @@ class TestExpandedSchematicGate:
 
         # New symbol lib_id not found -> pin count is None -> no blocker
         # But we can test by directly calling the expanded check
-        from kicad_agent.ops.pre_analysis_schematic import _count_symbol_pins
+        from volta.ops.pre_analysis_schematic import _count_symbol_pins
         assert _count_symbol_pins(ir, "U1") == 10
 
     def test_swap_symbol_proceeds_when_pin_count_within_20_percent(self):

@@ -2,9 +2,9 @@
 
 import pytest
 
-from kicad_agent.generation.intent import ComponentSpec, PositionSpec
-from kicad_agent.generation.intent import NetSpec
-from kicad_agent.placement.graph import PlacementGraph, netlist_to_placement_graph
+from volta.generation.intent import ComponentSpec, PositionSpec
+from volta.generation.intent import NetSpec
+from volta.placement.graph import PlacementGraph, netlist_to_placement_graph
 
 
 @pytest.fixture

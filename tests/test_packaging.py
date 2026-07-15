@@ -29,7 +29,7 @@ class TestVersion:
 
     def test_version_is_string(self) -> None:
         """__version__ is a non-empty string matching a semver-like pattern."""
-        from kicad_agent import __version__
+        from volta import __version__
 
         assert isinstance(__version__, str)
         assert __version__, "__version__ must not be empty"
@@ -37,7 +37,7 @@ class TestVersion:
 
     def test_version_not_zero(self) -> None:
         """__version__ is not 0.0.0, which would indicate setuptools-scm failure."""
-        from kicad_agent import __version__
+        from volta import __version__
 
         assert __version__ != "0.0.0", (
             "Version is 0.0.0 -- setuptools-scm likely failed to detect git version"
@@ -47,18 +47,18 @@ class TestVersion:
 class TestPublicImports:
     """Verify the public API surface is importable."""
 
-    def test_import_kicad_agent(self) -> None:
-        import kicad_agent
+    def test_import_volta(self) -> None:
+        import volta
 
-        assert hasattr(kicad_agent, "__version__")
+        assert hasattr(volta, "__version__")
 
     def test_cli_entry_point_module(self) -> None:
-        from kicad_agent.cli import main
+        from volta.cli import main
 
         assert callable(main)
 
     def test_handler_imports(self) -> None:
-        from kicad_agent.handler import format_result, handle_operation, validate_operation
+        from volta.handler import format_result, handle_operation, validate_operation
 
         assert callable(validate_operation)
         assert callable(handle_operation)
@@ -70,7 +70,7 @@ class TestCLI:
 
     def test_schema_command(self, capsys: pytest.CaptureFixture[str]) -> None:
         """--schema prints valid JSON with a 'properties' key (the operation schema)."""
-        from kicad_agent.cli import main
+        from volta.cli import main
 
         with pytest.raises(SystemExit) as exc_info:
             main(["--schema"])
@@ -113,7 +113,7 @@ class TestBuild:
             capture_output=True,
             text=True,
         )
-        assert "kicad_agent/__init__.py" in whl_check.stdout, "Wheel missing kicad_agent/__init__.py"
+        assert "volta/__init__.py" in whl_check.stdout, "Wheel missing volta/__init__.py"
         assert "tests/" not in whl_check.stdout, "Wheel should not contain tests/"
 
         # Clean up build artifacts

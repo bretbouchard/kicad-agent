@@ -16,9 +16,9 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ir import SchematicIR
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.parser import parse_schematic
+from volta.ir import SchematicIR
+from volta.ir.base import _clear_registry
+from volta.parser import parse_schematic
 
 
 @pytest.fixture(autouse=True)
@@ -235,8 +235,8 @@ class TestAddWireHandlerForceParam:
         import json
         import shutil
 
-        from kicad_agent.handler import handle_operation
-        from kicad_agent.result import OperationResult
+        from volta.handler import handle_operation
+        from volta.result import OperationResult
 
         sch_dst = tmp_path / "Arduino_Mega.kicad_sch"
         shutil.copy2(arduino_mega_sch, sch_dst)
@@ -267,8 +267,8 @@ class TestAddWireHandlerForceParam:
         import json
         import shutil
 
-        from kicad_agent.handler import handle_operation
-        from kicad_agent.result import OperationError
+        from volta.handler import handle_operation
+        from volta.result import OperationError
 
         sch_dst = tmp_path / "Arduino_Mega.kicad_sch"
         shutil.copy2(arduino_mega_sch, sch_dst)

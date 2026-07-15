@@ -1,8 +1,8 @@
 """Phase 204: BOM markdown generation from skidl Circuit."""
 from __future__ import annotations
 
-from kicad_agent.sim.bom import circuit_to_bom_markdown
-from kicad_agent.sim.eurorack import build_preamp_circuit
+from volta.sim.bom import circuit_to_bom_markdown
+from volta.sim.eurorack import build_preamp_circuit
 
 
 def _fixture_circuit():

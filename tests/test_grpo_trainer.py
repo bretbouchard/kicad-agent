@@ -14,8 +14,8 @@ import math
 
 import pytest
 
-from kicad_agent.training.grpo_config import GRPOTrainingConfig
-from kicad_agent.training.grpo_trainer import GRPOLoopTrainer
+from volta.training.grpo_config import GRPOTrainingConfig
+from volta.training.grpo_trainer import GRPOLoopTrainer
 
 
 class TestGRPOTrainingConfig:

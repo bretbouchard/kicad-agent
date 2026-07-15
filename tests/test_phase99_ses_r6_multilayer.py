@@ -20,7 +20,7 @@ import re
 
 import pytest
 
-from kicad_agent.routing.freerouting import (
+from volta.routing.freerouting import (
     SesParseResult,
     SesVia,
     parse_ses,

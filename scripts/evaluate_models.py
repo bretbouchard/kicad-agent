@@ -24,8 +24,8 @@ import sys
 if sys_path not in sys.path:
     sys.path.insert(0, sys_path)
 
-from kicad_agent.llm.local_client import LocalLLMClient
-from kicad_agent.training.reward_model import RewardModel, predict_reward
+from volta.llm.local_client import LocalLLMClient
+from volta.training.reward_model import RewardModel, predict_reward
 
 TEST_PROMPTS = [
     {

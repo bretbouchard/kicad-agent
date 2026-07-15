@@ -109,7 +109,7 @@ class TestFindZoneBlock:
 
     def test_find_zone_by_uuid_returns_offsets(self):
         """find_zone_block() returns (start, end) for a known UUID."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         start, end = PcbRawWriter.find_zone_block(PCB_WITH_TWO_ZONES, ZONE_UUID_A)
         assert start is not None
         assert end is not None
@@ -120,14 +120,14 @@ class TestFindZoneBlock:
 
     def test_find_zone_by_uuid_returns_none_when_not_found(self):
         """find_zone_block() returns (None, None) for unknown UUID."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         start, end = PcbRawWriter.find_zone_block(PCB_WITH_TWO_ZONES, "nonexistent-uuid")
         assert start is None
         assert end is None
 
     def test_find_zone_locates_second_zone(self):
         """find_zone_block() finds the second zone by its UUID."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         start, end = PcbRawWriter.find_zone_block(PCB_WITH_TWO_ZONES, ZONE_UUID_B)
         assert start is not None
         assert end is not None
@@ -137,7 +137,7 @@ class TestFindZoneBlock:
 
     def test_find_zone_handles_nested_parens(self):
         """find_zone_block() correctly handles deeply nested parens in zone."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         start, end = PcbRawWriter.find_zone_block(ZONE_WITH_NESTED, ZONE_UUID_A)
         assert start is not None
         assert end is not None
@@ -155,7 +155,7 @@ class TestFindZoneBlockByIndex:
 
     def test_find_zone_by_index_zero(self):
         """find_zone_block_by_index() returns first zone at index 0."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         start, end = PcbRawWriter.find_zone_block_by_index(PCB_WITH_TWO_ZONES, 0)
         assert start is not None
         assert end is not None
@@ -164,7 +164,7 @@ class TestFindZoneBlockByIndex:
 
     def test_find_zone_by_index_one(self):
         """find_zone_block_by_index() returns second zone at index 1."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         start, end = PcbRawWriter.find_zone_block_by_index(PCB_WITH_TWO_ZONES, 1)
         assert start is not None
         assert end is not None
@@ -173,7 +173,7 @@ class TestFindZoneBlockByIndex:
 
     def test_find_zone_by_index_out_of_range(self):
         """find_zone_block_by_index() returns (None, None) for out-of-range index."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         start, end = PcbRawWriter.find_zone_block_by_index(PCB_WITH_TWO_ZONES, 99)
         assert start is None
         assert end is None
@@ -188,7 +188,7 @@ class TestModifyZoneField:
 
     def test_modify_zone_net_name(self):
         """modify_zone_field() changes net name in a zone block."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         result = PcbRawWriter.modify_zone_field(
             PCB_WITH_TWO_ZONES, ZONE_UUID_B, "net_name", "VCC"
         )
@@ -199,7 +199,7 @@ class TestModifyZoneField:
 
     def test_modify_zone_layer(self):
         """modify_zone_field() changes layer in a zone block."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         result = PcbRawWriter.modify_zone_field(
             PCB_WITH_TWO_ZONES, ZONE_UUID_A, "layer", "B.Cu"
         )
@@ -212,7 +212,7 @@ class TestModifyZoneField:
 
     def test_modify_zone_clearance(self):
         """modify_zone_field() changes clearance in connect_pads."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         result = PcbRawWriter.modify_zone_field(
             PCB_WITH_TWO_ZONES, ZONE_UUID_B, "clearance", 1.5
         )
@@ -222,7 +222,7 @@ class TestModifyZoneField:
 
     def test_modify_zone_priority(self):
         """modify_zone_field() changes priority in a zone block."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         result = PcbRawWriter.modify_zone_field(
             PCB_WITH_TWO_ZONES, ZONE_UUID_A, "priority", 5
         )
@@ -232,7 +232,7 @@ class TestModifyZoneField:
 
     def test_modify_zone_min_width(self):
         """modify_zone_field() changes min_thickness in a zone block."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         result = PcbRawWriter.modify_zone_field(
             PCB_WITH_TWO_ZONES, ZONE_UUID_A, "min_width", 0.4
         )
@@ -242,7 +242,7 @@ class TestModifyZoneField:
 
     def test_modify_zone_returns_original_when_not_found(self):
         """modify_zone_field() returns original content when UUID not found."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         result = PcbRawWriter.modify_zone_field(
             PCB_WITH_TWO_ZONES, "nonexistent-uuid", "layer", "B.Cu"
         )
@@ -258,7 +258,7 @@ class TestModifyZonePolygon:
 
     def test_modify_zone_polygon_replaces_points(self):
         """modify_zone_polygon() replaces the polygon outline points."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         new_polygon = [(1.0, 2.0), (3.0, 4.0), (5.0, 6.0)]
         result = PcbRawWriter.modify_zone_polygon(
             PCB_WITH_TWO_ZONES, ZONE_UUID_A, new_polygon
@@ -273,7 +273,7 @@ class TestModifyZonePolygon:
 
     def test_modify_zone_polygon_returns_original_when_not_found(self):
         """modify_zone_polygon() returns original content when UUID not found."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         result = PcbRawWriter.modify_zone_polygon(
             PCB_WITH_TWO_ZONES, "nonexistent-uuid", [(1, 2), (3, 4), (5, 6)]
         )
@@ -289,7 +289,7 @@ class TestRemoveZoneBlock:
 
     def test_remove_zone_by_uuid(self):
         """remove_zone_block() removes the zone block from content."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         result = PcbRawWriter.remove_zone_block(PCB_WITH_TWO_ZONES, ZONE_UUID_A)
         assert ZONE_UUID_A not in result
         assert ZONE_UUID_B in result
@@ -298,13 +298,13 @@ class TestRemoveZoneBlock:
 
     def test_remove_zone_returns_original_when_not_found(self):
         """remove_zone_block() returns original content when UUID not found."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         result = PcbRawWriter.remove_zone_block(PCB_WITH_TWO_ZONES, "nonexistent-uuid")
         assert result == PCB_WITH_TWO_ZONES
 
     def test_remove_all_zones_leaves_none(self):
         """remove_zone_block() can remove all zones sequentially."""
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_raw_writer import PcbRawWriter
         result = PcbRawWriter.remove_zone_block(PCB_WITH_TWO_ZONES, ZONE_UUID_A)
         result = PcbRawWriter.remove_zone_block(result, ZONE_UUID_B)
         assert "(zone" not in result

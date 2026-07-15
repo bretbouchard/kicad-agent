@@ -11,13 +11,13 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from kicad_agent.ops._schema_placement import (
+from volta.ops._schema_placement import (
     AutoPlaceZonedOp,
     ExportPositionsOp,
     ImportPositionsOp,
     ZoneDefinition,
 )
-from kicad_agent.placement.zone_partition import (
+from volta.placement.zone_partition import (
     assign_to_zone,
     build_keepouts_from_zone,
 )

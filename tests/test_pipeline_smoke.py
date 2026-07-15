@@ -7,7 +7,7 @@ import time
 
 import pytest
 
-from kicad_agent.training.smoke_test import run_sft_smoke_test, run_grpo_smoke_test
+from volta.training.smoke_test import run_sft_smoke_test, run_grpo_smoke_test
 
 
 def _torch_available() -> bool:

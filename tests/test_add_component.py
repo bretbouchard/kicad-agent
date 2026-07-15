@@ -19,11 +19,11 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.ops.schema import AddComponentOp, Operation, PositionSpec
-from kicad_agent.parser import parse_schematic
-from kicad_agent.serializer import serialize_schematic
+from volta.ir.base import _clear_registry
+from volta.ir.schematic_ir import SchematicIR
+from volta.ops.schema import AddComponentOp, Operation, PositionSpec
+from volta.parser import parse_schematic
+from volta.serializer import serialize_schematic
 
 
 @pytest.fixture(autouse=True)
@@ -54,7 +54,7 @@ class TestAddComponent:
         self, setup_schematic: dict
     ) -> None:
         """add_component creates a SchematicSymbol with correct libraryNickname and entryName."""
-        from kicad_agent.ops.add_component import add_component
+        from volta.ops.add_component import add_component
 
         op = AddComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -74,7 +74,7 @@ class TestAddComponent:
 
     def test_generates_valid_uuid_v4(self, setup_schematic: dict) -> None:
         """add_component generates a valid UUID v4 for the new symbol."""
-        from kicad_agent.ops.add_component import add_component
+        from volta.ops.add_component import add_component
 
         op = AddComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -97,7 +97,7 @@ class TestAddComponent:
 
     def test_creates_standard_properties(self, setup_schematic: dict) -> None:
         """add_component creates Reference, Value, Footprint, Datasheet properties."""
-        from kicad_agent.ops.add_component import add_component
+        from volta.ops.add_component import add_component
 
         op = AddComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -121,7 +121,7 @@ class TestAddComponent:
 
     def test_sets_inbom_and_onboard(self, setup_schematic: dict) -> None:
         """add_component sets inBom=True and onBoard=True (KiCad defaults for real components)."""
-        from kicad_agent.ops.add_component import add_component
+        from volta.ops.add_component import add_component
 
         op = AddComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -141,7 +141,7 @@ class TestAddComponent:
         self, setup_schematic: dict
     ) -> None:
         """add_component appends to SchematicIR.components and records mutation."""
-        from kicad_agent.ops.add_component import add_component
+        from volta.ops.add_component import add_component
 
         initial_count = len(setup_schematic["ir"].components)
         initial_mutations = len(setup_schematic["ir"].mutation_log)
@@ -164,7 +164,7 @@ class TestAddComponent:
 
     def test_raises_on_invalid_library_id(self, setup_schematic: dict) -> None:
         """add_component raises AddComponentError when library_id has no colon."""
-        from kicad_agent.ops.add_component import AddComponentError, add_component
+        from volta.ops.add_component import AddComponentError, add_component
 
         op = AddComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -179,7 +179,7 @@ class TestAddComponent:
 
     def test_raises_on_duplicate_reference(self, setup_schematic: dict) -> None:
         """add_component raises AddComponentError when reference already exists."""
-        from kicad_agent.ops.add_component import AddComponentError, add_component
+        from volta.ops.add_component import AddComponentError, add_component
 
         # J1 already exists in the RaspberryPi fixture
         op = AddComponentOp(
@@ -195,7 +195,7 @@ class TestAddComponent:
 
     def test_position_matches_input(self, setup_schematic: dict) -> None:
         """add_component sets the correct position coordinates."""
-        from kicad_agent.ops.add_component import add_component
+        from volta.ops.add_component import add_component
 
         op = AddComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -228,7 +228,7 @@ class TestOperationExecutorAdd:
         self, setup_schematic: dict
     ) -> None:
         """OperationExecutor dispatches add_component op_type correctly."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         executor = OperationExecutor(base_dir=setup_schematic["base_dir"])
 
@@ -251,7 +251,7 @@ class TestOperationExecutorAdd:
     def test_executor_raises_on_unknown_op_type(self) -> None:
         """OperationExecutor raises ValueError for unknown op_type."""
         # This test validates the dispatch guard without needing a file
-        from kicad_agent.ops.executor import dispatch_schematic
+        from volta.ops.executor import dispatch_schematic
 
         # Create an Operation with unknown op_type via model_construct to bypass validation
         # Since Pydantic validates op_type, we test the dispatch guard differently
@@ -263,7 +263,7 @@ class TestOperationExecutorAdd:
         self, setup_schematic: dict
     ) -> None:
         """Full pipeline: validate Operation -> executor -> add_component -> serialize -> file on disk."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         executor = OperationExecutor(base_dir=setup_schematic["base_dir"])
 

@@ -41,7 +41,7 @@ SOURCE_PCB = Path(
 
 def _clear_ir_registry() -> None:
     """Reset the IR cache between ops so each op sees a fresh load."""
-    from kicad_agent.ir.base import _clear_registry
+    from volta.ir.base import _clear_registry
     _clear_registry()
 
 
@@ -64,8 +64,8 @@ def temp_pcb_copy():
 
 def _execute_op(op_dict: dict, base_dir: Path) -> dict:
     """Build, validate, and execute a single op via OperationExecutor."""
-    from kicad_agent.ops.executor import OperationExecutor
-    from kicad_agent.ops.schema import Operation
+    from volta.ops.executor import OperationExecutor
+    from volta.ops.schema import Operation
 
     op = Operation.model_validate({"root": op_dict})
     executor = OperationExecutor(base_dir=base_dir)

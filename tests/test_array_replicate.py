@@ -22,10 +22,10 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.ops.schema import ArrayReplicateOp, Operation, PositionSpec
-from kicad_agent.parser import parse_schematic
+from volta.ir.base import _clear_registry
+from volta.ir.schematic_ir import SchematicIR
+from volta.ops.schema import ArrayReplicateOp, Operation, PositionSpec
+from volta.parser import parse_schematic
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 
@@ -112,7 +112,7 @@ class TestLinearArray:
 
     def test_linear_array_creates_n_components(self, setup_schematic: dict) -> None:
         """Linear array creates N components spaced by (dx, dy)."""
-        from kicad_agent.ops.array_replicate import array_replicate
+        from volta.ops.array_replicate import array_replicate
 
         source = setup_schematic["ir"].get_component_by_ref("J1")
         assert source is not None
@@ -138,7 +138,7 @@ class TestLinearArray:
 
     def test_linear_array_diagonal(self, setup_schematic: dict) -> None:
         """Linear array with diagonal spacing increments both x and y."""
-        from kicad_agent.ops.array_replicate import array_replicate
+        from volta.ops.array_replicate import array_replicate
 
         source = setup_schematic["ir"].get_component_by_ref("J1")
         assert source is not None
@@ -178,7 +178,7 @@ class TestCircularArray:
 
     def test_circular_array_creates_n_components(self, setup_schematic: dict) -> None:
         """Circular array creates N components distributed around center."""
-        from kicad_agent.ops.array_replicate import array_replicate
+        from volta.ops.array_replicate import array_replicate
 
         op = ArrayReplicateOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -195,7 +195,7 @@ class TestCircularArray:
 
     def test_circular_array_positions(self, setup_schematic: dict) -> None:
         """Circular array positions calculated using trigonometry (cos/sin)."""
-        from kicad_agent.ops.array_replicate import array_replicate
+        from volta.ops.array_replicate import array_replicate
 
         source = setup_schematic["ir"].get_component_by_ref("J1")
         assert source is not None
@@ -244,7 +244,7 @@ class TestMatrixArray:
 
     def test_matrix_array_creates_correct_count(self, setup_schematic: dict) -> None:
         """Matrix array creates (rows * cols - 1) components (excluding source)."""
-        from kicad_agent.ops.array_replicate import array_replicate
+        from volta.ops.array_replicate import array_replicate
 
         op = ArrayReplicateOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -262,7 +262,7 @@ class TestMatrixArray:
 
     def test_matrix_positions(self, setup_schematic: dict) -> None:
         """Matrix array positions calculated using row/col indices * spacing."""
-        from kicad_agent.ops.array_replicate import array_replicate
+        from volta.ops.array_replicate import array_replicate
 
         source = setup_schematic["ir"].get_component_by_ref("J1")
         assert source is not None
@@ -323,7 +323,7 @@ class TestArrayReplicateErrors:
 
     def test_circular_without_center_raises(self, setup_schematic: dict) -> None:
         """Circular array without center raises ArrayReplicateError."""
-        from kicad_agent.ops.array_replicate import ArrayReplicateError, array_replicate
+        from volta.ops.array_replicate import ArrayReplicateError, array_replicate
 
         op = ArrayReplicateOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -339,7 +339,7 @@ class TestArrayReplicateErrors:
 
     def test_source_not_found_raises(self, setup_schematic: dict) -> None:
         """Array replicate raises ArrayReplicateError when source not found."""
-        from kicad_agent.ops.array_replicate import ArrayReplicateError, array_replicate
+        from volta.ops.array_replicate import ArrayReplicateError, array_replicate
 
         op = ArrayReplicateOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -353,7 +353,7 @@ class TestArrayReplicateErrors:
 
     def test_circular_without_angle_step_raises(self, setup_schematic: dict) -> None:
         """Circular array without angle_step raises ArrayReplicateError."""
-        from kicad_agent.ops.array_replicate import ArrayReplicateError, array_replicate
+        from volta.ops.array_replicate import ArrayReplicateError, array_replicate
 
         op = ArrayReplicateOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -369,7 +369,7 @@ class TestArrayReplicateErrors:
 
     def test_matrix_without_rows_raises(self, setup_schematic: dict) -> None:
         """Matrix array without rows raises ArrayReplicateError."""
-        from kicad_agent.ops.array_replicate import ArrayReplicateError, array_replicate
+        from volta.ops.array_replicate import ArrayReplicateError, array_replicate
 
         op = ArrayReplicateOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -399,7 +399,7 @@ class TestArrayReplicateUniqueness:
 
     def test_unique_references(self, setup_schematic: dict) -> None:
         """All replicated components have unique references."""
-        from kicad_agent.ops.array_replicate import array_replicate
+        from volta.ops.array_replicate import array_replicate
 
         op = ArrayReplicateOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -415,7 +415,7 @@ class TestArrayReplicateUniqueness:
 
     def test_unique_uuids(self, setup_schematic: dict) -> None:
         """All replicated components have unique UUIDs."""
-        from kicad_agent.ops.array_replicate import array_replicate
+        from volta.ops.array_replicate import array_replicate
 
         op = ArrayReplicateOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -447,7 +447,7 @@ class TestArrayReplicateExecutor:
 
     def test_executor_dispatches_array_replicate(self, setup_schematic: dict) -> None:
         """OperationExecutor dispatches array_replicate correctly."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         executor = OperationExecutor(base_dir=setup_schematic["base_dir"])
 
@@ -469,7 +469,7 @@ class TestArrayReplicateExecutor:
 
     def test_full_pipeline_array_replicate(self, setup_schematic: dict) -> None:
         """Full pipeline: validate -> executor -> array_replicate -> serialize -> file on disk."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         executor = OperationExecutor(base_dir=setup_schematic["base_dir"])
 

@@ -1,6 +1,6 @@
 """Tests for IR caching layer (IRCache and CacheEntry).
 
-Uses real ParseResult objects from kicad_agent.parser and real temp files
+Uses real ParseResult objects from volta.parser and real temp files
 for mtime-based cache key behavior.
 """
 
@@ -12,8 +12,8 @@ from unittest.mock import patch
 
 import pytest
 
-from kicad_agent.ops.ir_cache import CacheEntry, IRCache
-from kicad_agent.parser.types import ParseResult
+from volta.ops.ir_cache import CacheEntry, IRCache
+from volta.parser.types import ParseResult
 
 
 # ---------------------------------------------------------------------------
@@ -238,8 +238,8 @@ class TestExecutorCache:
         self, tmp_path: Path, arduino_sch: Path
     ) -> None:
         """Executor with cache only parses once for repeated operations on same file."""
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         # Copy fixture to tmp_path so we can mutate it
         work_file = tmp_path / "test.kicad_sch"
@@ -257,9 +257,9 @@ class TestExecutorCache:
         }
         op = Operation.model_validate(op_data)
 
-        with patch("kicad_agent.ops.execution.parse_schematic", wraps=None) as mock_parse:
+        with patch("volta.ops.execution.parse_schematic", wraps=None) as mock_parse:
             # Set up the mock to return a real parse result
-            from kicad_agent.parser import parse_schematic
+            from volta.parser import parse_schematic
 
             mock_parse.side_effect = lambda p: parse_schematic(p)
 
@@ -280,8 +280,8 @@ class TestExecutorCache:
         self, tmp_path: Path, arduino_sch: Path
     ) -> None:
         """Executor re-parses when file mtime changes after caching."""
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         work_file = tmp_path / "test.kicad_sch"
         work_file.write_text(arduino_sch.read_text(encoding="utf-8"), encoding="utf-8")
@@ -297,8 +297,8 @@ class TestExecutorCache:
         }
         op = Operation.model_validate(op_data)
 
-        with patch("kicad_agent.ops.execution.parse_schematic", wraps=None) as mock_parse:
-            from kicad_agent.parser import parse_schematic
+        with patch("volta.ops.execution.parse_schematic", wraps=None) as mock_parse:
+            from volta.parser import parse_schematic
 
             mock_parse.side_effect = lambda p: parse_schematic(p)
 
@@ -320,8 +320,8 @@ class TestExecutorCache:
         self, tmp_path: Path, arduino_sch: Path
     ) -> None:
         """Executor without cache (default) works identically to before."""
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         work_file = tmp_path / "test.kicad_sch"
         work_file.write_text(arduino_sch.read_text(encoding="utf-8"), encoding="utf-8")
@@ -345,8 +345,8 @@ class TestExecutorCache:
         self, tmp_path: Path, arduino_sch: Path
     ) -> None:
         """After a write operation, cache is updated with new ParseResult."""
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         work_file = tmp_path / "test.kicad_sch"
         work_file.write_text(arduino_sch.read_text(encoding="utf-8"), encoding="utf-8")
@@ -371,8 +371,8 @@ class TestExecutorCache:
 
     def test_cache_hit_for_pcb_includes_uuid_map(self, tmp_path: Path) -> None:
         """Cache entry for PCB files includes the uuid_map."""
-        from kicad_agent.parser import parse_pcb
-        from kicad_agent.parser.uuid_extractor import extract_uuids
+        from volta.parser import parse_pcb
+        from volta.parser.uuid_extractor import extract_uuids
 
         pcb_fixture = Path(__file__).parent / "fixtures" / "Arduino_Mega" / "Arduino_Mega.kicad_pcb"
         if not pcb_fixture.exists():

@@ -8,14 +8,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.generation.intent import (
+from volta.generation.intent import (
     BoardSpec,
     ComponentSpec,
     GenerationIntent,
     NetSpec,
     PowerSpec,
 )
-from kicad_agent.generation.pipeline import GenerationResult
+from volta.generation.pipeline import GenerationResult
 
 
 # ---------------------------------------------------------------------------
@@ -44,7 +44,7 @@ class TestDemoTemplateSchema:
 
     def test_valid_template(self):
         """DemoTemplate accepts valid fields."""
-        from kicad_agent.demo.templates import DemoTemplate
+        from volta.demo.templates import DemoTemplate
 
         t = DemoTemplate(
             name="test-circuit",
@@ -59,7 +59,7 @@ class TestDemoTemplateSchema:
 
     def test_rejects_empty_name(self):
         """DemoTemplate rejects empty name."""
-        from kicad_agent.demo.templates import DemoTemplate
+        from volta.demo.templates import DemoTemplate
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError):
@@ -74,7 +74,7 @@ class TestDemoTemplateSchema:
 
     def test_rejects_invalid_difficulty(self):
         """DemoTemplate rejects invalid difficulty tier."""
-        from kicad_agent.demo.templates import DemoTemplate
+        from volta.demo.templates import DemoTemplate
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError):
@@ -89,7 +89,7 @@ class TestDemoTemplateSchema:
 
     def test_rejects_uppercase_name(self):
         """DemoTemplate rejects uppercase in name."""
-        from kicad_agent.demo.templates import DemoTemplate
+        from volta.demo.templates import DemoTemplate
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError):
@@ -113,13 +113,13 @@ class TestBuiltinTemplates:
 
     def test_has_at_least_5_entries(self):
         """BUILTIN_TEMPLATES has at least 5 entries."""
-        from kicad_agent.demo.templates import BUILTIN_TEMPLATES
+        from volta.demo.templates import BUILTIN_TEMPLATES
 
         assert len(BUILTIN_TEMPLATES) >= 5
 
     def test_each_entry_has_valid_intent(self):
         """Each BUILTIN_TEMPLATES entry has a valid GenerationIntent."""
-        from kicad_agent.demo.templates import BUILTIN_TEMPLATES
+        from volta.demo.templates import BUILTIN_TEMPLATES
 
         for name, t in BUILTIN_TEMPLATES.items():
             assert isinstance(t.intent, GenerationIntent)
@@ -127,28 +127,28 @@ class TestBuiltinTemplates:
 
     def test_get_template_returns_match(self):
         """get_template(name) returns matching template."""
-        from kicad_agent.demo.templates import get_template
+        from volta.demo.templates import get_template
 
         t = get_template("rc-lowpass")
         assert t.name == "rc-lowpass"
 
     def test_get_template_raises_on_missing(self):
         """get_template raises KeyError with available names."""
-        from kicad_agent.demo.templates import get_template
+        from volta.demo.templates import get_template
 
         with pytest.raises(KeyError, match="not found"):
             get_template("nonexistent")
 
     def test_get_random_template(self):
         """get_random_template returns a valid template."""
-        from kicad_agent.demo.templates import get_random_template, DemoTemplate
+        from volta.demo.templates import get_random_template, DemoTemplate
 
         t = get_random_template()
         assert isinstance(t, DemoTemplate)
 
     def test_covers_all_difficulty_tiers(self):
         """Templates span all three difficulty tiers."""
-        from kicad_agent.demo.templates import BUILTIN_TEMPLATES
+        from volta.demo.templates import BUILTIN_TEMPLATES
 
         tiers = {t.difficulty for t in BUILTIN_TEMPLATES.values()}
         assert "basic" in tiers
@@ -166,7 +166,7 @@ class TestListTemplates:
 
     def test_returns_sorted_tuples(self):
         """list_templates returns sorted (name, desc, difficulty) tuples."""
-        from kicad_agent.demo.templates import list_templates
+        from volta.demo.templates import list_templates
 
         templates = list_templates()
         assert len(templates) >= 5
@@ -186,14 +186,14 @@ class TestDemoReportSchema:
 
     def test_valid_report(self):
         """DemoReport accepts valid fields."""
-        from kicad_agent.demo.pipeline import DemoReport
+        from volta.demo.pipeline import DemoReport
 
         report = DemoReport(template_used="rc-lowpass")
         assert report.template_used == "rc-lowpass"
 
     def test_defaults(self):
         """DemoReport has sensible defaults."""
-        from kicad_agent.demo.pipeline import DemoReport
+        from volta.demo.pipeline import DemoReport
 
         report = DemoReport(template_used="test")
         assert report.stages_completed == []
@@ -215,22 +215,22 @@ class TestDemoPipeline:
 
     def test_init_default_output_dir(self):
         """DemoPipeline defaults output_dir to ./demo-output."""
-        from kicad_agent.demo.pipeline import DemoPipeline
+        from volta.demo.pipeline import DemoPipeline
 
         pipeline = DemoPipeline()
         assert pipeline.output_dir == Path("demo-output")
 
     def test_init_custom_output_dir(self):
         """DemoPipeline accepts custom output_dir."""
-        from kicad_agent.demo.pipeline import DemoPipeline
+        from volta.demo.pipeline import DemoPipeline
 
         pipeline = DemoPipeline(output_dir=Path("/tmp/test-demo"))
         assert pipeline.output_dir == Path("/tmp/test-demo")
 
-    @patch("kicad_agent.demo.pipeline.generate_design")
+    @patch("volta.demo.pipeline.generate_design")
     def test_run_success(self, mock_gen):
         """Pipeline returns success report when generate_design succeeds."""
-        from kicad_agent.demo.pipeline import DemoPipeline
+        from volta.demo.pipeline import DemoPipeline
 
         mock_gen.return_value = GenerationResult(
             success=True,
@@ -250,10 +250,10 @@ class TestDemoPipeline:
         assert "generate" in report.stages_completed
         assert report.template_used == "rc-lowpass"
 
-    @patch("kicad_agent.demo.pipeline.generate_design")
+    @patch("volta.demo.pipeline.generate_design")
     def test_run_records_erc_counts(self, mock_gen):
         """Pipeline records erc_before and erc_after counts."""
-        from kicad_agent.demo.pipeline import DemoPipeline
+        from volta.demo.pipeline import DemoPipeline
 
         mock_gen.return_value = GenerationResult(
             success=True,
@@ -270,10 +270,10 @@ class TestDemoPipeline:
         assert report.erc_before == 5
         assert report.erc_after == 1
 
-    @patch("kicad_agent.demo.pipeline.generate_design")
+    @patch("volta.demo.pipeline.generate_design")
     def test_run_records_svg_paths(self, mock_gen):
         """Pipeline records SVG paths."""
-        from kicad_agent.demo.pipeline import DemoPipeline
+        from volta.demo.pipeline import DemoPipeline
 
         mock_gen.return_value = GenerationResult(
             success=True,
@@ -289,10 +289,10 @@ class TestDemoPipeline:
 
         assert len(report.svg_paths) == 1
 
-    @patch("kicad_agent.demo.pipeline.generate_design")
+    @patch("volta.demo.pipeline.generate_design")
     def test_run_duration_positive(self, mock_gen):
         """Pipeline records positive duration."""
-        from kicad_agent.demo.pipeline import DemoPipeline
+        from volta.demo.pipeline import DemoPipeline
 
         mock_gen.return_value = GenerationResult(
             success=True,
@@ -308,10 +308,10 @@ class TestDemoPipeline:
 
         assert report.duration_seconds >= 0
 
-    @patch("kicad_agent.demo.pipeline.generate_design")
+    @patch("volta.demo.pipeline.generate_design")
     def test_run_handles_generation_failure(self, mock_gen):
         """Pipeline handles generate_design failure gracefully."""
-        from kicad_agent.demo.pipeline import DemoPipeline
+        from volta.demo.pipeline import DemoPipeline
 
         mock_gen.return_value = GenerationResult(
             success=False,
@@ -327,9 +327,9 @@ class TestDemoPipeline:
 
     def test_run_handles_kicad_cli_missing(self):
         """Pipeline handles missing kicad-cli gracefully."""
-        from kicad_agent.demo.pipeline import DemoPipeline
+        from volta.demo.pipeline import DemoPipeline
 
-        with patch("kicad_agent.demo.pipeline.generate_design") as mock_gen:
+        with patch("volta.demo.pipeline.generate_design") as mock_gen:
             mock_gen.return_value = GenerationResult(
                 success=True,
                 project_dir=Path("/tmp/demo/test"),
@@ -345,10 +345,10 @@ class TestDemoPipeline:
         # Should still succeed, just without ERC/render
         assert report.success is True
 
-    @patch("kicad_agent.demo.pipeline.generate_design")
+    @patch("volta.demo.pipeline.generate_design")
     def test_run_random_template(self, mock_gen):
         """Pipeline with 'random' template name selects random template."""
-        from kicad_agent.demo.pipeline import DemoPipeline
+        from volta.demo.pipeline import DemoPipeline
 
         mock_gen.return_value = GenerationResult(
             success=True,
@@ -363,7 +363,7 @@ class TestDemoPipeline:
             report = pipeline.run("random")
 
         # template_used should be one of the registered templates, not "random"
-        from kicad_agent.demo.templates import BUILTIN_TEMPLATES
+        from volta.demo.templates import BUILTIN_TEMPLATES
         assert report.template_used in BUILTIN_TEMPLATES
 
 
@@ -377,15 +377,15 @@ class TestDemoCLI:
 
     def test_demo_in_subcommands(self):
         """'demo' CLI subcommand is registered."""
-        from kicad_agent.demo.pipeline import DemoPipeline
-        from kicad_agent.demo.templates import get_template, list_templates
+        from volta.demo.pipeline import DemoPipeline
+        from volta.demo.templates import get_template, list_templates
         assert callable(DemoPipeline)
         assert callable(get_template)
         assert callable(list_templates)
 
     def test_demo_module_importable(self):
         """Demo package is importable."""
-        from kicad_agent.demo import DemoPipeline, DemoReport, DemoTemplate
+        from volta.demo import DemoPipeline, DemoReport, DemoTemplate
         assert DemoPipeline is not None
         assert DemoReport is not None
         assert DemoTemplate is not None

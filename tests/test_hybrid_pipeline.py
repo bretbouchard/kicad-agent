@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.llm.pipeline import llm_generate, _resolve_hybrid_client
+from volta.llm.pipeline import llm_generate, _resolve_hybrid_client
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +108,7 @@ def test_pipeline_cloud_only_mode_backward_compat():
     mock_parser.parse.return_value = mock_intent
 
     # Mock generate_design to fail fast (we only care about stage 1)
-    with patch("kicad_agent.generation.pipeline.generate_design") as mock_gen:
+    with patch("volta.generation.pipeline.generate_design") as mock_gen:
         mock_gen_result = MagicMock()
         mock_gen_result.success = False
         mock_gen_result.errors = ["test error"]
@@ -135,7 +135,7 @@ def test_pipeline_local_first_mode_uses_unified_parser():
     mock_intent.name = "test-design"
     mock_parser.parse.return_value = mock_intent
 
-    with patch("kicad_agent.generation.pipeline.generate_design") as mock_gen:
+    with patch("volta.generation.pipeline.generate_design") as mock_gen:
         mock_gen_result = MagicMock()
         mock_gen_result.success = False
         mock_gen_result.errors = ["test error"]
@@ -163,7 +163,7 @@ def test_pipeline_no_mode_preserves_existing_behavior():
     mock_parser.parse.return_value = mock_intent
 
     with patch.dict(os.environ, {}, clear=True):
-        with patch("kicad_agent.generation.pipeline.generate_design") as mock_gen:
+        with patch("volta.generation.pipeline.generate_design") as mock_gen:
             mock_gen_result = MagicMock()
             mock_gen_result.success = True
             mock_gen_result.erc_pass = True

@@ -10,8 +10,8 @@ import pytest
 
 from kiutils.schematic import Schematic
 
-from kicad_agent.parser import parse_schematic
-from kicad_agent.cli import _handle_gate
+from volta.parser import parse_schematic
+from volta.cli import _handle_gate
 
 
 def _create_minimal_schematic(tmpdir: Path) -> Path:
@@ -24,9 +24,9 @@ def _create_minimal_schematic(tmpdir: Path) -> Path:
 
 def _make_gate_runner_aware():
     """Ensure the default GateRunner has pre_pcb_schematic registered."""
-    from kicad_agent.ops.validation_gates import pre_pcb_schematic_gate, _resolve_sch_path
-    from kicad_agent.validation.gate_types import GateDefinition, DesignStage
-    from kicad_agent.validation.gate_runner import get_gate_runner, register_gate
+    from volta.ops.validation_gates import pre_pcb_schematic_gate, _resolve_sch_path
+    from volta.validation.gate_types import GateDefinition, DesignStage
+    from volta.validation.gate_runner import get_gate_runner, register_gate
 
     runner = get_gate_runner()
     if runner.get_gate("pre_pcb_schematic") is None:

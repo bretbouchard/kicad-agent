@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.routing.constraints import RoutingConstraints
-from kicad_agent.routing.negotiation import NegotiationLoop, NegotiationResult, negotiate_route
-from kicad_agent.spatial.primitives import SpatialBox
+from volta.routing.constraints import RoutingConstraints
+from volta.routing.negotiation import NegotiationLoop, NegotiationResult, negotiate_route
+from volta.spatial.primitives import SpatialBox
 
 
 class TestConvergence:

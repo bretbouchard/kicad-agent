@@ -26,7 +26,7 @@ import skidl
 _KICAD_SYMBOLS_DIR = "/Applications/KiCad/KiCad.app/Contents/SharedSupport/symbols"
 skidl.lib_search_paths[skidl.KICAD] = [_KICAD_SYMBOLS_DIR]
 
-from kicad_agent.circuit_ir import circuit_to_kicad_sch
+from volta.circuit_ir import circuit_to_kicad_sch
 
 
 def schgen_to_skidl(code: str, name: str) -> skidl.Circuit | None:

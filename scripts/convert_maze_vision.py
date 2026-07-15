@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.training.maze_vision_converter import build_maze_vision_dataset
+from volta.training.maze_vision_converter import build_maze_vision_dataset
 
 
 def main() -> int:

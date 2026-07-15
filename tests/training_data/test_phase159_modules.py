@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.training_data import (
+from volta.training_data import (
     combine_rewards,
     compute_spice_reward,
     compute_combined_reward,
@@ -14,7 +14,7 @@ from kicad_agent.training_data import (
     convert_repo_to_skidl,
     load_discovered_repos,
 )
-from kicad_agent.spice.types import DegradationReport
+from volta.spice.types import DegradationReport
 
 
 class TestRewardCombiner:

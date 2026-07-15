@@ -17,10 +17,10 @@ from unittest.mock import patch
 
 import pytest
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ops.executor import OperationExecutor
-from kicad_agent.ops.schema import Operation
-from kicad_agent.ops._schema_crossfile import PropagateSymbolChangeOp
+from volta.ir.base import _clear_registry
+from volta.ops.executor import OperationExecutor
+from volta.ops.schema import Operation
+from volta.ops._schema_crossfile import PropagateSymbolChangeOp
 
 
 # ---------------------------------------------------------------------------
@@ -193,7 +193,7 @@ class TestCrossFilePartialFailure:
 
         # Make propagate_footprint_ref raise to simulate PCB-side failure
         with patch(
-            "kicad_agent.crossfile.propagation.propagate_footprint_ref",
+            "volta.crossfile.propagation.propagate_footprint_ref",
             side_effect=RuntimeError("Simulated PCB failure"),
         ):
             executor = OperationExecutor(base_dir=project_dir)

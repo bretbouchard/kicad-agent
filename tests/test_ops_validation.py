@@ -2,7 +2,7 @@
 
 import pytest
 
-from kicad_agent.ops.pre_analysis import (
+from volta.ops.pre_analysis import (
     PreAnalysisGate,
 )
 
@@ -12,7 +12,7 @@ class TestValidationGates:
 
     def test_import(self):
         """ValidationGates module is importable."""
-        from kicad_agent.ops import pre_analysis
+        from volta.ops import pre_analysis
         assert hasattr(pre_analysis, "PreAnalysisGate")
 
     def test_pre_analysis_gate_instantiable(self):
@@ -32,7 +32,7 @@ class TestSchemaValidation:
 
     def test_import(self):
         """Schema validation module is importable."""
-        from kicad_agent.ops import schema
+        from volta.ops import schema
         assert hasattr(schema, "Operation")
 
 
@@ -41,12 +41,12 @@ class TestOperationRegistry:
 
     def test_registry_import(self):
         """Operation registry is importable."""
-        from kicad_agent.ops import registry
+        from volta.ops import registry
         assert hasattr(registry, "OPERATION_REGISTRY")
 
     def test_registry_has_entries(self):
         """Registry has operation entries."""
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
         assert len(OPERATION_REGISTRY) > 50
 
 
@@ -55,15 +55,15 @@ class TestSchemaSchemas:
 
     def test_component_schema(self):
         """Component operation schema is importable."""
-        from kicad_agent.ops.schema import AddComponentOp
+        from volta.ops.schema import AddComponentOp
         assert AddComponentOp is not None
 
     def test_net_schema(self):
         """Net operation schema is importable."""
-        from kicad_agent.ops.schema import AddNetOp
+        from volta.ops.schema import AddNetOp
         assert AddNetOp is not None
 
     def test_wire_schema(self):
         """Wire operation schema is importable."""
-        from kicad_agent.ops.schema import AddWireOp
+        from volta.ops.schema import AddWireOp
         assert AddWireOp is not None

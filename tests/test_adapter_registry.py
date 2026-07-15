@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from kicad_agent.training.adapter_registry import (
+from volta.training.adapter_registry import (
     AdapterMetadata,
     AdapterRegistry,
     DatasetInfo,

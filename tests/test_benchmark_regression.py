@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.benchmarks.runner import BenchmarkResult
-from kicad_agent.benchmarks.regression import RegressionDetector, RegressionReport
+from volta.benchmarks.runner import BenchmarkResult
+from volta.benchmarks.regression import RegressionDetector, RegressionReport
 
 
 # ---------------------------------------------------------------------------

@@ -4,8 +4,8 @@ from __future__ import annotations
 import os
 import tempfile
 
-from kicad_agent.spice import AnalysisResult, AnalysisType, SimulationResult, Trace
-from kicad_agent.sim.plot import plot_bode
+from volta.spice import AnalysisResult, AnalysisType, SimulationResult, Trace
+from volta.sim.plot import plot_bode
 
 
 def _result_with_trace() -> SimulationResult:

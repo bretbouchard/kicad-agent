@@ -29,9 +29,9 @@ def test_phase_99_references_present() -> None:
     touched exactly these files). Do not loosen to a generic "Phase N" check.
     """
     targets = [
-        ("src/kicad_agent/handler.py", "Phase 99 Gap 4"),
-        ("src/kicad_agent/routing/pathfinder.py", "Phase 99 Gap 2"),
-        ("src/kicad_agent/routing/graph.py", "Phase 99 Gap 2"),
+        ("src/volta/handler.py", "Phase 99 Gap 4"),
+        ("src/volta/routing/pathfinder.py", "Phase 99 Gap 2"),
+        ("src/volta/routing/graph.py", "Phase 99 Gap 2"),
     ]
     for rel_path, expected in targets:
         text = (_REPO_ROOT / rel_path).read_text(encoding="utf-8")

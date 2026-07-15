@@ -15,8 +15,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.dfm.checker import DfmCheck, DfmFinding, DfmSeverity
-from kicad_agent.dfm.profiles import get_builtin_profiles
+from volta.dfm.checker import DfmCheck, DfmFinding, DfmSeverity
+from volta.dfm.profiles import get_builtin_profiles
 
 
 # ===========================================================================
@@ -142,7 +142,7 @@ class TestAcidTrapCheck:
 
     def test_acute_angle_between_traces_flagged(self):
         """Two traces forming an acute angle (< 90 degrees) are flagged."""
-        from kicad_agent.dfm.extended_checks import AcidTrapCheck
+        from volta.dfm.extended_checks import AcidTrapCheck
 
         # Two traces meeting at a point with acute angle (~45 degrees)
         trace1 = _make_path(
@@ -165,7 +165,7 @@ class TestAcidTrapCheck:
 
     def test_right_angle_between_traces_passes(self):
         """Two traces forming a right angle (90 degrees) pass."""
-        from kicad_agent.dfm.extended_checks import AcidTrapCheck
+        from volta.dfm.extended_checks import AcidTrapCheck
 
         trace1 = _make_path(
             points=((0, 0), (10, 0)),
@@ -185,7 +185,7 @@ class TestAcidTrapCheck:
 
     def test_obtuse_angle_passes(self):
         """Two traces forming an obtuse angle (> 90 degrees) pass."""
-        from kicad_agent.dfm.extended_checks import AcidTrapCheck
+        from volta.dfm.extended_checks import AcidTrapCheck
 
         trace1 = _make_path(
             points=((0, 0), (10, 0)),
@@ -205,7 +205,7 @@ class TestAcidTrapCheck:
 
     def test_no_traces_no_findings(self):
         """Empty spatial model produces no findings."""
-        from kicad_agent.dfm.extended_checks import AcidTrapCheck
+        from volta.dfm.extended_checks import AcidTrapCheck
 
         model = _MockSpatialModel(primitives=[])
         profile = get_builtin_profiles()["jlcpcb"]
@@ -215,7 +215,7 @@ class TestAcidTrapCheck:
 
     def test_disconnected_traces_no_findings(self):
         """Traces that don't meet at endpoints produce no findings."""
-        from kicad_agent.dfm.extended_checks import AcidTrapCheck
+        from volta.dfm.extended_checks import AcidTrapCheck
 
         trace1 = _make_path(
             points=((0, 0), (10, 0)),
@@ -244,7 +244,7 @@ class TestCopperPourSpacingCheck:
 
     def test_zone_too_close_to_pad_flagged(self):
         """Copper pour zone too close to a pad is flagged."""
-        from kicad_agent.dfm.extended_checks import CopperPourSpacingCheck
+        from volta.dfm.extended_checks import CopperPourSpacingCheck
 
         pad = _make_box(
             x1=4.5, y1=4.5, x2=5.5, y2=5.5,
@@ -266,7 +266,7 @@ class TestCopperPourSpacingCheck:
 
     def test_zone_adequate_spacing_passes(self):
         """Copper pour zone with adequate spacing to pad passes."""
-        from kicad_agent.dfm.extended_checks import CopperPourSpacingCheck
+        from volta.dfm.extended_checks import CopperPourSpacingCheck
 
         pad = _make_box(
             x1=0, y1=0, x2=1, y2=1,
@@ -287,7 +287,7 @@ class TestCopperPourSpacingCheck:
 
     def test_same_net_zone_ignores_clearance(self):
         """Zone on same net as pad does not trigger spacing check."""
-        from kicad_agent.dfm.extended_checks import CopperPourSpacingCheck
+        from volta.dfm.extended_checks import CopperPourSpacingCheck
 
         pad = _make_box(
             x1=4.5, y1=4.5, x2=5.5, y2=5.5,
@@ -307,7 +307,7 @@ class TestCopperPourSpacingCheck:
 
     def test_zone_to_trace_spacing_flagged(self):
         """Copper pour zone too close to a trace is flagged."""
-        from kicad_agent.dfm.extended_checks import CopperPourSpacingCheck
+        from volta.dfm.extended_checks import CopperPourSpacingCheck
 
         trace = _make_path(
             points=((0, 0), (10, 0)),
@@ -336,7 +336,7 @@ class TestViaInPadCheck:
 
     def test_via_inside_pad_flagged(self):
         """A via geometry contained within a pad geometry is flagged."""
-        from kicad_agent.dfm.extended_checks import ViaInPadCheck
+        from volta.dfm.extended_checks import ViaInPadCheck
 
         pad = _make_box(
             x1=0, y1=0, x2=2, y2=2,
@@ -357,7 +357,7 @@ class TestViaInPadCheck:
 
     def test_via_outside_pad_passes(self):
         """A via far from any pad passes."""
-        from kicad_agent.dfm.extended_checks import ViaInPadCheck
+        from volta.dfm.extended_checks import ViaInPadCheck
 
         pad = _make_box(
             x1=0, y1=0, x2=2, y2=2,
@@ -377,7 +377,7 @@ class TestViaInPadCheck:
 
     def test_no_vias_no_findings(self):
         """No vias produces no findings."""
-        from kicad_agent.dfm.extended_checks import ViaInPadCheck
+        from volta.dfm.extended_checks import ViaInPadCheck
 
         pad = _make_box(
             x1=0, y1=0, x2=2, y2=2,
@@ -400,7 +400,7 @@ class TestSolderPasteCoverageCheck:
 
     def test_paste_smaller_than_pad_flagged(self):
         """Solder paste opening smaller than pad coverage threshold flagged."""
-        from kicad_agent.dfm.extended_checks import SolderPasteCoverageCheck
+        from volta.dfm.extended_checks import SolderPasteCoverageCheck
 
         # Pad with small paste coverage
         pad = _make_box(
@@ -423,7 +423,7 @@ class TestSolderPasteCoverageCheck:
 
     def test_paste_covers_pad_passes(self):
         """Solder paste adequately covering pad passes."""
-        from kicad_agent.dfm.extended_checks import SolderPasteCoverageCheck
+        from volta.dfm.extended_checks import SolderPasteCoverageCheck
 
         pad = _make_box(
             x1=0, y1=0, x2=2, y2=2,
@@ -444,7 +444,7 @@ class TestSolderPasteCoverageCheck:
 
     def test_no_paste_data_info_finding(self):
         """Pads without paste data emit INFO finding."""
-        from kicad_agent.dfm.extended_checks import SolderPasteCoverageCheck
+        from volta.dfm.extended_checks import SolderPasteCoverageCheck
 
         pad = _make_box(
             x1=0, y1=0, x2=2, y2=2,
@@ -470,7 +470,7 @@ class TestSilkscreenClearanceCheck:
 
     def test_silkscreen_on_pad_flagged(self):
         """Silkscreen geometry overlapping pad geometry is flagged."""
-        from kicad_agent.dfm.extended_checks import SilkscreenClearanceCheck
+        from volta.dfm.extended_checks import SilkscreenClearanceCheck
 
         pad = _make_box(
             x1=0, y1=0, x2=2, y2=2,
@@ -491,7 +491,7 @@ class TestSilkscreenClearanceCheck:
 
     def test_silkscreen_clear_of_pad_passes(self):
         """Silkscreen geometry clear of pad geometry passes."""
-        from kicad_agent.dfm.extended_checks import SilkscreenClearanceCheck
+        from volta.dfm.extended_checks import SilkscreenClearanceCheck
 
         pad = _make_box(
             x1=0, y1=0, x2=2, y2=2,
@@ -511,7 +511,7 @@ class TestSilkscreenClearanceCheck:
 
     def test_no_silkscreen_no_findings(self):
         """No silkscreen primitives produces no findings."""
-        from kicad_agent.dfm.extended_checks import SilkscreenClearanceCheck
+        from volta.dfm.extended_checks import SilkscreenClearanceCheck
 
         pad = _make_box(
             x1=0, y1=0, x2=2, y2=2,
@@ -534,7 +534,7 @@ class TestBoardEdgeClearanceCheck:
 
     def test_pad_too_close_to_edge_flagged(self):
         """Pad too close to Edge.Cuts geometry is flagged."""
-        from kicad_agent.dfm.extended_checks import BoardEdgeClearanceCheck
+        from volta.dfm.extended_checks import BoardEdgeClearanceCheck
 
         pad = _make_box(
             x1=0, y1=0, x2=1, y2=1,
@@ -555,7 +555,7 @@ class TestBoardEdgeClearanceCheck:
 
     def test_pad_far_from_edge_passes(self):
         """Pad well inside board edge passes."""
-        from kicad_agent.dfm.extended_checks import BoardEdgeClearanceCheck
+        from volta.dfm.extended_checks import BoardEdgeClearanceCheck
 
         pad = _make_box(
             x1=10, y1=10, x2=12, y2=12,
@@ -575,7 +575,7 @@ class TestBoardEdgeClearanceCheck:
 
     def test_no_edge_geometry_passes(self):
         """No Edge.Cuts geometry means no findings (cannot check)."""
-        from kicad_agent.dfm.extended_checks import BoardEdgeClearanceCheck
+        from volta.dfm.extended_checks import BoardEdgeClearanceCheck
 
         pad = _make_box(
             x1=0, y1=0, x2=1, y2=1,
@@ -598,7 +598,7 @@ class TestViaTentingCheck:
 
     def test_uncovered_via_flagged_when_tenting_required(self):
         """Via without tenting/tenting_required flag emits INFO finding."""
-        from kicad_agent.dfm.extended_checks import ViaTentingCheck
+        from volta.dfm.extended_checks import ViaTentingCheck
 
         via = _make_point(
             x=5, y=5, entity_type="via", entity_id="v1",
@@ -615,7 +615,7 @@ class TestViaTentingCheck:
 
     def test_tented_via_passes(self):
         """Via with tenting attribute passes."""
-        from kicad_agent.dfm.extended_checks import ViaTentingCheck
+        from volta.dfm.extended_checks import ViaTentingCheck
 
         via = _make_point(
             x=5, y=5, entity_type="via", entity_id="v1",
@@ -631,7 +631,7 @@ class TestViaTentingCheck:
 
     def test_no_vias_no_findings(self):
         """No vias produces no findings."""
-        from kicad_agent.dfm.extended_checks import ViaTentingCheck
+        from volta.dfm.extended_checks import ViaTentingCheck
 
         model = _MockSpatialModel(primitives=[])
         profile = get_builtin_profiles()["jlcpcb"]
@@ -650,7 +650,7 @@ class TestImpedanceControlCheck:
 
     def test_wide_power_trace_without_impedance_info_flagged(self):
         """Power trace exceeding impedance width threshold flagged when no impedance info."""
-        from kicad_agent.dfm.extended_checks import ImpedanceControlCheck
+        from volta.dfm.extended_checks import ImpedanceControlCheck
 
         # Thick trace that might need impedance control
         trace = _make_path(
@@ -668,7 +668,7 @@ class TestImpedanceControlCheck:
 
     def test_traces_on_normal_nets_pass(self):
         """Normal signal traces don't trigger impedance warnings."""
-        from kicad_agent.dfm.extended_checks import ImpedanceControlCheck
+        from volta.dfm.extended_checks import ImpedanceControlCheck
 
         trace = _make_path(
             points=((0, 0), (10, 0)),
@@ -692,7 +692,7 @@ class TestLayerStackupCheck:
 
     def test_missing_layer_flagged_for_4layer_profile(self):
         """Missing inner copper layers flagged when profile requires 4+ layers."""
-        from kicad_agent.dfm.extended_checks import LayerStackupCheck
+        from volta.dfm.extended_checks import LayerStackupCheck
 
         # Profile expects 4 layers, but board has only 2
         model = _MockSpatialModel(primitives=[
@@ -707,7 +707,7 @@ class TestLayerStackupCheck:
 
     def test_correct_layers_for_2layer_passes(self):
         """Board with correct layer count for 2-layer profile passes."""
-        from kicad_agent.dfm.extended_checks import LayerStackupCheck
+        from volta.dfm.extended_checks import LayerStackupCheck
 
         model = _MockSpatialModel(primitives=[
             _make_path(points=((0, 0), (10, 0)), layer="F.Cu", net="SIG"),
@@ -729,7 +729,7 @@ class TestMinFeatureSizeCheck:
 
     def test_small_pad_flagged(self):
         """Pad below minimum feature size flagged."""
-        from kicad_agent.dfm.extended_checks import MinFeatureSizeCheck
+        from volta.dfm.extended_checks import MinFeatureSizeCheck
 
         # Very small pad: 0.05mm x 0.05mm
         pad = _make_box(
@@ -746,7 +746,7 @@ class TestMinFeatureSizeCheck:
 
     def test_normal_pad_passes(self):
         """Normal-sized pad passes."""
-        from kicad_agent.dfm.extended_checks import MinFeatureSizeCheck
+        from volta.dfm.extended_checks import MinFeatureSizeCheck
 
         pad = _make_box(
             x1=0, y1=0, x2=2, y2=2,
@@ -760,7 +760,7 @@ class TestMinFeatureSizeCheck:
 
     def test_small_text_on_silkscreen_flagged(self):
         """Small silkscreen text flagged if below minimum."""
-        from kicad_agent.dfm.extended_checks import MinFeatureSizeCheck
+        from volta.dfm.extended_checks import MinFeatureSizeCheck
 
         text = MagicMock()
         text.entity_type = "text"
@@ -791,7 +791,7 @@ class TestTraceAngleCheck:
 
     def test_45_degree_bend_passes(self):
         """45-degree trace bend passes."""
-        from kicad_agent.dfm.extended_checks import TraceAngleCheck
+        from volta.dfm.extended_checks import TraceAngleCheck
 
         trace = _make_path(
             points=((0, 0), (10, 0), (15, 5)),
@@ -806,7 +806,7 @@ class TestTraceAngleCheck:
 
     def test_straight_line_passes(self):
         """Straight trace with no bends passes."""
-        from kicad_agent.dfm.extended_checks import TraceAngleCheck
+        from volta.dfm.extended_checks import TraceAngleCheck
 
         trace = _make_path(
             points=((0, 0), (10, 0), (20, 0)),
@@ -830,7 +830,7 @@ class TestCourtyardOverlapCheck:
 
     def test_overlapping_courtyards_flagged(self):
         """Two components with overlapping courtyards flagged."""
-        from kicad_agent.dfm.extended_checks import CourtyardOverlapCheck
+        from volta.dfm.extended_checks import CourtyardOverlapCheck
 
         comp1 = _make_box(
             x1=0, y1=0, x2=5, y2=5,
@@ -851,7 +851,7 @@ class TestCourtyardOverlapCheck:
 
     def test_non_overlapping_courtyards_pass(self):
         """Components with separate courtyards pass."""
-        from kicad_agent.dfm.extended_checks import CourtyardOverlapCheck
+        from volta.dfm.extended_checks import CourtyardOverlapCheck
 
         comp1 = _make_box(
             x1=0, y1=0, x2=5, y2=5,
@@ -871,7 +871,7 @@ class TestCourtyardOverlapCheck:
 
     def test_no_courtyards_no_findings(self):
         """No courtyard primitives produces no findings."""
-        from kicad_agent.dfm.extended_checks import CourtyardOverlapCheck
+        from volta.dfm.extended_checks import CourtyardOverlapCheck
 
         model = _MockSpatialModel(primitives=[])
         profile = get_builtin_profiles()["jlcpcb"]
@@ -890,7 +890,7 @@ class TestPin1MarkerCheck:
 
     def test_ic_without_pin1_marker_flagged(self):
         """IC component without pin 1 marker emits INFO finding."""
-        from kicad_agent.dfm.extended_checks import Pin1MarkerCheck
+        from volta.dfm.extended_checks import Pin1MarkerCheck
 
         comp = _make_box(
             x1=0, y1=0, x2=10, y2=10,
@@ -907,7 +907,7 @@ class TestPin1MarkerCheck:
 
     def test_ic_with_pin1_marker_passes(self):
         """IC component with pin 1 marker passes."""
-        from kicad_agent.dfm.extended_checks import Pin1MarkerCheck
+        from volta.dfm.extended_checks import Pin1MarkerCheck
 
         comp = _make_box(
             x1=0, y1=0, x2=10, y2=10,
@@ -923,7 +923,7 @@ class TestPin1MarkerCheck:
 
     def test_passive_component_ignored(self):
         """Passive components (R, C, L) are not checked for pin 1 markers."""
-        from kicad_agent.dfm.extended_checks import Pin1MarkerCheck
+        from volta.dfm.extended_checks import Pin1MarkerCheck
 
         comp = _make_box(
             x1=0, y1=0, x2=3, y2=2,
@@ -948,7 +948,7 @@ class TestViaStubCheck:
 
     def test_long_via_stub_flagged(self):
         """Via with long stub length flagged."""
-        from kicad_agent.dfm.extended_checks import ViaStubCheck
+        from volta.dfm.extended_checks import ViaStubCheck
 
         via = _make_point(
             x=5, y=5, entity_type="via", entity_id="v1",
@@ -965,7 +965,7 @@ class TestViaStubCheck:
 
     def test_no_stub_data_passes(self):
         """Via without stub length data passes (can't check)."""
-        from kicad_agent.dfm.extended_checks import ViaStubCheck
+        from volta.dfm.extended_checks import ViaStubCheck
 
         via = _make_point(
             x=5, y=5, entity_type="via", entity_id="v1",
@@ -990,7 +990,7 @@ class TestPowerPlaneVoidCheck:
 
     def test_large_void_in_power_zone_flagged(self):
         """Large void area in power plane flagged."""
-        from kicad_agent.dfm.extended_checks import PowerPlaneVoidCheck
+        from volta.dfm.extended_checks import PowerPlaneVoidCheck
 
         zone = _make_region(
             boundary=((0, 0), (50, 0), (50, 50), (0, 50)),
@@ -1007,7 +1007,7 @@ class TestPowerPlaneVoidCheck:
 
     def test_small_void_passes(self):
         """Small void area in power plane passes."""
-        from kicad_agent.dfm.extended_checks import PowerPlaneVoidCheck
+        from volta.dfm.extended_checks import PowerPlaneVoidCheck
 
         zone = _make_region(
             boundary=((0, 0), (50, 0), (50, 50), (0, 50)),
@@ -1023,7 +1023,7 @@ class TestPowerPlaneVoidCheck:
 
     def test_signal_zone_ignored(self):
         """Signal zones are not checked for power void issues."""
-        from kicad_agent.dfm.extended_checks import PowerPlaneVoidCheck
+        from volta.dfm.extended_checks import PowerPlaneVoidCheck
 
         zone = _make_region(
             boundary=((0, 0), (50, 0), (50, 50), (0, 50)),
@@ -1048,7 +1048,7 @@ class TestFiducialMarkerCheck:
 
     def test_no_fiducials_flagged(self):
         """Board with no fiducials flagged."""
-        from kicad_agent.dfm.extended_checks import FiducialMarkerCheck
+        from volta.dfm.extended_checks import FiducialMarkerCheck
 
         model = _MockSpatialModel(primitives=[])
         profile = get_builtin_profiles()["jlcpcb"]
@@ -1059,7 +1059,7 @@ class TestFiducialMarkerCheck:
 
     def test_three_fiducials_passes(self):
         """Board with 3+ fiducials passes."""
-        from kicad_agent.dfm.extended_checks import FiducialMarkerCheck
+        from volta.dfm.extended_checks import FiducialMarkerCheck
 
         primitives = [
             _make_box(entity_type="fiducial", entity_id="FID1", reference="FID1"),
@@ -1083,7 +1083,7 @@ class TestComponentPlacementCheck:
 
     def test_component_outside_board_flagged(self):
         """Component placed outside board outline flagged."""
-        from kicad_agent.dfm.extended_checks import ComponentPlacementCheck
+        from volta.dfm.extended_checks import ComponentPlacementCheck
 
         comp = _make_box(
             x1=-5, y1=-5, x2=0, y2=0,
@@ -1104,7 +1104,7 @@ class TestComponentPlacementCheck:
 
     def test_component_inside_board_passes(self):
         """Component well inside board outline passes."""
-        from kicad_agent.dfm.extended_checks import ComponentPlacementCheck
+        from volta.dfm.extended_checks import ComponentPlacementCheck
 
         comp = _make_box(
             x1=10, y1=10, x2=15, y2=15,
@@ -1133,7 +1133,7 @@ class TestMinSpacingCheck:
 
     def test_traces_too_close_flagged(self):
         """Two traces on same layer below minimum clearance flagged."""
-        from kicad_agent.dfm.extended_checks import MinSpacingCheck
+        from volta.dfm.extended_checks import MinSpacingCheck
 
         trace1 = _make_path(
             points=((0, 0), (10, 0)),
@@ -1154,7 +1154,7 @@ class TestMinSpacingCheck:
 
     def test_traces_far_apart_pass(self):
         """Traces with adequate spacing pass."""
-        from kicad_agent.dfm.extended_checks import MinSpacingCheck
+        from volta.dfm.extended_checks import MinSpacingCheck
 
         trace1 = _make_path(
             points=((0, 0), (10, 0)),
@@ -1174,7 +1174,7 @@ class TestMinSpacingCheck:
 
     def test_same_net_traces_ignored(self):
         """Traces on same net are not checked for spacing."""
-        from kicad_agent.dfm.extended_checks import MinSpacingCheck
+        from volta.dfm.extended_checks import MinSpacingCheck
 
         trace1 = _make_path(
             points=((0, 0), (10, 0)),
@@ -1203,7 +1203,7 @@ class TestMinViaPadCheck:
 
     def test_small_via_pad_flagged(self):
         """Via pad below minimum diameter flagged."""
-        from kicad_agent.dfm.extended_checks import MinViaPadCheck
+        from volta.dfm.extended_checks import MinViaPadCheck
 
         via = _make_point(
             x=5, y=5, entity_type="via", entity_id="v1",
@@ -1220,7 +1220,7 @@ class TestMinViaPadCheck:
 
     def test_adequate_via_pad_passes(self):
         """Via pad with adequate diameter passes."""
-        from kicad_agent.dfm.extended_checks import MinViaPadCheck
+        from volta.dfm.extended_checks import MinViaPadCheck
 
         via = _make_point(
             x=5, y=5, entity_type="via", entity_id="v1",
@@ -1245,7 +1245,7 @@ class TestTeardropCheck:
 
     def test_via_pad_without_teardrop_emits_info(self):
         """Via-pad transition without teardrop emits INFO finding."""
-        from kicad_agent.dfm.extended_checks import TeardropCheck
+        from volta.dfm.extended_checks import TeardropCheck
 
         via = _make_point(
             x=5, y=5, entity_type="via", entity_id="v1",
@@ -1261,7 +1261,7 @@ class TestTeardropCheck:
 
     def test_via_pad_with_teardrop_passes(self):
         """Via-pad transition with teardrop passes."""
-        from kicad_agent.dfm.extended_checks import TeardropCheck
+        from volta.dfm.extended_checks import TeardropCheck
 
         via = _make_point(
             x=5, y=5, entity_type="via", entity_id="v1",
@@ -1286,7 +1286,7 @@ class TestBlindViaCheck:
 
     def test_blind_via_unsupported_flagged(self):
         """Blind via on manufacturer that doesn't support them flagged."""
-        from kicad_agent.dfm.extended_checks import BlindViaCheck
+        from volta.dfm.extended_checks import BlindViaCheck
 
         via = _make_point(
             x=5, y=5, entity_type="blind_via", entity_id="bv1",
@@ -1302,7 +1302,7 @@ class TestBlindViaCheck:
 
     def test_blind_via_supported_passes(self):
         """Blind via on manufacturer that supports them passes."""
-        from kicad_agent.dfm.extended_checks import BlindViaCheck
+        from volta.dfm.extended_checks import BlindViaCheck
 
         via = _make_point(
             x=5, y=5, entity_type="blind_via", entity_id="bv1",
@@ -1326,7 +1326,7 @@ class TestBoardDimensionCheck:
 
     def test_oversized_board_flagged(self):
         """Board exceeding maximum dimension flagged."""
-        from kicad_agent.dfm.extended_checks import BoardDimensionCheck
+        from volta.dfm.extended_checks import BoardDimensionCheck
 
         edge = _make_path(
             points=((0, 0), (600, 0), (600, 400), (0, 400), (0, 0)),
@@ -1342,7 +1342,7 @@ class TestBoardDimensionCheck:
 
     def test_normal_board_passes(self):
         """Board within maximum dimensions passes."""
-        from kicad_agent.dfm.extended_checks import BoardDimensionCheck
+        from volta.dfm.extended_checks import BoardDimensionCheck
 
         edge = _make_path(
             points=((0, 0), (100, 0), (100, 80), (0, 80), (0, 0)),
@@ -1366,7 +1366,7 @@ class TestCastellatedHoleCheck:
 
     def test_castellated_unsupported_flagged(self):
         """Castellated hole on unsupported manufacturer flagged."""
-        from kicad_agent.dfm.extended_checks import CastellatedHoleCheck
+        from volta.dfm.extended_checks import CastellatedHoleCheck
 
         pad = _make_point(
             x=0, y=10, entity_type="castellated_pad", entity_id="cp1",
@@ -1382,7 +1382,7 @@ class TestCastellatedHoleCheck:
 
     def test_castellated_supported_passes(self):
         """Castellated hole on supported manufacturer passes."""
-        from kicad_agent.dfm.extended_checks import CastellatedHoleCheck
+        from volta.dfm.extended_checks import CastellatedHoleCheck
 
         pad = _make_point(
             x=0, y=10, entity_type="castellated_pad", entity_id="cp1",
@@ -1406,7 +1406,7 @@ class TestNPTHDrillCheck:
 
     def test_small_npth_flagged(self):
         """Small NPTH drill flagged."""
-        from kicad_agent.dfm.extended_checks import NPTHDrillCheck
+        from volta.dfm.extended_checks import NPTHDrillCheck
 
         drill = _make_point(
             x=5, y=5, entity_type="npth_drill", entity_id="np1",
@@ -1422,7 +1422,7 @@ class TestNPTHDrillCheck:
 
     def test_normal_npth_passes(self):
         """Normal NPTH drill passes."""
-        from kicad_agent.dfm.extended_checks import NPTHDrillCheck
+        from volta.dfm.extended_checks import NPTHDrillCheck
 
         drill = _make_point(
             x=5, y=5, entity_type="npth_drill", entity_id="np1",
@@ -1446,7 +1446,7 @@ class TestSlotCheck:
 
     def test_narrow_slot_flagged(self):
         """Very narrow slot flagged."""
-        from kicad_agent.dfm.extended_checks import SlotCheck
+        from volta.dfm.extended_checks import SlotCheck
 
         slot = _make_box(
             x1=0, y1=0, x2=0.05, y2=5,
@@ -1462,7 +1462,7 @@ class TestSlotCheck:
 
     def test_normal_slot_passes(self):
         """Normal slot passes."""
-        from kicad_agent.dfm.extended_checks import SlotCheck
+        from volta.dfm.extended_checks import SlotCheck
 
         slot = _make_box(
             x1=0, y1=0, x2=2, y2=5,
@@ -1486,7 +1486,7 @@ class TestViaCountCheck:
 
     def test_excessive_vias_flagged(self):
         """Excessive via count flagged."""
-        from kicad_agent.dfm.extended_checks import ViaCountCheck
+        from volta.dfm.extended_checks import ViaCountCheck
 
         primitives = []
         for i in range(1000):
@@ -1503,7 +1503,7 @@ class TestViaCountCheck:
 
     def test_normal_via_count_passes(self):
         """Normal via count passes."""
-        from kicad_agent.dfm.extended_checks import ViaCountCheck
+        from volta.dfm.extended_checks import ViaCountCheck
 
         primitives = []
         for i in range(10):
@@ -1528,7 +1528,7 @@ class TestSolderMaskOpeningCheck:
 
     def test_tiny_mask_opening_flagged(self):
         """Very small solder mask opening flagged."""
-        from kicad_agent.dfm.extended_checks import SolderMaskOpeningCheck
+        from volta.dfm.extended_checks import SolderMaskOpeningCheck
 
         opening = _make_box(
             x1=0, y1=0, x2=0.05, y2=0.05,
@@ -1544,7 +1544,7 @@ class TestSolderMaskOpeningCheck:
 
     def test_normal_mask_opening_passes(self):
         """Normal solder mask opening passes."""
-        from kicad_agent.dfm.extended_checks import SolderMaskOpeningCheck
+        from volta.dfm.extended_checks import SolderMaskOpeningCheck
 
         opening = _make_box(
             x1=0, y1=0, x2=2, y2=2,
@@ -1568,7 +1568,7 @@ class TestTraceLengthCheck:
 
     def test_very_long_trace_info(self):
         """Very long trace emits INFO about signal integrity review."""
-        from kicad_agent.dfm.extended_checks import TraceLengthCheck
+        from volta.dfm.extended_checks import TraceLengthCheck
 
         trace = _make_path(
             points=((0, 0), (1000, 0)),
@@ -1583,7 +1583,7 @@ class TestTraceLengthCheck:
 
     def test_normal_trace_passes(self):
         """Normal trace length passes."""
-        from kicad_agent.dfm.extended_checks import TraceLengthCheck
+        from volta.dfm.extended_checks import TraceLengthCheck
 
         trace = _make_path(
             points=((0, 0), (20, 0)),
@@ -1607,7 +1607,7 @@ class TestPadSolderMaskClearanceCheck:
 
     def test_pad_too_close_to_mask_edge_flagged(self):
         """Pad too close to solder mask clearance edge flagged."""
-        from kicad_agent.dfm.extended_checks import PadSolderMaskClearanceCheck
+        from volta.dfm.extended_checks import PadSolderMaskClearanceCheck
 
         pad = _make_box(
             x1=0, y1=0, x2=2, y2=2,
@@ -1627,7 +1627,7 @@ class TestPadSolderMaskClearanceCheck:
 
     def test_no_mask_features_passes(self):
         """No mask features means no findings."""
-        from kicad_agent.dfm.extended_checks import PadSolderMaskClearanceCheck
+        from volta.dfm.extended_checks import PadSolderMaskClearanceCheck
 
         pad = _make_box(
             x1=0, y1=0, x2=2, y2=2,
@@ -1650,7 +1650,7 @@ class TestViaAnnularCheck:
 
     def test_thin_via_annular_flagged(self):
         """Via with thin annular ring flagged."""
-        from kicad_agent.dfm.extended_checks import ViaAnnularCheck
+        from volta.dfm.extended_checks import ViaAnnularCheck
 
         via = _make_point(
             x=5, y=5, entity_type="via", entity_id="v1",
@@ -1667,7 +1667,7 @@ class TestViaAnnularCheck:
 
     def test_adequate_via_annular_passes(self):
         """Via with adequate annular ring passes."""
-        from kicad_agent.dfm.extended_checks import ViaAnnularCheck
+        from volta.dfm.extended_checks import ViaAnnularCheck
 
         via = _make_point(
             x=5, y=5, entity_type="via", entity_id="v1",
@@ -1692,7 +1692,7 @@ class TestHoleToHoleCheck:
 
     def test_holes_too_close_flagged(self):
         """Two holes too close flagged."""
-        from kicad_agent.dfm.extended_checks import HoleToHoleCheck
+        from volta.dfm.extended_checks import HoleToHoleCheck
 
         h1 = _make_point(x=0, y=0, entity_type="drill", entity_id="d1", drill_diameter=1.0)
         h2 = _make_point(x=0.8, y=0, entity_type="drill", entity_id="d2", drill_diameter=1.0)
@@ -1705,7 +1705,7 @@ class TestHoleToHoleCheck:
 
     def test_holes_far_apart_pass(self):
         """Holes with adequate spacing pass."""
-        from kicad_agent.dfm.extended_checks import HoleToHoleCheck
+        from volta.dfm.extended_checks import HoleToHoleCheck
 
         h1 = _make_point(x=0, y=0, entity_type="drill", entity_id="d1", drill_diameter=1.0)
         h2 = _make_point(x=5, y=0, entity_type="drill", entity_id="d2", drill_diameter=1.0)
@@ -1726,7 +1726,7 @@ class TestPadToPadClearanceCheck:
 
     def test_pads_too_close_flagged(self):
         """Pads on different nets too close flagged."""
-        from kicad_agent.dfm.extended_checks import PadToPadClearanceCheck
+        from volta.dfm.extended_checks import PadToPadClearanceCheck
 
         pad1 = _make_box(
             x1=0, y1=0, x2=1, y2=1,
@@ -1747,7 +1747,7 @@ class TestPadToPadClearanceCheck:
 
     def test_pads_on_same_net_ignored(self):
         """Pads on same net are not checked for clearance."""
-        from kicad_agent.dfm.extended_checks import PadToPadClearanceCheck
+        from volta.dfm.extended_checks import PadToPadClearanceCheck
 
         pad1 = _make_box(
             x1=0, y1=0, x2=1, y2=1,
@@ -1776,7 +1776,7 @@ class TestZoneFillCheck:
 
     def test_unfilled_zone_flagged(self):
         """Unfilled copper zone flagged."""
-        from kicad_agent.dfm.extended_checks import ZoneFillCheck
+        from volta.dfm.extended_checks import ZoneFillCheck
 
         zone = _make_region(
             boundary=((0, 0), (10, 0), (10, 10), (0, 10)),
@@ -1793,7 +1793,7 @@ class TestZoneFillCheck:
 
     def test_filled_zone_passes(self):
         """Filled copper zone passes."""
-        from kicad_agent.dfm.extended_checks import ZoneFillCheck
+        from volta.dfm.extended_checks import ZoneFillCheck
 
         zone = _make_region(
             boundary=((0, 0), (10, 0), (10, 10), (0, 10)),
@@ -1818,7 +1818,7 @@ class TestMinCopperPourWidthCheck:
 
     def test_thin_copper_pour_flagged(self):
         """Thin copper pour neck flagged."""
-        from kicad_agent.dfm.extended_checks import MinCopperPourWidthCheck
+        from volta.dfm.extended_checks import MinCopperPourWidthCheck
 
         pour = _make_box(
             x1=0, y1=0, x2=0.05, y2=5,
@@ -1834,7 +1834,7 @@ class TestMinCopperPourWidthCheck:
 
     def test_normal_copper_pour_passes(self):
         """Normal copper pour width passes."""
-        from kicad_agent.dfm.extended_checks import MinCopperPourWidthCheck
+        from volta.dfm.extended_checks import MinCopperPourWidthCheck
 
         pour = _make_box(
             x1=0, y1=0, x2=5, y2=5,
@@ -1858,15 +1858,15 @@ class TestMultiStageWithExtendedChecks:
 
     def test_extended_checks_count(self):
         """get_builtin_dfm_checks returns 50+ checks after expansion."""
-        from kicad_agent.dfm.checks import get_builtin_dfm_checks
+        from volta.dfm.checks import get_builtin_dfm_checks
 
         checks = get_builtin_dfm_checks()
         assert len(checks) >= 50, f"Expected 50+ checks, got {len(checks)}"
 
     def test_all_checks_run_through_checker(self):
         """All extended checks execute through DfmChecker without crashing."""
-        from kicad_agent.dfm.checks import get_builtin_dfm_checks
-        from kicad_agent.dfm.checker import DfmChecker
+        from volta.dfm.checks import get_builtin_dfm_checks
+        from volta.dfm.checker import DfmChecker
 
         checker = DfmChecker(checks=get_builtin_dfm_checks())
         model = _MockSpatialModel(primitives=[])
@@ -1878,7 +1878,7 @@ class TestMultiStageWithExtendedChecks:
 
     def test_check_names_unique(self):
         """All check names are unique."""
-        from kicad_agent.dfm.checks import get_builtin_dfm_checks
+        from volta.dfm.checks import get_builtin_dfm_checks
 
         checks = get_builtin_dfm_checks()
         names = [c.name for c in checks]

@@ -17,11 +17,11 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.ops.schema import MoveComponentOp, Operation, PositionSpec
-from kicad_agent.parser import parse_schematic
-from kicad_agent.serializer import serialize_schematic
+from volta.ir.base import _clear_registry
+from volta.ir.schematic_ir import SchematicIR
+from volta.ops.schema import MoveComponentOp, Operation, PositionSpec
+from volta.parser import parse_schematic
+from volta.serializer import serialize_schematic
 
 
 @pytest.fixture(autouse=True)
@@ -50,7 +50,7 @@ class TestMoveComponent:
 
     def test_move_updates_position(self, setup_schematic: dict) -> None:
         """move_component updates the component's position to the requested coordinates."""
-        from kicad_agent.ops.move_component import move_component
+        from volta.ops.move_component import move_component
 
         # J1 is at (66.04, 50.8) in the fixture
         op = MoveComponentOp(
@@ -71,7 +71,7 @@ class TestMoveComponent:
 
     def test_move_schematic_precision(self, setup_schematic: dict) -> None:
         """Schematic coordinates are rounded to 4 decimal places."""
-        from kicad_agent.ops.move_component import move_component
+        from volta.ops.move_component import move_component
 
         op = MoveComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -87,7 +87,7 @@ class TestMoveComponent:
 
     def test_move_with_rotation(self, setup_schematic: dict) -> None:
         """move sets the angle field correctly for non-zero rotation."""
-        from kicad_agent.ops.move_component import move_component
+        from volta.ops.move_component import move_component
 
         op = MoveComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -102,7 +102,7 @@ class TestMoveComponent:
 
     def test_move_zero_angle(self, setup_schematic: dict) -> None:
         """move with angle=0.0 sets angle to None (KiCad convention)."""
-        from kicad_agent.ops.move_component import move_component
+        from volta.ops.move_component import move_component
 
         op = MoveComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -117,7 +117,7 @@ class TestMoveComponent:
 
     def test_move_preserves_properties(self, setup_schematic: dict) -> None:
         """Moving a component preserves all other properties unchanged."""
-        from kicad_agent.ops.move_component import move_component
+        from volta.ops.move_component import move_component
 
         # Get original properties
         component = setup_schematic["ir"].get_component_by_ref("J1")
@@ -140,7 +140,7 @@ class TestMoveComponent:
 
     def test_move_not_found(self, setup_schematic: dict) -> None:
         """move_component raises MoveComponentError when reference not found."""
-        from kicad_agent.ops.move_component import MoveComponentError, move_component
+        from volta.ops.move_component import MoveComponentError, move_component
 
         op = MoveComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -153,7 +153,7 @@ class TestMoveComponent:
 
     def test_move_mutation_logged(self, setup_schematic: dict) -> None:
         """Move records mutation in IR log with old and new positions."""
-        from kicad_agent.ops.move_component import move_component
+        from volta.ops.move_component import move_component
 
         initial_mutations = len(setup_schematic["ir"].mutation_log)
 
@@ -173,7 +173,7 @@ class TestMoveComponent:
 
     def test_move_reparse(self, setup_schematic: dict) -> None:
         """After move, re-parsing the serialized file shows the new position."""
-        from kicad_agent.ops.move_component import move_component
+        from volta.ops.move_component import move_component
 
         op = MoveComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -207,7 +207,7 @@ class TestMoveComponentExecutor:
 
     def test_executor_dispatch(self, setup_schematic: dict) -> None:
         """OperationExecutor dispatches move_component op_type correctly."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         executor = OperationExecutor(base_dir=setup_schematic["base_dir"])
 

@@ -2,8 +2,8 @@
 
 import pytest
 
-from kicad_agent.analysis.types import NetClassification
-from kicad_agent.validation.gates.component_classifier import (
+from volta.analysis.types import NetClassification
+from volta.validation.gates.component_classifier import (
     ComponentRole,
     ComponentTypeClassifier,
 )

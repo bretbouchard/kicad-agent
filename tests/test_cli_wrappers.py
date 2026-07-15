@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.export.cli_wrappers import (
+from volta.export.cli_wrappers import (
     export_footprint_svg,
     export_pcb_pdf,
     export_pcb_svg,
@@ -19,7 +19,7 @@ from kicad_agent.export.cli_wrappers import (
     export_symbol_svg,
     render_pcb_3d,
 )
-from kicad_agent.export.gerber import ExportResult
+from volta.export.gerber import ExportResult
 
 
 # --- Shared fixtures ---
@@ -59,7 +59,7 @@ def fake_fp(tmp_path):
 @pytest.fixture
 def mock_kicad_cli():
     """Patch subprocess.run to simulate successful kicad-cli execution."""
-    with patch("kicad_agent.export.gerber.subprocess.run") as mock_run:
+    with patch("volta.export.gerber.subprocess.run") as mock_run:
         mock_result = MagicMock()
         mock_result.returncode = 0
         mock_result.stdout = ""
@@ -71,7 +71,7 @@ def mock_kicad_cli():
 @pytest.fixture
 def mock_cli_resolver():
     """Patch find_kicad_cli to return a fake path."""
-    with patch("kicad_agent.export.gerber.find_kicad_cli") as mock_find:
+    with patch("volta.export.gerber.find_kicad_cli") as mock_find:
         mock_cli = MagicMock()
         mock_cli.path = "/usr/local/bin/kicad-cli"
         mock_find.return_value = mock_cli

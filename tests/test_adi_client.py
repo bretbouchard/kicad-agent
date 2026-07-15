@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from kicad_agent.project.adi_library.client import (
+from volta.project.adi_library.client import (
     SAMACSYS_BASE_URL,
     SamacSysClient,
     SearchResult,

@@ -14,8 +14,8 @@ from kiutils.items.common import Position
 from kiutils.items.schitems import Connection, LocalLabel
 from kiutils.schematic import Schematic
 
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.ops.repair import (
+from volta.ir.schematic_ir import SchematicIR
+from volta.ops.repair import (
     SNAP_TOLERANCE,
     _find_position_for_unit,
     _get_unit_pin_map,
@@ -33,7 +33,7 @@ from kicad_agent.ops.repair import (
     snap_to_grid,
     update_symbols_from_library,
 )
-from kicad_agent.parser import parse_schematic
+from volta.parser import parse_schematic
 
 
 def _save_and_parse(board_path: Path, sch: Schematic) -> SchematicIR:
@@ -282,8 +282,8 @@ class TestRepairSchematicOperation:
 
     def test_repair_schematic_operation(self):
         """Execute repair_schematic operation through the executor."""
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         fixture = Path("tests/fixtures/RaspberryPi-uHAT/RaspberryPi-uHAT.kicad_sch")
         if not fixture.exists():
@@ -438,7 +438,7 @@ class TestAddPowerFlags:
 
     def test_add_power_flags_places_pwr_flag(self):
         """PWR_FLAG is placed at power_pin_not_driven positions."""
-        from kicad_agent.ops.erc_parser import ViolationPosition
+        from volta.ops.erc_parser import ViolationPosition
 
         ir = MagicMock()
         ir.get_label_positions.return_value = [
@@ -449,7 +449,7 @@ class TestAddPowerFlags:
             ViolationPosition(x=50.0, y=30.0, sheet="/", description="Power pin not driven"),
         ]
 
-        with patch("kicad_agent.ops.erc_parser.extract_violation_positions", return_value=mock_positions):
+        with patch("volta.ops.erc_parser.extract_violation_positions", return_value=mock_positions):
             result = add_power_flags(ir, Path("test.kicad_sch"))
 
         assert result["placed"] == 1
@@ -460,7 +460,7 @@ class TestAddPowerFlags:
         """No violations means no symbols placed."""
         ir = MagicMock()
 
-        with patch("kicad_agent.ops.erc_parser.extract_violation_positions", return_value=[]):
+        with patch("volta.ops.erc_parser.extract_violation_positions", return_value=[]):
             result = add_power_flags(ir, Path("test.kicad_sch"))
 
         assert result["placed"] == 0
@@ -472,7 +472,7 @@ class TestPlaceNoConnectsFromErc:
 
     def test_places_at_violation_positions(self):
         """No-connect markers placed at each violation position."""
-        from kicad_agent.ops.erc_parser import ViolationPosition
+        from volta.ops.erc_parser import ViolationPosition
 
         ir = MagicMock()
         ir.schematic.noConnects = []
@@ -483,7 +483,7 @@ class TestPlaceNoConnectsFromErc:
             ViolationPosition(x=50.0, y=60.0, sheet="/", description="Pin not connected"),
         ]
 
-        with patch("kicad_agent.ops.erc_parser.extract_violation_positions", return_value=mock_positions):
+        with patch("volta.ops.erc_parser.extract_violation_positions", return_value=mock_positions):
             result = place_no_connects_from_erc(ir, Path("test.kicad_sch"))
 
         assert result["placed"] == 3
@@ -491,7 +491,7 @@ class TestPlaceNoConnectsFromErc:
 
     def test_skips_existing_no_connects(self):
         """Existing no-connect markers at positions are skipped."""
-        from kicad_agent.ops.erc_parser import ViolationPosition
+        from volta.ops.erc_parser import ViolationPosition
 
         ir = MagicMock()
         # Existing no-connect at (10.0, 20.0)
@@ -505,7 +505,7 @@ class TestPlaceNoConnectsFromErc:
             ViolationPosition(x=30.0, y=40.0, sheet="/", description="Pin not connected"),
         ]
 
-        with patch("kicad_agent.ops.erc_parser.extract_violation_positions", return_value=mock_positions):
+        with patch("volta.ops.erc_parser.extract_violation_positions", return_value=mock_positions):
             result = place_no_connects_from_erc(ir, Path("test.kicad_sch"))
 
         assert result["placed"] == 1
@@ -515,7 +515,7 @@ class TestPlaceNoConnectsFromErc:
         """Empty violation list returns placed=0."""
         ir = MagicMock()
 
-        with patch("kicad_agent.ops.erc_parser.extract_violation_positions", return_value=[]):
+        with patch("volta.ops.erc_parser.extract_violation_positions", return_value=[]):
             result = place_no_connects_from_erc(ir, Path("test.kicad_sch"))
 
         assert result["placed"] == 0
@@ -529,7 +529,7 @@ class TestPlaceNoConnectsFromErc:
 
 def test_snap_to_grid_op_schema():
     """SnapToGridOp validates correctly."""
-    from kicad_agent.ops.schema import Operation, SnapToGridOp
+    from volta.ops.schema import Operation, SnapToGridOp
 
     op = SnapToGridOp(op_type="snap_to_grid", target_file="test.kicad_sch")
     assert op.grid_mm == 0.01
@@ -546,7 +546,7 @@ def test_snap_to_grid_op_schema():
 
 def test_add_power_flag_op_schema():
     """AddPowerFlagOp validates correctly."""
-    from kicad_agent.ops.schema import AddPowerFlagOp, Operation
+    from volta.ops.schema import AddPowerFlagOp, Operation
 
     op = AddPowerFlagOp(op_type="add_power_flag", target_file="test.kicad_sch")
     assert op.op_type == "add_power_flag"
@@ -559,7 +559,7 @@ def test_add_power_flag_op_schema():
 
 def test_repair_schematic_with_snap_to_grid():
     """RepairSchematicOp with snap_to_grid=True validates correctly."""
-    from kicad_agent.ops.schema import Operation
+    from volta.ops.schema import Operation
 
     op = Operation.model_validate({
         "root": {
@@ -584,7 +584,7 @@ class TestErcAutoFix:
 
     def _make_violation(self, vtype: str, count: int = 1) -> list:
         """Create mock ErcViolation instances for testing."""
-        from kicad_agent.ops.erc_parser import ErcViolation
+        from volta.ops.erc_parser import ErcViolation
         return [
             ErcViolation(
                 sheet="/",
@@ -598,10 +598,10 @@ class TestErcAutoFix:
 
     def test_no_violations(self):
         """erc_auto_fix with empty ERC results returns fixes_applied=[] and iterations=0."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         ir = MagicMock()
-        with patch("kicad_agent.ops.erc_auto_fix.parse_erc", return_value=[]):
+        with patch("volta.ops.erc_auto_fix.parse_erc", return_value=[]):
             result = erc_auto_fix(ir, Path("test.kicad_sch"), max_iterations=3)
 
         assert result["fixes_applied"] == []
@@ -611,13 +611,13 @@ class TestErcAutoFix:
 
     def test_pin_not_connected_fix(self):
         """erc_auto_fix maps pin_not_connected violations to place_no_connects_from_erc."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         ir = MagicMock()
         violations = self._make_violation("pin_not_connected", count=3)
         # Iteration 1: violations, iteration 2: empty, final check: empty
-        with patch("kicad_agent.ops.erc_auto_fix.parse_erc", side_effect=[violations, [], []]), \
-             patch("kicad_agent.ops.repair_erc.place_no_connects_from_erc", return_value={"placed": 3, "skipped_duplicates": 0}) as mock_nc:
+        with patch("volta.ops.erc_auto_fix.parse_erc", side_effect=[violations, [], []]), \
+             patch("volta.ops.repair_erc.place_no_connects_from_erc", return_value={"placed": 3, "skipped_duplicates": 0}) as mock_nc:
             result = erc_auto_fix(ir, Path("test.kicad_sch"))
 
         mock_nc.assert_called_once()
@@ -625,13 +625,13 @@ class TestErcAutoFix:
 
     def test_power_pin_not_driven_fix(self):
         """erc_auto_fix maps power_pin_not_driven violations to add_power_flags."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         ir = MagicMock()
         violations = self._make_violation("power_pin_not_driven", count=2)
         # Iteration 1: violations, iteration 2: empty, final check: empty
-        with patch("kicad_agent.ops.erc_auto_fix.parse_erc", side_effect=[violations, [], []]), \
-             patch("kicad_agent.ops.repair_erc.add_power_flags", return_value={"placed": 2, "skipped": 0, "positions": [], "net_names": []}) as mock_pf:
+        with patch("volta.ops.erc_auto_fix.parse_erc", side_effect=[violations, [], []]), \
+             patch("volta.ops.repair_erc.add_power_flags", return_value={"placed": 2, "skipped": 0, "positions": [], "net_names": []}) as mock_pf:
             result = erc_auto_fix(ir, Path("test.kicad_sch"))
 
         mock_pf.assert_called_once()
@@ -639,13 +639,13 @@ class TestErcAutoFix:
 
     def test_max_iterations_respected(self):
         """erc_auto_fix respects max_iterations and stops after that many rounds."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         ir = MagicMock()
         violations = self._make_violation("pin_not_connected", count=5)
         # parse_erc always returns violations (never decreases)
-        with patch("kicad_agent.ops.erc_auto_fix.parse_erc", return_value=violations), \
-             patch("kicad_agent.ops.repair_erc.place_no_connects_from_erc", return_value={"placed": 5, "skipped_duplicates": 0}):
+        with patch("volta.ops.erc_auto_fix.parse_erc", return_value=violations), \
+             patch("volta.ops.repair_erc.place_no_connects_from_erc", return_value={"placed": 5, "skipped_duplicates": 0}):
             result = erc_auto_fix(ir, Path("test.kicad_sch"), max_iterations=2)
 
         # Should run exactly 2 iterations (stops when count doesn't decrease after iteration 1,
@@ -654,13 +654,13 @@ class TestErcAutoFix:
 
     def test_early_stop_no_decrease(self):
         """erc_auto_fix stops early when violation count does not decrease."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         ir = MagicMock()
         violations = self._make_violation("pin_not_connected", count=5)
         # Always returns same violations -- count never decreases
-        with patch("kicad_agent.ops.erc_auto_fix.parse_erc", return_value=violations), \
-             patch("kicad_agent.ops.repair_erc.place_no_connects_from_erc", return_value={"placed": 0, "skipped_duplicates": 0}):
+        with patch("volta.ops.erc_auto_fix.parse_erc", return_value=violations), \
+             patch("volta.ops.repair_erc.place_no_connects_from_erc", return_value={"placed": 0, "skipped_duplicates": 0}):
             result = erc_auto_fix(ir, Path("test.kicad_sch"), max_iterations=10)
 
         # Should stop after 2 iterations: first runs repairs, second sees no decrease and stops
@@ -668,12 +668,12 @@ class TestErcAutoFix:
 
     def test_unhandled_violations_reported(self):
         """Unmapped violation types appear in unhandled_violations in return value."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         ir = MagicMock()
         violations = self._make_violation("unknown_violation_type", count=2)
         # Iteration 1: unhandled violations, iteration 2: same count -> early stop, final check: empty
-        with patch("kicad_agent.ops.erc_auto_fix.parse_erc", side_effect=[violations, violations, []]):
+        with patch("volta.ops.erc_auto_fix.parse_erc", side_effect=[violations, violations, []]):
             result = erc_auto_fix(ir, Path("test.kicad_sch"))
 
         assert len(result["unhandled_violations"]) == 1
@@ -682,7 +682,7 @@ class TestErcAutoFix:
 
     def test_schema_validates(self):
         """ErcAutoFixOp validates with op_type='erc_auto_fix' through Operation.model_validate."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -705,7 +705,7 @@ class TestErcAutoFix:
 
     def test_priority_order(self):
         """Repairs execute in priority order: shorts first, then type fixes, then cosmetic."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         ir = MagicMock()
         violations = [
@@ -720,9 +720,9 @@ class TestErcAutoFix:
                 return {"placed": 0, "skipped": 0}
             return wrapper
 
-        with patch("kicad_agent.ops.erc_auto_fix.parse_erc", side_effect=[violations, [], []]), \
-             patch("kicad_agent.ops.repair_erc.add_power_flags", side_effect=track_call("power_flags")), \
-             patch("kicad_agent.ops.repair_erc.place_no_connects_from_erc", side_effect=track_call("no_connects")):
+        with patch("volta.ops.erc_auto_fix.parse_erc", side_effect=[violations, [], []]), \
+             patch("volta.ops.repair_erc.add_power_flags", side_effect=track_call("power_flags")), \
+             patch("volta.ops.repair_erc.place_no_connects_from_erc", side_effect=track_call("no_connects")):
             result = erc_auto_fix(ir, Path("test.kicad_sch"))
 
         # power_pin_not_driven should be called before pin_not_connected
@@ -940,7 +940,7 @@ class TestNetPositionIndex:
         if not _EQ_STAGE.exists():
             pytest.skip("Channel strip eq-stage not found")
 
-        from kicad_agent.schematic_routing.net_extractor import NetPositionIndex
+        from volta.schematic_routing.net_extractor import NetPositionIndex
 
         index = NetPositionIndex.from_file(_EQ_STAGE)
         # Should have at least some named nets
@@ -962,7 +962,7 @@ class TestNetPositionIndex:
         if not _EQ_STAGE.exists():
             pytest.skip("Channel strip eq-stage not found")
 
-        from kicad_agent.schematic_routing.net_extractor import NetPositionIndex
+        from volta.schematic_routing.net_extractor import NetPositionIndex
 
         index = NetPositionIndex.from_file(_EQ_STAGE)
 
@@ -984,7 +984,7 @@ class TestNetPositionIndex:
         if not _EQ_STAGE.exists():
             pytest.skip("Channel strip eq-stage not found")
 
-        from kicad_agent.schematic_routing.net_extractor import NetPositionIndex
+        from volta.schematic_routing.net_extractor import NetPositionIndex
 
         index = NetPositionIndex.from_file(_EQ_STAGE)
 
@@ -1010,7 +1010,7 @@ class TestNetPositionIndex:
 
     def test_auto_named_detection(self):
         """is_auto_named correctly identifies Net_N pattern."""
-        from kicad_agent.schematic_routing.net_extractor import NetPositionIndex
+        from volta.schematic_routing.net_extractor import NetPositionIndex
 
         # We can't instantiate without a graph, but we can test the method
         # by creating a minimal mock
@@ -1263,7 +1263,7 @@ class TestResolveShortedNets:
 
     def test_power_net_detection(self):
         """Power net patterns are correctly identified."""
-        from kicad_agent.ops.repair import _is_power_net
+        from volta.ops.repair import _is_power_net
 
         assert _is_power_net("VCC") is True
         assert _is_power_net("+9V") is True
@@ -1276,7 +1276,7 @@ class TestResolveShortedNets:
 
     def test_orphan_check_returns_zero_for_clean_break(self):
         """Orphan check returns 0 when removing a bridge wire leaves no orphans."""
-        from kicad_agent.ops.repair import _check_orphan_count
+        from volta.ops.repair import _check_orphan_count
 
         # Two labels connected by a wire, plus a bridge wire
         wire_endpoints = [
@@ -1394,8 +1394,8 @@ class TestPowerNetProtection:
             {0, 1, 2} if name == "NET_A" else {0}
         )
 
-        with patch("kicad_agent.ops.repair_nets.detect_shorted_nets", return_value=short_data), \
-             patch("kicad_agent.ops.repair_nets.NetPositionIndex.from_file", return_value=mock_index):
+        with patch("volta.ops.repair_nets.detect_shorted_nets", return_value=short_data), \
+             patch("volta.ops.repair_nets.NetPositionIndex.from_file", return_value=mock_index):
             result = fix_shorted_nets(ir, path, strategy="keep_majority", dry_run=True)
 
         # Should report the short and plan to remove the minority net
@@ -1417,8 +1417,8 @@ class TestPowerNetProtection:
             {0} if name == "AGND" else {0, 1, 2, 3, 4}
         )
 
-        with patch("kicad_agent.ops.repair_nets.detect_shorted_nets", return_value=short_data), \
-             patch("kicad_agent.ops.repair_nets.NetPositionIndex.from_file", return_value=mock_index):
+        with patch("volta.ops.repair_nets.detect_shorted_nets", return_value=short_data), \
+             patch("volta.ops.repair_nets.NetPositionIndex.from_file", return_value=mock_index):
             result = fix_shorted_nets(ir, path, strategy="keep_majority", dry_run=True)
 
         # Should keep AGND (power net), remove DATA_LINE
@@ -1437,8 +1437,8 @@ class TestPowerNetProtection:
         mock_index = MagicMock()
         mock_index.get_positions_for_net.return_value = {0}
 
-        with patch("kicad_agent.ops.repair_nets.detect_shorted_nets", return_value=short_data), \
-             patch("kicad_agent.ops.repair_nets.NetPositionIndex.from_file", return_value=mock_index):
+        with patch("volta.ops.repair_nets.detect_shorted_nets", return_value=short_data), \
+             patch("volta.ops.repair_nets.NetPositionIndex.from_file", return_value=mock_index):
             result = fix_shorted_nets(ir, path, strategy="keep_majority", dry_run=True)
 
         # Should find the short but refuse to fix it (no labels removed)
@@ -1671,7 +1671,7 @@ class TestResolveShortedNetsSmart:
 
     def test_verify_clean_break_detects_unclean(self):
         """_verify_clean_break returns False when removal would not separate nets."""
-        from kicad_agent.ops.repair import _verify_clean_break
+        from volta.ops.repair import _verify_clean_break
 
         # Wire 0 connects A to B, Wire 1 also connects A to B
         # Removing just one wire does NOT separate them
@@ -1693,7 +1693,7 @@ class TestResolveShortedNetsSmart:
 
     def test_verify_clean_break_confirms_clean(self):
         """_verify_clean_break returns True for a clean separation."""
-        from kicad_agent.ops.repair import _verify_clean_break
+        from volta.ops.repair import _verify_clean_break
 
         # Single wire connecting A to B
         wire_endpoints = [
@@ -1716,7 +1716,7 @@ class TestNetSnapshot:
 
     def test_snapshot_on_channel_strip(self):
         """Snapshot returns populated components on a real schematic."""
-        from kicad_agent.ops.repair import _take_net_snapshot
+        from volta.ops.repair import _take_net_snapshot
 
         if not _EQ_STAGE.exists():
             pytest.skip("Channel strip eq-stage not found")
@@ -1738,7 +1738,7 @@ class TestNetSnapshot:
 
     def test_diff_clean_when_identical(self):
         """Diff of identical snapshots reports clean."""
-        from kicad_agent.ops.repair import _diff_net_snapshots
+        from volta.ops.repair import _diff_net_snapshots
 
         snapshot = {
             "components": {
@@ -1751,7 +1751,7 @@ class TestNetSnapshot:
 
     def test_diff_detects_broken_net(self):
         """Diff detects when a net is lost between snapshots."""
-        from kicad_agent.ops.repair import _diff_net_snapshots
+        from volta.ops.repair import _diff_net_snapshots
 
         before = {
             "components": {
@@ -1773,7 +1773,7 @@ class TestIRCheckpoint:
 
     def test_checkpoint_and_restore_roundtrip(self):
         """Checkpoint captures state, restore recovers it."""
-        from kicad_agent.ops.repair import _checkpoint_ir, _restore_ir
+        from volta.ops.repair import _checkpoint_ir, _restore_ir
 
         sch = Schematic()
         sch.graphicalItems = []
@@ -1804,7 +1804,7 @@ class TestErcAutoFixVerification:
 
     def test_verify_returns_rollback_key(self):
         """erc_auto_fix result includes verification_rollback even when verify=False."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         sch = Schematic()
         sch.graphicalItems = []
@@ -1826,14 +1826,14 @@ class TestPointOnWireSegment:
     """Test _point_on_wire_segment helper for mid-wire connectivity (#4)."""
 
     def test_horizontal_wire_midpoint(self):
-        from kicad_agent.ops.repair import _point_on_wire_segment
+        from volta.ops.repair import _point_on_wire_segment
 
         wires = [{"start_x": 10.0, "start_y": 20.0, "end_x": 10.0, "end_y": 30.0}]
         # Pin at midpoint of vertical wire
         assert _point_on_wire_segment(10.0, 25.0, wires) is True
 
     def test_horizontal_wire_endpoint_not_counted_as_midpoint(self):
-        from kicad_agent.ops.repair import _point_on_wire_segment
+        from volta.ops.repair import _point_on_wire_segment
 
         wires = [{"start_x": 10.0, "start_y": 20.0, "end_x": 10.0, "end_y": 30.0}]
         # Pin at endpoint — endpoint matching is handled by _is_position_connected
@@ -1841,21 +1841,21 @@ class TestPointOnWireSegment:
         assert _point_on_wire_segment(10.0, 20.0, wires) is True
 
     def test_not_on_wire(self):
-        from kicad_agent.ops.repair import _point_on_wire_segment
+        from volta.ops.repair import _point_on_wire_segment
 
         wires = [{"start_x": 10.0, "start_y": 20.0, "end_x": 10.0, "end_y": 30.0}]
         # Pin far from wire
         assert _point_on_wire_segment(50.0, 25.0, wires) is False
 
     def test_horizontal_wire(self):
-        from kicad_agent.ops.repair import _point_on_wire_segment
+        from volta.ops.repair import _point_on_wire_segment
 
         wires = [{"start_x": 0.0, "start_y": 10.0, "end_x": 50.0, "end_y": 10.0}]
         # Pin at midpoint of horizontal wire
         assert _point_on_wire_segment(25.0, 10.0, wires) is True
 
     def test_tolerance_edge(self):
-        from kicad_agent.ops.repair import _point_on_wire_segment
+        from volta.ops.repair import _point_on_wire_segment
 
         wires = [{"start_x": 0.0, "start_y": 10.0, "end_x": 50.0, "end_y": 10.0}]
         # Pin slightly off wire (within tolerance)
@@ -1868,26 +1868,26 @@ class TestNearAnchor:
     """Test _near_anchor tolerance-based proximity (#5)."""
 
     def test_exact_match(self):
-        from kicad_agent.ops.repair import _near_anchor
+        from volta.ops.repair import _near_anchor
 
         anchors = {(67.32, 68.58)}
         assert _near_anchor(67.32, 68.58, anchors) is True
 
     def test_within_tolerance(self):
-        from kicad_agent.ops.repair import _near_anchor
+        from volta.ops.repair import _near_anchor
 
         # Positions that round differently but are within SNAP_TOLERANCE
         anchors = {(67.32, 68.58)}
         assert _near_anchor(67.315, 68.575, anchors) is True
 
     def test_beyond_tolerance(self):
-        from kicad_agent.ops.repair import _near_anchor
+        from volta.ops.repair import _near_anchor
 
         anchors = {(67.32, 68.58)}
         assert _near_anchor(67.33, 68.59, anchors) is False
 
     def test_empty_anchors(self):
-        from kicad_agent.ops.repair import _near_anchor
+        from volta.ops.repair import _near_anchor
 
         assert _near_anchor(0.0, 0.0, set()) is False
 
@@ -2311,8 +2311,8 @@ class TestRemoveDanglingWiresTrustErc:
         but ERC reports wire_dangling at that endpoint. trust_erc=True must
         remove the wire despite geometric criteria not flagging it.
         """
-        from kicad_agent.ops.erc_parser import ViolationPosition
-        from kicad_agent.ops.repair_wires import remove_dangling_wires
+        from volta.ops.erc_parser import ViolationPosition
+        from volta.ops.repair_wires import remove_dangling_wires
 
         ir = self._build_anchored_wire_ir()
         mock_erc_positions = [
@@ -2320,7 +2320,7 @@ class TestRemoveDanglingWiresTrustErc:
         ]
 
         with patch(
-            "kicad_agent.ops.erc_parser.extract_violation_positions",
+            "volta.ops.erc_parser.extract_violation_positions",
             return_value=mock_erc_positions,
         ):
             result = remove_dangling_wires(
@@ -2345,8 +2345,8 @@ class TestRemoveDanglingWiresTrustErc:
         ERC positions are ignored. Geometric criteria see the label-anchored
         endpoint as connected, so the wire is NOT removed.
         """
-        from kicad_agent.ops.erc_parser import ViolationPosition
-        from kicad_agent.ops.repair_wires import remove_dangling_wires
+        from volta.ops.erc_parser import ViolationPosition
+        from volta.ops.repair_wires import remove_dangling_wires
 
         ir = self._build_anchored_wire_ir()
         mock_erc_positions = [
@@ -2354,7 +2354,7 @@ class TestRemoveDanglingWiresTrustErc:
         ]
 
         with patch(
-            "kicad_agent.ops.erc_parser.extract_violation_positions",
+            "volta.ops.erc_parser.extract_violation_positions",
             return_value=mock_erc_positions,
         ):
             result = remove_dangling_wires(
@@ -2372,8 +2372,8 @@ class TestRemoveDanglingWiresTrustErc:
         Reuses the erc_passthrough fixture: call without specifying trust_erc.
         Default behavior must match trust_erc=True (ERC positions are used).
         """
-        from kicad_agent.ops.erc_parser import ViolationPosition
-        from kicad_agent.ops.repair_wires import remove_dangling_wires
+        from volta.ops.erc_parser import ViolationPosition
+        from volta.ops.repair_wires import remove_dangling_wires
 
         ir = self._build_anchored_wire_ir()
         mock_erc_positions = [
@@ -2381,7 +2381,7 @@ class TestRemoveDanglingWiresTrustErc:
         ]
 
         with patch(
-            "kicad_agent.ops.erc_parser.extract_violation_positions",
+            "volta.ops.erc_parser.extract_violation_positions",
             return_value=mock_erc_positions,
         ):
             # NOTE: no trust_erc= kwarg — rely on default
@@ -2399,13 +2399,13 @@ class TestRemoveDanglingWiresTrustErc:
         2+ wire intersections). ERC reports no wire_dangling violations.
         Geometric criteria must catch this wire regardless of trust_erc value.
         """
-        from kicad_agent.ops.repair_wires import remove_dangling_wires
+        from volta.ops.repair_wires import remove_dangling_wires
 
         ir = self._build_geometrically_dangling_ir()
 
         # ERC reports nothing — geometric path must still work
         with patch(
-            "kicad_agent.ops.erc_parser.extract_violation_positions",
+            "volta.ops.erc_parser.extract_violation_positions",
             return_value=[],
         ):
             result_trust = remove_dangling_wires(
@@ -2414,10 +2414,10 @@ class TestRemoveDanglingWiresTrustErc:
 
         ir2 = self._build_geometrically_dangling_ir()
         with patch(
-            "kicad_agent.ops.erc_parser.extract_violation_positions",
+            "volta.ops.erc_parser.extract_violation_positions",
             return_value=[],
         ):
-            from kicad_agent.ops.repair_wires import remove_dangling_wires as rdw2
+            from volta.ops.repair_wires import remove_dangling_wires as rdw2
             result_no_trust = rdw2(
                 ir2, Path("test.kicad_sch"), trust_erc=False, dry_run=True,
             )

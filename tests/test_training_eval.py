@@ -10,7 +10,7 @@ import math
 
 import pytest
 
-from kicad_agent.training.reward_model import (
+from volta.training.reward_model import (
     PredictedReward,
     eval_reward_quality,
 )

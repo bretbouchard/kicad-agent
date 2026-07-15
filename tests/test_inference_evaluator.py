@@ -6,7 +6,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from kicad_agent.inference.best_of_n import ScoredChain
+from volta.inference.best_of_n import ScoredChain
 
 
 class TestEvaluationReport:
@@ -14,7 +14,7 @@ class TestEvaluationReport:
 
     def test_evaluation_report_frozen(self):
         """EvaluationReport is immutable (frozen dataclass)."""
-        from kicad_agent.inference.evaluator import EvaluationReport
+        from volta.inference.evaluator import EvaluationReport
 
         report = EvaluationReport(
             n_test_files=1,
@@ -33,7 +33,7 @@ class TestEvaluationReport:
 
     def test_evaluation_report_to_text(self):
         """to_text produces readable summary with scores."""
-        from kicad_agent.inference.evaluator import EvaluationReport
+        from volta.inference.evaluator import EvaluationReport
 
         report = EvaluationReport(
             n_test_files=3,
@@ -62,7 +62,7 @@ class TestRunE2EEvaluation:
         """run_e2e_evaluation returns EvaluationReport with valid metrics."""
         from unittest.mock import patch
 
-        from kicad_agent.inference.evaluator import run_e2e_evaluation
+        from volta.inference.evaluator import run_e2e_evaluation
 
         single_chain = ScoredChain(
             chain_text="single chain",
@@ -82,9 +82,9 @@ class TestRunE2EEvaluation:
         )
 
         with patch(
-            "kicad_agent.inference.wrapper.InferenceWrapper.analyze"
+            "volta.inference.wrapper.InferenceWrapper.analyze"
         ) as mock_analyze, patch(
-            "kicad_agent.inference.evaluator.Path.exists", return_value=True,
+            "volta.inference.evaluator.Path.exists", return_value=True,
         ):
             # First call (single baseline), then second call (best-of-N)
             mock_analyze.side_effect = [single_chain, best_chain]
@@ -107,7 +107,7 @@ class TestRunE2EEvaluation:
         """
         from unittest.mock import patch
 
-        from kicad_agent.inference.evaluator import run_e2e_evaluation
+        from volta.inference.evaluator import run_e2e_evaluation
 
         single_chain = ScoredChain(
             chain_text="single",
@@ -127,9 +127,9 @@ class TestRunE2EEvaluation:
         )
 
         with patch(
-            "kicad_agent.inference.wrapper.InferenceWrapper.analyze"
+            "volta.inference.wrapper.InferenceWrapper.analyze"
         ) as mock_analyze, patch(
-            "kicad_agent.inference.evaluator.Path.exists", return_value=True,
+            "volta.inference.evaluator.Path.exists", return_value=True,
         ):
             mock_analyze.side_effect = [single_chain, best_chain]
 
@@ -144,7 +144,7 @@ class TestRunE2EEvaluation:
 
     def test_run_e2e_empty_files(self):
         """Empty test_files returns report with n_test_files=0."""
-        from kicad_agent.inference.evaluator import run_e2e_evaluation
+        from volta.inference.evaluator import run_e2e_evaluation
 
         report = run_e2e_evaluation(test_files=[])
 

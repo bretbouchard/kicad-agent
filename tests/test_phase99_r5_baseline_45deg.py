@@ -33,7 +33,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.routing.freerouting import (
+from volta.routing.freerouting import (
     is_freerouting_available,
     parse_ses,
     route_with_freerouting,

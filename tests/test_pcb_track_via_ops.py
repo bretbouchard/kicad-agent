@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+from volta.ops.pcb_raw_writer import PcbRawWriter
 
 
 # ---------------------------------------------------------------------------
@@ -265,7 +265,7 @@ class TestSchemas:
     """Pydantic schemas for AddTrackOp / AddArcTrackOp / AddViaOp."""
 
     def test_add_track_schema(self):
-        from kicad_agent.ops._schema_pcb import AddTrackOp
+        from volta.ops._schema_pcb import AddTrackOp
         op = AddTrackOp(
             target_file="test.kicad_pcb",
             net="GND",
@@ -279,7 +279,7 @@ class TestSchemas:
         assert tuple(op.start) == (100.0, 50.0)
 
     def test_add_arc_track_schema(self):
-        from kicad_agent.ops._schema_pcb import AddArcTrackOp
+        from volta.ops._schema_pcb import AddArcTrackOp
         op = AddArcTrackOp(
             target_file="test.kicad_pcb",
             net="CLK",
@@ -291,7 +291,7 @@ class TestSchemas:
         assert tuple(op.mid) == (5.0, 5.0)
 
     def test_add_via_schema_defaults(self):
-        from kicad_agent.ops._schema_pcb import AddViaOp
+        from volta.ops._schema_pcb import AddViaOp
         op = AddViaOp(
             target_file="test.kicad_pcb",
             net="GND",
@@ -303,7 +303,7 @@ class TestSchemas:
         assert op.layers == ["F.Cu", "B.Cu"]
 
     def test_add_via_schema_multilayer(self):
-        from kicad_agent.ops._schema_pcb import AddViaOp
+        from volta.ops._schema_pcb import AddViaOp
         op = AddViaOp(
             target_file="test.kicad_pcb",
             net="GND",
@@ -313,7 +313,7 @@ class TestSchemas:
         assert len(op.layers) == 4
 
     def test_schema_empty_net_rejected(self):
-        from kicad_agent.ops._schema_pcb import AddTrackOp
+        from volta.ops._schema_pcb import AddTrackOp
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             AddTrackOp(
@@ -333,11 +333,11 @@ class TestHandlerExecution:
 
     def test_add_track_via_executor(self, pcb_path, monkeypatch):
         """add_track dispatches through executor and writes the segment."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -363,11 +363,11 @@ class TestHandlerExecution:
         assert not re.search(r'\(net\s+\d+\s+"GND"\)', content)
 
     def test_add_arc_track_via_executor(self, pcb_path):
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -392,11 +392,11 @@ class TestHandlerExecution:
         assert '(net "CLK")' in content
 
     def test_add_via_via_executor(self, pcb_path):
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -424,11 +424,11 @@ class TestHandlerExecution:
 
     def test_two_tracks_unique_uuids_on_disk(self, pcb_path):
         """Two consecutive add_track ops produce two different UUIDs on disk."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=pcb_path.parent)
 

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.training.rewards.cap_inputs import CapInputs
+from volta.training.rewards.cap_inputs import CapInputs
 
 
 def test_cap_inputs_constructs_cleanly() -> None:
@@ -71,9 +71,9 @@ def test_from_layout_result_with_real_fixture() -> None:
     if not fixture.exists():
         pytest.skip(f"fixture {fixture} not available")
 
-    from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
-    from kicad_agent.ir.schematic_ir import SchematicIR
-    from kicad_agent.parser.schematic_parser import parse_schematic
+    from volta.analysis.schematic_spatial import SchematicSpatialExtractor
+    from volta.ir.schematic_ir import SchematicIR
+    from volta.parser.schematic_parser import parse_schematic
 
     parse_result = parse_schematic(fixture)
     ir = SchematicIR(_parse_result=parse_result)
@@ -100,8 +100,8 @@ def test_from_layout_result_with_real_chain() -> None:
     if not fixture.exists():
         pytest.skip(f"fixture {fixture} not available")
 
-    from kicad_agent.ir.schematic_ir import SchematicIR
-    from kicad_agent.parser.schematic_parser import parse_schematic
+    from volta.ir.schematic_ir import SchematicIR
+    from volta.parser.schematic_parser import parse_schematic
 
     parse_result = parse_schematic(fixture)
     ir = SchematicIR(_parse_result=parse_result)

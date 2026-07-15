@@ -119,7 +119,7 @@ def generate_from_benchmark_tasks(
     Returns:
         Total number of examples generated.
     """
-    from kicad_agent.analysis.spatial_benchmark import TaskGenerator, SpatialReasoningTask
+    from volta.analysis.spatial_benchmark import TaskGenerator, SpatialReasoningTask
 
     examples: list[dict[str, Any]] = []
 
@@ -172,7 +172,7 @@ def generate_from_gap_analysis(
     Returns:
         Total number of examples generated.
     """
-    from kicad_agent.analysis.gap_analyzer import GapAnalyzer
+    from volta.analysis.gap_analyzer import GapAnalyzer
 
     if render_dir:
         render_dir.mkdir(parents=True, exist_ok=True)

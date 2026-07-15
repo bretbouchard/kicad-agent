@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.training.grpo_evaluator import (
+from volta.training.grpo_evaluator import (
     compare_sft_vs_grpo,
     evaluate_grpo_model,
     run_discrimination_test,
@@ -30,10 +30,10 @@ def _mock_reward_model():
 class TestDiscriminationRateRange:
     """Test discrimination_rate is between 0 and 1."""
 
-    @patch("kicad_agent.training.grpo_evaluator.RewardModel")
-    @patch("kicad_agent.training.grpo_evaluator.predict_reward")
-    @patch("kicad_agent.training.grpo_evaluator._generate_text_with_adapter")
-    @patch("kicad_agent.training.grpo_evaluator._load_chatml_prompts")
+    @patch("volta.training.grpo_evaluator.RewardModel")
+    @patch("volta.training.grpo_evaluator.predict_reward")
+    @patch("volta.training.grpo_evaluator._generate_text_with_adapter")
+    @patch("volta.training.grpo_evaluator._load_chatml_prompts")
     def test_rate_in_range(
         self, mock_load, mock_generate, mock_predict, mock_rm_cls,
     ):
@@ -68,10 +68,10 @@ class TestDiscriminationRateRange:
 class TestDiscriminationPerfect:
     """Test perfect discrimination when correct always scores higher."""
 
-    @patch("kicad_agent.training.grpo_evaluator.RewardModel")
-    @patch("kicad_agent.training.grpo_evaluator.predict_reward")
-    @patch("kicad_agent.training.grpo_evaluator._generate_text_with_adapter")
-    @patch("kicad_agent.training.grpo_evaluator._load_chatml_prompts")
+    @patch("volta.training.grpo_evaluator.RewardModel")
+    @patch("volta.training.grpo_evaluator.predict_reward")
+    @patch("volta.training.grpo_evaluator._generate_text_with_adapter")
+    @patch("volta.training.grpo_evaluator._load_chatml_prompts")
     def test_perfect_discrimination(
         self, mock_load, mock_generate, mock_predict, mock_rm_cls,
     ):
@@ -104,8 +104,8 @@ class TestDiscriminationPerfect:
 class TestCompareReturnsDeltas:
     """Test compare_sft_vs_grpo returns delta keys for each dimension."""
 
-    @patch("kicad_agent.training.grpo_evaluator.run_discrimination_test")
-    @patch("kicad_agent.training.grpo_evaluator.evaluate_grpo_model")
+    @patch("volta.training.grpo_evaluator.run_discrimination_test")
+    @patch("volta.training.grpo_evaluator.evaluate_grpo_model")
     def test_compare_deltas(self, mock_evaluate, mock_discrimination):
         """compare_sft_vs_grpo returns delta_reward, delta_format, delta_quality, delta_accuracy."""
         mock_evaluate.side_effect = [
@@ -150,10 +150,10 @@ class TestCompareReturnsDeltas:
 class TestEvaluateReturnsDimensions:
     """Test evaluate_grpo_model returns all three reward dimensions."""
 
-    @patch("kicad_agent.training.grpo_evaluator.RewardModel")
-    @patch("kicad_agent.training.grpo_evaluator.predict_reward")
-    @patch("kicad_agent.training.grpo_evaluator._generate_text_with_adapter")
-    @patch("kicad_agent.training.grpo_evaluator._load_chatml_prompts")
+    @patch("volta.training.grpo_evaluator.RewardModel")
+    @patch("volta.training.grpo_evaluator.predict_reward")
+    @patch("volta.training.grpo_evaluator._generate_text_with_adapter")
+    @patch("volta.training.grpo_evaluator._load_chatml_prompts")
     def test_evaluate_dimensions(
         self, mock_load, mock_generate, mock_predict, mock_rm_cls,
     ):

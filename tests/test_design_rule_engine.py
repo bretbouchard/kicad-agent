@@ -13,21 +13,21 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.analysis.topology_graph import (
+from volta.analysis.topology_graph import (
     CircuitTopology,
     TopologyEdge,
     TopologyNode,
 )
 
 # These will be implemented:
-from kicad_agent.analysis.design_rules import (
+from volta.analysis.design_rules import (
     DesignRule,
     DesignRuleReport,
     DesignRuleViolation,
     RuleCategory,
     RuleSeverity,
 )
-from kicad_agent.analysis.design_rule_engine import DesignRuleEngine
+from volta.analysis.design_rule_engine import DesignRuleEngine
 
 
 # ---------------------------------------------------------------------------
@@ -439,7 +439,7 @@ class TestBypassCapRule:
 
     def test_flags_ic_without_bypass_cap(self):
         """Test 1: IC without decoupling cap on power net is flagged."""
-        from kicad_agent.analysis.builtin_rules import BypassCapRule
+        from volta.analysis.builtin_rules import BypassCapRule
 
         ic = _ic_node("U1", "NE5532", power_pins=("4", "8"))
         # Power net edges but no cap
@@ -460,7 +460,7 @@ class TestBypassCapRule:
 
     def test_no_flag_ic_with_bypass_cap(self):
         """Test 2: IC with bypass cap is NOT flagged."""
-        from kicad_agent.analysis.builtin_rules import BypassCapRule
+        from volta.analysis.builtin_rules import BypassCapRule
 
         ic = _ic_node("U1", "NE5532", power_pins=("4", "8"))
         cap = _cap_node("C1")
@@ -487,7 +487,7 @@ class TestBypassCapRule:
 
     def test_ignores_non_ic_components(self):
         """Non-IC components are not flagged."""
-        from kicad_agent.analysis.builtin_rules import BypassCapRule
+        from volta.analysis.builtin_rules import BypassCapRule
 
         res = _resistor_node("R1")
         topo = _make_topology(
@@ -506,7 +506,7 @@ class TestFeedbackRule:
 
     def test_flags_opamp_without_comp_cap(self):
         """Test 4: Op-amp with feedback resistor but no comp cap is flagged."""
-        from kicad_agent.analysis.builtin_rules import FeedbackCompRule
+        from volta.analysis.builtin_rules import FeedbackCompRule
 
         opamp = _ic_node("U1", "NE5532", output_pins=("1",), input_pins=("2", "3"))
         feedback_r = _resistor_node("R1")
@@ -527,7 +527,7 @@ class TestFeedbackRule:
 
     def test_no_flag_opamp_with_comp_cap(self):
         """Test 5: Op-amp with comp cap in feedback is NOT flagged."""
-        from kicad_agent.analysis.builtin_rules import FeedbackCompRule
+        from volta.analysis.builtin_rules import FeedbackCompRule
 
         opamp = _ic_node("U1", "NE5532", output_pins=("1",), input_pins=("2", "3"))
         feedback_r = _resistor_node("R1")
@@ -554,7 +554,7 @@ class TestImpedanceRule:
 
     def test_flags_high_speed_net_without_termination(self):
         """Test 6: High-speed net without series termination is flagged."""
-        from kicad_agent.analysis.builtin_rules import ImpedanceRule
+        from volta.analysis.builtin_rules import ImpedanceRule
 
         ic1 = _ic_node("U1", "RP2040", output_pins=("1",))
         ic2 = _ic_node("U2", "CD4066", input_pins=("1",))
@@ -573,7 +573,7 @@ class TestImpedanceRule:
 
     def test_no_flag_power_net(self):
         """Power nets are not flagged by impedance rule."""
-        from kicad_agent.analysis.builtin_rules import ImpedanceRule
+        from volta.analysis.builtin_rules import ImpedanceRule
 
         ic1 = _ic_node("U1", "RP2040", power_pins=("1",))
         ic2 = _ic_node("U2", "NE5532", power_pins=("1",))
@@ -594,7 +594,7 @@ class TestThermalRule:
 
     def test_flags_power_regulator(self):
         """Test 7: Power regulator without thermal pad is flagged."""
-        from kicad_agent.analysis.builtin_rules import ThermalRule
+        from volta.analysis.builtin_rules import ThermalRule
 
         reg = _ic_node("U1", "LM7805", power_pins=("1",))
         topo = _make_topology(nodes=(reg,))
@@ -606,7 +606,7 @@ class TestThermalRule:
 
     def test_no_flag_regular_ic(self):
         """Regular op-amps are not flagged by thermal rule."""
-        from kicad_agent.analysis.builtin_rules import ThermalRule
+        from volta.analysis.builtin_rules import ThermalRule
 
         opamp = _ic_node("U1", "NE5532")
         topo = _make_topology(nodes=(opamp,))
@@ -621,7 +621,7 @@ class TestGroundRule:
 
     def test_flags_unconnected_ground_nets(self):
         """Test 8: Multiple ground nets without connection are flagged."""
-        from kicad_agent.analysis.builtin_rules import GroundRule
+        from volta.analysis.builtin_rules import GroundRule
 
         # IC1 on GND, IC2 on GNDA -- no component bridges them
         ic1 = _ic_node("U1", "NE5532")
@@ -642,7 +642,7 @@ class TestGroundRule:
 
     def test_single_ground_not_flagged(self):
         """Single ground net is not flagged."""
-        from kicad_agent.analysis.builtin_rules import GroundRule
+        from volta.analysis.builtin_rules import GroundRule
 
         ic = _ic_node("U1", "NE5532")
         topo = _make_topology(nodes=(ic,))
@@ -657,7 +657,7 @@ class TestPowerRule:
 
     def test_flags_power_net_without_bulk_cap(self):
         """Test 9: Power net without bulk cap is flagged."""
-        from kicad_agent.analysis.builtin_rules import PowerFilterRule
+        from volta.analysis.builtin_rules import PowerFilterRule
 
         ic = _ic_node("U1", "NE5532", power_pins=("1",))
         edges = (
@@ -676,7 +676,7 @@ class TestPowerRule:
 
     def test_no_flag_power_net_with_cap(self):
         """Power net with capacitor is not flagged."""
-        from kicad_agent.analysis.builtin_rules import PowerFilterRule
+        from volta.analysis.builtin_rules import PowerFilterRule
 
         ic = _ic_node("U1", "NE5532", power_pins=("1",))
         cap = _cap_node("C1")
@@ -700,7 +700,7 @@ class TestSignalRule:
 
     def test_flags_input_without_protection(self):
         """Test 10: Input net without protection is flagged."""
-        from kicad_agent.analysis.builtin_rules import InputProtectionRule
+        from volta.analysis.builtin_rules import InputProtectionRule
 
         ic = _ic_node("U1", "NE5532", input_pins=("1",))
         conn = _connector_node("J1")
@@ -720,7 +720,7 @@ class TestSignalRule:
 
     def test_no_flag_protected_input(self):
         """Input net with series resistor is not flagged."""
-        from kicad_agent.analysis.builtin_rules import InputProtectionRule
+        from volta.analysis.builtin_rules import InputProtectionRule
 
         ic = _ic_node("U1", "NE5532", input_pins=("1",))
         conn = _connector_node("J1")
@@ -745,7 +745,7 @@ class TestLayoutRule:
 
     def test_flags_high_fanout_net(self):
         """Test 11: Net with many connections is flagged."""
-        from kicad_agent.analysis.builtin_rules import LayoutRule
+        from volta.analysis.builtin_rules import LayoutRule
 
         nodes = tuple(
             _ic_node(f"U{i}", f"IC_{i}") for i in range(7)
@@ -762,7 +762,7 @@ class TestLayoutRule:
 
     def test_respects_custom_threshold(self):
         """Layout rule respects custom max_components config."""
-        from kicad_agent.analysis.builtin_rules import LayoutRule
+        from volta.analysis.builtin_rules import LayoutRule
 
         nodes = tuple(
             _ic_node(f"U{i}", f"IC_{i}") for i in range(4)
@@ -788,7 +788,7 @@ class TestBuiltinRules:
 
     def test_returns_8_rules(self):
         """Test 12: get_builtin_rules returns 8 rule instances."""
-        from kicad_agent.analysis.builtin_rules import get_builtin_rules
+        from volta.analysis.builtin_rules import get_builtin_rules
 
         rules = get_builtin_rules()
         assert len(rules) == 8
@@ -805,7 +805,7 @@ class TestBuiltinRules:
 
     def test_all_rules_are_design_rule_subclasses(self):
         """All built-in rules subclass DesignRule."""
-        from kicad_agent.analysis.builtin_rules import get_builtin_rules
+        from volta.analysis.builtin_rules import get_builtin_rules
 
         rules = get_builtin_rules()
         for rule in rules:
@@ -817,7 +817,7 @@ class TestEngineIntegration:
 
     def test_full_engine_run(self):
         """Engine runs all 8 built-in rules on a topology."""
-        from kicad_agent.analysis.builtin_rules import get_builtin_rules
+        from volta.analysis.builtin_rules import get_builtin_rules
 
         rules = get_builtin_rules()
         engine = DesignRuleEngine(rules=rules)

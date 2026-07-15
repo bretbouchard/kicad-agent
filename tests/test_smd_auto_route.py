@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.routing.constraints import RoutingConstraints
-from kicad_agent.routing.pathfinder import (
+from volta.routing.constraints import RoutingConstraints
+from volta.routing.pathfinder import (
     build_routing_graph,
     route_net,
 )
@@ -26,8 +26,8 @@ _SMD_BOARD = Path(__file__).parent / "fixtures" / "smd_test_board.kicad_pcb"
 
 def _parse_smd_board():
     """Parse the SMD test board via native parser and return PcbIR."""
-    from kicad_agent.ir.pcb_ir import PcbIR
-    from kicad_agent.parser.pcb_native_parser import NativeParser
+    from volta.ir.pcb_ir import PcbIR
+    from volta.parser.pcb_native_parser import NativeParser
 
     native_board = NativeParser.parse_pcb(_SMD_BOARD)
     return PcbIR.from_native(native_board)

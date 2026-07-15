@@ -21,9 +21,9 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.routing.dsn_generator import _emit_wiring_section, generate_dsn
-from kicad_agent.routing.freerouting import is_freerouting_available
-from kicad_agent.parser.pcb_native_parser import NativeParser, NativeBoard
+from volta.routing.dsn_generator import _emit_wiring_section, generate_dsn
+from volta.routing.freerouting import is_freerouting_available
+from volta.parser.pcb_native_parser import NativeParser, NativeBoard
 
 
 def _parse(content: str) -> "NativeBoard":
@@ -33,7 +33,7 @@ def _parse(content: str) -> "NativeBoard":
 pytestmark = pytest.mark.slow
 
 _JAR = Path.home() / ".kicad-agent" / "tools" / "freerouting.jar"
-_BATCH_DIR = Path(__file__).resolve().parents[1] / "src" / "kicad_agent" / "routing"
+_BATCH_DIR = Path(__file__).resolve().parents[1] / "src" / "volta" / "routing"
 
 
 # Minimal PCB content with two routed segments for testing.

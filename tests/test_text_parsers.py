@@ -6,13 +6,13 @@ import json
 
 import pytest
 
-from kicad_agent.llm.text_parsers import (
+from volta.llm.text_parsers import (
     TextCritiqueParser,
     TextErrorFixer,
     TextIntentParser,
 )
-from kicad_agent.llm.error_fixer import FixResult
-from kicad_agent.llm.design_critic import CritiqueReport
+from volta.llm.error_fixer import FixResult
+from volta.llm.design_critic import CritiqueReport
 
 
 # ---------------------------------------------------------------------------

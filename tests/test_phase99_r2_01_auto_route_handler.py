@@ -20,7 +20,7 @@ def _make_op(**overrides):
     Schema rejects absolute paths, so target_file is relative to repo root.
     Tests must chdir to repo root before invoking the handler.
     """
-    from kicad_agent.ops._schema_pcb import AutoRouteOp
+    from volta.ops._schema_pcb import AutoRouteOp
 
     fields = {
         "target_file": _FIXTURE_REL,
@@ -62,7 +62,7 @@ def _make_ir():
 
 def _patch_freerouting(monkeypatch, captured, *, available=True, success=True):
     """Patch freerouting module so handler runs without external deps."""
-    import kicad_agent.routing.freerouting as fr_module
+    import volta.routing.freerouting as fr_module
 
     monkeypatch.setattr(fr_module, "is_freerouting_available", lambda: available)
 
@@ -93,7 +93,7 @@ def test_auto_route_threads_snap_angle_to_freerouting(monkeypatch, tmp_path):
         import pytest
         pytest.skip(f"Fixture missing: {_FIXTURE}")
 
-    from kicad_agent.ops.handlers.pcb import _handle_auto_route
+    from volta.ops.handlers.pcb import _handle_auto_route
 
     captured: dict = {}
     _patch_freerouting(monkeypatch, captured)
@@ -114,7 +114,7 @@ def test_auto_route_defaults_snap_angle_to_none(monkeypatch):
         import pytest
         pytest.skip(f"Fixture missing: {_FIXTURE}")
 
-    from kicad_agent.ops.handlers.pcb import _handle_auto_route
+    from volta.ops.handlers.pcb import _handle_auto_route
 
     captured: dict = {}
     _patch_freerouting(monkeypatch, captured)
@@ -131,7 +131,7 @@ def test_auto_route_defaults_snap_angle_to_none(monkeypatch):
 
 def test_auto_route_schema_caps_max_iterations():
     """Schema rejects max_iterations > 5 (Council WR-02 primary enforcement)."""
-    from kicad_agent.ops._schema_pcb import AutoRouteOp
+    from volta.ops._schema_pcb import AutoRouteOp
     import pytest
 
     with pytest.raises(ValueError):
@@ -152,7 +152,7 @@ def test_auto_route_handler_defensive_min_clamp(monkeypatch):
         import pytest
         pytest.skip(f"Fixture missing: {_FIXTURE}")
 
-    from kicad_agent.ops.handlers.pcb import _handle_auto_route
+    from volta.ops.handlers.pcb import _handle_auto_route
 
     captured: dict = {}
     _patch_freerouting(monkeypatch, captured)
@@ -181,7 +181,7 @@ def test_auto_route_passes_max_iterations_below_cap(monkeypatch):
         import pytest
         pytest.skip(f"Fixture missing: {_FIXTURE}")
 
-    from kicad_agent.ops.handlers.pcb import _handle_auto_route
+    from volta.ops.handlers.pcb import _handle_auto_route
 
     captured: dict = {}
     _patch_freerouting(monkeypatch, captured)
@@ -198,7 +198,7 @@ def test_auto_route_passes_max_iterations_below_cap(monkeypatch):
 
 def test_auto_route_op_schema_accepts_snap_angle():
     """AutoRouteOp schema accepts snap_angle with enum validation."""
-    from kicad_agent.ops._schema_pcb import AutoRouteOp
+    from volta.ops._schema_pcb import AutoRouteOp
 
     op = AutoRouteOp(target_file="test.kicad_pcb", snap_angle="fortyfive_degree")
     assert op.snap_angle == "fortyfive_degree"
@@ -217,7 +217,7 @@ def test_auto_route_uses_freerouting_strategy(monkeypatch):
         import pytest
         pytest.skip(f"Fixture missing: {_FIXTURE}")
 
-    from kicad_agent.ops.handlers.pcb import _handle_auto_route
+    from volta.ops.handlers.pcb import _handle_auto_route
 
     captured: dict = {}
     _patch_freerouting(monkeypatch, captured, available=False)  # not auto-available

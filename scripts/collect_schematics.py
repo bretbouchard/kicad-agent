@@ -26,19 +26,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.training.graph_builder import (
+from volta.training.graph_builder import (
     MIN_KICAD_VERSION,
     detect_kicad_version,
     is_likely_parseable,
 )
-from kicad_agent.training.real_dataset import (
+from volta.training.real_dataset import (
     RealBoardDataset,
     RealBoardSample,
     _schematic_result_to_sample,
     dedup_by_hash,
     filter_quality,
 )
-from kicad_agent.training.schematic_graph_builder import build_schematic_graph
+from volta.training.schematic_graph_builder import build_schematic_graph
 
 logging.basicConfig(
     level=logging.INFO,

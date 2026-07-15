@@ -8,7 +8,7 @@ import difflib
 
 import pytest
 
-from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+from volta.ops.schematic_raw_writer import SchematicRawWriter
 
 SYMBOL_TEMPLATE = '''
   (symbol (lib_id "Device:R") (at {x} {y} 0) (unit 1)

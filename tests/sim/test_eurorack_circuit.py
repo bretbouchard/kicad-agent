@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.sim.eurorack import build_preamp_circuit, circuit_to_spice_netlist, _sci
-from kicad_agent.sim import eurorack as eurorack_mod  # for internal helper test
+from volta.sim.eurorack import build_preamp_circuit, circuit_to_spice_netlist, _sci
+from volta.sim import eurorack as eurorack_mod  # for internal helper test
 
 
 def test_build_preamp_circuit_has_8_parts() -> None:
@@ -88,7 +88,7 @@ def test_emitted_netlist_is_valid_spice() -> None:
     AC-coupled outputs), and a .OP+.PRINT statement (ngspice batch mode
     requires an analysis statement).
     """
-    from kicad_agent.spice import get_model, run_simulation
+    from volta.spice import get_model, run_simulation
 
     ckt = build_preamp_circuit(4.7e3, 68e3, 10e3, 470, 10e-6, 10e-6, 100e-6)
     model = get_model("2N3904")
@@ -115,7 +115,7 @@ def test_emitted_netlist_is_valid_spice() -> None:
 def test_eurorack_preamp_meets_target_gain(eurorack_preamp) -> None:
     """BLK-1: gain >= 17 dB (target 20, tolerance 3)."""
     _, result = eurorack_preamp
-    from kicad_agent.spice import AnalysisType
+    from volta.spice import AnalysisType
     ac = result.get_analysis(AnalysisType.AC)
     assert ac is not None, f"no AC analysis: tail of log = {result.log[-500:]!r}"
     assert ac.passed, f"AC failed: {ac.error_message}"
@@ -126,7 +126,7 @@ def test_eurorack_preamp_meets_target_gain(eurorack_preamp) -> None:
 def test_eurorack_preamp_meets_target_bandwidth(eurorack_preamp) -> None:
     """BLK-1: bandwidth >= 15 kHz (target 20 kHz, tolerance 5 kHz)."""
     _, result = eurorack_preamp
-    from kicad_agent.spice import AnalysisType
+    from volta.spice import AnalysisType
     ac = result.get_analysis(AnalysisType.AC)
     assert ac is not None and ac.passed
     assert ac.bandwidth_hz is not None, "bw_3db is None — no -3 dB point found"
@@ -165,7 +165,7 @@ def test_fixture_gain_matches_hand_calc(eurorack_preamp) -> None:
     upper end so a shorted-base-to-Vcc bug doesn't silently pass the floor.
     """
     _, result = eurorack_preamp
-    from kicad_agent.spice import AnalysisType
+    from volta.spice import AnalysisType
     ac = result.get_analysis(AnalysisType.AC)
     assert ac is not None and ac.gain_db is not None
     assert 17.0 <= ac.gain_db <= 55.0, (

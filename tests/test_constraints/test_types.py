@@ -6,7 +6,7 @@ CP-02: PCBConstraint frozen dataclass hierarchy with typed subtypes.
 import pytest
 from pydantic import ValidationError
 
-from kicad_agent.constraints.types import (
+from volta.constraints.types import (
     ClearanceConstraint,
     ConstraintType,
     DecouplingConstraint,

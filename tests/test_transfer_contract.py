@@ -21,8 +21,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.project.design_rules import NetClassDef
-from kicad_agent.validation.gate_types import DesignStage, GateResult
+from volta.project.design_rules import NetClassDef
+from volta.validation.gate_types import DesignStage, GateResult
 
 
 # ---------------------------------------------------------------------------
@@ -178,7 +178,7 @@ class TestTransferContractConstruction:
 
     def test_basic_construction(self):
         """TransferContract constructs with all required fields."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContract
+        from volta.validation.gates.transfer_contract import TransferContract
 
         contract = TransferContract(
             symbol_footprint_map={"R1": "Resistor_SMD:R_0805_2012Metric"},
@@ -194,7 +194,7 @@ class TestTransferContractConstruction:
 
     def test_frozen_model(self):
         """TransferContract is frozen (immutable) -- field reassignment raises error."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContract
+        from volta.validation.gates.transfer_contract import TransferContract
 
         contract = TransferContract(
             symbol_footprint_map={"R1": "Resistor_SMD:R_0805_2012Metric"},
@@ -208,7 +208,7 @@ class TestTransferContractConstruction:
 
     def test_is_complete_all_populated(self):
         """is_complete() returns True when all components have footprints and pins assigned."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContract
+        from volta.validation.gates.transfer_contract import TransferContract
 
         contract = TransferContract(
             symbol_footprint_map={"R1": "Resistor_SMD:R_0805_2012Metric"},
@@ -221,7 +221,7 @@ class TestTransferContractConstruction:
 
     def test_is_complete_missing_footprint(self):
         """is_complete() returns False when a component has no footprint."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContract
+        from volta.validation.gates.transfer_contract import TransferContract
 
         contract = TransferContract(
             symbol_footprint_map={},  # R1 not mapped
@@ -234,7 +234,7 @@ class TestTransferContractConstruction:
 
     def test_is_complete_missing_pin_pad(self):
         """is_complete() returns False when pin-pad map is empty for a mapped component."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContract
+        from volta.validation.gates.transfer_contract import TransferContract
 
         contract = TransferContract(
             symbol_footprint_map={"R1": "Resistor_SMD:R_0805_2012Metric"},
@@ -247,7 +247,7 @@ class TestTransferContractConstruction:
 
     def test_missing_items(self):
         """missing_items() lists unfulfilled contract items."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContract
+        from volta.validation.gates.transfer_contract import TransferContract
 
         contract = TransferContract(
             symbol_footprint_map={},  # R1 missing
@@ -271,7 +271,7 @@ class TestPadNetAssignmentResult:
 
     def test_construction(self):
         """PadNetAssignmentResult constructs with assignments, blockers, warnings."""
-        from kicad_agent.validation.gates.transfer_contract import PadNetAssignmentResult
+        from volta.validation.gates.transfer_contract import PadNetAssignmentResult
 
         result = PadNetAssignmentResult(
             assignments_made={"R1": {"1": "VCC", "2": "GND"}},
@@ -285,7 +285,7 @@ class TestPadNetAssignmentResult:
 
     def test_with_blockers(self):
         """PadNetAssignmentResult can hold blockers."""
-        from kicad_agent.validation.gates.transfer_contract import PadNetAssignmentResult
+        from volta.validation.gates.transfer_contract import PadNetAssignmentResult
 
         result = PadNetAssignmentResult(
             assignments_made={},
@@ -306,7 +306,7 @@ class TestPadNetAssigner:
 
     def test_successful_assignment(self):
         """PadNetAssigner assigns PCB pad nets from schematic netlist."""
-        from kicad_agent.validation.gates.transfer_contract import (
+        from volta.validation.gates.transfer_contract import (
             PadNetAssigner,
             TransferContract,
         )
@@ -331,7 +331,7 @@ class TestPadNetAssigner:
 
     def test_returns_structured_result(self):
         """PadNetAssigner.assign_pad_nets returns PadNetAssignmentResult."""
-        from kicad_agent.validation.gates.transfer_contract import (
+        from volta.validation.gates.transfer_contract import (
             PadNetAssigner,
             PadNetAssignmentResult,
             TransferContract,
@@ -355,7 +355,7 @@ class TestPadNetAssigner:
 
     def test_pad_count_mismatch(self):
         """PadNetAssigner detects pin-pad count mismatch."""
-        from kicad_agent.validation.gates.transfer_contract import (
+        from volta.validation.gates.transfer_contract import (
             PadNetAssigner,
             TransferContract,
         )
@@ -387,7 +387,7 @@ class TestNetIdVerifier:
 
     def test_matching_net_ids(self):
         """NetIdVerifier passes when schematic and PCB net names match."""
-        from kicad_agent.validation.gates.transfer_contract import (
+        from volta.validation.gates.transfer_contract import (
             NetIdVerifier,
             TransferContract,
         )
@@ -408,7 +408,7 @@ class TestNetIdVerifier:
 
     def test_returns_structured_result(self):
         """NetIdVerifier.verify_net_ids returns PadNetAssignmentResult."""
-        from kicad_agent.validation.gates.transfer_contract import (
+        from volta.validation.gates.transfer_contract import (
             NetIdVerifier,
             PadNetAssignmentResult,
             TransferContract,
@@ -430,7 +430,7 @@ class TestNetIdVerifier:
 
     def test_missing_net_in_pcb(self):
         """NetIdVerifier detects schematic net missing from PCB."""
-        from kicad_agent.validation.gates.transfer_contract import (
+        from volta.validation.gates.transfer_contract import (
             NetIdVerifier,
             TransferContract,
         )
@@ -452,7 +452,7 @@ class TestNetIdVerifier:
 
     def test_case_sensitive_net_names(self):
         """NetIdVerifier treats net names as case-sensitive: GND != gnd."""
-        from kicad_agent.validation.gates.transfer_contract import (
+        from volta.validation.gates.transfer_contract import (
             NetIdVerifier,
             TransferContract,
         )
@@ -482,7 +482,7 @@ class TestPowerSymbolExclusion:
 
     def test_power_pwr_symbol_excluded(self):
         """Component with lib_id containing #PWR is excluded."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
+        from volta.validation.gates.transfer_contract import TransferContractValidator
 
         pwr_comp = _make_component(
             reference="#PWR0101",
@@ -500,7 +500,7 @@ class TestPowerSymbolExclusion:
 
     def test_power_lib_id_pwr_prefix_excluded(self):
         """Component with lib_id starting with 'power:' is excluded."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
+        from volta.validation.gates.transfer_contract import TransferContractValidator
 
         vcc_comp = _make_component(
             reference="#PWR0102",
@@ -525,7 +525,7 @@ class TestMultiUnitSymbols:
 
     def test_multi_unit_flat_pin_pad_map(self):
         """Multi-unit symbols (U1.A, U1.B) map to flat 'U1' in pin_pad_map."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
+        from volta.validation.gates.transfer_contract import TransferContractValidator
 
         comp_a = _make_component(
             reference="U1.A",
@@ -574,7 +574,7 @@ class TestMultiUnitSymbols:
 
     def test_multi_unit_pins_merged(self):
         """All pins from all units merge into single pin_pad_map entry."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
+        from volta.validation.gates.transfer_contract import TransferContractValidator
 
         comp_a = _make_component(
             reference="U1.A",
@@ -628,7 +628,7 @@ class TestSchematicIntentPrerequisite:
 
     def test_auto_runs_when_not_cached(self):
         """TransferContractValidator auto-runs SchematicIntentGate when not cached."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
+        from volta.validation.gates.transfer_contract import TransferContractValidator
 
         r1 = _make_component(reference="R1", lib_id="Device:R", footprint="Resistor_SMD:R_0805_2012Metric")
         ir = _make_schematic_ir(components=[r1])
@@ -642,7 +642,7 @@ class TestSchematicIntentPrerequisite:
         validator = TransferContractValidator()
 
         with patch(
-            "kicad_agent.validation.gates.schematic_intent_gate.SchematicIntentGate"
+            "volta.validation.gates.schematic_intent_gate.SchematicIntentGate"
         ) as MockGate:
             mock_instance = MockGate.return_value
             mock_instance.run.return_value = passing_gate_result
@@ -654,7 +654,7 @@ class TestSchematicIntentPrerequisite:
 
     def test_skips_auto_run_when_cached(self):
         """TransferContractValidator skips auto-run when schematic_intent_passed=True."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
+        from volta.validation.gates.transfer_contract import TransferContractValidator
 
         r1 = _make_component(reference="R1", lib_id="Device:R", footprint="Resistor_SMD:R_0805_2012Metric")
         ir = _make_schematic_ir(components=[r1])
@@ -662,7 +662,7 @@ class TestSchematicIntentPrerequisite:
         validator = TransferContractValidator()
 
         with patch(
-            "kicad_agent.validation.gates.schematic_intent_gate.SchematicIntentGate"
+            "volta.validation.gates.schematic_intent_gate.SchematicIntentGate"
         ) as MockGate:
             mock_instance = MockGate.return_value
 
@@ -673,7 +673,7 @@ class TestSchematicIntentPrerequisite:
 
     def test_propagates_intent_gate_failure(self):
         """If SchematicIntentGate fails, TransferContractValidator returns its failure."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
+        from volta.validation.gates.transfer_contract import TransferContractValidator
 
         r1 = _make_component(reference="R1", lib_id="Device:R", footprint="")
         ir = _make_schematic_ir(components=[r1])
@@ -688,7 +688,7 @@ class TestSchematicIntentPrerequisite:
         validator = TransferContractValidator()
 
         with patch(
-            "kicad_agent.validation.gates.schematic_intent_gate.SchematicIntentGate"
+            "volta.validation.gates.schematic_intent_gate.SchematicIntentGate"
         ) as MockGate:
             mock_instance = MockGate.return_value
             mock_instance.run.return_value = failing_gate_result
@@ -708,7 +708,7 @@ class TestEmptySchematic:
 
     def test_empty_schematic_clean_contract(self):
         """Empty schematic with no components produces a passing, clean contract."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
+        from volta.validation.gates.transfer_contract import TransferContractValidator
 
         ir = _make_schematic_ir(components=[])
 
@@ -728,7 +728,7 @@ class TestMissingFootprint:
 
     def test_no_footprint_fails(self):
         """Component with no footprint assigned produces a blocker."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
+        from volta.validation.gates.transfer_contract import TransferContractValidator
 
         r1 = _make_component(reference="R1", lib_id="Device:R", footprint="")
 
@@ -750,7 +750,7 @@ class TestPinCountMismatch:
 
     def test_pin_count_mismatch_fails(self):
         """When verify_pin_map indicates mismatch, contract fails."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
+        from volta.validation.gates.transfer_contract import TransferContractValidator
 
         r1 = _make_component(reference="R1", lib_id="Device:R", footprint="Resistor_SMD:R_0805_2012Metric")
 
@@ -783,7 +783,7 @@ class TestNetNameCaseSensitivity:
 
     def test_case_mismatch_detected(self):
         """GND vs gnd produces a mismatch blocker."""
-        from kicad_agent.validation.gates.transfer_contract import (
+        from volta.validation.gates.transfer_contract import (
             NetIdVerifier,
             TransferContract,
         )
@@ -814,7 +814,7 @@ class TestGoldenLedResistor:
 
     def test_led_resistor_transfer(self):
         """R1 (Device:R) and D1 (Device:LED) transfer correctly."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
+        from volta.validation.gates.transfer_contract import TransferContractValidator
 
         r1 = _make_component(
             reference="R1",
@@ -857,7 +857,7 @@ class TestGoldenLedResistor:
 
     def test_led_resistor_with_pcb_ir(self):
         """LED+resistor with PcbIR runs PadNetAssigner and NetIdVerifier."""
-        from kicad_agent.validation.gates.transfer_contract import TransferContractValidator
+        from volta.validation.gates.transfer_contract import TransferContractValidator
 
         r1 = _make_component(
             reference="R1",

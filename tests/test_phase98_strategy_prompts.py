@@ -9,8 +9,8 @@ teaching the model the required output format via explicit schema + exemplars.
 
 from __future__ import annotations
 
-from kicad_agent.routing.strategy import BoardState, Pin
-from kicad_agent.routing.strategy_prompts import build_strategy_prompt
+from volta.routing.strategy import BoardState, Pin
+from volta.routing.strategy_prompts import build_strategy_prompt
 
 
 def _make_board_state() -> BoardState:

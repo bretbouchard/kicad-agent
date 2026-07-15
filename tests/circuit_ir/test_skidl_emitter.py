@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.circuit_ir.skidl_emitter import emit_build_py
-from kicad_agent.circuit_ir.types import CircuitIR, NetDescriptor, PartDescriptor, PinRef
+from volta.circuit_ir.skidl_emitter import emit_build_py
+from volta.circuit_ir.types import CircuitIR, NetDescriptor, PartDescriptor, PinRef
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 _LED_FIXTURE = _FIXTURES / "schematic_intent" / "complete_led.kicad_sch"
@@ -121,7 +121,7 @@ class TestRoundTrip:
         if not _LED_FIXTURE.exists():
             pytest.skip(f"Fixture not found: {_LED_FIXTURE}")
 
-        from kicad_agent.circuit_ir import build_circuit
+        from volta.circuit_ir import build_circuit
 
         circuit, circuit_ir = build_circuit(_LED_FIXTURE)
         code = emit_build_py(circuit_ir, mode="L1")

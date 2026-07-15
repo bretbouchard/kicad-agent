@@ -8,12 +8,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ops.root_sheet import (
+from volta.ops.root_sheet import (
     RootSheetResult,
     _classify_direction,
     rebuild_root_sheet,
 )
-from kicad_agent.ops.schema import Operation, RebuildRootSheetOp
+from volta.ops.schema import Operation, RebuildRootSheetOp
 
 
 # ---------------------------------------------------------------------------
@@ -90,8 +90,8 @@ def test_rebuild_root_sheet_basic():
 
     mock_parse_result = MagicMock()
 
-    with patch("kicad_agent.parser.parse_schematic", return_value=mock_parse_result) as mock_parse, \
-         patch("kicad_agent.ir.schematic_ir.SchematicIR") as mock_ir_class, \
+    with patch("volta.parser.parse_schematic", return_value=mock_parse_result) as mock_parse, \
+         patch("volta.ir.schematic_ir.SchematicIR") as mock_ir_class, \
          patch("pathlib.Path.exists", return_value=True):
         # First call returns root IR, second returns sub IR
         mock_ir_class.side_effect = [mock_root_ir, mock_sub_ir]
@@ -124,8 +124,8 @@ def test_rebuild_root_sheet_missing_subsheet():
     mock_sheet = _make_mock_sheet("nonexistent.kicad_sch", 100, 100, 50, 50)
     mock_root_ir.schematic.sheets = [mock_sheet]
 
-    with patch("kicad_agent.parser.parse_schematic") as mock_parse, \
-         patch("kicad_agent.ir.schematic_ir.SchematicIR", return_value=mock_root_ir):
+    with patch("volta.parser.parse_schematic") as mock_parse, \
+         patch("volta.ir.schematic_ir.SchematicIR", return_value=mock_root_ir):
         # parse_schematic returns a result, but sub-sheet path won't exist
         results = rebuild_root_sheet(Path("root.kicad_sch"))
 
@@ -141,8 +141,8 @@ def test_rebuild_root_sheet_empty_subsheet():
     mock_sub_ir = MagicMock()
     mock_sub_ir.schematic.hierarchicalLabels = []
 
-    with patch("kicad_agent.parser.parse_schematic"), \
-         patch("kicad_agent.ir.schematic_ir.SchematicIR") as mock_ir_class, \
+    with patch("volta.parser.parse_schematic"), \
+         patch("volta.ir.schematic_ir.SchematicIR") as mock_ir_class, \
          patch("pathlib.Path.exists", return_value=True):
         mock_ir_class.side_effect = [mock_root_ir, mock_sub_ir]
 
@@ -165,8 +165,8 @@ def test_rebuild_root_sheet_pin_positioning():
         _make_mock_hlabel("C", "output"),
     ]
 
-    with patch("kicad_agent.parser.parse_schematic"), \
-         patch("kicad_agent.ir.schematic_ir.SchematicIR") as mock_ir_class, \
+    with patch("volta.parser.parse_schematic"), \
+         patch("volta.ir.schematic_ir.SchematicIR") as mock_ir_class, \
          patch("pathlib.Path.exists", return_value=True):
         mock_ir_class.side_effect = [mock_root_ir, mock_sub_ir]
 

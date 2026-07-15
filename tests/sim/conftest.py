@@ -40,8 +40,8 @@ def eurorack_preamp() -> tuple[Any, Any]:
     toward the 20 dB target. See council CR-03 (R2 P1) + test_fixture_gain_
     matches_hand_calc which bounds gain to 17..55 dB.
     """
-    from kicad_agent.sim.eurorack import build_preamp_circuit, circuit_to_spice_netlist
-    from kicad_agent.spice import (
+    from volta.sim.eurorack import build_preamp_circuit, circuit_to_spice_netlist
+    from volta.spice import (
         generate_ac_testbench, get_model, run_simulation,
     )
 

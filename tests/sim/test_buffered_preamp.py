@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.sim.buffered_preamp import (
+from volta.sim.buffered_preamp import (
     build_buffered_preamp_spice_netlist,
     compute_input_impedance_kohm,
 )
@@ -64,7 +64,7 @@ class TestBufferedPreampSimulation:
 
     def test_buffered_preamp_sims_with_gain_near_20db(self) -> None:
         """Full sim with TL072 + 2N3904 models produces ~20 dB gain."""
-        from kicad_agent.spice import (
+        from volta.spice import (
             run_simulation,
             generate_ac_testbench,
             get_model,
@@ -95,7 +95,7 @@ class TestBufferedPreampSimulation:
     def test_input_z_measured_via_ac_current(self) -> None:
         """Input Z = V_in / I_in. With V_in = 1V AC and R_BIAS = 1MΩ,
         I_in should be ~1µA → Z = 1MΩ = 1000 kΩ."""
-        from kicad_agent.spice import (
+        from volta.spice import (
             run_simulation,
             generate_ac_testbench,
             get_model,

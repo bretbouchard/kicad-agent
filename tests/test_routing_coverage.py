@@ -2,7 +2,7 @@
 
 import pytest
 
-from kicad_agent.routing import (
+from volta.routing import (
     DiffPairResult,
     ImpedanceResult,
     InteractiveRoutingSession,
@@ -182,7 +182,7 @@ class TestRoutingImports:
 
     def test_all_exports_importable(self):
         """All __all__ exports can be imported."""
-        from kicad_agent import routing
+        from volta import routing
         for name in routing.__all__:
             assert hasattr(routing, name), f"Missing export: {name}"
 

@@ -10,7 +10,7 @@ from types import MappingProxyType
 
 import pytest
 
-from kicad_agent.parser.pcb_native_types import (
+from volta.parser.pcb_native_types import (
     NativeBoard,
     NativeBoardOutline,
     NativeFootprint,
@@ -126,7 +126,7 @@ def test_kiutils_compat_properties_preserved() -> None:
 
 def test_add_net_uses_replace() -> None:
     """PcbIR.add_net must build a new NativeBoard via dataclasses.replace."""
-    from kicad_agent.ir.pcb_ir import PcbIR
+    from volta.ir.pcb_ir import PcbIR
 
     board = NativeBoard()
     ir = PcbIR.from_native(board)
@@ -145,7 +145,7 @@ def test_add_net_uses_replace() -> None:
 
 def test_remove_net_rebuilds_immutably() -> None:
     """PcbIR.remove_net must rebuild footprints/pads/nets via replace."""
-    from kicad_agent.ir.pcb_ir import PcbIR
+    from volta.ir.pcb_ir import PcbIR
 
     pad_vcc = NativePad(number="1", net_name="VCC", net_number=1)
     pad_gnd = NativePad(number="2", net_name="GND", net_number=2)

@@ -10,12 +10,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.mcp.edit_server import (
+from volta.mcp.edit_server import (
     _ALL_TOOLS,
     _META_TOOLS,
     dispatch_tool,
 )
-from kicad_agent.ops.executor import OperationExecutor
+from volta.ops.executor import OperationExecutor
 
 
 class TestHealthCheckReturnsStatus:

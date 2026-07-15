@@ -17,7 +17,7 @@ import logging
 
 import pytest
 
-from kicad_agent.routing.strategy import (
+from volta.routing.strategy import (
     BoardState,
     DeterministicStrategy,
     Keepout,
@@ -278,14 +278,14 @@ class TestDeterministicStrategyNoWarningsOnPopulation:
         nl["CLK+"] = [_make_pin(pad="1", x=30.0), _make_pin(pad="2", x=35.0)]
         nl["CLK-"] = [_make_pin(pad="1", x=40.0), _make_pin(pad="2", x=45.0)]
 
-        with caplog.at_level(logging.WARNING, logger="kicad_agent.routing.strategy"):
+        with caplog.at_level(logging.WARNING, logger="volta.routing.strategy"):
             result = ds.strategize(bs, nl)
 
         # LO-05 acceptance: zero WARNING records from strategy module.
         warning_records = [
             r for r in caplog.records
             if r.levelno >= logging.WARNING
-            and r.name == "kicad_agent.routing.strategy"
+            and r.name == "volta.routing.strategy"
         ]
         assert len(warning_records) == 0, (
             f"DeterministicStrategy emitted {len(warning_records)} WARNING(s) "

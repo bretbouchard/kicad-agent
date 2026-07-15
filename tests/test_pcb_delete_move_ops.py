@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+from volta.ops.pcb_raw_writer import PcbRawWriter
 
 
 # ---------------------------------------------------------------------------
@@ -207,11 +207,11 @@ class TestHandlerExecution:
 
     def test_delete_track_via_executor(self, pcb_path):
         """add_track then delete_track leaves the PCB segment-free."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=pcb_path.parent)
 
@@ -254,11 +254,11 @@ class TestHandlerExecution:
 
     def test_delete_via_via_executor(self, pcb_path):
         """add_via then delete_via leaves the PCB via-free."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=pcb_path.parent)
 
@@ -298,11 +298,11 @@ class TestHandlerExecution:
 
     def test_move_track_endpoint_via_executor(self, pcb_path):
         """move_track_endpoint rewrites the (start X Y) on disk."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=pcb_path.parent)
 
@@ -351,11 +351,11 @@ class TestHandlerExecution:
         ``success: False``). The Transaction auto-rollback restores the
         file content, so the PCB on disk is left untouched.
         """
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         delete_op = Operation.model_validate({
             "root": {
@@ -374,11 +374,11 @@ class TestHandlerExecution:
 
     def test_round_trip_add_move_delete(self, pcb_path):
         """add -> move -> delete leaves the PCB segment-free."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=pcb_path.parent)
 

@@ -1,7 +1,7 @@
 """Tests for BoardSpec model + sidecar JSON persistence (META-04, META-05)."""
 from pathlib import Path
 
-from kicad_agent.manufacturing.board_spec import (
+from volta.manufacturing.board_spec import (
     BoardSpec,
     ImpedanceRequirement,
     SurfaceFinish,

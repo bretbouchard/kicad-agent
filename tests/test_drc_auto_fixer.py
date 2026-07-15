@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from kicad_agent.analysis.drc_auto_fixer import DrcAutoFixer
-from kicad_agent.validation.drc_intel import (
+from volta.analysis.drc_auto_fixer import DrcAutoFixer
+from volta.validation.drc_intel import (
     EnrichedViolation,
     ViolationClassification,
 )
@@ -98,7 +98,7 @@ class TestAIFix:
         )
 
         with patch(
-            "kicad_agent.llm.local_client.LocalLLMClient",
+            "volta.llm.local_client.LocalLLMClient",
             return_value=mock_client,
         ):
             fixer = DrcAutoFixer(target_file="test.kicad_pcb", use_ai=True)
@@ -115,7 +115,7 @@ class TestAIFix:
         )
 
         with patch(
-            "kicad_agent.llm.local_client.LocalLLMClient",
+            "volta.llm.local_client.LocalLLMClient",
             return_value=mock_client,
         ):
             fixer = DrcAutoFixer(target_file="test.kicad_pcb", use_ai=True)
@@ -128,7 +128,7 @@ class TestAIFix:
         mock_client.chat.side_effect = RuntimeError("Model error")
 
         with patch(
-            "kicad_agent.llm.local_client.LocalLLMClient",
+            "volta.llm.local_client.LocalLLMClient",
             return_value=mock_client,
         ):
             fixer = DrcAutoFixer(target_file="test.kicad_pcb", use_ai=True)
@@ -142,7 +142,7 @@ class TestAIFix:
         mock_client.chat.return_value = "not json"
 
         with patch(
-            "kicad_agent.llm.local_client.LocalLLMClient",
+            "volta.llm.local_client.LocalLLMClient",
             return_value=mock_client,
         ):
             fixer = DrcAutoFixer(target_file="test.kicad_pcb", use_ai=True)
@@ -157,7 +157,7 @@ class TestAIFix:
         )
 
         with patch(
-            "kicad_agent.llm.local_client.LocalLLMClient",
+            "volta.llm.local_client.LocalLLMClient",
             return_value=mock_client,
         ):
             fixer = DrcAutoFixer(target_file="test.kicad_pcb", use_ai=True)

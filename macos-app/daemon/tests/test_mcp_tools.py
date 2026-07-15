@@ -5,7 +5,7 @@ Phase 167 — Stdio MCP Client.
 
 Coverage:
     tools/list:
-        - Returns 151 tools matching the kicad_agent.ops registry count
+        - Returns 151 tools matching the volta.ops registry count
         - Every tool name is kicad.<op_type>
         - Every tool has description, inputSchema
         - Names are sorted alphabetically (mirror of registry sort)
@@ -42,14 +42,14 @@ from handlers import (
 )
 from protocol import RpcError, INVALID_PARAMS
 
-# These tests require the kicad_agent ops registry, which only imports on
+# These tests require the volta ops registry, which only imports on
 # Python 3.11+ (the schema uses `X | None` syntax that fails on 3.9/3.10).
 # Skip the entire module if running on an older Python — without this, the
 # registry comes back empty and every call_tool test fails with a confusing
 # "unknown operation" error instead of a clear version mismatch message.
 pytestmark = pytest.mark.skipif(
     sys.version_info < (3, 11),
-    reason="kicad_agent.ops.registry requires Python 3.11+ (pyproject.toml requires-python)",
+    reason="volta.ops.registry requires Python 3.11+ (pyproject.toml requires-python)",
 )
 
 
@@ -104,9 +104,9 @@ class TestToolsList:
     def test_returns_151_tools_matching_registry(self, ctx: HandlerContext) -> None:
         result = tools_list({}, ctx)
         registered = _registered_operations()
-        # Skip when kicad_agent isn't importable (test env quirk).
+        # Skip when volta isn't importable (test env quirk).
         if not registered:
-            pytest.skip("kicad_agent.ops.registry not importable in this env")
+            pytest.skip("volta.ops.registry not importable in this env")
         assert len(result["tools"]) == len(registered)
 
     def test_every_tool_name_uses_kicad_namespace(self, ctx: HandlerContext) -> None:
@@ -138,7 +138,7 @@ class TestToolsList:
         result = tools_list({}, ctx)
         names = {t["name"] for t in result["tools"]}
         if not names:
-            pytest.skip("kicad_agent.ops.registry not importable")
+            pytest.skip("volta.ops.registry not importable")
         assert "kicad.add_component" in names
 
     def test_tolerates_none_params(self, ctx: HandlerContext) -> None:
@@ -346,7 +346,7 @@ class TestBuildToolDescriptor:
         assert descriptor["name"] == "kicad.list_lib_entries"
 
     def test_returns_minimal_descriptor_when_registry_unavailable(self) -> None:
-        """If kicad_agent.ops.registry isn't importable, we still get a descriptor."""
+        """If volta.ops.registry isn't importable, we still get a descriptor."""
         # Force the import to fail by patching sys.modules — too heavy for a unit
         # test. Instead, verify the descriptor has the minimum shape required.
         descriptor = _build_tool_descriptor("any_op_name")

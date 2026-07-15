@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.crossfile.diff import (
+from volta.crossfile.diff import (
     DiffEntry,
     DiffResult,
     DiffType,

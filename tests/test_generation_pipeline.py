@@ -9,14 +9,14 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.generation.intent import (
+from volta.generation.intent import (
     BoardSpec,
     ComponentSpec,
     GenerationIntent,
     NetSpec,
     PowerSpec,
 )
-from kicad_agent.generation.pipeline import GenerationResult, generate_design
+from volta.generation.pipeline import GenerationResult, generate_design
 
 # Check if kicad-cli is available for integration tests
 KICAD_CLI_AVAILABLE = shutil.which("kicad-cli") is not None

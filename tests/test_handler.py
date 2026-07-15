@@ -16,8 +16,8 @@ import json
 
 import pytest
 
-from kicad_agent.handler import format_result, handle_operation, validate_operation
-from kicad_agent.result import OperationError, OperationResult
+from volta.handler import format_result, handle_operation, validate_operation
+from volta.result import OperationError, OperationResult
 
 
 # ---------------------------------------------------------------------------

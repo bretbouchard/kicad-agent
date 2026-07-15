@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.project.design_rules import (
+from volta.project.design_rules import (
     DesignRule,
     DesignRulesFile,
     NetClassDef,

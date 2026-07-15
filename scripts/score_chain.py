@@ -32,7 +32,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.training.reward_model import RewardModel, predict_reward
+from volta.training.reward_model import RewardModel, predict_reward
 
 
 def load_model(model_dir: str) -> RewardModel:
@@ -114,7 +114,7 @@ def score_jsonl(model: RewardModel, input_path: Path, limit: int = 0) -> None:
 
 def discriminate(model: RewardModel, input_path: Path, limit: int = 20) -> None:
     """Score correct vs corrupted chains and measure discrimination gap."""
-    from kicad_agent.training.real_dataset import RealBoardSample
+    from volta.training.real_dataset import RealBoardSample
 
     samples = []
     with open(input_path) as f:
@@ -128,7 +128,7 @@ def discriminate(model: RewardModel, input_path: Path, limit: int = 20) -> None:
 
     print(f"\nDiscrimination test: {len(samples)} samples from {input_path.name}")
 
-    from kicad_agent.training.board_chains import (
+    from volta.training.board_chains import (
         synthesize_board_chain,
         synthesize_corrupted_board_chain,
         _compute_chain_labels,
@@ -195,11 +195,11 @@ def discriminate(model: RewardModel, input_path: Path, limit: int = 20) -> None:
 
 def best_of_n(model: RewardModel, pcb_path: Path, n: int = 5) -> None:
     """Parse a PCB, generate N reasoning chains, score and rank them."""
-    from kicad_agent.parser.pcb_parser import parse_pcb
-    from kicad_agent.parser.uuid_extractor import extract_uuids
-    from kicad_agent.ir.pcb_ir import PcbIR
-    from kicad_agent.training.real_dataset import RealBoardSample
-    from kicad_agent.training.board_chains import (
+    from volta.parser.pcb_parser import parse_pcb
+    from volta.parser.uuid_extractor import extract_uuids
+    from volta.ir.pcb_ir import PcbIR
+    from volta.training.real_dataset import RealBoardSample
+    from volta.training.board_chains import (
         synthesize_board_chain,
         synthesize_corrupted_board_chain,
     )
@@ -276,8 +276,8 @@ def _extract_chain_text(raw: dict) -> str:
 
     # Board graph data — synthesize from graph
     if "graph_json" in raw:
-        from kicad_agent.training.real_dataset import RealBoardSample
-        from kicad_agent.training.board_chains import synthesize_board_chain
+        from volta.training.real_dataset import RealBoardSample
+        from volta.training.board_chains import synthesize_board_chain
 
         try:
             sample = RealBoardSample(

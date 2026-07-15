@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.training.rewards.legibility import LegibilityReward
+from volta.training.rewards.legibility import LegibilityReward
 
 
 def test_perfect_factors_returns_one() -> None:

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.parser.raw_parser import (
+from volta.parser.raw_parser import (
     _pre_scan_depth,
     parse_raw_sexp,
     parse_raw_sexp_file,

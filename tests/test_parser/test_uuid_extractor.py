@@ -13,21 +13,21 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.parser.schematic_parser import parse_schematic
-from kicad_agent.parser.pcb_parser import parse_pcb
-from kicad_agent.parser.symbol_parser import parse_symbol_lib
-from kicad_agent.parser.footprint_parser import parse_footprint
-from kicad_agent.parser.uuid_extractor import (
+from volta.parser.schematic_parser import parse_schematic
+from volta.parser.pcb_parser import parse_pcb
+from volta.parser.symbol_parser import parse_symbol_lib
+from volta.parser.footprint_parser import parse_footprint
+from volta.parser.uuid_extractor import (
     UUIDEntry,
     UUIDMap,
     extract_uuids,
     extract_uuids_from_file,
 )
-from kicad_agent.serializer.uuid_reinjector import reinject_uuids
-from kicad_agent.serializer.schematic_ser import serialize_schematic
-from kicad_agent.serializer.pcb_ser import serialize_pcb
-from kicad_agent.serializer.symbol_ser import serialize_symbol_lib
-from kicad_agent.serializer.footprint_ser import serialize_footprint
+from volta.serializer.uuid_reinjector import reinject_uuids
+from volta.serializer.schematic_ser import serialize_schematic
+from volta.serializer.pcb_ser import serialize_pcb
+from volta.serializer.symbol_ser import serialize_symbol_lib
+from volta.serializer.footprint_ser import serialize_footprint
 
 
 # ---------------------------------------------------------------------------

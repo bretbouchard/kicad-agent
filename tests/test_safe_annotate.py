@@ -25,8 +25,8 @@ def _execute_op(op_json: dict, base_dir: Path) -> dict:
         op_json: The "root" payload (op_type, target_file, scope, etc.).
         base_dir: Base directory for resolving relative target_file paths.
     """
-    from kicad_agent.ops.executor import OperationExecutor
-    from kicad_agent.ops.schema import Operation
+    from volta.ops.executor import OperationExecutor
+    from volta.ops.schema import Operation
 
     executor = OperationExecutor(base_dir=base_dir)
     op = Operation.model_validate({"root": op_json})
@@ -258,7 +258,7 @@ def test_handler_does_not_use_kiutils_to_file():
     Uses inspect.getsource(_handle_safe_annotate) — NOT a whole-module walk of
     handlers/schematic.py. Mirrors test_safe_sync_pcb_from_schematic.py:74-88.
     """
-    from kicad_agent.ops.handlers.schematic import _handle_safe_annotate
+    from volta.ops.handlers.schematic import _handle_safe_annotate
 
     source = inspect.getsource(_handle_safe_annotate)
     tree = ast.parse(source)
@@ -294,9 +294,9 @@ def test_paren_balance_preserved(tmp_path):
 # ---- TC-8: Registration (supporting) ----
 def test_safe_annotate_registered():
     """Op in SELF_SERIALIZING_OPS, registry, schema imports cleanly."""
-    from kicad_agent.ops.execution import SELF_SERIALIZING_OPS
-    from kicad_agent.ops.registry import OPERATION_REGISTRY
-    from kicad_agent.ops._schema_reference import SafeAnnotateOp
+    from volta.ops.execution import SELF_SERIALIZING_OPS
+    from volta.ops.registry import OPERATION_REGISTRY
+    from volta.ops._schema_reference import SafeAnnotateOp
 
     assert "safe_annotate" in SELF_SERIALIZING_OPS
     assert "safe_annotate" in OPERATION_REGISTRY
@@ -350,7 +350,7 @@ def test_extract_number_fallback_returns_zero_on_garbage():
     EXEC-04: the fallback is unreachable in practice (upstream _REF_PATTERN
     filters garbage), but the defensive return-0 path must be covered.
     """
-    from kicad_agent.ops.handlers.schematic import _extract_number
+    from volta.ops.handlers.schematic import _extract_number
 
     assert _extract_number("R42", "R") == 42
     assert _extract_number("C7", "C") == 7
@@ -505,7 +505,7 @@ def test_sort_tie_break_uses_sheet_uuid_not_path():
     OLD code (path tie-break): P wins ("/aaa_..." < "/zzz_...")
     NEW code (uuid tie-break): Q wins ("aaa-uuid" < "zzz-uuid")
     """
-    from kicad_agent.ops.handlers.schematic import _build_rename_plan
+    from volta.ops.handlers.schematic import _build_rename_plan
 
     components = [
         {

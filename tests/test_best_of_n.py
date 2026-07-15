@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.inference.best_of_n import ScoredChain, best_of_n_select
+from volta.inference.best_of_n import ScoredChain, best_of_n_select
 
 
 # ---------------------------------------------------------------------------
@@ -47,11 +47,11 @@ def test_scored_chain_composite_is_mean() -> None:
 
 def test_best_of_n_selects_highest() -> None:
     """best_of_n_select returns the chain with highest composite score."""
-    from kicad_agent.training.reward_model import PredictedReward
+    from volta.training.reward_model import PredictedReward
 
     mock_model = MagicMock()
 
-    with patch("kicad_agent.inference.best_of_n.predict_reward") as mock_predict:
+    with patch("volta.inference.best_of_n.predict_reward") as mock_predict:
         mock_predict.side_effect = [
             PredictedReward(format_score=0.9, quality_score=0.9, accuracy_score=0.9),
             PredictedReward(format_score=0.1, quality_score=0.1, accuracy_score=0.1),
@@ -64,11 +64,11 @@ def test_best_of_n_selects_highest() -> None:
 
 def test_best_of_n_single_chain() -> None:
     """N=1 returns the single chain with its score."""
-    from kicad_agent.training.reward_model import PredictedReward
+    from volta.training.reward_model import PredictedReward
 
     mock_model = MagicMock()
 
-    with patch("kicad_agent.inference.best_of_n.predict_reward") as mock_predict:
+    with patch("volta.inference.best_of_n.predict_reward") as mock_predict:
         mock_predict.return_value = PredictedReward(
             format_score=0.7, quality_score=0.8, accuracy_score=0.6,
         )
@@ -93,7 +93,7 @@ def test_best_of_n_no_reward_model() -> None:
 
 def test_best_of_n_improves_over_single() -> None:
     """Best-of-4 mean composite score >= 20% higher than mean single-sample."""
-    from kicad_agent.training.reward_model import PredictedReward
+    from volta.training.reward_model import PredictedReward
 
     mock_model = MagicMock()
 
@@ -105,7 +105,7 @@ def test_best_of_n_improves_over_single() -> None:
         PredictedReward(format_score=0.9, quality_score=0.9, accuracy_score=0.9),  # 0.9
     ]
 
-    with patch("kicad_agent.inference.best_of_n.predict_reward") as mock_predict:
+    with patch("volta.inference.best_of_n.predict_reward") as mock_predict:
         mock_predict.side_effect = scores
 
         chains = ["chain1", "chain2", "chain3", "chain4"]
@@ -123,11 +123,11 @@ def test_best_of_n_improves_over_single() -> None:
 
 def test_best_of_n_composite_is_mean_of_scores() -> None:
     """Composite score is computed as (fmt + qual + acc) / 3."""
-    from kicad_agent.training.reward_model import PredictedReward
+    from volta.training.reward_model import PredictedReward
 
     mock_model = MagicMock()
 
-    with patch("kicad_agent.inference.best_of_n.predict_reward") as mock_predict:
+    with patch("volta.inference.best_of_n.predict_reward") as mock_predict:
         mock_predict.return_value = PredictedReward(
             format_score=0.6, quality_score=0.8, accuracy_score=0.7,
         )

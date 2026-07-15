@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.generation.nl_pipeline import run_full_pipeline, FullPipelineResult
-from kicad_agent.generation.eval_suite import (
+from volta.generation.nl_pipeline import run_full_pipeline, FullPipelineResult
+from volta.generation.eval_suite import (
     run_eval_suite,
     format_eval_report,
     EvalCase,

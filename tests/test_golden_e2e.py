@@ -14,13 +14,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.analysis.types import NetClassification
-from kicad_agent.validation.gate_types import DesignStage, GateResult
-from kicad_agent.validation.gates.manufacturing_manifest import ManufacturingArtifact
-from kicad_agent.validation.gates.manufacturing_gate import ManufacturingReadinessGate
-from kicad_agent.validation.gates.placement_gate import PlacementReadinessGate
-from kicad_agent.validation.gates.routing_gate import RoutingReadinessGate
-from kicad_agent.validation.gates.route_quality import RouteQualityMetrics, compute_route_quality
+from volta.analysis.types import NetClassification
+from volta.validation.gate_types import DesignStage, GateResult
+from volta.validation.gates.manufacturing_manifest import ManufacturingArtifact
+from volta.validation.gates.manufacturing_gate import ManufacturingReadinessGate
+from volta.validation.gates.placement_gate import PlacementReadinessGate
+from volta.validation.gates.routing_gate import RoutingReadinessGate
+from volta.validation.gates.route_quality import RouteQualityMetrics, compute_route_quality
 
 from tests.fixtures.golden_e2e.board_configs import (
     ALL_BOARDS,
@@ -350,12 +350,12 @@ class TestRepairLoopIntegration:
 
     def test_repair_loop_present_in_codebase(self) -> None:
         """Phase 92 repair loop modules are importable."""
-        from kicad_agent.validation.gates.repair_loop import RepairLoop
+        from volta.validation.gates.repair_loop import RepairLoop
         assert RepairLoop is not None
 
     def test_fix_providers_available(self) -> None:
         """Phase 92 fix providers are importable."""
-        from kicad_agent.validation.gates.fix_providers import (
+        from volta.validation.gates.fix_providers import (
             ManufacturingExportFixProvider,
             PlacementBoundsFixProvider,
             RoutingManualMarkFixProvider,
@@ -370,8 +370,8 @@ class TestRepairLoopIntegration:
 
     def test_repair_loop_fixes_missing_export(self) -> None:
         """Repair loop can propose fix for missing manufacturing export."""
-        from kicad_agent.validation.gates.fix_providers import ManufacturingExportFixProvider
-        from kicad_agent.validation.gates.proposal import FixSource
+        from volta.validation.gates.fix_providers import ManufacturingExportFixProvider
+        from volta.validation.gates.proposal import FixSource
 
         provider = ManufacturingExportFixProvider()
         proposal = provider.propose_fix(
@@ -385,8 +385,8 @@ class TestRepairLoopIntegration:
 
     def test_repair_loop_fixes_placement(self) -> None:
         """Repair loop can propose fix for out-of-bounds component."""
-        from kicad_agent.validation.gates.fix_providers import PlacementBoundsFixProvider
-        from kicad_agent.validation.gates.proposal import FixSource
+        from volta.validation.gates.fix_providers import PlacementBoundsFixProvider
+        from volta.validation.gates.proposal import FixSource
 
         provider = PlacementBoundsFixProvider()
         proposal = provider.propose_fix(
@@ -398,7 +398,7 @@ class TestRepairLoopIntegration:
 
     def test_audit_trail_structure(self) -> None:
         """Repair audit entries have all required fields."""
-        from kicad_agent.validation.gates.repair_loop import RepairAuditEntry
+        from volta.validation.gates.repair_loop import RepairAuditEntry
 
         entry = RepairAuditEntry(
             iteration=1, blocker="b1", proposal_op={"op": "test"},

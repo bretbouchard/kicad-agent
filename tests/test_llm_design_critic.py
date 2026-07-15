@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.llm.design_critic import (
+from volta.llm.design_critic import (
     CRITIC_SYSTEM_PROMPT,
     CRITIC_TOOL,
     CritiqueFinding,
@@ -23,9 +23,9 @@ from kicad_agent.llm.design_critic import (
     DesignCritic,
     build_spatial_context,
 )
-from kicad_agent.spatial.primitives import SpatialBox, SpatialPoint
-from kicad_agent.spatial.query import SpatialQueryEngine
-from kicad_agent.validation.erc_drc import ErcResult, Severity, Violation
+from volta.spatial.primitives import SpatialBox, SpatialPoint
+from volta.spatial.query import SpatialQueryEngine
+from volta.validation.erc_drc import ErcResult, Severity, Violation
 
 
 # ---------------------------------------------------------------------------

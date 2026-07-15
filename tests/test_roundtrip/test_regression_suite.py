@@ -29,7 +29,7 @@ _SKIP_FILES = {"smd_test_board.kicad_pcb", "phase99_synthetic_4layer_mixedsignal
 
 def test_regression_suite_finds_all_fixture_files(tmp_path: Path) -> None:
     """run_regression_suite scans fixture_dir and finds all KiCad files."""
-    from kicad_agent.validation.roundtrip_regression import run_regression_suite
+    from volta.validation.roundtrip_regression import run_regression_suite
 
     result = run_regression_suite(FIXTURE_DIR, tmp_path, skip_files=_SKIP_FILES)
 
@@ -46,7 +46,7 @@ def test_regression_suite_finds_all_fixture_files(tmp_path: Path) -> None:
 
 def test_regression_suite_all_passed(tmp_path: Path) -> None:
     """All fixture files pass the two-pass round-trip stability test."""
-    from kicad_agent.validation.roundtrip_regression import run_regression_suite
+    from volta.validation.roundtrip_regression import run_regression_suite
 
     result = run_regression_suite(FIXTURE_DIR, tmp_path, skip_files=_SKIP_FILES)
 
@@ -62,7 +62,7 @@ def test_regression_suite_all_passed(tmp_path: Path) -> None:
 
 def test_regression_suite_file_type_coverage(tmp_path: Path) -> None:
     """The suite covers schematics, PCBs, footprints, and symbol libraries."""
-    from kicad_agent.validation.roundtrip_regression import run_regression_suite
+    from volta.validation.roundtrip_regression import run_regression_suite
 
     result = run_regression_suite(FIXTURE_DIR, tmp_path, skip_files=_SKIP_FILES)
 
@@ -80,7 +80,7 @@ def test_regression_suite_file_type_coverage(tmp_path: Path) -> None:
 
 def test_each_file_is_stable(tmp_path: Path) -> None:
     """Each file in the regression suite passes the two-pass stability test."""
-    from kicad_agent.validation.roundtrip_regression import run_regression_suite
+    from volta.validation.roundtrip_regression import run_regression_suite
 
     result = run_regression_suite(FIXTURE_DIR, tmp_path, skip_files=_SKIP_FILES)
 
@@ -98,7 +98,7 @@ def test_each_file_is_stable(tmp_path: Path) -> None:
 
 def test_pcb_uuid_preserved(tmp_path: Path) -> None:
     """PCB regression tests report uuid_preserved=True."""
-    from kicad_agent.validation.roundtrip_regression import run_regression_suite
+    from volta.validation.roundtrip_regression import run_regression_suite
 
     result = run_regression_suite(FIXTURE_DIR, tmp_path, skip_files=_SKIP_FILES)
 
@@ -124,7 +124,7 @@ def test_full_regression_suite(tmp_path: Path) -> None:
     This is the VAL-07 acceptance test: running the full suite with a single
     command validates the entire parse/serialize pipeline.
     """
-    from kicad_agent.validation.roundtrip_regression import run_regression_suite
+    from volta.validation.roundtrip_regression import run_regression_suite
 
     result = run_regression_suite(FIXTURE_DIR, tmp_path, skip_files=_SKIP_FILES)
 
@@ -147,7 +147,7 @@ def test_full_regression_suite(tmp_path: Path) -> None:
 
 def test_schematic_regression(tmp_path: Path) -> None:
     """Each .kicad_sch fixture passes round-trip stability."""
-    from kicad_agent.validation.roundtrip_regression import run_regression_suite
+    from volta.validation.roundtrip_regression import run_regression_suite
 
     result = run_regression_suite(FIXTURE_DIR, tmp_path, skip_files=_SKIP_FILES)
 
@@ -159,7 +159,7 @@ def test_schematic_regression(tmp_path: Path) -> None:
 
 def test_pcb_regression(tmp_path: Path) -> None:
     """Each .kicad_pcb fixture passes round-trip with UUID preservation."""
-    from kicad_agent.validation.roundtrip_regression import run_regression_suite
+    from volta.validation.roundtrip_regression import run_regression_suite
 
     result = run_regression_suite(FIXTURE_DIR, tmp_path, skip_files=_SKIP_FILES)
 
@@ -172,7 +172,7 @@ def test_pcb_regression(tmp_path: Path) -> None:
 
 def test_footprint_regression(tmp_path: Path) -> None:
     """Each .kicad_mod fixture passes round-trip stability."""
-    from kicad_agent.validation.roundtrip_regression import run_regression_suite
+    from volta.validation.roundtrip_regression import run_regression_suite
 
     result = run_regression_suite(FIXTURE_DIR, tmp_path, skip_files=_SKIP_FILES)
 
@@ -184,7 +184,7 @@ def test_footprint_regression(tmp_path: Path) -> None:
 
 def test_symbol_lib_regression(tmp_path: Path) -> None:
     """Each .kicad_sym fixture passes round-trip stability."""
-    from kicad_agent.validation.roundtrip_regression import run_regression_suite
+    from volta.validation.roundtrip_regression import run_regression_suite
 
     result = run_regression_suite(FIXTURE_DIR, tmp_path, skip_files=_SKIP_FILES)
 

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.export.bom import BomResult, export_bom, parse_bom_csv
+from volta.export.bom import BomResult, export_bom, parse_bom_csv
 
 # Skip all tests if kicad-cli is not available
 kicad_cli_available = shutil.which("kicad-cli") is not None

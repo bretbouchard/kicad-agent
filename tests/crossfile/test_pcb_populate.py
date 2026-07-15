@@ -11,7 +11,7 @@ from pathlib import Path
 # Add src to path if running standalone
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from kicad_agent.crossfile.pcb_populate import (
+from volta.crossfile.pcb_populate import (
     _add_net_to_pad,
     _replace_property_value,
     dedupe_pad_nets_multi_unit,

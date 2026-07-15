@@ -3,14 +3,14 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from kicad_agent.analysis.gap_analyzer import (
+from volta.analysis.gap_analyzer import (
     BoardInfo,
     GapReport,
     IncompleteNet,
     RoutingStats,
     UnroutedNet,
 )
-from kicad_agent.analysis.net_completion_filler import NetCompletionFiller
+from volta.analysis.net_completion_filler import NetCompletionFiller
 
 
 @pytest.fixture
@@ -157,7 +157,7 @@ class TestAIGeneration:
         )
 
         with patch(
-            "kicad_agent.llm.local_client.LocalLLMClient",
+            "volta.llm.local_client.LocalLLMClient",
             return_value=mock_client,
         ):
             filler = NetCompletionFiller(target_file="test.kicad_pcb", use_ai=True)
@@ -173,7 +173,7 @@ class TestAIGeneration:
         mock_client.chat.side_effect = RuntimeError("Model error")
 
         with patch(
-            "kicad_agent.llm.local_client.LocalLLMClient",
+            "volta.llm.local_client.LocalLLMClient",
             return_value=mock_client,
         ):
             filler = NetCompletionFiller(target_file="test.kicad_pcb", use_ai=True)
@@ -187,7 +187,7 @@ class TestAIGeneration:
         mock_client.chat.return_value = "no json here"
 
         with patch(
-            "kicad_agent.llm.local_client.LocalLLMClient",
+            "volta.llm.local_client.LocalLLMClient",
             return_value=mock_client,
         ):
             filler = NetCompletionFiller(target_file="test.kicad_pcb", use_ai=True)

@@ -15,13 +15,13 @@ import math
 
 import pytest
 
-from kicad_agent.placement.graph import PlacementGraph
-from kicad_agent.placement.packing import (
+from volta.placement.graph import PlacementGraph
+from volta.placement.packing import (
     PackResult,
     pack_components_no_overlap,
     resolve_overlaps,
 )
-from kicad_agent.placement.validation import PlacementValidator
+from volta.placement.validation import PlacementValidator
 
 
 # ---------------------------------------------------------------------------
@@ -209,7 +209,7 @@ class TestSAOverlapPenalty:
     """SA objective heavily penalizes overlaps."""
 
     def test_overlap_penalty_is_large(self):
-        from kicad_agent.placement.interactive import _compute_overlap_penalty
+        from volta.placement.interactive import _compute_overlap_penalty
 
         # Two components at same position — large penalty
         positions = {"R1": (50.0, 40.0, 0.0), "R2": (50.0, 40.0, 0.0)}
@@ -219,7 +219,7 @@ class TestSAOverlapPenalty:
         assert penalty >= 1000.0  # 1 overlap * 1000 weight
 
     def test_no_overlap_penalty_is_zero(self):
-        from kicad_agent.placement.interactive import _compute_overlap_penalty
+        from volta.placement.interactive import _compute_overlap_penalty
 
         positions = {"R1": (20.0, 20.0, 0.0), "R2": (80.0, 60.0, 0.0)}
         sizes = {"R1": 5.0, "R2": 5.0}
@@ -228,7 +228,7 @@ class TestSAOverlapPenalty:
         assert penalty == 0.0
 
     def test_penalty_scales_with_count(self):
-        from kicad_agent.placement.interactive import _compute_overlap_penalty
+        from volta.placement.interactive import _compute_overlap_penalty
 
         # 3 overlapping components
         positions = {
@@ -252,8 +252,8 @@ class TestEngineOverlapFree:
     """HybridPlacementEngine produces overlap-free output with packing."""
 
     def test_rule_based_50_components(self):
-        from kicad_agent.generation.intent import ComponentSpec
-        from kicad_agent.placement.engine import HybridPlacementEngine, PlacementRequest
+        from volta.generation.intent import ComponentSpec
+        from volta.placement.engine import HybridPlacementEngine, PlacementRequest
 
         components = [
             ComponentSpec(reference=f"R{i}", library_id="Device:R")
@@ -282,8 +282,8 @@ class TestEngineOverlapFree:
         assert output.source == "rule_based_packed"
 
     def test_engine_with_fixed_positions(self):
-        from kicad_agent.generation.intent import ComponentSpec
-        from kicad_agent.placement.engine import HybridPlacementEngine, PlacementRequest
+        from volta.generation.intent import ComponentSpec
+        from volta.placement.engine import HybridPlacementEngine, PlacementRequest
 
         components = [
             ComponentSpec(reference=f"R{i}", library_id="Device:R")
@@ -319,7 +319,7 @@ class TestScoringOverlapCount:
     """PlacementScore includes overlap_count field."""
 
     def test_score_reports_overlaps(self):
-        from kicad_agent.placement.scoring import PlacementScorer
+        from volta.placement.scoring import PlacementScorer
 
         scorer = PlacementScorer(board_width=100.0, board_height=80.0, min_clearance=1.0)
 
@@ -356,7 +356,7 @@ class TestScoringOverlapCount:
         assert score.overlap_count >= 1  # R0 and R1 overlap
 
     def test_score_zero_overlaps(self):
-        from kicad_agent.placement.scoring import PlacementScorer
+        from volta.placement.scoring import PlacementScorer
 
         scorer = PlacementScorer(board_width=100.0, board_height=80.0, min_clearance=1.0)
 

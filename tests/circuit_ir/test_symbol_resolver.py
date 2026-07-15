@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.circuit_ir.symbol_resolver import (
+from volta.circuit_ir.symbol_resolver import (
     get_pin_names,
     resolve_lib_symbol,
 )

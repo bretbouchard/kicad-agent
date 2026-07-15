@@ -19,14 +19,14 @@ PROMPT_MD = ROOT / "skills" / "prompt.md"
 
 def count_registry_ops() -> int:
     """Count ops in OPERATION_REGISTRY (authoritative source)."""
-    from kicad_agent.ops.registry import OPERATION_REGISTRY
+    from volta.ops.registry import OPERATION_REGISTRY
 
     return len(OPERATION_REGISTRY)
 
 
 def count_schema_ops() -> int:
     """Count ops in the Operation discriminated union in schema.py."""
-    import kicad_agent.ops.schema as schema_module
+    import volta.ops.schema as schema_module
 
     schema_types: set[str] = set()
     for name in dir(schema_module):

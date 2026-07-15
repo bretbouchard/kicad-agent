@@ -18,20 +18,20 @@ import math
 
 import pytest
 
-from kicad_agent.training.chains import MazeReasoningChain, synthesize_maze_chain
-from kicad_agent.training.dataset import MazeSample
-from kicad_agent.training.reward import (
+from volta.training.chains import MazeReasoningChain, synthesize_maze_chain
+from volta.training.dataset import MazeSample
+from volta.training.reward import (
     ChainReward,
     RewardConfig,
     RewardSignal,
     score_chain,
 )
-from kicad_agent.training.reward_hacking import (
+from volta.training.reward_hacking import (
     AnomalyReport,
     detect_anomalies,
     smooth_penalty,
 )
-from kicad_agent.training.reward_model import RewardModel, predict_reward
+from volta.training.reward_model import RewardModel, predict_reward
 
 
 # ---------------------------------------------------------------------------

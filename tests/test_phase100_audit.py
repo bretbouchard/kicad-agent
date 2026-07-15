@@ -15,12 +15,12 @@ import json
 
 import pytest
 
-from kicad_agent.routing.audit import (
+from volta.routing.audit import (
     RoutingAuditEntry,
     RoutingAuditLog,
     write_audit_entry,
 )
-from kicad_agent.routing.strategy import RouterBackend
+from volta.routing.strategy import RouterBackend
 
 
 def _make_entry(
@@ -365,8 +365,8 @@ class TestAiFallbackMarkerPersistsToAudit:
     def test_ai_fallback_marker_persists_to_audit(self, tmp_path) -> None:
         from pathlib import Path
 
-        from kicad_agent.routing.orchestrator import RoutingOrchestrator
-        from kicad_agent.routing.strategy import (
+        from volta.routing.orchestrator import RoutingOrchestrator
+        from volta.routing.strategy import (
             BoardState,
             DeterministicStrategy,
             Pin,

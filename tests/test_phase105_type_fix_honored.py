@@ -34,7 +34,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.routing.freerouting import is_freerouting_available
+from volta.routing.freerouting import is_freerouting_available
 
 pytestmark = pytest.mark.slow
 
@@ -45,7 +45,7 @@ _BASE_DSN = (
     / "smd_test_board.dsn"
 )
 _JAR = Path.home() / ".kicad-agent" / "tools" / "freerouting.jar"
-_BATCH_DIR = Path(__file__).resolve().parents[1] / "src" / "kicad_agent" / "routing"
+_BATCH_DIR = Path(__file__).resolve().parents[1] / "src" / "volta" / "routing"
 
 # U-detour fixed wire for NET_A: up to y=7000, across, back down.
 # Geometrically worse than the direct route, so survival proves the lock holds.

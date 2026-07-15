@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from kicad_agent.training.vastai_checkpoint_resumer import CheckpointResumer
+from volta.training.vastai_checkpoint_resumer import CheckpointResumer
 
 
 def _build_resumer_with_mock_b2(tmp_path: Path) -> tuple[CheckpointResumer, MagicMock]:

@@ -2,7 +2,7 @@
 
 import pytest
 
-from kicad_agent.ops.registry import (
+from volta.ops.registry import (
     OPERATION_REGISTRY,
     VALID_CATEGORIES,
     get_destructive_operations,

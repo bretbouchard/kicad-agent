@@ -11,22 +11,22 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.analysis.intent_schemas import (
+from volta.analysis.intent_schemas import (
     DesignGoal,
     DesignIntent,
     SubcircuitIntent,
 )
-from kicad_agent.analysis.intent_inference import (
+from volta.analysis.intent_inference import (
     InferenceResult,
     IntentInferrer,
 )
-from kicad_agent.analysis.subcircuit_detector import Subcircuit
-from kicad_agent.analysis.topology_graph import (
+from volta.analysis.subcircuit_detector import Subcircuit
+from volta.analysis.topology_graph import (
     CircuitTopology,
     TopologyEdge,
     TopologyNode,
 )
-from kicad_agent.analysis.types import NetClassification
+from volta.analysis.types import NetClassification
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +90,7 @@ def _make_subcircuit(
 
 def _function_to_subcircuit_type(function: str):
     """Map function string to SubcircuitType."""
-    from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+    from volta.analysis.subcircuit_detector import SubcircuitType
 
     mapping = {
         "vca": SubcircuitType.VCA,

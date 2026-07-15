@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 # Module under test
-from kicad_agent.training.maze_vision_converter import (
+from volta.training.maze_vision_converter import (
     MAZE_VISION_PROMPT,
     _create_vision_messages,
     _load_maze_samples_index,

@@ -12,14 +12,14 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.analysis.types import NetClassification
-from kicad_agent.project.design_rules import parse_design_rules
-from kicad_agent.validation.gate_runner import get_gate_runner
-from kicad_agent.validation.gates.constraint_gate import (
+from volta.analysis.types import NetClassification
+from volta.project.design_rules import parse_design_rules
+from volta.validation.gate_runner import get_gate_runner
+from volta.validation.gates.constraint_gate import (
     ConstraintCompletenessGate,
     ConstraintPropagator,
 )
-from kicad_agent.validation.gates.constraint_schema import (
+from volta.validation.gates.constraint_schema import (
     DesignConstraints,
     DiffPairSpec,
     ElectricalConstraints,
@@ -103,7 +103,7 @@ class TestConstraintPropagator:
             dru_path = Path(tmpdir) / "board.kicad_dru"
 
             # Write an initial .kicad_dru with "Default" class
-            from kicad_agent.project.design_rules import (
+            from volta.project.design_rules import (
                 DesignRulesFile,
                 NetClassDef,
             )
@@ -387,7 +387,7 @@ class TestConstraintCompletenessGate:
     def test_gate_stage_is_pcb_setup(self) -> None:
         """Gate result stage is always PCB_SETUP."""
         gate = self._gate()
-        from kicad_agent.validation.gate_types import DesignStage
+        from volta.validation.gate_types import DesignStage
         context = {
             "design_constraints": DesignConstraints(),
             "net_intent": {},
@@ -424,7 +424,7 @@ class TestGateRegistration:
         """Gate is registered for PCB_SETUP -> PLACEMENT."""
         runner = get_gate_runner()
         gate = runner.get_gate("constraint_completeness")
-        from kicad_agent.validation.gate_types import DesignStage
+        from volta.validation.gate_types import DesignStage
         assert gate.from_stage == DesignStage.PCB_SETUP
         assert gate.to_stage == DesignStage.PLACEMENT
 
@@ -446,7 +446,7 @@ class TestGateRegistration:
     def test_gate_in_required_gates_for_transition(self) -> None:
         """Gate appears in required gates for PCB_SETUP -> PLACEMENT."""
         runner = get_gate_runner()
-        from kicad_agent.validation.gate_types import DesignStage
+        from volta.validation.gate_types import DesignStage
         gates = runner.get_required_gates(
             DesignStage.PCB_SETUP, DesignStage.PLACEMENT
         )

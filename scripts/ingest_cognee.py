@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATASET_NAME = "kicad-agent-reference"
 
 DOC_FILES = [
-    "kicad_agent_reference.md",
+    "volta_reference.md",
     "pcb_editor_reference.md",
     "gerbview_reference.md",
     "kicad_docs.md",
@@ -30,8 +30,8 @@ DOC_FILES = [
 
 # Verification queries with expected content indicators
 VERIFICATION_QUERIES = [
-    ("pin at coordinate", "kicad_agent_reference"),
-    ("grid snap schematic", "kicad_agent_reference"),
+    ("pin at coordinate", "volta_reference"),
+    ("grid snap schematic", "volta_reference"),
     ("working with footprints", "pcb_editor_reference"),
     ("copper zones", "pcb_editor_reference"),
     ("Gerber", "gerbview_reference"),

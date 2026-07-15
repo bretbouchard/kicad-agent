@@ -14,11 +14,11 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.ops.schema import Operation, RemoveComponentOp
-from kicad_agent.parser import parse_schematic
-from kicad_agent.serializer import serialize_schematic
+from volta.ir.base import _clear_registry
+from volta.ir.schematic_ir import SchematicIR
+from volta.ops.schema import Operation, RemoveComponentOp
+from volta.parser import parse_schematic
+from volta.serializer import serialize_schematic
 
 
 @pytest.fixture(autouse=True)
@@ -54,7 +54,7 @@ class TestRemoveComponent:
         self, setup_schematic: dict
     ) -> None:
         """remove_component removes a component from schematicSymbols by reference."""
-        from kicad_agent.ops.remove_component import remove_component
+        from volta.ops.remove_component import remove_component
 
         # Verify J1 exists initially
         assert setup_schematic["ir"].get_component_by_ref("J1") is not None
@@ -72,7 +72,7 @@ class TestRemoveComponent:
         self, setup_schematic: dict
     ) -> None:
         """remove_component raises RemoveComponentError when reference not found."""
-        from kicad_agent.ops.remove_component import RemoveComponentError, remove_component
+        from volta.ops.remove_component import RemoveComponentError, remove_component
 
         op = RemoveComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -86,7 +86,7 @@ class TestRemoveComponent:
         self, setup_schematic: dict
     ) -> None:
         """remove_component removes matching symbol_instances entry if present."""
-        from kicad_agent.ops.remove_component import remove_component
+        from volta.ops.remove_component import remove_component
 
         # Even though this fixture has empty symbolInstances,
         # verify the cleanup runs without error
@@ -102,7 +102,7 @@ class TestRemoveComponent:
         self, setup_schematic: dict
     ) -> None:
         """After removal, component count decreased by exactly 1."""
-        from kicad_agent.ops.remove_component import remove_component
+        from volta.ops.remove_component import remove_component
 
         initial_count = setup_schematic["initial_count"]
 
@@ -118,7 +118,7 @@ class TestRemoveComponent:
         self, setup_schematic: dict
     ) -> None:
         """remove_component records mutation in IR mutation log."""
-        from kicad_agent.ops.remove_component import remove_component
+        from volta.ops.remove_component import remove_component
 
         initial_mutations = len(setup_schematic["ir"].mutation_log)
 
@@ -138,7 +138,7 @@ class TestRemoveComponent:
         self, setup_schematic: dict
     ) -> None:
         """Removing one component does not affect other components."""
-        from kicad_agent.ops.remove_component import remove_component
+        from volta.ops.remove_component import remove_component
 
         # Verify C1 and U1 exist before removal
         assert setup_schematic["ir"].get_component_by_ref("C1") is not None
@@ -160,7 +160,7 @@ class TestRemoveComponent:
         self, setup_schematic: dict
     ) -> None:
         """remove_component returns dict with removed reference and uuid."""
-        from kicad_agent.ops.remove_component import remove_component
+        from volta.ops.remove_component import remove_component
 
         # Get the UUID of J1 before removal
         j1 = setup_schematic["ir"].get_component_by_ref("J1")
@@ -191,7 +191,7 @@ class TestOperationExecutorRemove:
         self, setup_schematic: dict
     ) -> None:
         """OperationExecutor dispatches remove_component op_type correctly."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         executor = OperationExecutor(base_dir=setup_schematic["base_dir"])
 
@@ -212,7 +212,7 @@ class TestOperationExecutorRemove:
         self, setup_schematic: dict
     ) -> None:
         """Full pipeline: validate Operation -> executor -> remove_component -> serialize -> file on disk."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         executor = OperationExecutor(base_dir=setup_schematic["base_dir"])
 

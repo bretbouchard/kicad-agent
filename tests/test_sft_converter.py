@@ -18,9 +18,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.training.sft.converter import ChatMLSample, convert_chain_to_chatml
-from kicad_agent.training.sft.quality_filter import filter_by_reward_model, split_and_save
-from kicad_agent.training.sft.templates import (
+from volta.training.sft.converter import ChatMLSample, convert_chain_to_chatml
+from volta.training.sft.quality_filter import filter_by_reward_model, split_and_save
+from volta.training.sft.templates import (
     SYSTEM_PROMPT_SPATIAL,
     TASK_TEMPLATES,
     get_template_for_chain,
@@ -170,15 +170,15 @@ def test_quality_filter_keeps_top_fraction():
         idx = int(text.split("Chain text ")[1].split(" ")[0])
         # Bottom 5 (0-4) should be removed, top 15 (5-19) kept
         score = 0.3 if idx < 5 else 0.8
-        from kicad_agent.training.reward_model import PredictedReward
+        from volta.training.reward_model import PredictedReward
         return PredictedReward(
             format_score=score,
             quality_score=score,
             accuracy_score=score,
         )
 
-    with patch("kicad_agent.training.sft.quality_filter.predict_reward", side_effect=mock_predict), \
-         patch("kicad_agent.training.sft.quality_filter.RewardModel") as MockRM:
+    with patch("volta.training.sft.quality_filter.predict_reward", side_effect=mock_predict), \
+         patch("volta.training.sft.quality_filter.RewardModel") as MockRM:
         mock_instance = MagicMock()
         MockRM.load_trained.return_value = mock_instance
 

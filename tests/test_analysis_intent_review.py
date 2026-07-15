@@ -2,9 +2,9 @@
 
 import pytest
 
-from kicad_agent.analysis.intent_inference import IntentInferrer, InferenceResult
-from kicad_agent.analysis.intent_schemas import DesignGoal, DesignIntent, SubcircuitIntent
-from kicad_agent.analysis.design_review import (
+from volta.analysis.intent_inference import IntentInferrer, InferenceResult
+from volta.analysis.intent_schemas import DesignGoal, DesignIntent, SubcircuitIntent
+from volta.analysis.design_review import (
     DesignFinding,
     DesignReview,
     DesignReviewer,

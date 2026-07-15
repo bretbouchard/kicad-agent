@@ -157,14 +157,14 @@ def test_no_spatial_extractor_from_file() -> None:
 
 
 def test_no_ops_operation_import() -> None:
-    """HIGH-2 regression: Operation lives in kicad_agent.ops.schema.
+    """HIGH-2 regression: Operation lives in volta.ops.schema.
 
-    Importing from kicad_agent.ops.operation would fail with ModuleNotFoundError.
+    Importing from volta.ops.operation would fail with ModuleNotFoundError.
     """
     content = SCRIPT.read_text()
-    assert "from kicad_agent.ops.operation import" not in content, (
+    assert "from volta.ops.operation import" not in content, (
         "HIGH-2 regression: Operation must be imported from "
-        "kicad_agent.ops.schema, not kicad_agent.ops.operation."
+        "volta.ops.schema, not volta.ops.operation."
     )
 
 

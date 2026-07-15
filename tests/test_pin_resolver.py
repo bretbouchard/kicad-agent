@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops._schema_schematic_routing import ResolvePinPositionsOp
+from volta.ops._schema_schematic_routing import ResolvePinPositionsOp
 
 
 # ---------------------------------------------------------------------------
@@ -269,7 +269,7 @@ class TestPinResolver:
           wire_x = 59.69 + 1.27 * cos(270) = 59.69 + 0 = 59.69
           wire_y = 71.12 + 1.27 * sin(270) = 71.12 - 1.27 = 69.85
         """
-        from kicad_agent.schematic_routing.pin_resolver import PinResolver
+        from volta.schematic_routing.pin_resolver import PinResolver
 
         content = _make_sch_content(
             _rc_lib_symbols(),
@@ -304,7 +304,7 @@ class TestPinResolver:
           pin 2 body: (69.85 + 7.62, 69.85) = (77.47, 69.85)
           pin 2 wire: (77.47 + 3.81, 69.85) = (81.28, 69.85)
         """
-        from kicad_agent.schematic_routing.pin_resolver import PinResolver
+        from volta.schematic_routing.pin_resolver import PinResolver
 
         symbols = (
             _multi_unit_symbol("U21", 69.85, 69.85, 0, 1)
@@ -346,7 +346,7 @@ class TestPinResolver:
           body: (100 - 10.16, 100 + 5.08) = (89.84, 105.08)
           wire: (89.84 + 3.81, 105.08) = (93.65, 105.08)
         """
-        from kicad_agent.schematic_routing.pin_resolver import PinResolver
+        from volta.schematic_routing.pin_resolver import PinResolver
 
         content = _make_sch_content(
             _named_pin_lib_symbols(),
@@ -383,7 +383,7 @@ class TestPinResolver:
             wire_x = 96.19 + 1.27*cos(180) = 96.19 - 1.27 = 94.92
             wire_y = 100 + 1.27*sin(180) = 100 + 0 = 100
         """
-        from kicad_agent.schematic_routing.pin_resolver import PinResolver
+        from volta.schematic_routing.pin_resolver import PinResolver
 
         content = _make_sch_content(
             _rc_lib_symbols(),
@@ -402,7 +402,7 @@ class TestPinResolver:
 
     def test_resolve_all_returns_all_components(self):
         """Test 6: resolve_all() returns dict keyed by ref."""
-        from kicad_agent.schematic_routing.pin_resolver import PinResolver
+        from volta.schematic_routing.pin_resolver import PinResolver
 
         symbols = (
             _rc_symbol("R55", 59.69, 74.93, 0)
@@ -424,7 +424,7 @@ class TestPinResolver:
 
     def test_resolve_single_ref_filters(self):
         """Test 7: resolve(ref="R55") returns only that component."""
-        from kicad_agent.schematic_routing.pin_resolver import PinResolver
+        from volta.schematic_routing.pin_resolver import PinResolver
 
         symbols = (
             _rc_symbol("R55", 59.69, 74.93, 0)
@@ -442,7 +442,7 @@ class TestPinResolver:
 
     def test_resolve_missing_ref_returns_none(self):
         """resolve() with a ref that doesn't exist returns None."""
-        from kicad_agent.schematic_routing.pin_resolver import PinResolver
+        from volta.schematic_routing.pin_resolver import PinResolver
 
         content = _make_sch_content(
             _rc_lib_symbols(),
@@ -456,7 +456,7 @@ class TestPinResolver:
 
     def test_large_file_rejected(self):
         """T-38-01-03: PinResolver rejects files >10MB."""
-        from kicad_agent.schematic_routing.pin_resolver import PinResolver
+        from volta.schematic_routing.pin_resolver import PinResolver
 
         # Create a file larger than 10MB
         path = _write_sch("(kicad_sch)")
@@ -468,7 +468,7 @@ class TestPinResolver:
 
     def test_pin_count_limit(self):
         """T-38-01-03: PinResolver rejects files with >10000 pins."""
-        from kicad_agent.schematic_routing.pin_resolver import PinResolver
+        from volta.schematic_routing.pin_resolver import PinResolver
 
         # Generate a file with too many pins (exaggerated lib_symbols)
         # Each pin entry is ~100 chars, so 10001 pins is ~1MB (under the 10MB limit)

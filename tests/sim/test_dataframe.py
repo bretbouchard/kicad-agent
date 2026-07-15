@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import pandas as pd
 
-from kicad_agent.spice import AnalysisResult, AnalysisType, SimulationResult, Trace
-from kicad_agent.sim.dataframe import to_dataframe
+from volta.spice import AnalysisResult, AnalysisType, SimulationResult, Trace
+from volta.sim.dataframe import to_dataframe
 
 
 def _result_with_traces() -> SimulationResult:

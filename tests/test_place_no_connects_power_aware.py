@@ -13,9 +13,9 @@ import pytest
 from kiutils.items.common import Position
 from kiutils.schematic import Schematic
 
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.ops.repair import place_no_connects, place_no_connects_from_erc
-from kicad_agent.parser import parse_schematic
+from volta.ir.schematic_ir import SchematicIR
+from volta.ops.repair import place_no_connects, place_no_connects_from_erc
+from volta.parser import parse_schematic
 
 
 def _save_and_parse(sch_path: Path, sch: Schematic) -> SchematicIR:
@@ -283,13 +283,13 @@ class TestPlaceNoConnectsFromErcPinColocation:
             ir = _save_and_parse(sch_path, sch)
 
             # Mock extract_violation_positions to return empty
-            with patch("kicad_agent.ops.erc_parser.extract_violation_positions", return_value=[]):
+            with patch("volta.ops.erc_parser.extract_violation_positions", return_value=[]):
                 result = place_no_connects_from_erc(ir, sch_path)
                 assert result["placed"] == 0
 
     def test_colocated_pins_skipped(self):
         """ERC reports a violation at a position with 2 pins → skip (co-located)."""
-        from kicad_agent.ops.erc_parser import ViolationPosition
+        from volta.ops.erc_parser import ViolationPosition
 
         with tempfile.TemporaryDirectory() as tmpdir:
             sch_path = Path(tmpdir) / "test.kicad_sch"
@@ -309,9 +309,9 @@ class TestPlaceNoConnectsFromErcPinColocation:
 
             violation = ViolationPosition(x=50.0, y=50.0, sheet="/", description="pin not connected")
             with patch.object(ir, "get_pin_positions", return_value=mock_pins):
-                with patch("kicad_agent.ops.erc_parser.extract_violation_positions",
+                with patch("volta.ops.erc_parser.extract_violation_positions",
                            return_value=[violation]):
-                    with patch("kicad_agent.ops.repair_erc.NetPositionIndex") as mock_idx:
+                    with patch("volta.ops.repair_erc.NetPositionIndex") as mock_idx:
                         mock_idx.from_file.return_value = MagicMock(
                             get_net_at=MagicMock(return_value=None)
                         )
@@ -322,7 +322,7 @@ class TestPlaceNoConnectsFromErcPinColocation:
 
     def test_single_pin_violation_placed(self):
         """ERC reports violation at position with only 1 pin → marker placed."""
-        from kicad_agent.ops.erc_parser import ViolationPosition
+        from volta.ops.erc_parser import ViolationPosition
 
         with tempfile.TemporaryDirectory() as tmpdir:
             from kiutils.items.schitems import SchematicSymbol
@@ -354,9 +354,9 @@ class TestPlaceNoConnectsFromErcPinColocation:
             pin = pin_positions[0]
             violation = ViolationPosition(x=pin["x"], y=pin["y"], sheet="/", description="pin not connected")
 
-            with patch("kicad_agent.ops.erc_parser.extract_violation_positions",
+            with patch("volta.ops.erc_parser.extract_violation_positions",
                        return_value=[violation]):
-                with patch("kicad_agent.ops.repair_erc.NetPositionIndex") as mock_idx:
+                with patch("volta.ops.repair_erc.NetPositionIndex") as mock_idx:
                     mock_idx.from_file.return_value = MagicMock(
                         get_net_at=MagicMock(return_value=None)
                     )
@@ -388,7 +388,7 @@ class TestPlaceNoConnectsFromErcToleranceMatching:
         After the fix, tolerance-based lookup (SNAP_TOLERANCE=0.01mm)
         correctly identifies the pin as power_in and skips it.
         """
-        from kicad_agent.ops.erc_parser import ViolationPosition
+        from volta.ops.erc_parser import ViolationPosition
 
         with tempfile.TemporaryDirectory() as tmpdir:
             sch_path = Path(tmpdir) / "test.kicad_sch"
@@ -414,9 +414,9 @@ class TestPlaceNoConnectsFromErcToleranceMatching:
             with patch.object(ir, "get_pin_positions", return_value=mock_pins):
                 with patch.object(ir, "get_wire_endpoints", return_value=[]):
                     with patch.object(ir, "get_label_positions", return_value=[]):
-                        with patch("kicad_agent.ops.erc_parser.extract_violation_positions",
+                        with patch("volta.ops.erc_parser.extract_violation_positions",
                                    return_value=[violation]):
-                            with patch("kicad_agent.ops.repair_erc.NetPositionIndex") as mock_idx:
+                            with patch("volta.ops.repair_erc.NetPositionIndex") as mock_idx:
                                 mock_idx.from_file.return_value = MagicMock(
                                     get_net_at=MagicMock(return_value=None)
                                 )
@@ -440,7 +440,7 @@ class TestPlaceNoConnectsFromErcToleranceMatching:
         rounds to 86.00, violation_y=85.994 rounds to 85.99. Different keys,
         same pin. Tolerance matching catches it.
         """
-        from kicad_agent.ops.erc_parser import ViolationPosition
+        from volta.ops.erc_parser import ViolationPosition
 
         with tempfile.TemporaryDirectory() as tmpdir:
             sch_path = Path(tmpdir) / "test.kicad_sch"
@@ -462,9 +462,9 @@ class TestPlaceNoConnectsFromErcToleranceMatching:
             with patch.object(ir, "get_pin_positions", return_value=mock_pins):
                 with patch.object(ir, "get_wire_endpoints", return_value=[]):
                     with patch.object(ir, "get_label_positions", return_value=[]):
-                        with patch("kicad_agent.ops.erc_parser.extract_violation_positions",
+                        with patch("volta.ops.erc_parser.extract_violation_positions",
                                    return_value=[violation]):
-                            with patch("kicad_agent.ops.repair_erc.NetPositionIndex") as mock_idx:
+                            with patch("volta.ops.repair_erc.NetPositionIndex") as mock_idx:
                                 mock_idx.from_file.return_value = MagicMock(
                                     get_net_at=MagicMock(return_value=None)
                                 )

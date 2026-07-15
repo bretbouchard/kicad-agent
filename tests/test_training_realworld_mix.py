@@ -41,7 +41,7 @@ def _make_jsonl_sample(sample_id: int, difficulty: str = "medium") -> dict:
 
 def test_config_accepts_real_data_dir() -> None:
     """TrainingPipelineConfig accepts real_data_dir parameter."""
-    from kicad_agent.training.pipeline import TrainingPipelineConfig
+    from volta.training.pipeline import TrainingPipelineConfig
 
     config = TrainingPipelineConfig(real_data_dir="/path/to/real/data")
     assert config.real_data_dir == "/path/to/real/data"
@@ -49,7 +49,7 @@ def test_config_accepts_real_data_dir() -> None:
 
 def test_config_real_data_dir_default_none() -> None:
     """TrainingPipelineConfig.real_data_dir defaults to None."""
-    from kicad_agent.training.pipeline import TrainingPipelineConfig
+    from volta.training.pipeline import TrainingPipelineConfig
 
     config = TrainingPipelineConfig()
     assert config.real_data_dir is None
@@ -62,7 +62,7 @@ def test_config_real_data_dir_default_none() -> None:
 
 def test_pipeline_loads_real_data(tmp_path: Path) -> None:
     """run_pipeline with real_data_dir loads RealBoardDataset from train.jsonl."""
-    from kicad_agent.training.pipeline import TrainingPipelineConfig, run_pipeline
+    from volta.training.pipeline import TrainingPipelineConfig, run_pipeline
 
     # Create a real data directory with train.jsonl
     real_dir = tmp_path / "real_data"
@@ -95,7 +95,7 @@ def test_pipeline_loads_real_data(tmp_path: Path) -> None:
 
 def test_pipeline_without_real_data(tmp_path: Path) -> None:
     """run_pipeline without real_data_dir works unchanged (synthetic only)."""
-    from kicad_agent.training.pipeline import TrainingPipelineConfig, run_pipeline
+    from volta.training.pipeline import TrainingPipelineConfig, run_pipeline
 
     config = TrainingPipelineConfig(
         n_samples=10,
@@ -121,7 +121,7 @@ def test_pipeline_without_real_data(tmp_path: Path) -> None:
 
 def test_mixed_pipeline_tracks_counts(tmp_path: Path) -> None:
     """Mixed pipeline tracks synthetic vs real sample counts in report."""
-    from kicad_agent.training.pipeline import TrainingPipelineConfig, run_pipeline
+    from volta.training.pipeline import TrainingPipelineConfig, run_pipeline
 
     real_dir = tmp_path / "real_data"
     real_dir.mkdir()
@@ -156,7 +156,7 @@ def test_mixed_pipeline_tracks_counts(tmp_path: Path) -> None:
 
 def test_real_world_counts_in_metadata(tmp_path: Path) -> None:
     """Real-world sample counts are tracked in pipeline config metadata."""
-    from kicad_agent.training.pipeline import TrainingPipelineConfig, run_pipeline
+    from volta.training.pipeline import TrainingPipelineConfig, run_pipeline
 
     real_dir = tmp_path / "real_data"
     real_dir.mkdir()
@@ -189,7 +189,7 @@ def test_real_world_counts_in_metadata(tmp_path: Path) -> None:
 
 def test_missing_train_jsonl_continues_synthetic(tmp_path: Path) -> None:
     """Missing train.jsonl in real_data_dir logs warning and continues."""
-    from kicad_agent.training.pipeline import TrainingPipelineConfig, run_pipeline
+    from volta.training.pipeline import TrainingPipelineConfig, run_pipeline
 
     real_dir = tmp_path / "real_data"
     real_dir.mkdir()

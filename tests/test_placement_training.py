@@ -17,14 +17,14 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.generation.intent import ComponentSpec, NetSpec
-from kicad_agent.placement.graph import PlacementGraph, netlist_to_placement_graph
-from kicad_agent.placement.training.dataset import (
+from volta.generation.intent import ComponentSpec, NetSpec
+from volta.placement.graph import PlacementGraph, netlist_to_placement_graph
+from volta.placement.training.dataset import (
     PlacementDataset,
     PlacementSample,
     generate_placement_samples,
 )
-from kicad_agent.placement.training.reward import (
+from volta.placement.training.reward import (
     compute_edge_penalty,
     compute_hpwl,
     compute_overlap_area,
@@ -344,8 +344,8 @@ class TestPlacementTrainer:
 
     def test_placement_trainer_single_step(self):
         """Run 1 training step on 4 samples, verify metrics are valid."""
-        from kicad_agent.placement.model import PlacementModel
-        from kicad_agent.placement.training.train import (
+        from volta.placement.model import PlacementModel
+        from volta.placement.training.train import (
             PlacementTrainConfig,
             PlacementTrainer,
         )
@@ -382,7 +382,7 @@ class TestPlacementTrainer:
 
     def test_trainer_config_defaults(self):
         """PlacementTrainConfig has sensible defaults."""
-        from kicad_agent.placement.training.train import PlacementTrainConfig
+        from volta.placement.training.train import PlacementTrainConfig
 
         config = PlacementTrainConfig()
         assert config.n_epochs == 1

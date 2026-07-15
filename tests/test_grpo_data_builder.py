@@ -9,11 +9,11 @@ from unittest.mock import patch
 
 import pytest
 
-from kicad_agent.training.grpo_data_builder import (
+from volta.training.grpo_data_builder import (
     GRPODataBuilder,
     GRPODataBuilderError,
 )
-from kicad_agent.training.rewards import AlignmentJitter
+from volta.training.rewards import AlignmentJitter
 
 
 FIXTURE = Path("tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_sch")
@@ -127,7 +127,7 @@ def test_reward_delta_in_range(tmp_path) -> None:
 def test_var_seed_computation_matches_phase_63_pattern() -> None:
     """Test 9: var_seed = seed + i * _SEED_SPACING (HI-110-07 inlined constant)."""
     # Verify the constant is exactly 1_000_000
-    from kicad_agent.training.grpo_data_builder import _SEED_SPACING
+    from volta.training.grpo_data_builder import _SEED_SPACING
     assert _SEED_SPACING == 1_000_000
     # Manually verify the formula matches what build_exploration_rows uses
     seed = 42
@@ -149,7 +149,7 @@ def test_score_variation_uses_verified_chain(tmp_path) -> None:
     constructed_with = []
     original_class = None
 
-    from kicad_agent.training import grpo_data_builder as gdb_module
+    from volta.training import grpo_data_builder as gdb_module
 
     original_scorer = gdb_module.SchematicReadabilityScorer
 
@@ -158,7 +158,7 @@ def test_score_variation_uses_verified_chain(tmp_path) -> None:
             constructed_with.append(extractor)
 
         def score(self):
-            from kicad_agent.analysis.readability_scorer import ReadabilityReport
+            from volta.analysis.readability_scorer import ReadabilityReport
             return ReadabilityReport(srs=0.5, factors={"density": 0.5, "clarity": 0.5, "spacing": 0.5, "organization": 0.5})
 
     with patch.object(gdb_module, "SchematicReadabilityScorer", _CapturingScorer):
@@ -167,7 +167,7 @@ def test_score_variation_uses_verified_chain(tmp_path) -> None:
     # The scorer should have been constructed twice (base + variation), each with a
     # SchematicSpatialExtractor argument (not a Path or str).
     assert len(constructed_with) == 2
-    from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+    from volta.analysis.schematic_spatial import SchematicSpatialExtractor
     for arg in constructed_with:
         assert isinstance(arg, SchematicSpatialExtractor), (
             f"scorer constructed with {type(arg).__name__}, expected SchematicSpatialExtractor"

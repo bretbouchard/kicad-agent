@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from kicad_agent.training.sft_labeller import (
+from volta.training.sft_labeller import (
     LabellerStats,
     SFTLabeller,
     SFTLabellerError,
@@ -114,10 +114,10 @@ def test_overall_srs_sourced_from_readability_report_srs() -> None:
     """Test 8: overall_srs == ReadabilityReport.srs (NOT factors['overall'])."""
     if not FIXTURE.exists():
         pytest.skip(f"fixture {FIXTURE} not available")
-    from kicad_agent.analysis.readability_scorer import SchematicReadabilityScorer
-    from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
-    from kicad_agent.ir.schematic_ir import SchematicIR
-    from kicad_agent.parser.schematic_parser import parse_schematic
+    from volta.analysis.readability_scorer import SchematicReadabilityScorer
+    from volta.analysis.schematic_spatial import SchematicSpatialExtractor
+    from volta.ir.schematic_ir import SchematicIR
+    from volta.parser.schematic_parser import parse_schematic
 
     parse_result = parse_schematic(FIXTURE)
     ir = SchematicIR(_parse_result=parse_result)
@@ -133,10 +133,10 @@ def test_density_value_matches_readability_report_factors_density() -> None:
     """Test 9: density == ReadabilityReport.factors['density'] (verified chain)."""
     if not FIXTURE.exists():
         pytest.skip(f"fixture {FIXTURE} not available")
-    from kicad_agent.analysis.readability_scorer import SchematicReadabilityScorer
-    from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
-    from kicad_agent.ir.schematic_ir import SchematicIR
-    from kicad_agent.parser.schematic_parser import parse_schematic
+    from volta.analysis.readability_scorer import SchematicReadabilityScorer
+    from volta.analysis.schematic_spatial import SchematicSpatialExtractor
+    from volta.ir.schematic_ir import SchematicIR
+    from volta.parser.schematic_parser import parse_schematic
 
     parse_result = parse_schematic(FIXTURE)
     ir = SchematicIR(_parse_result=parse_result)

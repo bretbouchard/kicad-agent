@@ -1,6 +1,6 @@
 """Tests for PCB GapAnalyzer — deterministic gap analysis of partially-routed PCBs.
 
-Tests the GapAnalyzer in kicad_agent.analysis.gap_analyzer (Phase 81),
+Tests the GapAnalyzer in volta.analysis.gap_analyzer (Phase 81),
 which reads .kicad_pcb files and produces GapReport with unrouted nets,
 incomplete nets, DRC violations, and net naming issues.
 
@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.analysis.gap_analyzer import (
+from volta.analysis.gap_analyzer import (
     BoardInfo,
     GapAnalyzer,
     GapReport,
@@ -178,7 +178,7 @@ class TestNetClassification:
 
     @staticmethod
     def _make_board(segments=None, vias=None, nets=None):
-        from kicad_agent.parser.pcb_native_types import (
+        from volta.parser.pcb_native_types import (
             NativeBoard, NativeNet, NativeSegment, NativeVia,
             _NativePosition, NativeGeneral,
         )
@@ -191,7 +191,7 @@ class TestNetClassification:
         )
 
     def test_unrouted_net_no_segments(self):
-        from kicad_agent.parser.pcb_native_types import NativeNet
+        from volta.parser.pcb_native_types import NativeNet
 
         board = self._make_board(nets=[NativeNet(number=1, name="N_UNROUTED")])
         analyzer = GapAnalyzer(run_drc=False)
@@ -199,7 +199,7 @@ class TestNetClassification:
         assert result["N_UNROUTED"] == "unrouted"
 
     def test_routed_net_all_pins_connected(self):
-        from kicad_agent.parser.pcb_native_types import (
+        from volta.parser.pcb_native_types import (
             NativeNet, NativeSegment, _NativePosition,
         )
         seg = NativeSegment(
@@ -212,7 +212,7 @@ class TestNetClassification:
         assert result["NET_A"] == "routed"
 
     def test_incomplete_net_partial_routing(self):
-        from kicad_agent.parser.pcb_native_types import (
+        from volta.parser.pcb_native_types import (
             NativeNet, NativeSegment, _NativePosition,
         )
         seg = NativeSegment(
@@ -233,7 +233,7 @@ class TestNetClassification:
         assert "" not in result
 
     def test_multi_segment_routed_net(self):
-        from kicad_agent.parser.pcb_native_types import (
+        from volta.parser.pcb_native_types import (
             NativeNet, NativeSegment, _NativePosition,
         )
         segs = [
@@ -266,7 +266,7 @@ class TestNamingDetection:
 
         pads_by_ref: {ref: [(pad_number, net_name, pinfunction, pintype)]}
         """
-        from kicad_agent.parser.pcb_native_types import (
+        from volta.parser.pcb_native_types import (
             NativeBoard, NativeFootprint, NativeNet, NativePad, NativeGeneral,
         )
         footprints = []

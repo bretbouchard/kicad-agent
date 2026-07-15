@@ -14,9 +14,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.training.grpo import GRPOConfig, GRPOTrainer
-from kicad_agent.training.real_dataset import _resolve_github_token
-from kicad_agent.training.reward_model import _independent_score
+from volta.training.grpo import GRPOConfig, GRPOTrainer
+from volta.training.real_dataset import _resolve_github_token
+from volta.training.reward_model import _independent_score
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +120,7 @@ class TestParallelSeedOffset:
 
     def test_worker_seeds_are_unique(self) -> None:
         """Each worker must receive a different seed offset."""
-        from kicad_agent.training.generator import _SEED_SPACING
+        from volta.training.generator import _SEED_SPACING
 
         seed_base = 42
         n_workers = 4
@@ -133,7 +133,7 @@ class TestParallelSeedOffset:
 
     def test_seed_spacing_prevents_overlap(self) -> None:
         """Seed ranges must not overlap between workers."""
-        from kicad_agent.training.generator import _SEED_SPACING
+        from volta.training.generator import _SEED_SPACING
 
         seed_base = 42
         n_workers = 4
@@ -151,7 +151,7 @@ class TestParallelSeedOffset:
 
     def test_spacing_value_is_one_million(self) -> None:
         """_SEED_SPACING must be 1,000,000."""
-        from kicad_agent.training.generator import _SEED_SPACING
+        from volta.training.generator import _SEED_SPACING
 
         assert _SEED_SPACING == 1_000_000
 
@@ -212,7 +212,7 @@ class TestGRPOSeededRandom:
         )
 
         # Create minimal fake samples
-        from kicad_agent.training.dataset import MazeSample
+        from volta.training.dataset import MazeSample
 
         samples = [
             MazeSample(
@@ -249,7 +249,7 @@ class TestGRPOSeededRandom:
     def test_rng_is_seeded_with_config_seed_plus_counter(self) -> None:
         """Verify train_step source uses config.seed + _step_counter for RNG."""
         import inspect
-        from kicad_agent.training.grpo import GRPOTrainer
+        from volta.training.grpo import GRPOTrainer
 
         source = inspect.getsource(GRPOTrainer.train_step)
         # Must contain the seeded pattern
@@ -350,7 +350,7 @@ class TestRewardModelGenerate:
     def test_generate_uses_independent_scoring(self) -> None:
         """generate() must use _independent_score, not predict_reward on self."""
         import inspect
-        from kicad_agent.training.reward_model import RewardModel
+        from volta.training.reward_model import RewardModel
 
         source = inspect.getsource(RewardModel.generate)
         # Must call _independent_score
@@ -365,7 +365,7 @@ class TestRewardModelGenerate:
     def test_generate_accepts_reference_model(self) -> None:
         """generate() must accept optional reference_model parameter."""
         import inspect
-        from kicad_agent.training.reward_model import RewardModel
+        from volta.training.reward_model import RewardModel
 
         sig = inspect.signature(RewardModel.generate)
         assert "reference_model" in sig.parameters, (
@@ -375,7 +375,7 @@ class TestRewardModelGenerate:
     def test_generate_reference_model_default_is_none(self) -> None:
         """reference_model parameter must default to None."""
         import inspect
-        from kicad_agent.training.reward_model import RewardModel
+        from volta.training.reward_model import RewardModel
 
         sig = inspect.signature(RewardModel.generate)
         assert sig.parameters["reference_model"].default is None, (
@@ -385,7 +385,7 @@ class TestRewardModelGenerate:
     def test_generate_with_reference_model_uses_predict_reward(self) -> None:
         """When reference_model is provided, generate must call predict_reward on it."""
         import inspect
-        from kicad_agent.training.reward_model import RewardModel
+        from volta.training.reward_model import RewardModel
 
         source = inspect.getsource(RewardModel.generate)
         assert "predict_reward(reference_model" in source, (

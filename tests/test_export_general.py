@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.export.general import (
+from volta.export.general import (
     export_position,
     export_schematic_pdf,
     export_step,

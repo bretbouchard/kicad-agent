@@ -1,6 +1,6 @@
 """Tests for the Phase D task router."""
 import pytest
-from kicad_agent.llm.task_router import (
+from volta.llm.task_router import (
     TaskRouter,
     TaskType,
     classify_intent,
@@ -150,13 +150,13 @@ class TestTaskRouter:
         assert max_tokens == 600
 
     def test_default_router_exists(self):
-        from kicad_agent.llm.task_router import get_router
+        from volta.llm.task_router import get_router
         router = get_router()
         assert router is not None
 
     def test_adapter_path_resolves(self):
         """If the default adapter path exists, router should use it."""
-        from kicad_agent.llm.task_router import get_router
+        from volta.llm.task_router import get_router
         router = get_router()
         if Path(DEFAULT_ADAPTER_PATH).exists():
             decision = router.route("Design a circuit")

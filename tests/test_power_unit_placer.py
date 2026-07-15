@@ -9,7 +9,7 @@ Tests cover:
 
 import pytest
 
-from kicad_agent.schematic_routing.power_unit_placer import (
+from volta.schematic_routing.power_unit_placer import (
     _find_schematic_block_end,
     IC_POWER_CONFIG,
 )

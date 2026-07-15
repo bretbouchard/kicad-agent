@@ -8,7 +8,7 @@ class TestChainsModule:
 
     def test_import(self):
         """Training chains module is importable."""
-        from kicad_agent.training.chains import MazeReasoningChain
+        from volta.training.chains import MazeReasoningChain
         assert MazeReasoningChain is not None
 
 
@@ -17,7 +17,7 @@ class TestDatasetModule:
 
     def test_import(self):
         """Dataset module is importable."""
-        from kicad_agent.training.dataset import MazeDataset
+        from volta.training.dataset import MazeDataset
         assert MazeDataset is not None
 
 
@@ -26,7 +26,7 @@ class TestEvaluatorModule:
 
     def test_import(self):
         """Evaluator module is importable."""
-        from kicad_agent.training.evaluation import EvaluationHarness
+        from volta.training.evaluation import EvaluationHarness
         assert EvaluationHarness is not None
 
 
@@ -35,7 +35,7 @@ class TestGeneratorModule:
 
     def test_import(self):
         """Generator module is importable."""
-        from kicad_agent.training import generator
+        from volta.training import generator
         assert generator is not None
 
 
@@ -44,7 +44,7 @@ class TestPipelineModule:
 
     def test_import(self):
         """Pipeline module is importable."""
-        from kicad_agent.training.pipeline import TrainingPipelineConfig
+        from volta.training.pipeline import TrainingPipelineConfig
         assert TrainingPipelineConfig is not None
 
 
@@ -53,7 +53,7 @@ class TestGrpoModule:
 
     def test_import(self):
         """GRPO module is importable."""
-        from kicad_agent.training.grpo import AdvantageWeightedTrainer
+        from volta.training.grpo import AdvantageWeightedTrainer
         assert AdvantageWeightedTrainer is not None
 
 
@@ -62,7 +62,7 @@ class TestGrpoConfig:
 
     def test_import(self):
         """GRPOTrainingConfig is importable."""
-        from kicad_agent.training.grpo_config import GRPOTrainingConfig
+        from volta.training.grpo_config import GRPOTrainingConfig
         assert GRPOTrainingConfig is not None
 
 
@@ -71,5 +71,5 @@ class TestRewardModel:
 
     def test_import(self):
         """RewardModel is importable."""
-        from kicad_agent.training.reward_model import RewardModel
+        from volta.training.reward_model import RewardModel
         assert RewardModel is not None

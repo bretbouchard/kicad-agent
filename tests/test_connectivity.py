@@ -8,11 +8,11 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.analysis.connectivity import NetGraph, PadRef
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.parser import parse_pcb
-from kicad_agent.parser.uuid_extractor import extract_uuids
+from volta.analysis.connectivity import NetGraph, PadRef
+from volta.ir.base import _clear_registry
+from volta.ir.pcb_ir import PcbIR
+from volta.parser import parse_pcb
+from volta.parser.uuid_extractor import extract_uuids
 
 
 # ---------------------------------------------------------------------------

@@ -7,8 +7,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.ops.hlabel_guard import HlabelValidationResult, validate_hlabels
-from kicad_agent.ops.schema import Operation, ValidateHlabelsOp
+from volta.ops.hlabel_guard import HlabelValidationResult, validate_hlabels
+from volta.ops.schema import Operation, ValidateHlabelsOp
 
 
 # ---------------------------------------------------------------------------

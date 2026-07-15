@@ -32,11 +32,11 @@ from pathlib import Path
 # Add src to path so this script works without installing the package
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.crawler.bulk_fetcher import BulkFetcher  # noqa: E402
-from kicad_agent.crawler.github_discovery import GithubDiscovery  # noqa: E402
-from kicad_agent.crawler.file_fetcher import FileFetcher  # noqa: E402
-from kicad_agent.training.graph_builder import build_board_graph  # noqa: E402
-from kicad_agent.training.real_dataset import (  # noqa: E402
+from volta.crawler.bulk_fetcher import BulkFetcher  # noqa: E402
+from volta.crawler.github_discovery import GithubDiscovery  # noqa: E402
+from volta.crawler.file_fetcher import FileFetcher  # noqa: E402
+from volta.training.graph_builder import build_board_graph  # noqa: E402
+from volta.training.real_dataset import (  # noqa: E402
     RealBoardDataset,
     RealBoardSample,
     _graph_result_to_sample,

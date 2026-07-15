@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.cli import _SUBCOMMANDS, main
-from kicad_agent.handler import OperationResult
+from volta.cli import _SUBCOMMANDS, main
+from volta.handler import OperationResult
 
 
 def _ok_result(op_type: str, target_file: str) -> OperationResult:
@@ -29,10 +29,10 @@ def _ok_result(op_type: str, target_file: str) -> OperationResult:
 
 
 def _patch_handle_operation(monkeypatch, capture: list):
-    """Patch handle_operation in kicad_agent.handler to record calls.
+    """Patch handle_operation in volta.handler to record calls.
 
     The _dispatch_op_and_print helper does a local
-    ``from kicad_agent.handler import handle_operation`` at call time, so
+    ``from volta.handler import handle_operation`` at call time, so
     patching the source module attribute is the correct seam.
     """
 
@@ -42,9 +42,9 @@ def _patch_handle_operation(monkeypatch, capture: list):
         target_file = json.loads(json_str)["target_file"]
         return _ok_result(op_type, target_file)
 
-    monkeypatch.setattr("kicad_agent.handler.handle_operation", _fake)
+    monkeypatch.setattr("volta.handler.handle_operation", _fake)
     # The _dispatch_op_and_print helper resolves handle_operation via a
-    # local ``from kicad_agent.handler import handle_operation`` at call
+    # local ``from volta.handler import handle_operation`` at call
     # time, so patching the source module attribute is the complete seam.
 
 

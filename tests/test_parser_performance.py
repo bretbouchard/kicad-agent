@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.parser.pcb_native_parser import (
+from volta.parser.pcb_native_parser import (
     NativeParser,
     _build_symbol_index,
     _find_all_symbols,
@@ -186,7 +186,7 @@ class TestSymbolIndex:
     def test_index_maps_symbol_names_to_lists(self):
         """_build_symbol_index returns dict[str, list] with correct keys."""
         content = _generate_pcb_content(footprint_count=10)
-        from kicad_agent.parser.pcb_native_parser import NativeParser as NP
+        from volta.parser.pcb_native_parser import NativeParser as NP
 
         board = NP.parse_pcb_content(content)
         # Build index from the tree used internally
@@ -318,7 +318,7 @@ class TestDepthPreScan:
 
     def test_depth_pre_scan_rejects_201(self):
         """parse_raw_sexp depth pre-scan rejects depth=201 content with ValueError."""
-        from kicad_agent.parser.raw_parser import _pre_scan_depth
+        from volta.parser.raw_parser import _pre_scan_depth
 
         # Generate content with 201 nested parens
         deep = "(" * 201 + "data" + ")" * 201
@@ -327,7 +327,7 @@ class TestDepthPreScan:
 
     def test_depth_pre_scan_accepts_200(self):
         """Depth 200 is accepted (within limit)."""
-        from kicad_agent.parser.raw_parser import _pre_scan_depth
+        from volta.parser.raw_parser import _pre_scan_depth
 
         deep = "(" * 200 + "data" + ")" * 200
         max_depth = _pre_scan_depth(deep)
@@ -404,7 +404,7 @@ class TestCacheManagement:
 
     def test_pre_download_adapter_exists(self):
         """LocalLLMClient.pre_download_adapter() is callable classmethod."""
-        from kicad_agent.llm.local_client import LocalLLMClient
+        from volta.llm.local_client import LocalLLMClient
 
         assert callable(getattr(LocalLLMClient, "pre_download_adapter", None)), (
             "pre_download_adapter classmethod must exist"
@@ -412,7 +412,7 @@ class TestCacheManagement:
 
     def test_get_cache_info_exists(self):
         """LocalLLMClient.get_cache_info() is callable classmethod."""
-        from kicad_agent.llm.local_client import LocalLLMClient
+        from volta.llm.local_client import LocalLLMClient
 
         assert callable(getattr(LocalLLMClient, "get_cache_info", None)), (
             "get_cache_info classmethod must exist"
@@ -421,7 +421,7 @@ class TestCacheManagement:
     def test_pre_download_adapter_triggers_download(self):
         """pre_download_adapter downloads and caches adapter without loading model."""
         import tempfile
-        from kicad_agent.llm.local_client import LocalLLMClient
+        from volta.llm.local_client import LocalLLMClient
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp = Path(tmp_dir)
@@ -450,7 +450,7 @@ class TestCacheManagement:
     def test_get_cache_info_returns_dict(self):
         """get_cache_info returns dict with cache_dir, grpo_cached, sft_cached."""
         import tempfile
-        from kicad_agent.llm.local_client import LocalLLMClient
+        from volta.llm.local_client import LocalLLMClient
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             fake_home = Path(tmp_dir)
@@ -473,7 +473,7 @@ class TestCacheManagement:
     def test_get_cache_info_detects_cached_adapter(self):
         """get_cache_info detects when GRPO adapter is cached."""
         import tempfile
-        from kicad_agent.llm.local_client import LocalLLMClient
+        from volta.llm.local_client import LocalLLMClient
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             fake_home = Path(tmp_dir)

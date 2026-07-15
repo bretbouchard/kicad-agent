@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
-from kicad_agent.crawler import (
+from volta.crawler import (
     FileFetcher,
     GithubDiscovery,
     KicadFilePair,
@@ -115,6 +115,6 @@ class TestCrawlerImports:
 
     def test_all_exports_importable(self):
         """All __all__ exports can be imported."""
-        from kicad_agent import crawler
+        from volta import crawler
         for name in crawler.__all__:
             assert hasattr(crawler, name), f"Missing export: {name}"

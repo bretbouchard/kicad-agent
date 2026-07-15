@@ -12,7 +12,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from kicad_agent.ops._schema_erc_smart import (
+from volta.ops._schema_erc_smart import (
     ClassifyViolationsOp,
     DiagnoseViolationsOp,
 )
@@ -28,35 +28,35 @@ class TestErcAutoFixSchema:
 
     def test_default_mode_is_symptom(self):
         """ErcAutoFixOp with no mode specified defaults to 'symptom' (backward compatible)."""
-        from kicad_agent.ops._schema_erc_smart import ErcAutoFixOp
+        from volta.ops._schema_erc_smart import ErcAutoFixOp
 
         op = ErcAutoFixOp(target_file="test.kicad_sch")
         assert op.mode == "symptom"
 
     def test_root_cause_mode_validates(self):
         """ErcAutoFixOp with mode='root_cause' validates correctly."""
-        from kicad_agent.ops._schema_erc_smart import ErcAutoFixOp
+        from volta.ops._schema_erc_smart import ErcAutoFixOp
 
         op = ErcAutoFixOp(target_file="test.kicad_sch", mode="root_cause")
         assert op.mode == "root_cause"
 
     def test_symptom_mode_validates(self):
         """ErcAutoFixOp with mode='symptom' validates correctly."""
-        from kicad_agent.ops._schema_erc_smart import ErcAutoFixOp
+        from volta.ops._schema_erc_smart import ErcAutoFixOp
 
         op = ErcAutoFixOp(target_file="test.kicad_sch", mode="symptom")
         assert op.mode == "symptom"
 
     def test_fix_classes_default_none(self):
         """fix_classes defaults to None."""
-        from kicad_agent.ops._schema_erc_smart import ErcAutoFixOp
+        from volta.ops._schema_erc_smart import ErcAutoFixOp
 
         op = ErcAutoFixOp(target_file="test.kicad_sch")
         assert op.fix_classes is None
 
     def test_fix_classes_with_values(self):
         """fix_classes accepts a list of class names."""
-        from kicad_agent.ops._schema_erc_smart import ErcAutoFixOp
+        from volta.ops._schema_erc_smart import ErcAutoFixOp
 
         op = ErcAutoFixOp(
             target_file="test.kicad_sch",
@@ -67,21 +67,21 @@ class TestErcAutoFixSchema:
 
     def test_max_iterations_default(self):
         """max_iterations defaults to 3."""
-        from kicad_agent.ops._schema_erc_smart import ErcAutoFixOp
+        from volta.ops._schema_erc_smart import ErcAutoFixOp
 
         op = ErcAutoFixOp(target_file="test.kicad_sch")
         assert op.max_iterations == 3
 
     def test_op_type_is_erc_auto_fix(self):
         """op_type discriminator is 'erc_auto_fix'."""
-        from kicad_agent.ops._schema_erc_smart import ErcAutoFixOp
+        from volta.ops._schema_erc_smart import ErcAutoFixOp
 
         op = ErcAutoFixOp(target_file="test.kicad_sch")
         assert op.op_type == "erc_auto_fix"
 
     def test_invalid_mode_rejected(self):
         """Invalid mode value is rejected by Pydantic validation."""
-        from kicad_agent.ops._schema_erc_smart import ErcAutoFixOp
+        from volta.ops._schema_erc_smart import ErcAutoFixOp
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError):
@@ -201,21 +201,21 @@ class TestRootCauseMode:
             "total_diagnosed": 1,
         }
 
-    @patch("kicad_agent.ops.erc_auto_fix.parse_erc")
-    @patch("kicad_agent.ops.violation_classifier.classify_violations")
-    @patch("kicad_agent.ops.violation_diagnostic.diagnose_violations")
+    @patch("volta.ops.erc_auto_fix.parse_erc")
+    @patch("volta.ops.violation_classifier.classify_violations")
+    @patch("volta.ops.violation_diagnostic.diagnose_violations")
     def test_root_cause_returns_classified_summary(
         self, mock_diagnose, mock_classify, mock_parse_erc
     ):
         """Root cause mode returns result with classification categories."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         mock_parse_erc.return_value = [MagicMock(type="pin_not_connected", sheet="/")]
         mock_classify.return_value = self._mock_classify_return()
         mock_diagnose.return_value = self._mock_diagnose_return()
 
         # Mock the repair function
-        with patch("kicad_agent.ops.erc_auto_fix._get_repair_function") as mock_repair:
+        with patch("volta.ops.erc_auto_fix._get_repair_function") as mock_repair:
             mock_repair.return_value = MagicMock(return_value={"placed": 1})
             result = erc_auto_fix(
                 self._make_mock_ir(),
@@ -227,20 +227,20 @@ class TestRootCauseMode:
         assert "summary" in result
         assert result["summary"]["total"] == 4
 
-    @patch("kicad_agent.ops.erc_auto_fix.parse_erc")
-    @patch("kicad_agent.ops.violation_classifier.classify_violations")
-    @patch("kicad_agent.ops.violation_diagnostic.diagnose_violations")
+    @patch("volta.ops.erc_auto_fix.parse_erc")
+    @patch("volta.ops.violation_classifier.classify_violations")
+    @patch("volta.ops.violation_diagnostic.diagnose_violations")
     def test_root_cause_documents_pre_existing(
         self, mock_diagnose, mock_classify, mock_parse_erc
     ):
         """Root cause mode result includes pre_existing_documented with root cause explanations."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         mock_parse_erc.return_value = [MagicMock(type="power_pin_not_driven", sheet="/")]
         mock_classify.return_value = self._mock_classify_return()
         mock_diagnose.return_value = self._mock_diagnose_return()
 
-        with patch("kicad_agent.ops.erc_auto_fix._get_repair_function") as mock_repair:
+        with patch("volta.ops.erc_auto_fix._get_repair_function") as mock_repair:
             mock_repair.return_value = MagicMock(return_value={"placed": 1})
             result = erc_auto_fix(
                 self._make_mock_ir(),
@@ -254,20 +254,20 @@ class TestRootCauseMode:
         assert doc["type"] == "power_pin_not_driven"
         assert doc["root_cause"] == "library_pin_type_mismatch"
 
-    @patch("kicad_agent.ops.erc_auto_fix.parse_erc")
-    @patch("kicad_agent.ops.violation_classifier.classify_violations")
-    @patch("kicad_agent.ops.violation_diagnostic.diagnose_violations")
+    @patch("volta.ops.erc_auto_fix.parse_erc")
+    @patch("volta.ops.violation_classifier.classify_violations")
+    @patch("volta.ops.violation_diagnostic.diagnose_violations")
     def test_root_cause_suppresses_benign(
         self, mock_diagnose, mock_classify, mock_parse_erc
     ):
         """Root cause mode result includes benign_suppressed count (not detailed list)."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         mock_parse_erc.return_value = [MagicMock(type="same_local_global_label", sheet="/")]
         mock_classify.return_value = self._mock_classify_return()
         mock_diagnose.return_value = self._mock_diagnose_return()
 
-        with patch("kicad_agent.ops.erc_auto_fix._get_repair_function") as mock_repair:
+        with patch("volta.ops.erc_auto_fix._get_repair_function") as mock_repair:
             mock_repair.return_value = MagicMock(return_value={"placed": 1})
             result = erc_auto_fix(
                 self._make_mock_ir(),
@@ -281,20 +281,20 @@ class TestRootCauseMode:
         for fix in result["fixes_applied"]:
             assert fix["type"] != "same_local_global_label"
 
-    @patch("kicad_agent.ops.erc_auto_fix.parse_erc")
-    @patch("kicad_agent.ops.violation_classifier.classify_violations")
-    @patch("kicad_agent.ops.violation_diagnostic.diagnose_violations")
+    @patch("volta.ops.erc_auto_fix.parse_erc")
+    @patch("volta.ops.violation_classifier.classify_violations")
+    @patch("volta.ops.violation_diagnostic.diagnose_violations")
     def test_root_cause_lists_config_issues(
         self, mock_diagnose, mock_classify, mock_parse_erc
     ):
         """Root cause mode result includes config_issues list."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         mock_parse_erc.return_value = [MagicMock(type="lib_symbol_issues", sheet="/")]
         mock_classify.return_value = self._mock_classify_return()
         mock_diagnose.return_value = self._mock_diagnose_return()
 
-        with patch("kicad_agent.ops.erc_auto_fix._get_repair_function") as mock_repair:
+        with patch("volta.ops.erc_auto_fix._get_repair_function") as mock_repair:
             mock_repair.return_value = MagicMock(return_value={"placed": 1})
             result = erc_auto_fix(
                 self._make_mock_ir(),
@@ -306,20 +306,20 @@ class TestRootCauseMode:
         assert len(result["config_issues"]) == 1
         assert result["config_issues"][0]["type"] == "lib_symbol_issues"
 
-    @patch("kicad_agent.ops.erc_auto_fix.parse_erc")
-    @patch("kicad_agent.ops.violation_classifier.classify_violations")
-    @patch("kicad_agent.ops.violation_diagnostic.diagnose_violations")
+    @patch("volta.ops.erc_auto_fix.parse_erc")
+    @patch("volta.ops.violation_classifier.classify_violations")
+    @patch("volta.ops.violation_diagnostic.diagnose_violations")
     def test_root_cause_only_fixes_fixable(
         self, mock_diagnose, mock_classify, mock_parse_erc
     ):
         """Root cause mode result includes fixes_applied for fixable violations only."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         mock_parse_erc.return_value = [MagicMock(type="pin_not_connected", sheet="/")]
         mock_classify.return_value = self._mock_classify_return()
         mock_diagnose.return_value = self._mock_diagnose_return()
 
-        with patch("kicad_agent.ops.erc_auto_fix._get_repair_function") as mock_repair:
+        with patch("volta.ops.erc_auto_fix._get_repair_function") as mock_repair:
             mock_repair.return_value = MagicMock(return_value={"placed": 1})
             result = erc_auto_fix(
                 self._make_mock_ir(),
@@ -331,20 +331,20 @@ class TestRootCauseMode:
         assert len(result["fixes_applied"]) == 1
         assert result["fixes_applied"][0]["type"] == "pin_not_connected"
 
-    @patch("kicad_agent.ops.erc_auto_fix.parse_erc")
-    @patch("kicad_agent.ops.violation_classifier.classify_violations")
-    @patch("kicad_agent.ops.violation_diagnostic.diagnose_violations")
+    @patch("volta.ops.erc_auto_fix.parse_erc")
+    @patch("volta.ops.violation_classifier.classify_violations")
+    @patch("volta.ops.violation_diagnostic.diagnose_violations")
     def test_root_cause_single_pass(
         self, mock_diagnose, mock_classify, mock_parse_erc
     ):
         """Root cause mode is single-pass (iterations=1, diagnosis replaces iteration)."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         mock_parse_erc.return_value = [MagicMock(type="pin_not_connected", sheet="/")]
         mock_classify.return_value = self._mock_classify_return()
         mock_diagnose.return_value = self._mock_diagnose_return()
 
-        with patch("kicad_agent.ops.erc_auto_fix._get_repair_function") as mock_repair:
+        with patch("volta.ops.erc_auto_fix._get_repair_function") as mock_repair:
             mock_repair.return_value = MagicMock(return_value={"placed": 1})
             result = erc_auto_fix(
                 self._make_mock_ir(),
@@ -354,20 +354,20 @@ class TestRootCauseMode:
 
         assert result["iterations"] == 1
 
-    @patch("kicad_agent.ops.erc_auto_fix.parse_erc")
-    @patch("kicad_agent.ops.violation_classifier.classify_violations")
-    @patch("kicad_agent.ops.violation_diagnostic.diagnose_violations")
+    @patch("volta.ops.erc_auto_fix.parse_erc")
+    @patch("volta.ops.violation_classifier.classify_violations")
+    @patch("volta.ops.violation_diagnostic.diagnose_violations")
     def test_root_cause_does_not_fix_pre_existing(
         self, mock_diagnose, mock_classify, mock_parse_erc
     ):
         """Root cause mode does NOT attempt to fix pre_existing violations."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         mock_parse_erc.return_value = [MagicMock(type="power_pin_not_driven", sheet="/")]
         mock_classify.return_value = self._mock_classify_return()
         mock_diagnose.return_value = self._mock_diagnose_return()
 
-        with patch("kicad_agent.ops.erc_auto_fix._get_repair_function") as mock_repair:
+        with patch("volta.ops.erc_auto_fix._get_repair_function") as mock_repair:
             mock_repair.return_value = MagicMock(return_value={"placed": 1})
             result = erc_auto_fix(
                 self._make_mock_ir(),
@@ -380,10 +380,10 @@ class TestRootCauseMode:
         for fix in result["fixes_applied"]:
             assert fix["type"] != "power_pin_not_driven"
 
-    @patch("kicad_agent.ops.erc_auto_fix.parse_erc")
+    @patch("volta.ops.erc_auto_fix.parse_erc")
     def test_root_cause_empty_violations(self, mock_parse_erc):
         """Root cause mode with no violations returns empty result structure."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         mock_parse_erc.return_value = []
         result = erc_auto_fix(
@@ -416,10 +416,10 @@ class TestSymptomMode:
         ir.get_label_positions.return_value = []
         return ir
 
-    @patch("kicad_agent.ops.erc_auto_fix.parse_erc")
+    @patch("volta.ops.erc_auto_fix.parse_erc")
     def test_symptom_mode_returns_standard_structure(self, mock_parse_erc):
         """Symptom mode produces same result structure as before."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         mock_parse_erc.return_value = []
         result = erc_auto_fix(
@@ -433,10 +433,10 @@ class TestSymptomMode:
         assert "remaining_violations" in result
         assert "unhandled_violations" in result
 
-    @patch("kicad_agent.ops.erc_auto_fix.parse_erc")
+    @patch("volta.ops.erc_auto_fix.parse_erc")
     def test_symptom_mode_calls_original_logic(self, mock_parse_erc):
         """Symptom mode calls the original iteration-based repair logic."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         # No violations -- early exit, iterations=0
         mock_parse_erc.return_value = []
@@ -449,10 +449,10 @@ class TestSymptomMode:
         assert result["iterations"] == 0
         assert result["remaining_violations"] == 0
 
-    @patch("kicad_agent.ops.erc_auto_fix.parse_erc")
+    @patch("volta.ops.erc_auto_fix.parse_erc")
     def test_default_mode_is_symptom(self, mock_parse_erc):
         """Calling erc_auto_fix without mode defaults to symptom mode."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         mock_parse_erc.return_value = []
         result = erc_auto_fix(
@@ -480,14 +480,14 @@ class TestModeDispatch:
         ir.get_label_positions.return_value = []
         return ir
 
-    @patch("kicad_agent.ops.erc_auto_fix.parse_erc")
-    @patch("kicad_agent.ops.violation_classifier.classify_violations")
-    @patch("kicad_agent.ops.violation_diagnostic.diagnose_violations")
+    @patch("volta.ops.erc_auto_fix.parse_erc")
+    @patch("volta.ops.violation_classifier.classify_violations")
+    @patch("volta.ops.violation_diagnostic.diagnose_violations")
     def test_root_cause_calls_classify_then_diagnose(
         self, mock_diagnose, mock_classify, mock_parse_erc
     ):
         """Root cause mode calls classify_violations then diagnose_violations then targeted repair."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         mock_parse_erc.return_value = [MagicMock(type="pin_not_connected", sheet="/")]
         mock_classify.return_value = {
@@ -512,14 +512,14 @@ class TestModeDispatch:
         mock_classify.assert_called_once()
         mock_diagnose.assert_called_once()
 
-    @patch("kicad_agent.ops.erc_auto_fix.parse_erc")
+    @patch("volta.ops.erc_auto_fix.parse_erc")
     def test_symptom_mode_does_not_call_classify(self, mock_parse_erc):
         """Symptom mode does NOT call classify_violations."""
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         mock_parse_erc.return_value = []
 
-        with patch("kicad_agent.ops.violation_classifier.classify_violations") as mock_classify:
+        with patch("volta.ops.violation_classifier.classify_violations") as mock_classify:
             erc_auto_fix(
                 self._make_mock_ir(),
                 Path("test.kicad_sch"),
@@ -538,8 +538,8 @@ class TestExecutorHandlerDispatch:
 
     def test_handler_passes_mode(self):
         """Executor handler passes op.mode to erc_auto_fix."""
-        from kicad_agent.ops._schema_erc_smart import ErcAutoFixOp
-        from kicad_agent.ops.executor import _SCHEMATIC_HANDLERS
+        from volta.ops._schema_erc_smart import ErcAutoFixOp
+        from volta.ops.executor import _SCHEMATIC_HANDLERS
 
         assert "erc_auto_fix" in _SCHEMATIC_HANDLERS
         handler = _SCHEMATIC_HANDLERS["erc_auto_fix"]
@@ -555,7 +555,7 @@ class TestExecutorHandlerDispatch:
         mock_ir = MagicMock()
         mock_file_path = Path("test.kicad_sch")
 
-        with patch("kicad_agent.ops.erc_auto_fix.erc_auto_fix") as mock_auto_fix:
+        with patch("volta.ops.erc_auto_fix.erc_auto_fix") as mock_auto_fix:
             mock_auto_fix.return_value = {"mode": "root_cause"}
             handler(op, mock_ir, mock_file_path)
 
@@ -570,8 +570,8 @@ class TestExecutorHandlerDispatch:
 
     def test_handler_default_symptom(self):
         """Executor handler uses schema defaults when only target_file provided."""
-        from kicad_agent.ops._schema_erc_smart import ErcAutoFixOp
-        from kicad_agent.ops.executor import _SCHEMATIC_HANDLERS
+        from volta.ops._schema_erc_smart import ErcAutoFixOp
+        from volta.ops.executor import _SCHEMATIC_HANDLERS
 
         handler = _SCHEMATIC_HANDLERS["erc_auto_fix"]
 
@@ -581,7 +581,7 @@ class TestExecutorHandlerDispatch:
         mock_ir = MagicMock()
         mock_file_path = Path("test.kicad_sch")
 
-        with patch("kicad_agent.ops.erc_auto_fix.erc_auto_fix") as mock_auto_fix:
+        with patch("volta.ops.erc_auto_fix.erc_auto_fix") as mock_auto_fix:
             mock_auto_fix.return_value = {"fixes_applied": []}
             handler(op, mock_ir, mock_file_path)
 
@@ -592,8 +592,8 @@ class TestExecutorHandlerDispatch:
 
     def test_handler_hierarchical_dispatch(self):
         """erc_auto_fix_hierarchical handler is registered and dispatches correctly."""
-        from kicad_agent.ops._schema_erc_smart import ErcAutoFixHierarchicalOp
-        from kicad_agent.ops.executor import _SCHEMATIC_HANDLERS
+        from volta.ops._schema_erc_smart import ErcAutoFixHierarchicalOp
+        from volta.ops.executor import _SCHEMATIC_HANDLERS
 
         assert "erc_auto_fix_hierarchical" in _SCHEMATIC_HANDLERS
         handler = _SCHEMATIC_HANDLERS["erc_auto_fix_hierarchical"]
@@ -607,7 +607,7 @@ class TestExecutorHandlerDispatch:
         mock_ir = MagicMock()
         mock_file_path = Path("root.kicad_sch")
 
-        with patch("kicad_agent.ops.erc_auto_fix.erc_auto_fix_hierarchical") as mock_hier:
+        with patch("volta.ops.erc_auto_fix.erc_auto_fix_hierarchical") as mock_hier:
             mock_hier.return_value = {"sheets_processed": 3}
             handler(op, mock_ir, mock_file_path)
 
@@ -627,39 +627,39 @@ class TestActionMapping:
     """Test _action_to_repair_name helper."""
 
     def test_place_no_connect_mapping(self):
-        from kicad_agent.ops.erc_auto_fix import _action_to_repair_name
+        from volta.ops.erc_auto_fix import _action_to_repair_name
 
         assert _action_to_repair_name("place_no_connect") == "place_no_connects_from_erc"
 
     def test_break_wire_shorts_mapping(self):
-        from kicad_agent.ops.erc_auto_fix import _action_to_repair_name
+        from volta.ops.erc_auto_fix import _action_to_repair_name
 
         assert _action_to_repair_name("break_wire_shorts") == "resolve_shorted_nets"
 
     def test_fix_shorted_nets_mapping(self):
-        from kicad_agent.ops.erc_auto_fix import _action_to_repair_name
+        from volta.ops.erc_auto_fix import _action_to_repair_name
 
         assert _action_to_repair_name("fix_shorted_nets") == "resolve_shorted_nets"
 
     def test_add_power_flag_mapping(self):
-        from kicad_agent.ops.erc_auto_fix import _action_to_repair_name
+        from volta.ops.erc_auto_fix import _action_to_repair_name
 
         assert _action_to_repair_name("add_power_flag") == "add_power_flags"
 
     def test_unknown_action_returns_none(self):
-        from kicad_agent.ops.erc_auto_fix import _action_to_repair_name
+        from volta.ops.erc_auto_fix import _action_to_repair_name
 
         assert _action_to_repair_name("unknown_action") is None
 
     def test_erc_auto_fix_action_returns_none(self):
         """erc_auto_fix action from generic fallback has no direct mapping."""
-        from kicad_agent.ops.erc_auto_fix import _action_to_repair_name
+        from volta.ops.erc_auto_fix import _action_to_repair_name
 
         assert _action_to_repair_name("erc_auto_fix") is None
 
     def test_add_wire_action_returns_none(self):
         """add_wire action from pin_not_connected diagnosis has no direct mapping."""
-        from kicad_agent.ops.erc_auto_fix import _action_to_repair_name
+        from volta.ops.erc_auto_fix import _action_to_repair_name
 
         assert _action_to_repair_name("add_wire") is None
 
@@ -673,7 +673,7 @@ class TestEmptyRootCauseResult:
     """Test _empty_root_cause_result helper."""
 
     def test_empty_result_structure(self):
-        from kicad_agent.ops.erc_auto_fix import _empty_root_cause_result
+        from volta.ops.erc_auto_fix import _empty_root_cause_result
 
         result = _empty_root_cause_result()
         assert result["mode"] == "root_cause"

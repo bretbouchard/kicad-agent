@@ -8,15 +8,15 @@ import math
 
 import pytest
 
-from kicad_agent.generation.intent import ComponentSpec, NetSpec
-from kicad_agent.placement.graph import PlacementGraph, netlist_to_placement_graph
-from kicad_agent.placement.validation import (
+from volta.generation.intent import ComponentSpec, NetSpec
+from volta.placement.graph import PlacementGraph, netlist_to_placement_graph
+from volta.placement.validation import (
     PlacementValidator,
     PlacementViolation,
     positions_to_boxes,
     validate_placement,
 )
-from kicad_agent.spatial.primitives import SpatialBox
+from volta.spatial.primitives import SpatialBox
 
 
 # ---------------------------------------------------------------------------
@@ -197,7 +197,7 @@ class TestPlacementValidator:
     def test_validate_convenience_function(self) -> None:
         """validate_placement convenience function works with PlacementGraph."""
         # Build graph from sample components
-        from kicad_agent.generation.intent import ComponentSpec
+        from volta.generation.intent import ComponentSpec
 
         components = [
             ComponentSpec(library_id="Device:R_Small_US", reference="R1", value="10k"),

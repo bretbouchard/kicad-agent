@@ -2,7 +2,7 @@
 
 import pytest
 
-from kicad_agent.generation.intent import (
+from volta.generation.intent import (
     BoardSpec,
     ComponentSpec,
     GenerationIntent,
@@ -219,7 +219,7 @@ class TestGenerationImports:
 
     def test_core_imports(self):
         """Core generation classes are importable."""
-        from kicad_agent.generation import (
+        from volta.generation import (
             BoardSpec,
             ComponentSpec,
             GenerationIntent,

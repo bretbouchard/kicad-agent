@@ -34,7 +34,7 @@ from PIL import Image
 import pytest
 from pydantic import ValidationError
 
-from kicad_agent.analysis.legibility_critic import (
+from volta.analysis.legibility_critic import (
     ClaudeLegibilityCritic,
     CritiqueResult,
     GemmaLegibilityCritic,
@@ -47,7 +47,7 @@ from kicad_agent.analysis.legibility_critic import (
     validate_no_coordinates,
     validate_score_range,
 )
-from kicad_agent.ops._schema_critique import CritiqueSchOp
+from volta.ops._schema_critique import CritiqueSchOp
 
 
 # ---------------------------------------------------------------------------

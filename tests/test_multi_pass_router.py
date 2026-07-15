@@ -8,9 +8,9 @@ Covers:
 - Council C-03 compliance: max 3 passes
 """
 
-from kicad_agent.routing.multi_pass import MultiPassRouter, NetPassHistory
-from kicad_agent.routing.pathfinder import RouteResult
-from kicad_agent.routing.constraints import RoutingConstraints
+from volta.routing.multi_pass import MultiPassRouter, NetPassHistory
+from volta.routing.pathfinder import RouteResult
+from volta.routing.constraints import RoutingConstraints
 
 
 class TestNetPassHistory:
@@ -72,7 +72,7 @@ class TestMultiPassRouter:
             copper_thickness_mm=0.035,
         )
         bounds = (0, 0, 100, 80)
-        from kicad_agent.routing.pathfinder import build_routing_graph
+        from volta.routing.pathfinder import build_routing_graph
         graph = build_routing_graph(bounds, constraints=constraints)
         netlist = {
             "VCC": [(10.0, 20.0), (80.0, 60.0)],

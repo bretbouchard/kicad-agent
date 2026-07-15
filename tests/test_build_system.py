@@ -16,14 +16,14 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.manufacturing.build import (
+from volta.manufacturing.build import (
     Build,
     BuildDiff,
     BuildStatus,
     _get_git_sha,
     diff_builds,
 )
-from kicad_agent.validation.gates.manufacturing_manifest import (
+from volta.validation.gates.manufacturing_manifest import (
     ManufacturingArtifact,
     ManufacturingManifest,
     generate_manifest,
@@ -37,7 +37,7 @@ from kicad_agent.validation.gates.manufacturing_manifest import (
 
 @pytest.fixture(autouse=True)
 def _clear_ir_registry():
-    from kicad_agent.ir.base import _clear_registry
+    from volta.ir.base import _clear_registry
     _clear_registry()
     yield
     _clear_registry()
@@ -67,9 +67,9 @@ def _create_pcb_with_title_block(tmpdir: Path, rev: str = "1.0") -> Path:
 
 def _build_ir(pcb_path: Path):
     """Parse PCB and build PcbIR (mimics executor setup)."""
-    from kicad_agent.parser.pcb_parser import parse_pcb
-    from kicad_agent.ir.pcb_ir import PcbIR
-    from kicad_agent.parser.uuid_extractor import extract_uuids
+    from volta.parser.pcb_parser import parse_pcb
+    from volta.ir.pcb_ir import PcbIR
+    from volta.parser.uuid_extractor import extract_uuids
     result = parse_pcb(pcb_path)
     uuid_map = extract_uuids(result.raw_content, "pcb")
     return PcbIR(_parse_result=result, _uuid_map=uuid_map)
@@ -292,8 +292,8 @@ class TestBuildCreate:
 
     def test_build_create_creates_directory(self, tmp_path: Path) -> None:
         """build_create creates builds/v*_*/ with manifest.json + build.json + snapshot."""
-        from kicad_agent.ops._schema_pcb import BuildCreateOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildCreateOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         pcb_path = _create_pcb_with_title_block(tmp_path, rev="1.0")
         ir = _build_ir(pcb_path)
@@ -312,8 +312,8 @@ class TestBuildCreate:
 
     def test_build_create_reads_board_rev(self, tmp_path: Path) -> None:
         """PCB with rev '2.3' -> result['board_rev'] == '2.3'."""
-        from kicad_agent.ops._schema_pcb import BuildCreateOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildCreateOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         pcb_path = _create_pcb_with_title_block(tmp_path, rev="2.3")
         ir = _build_ir(pcb_path)
@@ -327,8 +327,8 @@ class TestBuildCreate:
 
     def test_build_create_records_git_sha(self, tmp_path: Path) -> None:
         """result['git_sha'] is a string (SHA or 'unknown')."""
-        from kicad_agent.ops._schema_pcb import BuildCreateOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildCreateOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         ir = _build_ir(pcb_path)
@@ -343,8 +343,8 @@ class TestBuildCreate:
 
     def test_build_create_creates_draft_status(self, tmp_path: Path) -> None:
         """build_create produces status == 'draft' (simplified v1 validation)."""
-        from kicad_agent.ops._schema_pcb import BuildCreateOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildCreateOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         ir = _build_ir(pcb_path)
@@ -358,8 +358,8 @@ class TestBuildCreate:
 
     def test_build_create_snapshots_source_files(self, tmp_path: Path) -> None:
         """The .kicad_pcb is copied; artifact sha256 matches a re-hash of the copy."""
-        from kicad_agent.ops._schema_pcb import BuildCreateOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildCreateOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         ir = _build_ir(pcb_path)
@@ -381,8 +381,8 @@ class TestBuildCreate:
 
     def test_build_create_snapshots_sch_and_pro(self, tmp_path: Path) -> None:
         """Sibling .kicad_sch and .kicad_pro with the same stem are also snapshotted."""
-        from kicad_agent.ops._schema_pcb import BuildCreateOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildCreateOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         (tmp_path / "test_build.kicad_sch").write_text("(kicad_sch ...)", encoding="utf-8")
@@ -401,8 +401,8 @@ class TestBuildCreate:
 
     def test_build_create_no_partial_state_on_parse_failure(self, tmp_path: Path) -> None:
         """A non-PCB target produces success=False and NO builds/ directory."""
-        from kicad_agent.ops._schema_pcb import BuildCreateOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildCreateOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         # A file that NativeParser can read but produces a degenerate board
         # (empty title block). To force a genuine failure we point at a path
@@ -421,8 +421,8 @@ class TestBuildCreate:
 
     def test_build_create_target_file_unchanged(self, tmp_path: Path) -> None:
         """The target .kicad_pcb is byte-identical after build_create (is_readonly contract)."""
-        from kicad_agent.ops._schema_pcb import BuildCreateOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildCreateOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         original_hash = hashlib.sha256(pcb_path.read_bytes()).hexdigest()
@@ -439,8 +439,8 @@ class TestBuildCreate:
 
     def test_build_create_rejects_path_traversal(self, tmp_path: Path) -> None:
         """project_dir with '..' segments is rejected (threat model #1)."""
-        from kicad_agent.ops._schema_pcb import BuildCreateOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildCreateOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         ir = _build_ir(pcb_path)
@@ -458,8 +458,8 @@ class TestBuildCreate:
 
     def test_build_create_generates_uuid(self, tmp_path: Path) -> None:
         """build_id matches UUID4 format (36 chars with hyphens)."""
-        from kicad_agent.ops._schema_pcb import BuildCreateOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildCreateOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         ir = _build_ir(pcb_path)
@@ -477,9 +477,9 @@ class TestBuildCreate:
 
     def test_build_create_build_json_round_trip(self, tmp_path: Path) -> None:
         """build.json round-trips losslessly via Build.load (success criterion #3)."""
-        from kicad_agent.ops._schema_pcb import BuildCreateOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
-        from kicad_agent.manufacturing.build import Build
+        from volta.ops._schema_pcb import BuildCreateOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
+        from volta.manufacturing.build import Build
 
         pcb_path = _create_pcb_with_title_block(tmp_path, rev="3.1")
         ir = _build_ir(pcb_path)
@@ -507,8 +507,8 @@ class TestBuildList:
 
     def _create_build(self, tmp_path: Path, rev: str = "1.0") -> str:
         """Helper: create one build and return its build_id."""
-        from kicad_agent.ops._schema_pcb import BuildCreateOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildCreateOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         pcb_path = _create_pcb_with_title_block(tmp_path, rev=rev)
         ir = _build_ir(pcb_path)
@@ -522,8 +522,8 @@ class TestBuildList:
 
     def test_build_list_returns_builds(self, tmp_path: Path) -> None:
         """Create 2 builds -> list count == 2, both build_ids present."""
-        from kicad_agent.ops._schema_pcb import BuildListOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildListOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         id1 = self._create_build(tmp_path, rev="1.0")
         id2 = self._create_build(tmp_path, rev="2.0")
@@ -538,8 +538,8 @@ class TestBuildList:
 
     def test_build_list_empty_when_no_builds(self, tmp_path: Path) -> None:
         """No builds/ dir -> count == 0, builds == []."""
-        from kicad_agent.ops._schema_pcb import BuildListOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildListOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         ir = _build_ir(pcb_path)
@@ -550,8 +550,8 @@ class TestBuildList:
 
     def test_build_list_skips_corrupt_dir(self, tmp_path: Path) -> None:
         """A valid build + a dir with corrupt build.json -> count==1 (no crash)."""
-        from kicad_agent.ops._schema_pcb import BuildListOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildListOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         self._create_build(tmp_path)
         # create a corrupt build dir
@@ -567,8 +567,8 @@ class TestBuildList:
 
     def test_build_list_sorted_descending(self, tmp_path: Path) -> None:
         """Builds are sorted by created_at descending (most recent first)."""
-        from kicad_agent.ops._schema_pcb import BuildListOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildListOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         self._create_build(tmp_path, rev="1.0")
         self._create_build(tmp_path, rev="2.0")
@@ -589,8 +589,8 @@ class TestBuildShow:
     """build_show handler (BUILD-08, BUILD-10)."""
 
     def _create_build(self, tmp_path: Path, rev: str = "1.0") -> str:
-        from kicad_agent.ops._schema_pcb import BuildCreateOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildCreateOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         pcb_path = _create_pcb_with_title_block(tmp_path, rev=rev)
         ir = _build_ir(pcb_path)
@@ -604,8 +604,8 @@ class TestBuildShow:
 
     def test_build_show_returns_details(self, tmp_path: Path) -> None:
         """Show by build_id -> success, status, artifacts present."""
-        from kicad_agent.ops._schema_pcb import BuildShowOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildShowOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         build_id = self._create_build(tmp_path, rev="1.0")
         pcb_path = _create_pcb_with_title_block(tmp_path)
@@ -622,8 +622,8 @@ class TestBuildShow:
 
     def test_build_show_not_found(self, tmp_path: Path) -> None:
         """Unknown build_id -> success=False, error mentions the id."""
-        from kicad_agent.ops._schema_pcb import BuildShowOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildShowOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         ir = _build_ir(pcb_path)
@@ -637,8 +637,8 @@ class TestBuildShow:
 
     def test_build_show_round_trip_manifest(self, tmp_path: Path) -> None:
         """Create then show -> manifest is not None, artifacts length matches source count."""
-        from kicad_agent.ops._schema_pcb import BuildShowOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildShowOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         build_id = self._create_build(tmp_path, rev="1.0")
         pcb_path = _create_pcb_with_title_block(tmp_path)
@@ -656,8 +656,8 @@ class TestBuildShow:
     def test_build_show_with_diff(self, tmp_path: Path) -> None:
         """Show build_1 with diff_build_id=build_2 -> response includes diff flags."""
         import json as _json
-        from kicad_agent.ops._schema_pcb import BuildShowOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildShowOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         id1 = self._create_build(tmp_path, rev="1.0")
         id2 = self._create_build(tmp_path, rev="2.0")
@@ -680,8 +680,8 @@ class TestBuildShow:
 
     def test_build_show_diff_not_found(self, tmp_path: Path) -> None:
         """Show with unknown diff_build_id -> primary build returned + diff_error."""
-        from kicad_agent.ops._schema_pcb import BuildShowOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildShowOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         build_id = self._create_build(tmp_path, rev="1.0")
         pcb_path = _create_pcb_with_title_block(tmp_path)
@@ -702,8 +702,8 @@ class TestBuildShow:
 
     def test_build_show_no_diff_when_omitted(self, tmp_path: Path) -> None:
         """Without diff_build_id, response has neither diff nor diff_error."""
-        from kicad_agent.ops._schema_pcb import BuildShowOp
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops._schema_pcb import BuildShowOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         build_id = self._create_build(tmp_path, rev="1.0")
         pcb_path = _create_pcb_with_title_block(tmp_path)

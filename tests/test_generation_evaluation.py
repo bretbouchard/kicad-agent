@@ -9,15 +9,15 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.generation.evaluation import (
+from volta.generation.evaluation import (
     EvaluationResult,
     _compute_score,
     evaluate_design,
     evaluate_intent_suite,
     get_test_intents,
 )
-from kicad_agent.generation.intent import GenerationIntent
-from kicad_agent.generation.pipeline import GenerationResult, generate_design
+from volta.generation.intent import GenerationIntent
+from volta.generation.pipeline import GenerationResult, generate_design
 
 KICAD_CLI_AVAILABLE = shutil.which("kicad-cli") is not None
 

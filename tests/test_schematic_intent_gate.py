@@ -23,15 +23,15 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures" / "schematic_intent"
 @pytest.fixture(autouse=True)
 def _clear_ir_registry():
     """Clear the IR registry between tests to prevent one-IR-per-ParseResult errors."""
-    from kicad_agent.ir.base import _clear_registry
+    from volta.ir.base import _clear_registry
     _clear_registry()
     yield
 
 
 def _load_ir(fixture_name: str):
     """Load a fixture schematic and build SchematicIR."""
-    from kicad_agent.parser import parse_schematic
-    from kicad_agent.ir.schematic_ir import SchematicIR
+    from volta.parser import parse_schematic
+    from volta.ir.schematic_ir import SchematicIR
 
     sch_path = FIXTURES_DIR / fixture_name
     parse_result = parse_schematic(sch_path)
@@ -59,7 +59,7 @@ class TestFootprintCompleteness:
 
     def test_footprint_completeness_pass(self):
         """Complete LED schematic passes footprint check -- no blockers."""
-        from kicad_agent.validation.gates.schematic_intent_gate import (
+        from volta.validation.gates.schematic_intent_gate import (
             check_footprint_completeness,
         )
 
@@ -69,7 +69,7 @@ class TestFootprintCompleteness:
 
     def test_footprint_completeness_fail_missing(self):
         """Schematic with missing footprint produces blocker listing reference and lib_id."""
-        from kicad_agent.validation.gates.schematic_intent_gate import (
+        from volta.validation.gates.schematic_intent_gate import (
             check_footprint_completeness,
         )
 
@@ -83,7 +83,7 @@ class TestFootprintCompleteness:
 
     def test_footprint_completeness_dnp_excluded(self):
         """DNP components (dnp=True) are excluded from footprint check."""
-        from kicad_agent.validation.gates.schematic_intent_gate import (
+        from volta.validation.gates.schematic_intent_gate import (
             check_footprint_completeness,
         )
 
@@ -96,7 +96,7 @@ class TestFootprintCompleteness:
 
     def test_footprint_completeness_power_symbol_excluded(self):
         """Power symbols (libId starts with 'power:') are excluded from all checks."""
-        from kicad_agent.validation.gates.schematic_intent_gate import (
+        from volta.validation.gates.schematic_intent_gate import (
             check_footprint_completeness,
         )
 
@@ -133,7 +133,7 @@ class TestSymbolPinCount:
 
     def test_pin_count_mismatch_detected(self):
         """Symbol pin count mismatch produces a blocker with expected vs actual count."""
-        from kicad_agent.validation.gates.schematic_intent_gate import (
+        from volta.validation.gates.schematic_intent_gate import (
             check_symbol_pin_count,
         )
 
@@ -171,7 +171,7 @@ class TestSymbolPinCount:
 
     def test_pin_count_no_hint_in_name_skipped(self):
         """If pin count cannot be determined from name, no blocker is produced."""
-        from kicad_agent.validation.gates.schematic_intent_gate import (
+        from volta.validation.gates.schematic_intent_gate import (
             check_symbol_pin_count,
         )
 
@@ -211,7 +211,7 @@ class TestComponentMetadata:
 
     def test_missing_value_warns(self):
         """Missing Value property on a non-DNP component with footprint produces warning."""
-        from kicad_agent.validation.gates.schematic_intent_gate import (
+        from volta.validation.gates.schematic_intent_gate import (
             check_component_metadata,
         )
 
@@ -226,7 +226,7 @@ class TestComponentMetadata:
 
     def test_missing_mpn_warns(self):
         """Missing MPN property on non-DNP components produces warning."""
-        from kicad_agent.validation.gates.schematic_intent_gate import (
+        from volta.validation.gates.schematic_intent_gate import (
             check_component_metadata,
         )
 
@@ -251,7 +251,7 @@ class TestCombinedGate:
 
     def test_complete_schematic_passes_gate(self):
         """Complete LED schematic passes all checks (GateResult.pass_=True)."""
-        from kicad_agent.validation.gates.schematic_intent_gate import SchematicIntentGate
+        from volta.validation.gates.schematic_intent_gate import SchematicIntentGate
 
         ir = _load_ir("complete_led.kicad_sch")
         gate = SchematicIntentGate()
@@ -260,7 +260,7 @@ class TestCombinedGate:
 
     def test_incomplete_schematic_blocks_gate(self):
         """Schematic with missing footprint blocks the gate (GateResult.pass_=False)."""
-        from kicad_agent.validation.gates.schematic_intent_gate import SchematicIntentGate
+        from volta.validation.gates.schematic_intent_gate import SchematicIntentGate
 
         ir = _load_ir("missing_footprint.kicad_sch")
         gate = SchematicIntentGate()
@@ -270,20 +270,20 @@ class TestCombinedGate:
 
     def test_ir_built_once_passed_to_all_checks(self):
         """SchematicIR is built once and passed to all sub-checks (verify via mock call count)."""
-        from kicad_agent.validation.gates.schematic_intent_gate import SchematicIntentGate
+        from volta.validation.gates.schematic_intent_gate import SchematicIntentGate
 
         ir = _load_ir("complete_led.kicad_sch")
         gate = SchematicIntentGate()
 
         # Patch sub-checks to track call count
         with patch(
-            "kicad_agent.validation.gates.schematic_intent_gate.check_footprint_completeness"
+            "volta.validation.gates.schematic_intent_gate.check_footprint_completeness"
         ) as mock_fp, patch(
-            "kicad_agent.validation.gates.schematic_intent_gate.check_symbol_pin_count"
+            "volta.validation.gates.schematic_intent_gate.check_symbol_pin_count"
         ) as mock_pc, patch(
-            "kicad_agent.validation.gates.schematic_intent_gate.check_component_metadata"
+            "volta.validation.gates.schematic_intent_gate.check_component_metadata"
         ) as mock_md, patch(
-            "kicad_agent.validation.gates.schematic_intent_gate.check_net_intent"
+            "volta.validation.gates.schematic_intent_gate.check_net_intent"
         ) as mock_ni:
             mock_fp.return_value = ([], [])
             mock_pc.return_value = ([], [])
@@ -312,7 +312,7 @@ class TestGateRegistration:
 
     def test_gate_registered_with_runner(self):
         """SchematicIntentGate registers with GateRunner via register_gate() on module import."""
-        from kicad_agent.validation.gate_runner import get_gate_runner
+        from volta.validation.gate_runner import get_gate_runner
 
         runner = get_gate_runner()
         gate_def = runner.get_gate("schematic_intent")
@@ -326,15 +326,15 @@ class TestGateRegistration:
 
     def test_gate_coexists_with_pre_pcb_schematic_gate(self):
         """Both schematic_intent and pre_pcb_schematic_gate are registered for schematic->pcb_setup."""
-        from kicad_agent.validation.gate_runner import get_gate_runner
-        from kicad_agent.validation.gate_types import DesignStage
+        from volta.validation.gate_runner import get_gate_runner
+        from volta.validation.gate_types import DesignStage
 
         runner = get_gate_runner()
         intent_gate = runner.get_gate("schematic_intent")
 
         # pre_pcb_schematic_gate uses lazy registration (only on first successful call).
         # Use a real fixture to trigger registration without exceptions.
-        from kicad_agent.ops.validation_gates import pre_pcb_schematic_gate
+        from volta.ops.validation_gates import pre_pcb_schematic_gate
 
         # The complete_led fixture is valid and parseable, so the gate should
         # run through to the registration block. Use require_erc_clean=False

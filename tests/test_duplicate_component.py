@@ -20,10 +20,10 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.ops.schema import Operation, PositionSpec
-from kicad_agent.parser import parse_schematic
+from volta.ir.base import _clear_registry
+from volta.ir.schematic_ir import SchematicIR
+from volta.ops.schema import Operation, PositionSpec
+from volta.parser import parse_schematic
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 
@@ -51,8 +51,8 @@ class TestDuplicateComponentHandler:
 
     def test_duplicate_reference_incrementing(self, setup_schematic: dict) -> None:
         """duplicate_component increments reference number: R1 -> R2, U3 -> U4."""
-        from kicad_agent.ops.duplicate_component import duplicate_component
-        from kicad_agent.ops.schema import DuplicateComponentOp
+        from volta.ops.duplicate_component import duplicate_component
+        from volta.ops.schema import DuplicateComponentOp
 
         # Find a component that exists in the fixture to duplicate
         source = setup_schematic["ir"].get_component_by_ref("J1")
@@ -71,8 +71,8 @@ class TestDuplicateComponentHandler:
 
     def test_duplicate_finds_next_available(self, setup_schematic: dict) -> None:
         """duplicate_component skips taken references (if J2 exists, J1 -> J3)."""
-        from kicad_agent.ops.duplicate_component import duplicate_component
-        from kicad_agent.ops.schema import AddComponentOp, DuplicateComponentOp
+        from volta.ops.duplicate_component import duplicate_component
+        from volta.ops.schema import AddComponentOp, DuplicateComponentOp
 
         # Add a J2 manually to occupy that reference
         add_op = AddComponentOp(
@@ -82,7 +82,7 @@ class TestDuplicateComponentHandler:
             value="Extra",
             position=PositionSpec(x=0.0, y=0.0),
         )
-        from kicad_agent.ops.add_component import add_component
+        from volta.ops.add_component import add_component
         add_component(add_op, setup_schematic["ir"], setup_schematic["file_path"])
 
         # Now duplicate J1 -- should become J3 since J2 is taken
@@ -95,8 +95,8 @@ class TestDuplicateComponentHandler:
 
     def test_duplicate_with_offset(self, setup_schematic: dict) -> None:
         """duplicate_component applies position offset from source."""
-        from kicad_agent.ops.duplicate_component import duplicate_component
-        from kicad_agent.ops.schema import DuplicateComponentOp
+        from volta.ops.duplicate_component import duplicate_component
+        from volta.ops.schema import DuplicateComponentOp
 
         source = setup_schematic["ir"].get_component_by_ref("J1")
         assert source is not None
@@ -118,8 +118,8 @@ class TestDuplicateComponentHandler:
 
     def test_duplicate_preserves_properties(self, setup_schematic: dict) -> None:
         """duplicate_component copies Value, Footprint from source, updates Reference."""
-        from kicad_agent.ops.duplicate_component import duplicate_component
-        from kicad_agent.ops.schema import DuplicateComponentOp
+        from volta.ops.duplicate_component import duplicate_component
+        from volta.ops.schema import DuplicateComponentOp
 
         op = DuplicateComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -144,8 +144,8 @@ class TestDuplicateComponentHandler:
 
     def test_duplicate_fresh_uuids(self, setup_schematic: dict) -> None:
         """duplicate_component generates fresh UUID for symbol (different from source)."""
-        from kicad_agent.ops.duplicate_component import duplicate_component
-        from kicad_agent.ops.schema import DuplicateComponentOp
+        from volta.ops.duplicate_component import duplicate_component
+        from volta.ops.schema import DuplicateComponentOp
 
         source = setup_schematic["ir"].get_component_by_ref("J1")
         assert source is not None
@@ -170,8 +170,8 @@ class TestDuplicateComponentHandler:
 
     def test_duplicate_missing_source_raises(self, setup_schematic: dict) -> None:
         """duplicate_component raises DuplicateComponentError when source not found."""
-        from kicad_agent.ops.duplicate_component import DuplicateComponentError, duplicate_component
-        from kicad_agent.ops.schema import DuplicateComponentOp
+        from volta.ops.duplicate_component import DuplicateComponentError, duplicate_component
+        from volta.ops.schema import DuplicateComponentOp
 
         op = DuplicateComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -182,8 +182,8 @@ class TestDuplicateComponentHandler:
 
     def test_duplicate_multiple_copies(self, setup_schematic: dict) -> None:
         """duplicate_component with count=3 creates 3 copies with unique refs."""
-        from kicad_agent.ops.duplicate_component import duplicate_component
-        from kicad_agent.ops.schema import DuplicateComponentOp
+        from volta.ops.duplicate_component import duplicate_component
+        from volta.ops.schema import DuplicateComponentOp
 
         op = DuplicateComponentOp(
             target_file="RaspberryPi-uHAT.kicad_sch",
@@ -201,8 +201,8 @@ class TestDuplicateComponentHandler:
 
     def test_duplicate_preserves_library_info(self, setup_schematic: dict) -> None:
         """duplicate_component preserves libraryNickname, entryName, libName."""
-        from kicad_agent.ops.duplicate_component import duplicate_component
-        from kicad_agent.ops.schema import DuplicateComponentOp
+        from volta.ops.duplicate_component import duplicate_component
+        from volta.ops.schema import DuplicateComponentOp
 
         source = setup_schematic["ir"].get_component_by_ref("J1")
         assert source is not None
@@ -222,8 +222,8 @@ class TestDuplicateComponentHandler:
 
     def test_duplicate_records_mutation(self, setup_schematic: dict) -> None:
         """duplicate_component records mutation in IR mutation log."""
-        from kicad_agent.ops.duplicate_component import duplicate_component
-        from kicad_agent.ops.schema import DuplicateComponentOp
+        from volta.ops.duplicate_component import duplicate_component
+        from volta.ops.schema import DuplicateComponentOp
 
         initial_mutations = len(setup_schematic["ir"].mutation_log)
 
@@ -243,7 +243,7 @@ class TestDuplicateComponentSchema:
 
     def test_valid_schema(self) -> None:
         """DuplicateComponentOp accepts valid input."""
-        from kicad_agent.ops.schema import DuplicateComponentOp
+        from volta.ops.schema import DuplicateComponentOp
 
         op = DuplicateComponentOp(
             target_file="test.kicad_sch",
@@ -256,7 +256,7 @@ class TestDuplicateComponentSchema:
 
     def test_schema_with_offset(self) -> None:
         """DuplicateComponentOp accepts optional offset."""
-        from kicad_agent.ops.schema import DuplicateComponentOp
+        from volta.ops.schema import DuplicateComponentOp
 
         op = DuplicateComponentOp(
             target_file="test.kicad_sch",
@@ -269,7 +269,7 @@ class TestDuplicateComponentSchema:
 
     def test_schema_rejects_count_zero(self) -> None:
         """DuplicateComponentOp rejects count < 1."""
-        from kicad_agent.ops.schema import DuplicateComponentOp
+        from volta.ops.schema import DuplicateComponentOp
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError):
@@ -281,7 +281,7 @@ class TestDuplicateComponentSchema:
 
     def test_schema_with_count(self) -> None:
         """DuplicateComponentOp accepts count >= 1."""
-        from kicad_agent.ops.schema import DuplicateComponentOp
+        from volta.ops.schema import DuplicateComponentOp
 
         op = DuplicateComponentOp(
             target_file="test.kicad_sch",
@@ -315,7 +315,7 @@ class TestDuplicateComponentExecutor:
 
     def test_executor_dispatches_duplicate(self, setup_schematic: dict) -> None:
         """OperationExecutor dispatches duplicate_component correctly."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         executor = OperationExecutor(base_dir=setup_schematic["base_dir"])
 
@@ -334,7 +334,7 @@ class TestDuplicateComponentExecutor:
 
     def test_full_pipeline_duplicate(self, setup_schematic: dict) -> None:
         """Full pipeline: validate -> executor -> duplicate -> serialize -> file on disk."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         executor = OperationExecutor(base_dir=setup_schematic["base_dir"])
 

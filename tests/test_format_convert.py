@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops.format_convert import (
+from volta.ops.format_convert import (
     convert_kicad6_to_10,
     _fix_header,
     _fix_missing_rotation,
@@ -20,7 +20,7 @@ from kicad_agent.ops.format_convert import (
     _unwrap_pins_wrapper,
     _unwrap_schematic_objects,
 )
-from kicad_agent.validation.format_check import validate_kicad10_format
+from volta.validation.format_check import validate_kicad10_format
 
 
 # ---------------------------------------------------------------------------
@@ -182,7 +182,7 @@ def test_convert_already_kicad10():
 
 def test_convert_kicad6_to_10_op_schema():
     """ConvertKicad6To10Op validates correctly."""
-    from kicad_agent.ops.schema import ConvertKicad6To10Op, Operation
+    from volta.ops.schema import ConvertKicad6To10Op, Operation
 
     op = ConvertKicad6To10Op(
         op_type="convert_kicad6_to_10",

@@ -14,17 +14,17 @@ from typing import Any
 
 import pytest
 
-from kicad_agent.ops.handlers.constraint_handlers import (
+from volta.ops.handlers.constraint_handlers import (
     GetConstraintsOp,
     SetConstraintsOp,
     handle_get_constraints,
     handle_set_constraints,
 )
-from kicad_agent.validation.gates.constraint_schema import (
+from volta.validation.gates.constraint_schema import (
     DesignConstraints,
     ElectricalConstraints,
 )
-from kicad_agent.analysis.types import NetClassification
+from volta.analysis.types import NetClassification
 
 
 # ---------------------------------------------------------------------------
@@ -98,7 +98,7 @@ class TestSetConstraintsPropagation:
 
 
 class TestSetConstraintsSidecar:
-    """SetConstraintsOp writes canonical JSON to .kicad_agent/constraints.json."""
+    """SetConstraintsOp writes canonical JSON to .volta/constraints.json."""
 
     def test_writes_sidecar_file(self, tmp_path: Path, monkeypatch: Any) -> None:
         """Sidecar file is created with DesignConstraints JSON."""
@@ -106,7 +106,7 @@ class TestSetConstraintsSidecar:
         op = SetConstraintsOp(constraints=_sample_constraints())
         result = handle_set_constraints(op)
 
-        sidecar_path = tmp_path / ".kicad_agent" / "constraints.json"
+        sidecar_path = tmp_path / ".volta" / "constraints.json"
         assert sidecar_path.exists(), "Expected sidecar file to be created"
         assert str(sidecar_path) in result["written_paths"]
 
@@ -132,7 +132,7 @@ class TestSetConstraintsSidecar:
         op = SetConstraintsOp(constraints=constraints)
         handle_set_constraints(op)
 
-        sidecar_path = tmp_path / ".kicad_agent" / "constraints.json"
+        sidecar_path = tmp_path / ".volta" / "constraints.json"
         raw = sidecar_path.read_text()
         data = json.loads(raw)
         restored = DesignConstraints.model_validate(data)
@@ -146,7 +146,7 @@ class TestSetConstraintsSidecar:
 
 
 class TestGetConstraintsSidecar:
-    """GetConstraintsOp reads from .kicad_agent/constraints.json."""
+    """GetConstraintsOp reads from .volta/constraints.json."""
 
     def test_reads_sidecar_file(self, tmp_path: Path, monkeypatch: Any) -> None:
         """GetConstraintsOp returns constraints written by SetConstraintsOp."""
@@ -191,7 +191,7 @@ class TestDryRun:
         assert result["dry_run"] is True
         assert result["written_paths"] == []
         assert not (tmp_path / "board.kicad_dru").exists()
-        assert not (tmp_path / ".kicad_agent" / "constraints.json").exists()
+        assert not (tmp_path / ".volta" / "constraints.json").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -204,8 +204,8 @@ class TestConstraintCompletenessGate:
 
     def test_gate_passes_when_all_nontrivial_constrained(self) -> None:
         """Gate passes when all nontrivial nets have constraints."""
-        import kicad_agent.validation  # noqa: ensure gates registered
-        from kicad_agent.validation.gate_runner import get_gate_runner
+        import volta.validation  # noqa: ensure gates registered
+        from volta.validation.gate_runner import get_gate_runner
 
         constraints = DesignConstraints(
             electrical=[
@@ -229,8 +229,8 @@ class TestConstraintCompletenessGate:
 
     def test_gate_blocks_missing_power_constraint(self) -> None:
         """Gate fails when a POWER net lacks electrical constraints."""
-        import kicad_agent.validation  # noqa: ensure gates registered
-        from kicad_agent.validation.gate_runner import get_gate_runner
+        import volta.validation  # noqa: ensure gates registered
+        from volta.validation.gate_runner import get_gate_runner
 
         constraints = DesignConstraints(
             electrical=[
@@ -253,8 +253,8 @@ class TestConstraintCompletenessGate:
 
     def test_gate_blocks_no_constraints_in_context(self) -> None:
         """Gate fails when no design_constraints present in context."""
-        import kicad_agent.validation  # noqa: ensure gates registered
-        from kicad_agent.validation.gate_runner import get_gate_runner
+        import volta.validation  # noqa: ensure gates registered
+        from volta.validation.gate_runner import get_gate_runner
 
         runner = get_gate_runner()
         context = {"net_intent": {"VCC3V3": NetClassification.POWER}}

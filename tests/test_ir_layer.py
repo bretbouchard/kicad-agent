@@ -9,15 +9,15 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ir import FootprintIR, PcbIR, SchematicIR, SymbolLibIR
-from kicad_agent.ir.base import BaseIR, _clear_registry
-from kicad_agent.parser import (
+from volta.ir import FootprintIR, PcbIR, SchematicIR, SymbolLibIR
+from volta.ir.base import BaseIR, _clear_registry
+from volta.parser import (
     parse_footprint,
     parse_pcb,
     parse_schematic,
     parse_symbol_lib,
 )
-from kicad_agent.parser.uuid_extractor import extract_uuids
+from volta.parser.uuid_extractor import extract_uuids
 
 
 @pytest.fixture(autouse=True)

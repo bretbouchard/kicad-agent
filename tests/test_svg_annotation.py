@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.spatial.svg_utils import (
+from volta.spatial.svg_utils import (
     SVG_NS,
     create_svg_circle,
     create_svg_group,
@@ -179,7 +179,7 @@ class TestSvgAnnotator:
 
     def test_annotate_creates_output(self, fixture_svg, tmp_path):
         """annotate() creates annotated SVG file."""
-        from kicad_agent.spatial.annotator import Annotation, SvgAnnotator
+        from volta.spatial.annotator import Annotation, SvgAnnotator
 
         output = tmp_path / "out.svg"
         annotator = SvgAnnotator()
@@ -192,7 +192,7 @@ class TestSvgAnnotator:
 
     def test_annotate_adds_markers(self, fixture_svg, tmp_path):
         """Annotated SVG contains circle markers."""
-        from kicad_agent.spatial.annotator import Annotation, SvgAnnotator
+        from volta.spatial.annotator import Annotation, SvgAnnotator
 
         output = tmp_path / "out.svg"
         annotator = SvgAnnotator()
@@ -209,7 +209,7 @@ class TestSvgAnnotator:
 
     def test_annotate_adds_legend(self, fixture_svg, tmp_path):
         """Annotated SVG contains a legend."""
-        from kicad_agent.spatial.annotator import Annotation, SvgAnnotator
+        from volta.spatial.annotator import Annotation, SvgAnnotator
 
         output = tmp_path / "out.svg"
         annotator = SvgAnnotator()
@@ -222,7 +222,7 @@ class TestSvgAnnotator:
 
     def test_severity_colors(self):
         """Different severities produce different colors."""
-        from kicad_agent.spatial.annotator import SvgAnnotator
+        from volta.spatial.annotator import SvgAnnotator
 
         assert SvgAnnotator._severity_color("error") == "red"
         assert SvgAnnotator._severity_color("warning") == "orange"
@@ -230,7 +230,7 @@ class TestSvgAnnotator:
 
     def test_annotate_defaults_output_path(self, fixture_svg):
         """annotate() defaults to _annotated suffix."""
-        from kicad_agent.spatial.annotator import Annotation, SvgAnnotator
+        from volta.spatial.annotator import Annotation, SvgAnnotator
 
         annotator = SvgAnnotator()
         annotations = [Annotation(x=50.0, y=50.0, label="err", description="Test")]
@@ -243,7 +243,7 @@ class TestSvgAnnotator:
 
     def test_annotation_style_defaults(self):
         """AnnotationStyle has sensible defaults."""
-        from kicad_agent.spatial.annotator import AnnotationStyle
+        from volta.spatial.annotator import AnnotationStyle
 
         style = AnnotationStyle()
         assert style.color == "red"

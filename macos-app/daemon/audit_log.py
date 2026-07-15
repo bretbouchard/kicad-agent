@@ -3,7 +3,7 @@ audit_log.py — Append-only JSONL audit log for the bundled daemon.
 
 Phase 162 — Python Daemon Bundling.
 
-Extends the existing `src/kicad_agent/routing/audit.py` pattern: every
+Extends the existing `src/volta/routing/audit.py` pattern: every
 event is written as one JSON object per line and fsync'd before the
 caller continues. This gives us crash-durable audit trails for daemon
 lifecycle events (spawn, crash, watchdog kill, RPC errors).

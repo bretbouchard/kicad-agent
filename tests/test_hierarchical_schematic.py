@@ -12,8 +12,8 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from kicad_agent.ops.net_tracer import trace_net_from_label
-from kicad_agent.schematic_routing.schematic_graph import (
+from volta.ops.net_tracer import trace_net_from_label
+from volta.schematic_routing.schematic_graph import (
     HierarchicalSchematic,
     SchematicGraph,
     SheetPin,

@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+from volta.ops.pcb_raw_writer import PcbRawWriter
 
 
 # ---------------------------------------------------------------------------
@@ -152,7 +152,7 @@ class TestDeleteCopperZoneAlias:
 
     def test_delete_copper_zone_schema_validates(self):
         """DeleteCopperZoneOp schema accepts required fields."""
-        from kicad_agent.ops._schema_pcb import DeleteCopperZoneOp
+        from volta.ops._schema_pcb import DeleteCopperZoneOp
         op = DeleteCopperZoneOp(
             target_file="board.kicad_pcb",
             zone_uuid="abc123",
@@ -162,24 +162,24 @@ class TestDeleteCopperZoneAlias:
 
     def test_delete_copper_zone_schema_requires_uuid(self):
         """DeleteCopperZoneOp requires zone_uuid (not optional like remove)."""
-        from kicad_agent.ops._schema_pcb import DeleteCopperZoneOp
+        from volta.ops._schema_pcb import DeleteCopperZoneOp
         with pytest.raises(Exception):
             DeleteCopperZoneOp(target_file="board.kicad_pcb")
 
     def test_delete_copper_zone_handler_registered(self):
         """Handler is registered under the delete_copper_zone name."""
-        from kicad_agent.ops.handlers.pcb import _PCB_HANDLERS
+        from volta.ops.handlers.pcb import _PCB_HANDLERS
         assert "delete_copper_zone" in _PCB_HANDLERS
         # Alias points to a callable (the wrapper around remove_copper_zone)
         assert callable(_PCB_HANDLERS["delete_copper_zone"])
 
     def test_delete_copper_zone_by_uuid_via_executor(self, pcb_path):
         """delete_copper_zone end-to-end: add zone, then delete by UUID."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         # First, add a zone
         test_uuid = str(_uuid.uuid4())
@@ -223,7 +223,7 @@ class TestAddZoneKeepoutAlias:
 
     def test_add_zone_keepout_schema_validates(self):
         """AddZoneKeepoutOp schema accepts rule_clearance_mm."""
-        from kicad_agent.ops._schema_pcb import AddZoneKeepoutOp
+        from volta.ops._schema_pcb import AddZoneKeepoutOp
         op = AddZoneKeepoutOp(
             target_file="board.kicad_pcb",
             layer="*",
@@ -236,7 +236,7 @@ class TestAddZoneKeepoutAlias:
 
     def test_add_zone_keepout_schema_rule_clearance_optional(self):
         """AddZoneKeepoutOp rule_clearance_mm is optional (backward compat)."""
-        from kicad_agent.ops._schema_pcb import AddZoneKeepoutOp
+        from volta.ops._schema_pcb import AddZoneKeepoutOp
         op = AddZoneKeepoutOp(
             target_file="board.kicad_pcb",
             polygon=[(0, 0), (10, 0), (10, 10), (0, 10)],
@@ -245,17 +245,17 @@ class TestAddZoneKeepoutAlias:
 
     def test_add_zone_keepout_handler_registered(self):
         """Handler is registered under the add_zone_keepout name."""
-        from kicad_agent.ops.handlers.pcb import _PCB_HANDLERS
+        from volta.ops.handlers.pcb import _PCB_HANDLERS
         assert "add_zone_keepout" in _PCB_HANDLERS
         assert callable(_PCB_HANDLERS["add_zone_keepout"])
 
     def test_add_zone_keepout_with_rule_clearance_via_executor(self, pcb_path):
         """add_zone_keepout end-to-end: produces (rule (clearance N)) wrapper."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -284,11 +284,11 @@ class TestAddZoneKeepoutAlias:
 
     def test_add_zone_keepout_without_rule_clearance(self, pcb_path):
         """add_zone_keepout without rule_clearance_mm omits (rule ...) wrapper."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -317,11 +317,11 @@ class TestExistingOpsBackwardCompat:
 
     def test_add_copper_zone_via_executor(self, pcb_path):
         """add_copper_zone produces KiCad 10 zone in the PCB file."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -349,11 +349,11 @@ class TestExistingOpsBackwardCompat:
 
     def test_add_keepout_area_alias_works(self, pcb_path):
         """add_keepout_area still works (backward compat with new schema)."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -386,18 +386,18 @@ class TestSchemaExports:
 
     def test_delete_copper_zone_op_in_schema_all(self):
         """DeleteCopperZoneOp is in schema.py __all__."""
-        from kicad_agent.ops import schema
+        from volta.ops import schema
         assert "DeleteCopperZoneOp" in schema.__all__
 
     def test_add_zone_keepout_op_in_schema_all(self):
         """AddZoneKeepoutOp is in schema.py __all__."""
-        from kicad_agent.ops import schema
+        from volta.ops import schema
         assert "AddZoneKeepoutOp" in schema.__all__
 
     def test_delete_copper_zone_op_in_union(self):
         """Operation union includes DeleteCopperZoneOp."""
-        from kicad_agent.ops._schema_pcb import DeleteCopperZoneOp
-        from kicad_agent.ops.schema import Operation
+        from volta.ops._schema_pcb import DeleteCopperZoneOp
+        from volta.ops.schema import Operation
         # Verify the discriminated union accepts the new op_type
         op = Operation.model_validate({
             "root": {
@@ -410,8 +410,8 @@ class TestSchemaExports:
 
     def test_add_zone_keepout_op_in_union(self):
         """Operation union includes AddZoneKeepoutOp."""
-        from kicad_agent.ops._schema_pcb import AddZoneKeepoutOp
-        from kicad_agent.ops.schema import Operation
+        from volta.ops._schema_pcb import AddZoneKeepoutOp
+        from volta.ops.schema import Operation
         op = Operation.model_validate({
             "root": {
                 "op_type": "add_zone_keepout",

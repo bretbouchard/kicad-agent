@@ -13,7 +13,7 @@ from typing import Optional
 
 import pytest
 
-from kicad_agent.schematic_routing.wire_router import (
+from volta.schematic_routing.wire_router import (
     WireFix,
     _find_dangling_endpoint,
     _snap_to_grid,

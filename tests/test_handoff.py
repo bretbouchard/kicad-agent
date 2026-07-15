@@ -17,9 +17,9 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.export.bom import BomResult, export_bom_profile
-from kicad_agent.dfm.profiles import load_profile
-from kicad_agent.export.gerber import ExportResult
+from volta.export.bom import BomResult, export_bom_profile
+from volta.dfm.profiles import load_profile
+from volta.export.gerber import ExportResult
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +127,7 @@ class TestExportBomProfileGeneric:
             )
             return BomResult(True, out, 1, 1, "stub", "")
 
-        monkeypatch.setattr("kicad_agent.export.bom.export_bom", _fake_export_bom)
+        monkeypatch.setattr("volta.export.bom.export_bom", _fake_export_bom)
 
         result = export_bom_profile(sch_path, tmp_path, profile=None)
 
@@ -150,7 +150,7 @@ class TestExportBomProfileJlcpcb:
             {"Reference": "R1", "Value": "10k", "Footprint": "R_0402", "Qty": "1", "DNP": ""},
         ]
         monkeypatch.setattr(
-            "kicad_agent.export.bom.export_bom",
+            "volta.export.bom.export_bom",
             _stub_export_bom_with_csv(sch_path.parent / "ignore.csv", std_rows, ["Reference", "Value", "Footprint", "Qty", "DNP"]),
         )
 
@@ -178,7 +178,7 @@ class TestExportBomProfileJlcpcb:
         sch_path = _create_minimal_sch(tmp_path, stem="custom_board")
         std_rows = [{"Reference": "C1", "Value": "100nF", "Footprint": "C_0402", "Qty": "1", "DNP": ""}]
         monkeypatch.setattr(
-            "kicad_agent.export.bom.export_bom",
+            "volta.export.bom.export_bom",
             _stub_export_bom_with_csv(tmp_path / "ignore.csv", std_rows, ["Reference", "Value", "Footprint", "Qty", "DNP"]),
         )
         profile = load_profile("jlcpcb")
@@ -190,7 +190,7 @@ class TestExportBomProfileJlcpcb:
         sch_path = _create_minimal_sch_with_value(tmp_path, value="=cmd|evil")
         std_rows = [{"Reference": "R1", "Value": "=cmd|evil", "Footprint": "R_0402", "Qty": "1", "DNP": ""}]
         monkeypatch.setattr(
-            "kicad_agent.export.bom.export_bom",
+            "volta.export.bom.export_bom",
             _stub_export_bom_with_csv(tmp_path / "ignore.csv", std_rows, ["Reference", "Value", "Footprint", "Qty", "DNP"]),
         )
         profile = load_profile("jlcpcb")
@@ -207,7 +207,7 @@ class TestExportBomProfileJlcpcb:
             {"Reference": "?", "Value": "unknown", "Footprint": "", "Qty": "1", "DNP": ""},
         ]
         monkeypatch.setattr(
-            "kicad_agent.export.bom.export_bom",
+            "volta.export.bom.export_bom",
             _stub_export_bom_with_csv(tmp_path / "ignore.csv", std_rows, ["Reference", "Value", "Footprint", "Qty", "DNP"]),
         )
         profile = load_profile("jlcpcb")
@@ -251,31 +251,31 @@ def _stub_export_single(category: str, build_dir: Path, name: str):
 def _install_export_stubs(monkeypatch, build_dir: Path) -> None:
     """Install stub export wrappers on the handoff module namespace."""
     monkeypatch.setattr(
-        "kicad_agent.manufacturing.handoff.export_gerber",
+        "volta.manufacturing.handoff.export_gerber",
         _stub_export_single("gerbers", build_dir, "board-F_Cu.gbr"),
     )
     monkeypatch.setattr(
-        "kicad_agent.manufacturing.handoff.export_drill",
+        "volta.manufacturing.handoff.export_drill",
         _stub_export_single("drill", build_dir, "board.drl"),
     )
     monkeypatch.setattr(
-        "kicad_agent.manufacturing.handoff.export_position",
+        "volta.manufacturing.handoff.export_position",
         _stub_export_single("cpl", build_dir, "board-pos.csv"),
     )
     monkeypatch.setattr(
-        "kicad_agent.manufacturing.handoff.export_netlist",
+        "volta.manufacturing.handoff.export_netlist",
         _stub_export_single("netlist", build_dir, "board.net"),
     )
     monkeypatch.setattr(
-        "kicad_agent.manufacturing.handoff.export_step",
+        "volta.manufacturing.handoff.export_step",
         _stub_export_single("step", build_dir, "board.step"),
     )
     monkeypatch.setattr(
-        "kicad_agent.manufacturing.handoff.export_pcb_pdf",
+        "volta.manufacturing.handoff.export_pcb_pdf",
         _stub_export_single("pcb_pdf", build_dir, "board.pdf"),
     )
     monkeypatch.setattr(
-        "kicad_agent.manufacturing.handoff.export_schematic_pdf",
+        "volta.manufacturing.handoff.export_schematic_pdf",
         _stub_export_single("schematic_pdf", build_dir, "board_schematic.pdf"),
     )
 
@@ -286,7 +286,7 @@ def _install_export_stubs(monkeypatch, build_dir: Path) -> None:
         return BomResult(True, f, 1, 1, "stub-bom", "")
 
     monkeypatch.setattr(
-        "kicad_agent.manufacturing.handoff.export_bom_profile", _fake_bom_profile
+        "volta.manufacturing.handoff.export_bom_profile", _fake_bom_profile
     )
 
 
@@ -301,7 +301,7 @@ def _stub_board_stats(monkeypatch, stats=None) -> None:
             "net_count": 3,
         }
     monkeypatch.setattr(
-        "kicad_agent.manufacturing.handoff.get_board_statistics",
+        "volta.manufacturing.handoff.get_board_statistics",
         lambda pcb_path: stats,
     )
 
@@ -311,7 +311,7 @@ class TestExportHandoff:
 
     def test_handoff_creates_zip(self, tmp_path: Path, monkeypatch) -> None:
         """skip_validation=True + stubbed exports -> zip exists on disk."""
-        from kicad_agent.manufacturing.handoff import export_handoff
+        from volta.manufacturing.handoff import export_handoff
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         _install_export_stubs(monkeypatch, tmp_path)
@@ -332,15 +332,15 @@ class TestExportHandoff:
 
     def test_handoff_blocks_on_drc_failure(self, tmp_path: Path, monkeypatch) -> None:
         """DRC fail (passed=False, error_message=None) -> no zip created (HANDOFF-06)."""
-        from kicad_agent.manufacturing.handoff import export_handoff
-        from kicad_agent.validation.erc_drc import DrcResult
+        from volta.manufacturing.handoff import export_handoff
+        from volta.validation.erc_drc import DrcResult
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         _install_export_stubs(monkeypatch, tmp_path)
         _stub_board_stats(monkeypatch)
 
         # Stub run_drc on the handoff module's imported reference (lazy import).
-        import kicad_agent.validation.erc_drc as erc_drc_mod
+        import volta.validation.erc_drc as erc_drc_mod
 
         def _fail_drc(pcb_path, **kwargs):
             return DrcResult(
@@ -363,7 +363,7 @@ class TestExportHandoff:
 
     def test_handoff_includes_all_artifacts(self, tmp_path: Path, monkeypatch) -> None:
         """Zip contains gerber, drill, bom, cpl, manifest.json, readme.md."""
-        from kicad_agent.manufacturing.handoff import export_handoff
+        from volta.manufacturing.handoff import export_handoff
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         sch_path = _create_minimal_sch(tmp_path)
@@ -390,7 +390,7 @@ class TestExportHandoff:
 
     def test_handoff_step_excluded_when_flag_false(self, tmp_path: Path, monkeypatch) -> None:
         """include_step=False -> no .step file in the zip (HANDOFF-07)."""
-        from kicad_agent.manufacturing.handoff import export_handoff
+        from volta.manufacturing.handoff import export_handoff
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         _install_export_stubs(monkeypatch, tmp_path)
@@ -409,7 +409,7 @@ class TestExportHandoff:
 
     def test_handoff_step_included_when_flag_true(self, tmp_path: Path, monkeypatch) -> None:
         """include_step=True (default) -> .step file present in the zip."""
-        from kicad_agent.manufacturing.handoff import export_handoff
+        from volta.manufacturing.handoff import export_handoff
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         _install_export_stubs(monkeypatch, tmp_path)
@@ -428,14 +428,14 @@ class TestExportHandoff:
 
     def test_handoff_no_partial_state_on_failure(self, tmp_path: Path, monkeypatch) -> None:
         """After a validation failure, no builds/handoff_* dir remains."""
-        from kicad_agent.manufacturing.handoff import export_handoff
-        from kicad_agent.validation.erc_drc import DrcResult
+        from volta.manufacturing.handoff import export_handoff
+        from volta.validation.erc_drc import DrcResult
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         _install_export_stubs(monkeypatch, tmp_path)
         _stub_board_stats(monkeypatch)
 
-        import kicad_agent.validation.erc_drc as erc_drc_mod
+        import volta.validation.erc_drc as erc_drc_mod
 
         monkeypatch.setattr(
             erc_drc_mod,
@@ -450,7 +450,7 @@ class TestExportHandoff:
 
     def test_handoff_arcname_no_path_separator(self, tmp_path: Path, monkeypatch) -> None:
         """Every name in the zip namelist has no / or \\ (TM-2)."""
-        from kicad_agent.manufacturing.handoff import export_handoff
+        from volta.manufacturing.handoff import export_handoff
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         _install_export_stubs(monkeypatch, tmp_path)
@@ -470,7 +470,7 @@ class TestExportHandoff:
 
     def test_target_file_unchanged(self, tmp_path: Path, monkeypatch) -> None:
         """The .kicad_pcb bytes are identical before and after export_handoff."""
-        from kicad_agent.manufacturing.handoff import export_handoff
+        from volta.manufacturing.handoff import export_handoff
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         before = pcb_path.read_bytes()
@@ -488,14 +488,14 @@ class TestExportHandoff:
 
     def test_handoff_drc_inconclusive_does_not_block(self, tmp_path: Path, monkeypatch) -> None:
         """kicad-cli absent (error_message set) -> None -> does NOT block (graceful degradation)."""
-        from kicad_agent.manufacturing.handoff import export_handoff
-        from kicad_agent.validation.erc_drc import DrcResult
+        from volta.manufacturing.handoff import export_handoff
+        from volta.validation.erc_drc import DrcResult
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         _install_export_stubs(monkeypatch, tmp_path)
         _stub_board_stats(monkeypatch)
 
-        import kicad_agent.validation.erc_drc as erc_drc_mod
+        import volta.validation.erc_drc as erc_drc_mod
 
         monkeypatch.setattr(
             erc_drc_mod,
@@ -511,7 +511,7 @@ class TestExportHandoff:
 
     def test_handoff_manifest_has_validation_proof(self, tmp_path: Path, monkeypatch) -> None:
         """Manifest records drc_passed/erc_passed/violation counts (HANDOFF-09)."""
-        from kicad_agent.manufacturing.handoff import export_handoff
+        from volta.manufacturing.handoff import export_handoff
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         _install_export_stubs(monkeypatch, tmp_path)
@@ -532,16 +532,16 @@ class TestExportHandoff:
 
     def test_handoff_vendor_drc_blocks_on_failure(self, tmp_path: Path, monkeypatch) -> None:
         """Vendor DRC fail (passed=False, no error_message) -> no zip."""
-        from kicad_agent.manufacturing.handoff import export_handoff
-        from kicad_agent.validation.erc_drc import DrcResult, ErcResult
-        from kicad_agent.manufacturing.vendor_drc import VendorDrcResult
+        from volta.manufacturing.handoff import export_handoff
+        from volta.validation.erc_drc import DrcResult, ErcResult
+        from volta.manufacturing.vendor_drc import VendorDrcResult
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         _install_export_stubs(monkeypatch, tmp_path)
         _stub_board_stats(monkeypatch)
 
-        import kicad_agent.validation.erc_drc as erc_drc_mod
-        import kicad_agent.manufacturing.vendor_drc as vdrc_mod
+        import volta.validation.erc_drc as erc_drc_mod
+        import volta.manufacturing.vendor_drc as vdrc_mod
 
         monkeypatch.setattr(
             erc_drc_mod, "run_drc",
@@ -565,12 +565,12 @@ class TestReadmeGeneration:
     """Tests for _generate_readme (Task 4)."""
 
     def _make_title_block(self, title="My Board", rev="2.0", company="Acme"):
-        from kicad_agent.parser.pcb_native_types import NativeTitleBlock
+        from volta.parser.pcb_native_types import NativeTitleBlock
 
         return NativeTitleBlock(title=title, rev=rev, company=company)
 
     def test_readme_has_board_name(self, tmp_path: Path, monkeypatch) -> None:
-        from kicad_agent.manufacturing.handoff import export_handoff
+        from volta.manufacturing.handoff import export_handoff
 
         pcb_path = _create_pcb_with_title_block(tmp_path, title="Unique Board Name")
         _install_export_stubs(monkeypatch, tmp_path)
@@ -590,8 +590,8 @@ class TestReadmeGeneration:
 
     def test_readme_has_surface_finish(self, tmp_path: Path, monkeypatch) -> None:
         """When a BoardSpec sidecar exists with surface_finish=ENIG, readme contains ENIG."""
-        from kicad_agent.manufacturing.handoff import export_handoff
-        from kicad_agent.manufacturing.board_spec import (
+        from volta.manufacturing.handoff import export_handoff
+        from volta.manufacturing.board_spec import (
             BoardSpec,
             SurfaceFinish,
             save_board_spec,
@@ -615,7 +615,7 @@ class TestReadmeGeneration:
         assert "ENIG" in readme
 
     def test_readme_has_validation_results(self, tmp_path: Path, monkeypatch) -> None:
-        from kicad_agent.manufacturing.handoff import export_handoff
+        from volta.manufacturing.handoff import export_handoff
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         _install_export_stubs(monkeypatch, tmp_path)
@@ -634,7 +634,7 @@ class TestReadmeGeneration:
         assert any(w in readme for w in ("passed", "failed", "inconclusive"))
 
     def test_readme_has_dimensions(self, tmp_path: Path, monkeypatch) -> None:
-        from kicad_agent.manufacturing.handoff import export_handoff
+        from volta.manufacturing.handoff import export_handoff
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
         _install_export_stubs(monkeypatch, tmp_path)
@@ -663,7 +663,7 @@ class TestReadmeGeneration:
 
     def test_readme_handles_missing_board_spec(self, tmp_path: Path, monkeypatch) -> None:
         """No sidecar -> readme still generates with 'not specified' placeholders."""
-        from kicad_agent.manufacturing.handoff import _generate_readme, HandoffValidation
+        from volta.manufacturing.handoff import _generate_readme, HandoffValidation
 
         readme = _generate_readme(
             title_block=self._make_title_block(),

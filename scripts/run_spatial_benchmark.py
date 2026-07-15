@@ -29,11 +29,11 @@ from pathlib import Path
 # Add project root to path.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.analysis.benchmark_runner import (
+from volta.analysis.benchmark_runner import (
     BenchmarkRunner,
     QwenTextAdapter,
 )
-from kicad_agent.analysis.spatial_benchmark import TaskGenerator
+from volta.analysis.spatial_benchmark import TaskGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ def main() -> None:
     if args.gemma:
         print("Loading Gemma 4 12B (vision)...")
         try:
-            from kicad_agent.analysis.benchmark_runner import GemmaVisionAdapter
+            from volta.analysis.benchmark_runner import GemmaVisionAdapter
 
             gemma = GemmaVisionAdapter()
             if gemma.is_available():

@@ -7,13 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ai_tracking import (
+from volta.ai_tracking import (
     GapAnalyzer,
     GapReport,
     InterventionEvent,
     InterventionTracker,
 )
-from kicad_agent.ai_tracking.stats import format_stats_report
+from volta.ai_tracking.stats import format_stats_report
 
 
 def _make_event(

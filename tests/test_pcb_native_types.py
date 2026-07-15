@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.parser.pcb_native_parser import NativeParser
-from kicad_agent.parser.pcb_native_types import (
+from volta.parser.pcb_native_parser import NativeParser
+from volta.parser.pcb_native_types import (
     NativeBoard,
     NativeFootprint,
     NativeNet,

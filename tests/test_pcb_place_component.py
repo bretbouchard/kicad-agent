@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+from volta.ops.pcb_raw_writer import PcbRawWriter
 
 
 # ---------------------------------------------------------------------------
@@ -259,7 +259,7 @@ class TestPlaceComponentSchema:
     """PlaceComponentOp Pydantic validation."""
 
     def test_valid_op(self):
-        from kicad_agent.ops._schema_pcb import PlaceComponentOp
+        from volta.ops._schema_pcb import PlaceComponentOp
         op = PlaceComponentOp(
             op_type="place_component",
             target_file="test.kicad_pcb",
@@ -275,7 +275,7 @@ class TestPlaceComponentSchema:
         assert op.layer == "F.Cu"
 
     def test_invalid_layer_rejected(self):
-        from kicad_agent.ops._schema_pcb import PlaceComponentOp
+        from volta.ops._schema_pcb import PlaceComponentOp
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             PlaceComponentOp(
@@ -289,7 +289,7 @@ class TestPlaceComponentSchema:
 
     def test_invalid_ref_rejected(self):
         """Reference designator cannot contain parens/quotes."""
-        from kicad_agent.ops._schema_pcb import PlaceComponentOp
+        from volta.ops._schema_pcb import PlaceComponentOp
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             PlaceComponentOp(
@@ -301,7 +301,7 @@ class TestPlaceComponentSchema:
             )
 
     def test_defaults_layer_and_rotation(self):
-        from kicad_agent.ops._schema_pcb import PlaceComponentOp
+        from volta.ops._schema_pcb import PlaceComponentOp
         op = PlaceComponentOp(
             op_type="place_component",
             target_file="test.kicad_pcb",
@@ -322,11 +322,11 @@ class TestPlaceComponentExecutor:
     """End-to-end handler dispatch via OperationExecutor."""
 
     def test_place_component_via_executor(self, pcb_path):
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -354,11 +354,11 @@ class TestPlaceComponentExecutor:
 
     def test_executor_unsupported_footprint_raises(self, pcb_path):
         """Unsupported footprint via executor propagates ValueError."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -376,11 +376,11 @@ class TestPlaceComponentExecutor:
 
     def test_two_components_unique_uuids_on_disk(self, pcb_path):
         """Two consecutive place_component ops produce all-unique UUIDs on disk."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=pcb_path.parent)
 
@@ -420,11 +420,11 @@ class TestPlaceComponentRoundTrip:
         so we verify that placing a component adds bytes and stripping (by
         re-writing the original minimal PCB) removes them cleanly.
         """
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         # Place
         op = Operation.model_validate({
@@ -453,11 +453,11 @@ class TestPlaceComponentRoundTrip:
 
     def test_round_trip_place_three_distinct_footprints(self, pcb_path):
         """Place three distinct footprints and verify all three are on disk."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=pcb_path.parent)
 

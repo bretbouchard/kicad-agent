@@ -106,7 +106,7 @@ class TestListOperations:
         some canonical KiCad operations."""
         result = list_operations({}, ctx)
         if result["count"] == 0:
-            pytest.skip("kicad_agent.ops.registry not importable in this env")
+            pytest.skip("volta.ops.registry not importable in this env")
         # add_wire is one of the most fundamental ops — should always be there.
         assert "add_wire" in result["operations"]
 

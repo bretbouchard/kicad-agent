@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from unittest.mock import MagicMock
 from typing import Any
 
-from kicad_agent.ops.erc_parser import ErcViolation
+from volta.ops.erc_parser import ErcViolation
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +64,7 @@ class TestClassifyViolationsSchema:
 
     def test_schema_with_target_file_only(self):
         """Schema validates with target_file, erc_report_path defaults to None."""
-        from kicad_agent.ops._schema_erc_smart import ClassifyViolationsOp
+        from volta.ops._schema_erc_smart import ClassifyViolationsOp
         op = ClassifyViolationsOp(target_file="test.kicad_sch")
         assert op.op_type == "classify_violations"
         assert op.target_file == "test.kicad_sch"
@@ -72,7 +72,7 @@ class TestClassifyViolationsSchema:
 
     def test_schema_with_erc_report_path(self):
         """Schema validates when erc_report_path is provided."""
-        from kicad_agent.ops._schema_erc_smart import ClassifyViolationsOp
+        from volta.ops._schema_erc_smart import ClassifyViolationsOp
         op = ClassifyViolationsOp(
             target_file="test.kicad_sch",
             erc_report_path="/tmp/erc_report.rpt",
@@ -81,7 +81,7 @@ class TestClassifyViolationsSchema:
 
     def test_schema_target_file_validation(self):
         """Invalid target_file is rejected by TargetFile type."""
-        from kicad_agent.ops._schema_erc_smart import ClassifyViolationsOp
+        from volta.ops._schema_erc_smart import ClassifyViolationsOp
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             ClassifyViolationsOp(target_file="../etc/passwd")
@@ -92,7 +92,7 @@ class TestClassifyViolations:
 
     def test_empty_violations_returns_empty_categories(self):
         """Empty violation list produces empty categories and zero summary."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir()
         result = classify_violations([], ir, Path("test.kicad_sch"))
         assert result["fixable"] == []
@@ -107,7 +107,7 @@ class TestClassifyViolations:
 
     def test_power_pin_not_driven_power_global_is_pre_existing(self):
         """power_pin_not_driven with '(power global)' -> pre_existing, high confidence."""
-        from kicad_agent.ops.violation_classifier import classify_violations, ViolationCategory
+        from volta.ops.violation_classifier import classify_violations, ViolationCategory
         ir = _mock_ir()
         violations = [
             _v(
@@ -125,7 +125,7 @@ class TestClassifyViolations:
 
     def test_pin_not_connected_pwr_symbol_is_pre_existing(self):
         """pin_not_connected on a #PWR symbol with no wire/label -> pre_existing."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         # Pin at position (85.09, 62.23) with a #PWR symbol at that location
         # but no wire or label connecting to it
         ir = _mock_ir(
@@ -151,7 +151,7 @@ class TestClassifyViolations:
 
     def test_same_local_global_label_is_benign(self):
         """same_local_global_label -> benign, cosmetic duplicate."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir()
         violations = [
             _v("same_local_global_label", description="Same local and global label GND"),
@@ -164,7 +164,7 @@ class TestClassifyViolations:
 
     def test_missing_unit_is_benign(self):
         """missing_unit -> benign, unused unit by design."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir()
         violations = [
             _v("missing_unit", description="Missing unit U? unit 3"),
@@ -177,7 +177,7 @@ class TestClassifyViolations:
 
     def test_lib_symbol_issues_is_config_issue(self):
         """lib_symbol_issues -> config_issue, missing library."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir()
         violations = [
             _v("lib_symbol_issues", description="Library symbol issues in U1"),
@@ -190,7 +190,7 @@ class TestClassifyViolations:
 
     def test_multiple_net_names_is_fixable(self):
         """multiple_net_names at known overlap position -> fixable, high confidence."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir()
         violations = [
             _v(
@@ -208,7 +208,7 @@ class TestClassifyViolations:
 
     def test_pin_to_pin_unspecified_is_pre_existing(self):
         """pin_to_pin (Unspecified vs Power input) -> pre_existing."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir()
         violations = [
             _v(
@@ -225,7 +225,7 @@ class TestClassifyViolations:
 
     def test_pin_not_connected_non_power_is_fixable(self):
         """pin_not_connected (non-power pin, no wire) -> fixable, high confidence."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir(
             pin_positions=[{
                 "ref": "R1",
@@ -249,7 +249,7 @@ class TestClassifyViolations:
 
     def test_power_pin_not_driven_default_is_fixable(self):
         """power_pin_not_driven without '(power global)' -> fixable, missing power symbol."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir()
         violations = [
             _v(
@@ -266,7 +266,7 @@ class TestClassifyViolations:
 
     def test_unknown_violation_type_is_fixable_low_confidence(self):
         """Any unmatched violation type -> fixable, low confidence, 'unknown' root cause."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir()
         violations = [
             _v("some_unknown_type", description="Something weird happened"),
@@ -284,7 +284,7 @@ class TestCategoryCounts:
 
     def test_summary_totals_match(self):
         """Summary total = fixable + pre_existing + benign + config."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir()
         violations = [
             _v("same_local_global_label", description="GND label dup"),
@@ -311,7 +311,7 @@ class TestCategoryCounts:
 
     def test_each_classified_violation_has_required_fields(self):
         """Each classified violation dict has category, confidence, root_cause, details."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir()
         violations = [
             _v("same_local_global_label", description="GND label dup"),
@@ -353,12 +353,12 @@ class TestExecutorRegistration:
 
     def test_classify_violations_in_schematic_handlers(self):
         """'classify_violations' key exists in _SCHEMATIC_QUERY_HANDLERS."""
-        from kicad_agent.ops.executor import _SCHEMATIC_QUERY_HANDLERS
+        from volta.ops.executor import _SCHEMATIC_QUERY_HANDLERS
         assert "classify_violations" in _SCHEMATIC_QUERY_HANDLERS
 
     def test_operation_union_validates_classify_violations(self):
         """ClassifyViolationsOp validates through Operation discriminated union."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
         op = Operation.model_validate({
             "root": {
                 "op_type": "classify_violations",
@@ -369,7 +369,7 @@ class TestExecutorRegistration:
 
     def test_existing_erc_auto_fix_tests_still_pass(self):
         """Verify no regression -- import and validate ErcAutoFixOp."""
-        from kicad_agent.ops._schema_erc_smart import ErcAutoFixOp
+        from volta.ops._schema_erc_smart import ErcAutoFixOp
         op = ErcAutoFixOp(target_file="test.kicad_sch")
         assert op.op_type == "erc_auto_fix"
         assert op.max_iterations == 3
@@ -380,7 +380,7 @@ class TestSwitchDiodeWireDanglingFP:
 
     def test_switch_diode_wire_dangling_is_benign(self):
         """wire_dangling near switch and diode pins -> BENIGN, medium confidence."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir(
             pin_positions=[
                 {
@@ -417,7 +417,7 @@ class TestSwitchDiodeWireDanglingFP:
 
     def test_generic_wire_dangling_stays_fixable(self):
         """wire_dangling not near switch/diode -> stays FIXABLE (default)."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir(
             pin_positions=[
                 {
@@ -444,7 +444,7 @@ class TestSwitchDiodeWireDanglingFP:
 
     def test_switch_only_wire_dangling_stays_fixable(self):
         """wire_dangling near switch but NOT diode -> stays FIXABLE."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir(
             pin_positions=[
                 {
@@ -469,7 +469,7 @@ class TestSwitchDiodeWireDanglingFP:
 
     def test_diode_only_wire_dangling_stays_fixable(self):
         """wire_dangling near diode but NOT switch -> stays FIXABLE."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir(
             pin_positions=[
                 {
@@ -494,7 +494,7 @@ class TestSwitchDiodeWireDanglingFP:
 
     def test_no_pin_data_wire_dangling_stays_fixable(self):
         """wire_dangling with no pin data -> stays FIXABLE."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir()
         violations = [
             _v(
@@ -509,7 +509,7 @@ class TestSwitchDiodeWireDanglingFP:
 
     def test_button_lib_id_detected_as_switch(self):
         """Button library IDs are detected as switch symbols."""
-        from kicad_agent.ops.violation_classifier import classify_violations
+        from volta.ops.violation_classifier import classify_violations
         ir = _mock_ir(
             pin_positions=[
                 {

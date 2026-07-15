@@ -42,7 +42,7 @@ from mlx_lm.tuner.trainer import TrainingArgs
 from mlx_lm.tuner.utils import linear_to_lora_layers
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from kicad_agent.training.reward_model import RewardModel, predict_reward
+from volta.training.reward_model import RewardModel, predict_reward
 
 
 SYSTEM_PROMPT = (

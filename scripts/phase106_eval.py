@@ -24,13 +24,13 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from kicad_agent.parser.pcb_native_parser import NativeParser
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.routing.constraints import RoutingConstraints
-from kicad_agent.routing.diagnostician import BlockerDiagnostician
-from kicad_agent.routing.diagnostician_model import BlockerDiagnosticianModel
-from kicad_agent.routing.pathfinder import RouteFailure
-from kicad_agent.spatial.primitives import SpatialBox
+from volta.parser.pcb_native_parser import NativeParser
+from volta.ir.pcb_ir import PcbIR
+from volta.routing.constraints import RoutingConstraints
+from volta.routing.diagnostician import BlockerDiagnostician
+from volta.routing.diagnostician_model import BlockerDiagnosticianModel
+from volta.routing.pathfinder import RouteFailure
+from volta.spatial.primitives import SpatialBox
 
 _FIXTURES = [
     PROJECT_ROOT / "tests" / "fixtures" / "Arduino_Mega" / "Arduino_Mega.kicad_pcb",
@@ -59,7 +59,7 @@ def load_model_diagnostician(
     adapter_path: Path,
 ) -> BlockerDiagnosticianModel:
     """Load the model-based diagnostician with the phase106 adapter."""
-    from kicad_agent.inference.vision_pipeline import (
+    from volta.inference.vision_pipeline import (
         KiCadVisionConfig,
         KiCadVisionPipeline,
     )
@@ -119,8 +119,8 @@ def generate_eval_failures(
     rng = random.Random(42)
     failures: list[RouteFailure] = []
 
-    from kicad_agent.routing.graph import RoutingGraph
-    from kicad_agent.routing.pathfinder import route_net
+    from volta.routing.graph import RoutingGraph
+    from volta.routing.pathfinder import route_net
 
     for i in range(5):
         kx = x_min + width * (0.3 + 0.4 * rng.random())

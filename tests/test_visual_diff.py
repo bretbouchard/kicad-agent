@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.demo.pipeline import DemoReport
+from volta.demo.pipeline import DemoReport
 
 
 # ---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ class TestVisualDiffer:
 
     def test_compare_detects_changes(self, before_svg, after_svg):
         """compare() detects added and modified elements."""
-        from kicad_agent.spatial.visual_diff import VisualDiffer
+        from volta.spatial.visual_diff import VisualDiffer
 
         differ = VisualDiffer()
         result = differ.compare(before_svg, after_svg)
@@ -59,7 +59,7 @@ class TestVisualDiffer:
 
     def test_compare_produces_diff_svg(self, before_svg, after_svg, tmp_path):
         """compare() produces a diff SVG file."""
-        from kicad_agent.spatial.visual_diff import VisualDiffer
+        from volta.spatial.visual_diff import VisualDiffer
 
         output = tmp_path / "diff.svg"
         differ = VisualDiffer()
@@ -70,7 +70,7 @@ class TestVisualDiffer:
 
     def test_identical_svgs_no_changes(self, tmp_path):
         """Identical SVGs produce no changes."""
-        from kicad_agent.spatial.visual_diff import VisualDiffer
+        from volta.spatial.visual_diff import VisualDiffer
 
         svg = tmp_path / "same.svg"
         svg.write_text(BEFORE_SVG)
@@ -83,7 +83,7 @@ class TestVisualDiffer:
 
     def test_diff_result_has_summary(self, before_svg, after_svg, tmp_path):
         """VisualDiffResult includes a summary string."""
-        from kicad_agent.spatial.visual_diff import VisualDiffer
+        from volta.spatial.visual_diff import VisualDiffer
 
         differ = VisualDiffer()
         result = differ.compare(before_svg, after_svg)
@@ -101,7 +101,7 @@ class TestReportGenerator:
 
     def test_generate_markdown(self):
         """generate() produces valid Markdown."""
-        from kicad_agent.demo.report_generator import ReportGenerator
+        from volta.demo.report_generator import ReportGenerator
 
         report = DemoReport(
             template_used="rc-lowpass",
@@ -123,7 +123,7 @@ class TestReportGenerator:
 
     def test_generate_with_errors(self):
         """Report includes errors section when errors present."""
-        from kicad_agent.demo.report_generator import ReportGenerator
+        from volta.demo.report_generator import ReportGenerator
 
         report = DemoReport(
             template_used="test",
@@ -139,7 +139,7 @@ class TestReportGenerator:
 
     def test_save_creates_file(self, tmp_path):
         """save() writes Markdown to file."""
-        from kicad_agent.demo.report_generator import ReportGenerator
+        from volta.demo.report_generator import ReportGenerator
 
         report = DemoReport(template_used="rc-lowpass", success=True)
         gen = ReportGenerator(output_dir=tmp_path)

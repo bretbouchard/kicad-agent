@@ -18,9 +18,9 @@ import pytest
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCHEMA_PATH = REPO_ROOT / "src" / "kicad_agent" / "ops" / "schema.py"
-SCHEMA_SUBMODULES_DIR = REPO_ROOT / "src" / "kicad_agent" / "ops"
-EXECUTOR_PATH = REPO_ROOT / "src" / "kicad_agent" / "ops" / "executor.py"
+SCHEMA_PATH = REPO_ROOT / "src" / "volta" / "ops" / "schema.py"
+SCHEMA_SUBMODULES_DIR = REPO_ROOT / "src" / "volta" / "ops"
+EXECUTOR_PATH = REPO_ROOT / "src" / "volta" / "ops" / "executor.py"
 PROMPT_PATH = REPO_ROOT / "skills" / "prompt.md"
 SKILL_PATH = REPO_ROOT / "skills" / "SKILL.md"
 README_PATH = REPO_ROOT / "README.md"
@@ -53,7 +53,7 @@ class TestBusOperationsRemoved:
 
     def test_operation_union_rejects_add_bus(self) -> None:
         """Operation discriminated union must reject op_type='add_bus'."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         with pytest.raises(Exception):
             Operation.model_validate({
@@ -67,7 +67,7 @@ class TestBusOperationsRemoved:
 
     def test_operation_union_rejects_remove_bus(self) -> None:
         """Operation discriminated union must reject op_type='remove_bus'."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         with pytest.raises(Exception):
             Operation.model_validate({
@@ -106,7 +106,7 @@ class TestValidateFootprintReal:
 
     def test_validate_footprint_returns_false_for_missing(self, tmp_path: Path) -> None:
         """validate_footprint must return valid=False for non-existent footprint."""
-        from kicad_agent.ops.handlers.pcb import _validate_footprint_impl
+        from volta.ops.handlers.pcb import _validate_footprint_impl
 
         result = _validate_footprint_impl(
             "NonexistentLib:NonexistentFootprint",
@@ -117,7 +117,7 @@ class TestValidateFootprintReal:
 
     def test_validate_footprint_returns_false_when_no_lib_table(self, tmp_path: Path) -> None:
         """validate_footprint must return valid=False when fp-lib-table is missing."""
-        from kicad_agent.ops.handlers.pcb import _validate_footprint_impl
+        from volta.ops.handlers.pcb import _validate_footprint_impl
 
         # tmp_path has no fp-lib-table, so any lookup should fail
         result = _validate_footprint_impl(
@@ -129,7 +129,7 @@ class TestValidateFootprintReal:
 
     def test_validate_footprint_invalid_lib_id(self, tmp_path: Path) -> None:
         """validate_footprint must return valid=False for malformed lib_id."""
-        from kicad_agent.ops.handlers.pcb import _validate_footprint_impl
+        from volta.ops.handlers.pcb import _validate_footprint_impl
 
         result = _validate_footprint_impl(
             "NoColonHere",
@@ -140,7 +140,7 @@ class TestValidateFootprintReal:
 
     def test_validate_footprint_result_has_lib_id(self, tmp_path: Path) -> None:
         """Result always includes the footprint_lib_id that was checked."""
-        from kicad_agent.ops.handlers.pcb import _validate_footprint_impl
+        from volta.ops.handlers.pcb import _validate_footprint_impl
 
         result = _validate_footprint_impl(
             "Library:Footprint",
@@ -214,7 +214,7 @@ class TestPromptSchemaFieldConsistency:
 
     def test_parse_erc_no_erc_report_path(self) -> None:
         """parse_erc in prompt.md must not reference erc_report_path (schema lacks it)."""
-        from kicad_agent.ops.schema import ParseErcOp
+        from volta.ops.schema import ParseErcOp
 
         fields = ParseErcOp.model_fields
         assert "erc_report_path" not in fields, (
@@ -223,7 +223,7 @@ class TestPromptSchemaFieldConsistency:
 
     def test_extract_violation_no_erc_report_path(self) -> None:
         """extract_violation_positions must not reference erc_report_path if schema lacks it."""
-        from kicad_agent.ops.schema import ExtractViolationPositionsOp
+        from volta.ops.schema import ExtractViolationPositionsOp
 
         fields = ExtractViolationPositionsOp.model_fields
         assert "erc_report_path" not in fields, (
@@ -232,7 +232,7 @@ class TestPromptSchemaFieldConsistency:
 
     def test_add_power_flag_no_erc_report_path(self) -> None:
         """add_power_flag must not reference erc_report_path if schema lacks it."""
-        from kicad_agent.ops.schema import AddPowerFlagOp
+        from volta.ops.schema import AddPowerFlagOp
 
         fields = AddPowerFlagOp.model_fields
         assert "erc_report_path" not in fields, (

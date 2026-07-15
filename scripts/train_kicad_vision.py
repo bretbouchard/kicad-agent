@@ -59,7 +59,7 @@ def main() -> int:
             print("Error: --input required for --convert", file=sys.stderr)
             return 1
 
-        from kicad_agent.training.vision_data_builder import build_vision_dataset
+        from volta.training.vision_data_builder import build_vision_dataset
 
         print(f"Converting {args.input} to vision dataset...")
         count = build_vision_dataset(
@@ -71,7 +71,7 @@ def main() -> int:
         print(f"Converted {count} samples to {args.output_dir}")
 
     if args.train:
-        from kicad_agent.training.vision_lora_trainer import (
+        from volta.training.vision_lora_trainer import (
             KiCadVisionSFTConfig,
             run_kicad_vision_lora,
         )

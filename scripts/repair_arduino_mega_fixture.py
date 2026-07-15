@@ -8,7 +8,7 @@ KiCad 10's strict parser rejects symbols missing required fields:
 blocks, ``(instances ...)``, and rotation on ``(at X Y R)``.
 
 This script delegates to the canonical normalizer at
-``kicad_agent.schematic_autolayout.symbol_normalizer`` — the SAME module
+``volta.schematic_autolayout.symbol_normalizer`` — the SAME module
 the autolayout pipeline uses internally. One source of truth for the
 repair logic; this script is just a CLI wrapper for one-off fixture repair.
 
@@ -26,7 +26,7 @@ from pathlib import Path
 # Add src to path so the import works when run from the repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.schematic_autolayout.symbol_normalizer import normalize_placed_symbols
+from volta.schematic_autolayout.symbol_normalizer import normalize_placed_symbols
 
 FIXTURE = Path(__file__).resolve().parent.parent / "tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_sch"
 

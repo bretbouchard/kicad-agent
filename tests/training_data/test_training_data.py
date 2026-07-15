@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.training_data import (
+from volta.training_data import (
     TrainingExample,
     generate_nl_description,
     create_training_example,
     convert_schematic_to_training_data,
     batch_convert_schematics,
 )
-from kicad_agent.circuit_ir.types import (
+from volta.circuit_ir.types import (
     CircuitIR,
     NetDescriptor,
     PartDescriptor,

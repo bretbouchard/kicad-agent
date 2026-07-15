@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pathlib import Path
 
-from kicad_agent.evaluation.vision_benchmark import VisionBenchmarkResult
+from volta.evaluation.vision_benchmark import VisionBenchmarkResult
 
 
 class TestVisionBenchmarkResult:

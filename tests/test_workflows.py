@@ -2,8 +2,8 @@
 
 import pytest
 
-from kicad_agent.ops.registry import OPERATION_REGISTRY, validate_dependencies, validate_conflicts
-from kicad_agent.ops.workflows import (
+from volta.ops.registry import OPERATION_REGISTRY, validate_dependencies, validate_conflicts
+from volta.ops.workflows import (
     WORKFLOW_TEMPLATES,
     WorkflowStep,
     WorkflowTemplate,

@@ -13,8 +13,8 @@ import pytest
 
 
 def _run(*args: str, cwd: str | None = None) -> subprocess.CompletedProcess[str]:
-    """Invoke the CLI via ``python -m kicad_agent.cli``."""
-    cmd = [sys.executable, "-m", "kicad_agent.cli", *args]
+    """Invoke the CLI via ``python -m volta.cli``."""
+    cmd = [sys.executable, "-m", "volta.cli", *args]
     # Inherit PYTHONPATH so the uninstalled source tree (src/) is importable.
     import os
     env = dict(os.environ)
@@ -48,8 +48,8 @@ class TestRoutePathOutsideCwd:
         mock_result.success = True
         mock_result.details = {"routed_nets": 3, "segments": 12, "failed_nets": []}
 
-        with patch("kicad_agent.handler.handle_operation", return_value=mock_result):
-            from kicad_agent.cli import main
+        with patch("volta.handler.handle_operation", return_value=mock_result):
+            from volta.cli import main
 
             # This used to raise ValueError -- now it should succeed
             with pytest.raises(SystemExit) as exc_info:
@@ -70,8 +70,8 @@ class TestRoutePathOutsideCwd:
         mock_result.success = True
         mock_result.details = {"routed_nets": 1, "segments": 5, "failed_nets": []}
 
-        with patch("kicad_agent.handler.handle_operation", return_value=mock_result) as mock_handle:
-            from kicad_agent.cli import main
+        with patch("volta.handler.handle_operation", return_value=mock_result) as mock_handle:
+            from volta.cli import main
 
             with pytest.raises(SystemExit) as exc_info:
                 main(["route", str(pcb_file)])
@@ -93,8 +93,8 @@ class TestRoutePathOutsideCwd:
         mock_result.success = True
         mock_result.details = {"routed_nets": 2, "segments": 8, "failed_nets": []}
 
-        with patch("kicad_agent.handler.handle_operation", return_value=mock_result):
-            from kicad_agent.cli import main
+        with patch("volta.handler.handle_operation", return_value=mock_result):
+            from volta.cli import main
 
             with pytest.raises(SystemExit) as exc_info:
                 main(["route", str(pcb_file)])
@@ -172,8 +172,8 @@ class TestComponentSearchHelp:
     ) -> None:
         """``--help`` should be handled by argparse before the MCP import."""
         # Use in-process call to verify MCP server is never imported
-        with patch("kicad_agent.mcp.server.main") as mock_mcp_main:
-            from kicad_agent.cli import main
+        with patch("volta.mcp.server.main") as mock_mcp_main:
+            from volta.cli import main
 
             with pytest.raises(SystemExit) as exc_info:
                 main(["component-search", "--help"])

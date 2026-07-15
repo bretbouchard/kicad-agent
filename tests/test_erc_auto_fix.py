@@ -12,15 +12,15 @@ Covers:
 import pytest
 from pathlib import Path
 
-from kicad_agent.ops._schema_library import UpdateSymbolsFromLibraryOp
-from kicad_agent.ops._schema_repair import (
+from volta.ops._schema_library import UpdateSymbolsFromLibraryOp
+from volta.ops._schema_repair import (
     FixShortedNetsOp,
     FixPinTypeMismatchesOp,
     PlaceMissingUnitsOp,
     RemoveDanglingWiresOp,
     BreakWireShortsOp,
 )
-from kicad_agent.ir.schematic_ir import SchematicIR
+from volta.ir.schematic_ir import SchematicIR
 
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
@@ -32,7 +32,7 @@ def arduino_ir():
     """Load Arduino Mega schematic as IR."""
     if not ARDUINO_SCH.exists():
         pytest.skip("Arduino_Mega fixture not found")
-    from kicad_agent.parser import parse_schematic
+    from volta.parser import parse_schematic
     result = parse_schematic(ARDUINO_SCH)
     return SchematicIR(_parse_result=result)
 
@@ -132,7 +132,7 @@ class TestSchemas:
 
 class TestUpdateSymbolsFromLibrary:
     def test_dry_run_no_crash(self, arduino_ir):
-        from kicad_agent.ops.repair import update_symbols_from_library
+        from volta.ops.repair import update_symbols_from_library
         result = update_symbols_from_library(
             arduino_ir, ARDUINO_SCH,
             dry_run=True,
@@ -145,7 +145,7 @@ class TestUpdateSymbolsFromLibrary:
 
 class TestFixPinTypeMismatches:
     def test_dry_run_default_map(self, arduino_ir):
-        from kicad_agent.ops.repair import fix_pin_type_mismatches
+        from volta.ops.repair import fix_pin_type_mismatches
         result = fix_pin_type_mismatches(
             arduino_ir, ARDUINO_SCH,
             dry_run=True,
@@ -157,7 +157,7 @@ class TestFixPinTypeMismatches:
             assert p.get("dry_run") is True
 
     def test_custom_map_no_match(self, arduino_ir):
-        from kicad_agent.ops.repair import fix_pin_type_mismatches
+        from volta.ops.repair import fix_pin_type_mismatches
         result = fix_pin_type_mismatches(
             arduino_ir, ARDUINO_SCH,
             pin_type_map={"nonexistent_type": "passive"},
@@ -168,7 +168,7 @@ class TestFixPinTypeMismatches:
 
 class TestFixShortedNets:
     def test_dry_run_no_crash(self, arduino_ir):
-        from kicad_agent.ops.repair import fix_shorted_nets
+        from volta.ops.repair import fix_shorted_nets
         result = fix_shorted_nets(
             arduino_ir, ARDUINO_SCH,
             dry_run=True,
@@ -179,7 +179,7 @@ class TestFixShortedNets:
 
 class TestPlaceMissingUnits:
     def test_dry_run_no_crash(self, arduino_ir):
-        from kicad_agent.ops.repair import place_missing_units
+        from volta.ops.repair import place_missing_units
         result = place_missing_units(
             arduino_ir, ARDUINO_SCH,
             dry_run=True,
@@ -190,7 +190,7 @@ class TestPlaceMissingUnits:
 
 class TestRemoveDanglingWires:
     def test_dry_run_no_crash(self, arduino_ir):
-        from kicad_agent.ops.repair import remove_dangling_wires
+        from volta.ops.repair import remove_dangling_wires
         result = remove_dangling_wires(
             arduino_ir, ARDUINO_SCH,
             dry_run=True,
@@ -199,7 +199,7 @@ class TestRemoveDanglingWires:
         assert isinstance(result["removed_count"], int)
 
     def test_with_max_length(self, arduino_ir):
-        from kicad_agent.ops.repair import remove_dangling_wires
+        from volta.ops.repair import remove_dangling_wires
         result = remove_dangling_wires(
             arduino_ir, ARDUINO_SCH,
             max_length_mm=1.0,
@@ -210,7 +210,7 @@ class TestRemoveDanglingWires:
 
 class TestBreakWireShorts:
     def test_dry_run_no_crash(self, arduino_ir):
-        from kicad_agent.ops.repair import break_wire_shorts
+        from volta.ops.repair import break_wire_shorts
         result = break_wire_shorts(
             arduino_ir, ARDUINO_SCH,
             dry_run=True,
@@ -223,7 +223,7 @@ class TestBreakWireShorts:
 
     def test_no_shorts_returns_clean(self, arduino_ir):
         """With a non-existent pair, should find 0 target shorts."""
-        from kicad_agent.ops.repair import break_wire_shorts
+        from volta.ops.repair import break_wire_shorts
         result = break_wire_shorts(
             arduino_ir, ARDUINO_SCH,
             net_pairs=[["NONEXISTENT_A", "NONEXISTENT_B"]],
@@ -234,7 +234,7 @@ class TestBreakWireShorts:
 
     def test_find_bridge_wires_no_match(self, arduino_ir):
         """find_bridge_wires returns empty for non-existent net pair."""
-        from kicad_agent.ops.repair import find_bridge_wires
+        from volta.ops.repair import find_bridge_wires
         result = find_bridge_wires(arduino_ir, "FAKE_NET_A", "FAKE_NET_B")
         assert result == []
 
@@ -243,7 +243,7 @@ class TestBreakWireShorts:
 
 class TestExecutorDispatch:
     def test_all_registered(self):
-        from kicad_agent.ops.executor import _SCHEMATIC_HANDLERS
+        from volta.ops.executor import _SCHEMATIC_HANDLERS
         ops = [
             "update_symbols_from_library",
             "fix_shorted_nets",
@@ -264,7 +264,7 @@ class TestOpMetaDeprecatedField:
 
     def test_opmeta_has_deprecated_field(self):
         """OpMeta model must have a `deprecated` field of type bool with default False."""
-        from kicad_agent.ops.registry import OpMeta
+        from volta.ops.registry import OpMeta
 
         assert "deprecated" in OpMeta.model_fields, (
             "OpMeta must have a 'deprecated' field"
@@ -286,7 +286,7 @@ class TestOpMetaDeprecatedField:
 
     def test_erc_auto_fix_registry_deprecated_flag(self):
         """OPERATION_REGISTRY['erc_auto_fix'] must have deprecated=True."""
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
 
         meta = OPERATION_REGISTRY.get("erc_auto_fix")
         assert meta is not None, "erc_auto_fix must be in OPERATION_REGISTRY"
@@ -296,7 +296,7 @@ class TestOpMetaDeprecatedField:
 
     def test_erc_auto_fix_hierarchical_registry_deprecated_flag(self):
         """OPERATION_REGISTRY['erc_auto_fix_hierarchical'] must have deprecated=True."""
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
 
         meta = OPERATION_REGISTRY.get("erc_auto_fix_hierarchical")
         assert meta is not None, (
@@ -308,7 +308,7 @@ class TestOpMetaDeprecatedField:
 
     def test_non_deprecated_ops_default_false(self):
         """A sampling of other ops must have deprecated=False (no collateral deprecation)."""
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
 
         sample_ops = [
             "add_component",
@@ -331,7 +331,7 @@ class TestErcAutoFixDeprecationWarning:
     def test_erc_auto_fix_emits_deprecation_warning(self, arduino_ir, tmp_path):
         """erc_auto_fix() must emit DeprecationWarning referencing P0-003."""
         import warnings
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix
+        from volta.ops.erc_auto_fix import erc_auto_fix
 
         # Copy fixture to tmp so we don't mutate the original
         target = tmp_path / "test.kicad_sch"
@@ -361,7 +361,7 @@ class TestErcAutoFixDeprecationWarning:
     def test_erc_auto_fix_hierarchical_emits_deprecation_warning(self, tmp_path):
         """erc_auto_fix_hierarchical() must emit DeprecationWarning referencing P0-003."""
         import warnings
-        from kicad_agent.ops.erc_auto_fix import erc_auto_fix_hierarchical
+        from volta.ops.erc_auto_fix import erc_auto_fix_hierarchical
 
         # Copy fixture to tmp so we don't mutate the original
         target = tmp_path / "test.kicad_sch"
@@ -408,7 +408,7 @@ class TestErcAutoFixRawSExprRewrite:
         completely removed.
         """
         import inspect
-        from kicad_agent.ops import erc_auto_fix
+        from volta.ops import erc_auto_fix
 
         source = inspect.getsource(erc_auto_fix)
         # Exclude comments and docstrings (lines starting with # or inside """)
@@ -436,10 +436,10 @@ class TestErcAutoFixRawSExprRewrite:
 
     def test_erc_auto_fix_uses_atomic_write(self):
         """erc_auto_fix module must import and use atomic_write."""
-        from kicad_agent.ops import erc_auto_fix
+        from volta.ops import erc_auto_fix
 
         assert hasattr(erc_auto_fix, "atomic_write"), (
-            "erc_auto_fix must import atomic_write from kicad_agent.io.atomic_write"
+            "erc_auto_fix must import atomic_write from volta.io.atomic_write"
         )
         assert hasattr(erc_auto_fix, "_persist_ir_raw"), (
             "erc_auto_fix must define _persist_ir_raw helper"
@@ -455,9 +455,9 @@ class TestErcAutoFixRawSExprRewrite:
         - File still valid S-expression (parses via kiutils)
         """
         import warnings
-        from kicad_agent.parser import parse_schematic
-        from kicad_agent.ir.schematic_ir import SchematicIR
-        from kicad_agent.ops.erc_auto_fix import _persist_ir_raw
+        from volta.parser import parse_schematic
+        from volta.ir.schematic_ir import SchematicIR
+        from volta.ops.erc_auto_fix import _persist_ir_raw
 
         # Create a minimal KiCad 10 schematic with distinctive formatting
         original = (
@@ -521,7 +521,7 @@ class TestErcAutoFixRawSExprRewrite:
         lib_symbols at the correct nesting level (top-level lib_symbols
         container).
         """
-        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+        from volta.ops.schematic_raw_writer import SchematicRawWriter
 
         # Minimal schematic with an existing lib_symbol (to detect mis-nesting)
         original = (
@@ -570,7 +570,7 @@ class TestSchematicRawWriter:
     """Unit tests for the SchematicRawWriter helper (P0-003 fix)."""
 
     def test_insert_no_connect(self):
-        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+        from volta.ops.schematic_raw_writer import SchematicRawWriter
 
         content = '(kicad_sch (version 20231120))'
         result = SchematicRawWriter.insert_no_connect(content, 10.0, 20.0)
@@ -578,7 +578,7 @@ class TestSchematicRawWriter:
         assert result.rstrip().endswith(")")
 
     def test_insert_junction(self):
-        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+        from volta.ops.schematic_raw_writer import SchematicRawWriter
 
         content = '(kicad_sch (version 20231120))'
         result = SchematicRawWriter.insert_junction(content, 5.0, 15.0)
@@ -587,7 +587,7 @@ class TestSchematicRawWriter:
 
     def test_insert_power_flag_lib_symbol_nesting(self):
         """PWR_FLAG lib_symbol must go in lib_symbols container, not nested."""
-        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+        from volta.ops.schematic_raw_writer import SchematicRawWriter
 
         content = (
             '(kicad_sch (version 20231120)\n'
@@ -606,7 +606,7 @@ class TestSchematicRawWriter:
         assert '(lib_id "power:PWR_FLAG")' in result
 
     def test_apply_mutation_add_no_connect(self):
-        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+        from volta.ops.schematic_raw_writer import SchematicRawWriter
 
         content = '(kicad_sch (version 20231120))'
         mutation = {"type": "add_no_connect", "position": [10.0, 20.0]}
@@ -614,7 +614,7 @@ class TestSchematicRawWriter:
         assert "(no_connect (at 10.0 20.0)" in result
 
     def test_apply_mutations_multiple(self):
-        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+        from volta.ops.schematic_raw_writer import SchematicRawWriter
 
         content = '(kicad_sch (version 20231120))'
         mutations = [
@@ -626,7 +626,7 @@ class TestSchematicRawWriter:
         assert "(junction (at 30.0 40.0)" in result
 
     def test_unknown_mutation_no_crash(self):
-        from kicad_agent.ops.schematic_raw_writer import SchematicRawWriter
+        from volta.ops.schematic_raw_writer import SchematicRawWriter
 
         content = '(kicad_sch (version 20231120))'
         mutation = {"type": "unknown_future_op", "position": [0.0, 0.0]}

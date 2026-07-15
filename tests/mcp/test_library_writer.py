@@ -1,16 +1,16 @@
-"""Tests for kicad_agent.mcp.library_writer (kicad-agent-4 fix)."""
+"""Tests for volta.mcp.library_writer (kicad-agent-4 fix)."""
 from __future__ import annotations
 
 from pathlib import Path
 
 import pytest
 
-from kicad_agent.crawler.easyeda_api import (
+from volta.crawler.easyeda_api import (
     EasyEdaComponentData,
     EasyEdaFootprintPad,
     EasyEdaPin,
 )
-from kicad_agent.mcp.library_writer import (
+from volta.mcp.library_writer import (
     write_symbol_to_library,
     write_footprint_to_library,
 )
@@ -43,7 +43,7 @@ class TestSymbolWriter:
         content = sym_file.read_text()
         # Header
         assert "(kicad_symbol_lib" in content
-        assert "kicad_agent_mcp" in content
+        assert "volta_mcp" in content
         # Symbol block
         assert '(symbol "C123456"' in content  # uses lcsc as symbol name
         # Pins

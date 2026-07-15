@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ops._schema_gate import GateStatusOp, RunGateCheckOp
-from kicad_agent.ops.handlers.gate_handlers import (
+from volta.ops._schema_gate import GateStatusOp, RunGateCheckOp
+from volta.ops.handlers.gate_handlers import (
     _detect_design_stage,
     get_gate_handler,
     handle_gate_status,
@@ -65,8 +65,8 @@ class TestHandleRunGateCheck:
 
     def test_registered_gate_dispatches(self):
         """Running a registered gate delegates to GateRunner."""
-        from kicad_agent.validation.gate_types import GateResult, DesignStage
-        from kicad_agent.validation.gate_runner import get_gate_runner, register_gate, GateDefinition
+        from volta.validation.gate_types import GateResult, DesignStage
+        from volta.validation.gate_runner import get_gate_runner, register_gate, GateDefinition
 
         def _pass_fn(ctx):
             return GateResult(pass_=True, gate_name="test_gate", stage=DesignStage.PCB_SETUP)

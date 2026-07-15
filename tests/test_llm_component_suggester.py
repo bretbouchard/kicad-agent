@@ -21,7 +21,7 @@ from tests.conftest_llm import FakeMessage, FakeTextBlock, FakeToolUseBlock
 
 def test_suggest_returns_valid_suggestions(mock_anthropic_client, sample_suggestions_dict):
     """ComponentSuggester.suggest('voltage regulator 3.3V') returns list of ComponentSuggestion."""
-    from kicad_agent.llm.component_suggester import ComponentSuggester
+    from volta.llm.component_suggester import ComponentSuggester
 
     mock_anthropic_client.return_value = FakeMessage([
         FakeToolUseBlock("suggest_components", {"suggestions": sample_suggestions_dict})
@@ -45,7 +45,7 @@ def test_suggest_returns_valid_suggestions(mock_anthropic_client, sample_suggest
 
 def test_suggest_raises_value_error_without_tool_use(mock_anthropic_client):
     """ComponentSuggester.suggest raises ValueError when LLM returns no tool_use block."""
-    from kicad_agent.llm.component_suggester import ComponentSuggester
+    from volta.llm.component_suggester import ComponentSuggester
 
     mock_anthropic_client.return_value = FakeMessage([
         FakeTextBlock("I would suggest using a voltage regulator...")
@@ -63,7 +63,7 @@ def test_suggest_raises_value_error_without_tool_use(mock_anthropic_client):
 
 def test_suggest_validates_library_id(mock_anthropic_client):
     """ComponentSuggestion.library_id values must pass _validate_safe_id pattern."""
-    from kicad_agent.llm.component_suggester import ComponentSuggester
+    from volta.llm.component_suggester import ComponentSuggester
 
     malicious_suggestions = {
         "suggestions": [
@@ -92,8 +92,8 @@ def test_suggest_validates_library_id(mock_anthropic_client):
 
 def test_suggester_uses_llm_client(mock_anthropic_client, sample_suggestions_dict):
     """ComponentSuggester must use LLMClient for API calls."""
-    from kicad_agent.llm.component_suggester import ComponentSuggester
-    from kicad_agent.llm.client import LLMClient
+    from volta.llm.component_suggester import ComponentSuggester
+    from volta.llm.client import LLMClient
 
     mock_anthropic_client.return_value = FakeMessage([
         FakeToolUseBlock("suggest_components", {"suggestions": sample_suggestions_dict})
@@ -113,8 +113,8 @@ def test_suggester_uses_llm_client(mock_anthropic_client, sample_suggestions_dic
 
 def test_suggester_uses_system_prompt(mock_anthropic_client, sample_suggestions_dict):
     """ComponentSuggester must pass COMPONENT_SYSTEM_PROMPT as system message."""
-    from kicad_agent.llm.component_suggester import ComponentSuggester
-    from kicad_agent.llm.tools import COMPONENT_SYSTEM_PROMPT
+    from volta.llm.component_suggester import ComponentSuggester
+    from volta.llm.tools import COMPONENT_SYSTEM_PROMPT
 
     mock_anthropic_client.return_value = FakeMessage([
         FakeToolUseBlock("suggest_components", {"suggestions": sample_suggestions_dict})

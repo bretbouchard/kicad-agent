@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.training.evaluation import EvalResult
-from kicad_agent.training.regression import (
+from volta.training.evaluation import EvalResult
+from volta.training.regression import (
     BaselineStore,
     RegressionResult,
     RegressionThresholds,

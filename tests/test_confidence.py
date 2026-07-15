@@ -5,13 +5,13 @@ import json
 
 import pytest
 
-from kicad_agent.generation.intent import GenerationIntent
-from kicad_agent.llm.confidence import (
+from volta.generation.intent import GenerationIntent
+from volta.llm.confidence import (
     ConfidenceScore,
     ConfidenceScorer,
     extract_json_from_text as confidence_extract,
 )
-from kicad_agent.llm.text_prompts import extract_json_from_text as text_prompts_extract
+from volta.llm.text_prompts import extract_json_from_text as text_prompts_extract
 
 
 # ---------------------------------------------------------------------------
@@ -20,7 +20,7 @@ from kicad_agent.llm.text_prompts import extract_json_from_text as text_prompts_
 
 
 class TestExtractJsonConfidenceModule:
-    """Tests for kicad_agent.llm.confidence.extract_json_from_text."""
+    """Tests for volta.llm.confidence.extract_json_from_text."""
 
     def test_extract_json_from_text_nested(self):
         text = '```json\n{"a": {"b": [1, 2]}, "c": 3}\n```'
@@ -39,7 +39,7 @@ class TestExtractJsonConfidenceModule:
 
 
 class TestExtractJsonTextPrompts:
-    """Tests for kicad_agent.llm.text_prompts.extract_json_from_text."""
+    """Tests for volta.llm.text_prompts.extract_json_from_text."""
 
     def test_extract_from_json_block(self):
         text = 'Some text\n```json\n{"key": "value"}\n```\nMore text'

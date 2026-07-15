@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.parser.pcb_netlist import (
+from volta.parser.pcb_netlist import (
     extract_pcb_netlist,
     _preprocess_nets,
     _find_pad_net,

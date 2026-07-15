@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.conventions.base import Violation
-from kicad_agent.conventions.serializers import (
+from volta.conventions.base import Violation
+from volta.conventions.serializers import (
     violations_to_json,
     violations_to_markdown,
     write_json_report,
@@ -146,8 +146,8 @@ def test_write_markdown_report_uses_atomic_write(tmp_path):
 
 def test_serializers_source_uses_atomic_write_for_file_reports():
     """Grep-enforced: serializers.py imports atomic_write for file reports."""
-    src = Path(__file__).resolve().parent.parent / "src" / "kicad_agent" / "conventions" / "serializers.py"
+    src = Path(__file__).resolve().parent.parent / "src" / "volta" / "conventions" / "serializers.py"
     text = src.read_text()
-    assert "from kicad_agent.io.atomic_write import atomic_write" in text, (
+    assert "from volta.io.atomic_write import atomic_write" in text, (
         "atomic_write not imported in serializers.py"
     )

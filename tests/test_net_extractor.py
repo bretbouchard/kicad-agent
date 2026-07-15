@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops._schema_schematic_intel import ExtractNetsOp
-from kicad_agent.ops.schema import Operation
+from volta.ops._schema_schematic_intel import ExtractNetsOp
+from volta.ops.schema import Operation
 
 
 # ---------------------------------------------------------------------------
@@ -253,7 +253,7 @@ class TestExtractNetsEmpty:
     """Schematic with no wires returns empty net list."""
 
     def test_empty_schematic(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_extractor import extract_nets
+        from volta.schematic_routing.net_extractor import extract_nets
         sch_path = _write_schematic(tmp_path, _minimal_empty_sch())
         result = extract_nets(sch_path=sch_path)
         assert "nets" in result
@@ -269,7 +269,7 @@ class TestExtractNetsWithLabels:
     """Schematics with global/local labels resolve net names."""
 
     def test_global_label_creates_named_net(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_extractor import extract_nets
+        from volta.schematic_routing.net_extractor import extract_nets
         sch_path = _write_schematic(tmp_path, _sch_with_global_label())
         result = extract_nets(sch_path=sch_path)
         # The global label "SDA" is at (50,50) which is a wire endpoint.
@@ -279,7 +279,7 @@ class TestExtractNetsWithLabels:
         assert result["stats"]["named_nets"] >= 1
 
     def test_local_label_creates_named_net(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_extractor import extract_nets
+        from volta.schematic_routing.net_extractor import extract_nets
         sch_path = _write_schematic(tmp_path, _sch_with_local_label())
         result = extract_nets(sch_path=sch_path)
         assert "CLK" in result["nets"], f"Expected 'CLK' net, got: {list(result['nets'].keys())}"
@@ -290,7 +290,7 @@ class TestExtractNetsUnnamedNets:
     """Wire-connected pins without labels get auto-generated names."""
 
     def test_unnamed_net_gets_auto_name(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_extractor import extract_nets
+        from volta.schematic_routing.net_extractor import extract_nets
         sch_path = _write_schematic(tmp_path, _sch_with_unnamed_net())
         result = extract_nets(sch_path=sch_path)
         # No labels, so should have unnamed nets with "Net_N" naming
@@ -306,7 +306,7 @@ class TestExtractNetsMultiPinNet:
     """Multi-pin nets (3+ pins) list all member pins."""
 
     def test_three_pin_net_lists_all(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_extractor import extract_nets
+        from volta.schematic_routing.net_extractor import extract_nets
         sch_path = _write_schematic(tmp_path, _sch_with_multi_pin_net())
         result = extract_nets(sch_path=sch_path)
         # "BUS" label at (100,50) with three wire segments
@@ -318,7 +318,7 @@ class TestExtractNetsPinEntryFields:
     """Each net entry contains ref, pin_number, pin_name, and position."""
 
     def test_pin_entry_has_required_fields(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_extractor import extract_nets
+        from volta.schematic_routing.net_extractor import extract_nets
         sch_path = _write_schematic(tmp_path, _sch_with_symbol_and_wires())
         result = extract_nets(sch_path=sch_path)
         # Should have at least one net with pins
@@ -333,7 +333,7 @@ class TestExtractNetsPinEntryFields:
         assert has_pins, "Expected at least one pin in the net topology"
 
     def test_include_positions_false(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_extractor import extract_nets
+        from volta.schematic_routing.net_extractor import extract_nets
         sch_path = _write_schematic(tmp_path, _sch_with_symbol_and_wires())
         result = extract_nets(sch_path=sch_path, include_positions=False)
         for net_name, pins in result["nets"].items():
@@ -345,7 +345,7 @@ class TestExtractNetsStats:
     """Stats accurately reflect named vs unnamed net counts."""
 
     def test_stats_consistency(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_extractor import extract_nets
+        from volta.schematic_routing.net_extractor import extract_nets
         sch_path = _write_schematic(tmp_path, _sch_with_global_label())
         result = extract_nets(sch_path=sch_path)
         stats = result["stats"]
@@ -366,7 +366,7 @@ class TestExtractNetsWithNetlist:
 
     def test_netlist_resolves_net_names(self, tmp_path: Path) -> None:
         """When a netlist maps a pin to a named net, extract_nets uses that name."""
-        from kicad_agent.schematic_routing.net_extractor import extract_nets
+        from volta.schematic_routing.net_extractor import extract_nets
         # Create a schematic with a resistor at (75,50) so pin 1's wire-connection
         # point lands at (75,50) -- matching the wire endpoint.
         sch_content = (

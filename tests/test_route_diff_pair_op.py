@@ -10,7 +10,7 @@ class TestRouteDiffPairOpSchema:
     """Schema validation tests for RouteDiffPairOp."""
 
     def test_valid_minimal(self):
-        from kicad_agent.ops._schema_pcb import RouteDiffPairOp
+        from volta.ops._schema_pcb import RouteDiffPairOp
 
         op = RouteDiffPairOp(
             target_file="board.kicad_pcb",
@@ -26,7 +26,7 @@ class TestRouteDiffPairOpSchema:
         assert op.max_length_mismatch_mm == 0.5
 
     def test_valid_full(self):
-        from kicad_agent.ops._schema_pcb import RouteDiffPairOp
+        from volta.ops._schema_pcb import RouteDiffPairOp
 
         op = RouteDiffPairOp(
             target_file="board.kicad_pcb",
@@ -47,7 +47,7 @@ class TestRouteDiffPairOpSchema:
         assert op.trace_width_mm == 0.10
 
     def test_invalid_spacing_too_small(self):
-        from kicad_agent.ops._schema_pcb import RouteDiffPairOp
+        from volta.ops._schema_pcb import RouteDiffPairOp
 
         with pytest.raises(ValidationError):
             RouteDiffPairOp(
@@ -58,7 +58,7 @@ class TestRouteDiffPairOpSchema:
             )
 
     def test_invalid_impedance_out_of_range(self):
-        from kicad_agent.ops._schema_pcb import RouteDiffPairOp
+        from volta.ops._schema_pcb import RouteDiffPairOp
 
         with pytest.raises(ValidationError):
             RouteDiffPairOp(
@@ -69,7 +69,7 @@ class TestRouteDiffPairOpSchema:
             )
 
     def test_invalid_layer(self):
-        from kicad_agent.ops._schema_pcb import RouteDiffPairOp
+        from volta.ops._schema_pcb import RouteDiffPairOp
 
         with pytest.raises(ValidationError):
             RouteDiffPairOp(
@@ -80,7 +80,7 @@ class TestRouteDiffPairOpSchema:
             )
 
     def test_invalid_via_layers(self):
-        from kicad_agent.ops._schema_pcb import RouteDiffPairOp
+        from volta.ops._schema_pcb import RouteDiffPairOp
 
         with pytest.raises(ValidationError):
             RouteDiffPairOp(
@@ -91,7 +91,7 @@ class TestRouteDiffPairOpSchema:
             )
 
     def test_registry_entry_exists(self):
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
 
         assert "route_diff_pair" in OPERATION_REGISTRY
         meta = OPERATION_REGISTRY["route_diff_pair"]
@@ -100,7 +100,7 @@ class TestRouteDiffPairOpSchema:
         assert meta.is_readonly is False
 
     def test_discriminated_union_accepts(self):
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {

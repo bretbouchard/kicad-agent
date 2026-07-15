@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.validation.gates.fix_providers import (
+from volta.validation.gates.fix_providers import (
     ManufacturingExportFixProvider,
     PlacementBoundsFixProvider,
     RoutingManualMarkFixProvider,

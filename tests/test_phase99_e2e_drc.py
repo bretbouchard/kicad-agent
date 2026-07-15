@@ -36,7 +36,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.routing.freerouting import (
+from volta.routing.freerouting import (
     import_ses_into_pcb,
     is_freerouting_available,
     route_with_freerouting,

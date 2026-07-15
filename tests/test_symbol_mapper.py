@@ -6,8 +6,8 @@ power library flags, simulation sources, custom overrides, and unmapped symbols.
 
 import pytest
 
-from kicad_agent.ltspice.symbol_mapper import SymbolMapper
-from kicad_agent.ltspice.types import SymbolMappingResult, SymbolMappingType
+from volta.ltspice.symbol_mapper import SymbolMapper
+from volta.ltspice.types import SymbolMappingResult, SymbolMappingType
 
 
 class TestDeviceMappings:

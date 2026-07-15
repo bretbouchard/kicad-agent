@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+from volta.ops.pcb_raw_writer import PcbRawWriter
 
 
 # ---------------------------------------------------------------------------
@@ -339,7 +339,7 @@ class TestSchema:
     """Pydantic schema validation for the three new ops."""
 
     def test_lock_track_schema(self):
-        from kicad_agent.ops._schema_pcb import LockTrackOp
+        from volta.ops._schema_pcb import LockTrackOp
         op = LockTrackOp(
             target_file="test.kicad_pcb",
             uuid="aaaaaaaa-0000-0000-0000-000000000001",
@@ -348,7 +348,7 @@ class TestSchema:
         assert op.uuid == "aaaaaaaa-0000-0000-0000-000000000001"
 
     def test_lock_via_schema(self):
-        from kicad_agent.ops._schema_pcb import LockViaOp
+        from volta.ops._schema_pcb import LockViaOp
         op = LockViaOp(
             target_file="test.kicad_pcb",
             uuid="cccccccc-0000-0000-0000-000000000003",
@@ -356,7 +356,7 @@ class TestSchema:
         assert op.op_type == "lock_via"
 
     def test_add_stitching_via_pattern_schema_defaults(self):
-        from kicad_agent.ops._schema_pcb import AddStitchingViaPatternOp
+        from volta.ops._schema_pcb import AddStitchingViaPatternOp
         op = AddStitchingViaPatternOp(
             target_file="test.kicad_pcb",
             net="GND",
@@ -369,7 +369,7 @@ class TestSchema:
         assert op.layers == ["F.Cu", "B.Cu"]
 
     def test_add_stitching_via_pattern_schema_multilayer(self):
-        from kicad_agent.ops._schema_pcb import AddStitchingViaPatternOp
+        from volta.ops._schema_pcb import AddStitchingViaPatternOp
         op = AddStitchingViaPatternOp(
             target_file="test.kicad_pcb",
             net="GND",
@@ -380,7 +380,7 @@ class TestSchema:
         assert len(op.layers) == 4
 
     def test_add_stitching_via_pattern_schema_rejects_zero_spacing(self):
-        from kicad_agent.ops._schema_pcb import AddStitchingViaPatternOp
+        from volta.ops._schema_pcb import AddStitchingViaPatternOp
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             AddStitchingViaPatternOp(
@@ -391,7 +391,7 @@ class TestSchema:
             )
 
     def test_schema_empty_uuid_rejected(self):
-        from kicad_agent.ops._schema_pcb import LockTrackOp
+        from volta.ops._schema_pcb import LockTrackOp
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             LockTrackOp(target_file="test.kicad_pcb", uuid="")
@@ -406,11 +406,11 @@ class TestHandlerExecution:
 
     def test_lock_track_via_executor(self, pcb_path):
         """lock_track dispatches through executor and modifies the file."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         # First, add a track so we have something to lock
         add_op = Operation.model_validate({
@@ -458,11 +458,11 @@ class TestHandlerExecution:
 
     def test_lock_via_via_executor(self, pcb_path):
         """lock_via dispatches through executor."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         # Add a via first
         add_op = Operation.model_validate({
@@ -496,11 +496,11 @@ class TestHandlerExecution:
 
     def test_add_stitching_via_pattern_via_executor(self, pcb_path):
         """add_stitching_via_pattern dispatches through executor."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -544,11 +544,11 @@ class TestHandlerExecution:
         executor surfaces this directly (with auto-rollback of any pending
         transaction state). Callers must catch the exception.
         """
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -567,11 +567,11 @@ class TestHandlerExecution:
 
     def test_lock_track_via_executor_details(self, pcb_path):
         """lock_track result details contain uuid and locked=segment."""
-        from kicad_agent.ir.base import _clear_registry
+        from volta.ir.base import _clear_registry
         _clear_registry()
 
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         # Add a track first
         add_op = Operation.model_validate({
@@ -612,7 +612,7 @@ class TestRegistry:
     """Verify ops are registered with correct metadata."""
 
     def test_lock_track_in_registry(self):
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
         assert "lock_track" in OPERATION_REGISTRY
         meta = OPERATION_REGISTRY["lock_track"]
         assert meta.category == "pcb"
@@ -620,13 +620,13 @@ class TestRegistry:
         assert ".kicad_pcb" in meta.file_types
 
     def test_lock_via_in_registry(self):
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
         assert "lock_via" in OPERATION_REGISTRY
         meta = OPERATION_REGISTRY["lock_via"]
         assert meta.category == "pcb"
 
     def test_add_stitching_via_pattern_in_registry(self):
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
         assert "add_stitching_via_pattern" in OPERATION_REGISTRY
         meta = OPERATION_REGISTRY["add_stitching_via_pattern"]
         assert meta.category == "pcb"

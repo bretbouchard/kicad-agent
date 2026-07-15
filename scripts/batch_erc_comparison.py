@@ -23,7 +23,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from kicad_agent.validation.native_erc import run_native_erc
+from volta.validation.native_erc import run_native_erc
 
 
 def run_kicad_cli_erc(sch_path: Path, timeout: int = 30) -> dict:

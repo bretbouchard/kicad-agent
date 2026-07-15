@@ -1,0 +1,306 @@
+"""Single-command training pipeline for spatial reasoning reward model.
+
+Reproducible end-to-end pipeline — dataset generation, chain synthesis,
+supervised reward model training, and evaluation — with configurable
+hyperparameters and deterministic seeding.
+
+Previously named "GRPO" but refactored to honest supervised training:
+the reward model is trained via MSE against ground-truth chain scores,
+not through a circular policy-gradient loop (Council C1-C3 fix).
+
+Usage:
+    from volta.training.pipeline import run_pipeline, TrainingPipelineConfig
+
+    config = TrainingPipelineConfig(n_samples=100, seed=42)
+    report = run_pipeline(config)
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from volta.training.chains import synthesize_maze_chain
+from volta.training.dataset import MazeDataset, generate_dataset
+from volta.training.evaluation import EvaluationHarness, run_baseline
+from volta.training.reward import RewardConfig, score_chain
+from volta.training.reward_model import RewardModel, train_reward_model
+from volta.training.tokenizer import ChainTokenizer
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class TrainingPipelineConfig:
+    """Configuration for the full training pipeline.
+
+    Attributes:
+        n_samples: Number of maze samples to generate.
+        n_chains_per_sample: Chains per sample (1=solution, 2=solution+exploration).
+        seed: Deterministic random seed.
+        device: "cpu" or "cuda" (auto-detects CUDA availability).
+        output_dir: Directory for all outputs.
+        reward_config: Optional reward scoring configuration.
+        grpo_config: Optional GRPO training configuration.
+        n_grpo_epochs: Number of GRPO training epochs (default 5).
+        max_train_chains: Max chains for reward model training (0=all).
+        hard_board_ratio: Fraction of hard/adversarial boards (0..1).
+        lr_schedule: "cosine" (default), "linear", or "constant".
+        warmup_steps: Number of warmup steps for LR schedule.
+        real_data_dir: Optional directory containing real-world PCB data
+            (train.jsonl from Phase 13 GitHub crawler output). Real-world samples
+            supplement synthetic maze data in training.
+    """
+
+    n_samples: int = 100_000
+    n_chains_per_sample: int = 2
+    seed: int = 42
+    device: str = "cpu"
+    output_dir: str = "training_output/"
+    reward_config: RewardConfig | None = None
+    n_epochs: int = 5
+    max_train_chains: int = 0
+    hard_board_ratio: float = 0.4
+    lr_schedule: str = "cosine"
+    warmup_steps: int = 100
+    real_data_dir: str | Path | None = None
+
+    def __post_init__(self):
+        """Auto-detect GPU if device is 'cpu' and a GPU is available."""
+        if self.device == "cpu":
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    self.device = "cuda"
+                    logger.info("CUDA detected — using GPU")
+                elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                    self.device = "mps"
+                    logger.info("Apple MPS detected — using Metal GPU")
+            except ImportError:
+                pass
+
+
+def _build_board_configs(hard_ratio: float) -> list[dict]:
+    """Build board configs with a mix of easy and hard boards.
+
+    Args:
+        hard_ratio: Fraction of configs that should be hard/adversarial.
+
+    Returns:
+        List of board configuration dicts.
+    """
+    easy_configs = [
+        {"width_mm": 30.0, "height_mm": 30.0, "grid_size_mm": 5.0},
+        {"width_mm": 40.0, "height_mm": 40.0, "grid_size_mm": 4.0},
+        {"width_mm": 50.0, "height_mm": 50.0, "grid_size_mm": 5.0},
+    ]
+    hard_configs = [
+        {"width_mm": 80.0, "height_mm": 60.0, "grid_size_mm": 3.0},
+        {"width_mm": 100.0, "height_mm": 80.0, "grid_size_mm": 3.0},
+        {"width_mm": 120.0, "height_mm": 100.0, "grid_size_mm": 2.5},
+        {"width_mm": 80.0, "height_mm": 80.0, "grid_size_mm": 2.0},
+    ]
+    # Build mixed list proportional to hard_ratio
+    n_hard = max(1, int(len(hard_configs) * hard_ratio / 0.5))
+    mixed = easy_configs + hard_configs[:n_hard] + hard_configs
+    return mixed
+
+
+def run_pipeline(config: TrainingPipelineConfig) -> dict:
+    """Execute the supervised reward model training pipeline.
+
+    Steps:
+      1. Generate dataset (with hard board mix)
+      2. Split train/val/test
+      3. Synthesize chains and score (ground truth) for train + val
+      4. Train tokenizer + reward model (supervised MSE)
+      5. Evaluate baseline
+      6. Evaluate trained model
+      7. Compare results
+      8. Save report
+
+    Args:
+        config: Pipeline configuration.
+
+    Returns:
+        Summary dict with all metrics and file paths.
+    """
+    start_time = time.time()
+    output_dir = Path(config.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    report: dict = {
+        "config": {
+            "n_samples": config.n_samples,
+            "seed": config.seed,
+            "device": config.device,
+            "n_epochs": config.n_epochs,
+            "hard_board_ratio": config.hard_board_ratio,
+            "real_data_dir": str(config.real_data_dir) if config.real_data_dir else None,
+        },
+        "steps": {},
+    }
+
+    # Step 1: Generate dataset with hard board mix
+    logger.info("Step 1: Generating %d maze samples (hard_ratio=%.0f%%)...",
+                config.n_samples, config.hard_board_ratio * 100)
+    board_configs = _build_board_configs(config.hard_board_ratio)
+    dataset = generate_dataset(
+        n_samples=config.n_samples,
+        seed_base=config.seed,
+        board_configs=board_configs,
+    )
+    report["steps"]["dataset"] = {
+        "n_generated": len(dataset),
+        "difficulty_counts": dataset.difficulty_counts,
+    }
+
+    # Step 1b: Load real-world data if real_data_dir provided
+    real_dataset = None
+    n_real_loaded = 0
+    real_difficulty_counts: dict[str, int] = {}
+    if config.real_data_dir is not None:
+        real_dir = Path(config.real_data_dir)
+        train_jsonl = real_dir / "train.jsonl"
+        if train_jsonl.exists():
+            try:
+                from volta.training.real_dataset import RealBoardDataset
+
+                real_dataset = RealBoardDataset.from_jsonl(train_jsonl)
+                n_real_loaded = len(real_dataset)
+                real_difficulty_counts = real_dataset.difficulty_counts
+                logger.info(
+                    "Step 1b: Loaded %d real-world samples from %s",
+                    n_real_loaded,
+                    train_jsonl,
+                )
+            except Exception as exc:
+                logger.warning("Failed to load real-world data from %s: %s", train_jsonl, exc)
+        else:
+            logger.warning(
+                "real_data_dir specified but train.jsonl not found at %s",
+                train_jsonl,
+            )
+
+    report["steps"]["real_world"] = {
+        "n_loaded": n_real_loaded,
+        "n_synthetic": len(dataset),
+        "difficulty_counts": real_difficulty_counts,
+    }
+
+    # Step 2: Split
+    logger.info("Step 2: Splitting dataset...")
+    train_ds, val_ds, test_ds = dataset.split()
+    report["steps"]["split"] = {
+        "train": len(train_ds),
+        "val": len(val_ds),
+        "test": len(test_ds),
+    }
+
+    # Step 3: Synthesize chains and score (ground truth)
+    # No artificial cap — use max_train_chains (0 = all)
+    max_chains = config.max_train_chains if config.max_train_chains > 0 else len(train_ds.samples)
+    n_to_score = min(max_chains, len(train_ds.samples))
+    logger.info("Step 3: Scoring %d training chains...", n_to_score)
+    train_texts: list[str] = []
+    train_labels: list[tuple[float, float, float]] = []
+
+    reward_config = config.reward_config or RewardConfig()
+    for sample in train_ds.samples[:n_to_score]:
+        chain = synthesize_maze_chain(sample)
+        chain_reward = score_chain(chain, sample, reward_config)
+        train_texts.append(chain.chain_text)
+        # Average scores across steps
+        fmt_avg = sum(sr.format_score for sr in chain_reward.step_rewards) / max(len(chain_reward.step_rewards), 1)
+        qual_avg = sum(sr.quality_score for sr in chain_reward.step_rewards) / max(len(chain_reward.step_rewards), 1)
+        acc_avg = sum(sr.accuracy_score for sr in chain_reward.step_rewards) / max(len(chain_reward.step_rewards), 1)
+        train_labels.append((fmt_avg, qual_avg, acc_avg))
+
+    report["steps"]["chains"] = {"n_scored": len(train_texts)}
+
+    # Step 3b: Score validation chains (for early stopping)
+    logger.info("Step 3b: Scoring %d validation chains...", len(val_ds.samples))
+    val_texts: list[str] = []
+    val_labels: list[tuple[float, float, float]] = []
+    for sample in val_ds.samples:
+        chain = synthesize_maze_chain(sample)
+        chain_reward = score_chain(chain, sample, reward_config)
+        val_texts.append(chain.chain_text)
+        fmt_avg = sum(sr.format_score for sr in chain_reward.step_rewards) / max(len(chain_reward.step_rewards), 1)
+        qual_avg = sum(sr.quality_score for sr in chain_reward.step_rewards) / max(len(chain_reward.step_rewards), 1)
+        acc_avg = sum(sr.accuracy_score for sr in chain_reward.step_rewards) / max(len(chain_reward.step_rewards), 1)
+        val_labels.append((fmt_avg, qual_avg, acc_avg))
+
+    # Step 4: Train tokenizer + reward model (supervised, not circular GRPO)
+    logger.info("Step 4: Training tokenizer on %d texts...", len(train_texts))
+    tokenizer = ChainTokenizer(vocab_size=8000)
+    tokenizer.train(train_texts)
+    logger.info("Tokenizer vocab size: %d", tokenizer.vocab_size_actual)
+
+    logger.info("Step 4: Training reward model (supervised) on %d samples...", len(train_texts))
+    reward_model = RewardModel(device=config.device)
+    reward_model.set_tokenizer(tokenizer)
+    if reward_model.is_available:
+        rm_history = train_reward_model(
+            reward_model,
+            train_texts,
+            train_labels,
+            val_texts=val_texts,
+            val_labels=val_labels,
+            n_epochs=config.n_epochs,
+            learning_rate=1e-4,
+            batch_size=32,
+        )
+        report["steps"]["reward_model"] = {
+            "final_loss": rm_history["losses"][-1] if rm_history.get("losses") else None,
+            "final_val_loss": rm_history["val_losses"][-1] if rm_history.get("val_losses") else None,
+            "tokenizer_vocab_size": tokenizer.vocab_size_actual,
+            "training_type": "supervised",
+        }
+    else:
+        report["steps"]["reward_model"] = {"status": "PyTorch not available"}
+
+    # Step 5: Evaluate baseline
+    logger.info("Step 5: Evaluating baseline...")
+    baseline_result = run_baseline(test_ds)
+    report["steps"]["baseline"] = {
+        "avg_reward": baseline_result.avg_reward,
+        "avg_accuracy": baseline_result.avg_accuracy,
+        "pass_rate": baseline_result.pass_rate,
+        "n_samples": baseline_result.n_samples,
+    }
+
+    # Step 6: Evaluate trained model (no more circular GRPO loop)
+    logger.info("Step 7: Evaluating trained model...")
+    harness = EvaluationHarness(test_ds, reward_model)
+    trained_result = harness.evaluate(model=reward_model)
+    report["steps"]["trained"] = {
+        "avg_reward": trained_result.avg_reward,
+        "avg_accuracy": trained_result.avg_accuracy,
+        "pass_rate": trained_result.pass_rate,
+        "n_samples": trained_result.n_samples,
+        "discrimination_gap": trained_result.discrimination_gap,
+    }
+
+    # Step 8: Compare
+    comparison = harness.compare(None, reward_model)
+    report["comparison"] = {
+        "delta_reward": comparison["delta_reward"],
+        "delta_accuracy": comparison["delta_accuracy"],
+        "delta_pass_rate": comparison["delta_pass_rate"],
+        "discrimination_gap": trained_result.discrimination_gap,
+    }
+
+    # Save report
+    elapsed = time.time() - start_time
+    report["elapsed_seconds"] = round(elapsed, 2)
+
+    report_path = output_dir / "eval_report.json"
+    with open(report_path, "w") as f:
+        json.dump(report, f, indent=2, default=str)
+
+    logger.info("Pipeline complete in %.1fs. Report: %s", elapsed, report_path)
+    return report

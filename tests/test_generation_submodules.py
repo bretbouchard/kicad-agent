@@ -8,7 +8,7 @@ class TestEvaluation:
 
     def test_import(self):
         """Evaluation module is importable."""
-        from kicad_agent.generation.evaluation import (
+        from volta.generation.evaluation import (
             EvaluationResult,
             evaluate_design,
             evaluate_intent_suite,
@@ -24,7 +24,7 @@ class TestPipeline:
 
     def test_import(self):
         """Pipeline module is importable."""
-        from kicad_agent.generation.pipeline import GenerationResult, generate_design
+        from volta.generation.pipeline import GenerationResult, generate_design
         assert GenerationResult is not None
         assert callable(generate_design)
 
@@ -34,7 +34,7 @@ class TestRefinement:
 
     def test_import(self):
         """Refinement module is importable."""
-        from kicad_agent.generation.refinement import (
+        from volta.generation.refinement import (
             RefinementIteration,
             RefinementResult,
             refine_design,
@@ -48,7 +48,7 @@ class TestPlacement:
 
     def test_import(self):
         """Placement module is importable."""
-        from kicad_agent.generation.placement import (
+        from volta.generation.placement import (
             PlacementEngine,
             PlacementResult,
             validate_placement_clearance,
@@ -62,7 +62,7 @@ class TestTemplateBoard:
 
     def test_import(self):
         """Template board module is importable."""
-        from kicad_agent.generation.template_board import BoardTemplate, generate_board
+        from volta.generation.template_board import BoardTemplate, generate_board
         assert BoardTemplate is not None
         assert callable(generate_board)
 
@@ -72,7 +72,7 @@ class TestTemplateSchematic:
 
     def test_import(self):
         """Template schematic module is importable."""
-        from kicad_agent.generation.template_schematic import (
+        from volta.generation.template_schematic import (
             SchematicTemplate,
             generate_schematic,
         )
@@ -85,7 +85,7 @@ class TestOpPlanner:
 
     def test_import(self):
         """Op planner module is importable."""
-        from kicad_agent.generation.op_planner import (
+        from volta.generation.op_planner import (
             OpPlanner,
             PlanStep,
             plan_operation_sequence,

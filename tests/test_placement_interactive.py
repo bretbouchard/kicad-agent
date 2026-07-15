@@ -14,14 +14,14 @@ import math
 
 import pytest
 
-from kicad_agent.generation.intent import ComponentSpec, NetSpec, PositionSpec
-from kicad_agent.placement.graph import PlacementGraph, netlist_to_placement_graph
-from kicad_agent.placement.interactive import (
+from volta.generation.intent import ComponentSpec, NetSpec, PositionSpec
+from volta.placement.graph import PlacementGraph, netlist_to_placement_graph
+from volta.placement.interactive import (
     ConstraintSet,
     interactive_placement,
     suggest_placements,
 )
-from kicad_agent.placement.scoring import compute_hpwl_score
+from volta.placement.scoring import compute_hpwl_score
 
 
 # ---------------------------------------------------------------------------
@@ -206,7 +206,7 @@ class TestInteractiveWithPredictor:
         result_no_pred = interactive_placement(graph, constraints, predictor=None)
 
         # With predictor (random weights, but still provides initial positions)
-        from kicad_agent.placement.predict import PlacementPredictor
+        from volta.placement.predict import PlacementPredictor
 
         predictor = PlacementPredictor(model_path=None)
         result_with_pred = interactive_placement(graph, constraints, predictor=predictor)

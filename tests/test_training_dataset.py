@@ -18,14 +18,14 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.training.dataset import (
+from volta.training.dataset import (
     DEFAULT_BOARD_CONFIGS,
     MazeDataset,
     MazeSample,
     _grade_difficulty,
     generate_dataset,
 )
-from kicad_agent.training.generator import generate_adversarial_samples, generate_samples_parallel
+from volta.training.generator import generate_adversarial_samples, generate_samples_parallel
 
 
 # ---------------------------------------------------------------------------

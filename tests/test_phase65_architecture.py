@@ -29,7 +29,7 @@ class TestM1DfmExitCodes:
 
     def test_docstring_documents_exit_codes(self):
         """The dfm_command docstring must document all three exit codes."""
-        from kicad_agent.dfm.cli import dfm_command
+        from volta.dfm.cli import dfm_command
 
         doc = dfm_command.__doc__
         assert doc is not None
@@ -39,7 +39,7 @@ class TestM1DfmExitCodes:
 
     def test_error_conditions_return_2(self):
         """Board-not-found and profile errors return exit code 2."""
-        from kicad_agent.dfm.cli import dfm_command
+        from volta.dfm.cli import dfm_command
 
         args = MagicMock()
         args.board = "/nonexistent/board.kicad_pcb"
@@ -56,7 +56,7 @@ class TestM2SchemaInlineRefs:
     """Verify _inline_refs resolves $ref using $defs and removes $defs."""
 
     def test_inline_refs_resolves_simple_ref(self):
-        from kicad_agent.mcp.edit_server import _inline_refs
+        from volta.mcp.edit_server import _inline_refs
 
         schema = {
             "$defs": {
@@ -80,7 +80,7 @@ class TestM2SchemaInlineRefs:
         assert "x" in position["properties"]
 
     def test_inline_refs_no_defs_noop(self):
-        from kicad_agent.mcp.edit_server import _inline_refs
+        from volta.mcp.edit_server import _inline_refs
 
         schema = {"properties": {"name": {"type": "string"}}}
         _inline_refs(schema)
@@ -88,7 +88,7 @@ class TestM2SchemaInlineRefs:
 
     def test_inline_refs_preserves_sibling_keys(self):
         """Sibling keys on a $ref node (like description) are preserved."""
-        from kicad_agent.mcp.edit_server import _inline_refs
+        from volta.mcp.edit_server import _inline_refs
 
         schema = {
             "$defs": {"Foo": {"type": "string"}},
@@ -114,13 +114,13 @@ class TestM3PublicBoardStats:
     """Verify InferenceWrapper has a public extract_board_stats method."""
 
     def test_public_method_exists(self):
-        from kicad_agent.inference.wrapper import InferenceWrapper
+        from volta.inference.wrapper import InferenceWrapper
 
         assert hasattr(InferenceWrapper, "extract_board_stats")
         assert callable(InferenceWrapper.extract_board_stats)
 
     def test_public_method_has_docstring(self):
-        from kicad_agent.inference.wrapper import InferenceWrapper
+        from volta.inference.wrapper import InferenceWrapper
 
         doc = InferenceWrapper.extract_board_stats.__doc__
         assert doc is not None
@@ -130,7 +130,7 @@ class TestM3PublicBoardStats:
         """CLI should use extract_board_stats, not _extract_board_stats."""
         import ast
 
-        cli_path = "/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/cli.py"
+        cli_path = "/Users/bretbouchard/apps/kicad-agent/src/volta/cli.py"
         with open(cli_path) as f:
             source = f.read()
         # Should NOT contain _extract_board_stats in the CLI source
@@ -150,7 +150,7 @@ class TestM5BatchConnectLabelFallback:
     def test_no_empty_string_fallback_in_executor(self):
         """The batch_connect handler must not fall back to empty string for label names."""
         # After Plan 74 refactor, batch_connect handler moved to handlers/schematic.py
-        handler_path = "/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/ops/handlers/schematic.py"
+        handler_path = "/Users/bretbouchard/apps/kicad-agent/src/volta/ops/handlers/schematic.py"
         with open(handler_path) as f:
             source = f.read()
 
@@ -175,7 +175,7 @@ class TestM6SolderMaskCaching:
         """The check method source must reference geom_cache."""
         import ast
 
-        checks_path = "/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/dfm/checks.py"
+        checks_path = "/Users/bretbouchard/apps/kicad-agent/src/volta/dfm/checks.py"
         with open(checks_path) as f:
             source = f.read()
         assert "geom_cache" in source, (
@@ -184,7 +184,7 @@ class TestM6SolderMaskCaching:
 
     def test_to_shapely_called_once_per_pad(self):
         """to_shapely should be called at most once per pad via the cache."""
-        from kicad_agent.dfm.checks import SolderMaskCheck
+        from volta.dfm.checks import SolderMaskCheck
 
         check = SolderMaskCheck()
         # Create pads with tracked to_shapely calls using real Shapely geometries
@@ -234,14 +234,14 @@ class TestM7InterpolatePathPrecondition:
     """Verify _interpolate_path docstring documents preconditions."""
 
     def test_docstring_has_precondition_section(self):
-        from kicad_agent.routing.geometry import _interpolate_path
+        from volta.routing.geometry import _interpolate_path
 
         doc = _interpolate_path.__doc__
         assert doc is not None
         assert "Precondition" in doc
 
     def test_docstring_documents_path_length(self):
-        from kicad_agent.routing.geometry import _interpolate_path
+        from volta.routing.geometry import _interpolate_path
 
         doc = _interpolate_path.__doc__
         assert "at least 2" in doc or "len(path) >= 2" in doc
@@ -257,7 +257,7 @@ class TestM8PublicGraphAccessor:
 
     def test_public_graph_property_exists(self):
         import networkx as nx
-        from kicad_agent.placement.graph import PlacementGraph
+        from volta.placement.graph import PlacementGraph
 
         g = nx.Graph()
         pg = PlacementGraph(g)
@@ -265,7 +265,7 @@ class TestM8PublicGraphAccessor:
         assert pg.graph is g
 
     def test_public_graph_is_property(self):
-        from kicad_agent.placement.graph import PlacementGraph
+        from volta.placement.graph import PlacementGraph
 
         assert isinstance(
             inspect.getattr_static(PlacementGraph, "graph"), property
@@ -283,7 +283,7 @@ class TestM10NarrowExcept:
     def test_no_bare_except_in_extract_ir_data(self):
         """Source must not use bare 'except Exception' in _extract_ir_data."""
         classifier_path = (
-            "/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/ops/violation_classifier.py"
+            "/Users/bretbouchard/apps/kicad-agent/src/volta/ops/violation_classifier.py"
         )
         with open(classifier_path) as f:
             source = f.read()
@@ -295,7 +295,7 @@ class TestM10NarrowExcept:
 
     def test_uses_narrow_exceptions(self):
         classifier_path = (
-            "/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/ops/violation_classifier.py"
+            "/Users/bretbouchard/apps/kicad-agent/src/volta/ops/violation_classifier.py"
         )
         with open(classifier_path) as f:
             source = f.read()
@@ -315,7 +315,7 @@ class TestM11PublicAccessors:
     """Verify public accessors for dirty state and raw_written flag."""
 
     def test_pcbir_raw_written_property(self):
-        from kicad_agent.ir.pcb_ir import PcbIR
+        from volta.ir.pcb_ir import PcbIR
 
         assert hasattr(PcbIR, "raw_written")
         assert isinstance(
@@ -323,15 +323,15 @@ class TestM11PublicAccessors:
         ), "PcbIR.raw_written should be a property"
 
     def test_baseir_mark_dirty_method(self):
-        from kicad_agent.ir.base import BaseIR
+        from volta.ir.base import BaseIR
 
         assert hasattr(BaseIR, "mark_dirty")
         assert callable(BaseIR.mark_dirty)
 
     def test_mark_dirty_sets_dirty_flag(self):
         """mark_dirty should set the dirty property to True."""
-        from kicad_agent.ir.base import BaseIR
-        from kicad_agent.parser.types import ParseResult
+        from volta.ir.base import BaseIR
+        from volta.parser.types import ParseResult
 
         # Create a minimal parse result
         pr = ParseResult(
@@ -347,7 +347,7 @@ class TestM11PublicAccessors:
 
     def test_executor_uses_raw_written_not_private(self):
         """Executor must use public raw_written, not _raw_written."""
-        executor_path = "/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/ops/executor.py"
+        executor_path = "/Users/bretbouchard/apps/kicad-agent/src/volta/ops/executor.py"
         with open(executor_path) as f:
             source = f.read()
 
@@ -361,7 +361,7 @@ class TestM11PublicAccessors:
 
     def test_executor_uses_mark_dirty_not_private(self):
         """Executor must use public mark_dirty(), not _dirty = True."""
-        executor_path = "/Users/bretbouchard/apps/kicad-agent/src/kicad_agent/ops/executor.py"
+        executor_path = "/Users/bretbouchard/apps/kicad-agent/src/volta/ops/executor.py"
         with open(executor_path) as f:
             source = f.read()
 

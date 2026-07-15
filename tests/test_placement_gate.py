@@ -14,8 +14,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.analysis.types import NetClassification
-from kicad_agent.validation.gates.placement_gate import (
+from volta.analysis.types import NetClassification
+from volta.validation.gates.placement_gate import (
     PlacementReadinessGate,
     _BLOCKED_CHANNEL_MIN_MM,
     _CONNECTOR_EDGE_MAX_MM,
@@ -535,8 +535,8 @@ class TestGateIntegration:
 class TestGateRegistration:
     def test_gate_registered(self) -> None:
         """placement_readiness gate is registered for PLACEMENT -> ROUTING."""
-        import kicad_agent.validation  # noqa: ensure gates registered
-        from kicad_agent.validation.gate_runner import get_gate_runner
+        import volta.validation  # noqa: ensure gates registered
+        from volta.validation.gate_runner import get_gate_runner
 
         runner = get_gate_runner()
         assert runner.get_gate("placement_readiness") is not None

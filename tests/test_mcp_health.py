@@ -8,7 +8,7 @@ class TestMcpExportTools:
 
     def test_import(self):
         """MCP edit_server module (with export tools) is importable."""
-        from kicad_agent.mcp import edit_server
+        from volta.mcp import edit_server
         assert edit_server is not None
 
 
@@ -17,5 +17,5 @@ class TestMcpHealthCheck:
 
     def test_import(self):
         """MCP edit_server module (with health check tool) is importable."""
-        from kicad_agent.mcp import edit_server
+        from volta.mcp import edit_server
         assert hasattr(edit_server, "call_tool")

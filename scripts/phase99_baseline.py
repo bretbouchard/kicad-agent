@@ -34,7 +34,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.routing.freerouting import (
+from volta.routing.freerouting import (
     import_ses_into_pcb,
     is_freerouting_available,
     parse_ses,

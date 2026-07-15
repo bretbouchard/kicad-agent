@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from kiutils.symbol import SymbolLib
 
-from kicad_agent.parser.symbol_parser import parse_symbol_lib, ParseResult
+from volta.parser.symbol_parser import parse_symbol_lib, ParseResult
 
 
 class TestParseSymbolLib:

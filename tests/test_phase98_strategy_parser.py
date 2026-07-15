@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import time
 
-from kicad_agent.routing.strategy_parser import _extract_brace_spans, parse_strategy_json
+from volta.routing.strategy_parser import _extract_brace_spans, parse_strategy_json
 
 
 class TestBareJson:

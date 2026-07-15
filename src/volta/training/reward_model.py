@@ -1,0 +1,665 @@
+"""Neural reward model for scoring reasoning chains (PyTorch).
+
+GRPO-03: Lightweight transformer-based model that predicts per-step reward
+scores (format, quality, accuracy) from chain text.
+
+Lazily imports PyTorch to avoid import-time failures if torch is not installed.
+
+Usage:
+    from volta.training.reward_model import RewardModel, predict_reward
+
+    model = RewardModel()
+    signal = predict_reward(model, "Observation: via at <point 5.0,10.0>")
+"""
+
+from __future__ import annotations
+
+import logging
+import re
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from volta.training.tokenizer import ChainTokenizer
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class PredictedReward:
+    """Predicted reward from the neural reward model.
+
+    Attributes:
+        format_score: Predicted format correctness (0..1).
+        quality_score: Predicted reasoning quality (0..1).
+        accuracy_score: Predicted coordinate accuracy (0..1).
+    """
+
+    format_score: float
+    quality_score: float
+    accuracy_score: float
+
+
+# ---------------------------------------------------------------------------
+# Simple tokenizer (no external dependencies)
+# ---------------------------------------------------------------------------
+
+_PAD_TOKEN = 0
+_UNKNOWN_TOKEN = 1
+_MAX_VOCAB = 5000
+_MAX_SEQ_LEN = 512
+
+
+def _simple_tokenize(text: str, max_len: int = _MAX_SEQ_LEN) -> tuple[list[int], list[int]]:
+    """Simple character-level tokenizer.
+
+    Converts text to integer token IDs and attention mask.
+    Uses character ordinals capped at _MAX_VOCAB.
+
+    Args:
+        text: Input text to tokenize.
+        max_len: Maximum sequence length.
+
+    Returns:
+        (token_ids, attention_mask) tuple.
+    """
+    token_ids: list[int] = []
+    for ch in text[:max_len]:
+        token_id = ord(ch) % _MAX_VOCAB
+        token_ids.append(token_id + 2)  # offset by 2 (pad=0, unk=1)
+    # Pad to max_len
+    attention_mask = [1] * len(token_ids) + [0] * (max_len - len(token_ids))
+    token_ids = token_ids + [_PAD_TOKEN] * (max_len - len(token_ids))
+    return token_ids[:max_len], attention_mask[:max_len]
+
+
+# ---------------------------------------------------------------------------
+# Reward Model
+# ---------------------------------------------------------------------------
+
+def _build_model(vocab_size: int = _MAX_VOCAB + 2):
+    """Build and return the RewardModel nn.Module.
+
+    Args:
+        vocab_size: Vocabulary size for the embedding layer.
+
+    Returns None if PyTorch is not available.
+    """
+    try:
+        import torch
+        import torch.nn as nn
+    except ImportError:
+        return None
+
+    class _RewardModel(nn.Module):
+        """Lightweight transformer-based reward prediction model.
+
+        Architecture:
+          - Token embedding (vocab_size -> d_model)
+          - 4-layer transformer encoder (d_model=256, heads=4, ff=512)
+          - Mean pooling over sequence
+          - 3 prediction heads: format, quality, accuracy
+        """
+
+        def __init__(
+            self,
+            vocab_size: int = 8000,
+            d_model: int = 256,
+            n_heads: int = 4,
+            n_layers: int = 4,
+            d_ff: int = 512,
+            max_seq_len: int = _MAX_SEQ_LEN,
+        ):
+            super().__init__()
+            self.d_model = d_model
+            self.embedding = nn.Embedding(vocab_size, d_model)
+            self.pos_embedding = nn.Embedding(max_seq_len, d_model)
+
+            encoder_layer = nn.TransformerEncoderLayer(
+                d_model=d_model,
+                nhead=n_heads,
+                dim_feedforward=d_ff,
+                dropout=0.1,
+                batch_first=True,
+            )
+            self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
+
+            # Prediction heads
+            self.format_head = nn.Linear(d_model, 1)
+            self.quality_head = nn.Linear(d_model, 1)
+            self.accuracy_head = nn.Linear(d_model, 1)
+
+        def forward(self, input_ids, attention_mask=None):
+            """Forward pass.
+
+            Args:
+                input_ids: (batch, seq_len) token IDs.
+                attention_mask: (batch, seq_len) mask (1=valid, 0=pad).
+
+            Returns:
+                (format_pred, quality_pred, accuracy_pred) each (batch, 1).
+            """
+            batch_size, seq_len = input_ids.shape
+
+            # Embed tokens + positions
+            positions = torch.arange(seq_len, device=input_ids.device).unsqueeze(0).expand(batch_size, -1)
+            x = self.embedding(input_ids) + self.pos_embedding(positions)
+
+            # Padding mask: use boolean mask on CUDA/CPU, float large-negative on MPS
+            device_type = input_ids.device.type
+            if attention_mask is not None and device_type not in ("mps",):
+                padding_mask = attention_mask == 0  # True = ignore
+            elif attention_mask is not None and device_type == "mps":
+                # MPS doesn't support nested boolean tensors; mask by zeroing
+                # out padded positions in the embedding space instead.
+                mask_expanded = attention_mask.unsqueeze(-1).float()
+                x = x * mask_expanded  # zero out padded positions
+                padding_mask = None
+            else:
+                padding_mask = None
+
+            # Encode
+            x = self.encoder(x, src_key_padding_mask=padding_mask)
+
+            # Mean pooling (respecting mask for accurate averaging)
+            if attention_mask is not None:
+                mask_expanded = attention_mask.unsqueeze(-1).float()
+                x = (x * mask_expanded).sum(dim=1) / mask_expanded.sum(dim=1).clamp(min=1)
+            else:
+                x = x.mean(dim=1)
+
+            # Predict
+            fmt = torch.sigmoid(self.format_head(x))
+            qual = torch.sigmoid(self.quality_head(x))
+            acc = torch.sigmoid(self.accuracy_head(x))
+
+            return fmt, qual, acc
+
+    return _RewardModel()
+
+
+class RewardModel:
+    """Wrapper for the neural reward model with lazy PyTorch initialization.
+
+    The underlying nn.Module is only created when first accessed,
+    allowing the module to be imported without PyTorch installed.
+
+    Optionally holds a trained ChainTokenizer for word-level tokenization.
+    Falls back to character-level tokenization if no tokenizer is set.
+    """
+
+    def __init__(self, device: str = "cpu"):
+        """Initialize with lazy model creation.
+
+        Args:
+            device: "cpu", "mps", or "cuda".
+        """
+        self._model = None
+        self._device = device
+        self._tokenizer: ChainTokenizer | None = None
+
+    @property
+    def model(self):
+        """Lazily create and return the underlying nn.Module."""
+        if self._model is None:
+            vocab = self._tokenizer.vocab_size_actual if self._tokenizer and self._tokenizer.is_trained else 8000
+            self._model = _build_model(vocab_size=vocab)
+            if self._model is not None:
+                try:
+                    import torch
+                    self._model.to(self._device)
+                    self._model.eval()
+                except Exception:
+                    pass
+        return self._model
+
+    def set_tokenizer(self, tokenizer: ChainTokenizer) -> None:
+        """Set a trained tokenizer and rebuild the model to match.
+
+        Must be called before the model is first accessed (before
+        ``is_available`` or ``model`` is queried).
+
+        Args:
+            tokenizer: A trained ChainTokenizer instance.
+        """
+        self._tokenizer = tokenizer
+        # Force rebuild with new vocab size
+        self._model = None
+
+    @classmethod
+    def load_trained(
+        cls,
+        model_dir: str | Path,
+        device: str = "auto",
+    ) -> RewardModel:
+        """Load a trained reward model + tokenizer from disk.
+
+        Args:
+            model_dir: Directory containing reward_model.pt and tokenizer.json.
+            device: "cpu", "mps", "cuda", or "auto" (auto-detect).
+
+        Returns:
+            RewardModel ready for inference via predict_reward().
+
+        Raises:
+            FileNotFoundError: If model or tokenizer files are missing.
+        """
+        import json as _json
+
+        path = Path(model_dir)
+        model_file = path / "reward_model.pt"
+        tok_file = path / "tokenizer.json"
+
+        if not model_file.exists():
+            raise FileNotFoundError(f"No model found: {model_file}")
+        if not tok_file.exists():
+            raise FileNotFoundError(f"No tokenizer found: {tok_file}")
+
+        # Auto-detect device
+        if device == "auto":
+            device = "cpu"
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    device = "cuda"
+                elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                    device = "mps"
+            except ImportError:
+                pass
+
+        # Reconstruct tokenizer from saved vocab
+        tok_data = _json.loads(tok_file.read_text())
+        tokenizer = ChainTokenizer(vocab_size=tok_data.get("vocab_size", 8000))
+        tokenizer.token_to_id = tok_data["token_to_id"]
+        tokenizer.id_to_token = {int(v): k for k, v in tokenizer.token_to_id.items()}
+        tokenizer._trained = True
+
+        # Build model and load weights
+        rm = cls(device=device)
+        rm.set_tokenizer(tokenizer)
+
+        import torch
+        state_dict = torch.load(model_file, map_location=device, weights_only=True)
+        rm.model.load_state_dict(state_dict)
+        rm.model.eval()
+
+        return rm
+
+    @property
+    def is_available(self) -> bool:
+        """Check if PyTorch model is available."""
+        return self.model is not None
+
+    def generate(self, sample, reference_model: RewardModel | None = None) -> Any:
+        """Generate a chain for a sample using best-of-N selection.
+
+        Generates 1 correct solution chain + 4 corrupted variants, scores each
+        using independent heuristic scoring (format + step count). Optionally
+        uses an external reference model for neural scoring instead of self.
+
+        Args:
+            sample: MazeSample to generate a chain for.
+            reference_model: Optional external RewardModel for neural scoring.
+                When provided, its predictions are blended with the independent
+                heuristic score (50/50). When None, only heuristic scoring is used.
+
+        Returns:
+            MazeReasoningChain with highest combined score.
+        """
+        from volta.training.chains import (
+            synthesize_maze_chain,
+            synthesize_corrupted_chain,
+        )
+
+        candidates = [synthesize_maze_chain(sample)]
+        candidates += [
+            synthesize_corrupted_chain(sample, "wrong_coords", rng_seed=sample.seed),
+            synthesize_corrupted_chain(sample, "missing_steps", rng_seed=sample.seed + 1),
+            synthesize_corrupted_chain(sample, "wrong_order", rng_seed=sample.seed + 2),
+            synthesize_corrupted_chain(sample, "vague_reasoning", rng_seed=sample.seed + 3),
+        ]
+
+        best_chain = candidates[0]
+        best_score = -1.0
+
+        for chain in candidates:
+            # Independent heuristic score (no self-reference)
+            heuristic_score = _independent_score(chain.chain_text)
+
+            # Optionally blend with external reference model predictions
+            if reference_model is not None:
+                pred = predict_reward(reference_model, chain.chain_text)
+                neural_score = (pred.format_score + pred.quality_score + pred.accuracy_score) / 3.0
+                score = 0.5 * heuristic_score + 0.5 * neural_score
+            else:
+                score = heuristic_score
+
+            if score > best_score:
+                best_score = score
+                best_chain = chain
+
+        return best_chain
+
+
+def predict_reward(model: RewardModel, chain_text: str) -> PredictedReward:
+    """Predict reward scores for a chain using the neural model.
+
+    Args:
+        model: RewardModel instance.
+        chain_text: Chain text to score.
+
+    Returns:
+        PredictedReward with format, quality, accuracy scores.
+        Returns neutral (0.5, 0.5, 0.5) if PyTorch not available.
+    """
+    if not model.is_available:
+        return PredictedReward(format_score=0.5, quality_score=0.5, accuracy_score=0.5)
+
+    import torch
+
+    if model._tokenizer and model._tokenizer.is_trained:
+        token_ids, attention_mask = model._tokenizer.encode(chain_text)
+    else:
+        token_ids, attention_mask = _simple_tokenize(chain_text)
+    input_ids = torch.tensor([token_ids], dtype=torch.long, device=model._device)
+    attn_mask = torch.tensor([attention_mask], dtype=torch.long, device=model._device)
+
+    with torch.no_grad():
+        fmt, qual, acc = model.model(input_ids, attn_mask)
+
+    return PredictedReward(
+        format_score=fmt.item(),
+        quality_score=qual.item(),
+        accuracy_score=acc.item(),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Independent scoring (H-14): format + step-count heuristic, no model self-ref
+# ---------------------------------------------------------------------------
+
+# Patterns for format validation
+_STEP_PATTERN = re.compile(r"Step\s+\d+", re.IGNORECASE)
+_OBSERVATION_PATTERN = re.compile(r"Observation:", re.IGNORECASE)
+_REASONING_PATTERN = re.compile(r"Reasoning:", re.IGNORECASE)
+_COORDINATE_PATTERN = re.compile(r"<point\s+[\d.]+\s*,\s*[\d.]+>")
+_CONCLUSION_PATTERN = re.compile(r"Conclusion:", re.IGNORECASE)
+
+
+def _independent_score(chain_text: str) -> float:
+    """Score a chain using deterministic heuristics, not model predictions.
+
+    Evaluates format compliance (presence of expected chain sections) and
+    reasoning depth (step count). This is used for best-of-N selection to
+    avoid self-referential scoring where the model ranks its own outputs.
+
+    Scoring rubric (each 0-1):
+      - Format: fraction of expected section headers present
+      - Depth: normalized step count (capped at 1.0 for 8+ steps)
+
+    The final score is the arithmetic mean of format and depth.
+
+    Args:
+        chain_text: The reasoning chain text to evaluate.
+
+    Returns:
+        Score between 0.0 and 1.0.
+    """
+    if not chain_text or not chain_text.strip():
+        return 0.0
+
+    # Format validation: check for expected sections
+    expected_patterns = [
+        _OBSERVATION_PATTERN,
+        _REASONING_PATTERN,
+        _COORDINATE_PATTERN,
+        _CONCLUSION_PATTERN,
+    ]
+    sections_found = sum(1 for p in expected_patterns if p.search(chain_text))
+    format_score = sections_found / len(expected_patterns)
+
+    # Step count depth (reward longer reasoning chains, cap at 8)
+    steps = _STEP_PATTERN.findall(chain_text)
+    depth_score = min(len(steps) / 8.0, 1.0)
+
+    return (format_score + depth_score) / 2.0
+
+
+# ---------------------------------------------------------------------------
+# Held-out evaluation: rank correlation against ground-truth quality scores
+# ---------------------------------------------------------------------------
+
+def eval_reward_quality(
+    model_predictions: list[PredictedReward],
+    ground_truth_labels: list[tuple[float, float, float]],
+) -> dict[str, float]:
+    """Evaluate reward model quality against ground-truth scores.
+
+    Computes rank correlation metrics between model predictions and
+    ground-truth quality labels. Uses rule-based ground truth (from
+    score_chain()) to avoid circular evaluation where the model scores
+    its own outputs.
+
+    Args:
+        model_predictions: List of PredictedReward from the model.
+        ground_truth_labels: List of (format, quality, accuracy) tuples
+            from rule-based scoring. Same length as model_predictions.
+
+    Returns:
+        Dict with keys:
+            kendall_tau: Kendall rank correlation coefficient.
+            spearman_rho: Spearman rank correlation coefficient.
+            top_1_accuracy: Fraction where model's #1 matches truth's #1.
+            top_3_accuracy: Fraction where truth's #1 is in model's top-3.
+            n_samples: Number of samples evaluated.
+
+    Raises:
+        ValueError: If input lists have different lengths or are empty.
+    """
+    if len(model_predictions) != len(ground_truth_labels):
+        raise ValueError(
+            f"model_predictions and ground_truth_labels must have the same length: "
+            f"got {len(model_predictions)} and {len(ground_truth_labels)}"
+        )
+    if len(model_predictions) == 0:
+        raise ValueError("model_predictions and ground_truth_labels must not be empty")
+
+    # Compute composite average scores
+    model_avgs = [
+        (p.format_score + p.quality_score + p.accuracy_score) / 3.0
+        for p in model_predictions
+    ]
+    truth_avgs = [
+        (gt[0] + gt[1] + gt[2]) / 3.0
+        for gt in ground_truth_labels
+    ]
+
+    n = len(model_avgs)
+
+    # Kendall tau and Spearman rho via scipy (with numpy fallback)
+    try:
+        from scipy.stats import kendalltau, spearmanr
+
+        tau_result = kendalltau(model_avgs, truth_avgs)
+        kendall_tau = tau_result.statistic if hasattr(tau_result, 'statistic') else tau_result[0]
+
+        rho_result = spearmanr(model_avgs, truth_avgs)
+        spearman_rho = rho_result.statistic if hasattr(rho_result, 'statistic') else rho_result[0]
+    except ImportError:
+        # Numpy-only fallback: compute rank correlation manually
+        import numpy as np
+
+        def _rank(x: list[float]) -> list[float]:
+            arr = np.array(x)
+            order = np.argsort(arr)[::-1]  # descending rank
+            ranks = np.empty_like(order, dtype=float)
+            ranks[order] = np.arange(1, len(arr) + 1, dtype=float)
+            return list(ranks)
+
+        model_ranks = _rank(model_avgs)
+        truth_ranks = _rank(truth_avgs)
+
+        # Pearson correlation of ranks = Spearman rho
+        mr = np.array(model_ranks)
+        tr = np.array(truth_ranks)
+        mr_centered = mr - mr.mean()
+        tr_centered = tr - tr.mean()
+        denom = np.sqrt(np.sum(mr_centered**2) * np.sum(tr_centered**2))
+        spearman_rho = float(np.sum(mr_centered * tr_centered) / denom) if denom > 0 else 0.0
+
+        # Kendall tau approximation from rank data
+        concordant = 0
+        discordant = 0
+        for i in range(n):
+            for j in range(i + 1, n):
+                diff_model = model_ranks[i] - model_ranks[j]
+                diff_truth = truth_ranks[i] - truth_ranks[j]
+                if diff_model * diff_truth > 0:
+                    concordant += 1
+                elif diff_model * diff_truth < 0:
+                    discordant += 1
+        total_pairs = concordant + discordant
+        kendall_tau = (concordant - discordant) / total_pairs if total_pairs > 0 else 0.0
+
+    # Top-k accuracy: check if the ground-truth best is in the model's top-k
+    # Sort model indices by score descending
+    ranked_model_indices = sorted(range(n), key=lambda i: model_avgs[i], reverse=True)
+    # Index of the ground-truth best chain
+    truth_best_idx = int(max(range(n), key=lambda i: truth_avgs[i]))
+
+    top_1_accuracy = 1.0 if ranked_model_indices[0] == truth_best_idx else 0.0
+    top_k = min(3, n)
+    top_3_accuracy = 1.0 if truth_best_idx in ranked_model_indices[:top_k] else 0.0
+
+    return {
+        "kendall_tau": float(kendall_tau),
+        "spearman_rho": float(spearman_rho),
+        "top_1_accuracy": float(top_1_accuracy),
+        "top_3_accuracy": float(top_3_accuracy),
+        "n_samples": float(n),
+    }
+
+
+def train_reward_model(
+    model: RewardModel,
+    train_texts: list[str],
+    train_labels: list[tuple[float, float, float]],
+    val_texts: list[str] | None = None,
+    val_labels: list[tuple[float, float, float]] | None = None,
+    n_epochs: int = 5,
+    learning_rate: float = 1e-4,
+    batch_size: int = 32,
+) -> dict:
+    """Train the reward model on scored chains.
+
+    Uses MSE loss against ground-truth reward signals (from score_chain).
+
+    Args:
+        model: RewardModel instance.
+        train_texts: Chain texts for training.
+        train_labels: (format, quality, accuracy) tuples for each text.
+        val_texts: Optional validation texts.
+        val_labels: Optional validation labels.
+        n_epochs: Number of training epochs.
+        learning_rate: AdamW learning rate.
+        batch_size: Training batch size.
+
+    Returns:
+        Dict with training history (losses, val_losses).
+    """
+    if not model.is_available:
+        return {"error": "PyTorch not available"}
+
+    import torch
+    import torch.nn as nn
+
+    device = model._device
+    nn_model = model.model
+    nn_model.train()
+
+    optimizer = torch.optim.AdamW(nn_model.parameters(), lr=learning_rate)
+    loss_fn = nn.MSELoss()
+
+    # Tokenize training data
+    all_ids = []
+    all_masks = []
+    for text in train_texts:
+        if model._tokenizer and model._tokenizer.is_trained:
+            ids, mask = model._tokenizer.encode(text)
+        else:
+            ids, mask = _simple_tokenize(text)
+        all_ids.append(ids)
+        all_masks.append(mask)
+
+    input_ids_t = torch.tensor(all_ids, dtype=torch.long, device=device)
+    attn_mask_t = torch.tensor(all_masks, dtype=torch.long, device=device)
+    labels_t = torch.tensor(train_labels, dtype=torch.float32, device=device)
+
+    # Tokenize validation data if provided
+    val_input_ids_t = None
+    val_attn_mask_t = None
+    val_labels_t = None
+    if val_texts and val_labels:
+        val_ids = []
+        val_masks = []
+        for text in val_texts:
+            if model._tokenizer and model._tokenizer.is_trained:
+                ids, mask = model._tokenizer.encode(text)
+            else:
+                ids, mask = _simple_tokenize(text)
+            val_ids.append(ids)
+            val_masks.append(mask)
+        val_input_ids_t = torch.tensor(val_ids, dtype=torch.long, device=device)
+        val_attn_mask_t = torch.tensor(val_masks, dtype=torch.long, device=device)
+        val_labels_t = torch.tensor(val_labels, dtype=torch.float32, device=device)
+
+    history: dict[str, list] = {"losses": [], "val_losses": []}
+
+    for epoch in range(n_epochs):
+        nn_model.train()
+        epoch_loss = 0.0
+        n_batches = 0
+
+        # Simple batch iteration
+        indices = list(range(len(train_texts)))
+        for i in range(0, len(indices), batch_size):
+            batch_idx = indices[i:i + batch_size]
+            batch_ids = input_ids_t[batch_idx]
+            batch_mask = attn_mask_t[batch_idx]
+            batch_labels = labels_t[batch_idx]
+
+            fmt, qual, acc = nn_model(batch_ids, batch_mask)
+            preds = torch.cat([fmt, qual, acc], dim=1)
+            loss = loss_fn(preds, batch_labels)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            epoch_loss += loss.item()
+            n_batches += 1
+
+        avg_loss = epoch_loss / max(n_batches, 1)
+        history["losses"].append(avg_loss)
+
+        # Compute validation loss if validation data is provided
+        if val_input_ids_t is not None:
+            nn_model.eval()
+            with torch.no_grad():
+                val_loss_sum = 0.0
+                val_n_batches = 0
+                for i in range(0, len(val_texts), batch_size):
+                    batch_ids = val_input_ids_t[i:i + batch_size]
+                    batch_mask = val_attn_mask_t[i:i + batch_size]
+                    batch_labels = val_labels_t[i:i + batch_size]
+                    fmt, qual, acc = nn_model(batch_ids, batch_mask)
+                    preds = torch.cat([fmt, qual, acc], dim=1)
+                    val_loss = loss_fn(preds, batch_labels)
+                    val_loss_sum += val_loss.item()
+                    val_n_batches += 1
+                avg_val_loss = val_loss_sum / max(val_n_batches, 1)
+                history["val_losses"].append(avg_val_loss)
+            logger.info("Epoch %d: train_loss=%.4f val_loss=%.4f", epoch + 1, avg_loss, avg_val_loss)
+
+    nn_model.eval()
+    return history

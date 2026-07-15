@@ -19,20 +19,20 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.training.chains import (
+from volta.training.chains import (
     MazeReasoningChain,
     synthesize_corrupted_chain,
     synthesize_exploration_chain,
     synthesize_maze_chain,
 )
-from kicad_agent.training.chain_builder import (
+from volta.training.chain_builder import (
     CellState,
     ExplorationStep,
     dfs_explore,
     exploration_to_chain,
 )
-from kicad_agent.training.chain_writer import build_training_chains, write_chains_jsonl
-from kicad_agent.training.dataset import MazeDataset, MazeSample, generate_dataset
+from volta.training.chain_writer import build_training_chains, write_chains_jsonl
+from volta.training.dataset import MazeDataset, MazeSample, generate_dataset
 
 
 # ---------------------------------------------------------------------------

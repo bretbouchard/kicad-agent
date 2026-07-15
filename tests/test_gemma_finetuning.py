@@ -200,19 +200,19 @@ class TestLocalLLMGemmaIntegration:
     """LocalLLMClient Gemma format detection."""
 
     def test_gemma_format_detection(self) -> None:
-        from kicad_agent.llm.local_client import LocalLLMClient
+        from volta.llm.local_client import LocalLLMClient
 
         client = LocalLLMClient(model="ggml-org/gemma-4-12B-it-Q4_K_M")
         assert client._is_gemma_model() is True
 
     def test_qwen_format_unchanged(self) -> None:
-        from kicad_agent.llm.local_client import LocalLLMClient
+        from volta.llm.local_client import LocalLLMClient
 
         client = LocalLLMClient(model="Qwen/Qwen2.5-0.5B-Instruct")
         assert client._is_gemma_model() is False
 
     def test_gemma_format_output(self) -> None:
-        from kicad_agent.llm.local_client import LocalLLMClient
+        from volta.llm.local_client import LocalLLMClient
 
         messages = [
             {"role": "system", "content": "sys"},
@@ -226,7 +226,7 @@ class TestLocalLLMGemmaIntegration:
         assert "<|im_start|>" not in text
 
     def test_qwen_format_output(self) -> None:
-        from kicad_agent.llm.local_client import LocalLLMClient
+        from volta.llm.local_client import LocalLLMClient
 
         messages = [
             {"role": "system", "content": "sys"},
@@ -239,7 +239,7 @@ class TestLocalLLMGemmaIntegration:
         assert "<start_of_turn>" not in text
 
     def test_format_messages_dispatches_correctly(self) -> None:
-        from kicad_agent.llm.local_client import LocalLLMClient
+        from volta.llm.local_client import LocalLLMClient
 
         messages = [
             {"role": "system", "content": "sys"},
@@ -256,14 +256,14 @@ class TestLocalLLMGemmaIntegration:
         assert "<|im_start|>" in qwen_text
 
     def test_extract_response_gemma(self) -> None:
-        from kicad_agent.llm.local_client import LocalLLMClient
+        from volta.llm.local_client import LocalLLMClient
 
         client = LocalLLMClient(model="gemma-4-12b")
         response = "prefix<start_of_turn>model\nanswer text<end_of_turn>"
         assert client._extract_response(response) == "answer text"
 
     def test_extract_response_qwen(self) -> None:
-        from kicad_agent.llm.local_client import LocalLLMClient
+        from volta.llm.local_client import LocalLLMClient
 
         client = LocalLLMClient(model="Qwen/Qwen2.5-0.5B-Instruct")
         response = "prefix<|im_start|>assistant\nanswer text<|im_end|>"

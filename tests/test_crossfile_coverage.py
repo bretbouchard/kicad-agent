@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.crossfile import (
+from volta.crossfile import (
     AtomicOperation,
     AtomicResult,
     DiffEntry,
@@ -18,7 +18,7 @@ from kicad_agent.crossfile import (
     propagate_symbol_ref,
     structural_diff,
 )
-from kicad_agent.crossfile.atomic import AtomicOperation as AtomicOp
+from volta.crossfile.atomic import AtomicOperation as AtomicOp
 
 
 class TestAtomicOperation:
@@ -125,6 +125,6 @@ class TestCrossfileImports:
 
     def test_all_exports_importable(self):
         """All __all__ exports can be imported from crossfile."""
-        from kicad_agent import crossfile
+        from volta import crossfile
         for name in crossfile.__all__:
             assert hasattr(crossfile, name), f"Missing export: {name}"

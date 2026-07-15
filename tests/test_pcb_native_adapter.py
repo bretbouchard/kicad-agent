@@ -13,9 +13,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.parser.pcb_native_parser import NativeParser
-from kicad_agent.parser.pcb_native_types import (
+from volta.ir.pcb_ir import PcbIR
+from volta.parser.pcb_native_parser import NativeParser
+from volta.parser.pcb_native_types import (
     NativeBoard,
     NativeFootprint,
     NativeGraphicItem,
@@ -35,7 +35,7 @@ ARDUINO_MEGA = Path("tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_pcb")
 @pytest.fixture(autouse=True)
 def _clear_ir_registry():
     """Clear IR registry between tests to prevent ParseResult reuse errors."""
-    from kicad_agent.ir.base import _clear_registry
+    from volta.ir.base import _clear_registry
     _clear_registry()
     yield
     _clear_registry()
@@ -273,8 +273,8 @@ class TestPcbIRKiutilsFallback:
 
     def test_pcbir_kiutils_path_requires_uuid_map(self):
         """PcbIR with kiutils path requires UUID map."""
-        from kicad_agent.parser import parse_pcb
-        from kicad_agent.parser.uuid_extractor import extract_uuids
+        from volta.parser import parse_pcb
+        from volta.parser.uuid_extractor import extract_uuids
 
         result = parse_pcb(ARDUINO_MEGA)
         uuid_map = extract_uuids(result.raw_content, "pcb")
@@ -284,7 +284,7 @@ class TestPcbIRKiutilsFallback:
 
     def test_pcbir_kiutils_no_uuid_map_raises(self):
         """PcbIR with kiutils path raises ValueError without UUID map."""
-        from kicad_agent.parser import parse_pcb
+        from volta.parser import parse_pcb
 
         result = parse_pcb(ARDUINO_MEGA)
         with pytest.raises(ValueError, match="UUID map"):
@@ -292,8 +292,8 @@ class TestPcbIRKiutilsFallback:
 
     def test_pcbir_fallback_to_kiutils(self):
         """PcbIR created with kiutils path works correctly."""
-        from kicad_agent.parser import parse_pcb
-        from kicad_agent.parser.uuid_extractor import extract_uuids
+        from volta.parser import parse_pcb
+        from volta.parser.uuid_extractor import extract_uuids
 
         result = parse_pcb(ARDUINO_MEGA)
         uuid_map = extract_uuids(result.raw_content, "pcb")
@@ -307,7 +307,7 @@ class TestPcbIRKiutilsFallback:
 
     def test_executor_fallback_on_native_failure(self):
         """Executor falls back to kiutils when NativeParser raises."""
-        from kicad_agent.ops.execution import try_native_parse
+        from volta.ops.execution import try_native_parse
 
         with patch.object(NativeParser, 'parse_pcb', side_effect=Exception("mock failure")):
             native_board = try_native_parse(ARDUINO_MEGA)
@@ -377,7 +377,7 @@ class TestBoardOutlineDuckTyping:
 
     def test_gr_line_detection(self):
         """NativeGraphicItem with item_type='line' passes _is_gr_line check."""
-        from kicad_agent.spatial.board_outline import _is_gr_line
+        from volta.spatial.board_outline import _is_gr_line
 
         gi = NativeGraphicItem(
             item_type="line",
@@ -388,7 +388,7 @@ class TestBoardOutlineDuckTyping:
 
     def test_gr_arc_detection(self):
         """NativeGraphicItem with item_type='arc' passes _is_gr_arc check."""
-        from kicad_agent.spatial.board_outline import _is_gr_arc
+        from volta.spatial.board_outline import _is_gr_arc
 
         gi = NativeGraphicItem(
             item_type="arc",
@@ -400,7 +400,7 @@ class TestBoardOutlineDuckTyping:
 
     def test_gr_circle_detection(self):
         """NativeGraphicItem with item_type='circle' passes _is_gr_circle check."""
-        from kicad_agent.spatial.board_outline import _is_gr_circle
+        from volta.spatial.board_outline import _is_gr_circle
 
         gi = NativeGraphicItem(
             item_type="circle",
@@ -411,7 +411,7 @@ class TestBoardOutlineDuckTyping:
 
     def test_gr_rect_detection(self):
         """NativeGraphicItem with item_type='rect' and filled passes _is_gr_rect check."""
-        from kicad_agent.spatial.board_outline import _is_gr_rect
+        from volta.spatial.board_outline import _is_gr_rect
 
         gi = NativeGraphicItem(
             item_type="rect",
@@ -423,7 +423,7 @@ class TestBoardOutlineDuckTyping:
 
     def test_gr_line_not_confused_with_rect(self):
         """NativeGraphicItem line (no filled) does not pass _is_gr_rect."""
-        from kicad_agent.spatial.board_outline import _is_gr_rect
+        from volta.spatial.board_outline import _is_gr_rect
 
         gi = NativeGraphicItem(
             item_type="line",

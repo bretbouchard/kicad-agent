@@ -14,8 +14,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from kicad_agent.ops.executor import OperationExecutor
-from kicad_agent.ops.schema import (
+from volta.ops.executor import OperationExecutor
+from volta.ops.schema import (
     CreatePcbOp,
     CreateProjectOp,
     CreateSchematicOp,
@@ -416,7 +416,7 @@ class TestSchemaExport:
     """Verify all new ops are included in the exported JSON schema."""
 
     def test_create_ops_in_schema(self) -> None:
-        from kicad_agent.ops.schema import get_operation_schema
+        from volta.ops.schema import get_operation_schema
         schema = get_operation_schema()
         root = schema.get("properties", {}).get("root", {})
         mapping = root.get("discriminator", {}).get("mapping", {})
@@ -816,9 +816,9 @@ class TestCreateFootprintExecutor:
         assert "(offset 0.1 0.2)" in content
 
     def test_create_footprint_in_create_op_types(self) -> None:
-        from kicad_agent.ops.executor import _CREATE_OP_TYPES
+        from volta.ops.executor import _CREATE_OP_TYPES
         assert "create_footprint" in _CREATE_OP_TYPES
 
     def test_create_footprint_handler_registered(self) -> None:
-        from kicad_agent.ops.executor import _CREATE_HANDLERS
+        from volta.ops.executor import _CREATE_HANDLERS
         assert "create_footprint" in _CREATE_HANDLERS

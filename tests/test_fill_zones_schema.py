@@ -7,7 +7,7 @@ before the implementation exists.
 import pytest
 from pydantic import ValidationError
 
-from kicad_agent.ops._schema_gap import FillZonesOp
+from volta.ops._schema_gap import FillZonesOp
 
 
 class TestFillZonesOpValid:

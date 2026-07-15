@@ -2,7 +2,7 @@
 
 import pytest
 
-from kicad_agent.analysis.net_classifier import SignalIntegrity
+from volta.analysis.net_classifier import SignalIntegrity
 
 
 class TestNetClassifierModule:
@@ -10,7 +10,7 @@ class TestNetClassifierModule:
 
     def test_import(self):
         """NetClassifier is importable."""
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
         assert NetClassifier is not None
 
 
@@ -19,7 +19,7 @@ class TestSignalIntegrity:
 
     def test_import(self):
         """SignalIntegrity is importable."""
-        from kicad_agent.analysis.net_classifier import SignalIntegrity
+        from volta.analysis.net_classifier import SignalIntegrity
         assert SignalIntegrity is not None
 
     def test_values(self):
@@ -33,7 +33,7 @@ class TestNetImportance:
 
     def test_import(self):
         """NetImportance is importable."""
-        from kicad_agent.analysis.net_classifier import NetImportance
+        from volta.analysis.net_classifier import NetImportance
         assert NetImportance is not None
 
 
@@ -42,5 +42,5 @@ class TestNetGraph:
 
     def test_import(self):
         """NetGraph is importable."""
-        from kicad_agent.analysis.connectivity import NetGraph
+        from volta.analysis.connectivity import NetGraph
         assert NetGraph is not None

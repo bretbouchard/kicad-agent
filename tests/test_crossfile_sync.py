@@ -2,8 +2,8 @@
 
 import pytest
 
-from kicad_agent.crossfile.propagation import PropagationResult
-from kicad_agent.crossfile.schematic_sync import (
+from volta.crossfile.propagation import PropagationResult
+from volta.crossfile.schematic_sync import (
     sync_pcb_from_netlist as synchronize_schematic,
 )
 

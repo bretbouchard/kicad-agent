@@ -14,13 +14,13 @@ Validates:
 import pytest
 from pydantic import ValidationError
 
-from kicad_agent.generation.intent import ComponentSpec, NetSpec
-from kicad_agent.placement.engine import (
+from volta.generation.intent import ComponentSpec, NetSpec
+from volta.placement.engine import (
     HybridPlacementEngine,
     PlacementOutput,
     PlacementRequest,
 )
-from kicad_agent.placement.graph import PlacementGraph, netlist_to_placement_graph
+from volta.placement.graph import PlacementGraph, netlist_to_placement_graph
 
 
 # ---------------------------------------------------------------------------
@@ -228,10 +228,10 @@ class TestPlacementRequestComponentCap:
 
 
 class TestBarrelExports:
-    """All placement module exports accessible from kicad_agent.placement."""
+    """All placement module exports accessible from volta.placement."""
 
     def test_barrel_exports(self):
-        from kicad_agent.placement import (
+        from volta.placement import (
             BipartiteAttentionLayer,
             HybridPlacementEngine,
             PlacementGraph,
@@ -246,9 +246,9 @@ class TestBarrelExports:
         assert BipartiteAttentionLayer is not None
 
     def test_barrel_export_count(self):
-        import kicad_agent.placement
+        import volta.placement
 
-        assert len(kicad_agent.placement.__all__) >= 20
+        assert len(volta.placement.__all__) >= 20
 
 
 class TestEndToEndPipeline:

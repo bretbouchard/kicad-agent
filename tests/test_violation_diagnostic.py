@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from unittest.mock import MagicMock
 from typing import Any
 
-from kicad_agent.ops.erc_parser import ErcViolation
+from volta.ops.erc_parser import ErcViolation
 
 
 # ---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ class TestDiagnoseViolationsSchema:
 
     def test_schema_with_target_file_only(self):
         """Schema validates with target_file, violation_types defaults to None."""
-        from kicad_agent.ops._schema_erc_smart import DiagnoseViolationsOp
+        from volta.ops._schema_erc_smart import DiagnoseViolationsOp
         op = DiagnoseViolationsOp(target_file="test.kicad_sch")
         assert op.op_type == "diagnose_violations"
         assert op.target_file == "test.kicad_sch"
@@ -93,7 +93,7 @@ class TestDiagnoseViolationsSchema:
 
     def test_schema_with_specific_violation_types(self):
         """Schema validates when violation_types list is provided."""
-        from kicad_agent.ops._schema_erc_smart import DiagnoseViolationsOp
+        from volta.ops._schema_erc_smart import DiagnoseViolationsOp
         op = DiagnoseViolationsOp(
             target_file="test.kicad_sch",
             violation_types=["pin_not_connected", "multiple_net_names"],
@@ -102,7 +102,7 @@ class TestDiagnoseViolationsSchema:
 
     def test_schema_target_file_validation(self):
         """Invalid target_file is rejected by TargetFile type."""
-        from kicad_agent.ops._schema_erc_smart import DiagnoseViolationsOp
+        from volta.ops._schema_erc_smart import DiagnoseViolationsOp
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             DiagnoseViolationsOp(target_file="../etc/passwd")
@@ -113,7 +113,7 @@ class TestDiagnoseViolations:
 
     def test_empty_fixable_returns_empty_diagnoses(self):
         """Empty fixable violation list produces empty diagnoses."""
-        from kicad_agent.ops.violation_diagnostic import diagnose_violations
+        from volta.ops.violation_diagnostic import diagnose_violations
         ir = _mock_ir()
         result = diagnose_violations([], ir, Path("test.kicad_sch"))
         assert result["diagnoses"] == []
@@ -122,7 +122,7 @@ class TestDiagnoseViolations:
 
     def test_pin_not_connected_produces_place_no_connect_fix(self):
         """Diagnosing pin_not_connected (non-power) includes 'place_no_connect' fix option."""
-        from kicad_agent.ops.violation_diagnostic import diagnose_violations
+        from volta.ops.violation_diagnostic import diagnose_violations
         ir = _mock_ir()
         classified = [
             _classified_fixable(
@@ -140,7 +140,7 @@ class TestDiagnoseViolations:
 
     def test_multiple_net_names_produces_break_and_fix_options(self):
         """Diagnosing multiple_net_names produces 'break_wire_shorts' and 'fix_shorted_nets' fix options."""
-        from kicad_agent.ops.violation_diagnostic import diagnose_violations
+        from volta.ops.violation_diagnostic import diagnose_violations
         ir = _mock_ir()
         classified = [
             _classified_fixable(
@@ -159,7 +159,7 @@ class TestDiagnoseViolations:
 
     def test_power_pin_not_driven_produces_add_power_flag(self):
         """power_pin_not_driven (non-power-global) produces 'add_power_flag' fix option."""
-        from kicad_agent.ops.violation_diagnostic import diagnose_violations
+        from volta.ops.violation_diagnostic import diagnose_violations
         ir = _mock_ir()
         classified = [
             _classified_fixable(
@@ -177,7 +177,7 @@ class TestDiagnoseViolations:
 
     def test_unknown_violation_type_returns_low_confidence(self):
         """Unknown violation type returns a diagnosis with 'low' confidence."""
-        from kicad_agent.ops.violation_diagnostic import diagnose_violations
+        from volta.ops.violation_diagnostic import diagnose_violations
         ir = _mock_ir()
         classified = [
             _classified_fixable(
@@ -197,7 +197,7 @@ class TestDiagnoseViolations:
 
     def test_diagnosis_result_has_required_fields(self):
         """Each diagnosis result has violation_type, position, root_cause, details, fix_options, recommended_fix_index."""
-        from kicad_agent.ops.violation_diagnostic import diagnose_violations
+        from volta.ops.violation_diagnostic import diagnose_violations
         ir = _mock_ir()
         classified = [
             _classified_fixable(
@@ -222,7 +222,7 @@ class TestFixOptions:
 
     def test_each_fix_option_has_required_fields(self):
         """Each fix option has action, params, description, side_effects, confidence."""
-        from kicad_agent.ops.violation_diagnostic import diagnose_violations
+        from volta.ops.violation_diagnostic import diagnose_violations
         ir = _mock_ir()
         classified = [
             _classified_fixable(
@@ -245,7 +245,7 @@ class TestFixOptions:
 
     def test_recommended_fix_index_is_valid(self):
         """recommended_fix_index points to a valid index in fix_options."""
-        from kicad_agent.ops.violation_diagnostic import diagnose_violations
+        from volta.ops.violation_diagnostic import diagnose_violations
         ir = _mock_ir()
         classified = [
             _classified_fixable(
@@ -262,7 +262,7 @@ class TestFixOptions:
 
     def test_multiple_violations_each_get_diagnosed(self):
         """Multiple fixable violations each get their own diagnosis."""
-        from kicad_agent.ops.violation_diagnostic import diagnose_violations
+        from volta.ops.violation_diagnostic import diagnose_violations
         ir = _mock_ir()
         classified = [
             _classified_fixable(
@@ -296,7 +296,7 @@ class TestFixOptions:
 
     def test_violation_types_filter(self):
         """When violation_types is provided, only those types are diagnosed."""
-        from kicad_agent.ops.violation_diagnostic import diagnose_violations
+        from volta.ops.violation_diagnostic import diagnose_violations
         ir = _mock_ir()
         classified = [
             _classified_fixable(
@@ -330,12 +330,12 @@ class TestExecutorRegistration:
 
     def test_diagnose_violations_in_schematic_handlers(self):
         """'diagnose_violations' key exists in _SCHEMATIC_QUERY_HANDLERS."""
-        from kicad_agent.ops.executor import _SCHEMATIC_QUERY_HANDLERS
+        from volta.ops.executor import _SCHEMATIC_QUERY_HANDLERS
         assert "diagnose_violations" in _SCHEMATIC_QUERY_HANDLERS
 
     def test_operation_union_validates_diagnose_violations(self):
         """DiagnoseViolationsOp validates through Operation discriminated union."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
         op = Operation.model_validate({
             "root": {
                 "op_type": "diagnose_violations",
@@ -346,7 +346,7 @@ class TestExecutorRegistration:
 
     def test_operation_union_validates_with_violation_types(self):
         """DiagnoseViolationsOp with violation_types validates through Operation union."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
         op = Operation.model_validate({
             "root": {
                 "op_type": "diagnose_violations",

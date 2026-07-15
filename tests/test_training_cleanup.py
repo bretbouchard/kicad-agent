@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.training.cleanup import CleanupConfig, TrainingCleanup
+from volta.training.cleanup import CleanupConfig, TrainingCleanup
 
 
 # ---------------------------------------------------------------------------

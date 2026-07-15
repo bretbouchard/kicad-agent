@@ -2,8 +2,8 @@
 
 import pytest
 
-from kicad_agent.llm.local_client import LocalLLMClient
-from kicad_agent.llm.backend import LLMBackend
+from volta.llm.local_client import LocalLLMClient
+from volta.llm.backend import LLMBackend
 
 
 class TestLocalLLMClientDetailed:
@@ -59,5 +59,5 @@ class TestLLMProvider:
 
     def test_import(self):
         """LLM provider module is importable."""
-        from kicad_agent.llm.provider import LLMProvider
+        from volta.llm.provider import LLMProvider
         assert LLMProvider is not None

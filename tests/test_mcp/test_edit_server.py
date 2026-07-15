@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.mcp.edit_server import (
+from volta.mcp.edit_server import (
     _ALL_TOOLS,
     _META_TOOLS,
     _OP_NAMES,
@@ -23,7 +23,7 @@ from kicad_agent.mcp.edit_server import (
     app,
     dispatch_tool,
 )
-from kicad_agent.ops.executor import OperationExecutor
+from volta.ops.executor import OperationExecutor
 from mcp import types
 
 
@@ -92,7 +92,7 @@ class TestToolAnnotations:
 
     def test_read_only_ops_have_hint(self) -> None:
         """Every registry-declared readonly op gets readOnlyHint=True."""
-        from kicad_agent.ops.registry import get_readonly_operations
+        from volta.ops.registry import get_readonly_operations
         readonly_names = {meta.op_type for meta in get_readonly_operations()}
         for tool in _OPERATION_TOOLS:
             if tool.name in readonly_names:
@@ -101,7 +101,7 @@ class TestToolAnnotations:
 
     def test_readonly_annotations_match_registry(self) -> None:
         """MCP readOnlyHint annotations exactly match registry is_readonly metadata."""
-        from kicad_agent.ops.registry import get_readonly_operations
+        from volta.ops.registry import get_readonly_operations
         registry_readonly = {meta.op_type for meta in get_readonly_operations()}
 
         mcp_readonly = set()
@@ -121,7 +121,7 @@ class TestToolAnnotations:
 
     def test_destructive_ops_have_hint(self) -> None:
         """Every registry-declared destructive op gets destructiveHint=True."""
-        from kicad_agent.ops.registry import get_destructive_operations
+        from volta.ops.registry import get_destructive_operations
         destructive_names = {meta.op_type for meta in get_destructive_operations()}
         for tool in _OPERATION_TOOLS:
             if tool.name in destructive_names:
@@ -227,7 +227,7 @@ class TestCallDispatch:
 
     def test_get_operation_schema_returns_valid_json(self) -> None:
         """get_operation_schema meta-tool returns valid Operation schema."""
-        from kicad_agent.ops.schema import get_operation_schema
+        from volta.ops.schema import get_operation_schema
         schema = get_operation_schema()
         assert "properties" in schema
         assert "root" in schema["properties"]
@@ -236,7 +236,7 @@ class TestCallDispatch:
 
     def test_get_project_context_calls_renderer(self, tmp_path: Path) -> None:
         """get_project_context returns render_project_context output."""
-        from kicad_agent.context import render_project_context
+        from volta.context import render_project_context
         # Create a minimal .kicad_sch so discovery finds something
         (tmp_path / "test.kicad_sch").write_text(
             "(kicad_sch (version 20250114) (generator kicad-agent-test)\n"
@@ -253,7 +253,7 @@ class TestCallDispatch:
     def test_validation_error_produces_structured_error(self) -> None:
         """Missing required field produces validation_error with suggestion."""
         from pydantic import ValidationError
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         with pytest.raises(ValidationError) as exc_info:
             Operation.model_validate({"root": {"op_type": "add_component", "target_file": "test.kicad_sch"}})
@@ -269,8 +269,8 @@ class TestCallDispatch:
 
     def test_executor_returns_dict_on_success(self, tmp_path: Path) -> None:
         """OperationExecutor.execute returns dict with success/details."""
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         # Copy fixture to temp dir
         fixture = Path(__file__).parent.parent / "fixtures" / "Arduino_Mega" / "Arduino_Mega.kicad_sch"
@@ -326,7 +326,7 @@ class TestDispatchTool:
     @pytest.mark.asyncio
     async def test_get_project_context(self, mock_executor: tuple) -> None:
         executor, base_dir = mock_executor
-        with patch("kicad_agent.mcp.edit_server.render_project_context", return_value="Project summary"):
+        with patch("volta.mcp.edit_server.render_project_context", return_value="Project summary"):
             result = await dispatch_tool("get_project_context", {"enrich": False}, executor, base_dir)
         assert result.isError is not True
         assert "Project summary" in result.content[0].text
@@ -394,10 +394,10 @@ class TestValidationTools:
     @pytest.mark.asyncio
     async def test_erc_check_returns_structured_result(self, mock_executor: tuple) -> None:
         from dataclasses import dataclass
-        from kicad_agent.validation.erc_drc import ErcResult
+        from volta.validation.erc_drc import ErcResult
         executor, base_dir = mock_executor
         erc_result = ErcResult(passed=True, file_path=base_dir / "test.kicad_sch", violations=())
-        with patch("kicad_agent.mcp.edit_server.run_erc", return_value=erc_result):
+        with patch("volta.mcp.edit_server.run_erc", return_value=erc_result):
             result = await dispatch_tool("erc_check", {"schematic_file": "test.kicad_sch"}, executor, base_dir)
         assert result.isError is not True
         body = json.loads(result.content[0].text)
@@ -406,11 +406,11 @@ class TestValidationTools:
 
     @pytest.mark.asyncio
     async def test_erc_check_with_violations(self, mock_executor: tuple) -> None:
-        from kicad_agent.validation.erc_drc import ErcResult, Violation, Severity
+        from volta.validation.erc_drc import ErcResult, Violation, Severity
         executor, base_dir = mock_executor
         violations = (Violation(description="Pin not driven", severity=Severity.ERROR, type="pin_not_driven"),)
         erc_result = ErcResult(passed=False, file_path=base_dir / "test.kicad_sch", violations=violations)
-        with patch("kicad_agent.mcp.edit_server.run_erc", return_value=erc_result):
+        with patch("volta.mcp.edit_server.run_erc", return_value=erc_result):
             result = await dispatch_tool("erc_check", {"schematic_file": "test.kicad_sch"}, executor, base_dir)
         body = json.loads(result.content[0].text)
         assert body["passed"] is False
@@ -419,10 +419,10 @@ class TestValidationTools:
 
     @pytest.mark.asyncio
     async def test_drc_check_returns_structured_result(self, mock_executor: tuple) -> None:
-        from kicad_agent.validation.erc_drc import DrcResult
+        from volta.validation.erc_drc import DrcResult
         executor, base_dir = mock_executor
         drc_result = DrcResult(passed=True, file_path=base_dir / "test.kicad_pcb", violations=(), unconnected_items=())
-        with patch("kicad_agent.mcp.edit_server.run_drc", return_value=drc_result):
+        with patch("volta.mcp.edit_server.run_drc", return_value=drc_result):
             result = await dispatch_tool("drc_check", {"pcb_file": "test.kicad_pcb"}, executor, base_dir)
         assert result.isError is not True
         body = json.loads(result.content[0].text)
@@ -525,7 +525,7 @@ class TestLifespanUndoStack:
 
     @pytest.mark.asyncio
     async def test_lifespan_creates_undo_stack(self, tmp_path: Path) -> None:
-        from kicad_agent.mcp.edit_server import server_lifespan
+        from volta.mcp.edit_server import server_lifespan
         with patch.dict(os.environ, {"KICAD_PROJECT_DIR": str(tmp_path)}):
             async with server_lifespan(app) as ctx:
                 executor = ctx["executor"]
@@ -534,7 +534,7 @@ class TestLifespanUndoStack:
 
     @pytest.mark.asyncio
     async def test_lifespan_custom_max_size(self, tmp_path: Path) -> None:
-        from kicad_agent.mcp.edit_server import server_lifespan
+        from volta.mcp.edit_server import server_lifespan
         with patch.dict(os.environ, {
             "KICAD_PROJECT_DIR": str(tmp_path),
             "KICAD_UNDO_MAX_SIZE": "25",
@@ -545,7 +545,7 @@ class TestLifespanUndoStack:
 
     @pytest.mark.asyncio
     async def test_lifespan_invalid_max_size_defaults(self, tmp_path: Path) -> None:
-        from kicad_agent.mcp.edit_server import server_lifespan
+        from volta.mcp.edit_server import server_lifespan
         with patch.dict(os.environ, {
             "KICAD_PROJECT_DIR": str(tmp_path),
             "KICAD_UNDO_MAX_SIZE": "not_a_number",

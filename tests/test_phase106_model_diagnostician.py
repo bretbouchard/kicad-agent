@@ -11,11 +11,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.routing.constraints import RoutingConstraints
-from kicad_agent.routing.diagnostician import BlockerDiagnostician
-from kicad_agent.routing.diagnostician_model import BlockerDiagnosticianModel
-from kicad_agent.routing.pathfinder import RouteFailure
-from kicad_agent.spatial.primitives import SpatialBox
+from volta.routing.constraints import RoutingConstraints
+from volta.routing.diagnostician import BlockerDiagnostician
+from volta.routing.diagnostician_model import BlockerDiagnosticianModel
+from volta.routing.pathfinder import RouteFailure
+from volta.spatial.primitives import SpatialBox
 
 
 def _make_failure() -> RouteFailure:
@@ -197,7 +197,7 @@ class TestPromptFormat:
     """Verify the prompt matches the training format exactly."""
 
     def test_prompt_contains_all_fields(self) -> None:
-        from kicad_agent.routing.diagnostician_model_prompts import (
+        from volta.routing.diagnostician_model_prompts import (
             build_diagnostician_prompt,
         )
         failure = _make_failure()

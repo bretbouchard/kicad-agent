@@ -13,13 +13,13 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ltspice.asc_parser import parse_asc
-from kicad_agent.ltspice.asc_writer import (
+from volta.ltspice.asc_parser import parse_asc
+from volta.ltspice.asc_writer import (
     AscWriter,
     CoordinateTransformer,
     _sanitize_net_name,
 )
-from kicad_agent.ltspice.sim_commands import (
+from volta.ltspice.sim_commands import (
     AcCommand,
     DcCommand,
     NoiseCommand,
@@ -28,7 +28,7 @@ from kicad_agent.ltspice.sim_commands import (
     parse_simulation_command,
     serialize_sim_command,
 )
-from kicad_agent.ltspice.symbol_mapper import SymbolMapper
+from volta.ltspice.symbol_mapper import SymbolMapper
 
 
 # ---------------------------------------------------------------------------

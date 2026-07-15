@@ -17,7 +17,7 @@ The geometry gate was added after the SRS scorer false-PASSED Arduino_Mega
 is NOT a sufficient gate — the scorer has no page-bounds awareness.
 
 VERIFIED imports (HIGH-2, HIGH-3 fixes from Council Gate 1):
-  - Operation from kicad_agent.ops.schema (NOT ops.operation — does not exist)
+  - Operation from volta.ops.schema (NOT ops.operation — does not exist)
   - SchematicSpatialExtractor(ir) takes a SchematicIR (NO from_file classmethod)
   - Chain: parse_schematic → SchematicIR(_parse_result=...) → SchematicSpatialExtractor(ir)
   - ReadabilityReport.srs is the composite score (factors has no 'overall' key)
@@ -56,24 +56,24 @@ from pathlib import Path
 from typing import Any
 
 # VERIFIED imports (HIGH-2 fix: from schema, NOT ops.operation)
-from kicad_agent.parser.schematic_parser import parse_schematic
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
-from kicad_agent.analysis.readability_scorer import SchematicReadabilityScorer
-from kicad_agent.analysis.topology_builder import TopologyBuilder
-from kicad_agent.schematic_routing.schematic_graph import SchematicGraph
-from kicad_agent.schematic_autolayout import paper_sizes
+from volta.parser.schematic_parser import parse_schematic
+from volta.ir.schematic_ir import SchematicIR
+from volta.analysis.schematic_spatial import SchematicSpatialExtractor
+from volta.analysis.readability_scorer import SchematicReadabilityScorer
+from volta.analysis.topology_builder import TopologyBuilder
+from volta.schematic_routing.schematic_graph import SchematicGraph
+from volta.schematic_autolayout import paper_sizes
 
 # VERIFIED dispatch (Rule 1 deviation): handlers are the entry points.
 # Plan 03's orchestrator dispatches via _SCHEMATIC_HANDLERS for the same
 # reason — OperationExecutor.execute() clobbers raw writes via
 # serialize_schematic() on the stale parse_result.
-from kicad_agent.ops.handlers.autolayout import (
+from volta.ops.handlers.autolayout import (
     _handle_place_components_sch,
     _handle_route_wires_sch,
     _handle_apply_labels_sch,
 )
-from kicad_agent.ops._schema_autolayout import (
+from volta.ops._schema_autolayout import (
     PlaceComponentsSchOp,
     RouteWiresSchOp,
     ApplyLabelsSchOp,

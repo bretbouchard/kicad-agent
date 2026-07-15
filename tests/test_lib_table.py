@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.project.lib_table import (
+from volta.project.lib_table import (
     LibEntry,
     LibTable,
     parse_lib_table,

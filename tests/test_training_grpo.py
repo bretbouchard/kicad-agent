@@ -18,15 +18,15 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.training.dataset import MazeDataset, MazeSample, generate_dataset
-from kicad_agent.training.evaluation import (
+from volta.training.dataset import MazeDataset, MazeSample, generate_dataset
+from volta.training.evaluation import (
     EvalResult,
     EvaluationHarness,
     run_baseline,
 )
-from kicad_agent.training.grpo import GRPOConfig, GRPOTrainer
-from kicad_agent.training.pipeline import TrainingPipelineConfig, run_pipeline
-from kicad_agent.training.reward_model import RewardModel
+from volta.training.grpo import GRPOConfig, GRPOTrainer
+from volta.training.pipeline import TrainingPipelineConfig, run_pipeline
+from volta.training.reward_model import RewardModel
 
 
 # ---------------------------------------------------------------------------

@@ -10,14 +10,14 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from kicad_agent.ops._schema_pcb import DrcVendorOp, ListVendorDrcProfilesOp
-from kicad_agent.ops.schema import Operation
+from volta.ops._schema_pcb import DrcVendorOp, ListVendorDrcProfilesOp
+from volta.ops.schema import Operation
 
 
 @pytest.fixture(autouse=True)
 def _clear_ir_registry():
     """Avoid cross-test IR registration leaks (mirrors test_board_metadata_ops.py)."""
-    from kicad_agent.ir.base import _clear_registry
+    from volta.ir.base import _clear_registry
     _clear_registry()
     yield
     _clear_registry()
@@ -25,9 +25,9 @@ def _clear_ir_registry():
 
 def _build_ir(pcb_path: Path):
     """Parse PCB and build PcbIR (mimics executor setup)."""
-    from kicad_agent.parser.pcb_parser import parse_pcb
-    from kicad_agent.ir.pcb_ir import PcbIR
-    from kicad_agent.parser.uuid_extractor import extract_uuids
+    from volta.parser.pcb_parser import parse_pcb
+    from volta.ir.pcb_ir import PcbIR
+    from volta.parser.uuid_extractor import extract_uuids
     result = parse_pcb(pcb_path)
     uuid_map = extract_uuids(result.raw_content, "pcb")
     return PcbIR(_parse_result=result, _uuid_map=uuid_map)
@@ -110,7 +110,7 @@ class TestDrcVendorSchema:
 
     def test_drc_vendor_all_vendor_keys_valid(self):
         """Every vendor key in list_drc_profiles validates against the schema."""
-        from kicad_agent.manufacturing.drc_profiles import list_drc_profiles
+        from volta.manufacturing.drc_profiles import list_drc_profiles
         for info in list_drc_profiles():
             op = Operation.model_validate({
                 "root": {
@@ -141,7 +141,7 @@ class TestListVendorDrcProfilesSchema:
 class TestDrcVendorHandler:
     def test_drc_vendor_unknown_vendor_raises(self, tmp_path):
         """Handler raises ValueError listing available vendors for unknown vendor."""
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops.handlers.query import _QUERY_HANDLERS
         pcb_path = _write_clean_pcb(tmp_path)
         ir = _build_ir(pcb_path)
         op = DrcVendorOp(target_file="clean.kicad_pcb", vendor="nonexistent", run_kicad_drc=False)
@@ -151,7 +151,7 @@ class TestDrcVendorHandler:
 
     def test_drc_vendor_detects_violation_via_handler(self, tmp_path):
         """SILENT-PASS GUARD: violating board -> passed=False, non-empty violations."""
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops.handlers.query import _QUERY_HANDLERS
         pcb_path = _write_violating_pcb(tmp_path)
         ir = _build_ir(pcb_path)
         op = DrcVendorOp(target_file="violating.kicad_pcb", vendor="generic", run_kicad_drc=False)
@@ -165,7 +165,7 @@ class TestDrcVendorHandler:
 
     def test_drc_vendor_clean_board_passes_via_handler(self, tmp_path):
         """Clean board -> passed=True."""
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops.handlers.query import _QUERY_HANDLERS
         pcb_path = _write_clean_pcb(tmp_path)
         ir = _build_ir(pcb_path)
         op = DrcVendorOp(target_file="clean.kicad_pcb", vendor="generic", run_kicad_drc=False)
@@ -176,7 +176,7 @@ class TestDrcVendorHandler:
 
     def test_drc_vendor_run_kicad_drc_graceful_degradation(self, tmp_path):
         """run_kicad_drc=True degrades gracefully if kicad-cli absent (error dict, not crash)."""
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops.handlers.query import _QUERY_HANDLERS
         pcb_path = _write_clean_pcb(tmp_path)
         ir = _build_ir(pcb_path)
         op = DrcVendorOp(target_file="clean.kicad_pcb", vendor="generic", run_kicad_drc=True)
@@ -188,7 +188,7 @@ class TestDrcVendorHandler:
 
     def test_drc_vendor_pcbway_via_handler(self, tmp_path):
         """drc_vendor(vendor='pcbway') runs against PCBWay limits."""
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops.handlers.query import _QUERY_HANDLERS
         pcb_path = _write_clean_pcb(tmp_path)
         ir = _build_ir(pcb_path)
         op = DrcVendorOp(target_file="clean.kicad_pcb", vendor="pcbway", run_kicad_drc=False)
@@ -200,7 +200,7 @@ class TestDrcVendorHandler:
 class TestListVendorDrcProfilesHandler:
     def test_list_vendor_drc_profiles_returns_9(self, tmp_path):
         """Handler returns 9 profiles with all required fields."""
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops.handlers.query import _QUERY_HANDLERS
         pcb_path = _write_clean_pcb(tmp_path)
         ir = _build_ir(pcb_path)
         op = ListVendorDrcProfilesOp(target_file="clean.kicad_pcb")
@@ -223,7 +223,7 @@ class TestListVendorDrcProfilesHandler:
 
     def test_list_profiles_ignores_ir(self, tmp_path):
         """Handler returns profiles even when ir is from a minimal board (handler ignores ir)."""
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops.handlers.query import _QUERY_HANDLERS
         # Minimal/empty board — handler should still return 9 profiles.
         pcb_path = tmp_path / "empty.kicad_pcb"
         pcb_path.write_text(
@@ -248,7 +248,7 @@ class TestReadOnlyVerification:
     def test_drc_vendor_file_mtime_unchanged(self, tmp_path):
         """drc_vendor is read-only — file mtime unchanged after the op (mirrors
         test_connectivity_query.py:283-298)."""
-        from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+        from volta.ops.handlers.query import _QUERY_HANDLERS
 
         # Copy a real fixture board to tmpdir.
         src = Path("tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_pcb")

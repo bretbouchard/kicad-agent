@@ -20,13 +20,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ops._schema_schematic_routing import (
+from volta.ops._schema_schematic_routing import (
     BatchConnectOp,
     GlobalLabelSpec,
     NetDef,
     RegenerateWiringOp,
 )
-from kicad_agent.ops.schema import PositionSpec
+from volta.ops.schema import PositionSpec
 
 
 # ---------------------------------------------------------------------------
@@ -299,7 +299,7 @@ class TestBatchWiring:
         schematic file is not needed. Patches remain active via direct
         attribute replacement on the instance so method calls use mocks.
         """
-        from kicad_agent.schematic_routing.batch_wiring import BatchWiring
+        from volta.schematic_routing.batch_wiring import BatchWiring
 
         tmpdir = tempfile.mkdtemp()
         tmpfile = Path(tmpdir) / "test.kicad_sch"
@@ -309,10 +309,10 @@ class TestBatchWiring:
         detector = mock_detector or MagicMock()
 
         with patch(
-            "kicad_agent.schematic_routing.batch_wiring.NetConnector",
+            "volta.schematic_routing.batch_wiring.NetConnector",
             return_value=connector,
         ), patch(
-            "kicad_agent.schematic_routing.batch_wiring.CollisionDetector",
+            "volta.schematic_routing.batch_wiring.CollisionDetector",
             return_value=detector,
         ):
             wiring = BatchWiring(tmpfile)
@@ -330,10 +330,10 @@ class TestBatchWiring:
         """Call batch_connect with patches active for CollisionDetector creation."""
         if getattr(wiring, '_patch_active', False):
             with patch(
-                "kicad_agent.schematic_routing.batch_wiring.NetConnector",
+                "volta.schematic_routing.batch_wiring.NetConnector",
                 return_value=wiring._mock_connector,
             ), patch(
-                "kicad_agent.schematic_routing.batch_wiring.CollisionDetector",
+                "volta.schematic_routing.batch_wiring.CollisionDetector",
                 return_value=wiring._mock_detector,
             ):
                 return wiring.batch_connect(**kwargs)
@@ -417,7 +417,7 @@ class TestBatchWiring:
 
     def test_regenerate_wiring_strips_existing_content(self):
         """Test 6: strips existing wires/labels/no_connects from schematic body."""
-        from kicad_agent.schematic_routing.batch_wiring import BatchWiring
+        from volta.schematic_routing.batch_wiring import BatchWiring
 
         tmpdir = tempfile.mkdtemp()
         tmpfile = Path(tmpdir) / "test.kicad_sch"
@@ -428,10 +428,10 @@ class TestBatchWiring:
         })
 
         with patch(
-            "kicad_agent.schematic_routing.batch_wiring.NetConnector",
+            "volta.schematic_routing.batch_wiring.NetConnector",
             return_value=mock_connector,
         ), patch(
-            "kicad_agent.schematic_routing.batch_wiring.CollisionDetector",
+            "volta.schematic_routing.batch_wiring.CollisionDetector",
             return_value=MagicMock(),
         ):
             wiring = BatchWiring(tmpfile)
@@ -447,7 +447,7 @@ class TestBatchWiring:
 
     def test_regenerate_wiring_connects_nets_and_adds_labels(self):
         """Test 7: connects all nets and adds global labels and no_connects."""
-        from kicad_agent.schematic_routing.batch_wiring import BatchWiring
+        from volta.schematic_routing.batch_wiring import BatchWiring
 
         tmpdir = tempfile.mkdtemp()
         tmpfile = Path(tmpdir) / "test.kicad_sch"
@@ -459,10 +459,10 @@ class TestBatchWiring:
         })
 
         with patch(
-            "kicad_agent.schematic_routing.batch_wiring.NetConnector",
+            "volta.schematic_routing.batch_wiring.NetConnector",
             return_value=mock_connector,
         ), patch(
-            "kicad_agent.schematic_routing.batch_wiring.CollisionDetector",
+            "volta.schematic_routing.batch_wiring.CollisionDetector",
             return_value=MagicMock(),
         ):
             wiring = BatchWiring(tmpfile)
@@ -485,7 +485,7 @@ class TestBatchWiring:
 
     def test_regenerate_wiring_returns_removed_and_generated_counts(self):
         """Test 8: returns removed counts and generated counts."""
-        from kicad_agent.schematic_routing.batch_wiring import BatchWiring
+        from volta.schematic_routing.batch_wiring import BatchWiring
 
         tmpdir = tempfile.mkdtemp()
         tmpfile = Path(tmpdir) / "test.kicad_sch"
@@ -496,10 +496,10 @@ class TestBatchWiring:
         })
 
         with patch(
-            "kicad_agent.schematic_routing.batch_wiring.NetConnector",
+            "volta.schematic_routing.batch_wiring.NetConnector",
             return_value=mock_connector,
         ), patch(
-            "kicad_agent.schematic_routing.batch_wiring.CollisionDetector",
+            "volta.schematic_routing.batch_wiring.CollisionDetector",
             return_value=MagicMock(),
         ):
             wiring = BatchWiring(tmpfile)

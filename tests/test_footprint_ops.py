@@ -10,10 +10,10 @@ Tests cover:
 import pytest
 from pydantic import ValidationError
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.ops.schema import (
+from volta.ir.base import _clear_registry
+from volta.ir.pcb_ir import PcbIR
+from volta.ir.schematic_ir import SchematicIR
+from volta.ops.schema import (
     AssignFootprintOp,
     Operation,
     SwapFootprintOp,
@@ -21,8 +21,8 @@ from kicad_agent.ops.schema import (
     VerifyPinMapOp,
     get_operation_schema,
 )
-from kicad_agent.parser import parse_pcb, parse_schematic
-from kicad_agent.parser.uuid_extractor import extract_uuids
+from volta.parser import parse_pcb, parse_schematic
+from volta.parser.uuid_extractor import extract_uuids
 
 
 # ---------------------------------------------------------------------------

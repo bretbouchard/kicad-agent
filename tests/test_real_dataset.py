@@ -8,10 +8,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.crawler.file_fetcher import FileFetcher
-from kicad_agent.crawler.github_discovery import GithubDiscovery, KicadFilePair
-from kicad_agent.training.graph_builder import BoardGraphResult
-from kicad_agent.training.real_dataset import (
+from volta.crawler.file_fetcher import FileFetcher
+from volta.crawler.github_discovery import GithubDiscovery, KicadFilePair
+from volta.training.graph_builder import BoardGraphResult
+from volta.training.real_dataset import (
     MIN_COMPONENTS,
     MIN_NETS,
     RealBoardDataset,
@@ -224,7 +224,7 @@ class TestQualityFilter:
             _make_sample(component_count=1, net_count=1),  # trivial
             _make_sample(component_count=10, net_count=5),  # valid
         ]
-        with caplog.at_level(logging.INFO, logger="kicad_agent.training.real_dataset"):
+        with caplog.at_level(logging.INFO, logger="volta.training.real_dataset"):
             result = filter_quality(samples)
         assert len(result) == 2
         assert "removed 1 trivial boards" in caplog.text
@@ -311,10 +311,10 @@ class TestPipelineIntegration:
         ]
 
         with (
-            patch("kicad_agent.training.real_dataset.GithubDiscovery", return_value=mock_discovery),
-            patch("kicad_agent.training.real_dataset.FileFetcher", return_value=mock_fetcher),
+            patch("volta.training.real_dataset.GithubDiscovery", return_value=mock_discovery),
+            patch("volta.training.real_dataset.FileFetcher", return_value=mock_fetcher),
             patch(
-                "kicad_agent.training.real_dataset.build_board_graph",
+                "volta.training.real_dataset.build_board_graph",
                 side_effect=[graph_result_1, graph_result_2],
             ),
         ):
@@ -380,10 +380,10 @@ class TestPipelineIntegration:
         mock_fetcher.fetch_pair.return_value = (fetched_sch, fetched_pcb)
 
         with (
-            patch("kicad_agent.training.real_dataset.GithubDiscovery", return_value=mock_discovery),
-            patch("kicad_agent.training.real_dataset.FileFetcher", return_value=mock_fetcher),
+            patch("volta.training.real_dataset.GithubDiscovery", return_value=mock_discovery),
+            patch("volta.training.real_dataset.FileFetcher", return_value=mock_fetcher),
             patch(
-                "kicad_agent.training.real_dataset.build_board_graph",
+                "volta.training.real_dataset.build_board_graph",
                 side_effect=graph_results,
             ),
         ):
@@ -445,10 +445,10 @@ class TestPipelineIntegration:
         output_dir = tmp_path / "splits"
 
         with (
-            patch("kicad_agent.training.real_dataset.GithubDiscovery", return_value=mock_discovery),
-            patch("kicad_agent.training.real_dataset.FileFetcher", return_value=mock_fetcher),
+            patch("volta.training.real_dataset.GithubDiscovery", return_value=mock_discovery),
+            patch("volta.training.real_dataset.FileFetcher", return_value=mock_fetcher),
             patch(
-                "kicad_agent.training.real_dataset.build_board_graph",
+                "volta.training.real_dataset.build_board_graph",
                 side_effect=graph_results,
             ),
         ):

@@ -21,10 +21,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.crawler.bulk_fetcher import BulkFetcher
-from kicad_agent.crawler.github_discovery import GithubDiscovery, RepoInfo
-from kicad_agent.training.graph_builder import build_board_graph
-from kicad_agent.training.real_dataset import (
+from volta.crawler.bulk_fetcher import BulkFetcher
+from volta.crawler.github_discovery import GithubDiscovery, RepoInfo
+from volta.training.graph_builder import build_board_graph
+from volta.training.real_dataset import (
     RealBoardDataset,
     RealBoardSample,
     _graph_result_to_sample,

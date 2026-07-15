@@ -22,7 +22,7 @@ class TestExecutorIntegration:
             pytest.skip(f"Fixture not found: {_LED_FIXTURE}")
 
         import json
-        from kicad_agent.handler import handle_operation
+        from volta.handler import handle_operation
 
         result = handle_operation(json.dumps({
             "op_type": "convert_to_skidl",
@@ -38,7 +38,7 @@ class TestExecutorIntegration:
     def test_convert_from_skidl_via_executor(self, tmp_path: Path) -> None:
         """convert_from_skidl works through the CREATE dispatch path."""
         import json
-        from kicad_agent.handler import handle_operation
+        from volta.handler import handle_operation
 
         skidl_script = tmp_path / "test_build.py"
         skidl_script.write_text(

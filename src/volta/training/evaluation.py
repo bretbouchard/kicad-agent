@@ -1,0 +1,252 @@
+"""Evaluation harness for GRPO-trained models.
+
+GRPO-06: Measures improvement on held-out maze-routing tasks vs baseline.
+Computes reward metrics, coordinate coverage, chain length statistics,
+and pass rates.
+
+eval_reward_quality() provides ground-truth-correlated held-out evaluation.
+
+Usage:
+    from volta.training.evaluation import EvaluationHarness, EvalResult
+    from volta.training.evaluation import eval_reward_quality
+
+    harness = EvaluationHarness(test_dataset, reward_model)
+    result = harness.evaluate(model)
+"""
+
+from __future__ import annotations
+
+import math
+import statistics
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from volta.training.chains import synthesize_maze_chain, synthesize_corrupted_chain
+from volta.training.dataset import MazeDataset, MazeSample
+from volta.training.regression import (
+    BaselineStore,
+    RegressionResult,
+    RegressionThresholds,
+    detect_regression,
+)
+from volta.training.reward import score_chain
+from volta.training.reward_model import eval_reward_quality  # noqa: F401
+
+
+@dataclass(frozen=True)
+class EvalResult:
+    """Evaluation metrics for a model on test data.
+
+    Attributes:
+        model_name: Identifier for the evaluated model.
+        n_samples: Number of test samples evaluated.
+        avg_reward: Mean reward across all samples.
+        avg_accuracy: Mean accuracy score component.
+        coordinate_coverage: Fraction of correct coordinates referenced.
+        chain_length_mean: Mean chain length.
+        chain_length_std: Standard deviation of chain lengths.
+        pass_rate: Fraction of chains that reach correct solution.
+        discrimination_gap: Model's avg score gap (correct - corrupted).
+            Higher = model better at distinguishing correct from corrupted.
+    """
+
+    model_name: str
+    n_samples: int
+    avg_reward: float
+    avg_accuracy: float
+    coordinate_coverage: float
+    chain_length_mean: float
+    chain_length_std: float
+    pass_rate: float
+    discrimination_gap: float = 0.0
+
+
+class EvaluationHarness:
+    """Evaluate models on held-out maze-routing test data.
+
+    Generates chains for test samples, scores them, and computes
+    aggregate metrics for comparison.
+    """
+
+    def __init__(
+        self,
+        test_dataset: MazeDataset,
+        reward_model: Any = None,
+    ):
+        """Initialize evaluation harness.
+
+        Args:
+            test_dataset: Held-out test dataset.
+            reward_model: Optional reward model for scoring.
+        """
+        self.test_dataset = test_dataset
+        self.reward_model = reward_model
+
+    def evaluate(
+        self,
+        model: Any = None,
+        n_samples: int = 100,
+    ) -> EvalResult:
+        """Evaluate a model on test data.
+
+        Args:
+            model: Optional model to evaluate. If None, uses rule-based chains.
+            n_samples: Max number of test samples to evaluate.
+
+        Returns:
+            EvalResult with aggregate metrics.
+        """
+        samples = self.test_dataset.samples[:n_samples]
+        if not samples:
+            return EvalResult(
+                model_name="empty",
+                n_samples=0,
+                avg_reward=0.0,
+                avg_accuracy=0.0,
+                coordinate_coverage=0.0,
+                chain_length_mean=0.0,
+                chain_length_std=0.0,
+                pass_rate=0.0,
+                discrimination_gap=0.0,
+            )
+
+        rewards: list[float] = []
+        accuracies: list[float] = []
+        chain_lengths: list[int] = []
+        correct_count = 0
+        total_coord_refs = 0
+        correct_coord_refs = 0
+
+        for sample in samples:
+            # Generate chain: model-based if available, else rule-based
+            if model is not None and hasattr(model, "generate"):
+                chain = model.generate(sample)
+            else:
+                chain = synthesize_maze_chain(sample)
+
+            # Score chain
+            chain_reward = score_chain(chain, sample)
+            rewards.append(chain_reward.reward_density)
+
+            # Average accuracy across steps
+            step_accs = [sr.accuracy_score for sr in chain_reward.step_rewards]
+            accuracies.append(sum(step_accs) / len(step_accs) if step_accs else 0.0)
+
+            chain_lengths.append(len(chain.steps))
+
+            if chain.is_correct:
+                correct_count += 1
+
+            # Coordinate coverage: fraction of solution path coords referenced
+            solution_set = set(sample.solution_path)
+            referenced_set = set(chain.coordinates_referenced)
+            if solution_set:
+                covered = len(solution_set & referenced_set)
+                total = len(solution_set)
+                total_coord_refs += total
+                correct_coord_refs += covered
+
+        coord_coverage = correct_coord_refs / max(total_coord_refs, 1)
+
+        # Measure discrimination: model's ability to score correct > corrupted
+        discrimination_gap = 0.0
+        if self.reward_model is not None and hasattr(self.reward_model, 'is_available') and self.reward_model.is_available:
+            from volta.training.reward_model import predict_reward
+            gaps: list[float] = []
+            for sample in samples[:50]:  # subsample for speed
+                correct = synthesize_maze_chain(sample)
+                pred_c = predict_reward(self.reward_model, correct.chain_text)
+                correct_score = (pred_c.format_score + pred_c.quality_score + pred_c.accuracy_score) / 3.0
+                corrupted = synthesize_corrupted_chain(sample, "wrong_coords", rng_seed=sample.seed)
+                pred_x = predict_reward(self.reward_model, corrupted.chain_text)
+                corrupted_score = (pred_x.format_score + pred_x.quality_score + pred_x.accuracy_score) / 3.0
+                gaps.append(correct_score - corrupted_score)
+            discrimination_gap = sum(gaps) / len(gaps) if gaps else 0.0
+
+        return EvalResult(
+            model_name=model.__class__.__name__ if model else "rule_based",
+            n_samples=len(samples),
+            avg_reward=sum(rewards) / len(rewards) if rewards else 0.0,
+            avg_accuracy=sum(accuracies) / len(accuracies) if accuracies else 0.0,
+            coordinate_coverage=coord_coverage,
+            chain_length_mean=statistics.mean(chain_lengths) if chain_lengths else 0.0,
+            chain_length_std=statistics.stdev(chain_lengths) if len(chain_lengths) > 1 else 0.0,
+            pass_rate=correct_count / len(samples) if samples else 0.0,
+            discrimination_gap=discrimination_gap,
+        )
+
+    def compare(self, model_before: Any, model_after: Any) -> dict:
+        """Side-by-side comparison of pre/post training.
+
+        Args:
+            model_before: Model before training.
+            model_after: Model after training.
+
+        Returns:
+            Dict with improvement deltas for each metric.
+        """
+        before = self.evaluate(model_before)
+        after = self.evaluate(model_after)
+
+        return {
+            "before": before,
+            "after": after,
+            "delta_reward": after.avg_reward - before.avg_reward,
+            "delta_accuracy": after.avg_accuracy - before.avg_accuracy,
+            "delta_coverage": after.coordinate_coverage - before.coordinate_coverage,
+            "delta_pass_rate": after.pass_rate - before.pass_rate,
+        }
+
+    def detect_regression(
+        self,
+        baseline: EvalResult,
+        current: EvalResult,
+        thresholds: RegressionThresholds = RegressionThresholds(),
+    ) -> RegressionResult:
+        """Detect regression between baseline and current evaluation.
+
+        Delegates to regression.detect_regression for threshold comparison.
+
+        Args:
+            baseline: Previous evaluation result.
+            current: New evaluation result.
+            thresholds: Configurable thresholds for each metric.
+
+        Returns:
+            RegressionResult with regression status and details.
+        """
+        return detect_regression(baseline, current, thresholds)
+
+    def save_baseline(
+        self, name: str, result: EvalResult, store_dir: Path | None = None
+    ) -> Path:
+        """Save an evaluation result as a baseline for future comparison.
+
+        Convenience wrapper for BaselineStore.save_baseline.
+
+        Args:
+            name: Baseline identifier.
+            result: Evaluation result to persist.
+            store_dir: Optional directory for baseline storage.
+
+        Returns:
+            Path to saved baseline file.
+        """
+        store = BaselineStore(store_dir)
+        return store.save_baseline(name, result)
+
+
+def run_baseline(test_dataset: MazeDataset) -> EvalResult:
+    """Generate chains using rule-based synthesis (no learned policy).
+
+    Provides baseline for comparison against trained models.
+
+    Args:
+        test_dataset: Test dataset to evaluate.
+
+    Returns:
+        EvalResult for rule-based baseline.
+    """
+    harness = EvaluationHarness(test_dataset)
+    return harness.evaluate(model=None)

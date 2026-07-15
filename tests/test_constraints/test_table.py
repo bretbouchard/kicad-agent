@@ -6,8 +6,8 @@ ConstraintParams via deterministic first-match lookup.
 
 import pytest
 
-from kicad_agent.analysis.net_classifier import NetImportance, SignalIntegrity
-from kicad_agent.constraints.table import ConstraintParams, lookup_params
+from volta.analysis.net_classifier import NetImportance, SignalIntegrity
+from volta.constraints.table import ConstraintParams, lookup_params
 
 
 class TestConstraintParams:

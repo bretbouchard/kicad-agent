@@ -65,7 +65,7 @@ def generate() -> Path:
         r3[2] += d1['A']
         d1['K'] += gnd
 
-        from kicad_agent.circuit_ir.skidl_to_kicad import circuit_to_kicad_sch
+        from volta.circuit_ir.skidl_to_kicad import circuit_to_kicad_sch
         OUT_DIR.mkdir(parents=True, exist_ok=True)
         out = circuit_to_kicad_sch(ckt, OUT_DIR / "astable_555.kicad_sch", emit_wires=True)
 

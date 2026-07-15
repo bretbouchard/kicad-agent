@@ -13,8 +13,8 @@ from pathlib import Path
 import pytest
 from kiutils.schematic import Schematic
 
-from kicad_agent.parser import parse_schematic
-from kicad_agent.serializer.normalizer import (
+from volta.parser import parse_schematic
+from volta.serializer.normalizer import (
     _fix_scientific_notation,
     _normalize_whitespace,
     normalize_kicad_output,
@@ -311,8 +311,8 @@ class TestIntegrationTransactionNormalizer:
         self, arduino_mega_sch: Path, tmp_output_dir: Path
     ) -> None:
         """Full pipeline: parse -> IR -> Transaction -> modify -> serialize -> normalize -> commit."""
-        from kicad_agent.ir.schematic_ir import SchematicIR
-        from kicad_agent.ir.transaction import Transaction
+        from volta.ir.schematic_ir import SchematicIR
+        from volta.ir.transaction import Transaction
 
         # Copy the schematic to a temp file so we can modify it
         work_file = tmp_output_dir / "work.kicad_sch"

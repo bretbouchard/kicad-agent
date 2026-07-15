@@ -11,12 +11,12 @@ class TestDiffModule:
 
     def test_import(self):
         """structural_diff is importable and callable."""
-        from kicad_agent.crossfile.diff import structural_diff
+        from volta.crossfile.diff import structural_diff
         assert callable(structural_diff)
 
     def test_diff_type_values(self):
         """DiffType enum has all expected values."""
-        from kicad_agent.crossfile.diff import DiffType
+        from volta.crossfile.diff import DiffType
         assert DiffType.ADDED.value == "added"
         assert DiffType.REMOVED.value == "removed"
         assert DiffType.MODIFIED.value == "modified"
@@ -28,7 +28,7 @@ class TestPropagationModule:
 
     def test_import(self):
         """Propagation module is importable."""
-        from kicad_agent.crossfile.propagation import (
+        from volta.crossfile.propagation import (
             PropagationResult,
             propagate_footprint_ref,
             propagate_symbol_ref,
@@ -43,7 +43,7 @@ class TestProjectContextModule:
 
     def test_import(self):
         """Project context types are importable."""
-        from kicad_agent.crossfile.project_context import (
+        from volta.crossfile.project_context import (
             ProjectContext,
             detect_project_root,
             discover_project,
@@ -54,7 +54,7 @@ class TestProjectContextModule:
 
     def test_discover_real_project(self):
         """discover_project works on a real KiCad project directory."""
-        from kicad_agent.crossfile.project_context import discover_project
+        from volta.crossfile.project_context import discover_project
         with tempfile.TemporaryDirectory() as tmp:
             # Create minimal project structure
             pro_file = Path(tmp) / "test.kicad_pro"
@@ -66,7 +66,7 @@ class TestProjectContextModule:
 
     def test_discover_project_finds_build_spec_and_builds_dir(self):
         """discover_project populates build_spec_files + builds_dir (INTEG-03/04)."""
-        from kicad_agent.crossfile.project_context import discover_project
+        from volta.crossfile.project_context import discover_project
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "test.kicad_pro").write_text(
@@ -86,7 +86,7 @@ class TestProjectContextModule:
 
     def test_discover_project_no_builds_is_backward_compat(self):
         """A project with no builds/ + no sidecar defaults cleanly (INTEG-03/04)."""
-        from kicad_agent.crossfile.project_context import discover_project
+        from volta.crossfile.project_context import discover_project
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "test.kicad_pro").write_text(

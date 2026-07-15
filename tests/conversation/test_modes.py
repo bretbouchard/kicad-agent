@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.conversation import (
+from volta.conversation import (
     ConversationMode,
     Mode,
     ModeRegistry,

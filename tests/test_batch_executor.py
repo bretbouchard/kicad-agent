@@ -15,9 +15,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ops.executor import OperationExecutor
-from kicad_agent.ops.ir_cache import IRCache
-from kicad_agent.ops.schema import Operation
+from volta.ops.executor import OperationExecutor
+from volta.ops.ir_cache import IRCache
+from volta.ops.schema import Operation
 
 
 # ---------------------------------------------------------------------------
@@ -88,9 +88,9 @@ class TestBatchExecutor:
         executor = OperationExecutor(base_dir=tmp_path)
 
         with patch(
-            "kicad_agent.ops.batch_executor.parse_schematic",
+            "volta.ops.batch_executor.parse_schematic",
             side_effect=lambda p: __import__(
-                "kicad_agent.parser", fromlist=["parse_schematic"]
+                "volta.parser", fromlist=["parse_schematic"]
             ).parse_schematic(p),
         ) as mock_parse:
             result = executor.execute_batch(ops)
@@ -113,9 +113,9 @@ class TestBatchExecutor:
         executor = OperationExecutor(base_dir=tmp_path)
 
         with patch(
-            "kicad_agent.ops.batch_executor.serialize_schematic",
+            "volta.ops.batch_executor.serialize_schematic",
             side_effect=lambda pr, fp, **kwargs: __import__(
-                "kicad_agent.serializer", fromlist=["serialize_schematic"]
+                "volta.serializer", fromlist=["serialize_schematic"]
             ).serialize_schematic(pr, fp, **kwargs),
         ) as mock_serialize:
             result = executor.execute_batch(ops)
@@ -236,9 +236,9 @@ class TestBatchExecutor:
         ]
 
         with patch(
-            "kicad_agent.ops.batch_executor.parse_schematic",
+            "volta.ops.batch_executor.parse_schematic",
             side_effect=lambda p: __import__(
-                "kicad_agent.parser", fromlist=["parse_schematic"]
+                "volta.parser", fromlist=["parse_schematic"]
             ).parse_schematic(p),
         ) as mock_parse:
             result = executor.execute_batch(ops)
@@ -264,7 +264,7 @@ class TestBatchExecutor:
         executor = OperationExecutor(base_dir=tmp_path)
 
         with patch(
-            "kicad_agent.ops.batch_executor.serialize_schematic",
+            "volta.ops.batch_executor.serialize_schematic",
             side_effect=RuntimeError("serialization failed"),
         ):
             with pytest.raises(RuntimeError, match="serialization failed"):
@@ -478,7 +478,7 @@ class TestOBUG009PartialFailure:
         executor = OperationExecutor(base_dir=tmp_path)
 
         # Mock the schematic handler to fail on the second call
-        from kicad_agent.ops import handlers as _handlers_mod
+        from volta.ops import handlers as _handlers_mod
         orig_handler = _handlers_mod._SCHEMATIC_HANDLERS.get("modify_property")
         call_count = [0]
 
@@ -517,7 +517,7 @@ class TestOBUG009PartialFailure:
 
         executor = OperationExecutor(base_dir=tmp_path)
 
-        from kicad_agent.ops import handlers as _handlers_mod
+        from volta.ops import handlers as _handlers_mod
         orig_handler = _handlers_mod._SCHEMATIC_HANDLERS.get("modify_property")
 
         def _failing_handler(root, ir, file_path):
@@ -552,7 +552,7 @@ class TestBatchRollback:
 
         executor = OperationExecutor(base_dir=tmp_path)
 
-        from kicad_agent.ops import handlers as _handlers_mod
+        from volta.ops import handlers as _handlers_mod
         orig_handler = _handlers_mod._SCHEMATIC_HANDLERS.get("modify_property")
 
         def _failing_handler(root, ir, file_path):
@@ -590,7 +590,7 @@ class TestBatchRollback:
 
         executor = OperationExecutor(base_dir=tmp_path)
 
-        from kicad_agent.ops import handlers as _handlers_mod
+        from volta.ops import handlers as _handlers_mod
         orig_handler = _handlers_mod._SCHEMATIC_HANDLERS.get("modify_property")
         call_count = [0]
 
@@ -621,7 +621,7 @@ class TestBatchRollback:
 
         executor = OperationExecutor(base_dir=tmp_path)
 
-        from kicad_agent.ops import handlers as _handlers_mod
+        from volta.ops import handlers as _handlers_mod
         orig_handler = _handlers_mod._SCHEMATIC_HANDLERS.get("modify_property")
 
         def _fail(root, ir, file_path):
@@ -645,8 +645,8 @@ class TestBatchRollback:
 
         executor = OperationExecutor(base_dir=tmp_path)
 
-        from kicad_agent.ops import handlers as _handlers_mod
-        from kicad_agent.ops.batch_executor import BatchOpFailedError
+        from volta.ops import handlers as _handlers_mod
+        from volta.ops.batch_executor import BatchOpFailedError
         orig_handler = _handlers_mod._SCHEMATIC_HANDLERS.get("modify_property")
 
         def _fail(root, ir, file_path):
@@ -813,7 +813,7 @@ class TestCumulativeIR:
         executor = OperationExecutor(base_dir=tmp_path)
 
         with patch(
-            "kicad_agent.ops.execution.try_native_parse",
+            "volta.ops.execution.try_native_parse",
             return_value=None,
         ):
             result = executor.execute_batch(ops)
@@ -861,14 +861,14 @@ class TestBatchPhase1Gate:
         executor = OperationExecutor(base_dir=tmp_path)
 
         # Patch the gate to verify it's called for .kicad_pcb
-        from kicad_agent.ops.pre_analysis import PreAnalysisGate
+        from volta.ops.pre_analysis import PreAnalysisGate
         mock_gate = MagicMock(spec=PreAnalysisGate)
         mock_gate.analyze.return_value = MagicMock(
             blocked=[], warnings=[], enriched_context={}
         )
 
         with patch(
-            "kicad_agent.ops.batch_executor._get_pre_analysis_gate",
+            "volta.ops.batch_executor._get_pre_analysis_gate",
             return_value=mock_gate,
         ):
             result = executor.execute_batch(ops)
@@ -887,14 +887,14 @@ class TestBatchPhase1Gate:
 
         executor = OperationExecutor(base_dir=tmp_path)
 
-        from kicad_agent.ops.pre_analysis import PreAnalysisGate
+        from volta.ops.pre_analysis import PreAnalysisGate
         mock_gate = MagicMock(spec=PreAnalysisGate)
         mock_gate.analyze.return_value = MagicMock(
             blocked=[], warnings=[], enriched_context={}
         )
 
         with patch(
-            "kicad_agent.ops.batch_executor._get_pre_analysis_gate",
+            "volta.ops.batch_executor._get_pre_analysis_gate",
             return_value=mock_gate,
         ):
             result = executor.execute_batch(ops)
@@ -912,7 +912,7 @@ class TestBatchPhase1Gate:
 
         executor = OperationExecutor(base_dir=tmp_path)
 
-        from kicad_agent.ops.pre_analysis import PreAnalysisResult, PreAnalysisFinding
+        from volta.ops.pre_analysis import PreAnalysisResult, PreAnalysisFinding
 
         blocker = PreAnalysisFinding(
             severity="blocker", message="Blocked by test", category="test"
@@ -921,12 +921,12 @@ class TestBatchPhase1Gate:
             blockers=[blocker], warnings=[], enriched_context={}
         )
 
-        from kicad_agent.ops.pre_analysis import PreAnalysisGate
+        from volta.ops.pre_analysis import PreAnalysisGate
         mock_gate = MagicMock(spec=PreAnalysisGate)
         mock_gate.analyze.return_value = mock_result
 
         with patch(
-            "kicad_agent.ops.batch_executor._get_pre_analysis_gate",
+            "volta.ops.batch_executor._get_pre_analysis_gate",
             return_value=mock_gate,
         ):
             result = executor.execute_batch(ops)

@@ -10,18 +10,18 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.parser import parse_pcb
-from kicad_agent.parser.uuid_extractor import extract_uuids
-from kicad_agent.spatial.extractor import (
+from volta.ir.base import _clear_registry
+from volta.ir.pcb_ir import PcbIR
+from volta.parser import parse_pcb
+from volta.parser.uuid_extractor import extract_uuids
+from volta.spatial.extractor import (
     extract_all,
     extract_boxes,
     extract_paths,
     extract_points,
     extract_regions,
 )
-from kicad_agent.spatial.primitives import SpatialBox, SpatialPath, SpatialPoint
+from volta.spatial.primitives import SpatialBox, SpatialPath, SpatialPoint
 
 from conftest import FIXTURE_DIR
 

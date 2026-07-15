@@ -11,33 +11,33 @@ CP-01, CP-05: Constraint propagation from circuit analysis.
 """
 import pytest
 
-from kicad_agent.analysis.design_rules import (
+from volta.analysis.design_rules import (
     DesignRuleReport,
     DesignRuleViolation,
     RuleCategory,
     RuleSeverity,
 )
-from kicad_agent.analysis.intent_schemas import (
+from volta.analysis.intent_schemas import (
     DesignGoal,
     DesignIntent,
     SubcircuitIntent,
 )
-from kicad_agent.analysis.net_classifier import NetImportance, SignalIntegrity
-from kicad_agent.analysis.subcircuit_detector import Subcircuit, SubcircuitType
-from kicad_agent.analysis.topology_graph import (
+from volta.analysis.net_classifier import NetImportance, SignalIntegrity
+from volta.analysis.subcircuit_detector import Subcircuit, SubcircuitType
+from volta.analysis.topology_graph import (
     CircuitTopology,
     TopologyEdge,
     TopologyNode,
 )
-from kicad_agent.analysis.types import NetClassification
-from kicad_agent.constraints.extractors import (
+from volta.analysis.types import NetClassification
+from volta.constraints.extractors import (
     extract_diff_pair_constraints,
     extract_impedance_constraints,
     extract_power_constraints,
     extract_signal_flow_constraints,
     extract_thermal_constraints,
 )
-from kicad_agent.constraints.types import (
+from volta.constraints.types import (
     ClearanceConstraint,
     DecouplingConstraint,
     DifferentialPairConstraint,

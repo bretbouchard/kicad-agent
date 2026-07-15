@@ -10,9 +10,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ops.executor import OperationExecutor
-from kicad_agent.ops.handlers.schematic_query import _SCHEMATIC_QUERY_HANDLERS
-from kicad_agent.ops.registry import get_readonly_operations
+from volta.ops.executor import OperationExecutor
+from volta.ops.handlers.schematic_query import _SCHEMATIC_QUERY_HANDLERS
+from volta.ops.registry import get_readonly_operations
 
 
 # ---------------------------------------------------------------------------
@@ -44,7 +44,7 @@ class TestSchematicQueryDispatchPath:
 
     def test_all_schematic_query_ops_use_query_path(self, project_dir):
         """Every op in _SCHEMATIC_QUERY_HANDLERS must go through execute_schematic_query."""
-        import kicad_agent.ops.executor as executor_mod
+        import volta.ops.executor as executor_mod
 
         executor = OperationExecutor(base_dir=project_dir)
 
@@ -70,7 +70,7 @@ class TestSchematicQueryDispatchPath:
         executor_mod.execute_schematic_query = track_query
         executor_mod.execute_schematic = track_schematic
 
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         try:
             for op_type in _SCHEMATIC_QUERY_HANDLERS:
@@ -98,7 +98,7 @@ class TestSchematicQueryDispatchPath:
 
     def test_query_ops_do_not_serialize(self, project_dir):
         """Verify that _execute_schematic_query does not write to the file."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=project_dir)
         mtime_before = Path(project_dir / "test.kicad_sch").stat().st_mtime_ns
@@ -117,11 +117,11 @@ class TestSchematicQueryDispatchPath:
 
     def test_query_ops_no_transaction(self, project_dir):
         """Verify that _execute_schematic_query does not create a Transaction."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=project_dir)
 
-        with patch("kicad_agent.ops.execution.Transaction") as mock_txn:
+        with patch("volta.ops.execution.Transaction") as mock_txn:
             op = Operation.model_validate({
                 "root": {
                     "op_type": "validate_refs",
@@ -133,7 +133,7 @@ class TestSchematicQueryDispatchPath:
 
     def test_query_ops_return_success_structure(self, project_dir):
         """Verify _execute_schematic_query returns correct result structure."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=project_dir)
 
@@ -170,7 +170,7 @@ class TestReadonlyCoverage:
         # are in _QUERY_HANDLERS rather than _SCHEMATIC_QUERY_HANDLERS but still
         # use the no-Transaction/no-serialize query dispatch path.
         # Gate ops (gate_status, run_gate_check) are in _GATE_HANDLERS.
-        from kicad_agent.ops.handlers import _QUERY_HANDLERS, _GATE_HANDLERS
+        from volta.ops.handlers import _QUERY_HANDLERS, _GATE_HANDLERS
         handled = (
             set(_SCHEMATIC_QUERY_HANDLERS.keys())
             | set(_QUERY_HANDLERS.keys())
@@ -196,7 +196,7 @@ class TestReadonlyCoverage:
             if ".kicad_pcb" in op.file_types
         }
 
-        from kicad_agent.ops.handlers import (
+        from volta.ops.handlers import (
             _QUERY_HANDLERS, _PROJECT_HANDLERS, _PCB_HANDLERS,
             _SCHEMATIC_QUERY_HANDLERS, _GATE_HANDLERS,
         )
@@ -223,7 +223,7 @@ class TestReadonlyCoverage:
         }
 
         # These should be in _PROJECT_HANDLERS, _QUERY_HANDLERS, or _GATE_HANDLERS
-        from kicad_agent.ops.handlers import (
+        from volta.ops.handlers import (
             _PROJECT_HANDLERS, _QUERY_HANDLERS, _GATE_HANDLERS,
         )
 

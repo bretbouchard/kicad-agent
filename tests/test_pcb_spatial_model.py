@@ -13,27 +13,27 @@ from typing import Any
 import pytest
 from shapely.geometry import GeometryCollection
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.parser import parse_pcb
-from kicad_agent.parser.uuid_extractor import extract_uuids
-from kicad_agent.project.design_rules import NetClassDef
-from kicad_agent.spatial.layer_classifier import LayerClassifier
-from kicad_agent.spatial.layer_stackup import LayerInfo, LayerStackup
-from kicad_agent.spatial.net_class_geometry import (
+from volta.ir.base import _clear_registry
+from volta.ir.pcb_ir import PcbIR
+from volta.parser import parse_pcb
+from volta.parser.uuid_extractor import extract_uuids
+from volta.project.design_rules import NetClassDef
+from volta.spatial.layer_classifier import LayerClassifier
+from volta.spatial.layer_stackup import LayerInfo, LayerStackup
+from volta.spatial.net_class_geometry import (
     NetClassGeometry,
     build_net_class_map,
 )
-from kicad_agent.spatial.pcb_model import (
+from volta.spatial.pcb_model import (
     PcbSpatialModel,
     _CLEARANCE_TOLERANCE_MM,
 )
-from kicad_agent.spatial.primitives import (
+from volta.spatial.primitives import (
     SpatialBox,
     SpatialPath,
     SpatialPoint,
 )
-from kicad_agent.spatial.board_outline import extract_board_outline
+from volta.spatial.board_outline import extract_board_outline
 from shapely.geometry import Polygon, MultiPolygon
 
 from conftest import FIXTURE_DIR

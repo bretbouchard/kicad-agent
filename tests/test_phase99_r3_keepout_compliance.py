@@ -30,7 +30,7 @@ except ImportError:
 @pytest.fixture(autouse=True)
 def _skip_if_no_freerouting_or_shapely():
     """JAR-skip + shapely-skip fixture."""
-    from kicad_agent.routing.freerouting import is_freerouting_available
+    from volta.routing.freerouting import is_freerouting_available
     if not is_freerouting_available():
         pytest.skip("Freerouting JAR or Java runtime not available")
     if not _HAS_SHAPELY:
@@ -46,8 +46,8 @@ def test_no_wire_crosses_keepout():
     WARN-7: fixture zone type verified BEFORE the compliance assertion.
     C-1 fix: 3-way classification (copper pour / routing keepout / placement-only).
     """
-    from kicad_agent.parser.pcb_native_parser import NativeParser
-    from kicad_agent.routing.freerouting import parse_ses, route_with_freerouting, ses_to_kicad_sexpr
+    from volta.parser.pcb_native_parser import NativeParser
+    from volta.routing.freerouting import parse_ses, route_with_freerouting, ses_to_kicad_sexpr
 
     # STEP 1 (WARN-7): verify fixture zone type upfront.
     board = NativeParser.parse_pcb(_RPI_UHAT)

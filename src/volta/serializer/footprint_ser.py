@@ -1,0 +1,58 @@
+"""Footprint (.kicad_mod) file serializer with UUID re-injection.
+
+Serializes parsed KiCad footprint files back to disk via kiutils, then
+re-injects UUIDs that kiutils drops during serialization.
+
+Uses atomic_write for crash safety (S-BUG-005).
+
+Usage:
+    from volta.serializer.footprint_ser import serialize_footprint
+
+    output_path = serialize_footprint(parse_result, Path("output.kicad_mod"), uuid_map=uuid_map)
+"""
+
+from pathlib import Path
+from typing import Optional
+
+from volta.io.atomic_write import atomic_write
+from volta.parser.types import ParseResult
+from volta.parser.uuid_extractor import UUIDMap
+from volta.serializer.uuid_reinjector import reinject_uuids
+
+
+def serialize_footprint(
+    parse_result: ParseResult,
+    output_path: Path,
+    uuid_map: Optional[UUIDMap] = None,
+) -> Path:
+    """Serialize a parsed footprint back to a .kicad_mod file.
+
+    Uses kiutils' to_file() for serialization. If a UUIDMap is provided,
+    reads the serialized output and re-injects UUIDs that kiutils dropped.
+
+    Uses atomic_write for crash safety when writing the final output
+    (S-BUG-005).
+
+    Args:
+        parse_result: ParseResult from parse_footprint().
+        output_path: Target file path for the serialized footprint.
+        uuid_map: Optional UUIDMap for re-injecting dropped UUIDs.
+
+    Returns:
+        The output path (same as input output_path).
+    """
+    if parse_result.file_type != "footprint":
+        raise ValueError(
+            f"Expected file_type='footprint', got file_type={parse_result.file_type!r}"
+        )
+
+    output_path = output_path.resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    parse_result.kiutils_obj.to_file(str(output_path))
+
+    if uuid_map is not None and uuid_map.entries:
+        serialized = output_path.read_text(encoding="utf-8")
+        restored = reinject_uuids(serialized, uuid_map)
+        atomic_write(output_path, restored)
+
+    return output_path

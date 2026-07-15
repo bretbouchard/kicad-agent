@@ -8,15 +8,15 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.generation.intent import (
+from volta.generation.intent import (
     BoardSpec,
     ComponentSpec,
     GenerationIntent,
     NetSpec,
     PowerSpec,
 )
-from kicad_agent.generation.op_planner import OpPlanner, PlanStep, plan_operation_sequence
-from kicad_agent.ops.schema import Operation
+from volta.generation.op_planner import OpPlanner, PlanStep, plan_operation_sequence
+from volta.ops.schema import Operation
 
 
 def _make_intent(

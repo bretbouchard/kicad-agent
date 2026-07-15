@@ -39,7 +39,7 @@ import skidl
 _KICAD_SYMBOLS = "/Applications/KiCad/KiCad.app/Contents/SharedSupport/symbols"
 skidl.lib_search_paths[skidl.KICAD] = [_KICAD_SYMBOLS]
 
-from kicad_agent.circuit_ir import circuit_to_kicad_sch
+from volta.circuit_ir import circuit_to_kicad_sch
 
 
 # System prompt for legibility task

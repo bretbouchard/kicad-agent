@@ -25,8 +25,8 @@ _SRC = Path(__file__).resolve().parent.parent / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from kicad_agent.io.atomic_write import atomic_write  # noqa: E402
-from kicad_agent.training.sft_labeller import SFTLabeller  # noqa: E402
+from volta.io.atomic_write import atomic_write  # noqa: E402
+from volta.training.sft_labeller import SFTLabeller  # noqa: E402
 
 logger = logging.getLogger("score_sft_dataset")
 

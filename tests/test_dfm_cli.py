@@ -15,11 +15,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.dfm.cli import dfm_command, register_dfm_parser
+from volta.dfm.cli import dfm_command, register_dfm_parser
 
 # Check for PcbSpatialModel availability (Phase 51 dependency)
 try:
-    from kicad_agent.spatial.pcb_model import PcbSpatialModel
+    from volta.spatial.pcb_model import PcbSpatialModel
     HAS_SPATIAL_MODEL = True
 except ImportError:
     HAS_SPATIAL_MODEL = False

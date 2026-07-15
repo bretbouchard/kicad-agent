@@ -43,7 +43,7 @@ class TestBenchmarkQuestionSchema:
 
     def test_valid_question(self) -> None:
         """Test 1: BenchmarkQuestion validates with all required fields."""
-        from kicad_agent.benchmarks.schemas import BenchmarkQuestion
+        from volta.benchmarks.schemas import BenchmarkQuestion
 
         q = BenchmarkQuestion(
             id="pcb-mmlu-0001",
@@ -65,7 +65,7 @@ class TestBenchmarkQuestionSchema:
 
     def test_rejects_out_of_bounds_correct_index(self) -> None:
         """Test 2: BenchmarkQuestion rejects correct_index outside choices bounds."""
-        from kicad_agent.benchmarks.schemas import BenchmarkQuestion
+        from volta.benchmarks.schemas import BenchmarkQuestion
 
         with pytest.raises(Exception):
             BenchmarkQuestion(
@@ -82,7 +82,7 @@ class TestBenchmarkQuestionSchema:
 
     def test_rejects_empty_fields(self) -> None:
         """Test 3: BenchmarkQuestion rejects empty question/choices/explanation."""
-        from kicad_agent.benchmarks.schemas import BenchmarkQuestion
+        from volta.benchmarks.schemas import BenchmarkQuestion
 
         with pytest.raises(Exception):
             BenchmarkQuestion(
@@ -112,7 +112,7 @@ class TestBenchmarkQuestionSchema:
 
     def test_rejects_duplicate_choices(self) -> None:
         """Test 4: BenchmarkQuestion rejects duplicate choices."""
-        from kicad_agent.benchmarks.schemas import BenchmarkQuestion
+        from volta.benchmarks.schemas import BenchmarkQuestion
 
         with pytest.raises(Exception):
             BenchmarkQuestion(
@@ -129,7 +129,7 @@ class TestBenchmarkQuestionSchema:
 
     def test_rejects_wrong_choice_count(self) -> None:
         """BenchmarkQuestion requires exactly 4 choices."""
-        from kicad_agent.benchmarks.schemas import BenchmarkQuestion
+        from volta.benchmarks.schemas import BenchmarkQuestion
 
         with pytest.raises(Exception):
             BenchmarkQuestion(
@@ -146,7 +146,7 @@ class TestBenchmarkQuestionSchema:
 
     def test_rejects_invalid_category(self) -> None:
         """BenchmarkQuestion rejects categories outside the 8 allowed."""
-        from kicad_agent.benchmarks.schemas import BenchmarkQuestion
+        from volta.benchmarks.schemas import BenchmarkQuestion
 
         with pytest.raises(Exception):
             BenchmarkQuestion(
@@ -163,7 +163,7 @@ class TestBenchmarkQuestionSchema:
 
     def test_rejects_invalid_id_format(self) -> None:
         """BenchmarkQuestion rejects IDs that don't match pcb-mmlu-NNNN."""
-        from kicad_agent.benchmarks.schemas import BenchmarkQuestion
+        from volta.benchmarks.schemas import BenchmarkQuestion
 
         with pytest.raises(Exception):
             BenchmarkQuestion(
@@ -180,7 +180,7 @@ class TestBenchmarkQuestionSchema:
 
     def test_rejects_empty_choices(self) -> None:
         """BenchmarkQuestion rejects empty string choices."""
-        from kicad_agent.benchmarks.schemas import BenchmarkQuestion
+        from volta.benchmarks.schemas import BenchmarkQuestion
 
         with pytest.raises(Exception):
             BenchmarkQuestion(
@@ -206,7 +206,7 @@ class TestBenchmarkDatasetSchema:
 
     def test_valid_dataset(self) -> None:
         """Test 5: BenchmarkDataset validates with version, questions list, metadata."""
-        from kicad_agent.benchmarks.schemas import BenchmarkDataset, BenchmarkQuestion
+        from volta.benchmarks.schemas import BenchmarkDataset, BenchmarkQuestion
 
         questions = [
             BenchmarkQuestion(
@@ -233,7 +233,7 @@ class TestBenchmarkDatasetSchema:
 
     def test_rejects_empty_questions(self) -> None:
         """BenchmarkDataset rejects empty questions list."""
-        from kicad_agent.benchmarks.schemas import BenchmarkDataset
+        from volta.benchmarks.schemas import BenchmarkDataset
 
         with pytest.raises(Exception):
             BenchmarkDataset(
@@ -244,7 +244,7 @@ class TestBenchmarkDatasetSchema:
 
     def test_rejects_invalid_version(self) -> None:
         """BenchmarkDataset rejects non-semver version strings."""
-        from kicad_agent.benchmarks.schemas import BenchmarkDataset, BenchmarkQuestion
+        from volta.benchmarks.schemas import BenchmarkDataset, BenchmarkQuestion
 
         q = BenchmarkQuestion(
             id="pcb-mmlu-0001",
@@ -275,7 +275,7 @@ class TestQuestionGenerator:
 
     def test_generate_questions_returns_list(self) -> None:
         """Test 6: generate_questions returns list of BenchmarkQuestion for each category."""
-        from kicad_agent.benchmarks.question_generator import generate_questions
+        from volta.benchmarks.question_generator import generate_questions
 
         categories = [
             "component_identification",
@@ -296,7 +296,7 @@ class TestQuestionGenerator:
 
     def test_topology_recognition_questions(self) -> None:
         """Test 7: generate_questions for topology_recognition from IC context."""
-        from kicad_agent.benchmarks.question_generator import generate_questions
+        from volta.benchmarks.question_generator import generate_questions
 
         questions = generate_questions(
             "topology_recognition",
@@ -316,7 +316,7 @@ class TestQuestionGenerator:
 
     def test_troubleshooting_questions(self) -> None:
         """Test 8: generate_questions for troubleshooting from ERC violations."""
-        from kicad_agent.benchmarks.question_generator import generate_questions
+        from volta.benchmarks.question_generator import generate_questions
 
         questions = generate_questions(
             "troubleshooting",
@@ -338,7 +338,7 @@ class TestQuestionGenerator:
 
     def test_four_choices_valid_index(self) -> None:
         """Test 9: Each question has exactly 4 choices, correct_index in [0,3], distractors != correct."""
-        from kicad_agent.benchmarks.question_generator import generate_questions
+        from volta.benchmarks.question_generator import generate_questions
 
         for category in [
             "component_identification",
@@ -381,7 +381,7 @@ class TestQuestionGenerator:
 
     def test_unique_sequential_ids(self) -> None:
         """Test 10: Question IDs are unique and sequential (pcb-mmlu-NNNN format)."""
-        from kicad_agent.benchmarks.question_generator import generate_questions
+        from volta.benchmarks.question_generator import generate_questions
 
         all_ids: list[str] = []
         for category in [
@@ -399,7 +399,7 @@ class TestQuestionGenerator:
 
     def test_distractors_differ_from_correct(self) -> None:
         """All distractors differ from the correct answer for every question."""
-        from kicad_agent.benchmarks.question_generator import generate_questions
+        from volta.benchmarks.question_generator import generate_questions
 
         questions = generate_questions(
             "component_identification",
@@ -422,7 +422,7 @@ class TestDatasetBuilder:
 
     def test_build_dataset_from_sources(self) -> None:
         """Test 1: DatasetBuilder builds dataset from a list of source schematics."""
-        from kicad_agent.benchmarks.dataset_builder import DatasetBuilder
+        from volta.benchmarks.dataset_builder import DatasetBuilder
 
         mock_sources = [
             {
@@ -467,7 +467,7 @@ class TestDatasetBuilder:
 
     def test_minimum_500_questions(self) -> None:
         """Test 2: DatasetBuilder produces >= 500 questions."""
-        from kicad_agent.benchmarks.dataset_builder import DatasetBuilder
+        from volta.benchmarks.dataset_builder import DatasetBuilder
 
         builder = DatasetBuilder(seed=42)
         dataset = builder.build(target_count=500)
@@ -475,7 +475,7 @@ class TestDatasetBuilder:
 
     def test_each_category_has_minimum_50(self) -> None:
         """Test 3: Each category has >= 50 questions."""
-        from kicad_agent.benchmarks.dataset_builder import DatasetBuilder
+        from volta.benchmarks.dataset_builder import DatasetBuilder
 
         builder = DatasetBuilder(seed=42)
         dataset = builder.build(target_count=500)
@@ -496,7 +496,7 @@ class TestDatasetBuilder:
 
     def test_difficulty_distribution(self) -> None:
         """Test 4: Difficulty distribution within 5% of targets (20/60/20)."""
-        from kicad_agent.benchmarks.dataset_builder import DatasetBuilder
+        from volta.benchmarks.dataset_builder import DatasetBuilder
 
         builder = DatasetBuilder(seed=42)
         dataset = builder.build(target_count=500)
@@ -513,21 +513,21 @@ class TestDatasetBuilder:
 
     def test_dataset_validates_against_schema(self) -> None:
         """Test 5: Generated dataset validates against BenchmarkDataset schema."""
-        from kicad_agent.benchmarks.dataset_builder import DatasetBuilder
+        from volta.benchmarks.dataset_builder import DatasetBuilder
 
         builder = DatasetBuilder(seed=42)
         dataset = builder.build(target_count=500)
 
         # Round-trip through model_validate
         json_str = dataset.model_dump_json()
-        from kicad_agent.benchmarks.schemas import BenchmarkDataset
+        from volta.benchmarks.schemas import BenchmarkDataset
 
         reloaded = BenchmarkDataset.model_validate_json(json_str)
         assert len(reloaded.questions) == len(dataset.questions)
 
     def test_no_duplicate_question_ids(self) -> None:
         """Test 6: No duplicate question IDs in output."""
-        from kicad_agent.benchmarks.dataset_builder import DatasetBuilder
+        from volta.benchmarks.dataset_builder import DatasetBuilder
 
         builder = DatasetBuilder(seed=42)
         dataset = builder.build(target_count=500)
@@ -537,7 +537,7 @@ class TestDatasetBuilder:
 
     def test_questions_reference_real_sources(self) -> None:
         """Test 7: Questions reference actual source schematics from analog-ecosystem."""
-        from kicad_agent.benchmarks.dataset_builder import DatasetBuilder
+        from volta.benchmarks.dataset_builder import DatasetBuilder
 
         builder = DatasetBuilder(seed=42)
         dataset = builder.build(target_count=500)
@@ -550,7 +550,7 @@ class TestDatasetBuilder:
 
     def test_json_round_trip(self) -> None:
         """Test 8: Dataset can be serialized to JSON and re-loaded."""
-        from kicad_agent.benchmarks.dataset_builder import DatasetBuilder
+        from volta.benchmarks.dataset_builder import DatasetBuilder
 
         builder = DatasetBuilder(seed=42)
         dataset = builder.build(target_count=50)

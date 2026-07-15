@@ -25,7 +25,7 @@ class TestCuratedProjectSchema:
 
     def test_validates_with_all_required_fields(self):
         """CuratedProject validates with all required fields."""
-        from kicad_agent.training.corpus_curator import CuratedProject
+        from volta.training.corpus_curator import CuratedProject
 
         project = CuratedProject(
             name="arduino-nano",
@@ -41,7 +41,7 @@ class TestCuratedProjectSchema:
 
     def test_rejects_missing_name(self):
         """CuratedProject rejects missing name."""
-        from kicad_agent.training.corpus_curator import CuratedProject
+        from volta.training.corpus_curator import CuratedProject
 
         with pytest.raises(Exception):
             CuratedProject(
@@ -50,14 +50,14 @@ class TestCuratedProjectSchema:
 
     def test_rejects_missing_source_url(self):
         """CuratedProject rejects missing source_url."""
-        from kicad_agent.training.corpus_curator import CuratedProject
+        from volta.training.corpus_curator import CuratedProject
 
         with pytest.raises(Exception):
             CuratedProject(name="test-project")
 
     def test_default_complexity_score_is_zero(self):
         """CuratedProject sets default complexity_score to 0.0."""
-        from kicad_agent.training.corpus_curator import CuratedProject
+        from volta.training.corpus_curator import CuratedProject
 
         project = CuratedProject(
             name="test",
@@ -67,7 +67,7 @@ class TestCuratedProjectSchema:
 
     def test_metadata_allows_arbitrary_kv(self):
         """CuratedProject metadata allows arbitrary key-value pairs."""
-        from kicad_agent.training.corpus_curator import CuratedProject
+        from volta.training.corpus_curator import CuratedProject
 
         project = CuratedProject(
             name="test",
@@ -78,7 +78,7 @@ class TestCuratedProjectSchema:
 
     def test_rejects_empty_license(self):
         """CuratedProject rejects empty license string (too short for SPDX)."""
-        from kicad_agent.training.corpus_curator import CuratedProject
+        from volta.training.corpus_curator import CuratedProject
 
         with pytest.raises(Exception):
             CuratedProject(
@@ -89,7 +89,7 @@ class TestCuratedProjectSchema:
 
     def test_accepts_noassertion_license(self):
         """CuratedProject accepts NOASSERTION as license."""
-        from kicad_agent.training.corpus_curator import CuratedProject
+        from volta.training.corpus_curator import CuratedProject
 
         project = CuratedProject(
             name="test",
@@ -100,7 +100,7 @@ class TestCuratedProjectSchema:
 
     def test_erc_status_pattern(self):
         """CuratedProject accepts only valid erc_status values."""
-        from kicad_agent.training.corpus_curator import CuratedProject
+        from volta.training.corpus_curator import CuratedProject
 
         for valid_status in ["pass", "fail", "unknown", "not_run"]:
             project = CuratedProject(
@@ -122,7 +122,7 @@ class TestCorpusCurator:
     """Test CorpusCurator pipeline with mocked external dependencies."""
 
     def _make_curator(self) -> "CorpusCurator":
-        from kicad_agent.training.corpus_curator import CorpusCurator
+        from volta.training.corpus_curator import CorpusCurator
         return CorpusCurator(github_token="fake")
 
     def test_check_license_compatibility_mit(self):
@@ -216,10 +216,10 @@ class TestCorpusCurator:
         assert valid is False
         assert "nets" in reason.lower()
 
-    @patch("kicad_agent.training.corpus_curator.CorpusCurator.download_and_validate")
+    @patch("volta.training.corpus_curator.CorpusCurator.download_and_validate")
     def test_curate_batch_processes_multiple(self, mock_validate):
         """curate_batch processes multiple repos and returns curated list."""
-        from kicad_agent.training.corpus_curator import CuratedProject, CorpusCurator
+        from volta.training.corpus_curator import CuratedProject, CorpusCurator
 
         curator = CorpusCurator(github_token="fake")
 
@@ -240,10 +240,10 @@ class TestCorpusCurator:
         results = curator.curate_batch(repos)
         assert len(results) == 3
 
-    @patch("kicad_agent.training.corpus_curator.CorpusCurator.download_and_validate")
+    @patch("volta.training.corpus_curator.CorpusCurator.download_and_validate")
     def test_curate_batch_deduplicates(self, mock_validate):
         """curate_batch filters out duplicate projects by source_url."""
-        from kicad_agent.training.corpus_curator import CuratedProject, CorpusCurator
+        from volta.training.corpus_curator import CuratedProject, CorpusCurator
 
         curator = CorpusCurator(github_token="fake")
 
@@ -273,35 +273,35 @@ class TestLicenseCompatibility:
 
     def test_mit_is_commercially_compatible(self):
         """MIT license is identified as commercially compatible."""
-        from kicad_agent.training.corpus_curator import CorpusCurator
+        from volta.training.corpus_curator import CorpusCurator
 
         curator = CorpusCurator()
         assert curator.check_license_compatibility("MIT") is True
 
     def test_apache_is_commercially_compatible(self):
         """Apache-2.0 is commercially compatible."""
-        from kicad_agent.training.corpus_curator import CorpusCurator
+        from volta.training.corpus_curator import CorpusCurator
 
         curator = CorpusCurator()
         assert curator.check_license_compatibility("Apache-2.0") is True
 
     def test_cern_ohl_p_is_commercially_compatible(self):
         """CERN-OHL-P-2.0 is commercially compatible."""
-        from kicad_agent.training.corpus_curator import CorpusCurator
+        from volta.training.corpus_curator import CorpusCurator
 
         curator = CorpusCurator()
         assert curator.check_license_compatibility("CERN-OHL-P-2.0") is True
 
     def test_cc_by_nc_is_not_commercially_compatible(self):
         """CC-BY-NC-4.0 is not commercially compatible."""
-        from kicad_agent.training.corpus_curator import CorpusCurator
+        from volta.training.corpus_curator import CorpusCurator
 
         curator = CorpusCurator()
         assert curator.check_license_compatibility("CC-BY-NC-4.0") is False
 
     def test_noassertion_is_not_commercially_compatible(self):
         """NOASSERTION is not commercially compatible (unknown = assume no)."""
-        from kicad_agent.training.corpus_curator import CorpusCurator
+        from volta.training.corpus_curator import CorpusCurator
 
         curator = CorpusCurator()
         assert curator.check_license_compatibility("NOASSERTION") is False
@@ -312,7 +312,7 @@ class TestCorpusCuratorSerialization:
 
     def test_to_jsonl_round_trip(self):
         """to_jsonl and from_jsonl preserve project data."""
-        from kicad_agent.training.corpus_curator import CorpusCurator, CuratedProject
+        from volta.training.corpus_curator import CorpusCurator, CuratedProject
 
         projects = [
             CuratedProject(name="test1", source_url="https://github.com/a/b", component_count=10),
@@ -343,7 +343,7 @@ class TestProjectIndex:
     """Test searchable project index."""
 
     def _make_sample_projects(self):
-        from kicad_agent.training.corpus_curator import CuratedProject
+        from volta.training.corpus_curator import CuratedProject
 
         return [
             CuratedProject(name="audio-amp", source_url="https://github.com/a/amp",
@@ -362,14 +362,14 @@ class TestProjectIndex:
 
     def test_builds_from_project_list(self):
         """ProjectIndex builds from list of CuratedProject."""
-        from kicad_agent.training.project_index import ProjectIndex
+        from volta.training.project_index import ProjectIndex
 
         index = ProjectIndex(self._make_sample_projects())
         assert len(index.projects) == 4
 
     def test_search_by_category(self):
         """Search by category returns matching projects."""
-        from kicad_agent.training.project_index import ProjectIndex
+        from volta.training.project_index import ProjectIndex
 
         index = ProjectIndex(self._make_sample_projects())
         audio = index.search(category="audio")
@@ -378,7 +378,7 @@ class TestProjectIndex:
 
     def test_search_by_complexity_range(self):
         """Search by complexity range filters correctly."""
-        from kicad_agent.training.project_index import ProjectIndex
+        from volta.training.project_index import ProjectIndex
 
         index = ProjectIndex(self._make_sample_projects())
         mid = index.search(min_complexity=3.0, max_complexity=7.0)
@@ -386,7 +386,7 @@ class TestProjectIndex:
 
     def test_search_commercial_only(self):
         """Search by license compatibility filters correctly."""
-        from kicad_agent.training.project_index import ProjectIndex
+        from volta.training.project_index import ProjectIndex
 
         index = ProjectIndex(self._make_sample_projects())
         commercial = index.search(commercial_only=True)
@@ -395,7 +395,7 @@ class TestProjectIndex:
 
     def test_search_by_component_count(self):
         """Search by component count range filters correctly."""
-        from kicad_agent.training.project_index import ProjectIndex
+        from volta.training.project_index import ProjectIndex
 
         index = ProjectIndex(self._make_sample_projects())
         large = index.search(min_components=20)
@@ -403,7 +403,7 @@ class TestProjectIndex:
 
     def test_combined_filters_anded(self):
         """Multiple filters AND together."""
-        from kicad_agent.training.project_index import ProjectIndex
+        from volta.training.project_index import ProjectIndex
 
         index = ProjectIndex(self._make_sample_projects())
         results = index.search(category="audio", min_complexity=5.0)
@@ -412,7 +412,7 @@ class TestProjectIndex:
 
     def test_search_empty_results(self):
         """Search returns empty list for non-matching filters."""
-        from kicad_agent.training.project_index import ProjectIndex
+        from volta.training.project_index import ProjectIndex
 
         index = ProjectIndex(self._make_sample_projects())
         results = index.search(category="robotics")
@@ -420,7 +420,7 @@ class TestProjectIndex:
 
     def test_stats(self):
         """Stats returns summary statistics."""
-        from kicad_agent.training.project_index import ProjectIndex
+        from volta.training.project_index import ProjectIndex
 
         index = ProjectIndex(self._make_sample_projects())
         stats = index.stats()
@@ -431,7 +431,7 @@ class TestProjectIndex:
 
     def test_json_round_trip(self):
         """ProjectIndex serializes to/from JSON."""
-        from kicad_agent.training.project_index import ProjectIndex
+        from volta.training.project_index import ProjectIndex
 
         projects = self._make_sample_projects()
         index = ProjectIndex(projects)
@@ -448,7 +448,7 @@ class TestProjectIndex:
 
     def test_categories_list(self):
         """categories() lists all categories."""
-        from kicad_agent.training.project_index import ProjectIndex
+        from volta.training.project_index import ProjectIndex
 
         index = ProjectIndex(self._make_sample_projects())
         cats = index.categories()

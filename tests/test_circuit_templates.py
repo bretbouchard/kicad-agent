@@ -9,7 +9,7 @@ class TestCircuitTemplates:
     def test_import(self):
         """Circuit templates module is importable if it exists."""
         try:
-            from kicad_agent.analysis.circuit_templates import CircuitTemplateDB
+            from volta.analysis.circuit_templates import CircuitTemplateDB
             assert CircuitTemplateDB is not None
         except ImportError:
             pytest.skip("circuit_templates module not present in this version")
@@ -17,7 +17,7 @@ class TestCircuitTemplates:
     def test_creation(self):
         """CircuitTemplateDB can be created."""
         try:
-            from kicad_agent.analysis.circuit_templates import CircuitTemplateDB
+            from volta.analysis.circuit_templates import CircuitTemplateDB
         except ImportError:
             pytest.skip("circuit_templates module not present in this version")
         db = CircuitTemplateDB()
@@ -30,7 +30,7 @@ class TestReasoningChains:
     def test_import(self):
         """Reasoning chains module is importable if it exists."""
         try:
-            from kicad_agent.analysis.reasoning_chains import ReasoningChainDB
+            from volta.analysis.reasoning_chains import ReasoningChainDB
             assert ReasoningChainDB is not None
         except ImportError:
             # Module may not exist in this version
@@ -42,7 +42,7 @@ class TestIntentSchemas:
 
     def test_import(self):
         """Intent schemas are importable."""
-        from kicad_agent.analysis.intent_schemas import (
+        from volta.analysis.intent_schemas import (
             DesignGoal,
             DesignIntent,
             SubcircuitIntent,

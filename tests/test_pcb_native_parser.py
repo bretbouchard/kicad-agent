@@ -9,11 +9,11 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.parser.pcb_native_parser import (
+from volta.parser.pcb_native_parser import (
     NativeParser,
     _pre_scan_depth,
 )
-from kicad_agent.parser.pcb_native_types import (
+from volta.parser.pcb_native_types import (
     NativeBoard,
     NativeFootprint,
     NativeGeneral,
@@ -340,7 +340,7 @@ class TestKiutilsCompatibility:
 
     def test_native_board_traceItems_mixed(self):
         """Verify traceItems combines segments and vias."""
-        from kicad_agent.parser.pcb_native_types import (
+        from volta.parser.pcb_native_types import (
             NativeSegment,
             NativeVia,
             _NativePosition,
@@ -549,7 +549,7 @@ class TestNativeBoardProperties:
         assert isinstance(board.graphicItems, list)
 
     def test_traceItems_combines_segments_and_vias(self):
-        from kicad_agent.parser.pcb_native_types import NativeSegment, NativeVia
+        from volta.parser.pcb_native_types import NativeSegment, NativeVia
 
         # CR-01: construct immutably (segments/vias are tuples).
         board = NativeBoard(
@@ -590,11 +590,11 @@ class TestImports:
     """Verify all expected exports are importable."""
 
     def test_import_parser(self):
-        from kicad_agent.parser.pcb_native_parser import NativeParser
+        from volta.parser.pcb_native_parser import NativeParser
         assert NativeParser is not None
 
     def test_import_types(self):
-        from kicad_agent.parser.pcb_native_types import (
+        from volta.parser.pcb_native_types import (
             NativeBoard,
             NativeBoardOutline,
             NativeFootprint,
@@ -621,7 +621,7 @@ class TestImports:
     def test_no_kiutils_import_in_parser(self):
         """Verify parser module does not import kiutils as a module."""
         import ast
-        import kicad_agent.parser.pcb_native_parser as parser_mod
+        import volta.parser.pcb_native_parser as parser_mod
         source = open(parser_mod.__file__).read()
         tree = ast.parse(source)
         for node in ast.walk(tree):
@@ -634,7 +634,7 @@ class TestImports:
     def test_no_kiutils_import_in_types(self):
         """Verify types module does not import kiutils as a module."""
         import ast
-        import kicad_agent.parser.pcb_native_types as types_mod
+        import volta.parser.pcb_native_types as types_mod
         source = open(types_mod.__file__).read()
         tree = ast.parse(source)
         for node in ast.walk(tree):

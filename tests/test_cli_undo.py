@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.cli import main
-from kicad_agent.ops.persistent_undo import PersistentUndoStack
+from volta.cli import main
+from volta.ops.persistent_undo import PersistentUndoStack
 
 
 @pytest.fixture
@@ -55,7 +55,7 @@ class TestCliUndo:
         stack.push(sch, original, modified, "add_wire")
 
         # Undo via executor (same stack instance)
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
         executor = OperationExecutor(base_dir=project_dir, undo_stack=stack)
         undo_result = executor.undo(target_file="test.kicad_sch")
         assert undo_result["success"]
@@ -128,7 +128,7 @@ class TestGitignore:
         src_dir = str(Path(__file__).resolve().parent.parent / "src")
         env["PYTHONPATH"] = src_dir + os.pathsep + env.get("PYTHONPATH", "")
         result = subprocess.run(
-            [sys.executable, "-m", "kicad_agent.cli", "undo", "-p", str(project_dir)],
+            [sys.executable, "-m", "volta.cli", "undo", "-p", str(project_dir)],
             capture_output=True, text=True, env=env,
         )
         assert result.returncode == 1

@@ -17,10 +17,10 @@ from unittest.mock import patch
 
 import pytest
 
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.ops.persistent_undo import PersistentUndoStack
-from kicad_agent.parser.pcb_native_parser import NativeParser
-from kicad_agent.routing.orchestrator import RoutingOrchestrator
+from volta.ir.pcb_ir import PcbIR
+from volta.ops.persistent_undo import PersistentUndoStack
+from volta.parser.pcb_native_parser import NativeParser
+from volta.routing.orchestrator import RoutingOrchestrator
 
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "smd_test_board.kicad_pcb"
@@ -74,7 +74,7 @@ class TestPreRouteSnapshotPushed:
 class TestRollbackNetUsesPcbir:
     def test_no_regex_import_in_orchestrator(self) -> None:
         # H2 done criterion: orchestrator.py must not import re at module level.
-        content = Path("src/kicad_agent/routing/orchestrator.py").read_text()
+        content = Path("src/volta/routing/orchestrator.py").read_text()
         # Check for top-level "import re" (not inside a comment/string).
         lines = content.split("\n")
         for line in lines:

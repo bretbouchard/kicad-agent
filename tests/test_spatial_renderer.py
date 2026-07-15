@@ -11,11 +11,11 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.parser import parse_pcb
-from kicad_agent.parser.uuid_extractor import extract_uuids
-from kicad_agent.spatial.renderer import (
+from volta.ir.base import _clear_registry
+from volta.ir.pcb_ir import PcbIR
+from volta.parser import parse_pcb
+from volta.parser.uuid_extractor import extract_uuids
+from volta.spatial.renderer import (
     _add_coordinate_grid,
     _get_board_bounds,
     render_pcb_layer,

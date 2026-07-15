@@ -13,7 +13,7 @@ import pytest
 from kiutils.items.common import Position
 from kiutils.schematic import Schematic
 
-from kicad_agent.schematic_routing.net_inference import (
+from volta.schematic_routing.net_inference import (
     _score_net,
     _suggest_net,
     infer_nets,
@@ -110,9 +110,9 @@ class TestInferNetsIntegration:
             sch = Schematic.create_new()
             sch.to_file(str(sch_path))
 
-            with patch("kicad_agent.schematic_routing.net_inference.extract_nets",
+            with patch("volta.schematic_routing.net_inference.extract_nets",
                        return_value={"nets": {}, "stats": {"total_nets": 0}}):
-                with patch("kicad_agent.schematic_routing.net_inference._find_unconnected_pins",
+                with patch("volta.schematic_routing.net_inference._find_unconnected_pins",
                            return_value=[]):
                     result = infer_nets(sch_path)
 
@@ -132,9 +132,9 @@ class TestInferNetsIntegration:
             sch = Schematic.create_new()
             sch.to_file(str(sch_path))
 
-            with patch("kicad_agent.schematic_routing.net_inference.extract_nets",
+            with patch("volta.schematic_routing.net_inference.extract_nets",
                        return_value={"nets": mock_nets, "stats": {"total_nets": 1}}):
-                with patch("kicad_agent.schematic_routing.net_inference._find_unconnected_pins",
+                with patch("volta.schematic_routing.net_inference._find_unconnected_pins",
                            return_value=[]):
                     result = infer_nets(sch_path)
 
@@ -157,9 +157,9 @@ class TestInferNetsIntegration:
             sch = Schematic.create_new()
             sch.to_file(str(sch_path))
 
-            with patch("kicad_agent.schematic_routing.net_inference.extract_nets",
+            with patch("volta.schematic_routing.net_inference.extract_nets",
                        return_value={"nets": mock_nets, "stats": {"total_nets": 1}}):
-                with patch("kicad_agent.schematic_routing.net_inference._find_unconnected_pins",
+                with patch("volta.schematic_routing.net_inference._find_unconnected_pins",
                            return_value=[]):
                     result = infer_nets(sch_path)
 
@@ -182,9 +182,9 @@ class TestInferNetsIntegration:
             sch = Schematic.create_new()
             sch.to_file(str(sch_path))
 
-            with patch("kicad_agent.schematic_routing.net_inference.extract_nets",
+            with patch("volta.schematic_routing.net_inference.extract_nets",
                        return_value={"nets": mock_nets, "stats": {"total_nets": 3}}):
-                with patch("kicad_agent.schematic_routing.net_inference._find_unconnected_pins",
+                with patch("volta.schematic_routing.net_inference._find_unconnected_pins",
                            return_value=[]):
                     result = infer_nets(sch_path, confidence_threshold="high")
 
@@ -204,9 +204,9 @@ class TestInferNetsIntegration:
             sch = Schematic.create_new()
             sch.to_file(str(sch_path))
 
-            with patch("kicad_agent.schematic_routing.net_inference.extract_nets",
+            with patch("volta.schematic_routing.net_inference.extract_nets",
                        return_value={"nets": mock_nets, "stats": {"total_nets": 1}}):
-                with patch("kicad_agent.schematic_routing.net_inference._find_unconnected_pins",
+                with patch("volta.schematic_routing.net_inference._find_unconnected_pins",
                            return_value=[{
                                "ref": "U1", "pin": "AIN1", "pin_number": "5",
                                "electrical_type": "passive",
@@ -249,7 +249,7 @@ class TestSuggestNetFromProfile:
 
     def test_backplane_profile_suggests_power(self):
         """Backplane profile suggests VCC_3V3 for AK4619VN TVDD pin."""
-        from kicad_agent.ops.net_label_placer import _BUILTIN_PROFILES
+        from volta.ops.net_label_placer import _BUILTIN_PROFILES
 
         mapping = _BUILTIN_PROFILES["backplane"]
         pin = {"pin_name": "TVDD", "pin_number": "5"}
@@ -258,7 +258,7 @@ class TestSuggestNetFromProfile:
 
     def test_backplane_profile_suggests_gnd(self):
         """Backplane profile suggests GND for MT8816 VSS pin."""
-        from kicad_agent.ops.net_label_placer import _BUILTIN_PROFILES
+        from volta.ops.net_label_placer import _BUILTIN_PROFILES
 
         mapping = _BUILTIN_PROFILES["backplane"]
         pin = {"pin_name": "VSS", "pin_number": "20"}
@@ -267,7 +267,7 @@ class TestSuggestNetFromProfile:
 
     def test_channel_strip_15v(self):
         """Channel-strip profile suggests ±15V for NE5532."""
-        from kicad_agent.ops.net_label_placer import _BUILTIN_PROFILES
+        from volta.ops.net_label_placer import _BUILTIN_PROFILES
 
         mapping = _BUILTIN_PROFILES["channel-strip"]
         pin = {"pin_name": "VCC", "pin_number": "8"}

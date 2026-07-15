@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-SCHEMA_DIR = Path(__file__).resolve().parents[2] / "src" / "kicad_agent" / "ops"
+SCHEMA_DIR = Path(__file__).resolve().parents[2] / "src" / "volta" / "ops"
 
 
 def count_op_classes() -> int:
@@ -40,6 +40,6 @@ def count_schema_files() -> int:
 
 def count_operation_tools() -> int:
     """Count tools generated from operation schemas in edit_server."""
-    from kicad_agent.mcp.edit_server import _OPERATION_TOOLS  # noqa: WPS433
+    from volta.mcp.edit_server import _OPERATION_TOOLS  # noqa: WPS433
 
     return len(_OPERATION_TOOLS)

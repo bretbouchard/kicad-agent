@@ -17,7 +17,7 @@ from typing import Optional
 
 import pytest
 
-from kicad_agent.schematic_routing.schematic_graph import (
+from volta.schematic_routing.schematic_graph import (
     Label,
     PinPosition,
     Pos,

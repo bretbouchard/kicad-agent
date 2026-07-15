@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.parser.pcb_native_parser import NativeParser
-from kicad_agent.routing.dsn_generator import generate_dsn
+from volta.parser.pcb_native_parser import NativeParser
+from volta.routing.dsn_generator import generate_dsn
 
 _SMD_BOARD = Path(__file__).parent / "fixtures" / "smd_test_board.kicad_pcb"
 

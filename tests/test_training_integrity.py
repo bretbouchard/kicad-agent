@@ -21,10 +21,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.inference.best_of_n import best_of_n_select
-from kicad_agent.training.grpo import GRPOConfig, GRPOTrainer
-from kicad_agent.training.grpo_trainer import GRPOLoopTrainer
-from kicad_agent.training.sft.templates import TASK_TEMPLATES, get_template_for_chain
+from volta.inference.best_of_n import best_of_n_select
+from volta.training.grpo import GRPOConfig, GRPOTrainer
+from volta.training.grpo_trainer import GRPOLoopTrainer
+from volta.training.sft.templates import TASK_TEMPLATES, get_template_for_chain
 
 
 # ---------------------------------------------------------------------------
@@ -52,7 +52,7 @@ def test_best_of_n_raises_on_empty_chains() -> None:
 
 def test_pipeline_uses_train_eval_split() -> None:
     """Pipeline must split data into separate train/val/test sets."""
-    from kicad_agent.training.dataset import MazeDataset, MazeSample
+    from volta.training.dataset import MazeDataset, MazeSample
 
     # Create a small dataset with 10 samples
     samples = [
@@ -90,7 +90,7 @@ def test_pipeline_uses_train_eval_split() -> None:
 
 def test_grpo_trainer_advantage_clipping_docstring() -> None:
     """GRPOLoopTrainer docstring must mention advantage clipping, not PPO ratio."""
-    from kicad_agent.training.grpo_config import GRPOTrainingConfig
+    from volta.training.grpo_config import GRPOTrainingConfig
 
     config = GRPOTrainingConfig()
     trainer = GRPOLoopTrainer(config)
@@ -103,7 +103,7 @@ def test_grpo_trainer_advantage_clipping_docstring() -> None:
 
 def test_grpo_trainer_clips_advantages_not_ratios() -> None:
     """compute_advantage_weights clips raw advantages, not probability ratios."""
-    from kicad_agent.training.grpo_config import GRPOTrainingConfig
+    from volta.training.grpo_config import GRPOTrainingConfig
 
     config = GRPOTrainingConfig(clip_range=0.2)
     trainer = GRPOLoopTrainer(config)
@@ -157,7 +157,7 @@ def test_sft_mps_uses_float32() -> None:
     """SFT trainer must use float32 on MPS device, not float16."""
     import torch
 
-    from kicad_agent.training.sft.trainer import SFTTrainingConfig
+    from volta.training.sft.trainer import SFTTrainingConfig
 
     config = SFTTrainingConfig(device="mps")
 
@@ -182,7 +182,7 @@ def test_grpo_no_per_step_rng_reset() -> None:
 
     # Verify the source code does not contain per-step seed reset
     import inspect
-    from kicad_agent.training.grpo import GRPOTrainer
+    from volta.training.grpo import GRPOTrainer
 
     source = inspect.getsource(GRPOTrainer.train_step)
     # The old pattern was: rng = random.Random(self.config.seed)
@@ -199,7 +199,7 @@ def test_grpo_no_per_step_rng_reset() -> None:
 
 def test_train_reward_model_computes_val_loss() -> None:
     """train_reward_model must compute validation loss when val data is provided."""
-    from kicad_agent.training.reward_model import RewardModel, train_reward_model
+    from volta.training.reward_model import RewardModel, train_reward_model
 
     # Skip if PyTorch not available
     rm = RewardModel(device="cpu")
@@ -235,7 +235,7 @@ def test_train_reward_model_computes_val_loss() -> None:
 
 def test_run_ablation_removed() -> None:
     """run_ablation must be removed from the evaluation module."""
-    import kicad_agent.training.evaluation as eval_module
+    import volta.training.evaluation as eval_module
 
     assert not hasattr(eval_module, "run_ablation"), (
         "run_ablation should be removed from evaluation module"

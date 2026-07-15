@@ -9,12 +9,12 @@ Covers:
 
 from pathlib import Path
 
-from kicad_agent.generation.intent import (
+from volta.generation.intent import (
     ComponentSpec,
     GenerationIntent,
     PowerSpec,
 )
-from kicad_agent.generation.template_schematic import generate_schematic
+from volta.generation.template_schematic import generate_schematic
 
 
 class TestGenerateSchematic:
@@ -97,7 +97,7 @@ class TestGenerateSchematic:
         assert result.component_count == 1
 
         # Re-parse through the project's own parser
-        from kicad_agent.parser import parse_schematic
+        from volta.parser import parse_schematic
 
         parse_result = parse_schematic(output)
         assert parse_result is not None

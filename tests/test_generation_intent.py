@@ -8,7 +8,7 @@ Covers:
 - Auto-reference assignment for component specs
 """
 
-from kicad_agent.generation.intent import (
+from volta.generation.intent import (
     BoardSpec,
     ComponentSpec,
     GenerationIntent,
@@ -17,7 +17,7 @@ from kicad_agent.generation.intent import (
     PositionSpec,
     intent_to_operations,
 )
-from kicad_agent.ops.schema import AddComponentOp, AddNetOp, AddPowerOp
+from volta.ops.schema import AddComponentOp, AddNetOp, AddPowerOp
 
 
 class TestGenerationIntentCreation:

@@ -12,7 +12,7 @@ class TestFixSilkscreenOverCopperOpSchema:
     """Schema validation tests."""
 
     def test_valid_default(self):
-        from kicad_agent.ops._schema_pcb import FixSilkscreenOverCopperOp
+        from volta.ops._schema_pcb import FixSilkscreenOverCopperOp
 
         op = FixSilkscreenOverCopperOp(target_file="board.kicad_pcb")
         assert op.op_type == "fix_silkscreen_over_copper"
@@ -22,7 +22,7 @@ class TestFixSilkscreenOverCopperOpSchema:
         assert op.silk_layers == ["F.SilkS", "B.SilkS"]
 
     def test_valid_relocate(self):
-        from kicad_agent.ops._schema_pcb import FixSilkscreenOverCopperOp
+        from volta.ops._schema_pcb import FixSilkscreenOverCopperOp
 
         op = FixSilkscreenOverCopperOp(
             target_file="board.kicad_pcb",
@@ -33,7 +33,7 @@ class TestFixSilkscreenOverCopperOpSchema:
         assert op.clearance_mm == 0.20
 
     def test_invalid_clearance(self):
-        from kicad_agent.ops._schema_pcb import FixSilkscreenOverCopperOp
+        from volta.ops._schema_pcb import FixSilkscreenOverCopperOp
 
         with pytest.raises(ValidationError):
             FixSilkscreenOverCopperOp(
@@ -42,7 +42,7 @@ class TestFixSilkscreenOverCopperOpSchema:
             )
 
     def test_invalid_action(self):
-        from kicad_agent.ops._schema_pcb import FixSilkscreenOverCopperOp
+        from volta.ops._schema_pcb import FixSilkscreenOverCopperOp
 
         with pytest.raises(ValidationError):
             FixSilkscreenOverCopperOp(
@@ -51,7 +51,7 @@ class TestFixSilkscreenOverCopperOpSchema:
             )
 
     def test_registry_entry_exists(self):
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
 
         assert "fix_silkscreen_over_copper" in OPERATION_REGISTRY
         meta = OPERATION_REGISTRY["fix_silkscreen_over_copper"]
@@ -59,7 +59,7 @@ class TestFixSilkscreenOverCopperOpSchema:
         assert meta.is_readonly is False
 
     def test_discriminated_union_accepts(self):
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -75,8 +75,8 @@ class TestSilkscreenClearanceEngine:
 
     def test_no_violations(self):
         """Board with pads far from silkscreen returns clean."""
-        from kicad_agent.validation.silkscreen_clearance import check_silkscreen_clearance
-        from kicad_agent.parser.pcb_native_types import NativeBoard, NativeFootprint
+        from volta.validation.silkscreen_clearance import check_silkscreen_clearance
+        from volta.parser.pcb_native_types import NativeBoard, NativeFootprint
 
         fp = SimpleNamespace(
             properties={"Reference": "R1", "Value": "10k"},
@@ -109,8 +109,8 @@ class TestSilkscreenClearanceEngine:
 
     def test_violation_detected(self):
         """Silkscreen text overlapping a pad is detected."""
-        from kicad_agent.validation.silkscreen_clearance import check_silkscreen_clearance
-        from kicad_agent.parser.pcb_native_types import NativeBoard, NativeFootprint
+        from volta.validation.silkscreen_clearance import check_silkscreen_clearance
+        from volta.parser.pcb_native_types import NativeBoard, NativeFootprint
 
         fp = SimpleNamespace(
             properties={"Reference": "U1", "Value": "ATMega"},
@@ -146,8 +146,8 @@ class TestSilkscreenClearanceEngine:
 
     def test_suggested_position(self):
         """Violations include a suggested relocation position."""
-        from kicad_agent.validation.silkscreen_clearance import check_silkscreen_clearance
-        from kicad_agent.parser.pcb_native_types import NativeBoard, NativeFootprint
+        from volta.validation.silkscreen_clearance import check_silkscreen_clearance
+        from volta.parser.pcb_native_types import NativeBoard, NativeFootprint
 
         fp = SimpleNamespace(
             properties={"Reference": "C1", "Value": "100nF"},
@@ -179,8 +179,8 @@ class TestSilkscreenClearanceEngine:
 
     def test_empty_board(self):
         """Empty board returns zero checked."""
-        from kicad_agent.validation.silkscreen_clearance import check_silkscreen_clearance
-        from kicad_agent.parser.pcb_native_types import NativeBoard
+        from volta.validation.silkscreen_clearance import check_silkscreen_clearance
+        from volta.parser.pcb_native_types import NativeBoard
 
         board = NativeBoard()
         ir = _make_pcb_ir(board)
@@ -192,7 +192,7 @@ class TestSilkscreenClearanceEngine:
 
 def _make_pcb_ir(board):
     """Create a minimal PcbIR for testing."""
-    from kicad_agent.ir.pcb_ir import PcbIR
+    from volta.ir.pcb_ir import PcbIR
 
     ir = PcbIR.__new__(PcbIR)
     ir._parse_result = type("PR", (), {

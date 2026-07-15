@@ -13,9 +13,9 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ltspice.asc_parser import parse_asc
-from kicad_agent.ltspice.net_graph import LTspiceNetGraph
-from kicad_agent.ltspice.types import LTspiceSchematic
+from volta.ltspice.asc_parser import parse_asc
+from volta.ltspice.net_graph import LTspiceNetGraph
+from volta.ltspice.types import LTspiceSchematic
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "ltspice"
 BASIC_RC_ASC = FIXTURE_DIR / "basic_rc.asc"

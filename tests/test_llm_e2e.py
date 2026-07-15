@@ -14,11 +14,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.generation.evaluation import EvaluationResult, get_test_intents
-from kicad_agent.generation.intent import GenerationIntent
-from kicad_agent.generation.pipeline import GenerationResult
-from kicad_agent.llm.design_critic import CritiqueReport, CritiqueFinding, CritiqueSeverity
-from kicad_agent.llm.refinement import LLMRefinementResult
+from volta.generation.evaluation import EvaluationResult, get_test_intents
+from volta.generation.intent import GenerationIntent
+from volta.generation.pipeline import GenerationResult
+from volta.llm.design_critic import CritiqueReport, CritiqueFinding, CritiqueSeverity
+from volta.llm.refinement import LLMRefinementResult
 
 
 # ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ class TestLLMGenerationResult:
 
     def test_result_holds_all_intermediate_outputs(self):
         """LLMGenerationResult holds intent, generation_result, critique, refinement, evaluation, errors."""
-        from kicad_agent.llm.pipeline import LLMGenerationResult
+        from volta.llm.pipeline import LLMGenerationResult
 
         intent = _led_simple_intent()
         gen_result = GenerationResult(
@@ -92,7 +92,7 @@ class TestLLMGenerationResult:
 
     def test_result_is_frozen(self):
         """LLMGenerationResult cannot be mutated after creation."""
-        from kicad_agent.llm.pipeline import LLMGenerationResult
+        from volta.llm.pipeline import LLMGenerationResult
 
         result = LLMGenerationResult(success=False, errors=("test error",))
         with pytest.raises(AttributeError):
@@ -100,7 +100,7 @@ class TestLLMGenerationResult:
 
     def test_result_holds_none_for_unpopulated_stages(self):
         """LLMGenerationResult allows None for optional intermediate outputs."""
-        from kicad_agent.llm.pipeline import LLMGenerationResult
+        from volta.llm.pipeline import LLMGenerationResult
 
         result = LLMGenerationResult(
             success=False,
@@ -125,7 +125,7 @@ class TestHappyPath:
 
     def test_full_pipeline_produces_success(self, tmp_path: Path):
         """llm_generate('design a voltage regulator') with mocked LLM produces LLMGenerationResult with success."""
-        from kicad_agent.llm.pipeline import llm_generate
+        from volta.llm.pipeline import llm_generate
 
         mock_parser = MagicMock()
         mock_parser.parse.return_value = _power_supply_intent()
@@ -159,7 +159,7 @@ class TestHappyPath:
                 erc_pass=True,
             )
 
-        with patch("kicad_agent.generation.pipeline.generate_design", side_effect=mock_generate):
+        with patch("volta.generation.pipeline.generate_design", side_effect=mock_generate):
             result = llm_generate(
                 description="design a 3.3V voltage regulator circuit",
                 output_dir=tmp_path,
@@ -178,7 +178,7 @@ class TestHappyPath:
 
     def test_pipeline_stages_execute_in_order(self, tmp_path: Path):
         """Pipeline runs stages in order: parse -> generate -> refine -> critique -> evaluate."""
-        from kicad_agent.llm.pipeline import llm_generate
+        from volta.llm.pipeline import llm_generate
 
         call_order = []
 
@@ -215,11 +215,11 @@ class TestHappyPath:
             )
 
         # Mock spatial extraction since generated templates lack UUID maps
-        with patch("kicad_agent.generation.pipeline.generate_design", side_effect=mock_generate):
-            with patch("kicad_agent.parser.parse_pcb") as mock_parse_pcb, \
-                 patch("kicad_agent.ir.pcb_ir.PcbIR") as mock_pcb_ir, \
-                 patch("kicad_agent.spatial.extractor.extract_all") as mock_extract, \
-                 patch("kicad_agent.spatial.query.SpatialQueryEngine") as mock_engine_cls:
+        with patch("volta.generation.pipeline.generate_design", side_effect=mock_generate):
+            with patch("volta.parser.parse_pcb") as mock_parse_pcb, \
+                 patch("volta.ir.pcb_ir.PcbIR") as mock_pcb_ir, \
+                 patch("volta.spatial.extractor.extract_all") as mock_extract, \
+                 patch("volta.spatial.query.SpatialQueryEngine") as mock_engine_cls:
                 mock_extract.return_value = {"points": [], "boxes": [], "paths": [], "regions": []}
                 mock_engine_cls.return_value = MagicMock()
 
@@ -241,7 +241,7 @@ class TestHappyPath:
 
     def test_pipeline_evaluation_produces_score(self, tmp_path: Path, llm_api_key):
         """Evaluation stage produces an EvaluationResult with overall_score."""
-        from kicad_agent.llm.pipeline import llm_generate
+        from volta.llm.pipeline import llm_generate
 
         mock_parser = MagicMock()
         mock_parser.parse.return_value = _led_simple_intent()
@@ -274,7 +274,7 @@ class TestParseFailure:
 
     def test_parse_failure_returns_error(self):
         """llm_generate with intent parsing failure returns success=False with error message."""
-        from kicad_agent.llm.pipeline import llm_generate
+        from volta.llm.pipeline import llm_generate
 
         mock_parser = MagicMock()
         mock_parser.parse.side_effect = ValueError("Could not understand the description")
@@ -293,7 +293,7 @@ class TestParseFailure:
 
     def test_parse_pydantic_validation_error(self):
         """Pydantic ValidationError during parsing returns success=False."""
-        from kicad_agent.llm.pipeline import llm_generate
+        from volta.llm.pipeline import llm_generate
         from pydantic import ValidationError
 
         mock_parser = MagicMock()
@@ -322,7 +322,7 @@ class TestGenerationFailure:
 
     def test_generation_failure_returns_partial_result(self, tmp_path: Path):
         """llm_generate with generation failure returns intent populated but success=False."""
-        from kicad_agent.llm.pipeline import llm_generate
+        from volta.llm.pipeline import llm_generate
 
         # Create an intent that will cause generate_design to fail
         # Use an invalid name with unsafe characters
@@ -358,7 +358,7 @@ class TestRefinementBehavior:
 
     def test_refinement_triggered_on_erc_fail(self, tmp_path: Path):
         """Pipeline runs refinement when ERC fails after generation."""
-        from kicad_agent.llm.pipeline import llm_generate
+        from volta.llm.pipeline import llm_generate
 
         mock_parser = MagicMock()
         mock_parser.parse.return_value = _led_simple_intent()
@@ -373,7 +373,7 @@ class TestRefinementBehavior:
         # We need to verify refinement runs when ERC fails.
         # With real generate_design, ERC may or may not pass depending on
         # the generated design. We mock llm_refine_design to verify it was called.
-        with patch("kicad_agent.llm.refinement.llm_refine_design") as mock_refine:
+        with patch("volta.llm.refinement.llm_refine_design") as mock_refine:
             mock_refine.return_value = LLMRefinementResult(
                 final_erc_pass=True,
                 converged=True,
@@ -382,7 +382,7 @@ class TestRefinementBehavior:
 
             # Force ERC to appear as failing by patching generation result
             original_generate = __import__(
-                "kicad_agent.generation.pipeline",
+                "volta.generation.pipeline",
                 fromlist=["generate_design"],
             ).generate_design
 
@@ -392,7 +392,7 @@ class TestRefinementBehavior:
                 )
                 # Force ERC to fail to trigger refinement
                 from dataclasses import replace
-                from kicad_agent.generation.pipeline import GenerationResult
+                from volta.generation.pipeline import GenerationResult
                 return GenerationResult(
                     success=result.success,
                     project_dir=result.project_dir,
@@ -407,7 +407,7 @@ class TestRefinementBehavior:
                     statistics=result.statistics,
                 )
 
-            with patch("kicad_agent.generation.pipeline.generate_design", side_effect=mock_generate):
+            with patch("volta.generation.pipeline.generate_design", side_effect=mock_generate):
                 result = llm_generate(
                     description="LED circuit",
                     output_dir=tmp_path,
@@ -423,7 +423,7 @@ class TestRefinementBehavior:
 
     def test_refinement_not_called_when_erc_passes(self, tmp_path: Path, llm_api_key):
         """Pipeline skips refinement when ERC already passes."""
-        from kicad_agent.llm.pipeline import llm_generate
+        from volta.llm.pipeline import llm_generate
 
         mock_parser = MagicMock()
         mock_parser.parse.return_value = _led_simple_intent()
@@ -433,7 +433,7 @@ class TestRefinementBehavior:
             findings=(), summary="OK", overall_quality_score=1.0,
         )
 
-        with patch("kicad_agent.llm.refinement.llm_refine_design") as mock_refine:
+        with patch("volta.llm.refinement.llm_refine_design") as mock_refine:
             result = llm_generate(
                 description="LED circuit",
                 output_dir=tmp_path,
@@ -457,7 +457,7 @@ class TestCritiqueSkipping:
 
     def test_critique_skipped_when_no_pcb(self, tmp_path: Path):
         """Pipeline skips critique when generate_design produces no PCB."""
-        from kicad_agent.llm.pipeline import llm_generate
+        from volta.llm.pipeline import llm_generate
 
         mock_parser = MagicMock()
         mock_parser.parse.return_value = _led_simple_intent()
@@ -468,7 +468,7 @@ class TestCritiqueSkipping:
         )
 
         # Force no PCB by patching generate_design to return one without PCB
-        from kicad_agent.generation.pipeline import GenerationResult
+        from volta.generation.pipeline import GenerationResult
 
         def mock_generate(intent, output_dir, run_validation=True, run_export=False):
             output_dir = Path(output_dir)
@@ -484,7 +484,7 @@ class TestCritiqueSkipping:
                 erc_pass=True,
             )
 
-        with patch("kicad_agent.generation.pipeline.generate_design", side_effect=mock_generate):
+        with patch("volta.generation.pipeline.generate_design", side_effect=mock_generate):
             result = llm_generate(
                 description="schematic only",
                 output_dir=tmp_path,
@@ -507,7 +507,7 @@ class TestSuccessCriteria:
 
     def test_success_true_when_erc_passes(self, tmp_path: Path, llm_api_key):
         """success=True when generation succeeded and ERC passed."""
-        from kicad_agent.llm.pipeline import llm_generate
+        from volta.llm.pipeline import llm_generate
 
         mock_parser = MagicMock()
         mock_parser.parse.return_value = _led_simple_intent()
@@ -529,8 +529,8 @@ class TestSuccessCriteria:
 
     def test_success_true_when_refinement_converges(self, tmp_path: Path, llm_api_key):
         """success=True when generation succeeded, ERC failed, but refinement converged."""
-        from kicad_agent.llm.pipeline import llm_generate
-        from kicad_agent.generation.pipeline import GenerationResult
+        from volta.llm.pipeline import llm_generate
+        from volta.generation.pipeline import GenerationResult
 
         mock_parser = MagicMock()
         mock_parser.parse.return_value = _led_simple_intent()
@@ -556,8 +556,8 @@ class TestSuccessCriteria:
                 erc_pass=False,  # ERC fails
             )
 
-        with patch("kicad_agent.generation.pipeline.generate_design", side_effect=mock_generate):
-            with patch("kicad_agent.llm.refinement.llm_refine_design") as mock_refine:
+        with patch("volta.generation.pipeline.generate_design", side_effect=mock_generate):
+            with patch("volta.llm.refinement.llm_refine_design") as mock_refine:
                 mock_refine.return_value = LLMRefinementResult(
                     final_erc_pass=True,
                     converged=True,  # But refinement converges
@@ -585,15 +585,15 @@ class TestExports:
 
     def test_pipeline_imports(self):
         """llm_generate and LLMGenerationResult are importable from pipeline module."""
-        from kicad_agent.llm.pipeline import llm_generate, LLMGenerationResult
+        from volta.llm.pipeline import llm_generate, LLMGenerationResult
 
         assert callable(llm_generate)
         assert LLMGenerationResult is not None
 
     def test_init_exports(self):
         """llm_generate and LLMGenerationResult are exported from __init__."""
-        import kicad_agent.llm
+        import volta.llm
 
-        assert hasattr(kicad_agent.llm, "__all__")
-        assert "llm_generate" in kicad_agent.llm.__all__
-        assert "LLMGenerationResult" in kicad_agent.llm.__all__
+        assert hasattr(volta.llm, "__all__")
+        assert "llm_generate" in volta.llm.__all__
+        assert "LLMGenerationResult" in volta.llm.__all__

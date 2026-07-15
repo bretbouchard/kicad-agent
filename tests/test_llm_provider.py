@@ -14,8 +14,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.llm.backend import LLMBackend
-from kicad_agent.llm.provider import (
+from volta.llm.backend import LLMBackend
+from volta.llm.provider import (
     AnthropicProvider,
     LLMProvider,
     MockProvider,
@@ -177,7 +177,7 @@ class TestGetProvider:
 
     def setup_method(self) -> None:
         """Clear the provider cache before each test."""
-        import kicad_agent.llm.provider as mod
+        import volta.llm.provider as mod
 
         mod._provider_cache.clear()
 

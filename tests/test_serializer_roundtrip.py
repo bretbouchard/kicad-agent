@@ -55,15 +55,15 @@ def pcb_dir(tmp_path: Path) -> Path:
 
 def test_pcb_serialize_uses_atomic_write(project_dir: Path) -> None:
     """PCB serialize writes via atomic_write, not directly via kiutils to_file."""
-    from kicad_agent.parser import parse_pcb
-    from kicad_agent.serializer.pcb_ser import serialize_pcb
+    from volta.parser import parse_pcb
+    from volta.serializer.pcb_ser import serialize_pcb
 
     pcb_path = project_dir / FIXTURE_PCB
     output_path = project_dir / "output.kicad_pcb"
 
     parse_result = parse_pcb(pcb_path)
 
-    with patch("kicad_agent.serializer.pcb_ser.atomic_write") as mock_atomic:
+    with patch("volta.serializer.pcb_ser.atomic_write") as mock_atomic:
         mock_atomic.side_effect = lambda p, c: p.write_text(c, encoding="utf-8")
         serialize_pcb(parse_result, output_path)
 
@@ -75,8 +75,8 @@ def test_pcb_serialize_temp_file_cleaned(project_dir: Path) -> None:
     """PCB serialize cleans up temp files after serialization."""
     import os
 
-    from kicad_agent.parser import parse_pcb
-    from kicad_agent.serializer.pcb_ser import serialize_pcb
+    from volta.parser import parse_pcb
+    from volta.serializer.pcb_ser import serialize_pcb
 
     pcb_path = project_dir / FIXTURE_PCB
     output_path = project_dir / "output_clean.kicad_pcb"
@@ -91,8 +91,8 @@ def test_pcb_serialize_temp_file_cleaned(project_dir: Path) -> None:
 
 def test_pcb_roundtrip_preserves_structure(project_dir: Path) -> None:
     """Parse PCB, serialize, parse again -- compare element counts."""
-    from kicad_agent.parser import parse_pcb
-    from kicad_agent.serializer.pcb_ser import serialize_pcb
+    from volta.parser import parse_pcb
+    from volta.serializer.pcb_ser import serialize_pcb
 
     pcb_path = project_dir / FIXTURE_PCB
     output_path = project_dir / "roundtrip.kicad_pcb"
@@ -124,8 +124,8 @@ def test_pcb_roundtrip_preserves_structure(project_dir: Path) -> None:
 
 def test_schematic_preserves_in_bom_yes(project_dir: Path) -> None:
     """Schematic round-trip preserves (in_bom yes) for placed components."""
-    from kicad_agent.parser import parse_schematic
-    from kicad_agent.serializer.schematic_ser import serialize_schematic
+    from volta.parser import parse_schematic
+    from volta.serializer.schematic_ser import serialize_schematic
 
     sch_path = project_dir / FIXTURE_SCH
     output_path = project_dir / "bom_test.kicad_sch"
@@ -170,7 +170,7 @@ def test_schematic_preserves_in_bom_yes(project_dir: Path) -> None:
 def test_schematic_no_blanket_bom_replacement() -> None:
     """_fix_kiutils_output no longer exists (replaced by normalizer)."""
     # The old _fix_kiutils_output function should not exist anymore
-    from kicad_agent.serializer import schematic_ser
+    from volta.serializer import schematic_ser
 
     assert not hasattr(schematic_ser, "_fix_kiutils_output"), (
         "_fix_kiutils_output should be removed (S-BUG-002, S-BUG-004)"
@@ -184,8 +184,8 @@ def test_schematic_no_blanket_bom_replacement() -> None:
 
 def test_uuid_reinjector_raises_on_count_mismatch() -> None:
     """UUID reinjection raises ValueError when element counts diverge."""
-    from kicad_agent.parser.uuid_extractor import UUIDEntry, UUIDMap
-    from kicad_agent.serializer.uuid_reinjector import reinject_uuids
+    from volta.parser.uuid_extractor import UUIDEntry, UUIDMap
+    from volta.serializer.uuid_reinjector import reinject_uuids
 
     # Create a UUID map with more entries than structural elements
     uuid_map = UUIDMap(entries=[
@@ -203,8 +203,8 @@ def test_uuid_reinjector_raises_on_count_mismatch() -> None:
 
 def test_uuid_reinjector_passes_on_matching_counts() -> None:
     """UUID reinjection succeeds when element counts match."""
-    from kicad_agent.parser.uuid_extractor import UUIDEntry, UUIDMap
-    from kicad_agent.serializer.uuid_reinjector import reinject_uuids
+    from volta.parser.uuid_extractor import UUIDEntry, UUIDMap
+    from volta.serializer.uuid_reinjector import reinject_uuids
 
     uuid_map = UUIDMap(entries=[
         UUIDEntry(uuid_value="00000000-0000-0000-0000-000000000001", parent_type="pad", parent_index=0, line_number=1),
@@ -218,8 +218,8 @@ def test_uuid_reinjector_passes_on_matching_counts() -> None:
 
 def test_uuid_reinjector_value_error_includes_type_breakdown() -> None:
     """ValueError message includes element type counts for debugging."""
-    from kicad_agent.parser.uuid_extractor import UUIDEntry, UUIDMap
-    from kicad_agent.serializer.uuid_reinjector import reinject_uuids
+    from volta.parser.uuid_extractor import UUIDEntry, UUIDMap
+    from volta.serializer.uuid_reinjector import reinject_uuids
 
     uuid_map = UUIDMap(entries=[
         UUIDEntry(uuid_value="00000000-0000-0000-0000-000000000001", parent_type="pad", parent_index=0, line_number=1),
@@ -242,7 +242,7 @@ def test_uuid_reinjector_value_error_includes_type_breakdown() -> None:
 
 def test_schematic_uses_normalizer_module() -> None:
     """schematic_ser imports normalize_kicad_output from normalizer module."""
-    from kicad_agent.serializer import schematic_ser
+    from volta.serializer import schematic_ser
 
     # The module should import normalize_kicad_output
     assert hasattr(schematic_ser, "normalize_kicad_output"), (
@@ -252,8 +252,8 @@ def test_schematic_uses_normalizer_module() -> None:
 
 def test_schematic_lib_name_removed_from_placed_components(project_dir: Path) -> None:
     """Schematic serialization removes (lib_name ...) from placed components."""
-    from kicad_agent.parser import parse_schematic
-    from kicad_agent.serializer.schematic_ser import serialize_schematic
+    from volta.parser import parse_schematic
+    from volta.serializer.schematic_ser import serialize_schematic
 
     sch_path = project_dir / FIXTURE_SCH
     output_path = project_dir / "libname_test.kicad_sch"
@@ -283,8 +283,8 @@ def test_schematic_lib_name_removed_from_placed_components(project_dir: Path) ->
 
 def test_schematic_property_id_removed_from_placed_components(project_dir: Path) -> None:
     """Schematic serialization removes (id N) from property lines."""
-    from kicad_agent.parser import parse_schematic
-    from kicad_agent.serializer.schematic_ser import serialize_schematic
+    from volta.parser import parse_schematic
+    from volta.serializer.schematic_ser import serialize_schematic
 
     sch_path = project_dir / FIXTURE_SCH
     output_path = project_dir / "propid_test.kicad_sch"
@@ -307,8 +307,8 @@ def test_schematic_property_id_removed_from_placed_components(project_dir: Path)
 
 def test_schematic_roundtrip_valid(project_dir: Path) -> None:
     """Schematic round-trip produces valid KiCad output."""
-    from kicad_agent.parser import parse_schematic
-    from kicad_agent.serializer.schematic_ser import serialize_schematic
+    from volta.parser import parse_schematic
+    from volta.serializer.schematic_ser import serialize_schematic
 
     sch_path = project_dir / FIXTURE_SCH
     output_path = project_dir / "roundtrip.kicad_sch"
@@ -328,13 +328,13 @@ def test_schematic_roundtrip_valid(project_dir: Path) -> None:
 
 def test_footprint_serialize_uses_atomic_write(tmp_path: Path) -> None:
     """Footprint serialize writes via atomic_write for crash safety."""
-    from kicad_agent.parser.types import ParseResult
-    from kicad_agent.serializer.footprint_ser import serialize_footprint
+    from volta.parser.types import ParseResult
+    from volta.serializer.footprint_ser import serialize_footprint
 
     # Create a minimal mock footprint ParseResult
     # We can't easily create a real kiutils Footprint object, so we
     # verify the atomic_write import and code path exist
-    from kicad_agent.serializer import footprint_ser
+    from volta.serializer import footprint_ser
 
     assert hasattr(footprint_ser, "atomic_write"), (
         "footprint_ser should import atomic_write (S-BUG-005)"
@@ -355,8 +355,8 @@ def test_footprint_serialize_uses_atomic_write(tmp_path: Path) -> None:
 
 def test_schematic_roundtrip_preserves_symbol_count(project_dir: Path) -> None:
     """Round-trip preserves the placed symbol count."""
-    from kicad_agent.parser import parse_schematic
-    from kicad_agent.serializer.schematic_ser import serialize_schematic
+    from volta.parser import parse_schematic
+    from volta.serializer.schematic_ser import serialize_schematic
 
     sch_path = project_dir / FIXTURE_SCH
     output_path = project_dir / "count_test.kicad_sch"

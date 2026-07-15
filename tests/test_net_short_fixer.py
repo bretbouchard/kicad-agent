@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ops.net_short_fixer import (
+from volta.ops.net_short_fixer import (
     _find_wires_touching_net,
     _is_safe_to_auto_fix,
     fix_net_short,
@@ -145,7 +145,7 @@ class TestFixNetShortOpSchema:
     """Tests for FixNetShortOp Pydantic schema validation."""
 
     def test_defaults(self) -> None:
-        from kicad_agent.ops._schema_repair import FixNetShortOp
+        from volta.ops._schema_repair import FixNetShortOp
         op = FixNetShortOp(
             target_file="test.kicad_sch",
             net_a="SDA",
@@ -156,7 +156,7 @@ class TestFixNetShortOpSchema:
         assert op.remove_strategy == "remove_wire"
 
     def test_custom_fields(self) -> None:
-        from kicad_agent.ops._schema_repair import FixNetShortOp
+        from volta.ops._schema_repair import FixNetShortOp
         op = FixNetShortOp(
             target_file="test.kicad_sch",
             net_a="SDA",
@@ -168,7 +168,7 @@ class TestFixNetShortOpSchema:
         assert op.remove_strategy == "disconnect_a"
 
     def test_invalid_strategy(self) -> None:
-        from kicad_agent.ops._schema_repair import FixNetShortOp
+        from volta.ops._schema_repair import FixNetShortOp
         with pytest.raises(Exception):
             FixNetShortOp(
                 target_file="test.kicad_sch",
@@ -178,7 +178,7 @@ class TestFixNetShortOpSchema:
             )
 
     def test_empty_net_names(self) -> None:
-        from kicad_agent.ops._schema_repair import FixNetShortOp
+        from volta.ops._schema_repair import FixNetShortOp
         with pytest.raises(Exception):
             FixNetShortOp(
                 target_file="test.kicad_sch",
@@ -187,7 +187,7 @@ class TestFixNetShortOpSchema:
             )
 
     def test_rejects_absolute_path(self) -> None:
-        from kicad_agent.ops._schema_repair import FixNetShortOp
+        from volta.ops._schema_repair import FixNetShortOp
         with pytest.raises(Exception):
             FixNetShortOp(
                 target_file="/etc/passwd.kicad_sch",
@@ -216,7 +216,7 @@ class TestFixNetShortIntegration:
         ir.schematic.graphicalItems = [MagicMock()] * 10
         return ir
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_refuses_critical_short(self, mock_netlist) -> None:
         mock_netlist.return_value = {
             "+3V3": {("U1", "4")},
@@ -234,7 +234,7 @@ class TestFixNetShortIntegration:
         assert "critical" in result["reason"]
         assert len(ir.schematic.graphicalItems) == 10
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_refuses_medium_short(self, mock_netlist) -> None:
         mock_netlist.return_value = {
             "GND": {("R1", "1")},
@@ -251,7 +251,7 @@ class TestFixNetShortIntegration:
         assert result["action"] == "refused"
         assert "medium" in result["reason"]
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_refuses_power_to_signal(self, mock_netlist) -> None:
         mock_netlist.return_value = {
             "+3V3": {("U1", "4")},
@@ -268,9 +268,9 @@ class TestFixNetShortIntegration:
         assert result["action"] == "refused"
         assert "power-to-signal" in result["reason"]
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
-    @patch("kicad_agent.ops.repair_wires.find_bridge_wires")
-    @patch("kicad_agent.ops.repair_nets._verify_clean_break")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.repair_wires.find_bridge_wires")
+    @patch("volta.ops.repair_nets._verify_clean_break")
     def test_removes_bridge_wire_signal_short(
         self, mock_verify, mock_find, mock_netlist,
     ) -> None:
@@ -316,9 +316,9 @@ class TestFixNetShortIntegration:
         assert result["wires"][0]["wire_index"] == 3
         assert len(ir.schematic.graphicalItems) == 9  # 10 - 1 removed
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
-    @patch("kicad_agent.ops.repair_wires.find_bridge_wires")
-    @patch("kicad_agent.ops.repair_nets._verify_clean_break")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.repair_wires.find_bridge_wires")
+    @patch("volta.ops.repair_nets._verify_clean_break")
     def test_dry_run_reports_without_modifying(
         self, mock_verify, mock_find, mock_netlist,
     ) -> None:
@@ -360,8 +360,8 @@ class TestFixNetShortIntegration:
         assert result["wire_count"] == 1
         assert len(ir.schematic.graphicalItems) == 10  # unchanged
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
-    @patch("kicad_agent.ops.repair_wires.find_bridge_wires")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.repair_wires.find_bridge_wires")
     def test_no_bridge_found(
         self, mock_find, mock_netlist,
     ) -> None:
@@ -383,7 +383,7 @@ class TestFixNetShortIntegration:
         assert result["action"] == "no_bridge_found"
         assert result["shared_pins"] == []
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_disconnect_a_removes_wires(self, mock_netlist) -> None:
         mock_netlist.return_value = {
             "ADC1_L": {("U1", "1")},
@@ -413,7 +413,7 @@ class TestFixNetShortIntegration:
         assert result["wire_count"] == 2  # wires 0 and 1 touch ADC1_L label
         assert len(ir.schematic.graphicalItems) == 8  # 10 - 2 removed
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_disconnect_b_removes_wires(self, mock_netlist) -> None:
         mock_netlist.return_value = {
             "ADC1_L": {("U1", "1")},
@@ -442,7 +442,7 @@ class TestFixNetShortIntegration:
         assert result["action"] == "disconnect_b"
         assert result["wire_count"] == 2  # wires 1 and 2 touch OUT_IN_CH1 label
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_disconnect_no_wires_for_net(self, mock_netlist) -> None:
         mock_netlist.return_value = {
             "SDA": {("U1", "5")},
@@ -468,9 +468,9 @@ class TestFixNetShortIntegration:
         assert result["fixed"] is False
         assert result["action"] == "no_wires_found"
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
-    @patch("kicad_agent.ops.repair_wires.find_bridge_wires")
-    @patch("kicad_agent.ops.repair_nets._verify_clean_break")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.repair_wires.find_bridge_wires")
+    @patch("volta.ops.repair_nets._verify_clean_break")
     def test_skips_dirty_break(
         self, mock_verify, mock_find, mock_netlist,
     ) -> None:
@@ -509,9 +509,9 @@ class TestFixNetShortIntegration:
         assert result["action"] == "no_action"
         assert len(ir.schematic.graphicalItems) == 10  # unchanged
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
-    @patch("kicad_agent.ops.repair_wires.find_bridge_wires")
-    @patch("kicad_agent.ops.repair_nets._verify_clean_break")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.repair_wires.find_bridge_wires")
+    @patch("volta.ops.repair_nets._verify_clean_break")
     def test_removes_in_reverse_order(
         self, mock_verify, mock_find, mock_netlist,
     ) -> None:

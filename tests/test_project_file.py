@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops.executor import OperationExecutor
-from kicad_agent.ops.schema import (
+from volta.ops.executor import OperationExecutor
+from volta.ops.schema import (
     AddDesignRuleOp,
     AddLibEntryOp,
     AddNetClassOp,
@@ -25,7 +25,7 @@ from kicad_agent.ops.schema import (
     RemoveLibEntryOp,
     RemoveNetClassOp,
 )
-from kicad_agent.project.project_file import (
+from volta.project.project_file import (
     ProjectFile,
     get_project_settings,
     parse_project_file,
@@ -169,7 +169,7 @@ class TestAddLibEntryOp:
         assert result["details"]["lib_name"] == "MyCustom"
 
         # Verify on disk
-        from kicad_agent.project.lib_table import parse_lib_table
+        from volta.project.lib_table import parse_lib_table
         table = parse_lib_table(sym_lib_file)
         assert len(table.entries) == 3
         assert table.get("MyCustom").uri == "${KIPRJMOD}/custom.kicad_sym"
@@ -193,7 +193,7 @@ class TestRemoveLibEntryOp:
         assert result["details"]["lib_name"] == "tile"
 
         # Verify on disk
-        from kicad_agent.project.lib_table import parse_lib_table
+        from volta.project.lib_table import parse_lib_table
         table = parse_lib_table(fp_lib_file)
         assert len(table.entries) == 0
 
@@ -220,7 +220,7 @@ class TestAddNetClassOp:
         assert result["details"]["net_class"] == "Power"
 
         # Verify on disk
-        from kicad_agent.project.design_rules import parse_design_rules
+        from volta.project.design_rules import parse_design_rules
         dru = parse_design_rules(dru_file)
         names = [nc.name for nc in dru.net_classes]
         assert "Power" in names
@@ -249,7 +249,7 @@ class TestAddDesignRuleOp:
         assert result["details"]["rule_name"] == "HV_clearance"
 
         # Verify on disk
-        from kicad_agent.project.design_rules import parse_design_rules
+        from volta.project.design_rules import parse_design_rules
         dru = parse_design_rules(dru_file)
         assert len(dru.custom_rules) == 1
         assert dru.custom_rules[0].name == "HV_clearance"
@@ -490,7 +490,7 @@ class TestModifyNetClass:
         assert result["details"]["updated_fields"] == ["clearance"]
 
         # Verify on disk
-        from kicad_agent.project.design_rules import parse_design_rules
+        from volta.project.design_rules import parse_design_rules
         dru = parse_design_rules(dru_file)
         default = next(nc for nc in dru.net_classes if nc.name == "Default")
         assert default.clearance == 0.5
@@ -512,7 +512,7 @@ class TestModifyNetClass:
         assert result["success"] is True
 
         # Verify on disk
-        from kicad_agent.project.design_rules import parse_design_rules
+        from volta.project.design_rules import parse_design_rules
         dru = parse_design_rules(dru_file)
         default = next(nc for nc in dru.net_classes if nc.name == "Default")
         assert default.track_width == 0.4
@@ -553,7 +553,7 @@ class TestRemoveNetClass:
         assert result["details"]["action"] == "removed"
 
         # Verify on disk
-        from kicad_agent.project.design_rules import parse_design_rules
+        from volta.project.design_rules import parse_design_rules
         dru = parse_design_rules(dru_file)
         assert len(dru.net_classes) == 0
 
@@ -603,7 +603,7 @@ class TestModifyDesignRule:
         assert result["details"]["rule_name"] == "HV_clearance"
 
         # Verify on disk
-        from kicad_agent.project.design_rules import parse_design_rules
+        from volta.project.design_rules import parse_design_rules
         dru = parse_design_rules(dru_file)
         rule = next(r for r in dru.custom_rules if r.name == "HV_clearance")
         assert rule.constraint_values == {"min": "1.0"}
@@ -657,7 +657,7 @@ class TestRemoveDesignRule:
         assert result["details"]["action"] == "removed"
 
         # Verify on disk
-        from kicad_agent.project.design_rules import parse_design_rules
+        from volta.project.design_rules import parse_design_rules
         dru = parse_design_rules(dru_file)
         assert len(dru.custom_rules) == 0
 

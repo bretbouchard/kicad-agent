@@ -134,8 +134,8 @@ def evaluate_adapter(
     Returns:
         BenchmarkReport with results.
     """
-    from kicad_agent.analysis.benchmark_runner import BenchmarkRunner
-    from kicad_agent.analysis.spatial_benchmark import TaskGenerator
+    from volta.analysis.benchmark_runner import BenchmarkRunner
+    from volta.analysis.spatial_benchmark import TaskGenerator
 
     if not (adapter_dir / "adapters.safetensors").exists():
         raise FileNotFoundError(

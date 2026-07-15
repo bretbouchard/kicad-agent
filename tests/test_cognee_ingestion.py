@@ -50,7 +50,7 @@ class TestDocResolution:
 
     def test_doc_files_contains_expected_names(self) -> None:
         """DOC_FILES should contain the expected reference doc filenames."""
-        assert "kicad_agent_reference.md" in DOC_FILES
+        assert "volta_reference.md" in DOC_FILES
         assert "pcb_editor_reference.md" in DOC_FILES
         assert "gerbview_reference.md" in DOC_FILES
         assert "kicad_docs.md" in DOC_FILES

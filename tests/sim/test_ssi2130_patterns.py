@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.sim.ssi2130_patterns import (
+from volta.sim.ssi2130_patterns import (
     build_measurement_tap_spice_netlist,
     build_hf_trim_spice_netlist,
     build_local_refs_spice_netlist,

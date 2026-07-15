@@ -29,7 +29,7 @@ def _make_erc_result(passed: bool, violations: list[tuple[str, str, str]]):
     Returns:
         MagicMock with .passed, .error_count, .violations attributes.
     """
-    from kicad_agent.validation.erc_drc import Severity
+    from volta.validation.erc_drc import Severity
 
     mock = MagicMock()
     mock.passed = passed
@@ -48,7 +48,7 @@ def _make_erc_result(passed: bool, violations: list[tuple[str, str, str]]):
 
 def _make_fixer_return(operations=None, description="LLM fix", success=True):
     """Create a mock FixResult."""
-    from kicad_agent.llm.error_fixer import FixResult
+    from volta.llm.error_fixer import FixResult
 
     return FixResult(
         operations=tuple(operations or []),
@@ -65,7 +65,7 @@ class TestLLMRefinementResult:
 
     def test_result_has_llm_fixes_count(self):
         """LLMRefinementResult tracks total_llm_fixes."""
-        from kicad_agent.llm.refinement import LLMRefinementResult
+        from volta.llm.refinement import LLMRefinementResult
 
         result = LLMRefinementResult(
             iterations=(),
@@ -80,7 +80,7 @@ class TestLLMRefinementResult:
 
     def test_result_has_stagnation_flag(self):
         """LLMRefinementResult tracks stagnation_detected."""
-        from kicad_agent.llm.refinement import LLMRefinementResult
+        from volta.llm.refinement import LLMRefinementResult
 
         result = LLMRefinementResult(
             iterations=(),
@@ -95,7 +95,7 @@ class TestLLMRefinementResult:
 
     def test_iteration_has_llm_fixes_applied(self):
         """LLMRefinementIteration tracks llm_fixes_applied count."""
-        from kicad_agent.llm.refinement import LLMRefinementIteration
+        from volta.llm.refinement import LLMRefinementIteration
 
         it = LLMRefinementIteration(
             iteration=1,
@@ -109,7 +109,7 @@ class TestLLMRefinementResult:
 
     def test_result_frozen(self):
         """LLMRefinementResult is immutable."""
-        from kicad_agent.llm.refinement import LLMRefinementResult
+        from volta.llm.refinement import LLMRefinementResult
 
         result = LLMRefinementResult(
             iterations=(),
@@ -129,7 +129,7 @@ class TestLLMRefineDesign:
 
     def test_deterministic_only_no_llm_call(self, tmp_path):
         """llm_refine_design does NOT call LLM when only deterministic errors exist."""
-        from kicad_agent.llm.refinement import llm_refine_design
+        from volta.llm.refinement import llm_refine_design
 
         sch_path = tmp_path / "test.kicad_sch"
         sch_path.write_text("(kicad_sch (version 20231120))")
@@ -142,8 +142,8 @@ class TestLLMRefineDesign:
 
         mock_fixer = MagicMock()
 
-        with patch("kicad_agent.llm.refinement.run_erc") as mock_erc, \
-             patch("kicad_agent.llm.refinement._apply_place_no_connects") as mock_nc:
+        with patch("volta.llm.refinement.run_erc") as mock_erc, \
+             patch("volta.llm.refinement._apply_place_no_connects") as mock_nc:
             mock_erc.side_effect = [erc_fail, erc_pass]
             mock_nc.return_value = 1
 
@@ -159,7 +159,7 @@ class TestLLMRefineDesign:
 
     def test_other_errors_trigger_llm(self, tmp_path):
         """llm_refine_design calls ErrorFixer when 'other' category errors exist."""
-        from kicad_agent.llm.refinement import llm_refine_design
+        from volta.llm.refinement import llm_refine_design
 
         sch_path = tmp_path / "test.kicad_sch"
         sch_path.write_text("(kicad_sch (version 20231120))")
@@ -177,7 +177,7 @@ class TestLLMRefineDesign:
             description="Fixed conflicting values",
         )
 
-        with patch("kicad_agent.llm.refinement.run_erc") as mock_erc:
+        with patch("volta.llm.refinement.run_erc") as mock_erc:
             mock_erc.side_effect = [erc_fail, erc_pass]
 
             result = llm_refine_design(
@@ -191,7 +191,7 @@ class TestLLMRefineDesign:
 
     def test_stagnation_detection(self, tmp_path):
         """llm_refine_design stops after 3 consecutive iterations with same error count."""
-        from kicad_agent.llm.refinement import llm_refine_design
+        from volta.llm.refinement import llm_refine_design
 
         sch_path = tmp_path / "test.kicad_sch"
         sch_path.write_text("(kicad_sch (version 20231120))")
@@ -207,7 +207,7 @@ class TestLLMRefineDesign:
             description="Could not fix",
         )
 
-        with patch("kicad_agent.llm.refinement.run_erc") as mock_erc:
+        with patch("volta.llm.refinement.run_erc") as mock_erc:
             # Return same errors every time
             mock_erc.return_value = erc_fail
 
@@ -224,7 +224,7 @@ class TestLLMRefineDesign:
 
     def test_hard_cap_ten_iterations(self, tmp_path):
         """llm_refine_design respects hard cap of 10 iterations even with higher max."""
-        from kicad_agent.llm.refinement import llm_refine_design
+        from volta.llm.refinement import llm_refine_design
 
         sch_path = tmp_path / "test.kicad_sch"
         sch_path.write_text("(kicad_sch (version 20231120))")
@@ -251,7 +251,7 @@ class TestLLMRefineDesign:
             # Alternate between 3 and 2 errors to avoid stagnation at count 3
             return erc_2 if call_count % 2 == 0 else erc_3
 
-        with patch("kicad_agent.llm.refinement.run_erc") as mock_erc:
+        with patch("volta.llm.refinement.run_erc") as mock_erc:
             mock_erc.side_effect = alternating_erc
 
             result = llm_refine_design(
@@ -264,7 +264,7 @@ class TestLLMRefineDesign:
 
     def test_converges_when_erc_passes(self, tmp_path):
         """llm_refine_design converges when ERC passes after LLM fixes."""
-        from kicad_agent.llm.refinement import llm_refine_design
+        from volta.llm.refinement import llm_refine_design
 
         sch_path = tmp_path / "test.kicad_sch"
         sch_path.write_text("(kicad_sch (version 20231120))")
@@ -280,7 +280,7 @@ class TestLLMRefineDesign:
             description="Auto-repaired",
         )
 
-        with patch("kicad_agent.llm.refinement.run_erc") as mock_erc:
+        with patch("volta.llm.refinement.run_erc") as mock_erc:
             mock_erc.side_effect = [erc_fail, erc_pass]
 
             result = llm_refine_design(
@@ -295,7 +295,7 @@ class TestLLMRefineDesign:
 
     def test_iteration_history_passed_to_fixer(self, tmp_path):
         """Iteration history is passed to ErrorFixer on subsequent calls."""
-        from kicad_agent.llm.refinement import llm_refine_design
+        from volta.llm.refinement import llm_refine_design
 
         sch_path = tmp_path / "test.kicad_sch"
         sch_path.write_text("(kicad_sch (version 20231120))")
@@ -316,7 +316,7 @@ class TestLLMRefineDesign:
                 return _make_erc_result(True, [])
             return erc_fail
 
-        with patch("kicad_agent.llm.refinement.run_erc") as mock_erc:
+        with patch("volta.llm.refinement.run_erc") as mock_erc:
             mock_erc.side_effect = erc_side_effect
 
             result = llm_refine_design(
@@ -336,7 +336,7 @@ class TestLLMRefineDesign:
 
     def test_total_llm_fixes_accumulated(self, tmp_path):
         """LLMRefinementResult.total_llm_fixes accumulates across iterations."""
-        from kicad_agent.llm.refinement import llm_refine_design
+        from volta.llm.refinement import llm_refine_design
 
         sch_path = tmp_path / "test.kicad_sch"
         sch_path.write_text("(kicad_sch (version 20231120))")
@@ -360,7 +360,7 @@ class TestLLMRefineDesign:
                 return _make_erc_result(True, [])
             return erc_fail
 
-        with patch("kicad_agent.llm.refinement.run_erc") as mock_erc:
+        with patch("volta.llm.refinement.run_erc") as mock_erc:
             mock_erc.side_effect = erc_converge
 
             result = llm_refine_design(
@@ -374,7 +374,7 @@ class TestLLMRefineDesign:
 
     def test_missing_schematic_returns_empty(self, tmp_path):
         """llm_refine_design returns empty result when schematic doesn't exist."""
-        from kicad_agent.llm.refinement import llm_refine_design
+        from volta.llm.refinement import llm_refine_design
 
         sch_path = tmp_path / "nonexistent.kicad_sch"
         mock_fixer = MagicMock()

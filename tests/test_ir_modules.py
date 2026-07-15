@@ -2,7 +2,7 @@
 
 import pytest
 
-from kicad_agent.ir.transaction import (
+from volta.ir.transaction import (
     Transaction,
     TransactionResult,
 )
@@ -37,7 +37,7 @@ class TestSchematicIR:
 
     def test_import(self):
         """Schematic IR is importable."""
-        from kicad_agent.ir import schematic_ir
+        from volta.ir import schematic_ir
         assert hasattr(schematic_ir, "SchematicIR")
 
 
@@ -46,7 +46,7 @@ class TestPcbIR:
 
     def test_import(self):
         """PCB IR is importable."""
-        from kicad_agent.ir import pcb_ir
+        from volta.ir import pcb_ir
         assert hasattr(pcb_ir, "PcbIR")
 
 
@@ -55,5 +55,5 @@ class TestFootprintIR:
 
     def test_import(self):
         """Footprint IR is importable."""
-        from kicad_agent.ir import footprint_ir
+        from volta.ir import footprint_ir
         assert hasattr(footprint_ir, "FootprintIR")

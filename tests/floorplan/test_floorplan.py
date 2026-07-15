@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.floorplan import (
+from volta.floorplan import (
     FloorPlanSpec,
     PlacementRule,
     RuleType,

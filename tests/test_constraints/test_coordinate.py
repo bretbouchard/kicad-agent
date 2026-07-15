@@ -5,7 +5,7 @@ CP-06: Schematic-to-PCB Y-axis flip with full affine transform support.
 
 import math
 
-from kicad_agent.constraints.coordinate import CoordinateConverter
+from volta.constraints.coordinate import CoordinateConverter
 
 
 class TestCoordinateConverterYFlip:

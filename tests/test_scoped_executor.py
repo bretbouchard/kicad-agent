@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.validation.gates.scoped_executor import (
+from volta.validation.gates.scoped_executor import (
     ScopeViolationError,
     ScopedExecutor,
 )

@@ -9,18 +9,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ops.erc_parser import (
+from volta.ops.erc_parser import (
     ErcViolation,
     ViolationPosition,
     extract_violation_positions,
     parse_erc,
 )
-from kicad_agent.ops.schema import (
+from volta.ops.schema import (
     ExtractViolationPositionsOp,
     Operation,
     ParseErcOp,
 )
-from kicad_agent.validation.erc_drc import Severity, Violation
+from volta.validation.erc_drc import Severity, Violation
 
 
 # ---------------------------------------------------------------------------
@@ -87,7 +87,7 @@ def test_extract_violation_positions_type_filter():
         ),
     ]
 
-    with patch("kicad_agent.ops.erc_parser.parse_erc", return_value=violations):
+    with patch("volta.ops.erc_parser.parse_erc", return_value=violations):
         positions = extract_violation_positions(Path("test.kicad_sch"), "pin_not_connected")
 
     assert len(positions) == 2
@@ -102,7 +102,7 @@ def test_extract_violation_positions_type_filter():
 
 def test_extract_violation_positions_empty():
     """extract_violation_positions returns empty list when no violations."""
-    with patch("kicad_agent.ops.erc_parser.parse_erc", return_value=[]):
+    with patch("volta.ops.erc_parser.parse_erc", return_value=[]):
         positions = extract_violation_positions(Path("test.kicad_sch"), "pin_not_connected")
 
     assert positions == []

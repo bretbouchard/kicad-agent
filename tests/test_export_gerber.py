@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.export.gerber import ExportResult, export_drill, export_gerber
+from volta.export.gerber import ExportResult, export_drill, export_gerber
 
 # Skip all tests if kicad-cli is not available
 kicad_cli_available = shutil.which("kicad-cli") is not None

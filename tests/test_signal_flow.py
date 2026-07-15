@@ -15,8 +15,8 @@ from dataclasses import dataclass
 
 import pytest
 
-from kicad_agent.analysis.subcircuit_detector import Subcircuit, SubcircuitType
-from kicad_agent.placement.signal_flow import (
+from volta.analysis.subcircuit_detector import Subcircuit, SubcircuitType
+from volta.placement.signal_flow import (
     SignalFlowGroup,
     SignalFlowGrouper,
     SignalFlowZone,

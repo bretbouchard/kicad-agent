@@ -11,7 +11,7 @@ import sys
 
 import pytest
 
-from kicad_agent.manufacturing.manufacturer_client import (
+from volta.manufacturing.manufacturer_client import (
     ManufacturerClient,
     OrderResult,
     OrderStatus,
@@ -31,7 +31,7 @@ class TestManufacturerClientImport:
         import importlib
         network_mods = ("httpx", "requests", "urllib3", "aiohttp")
         before = set(sys.modules)
-        importlib.import_module("kicad_agent.manufacturing.manufacturer_client")
+        importlib.import_module("volta.manufacturing.manufacturer_client")
         added = set(sys.modules) - before
         leaked = {m for m in network_mods if m in added}
         assert not leaked, f"network modules loaded by manufacturer_client: {leaked}"

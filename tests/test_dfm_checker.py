@@ -18,14 +18,14 @@ from pydantic import ValidationError
 # ---------------------------------------------------------------------------
 # Task 1 imports — will fail until implementation exists (TDD RED)
 # ---------------------------------------------------------------------------
-from kicad_agent.dfm.checker import (
+from volta.dfm.checker import (
     DfmCheck,
     DfmChecker,
     DfmFinding,
     DfmReport,
     DfmSeverity,
 )
-from kicad_agent.dfm.profiles import (
+from volta.dfm.profiles import (
     ManufacturerProfile,
     get_builtin_profiles,
     load_profile,
@@ -434,7 +434,7 @@ class TestBuiltinDfmChecks:
 
     def test_annular_ring_flags_violation(self):
         """AnnularRingCheck flags pad with annular ring below JLCPCB minimum."""
-        from kicad_agent.dfm.checks import AnnularRingCheck
+        from volta.dfm.checks import AnnularRingCheck
 
         # Pad with 0.5mm diameter, drill 0.4mm -> annular ring = (0.5 - 0.4) / 2 = 0.05mm
         # JLCPCB minimum is 0.1mm -> should flag
@@ -455,7 +455,7 @@ class TestBuiltinDfmChecks:
 
     def test_annular_ring_passes_adequate(self):
         """AnnularRingCheck passes pad with adequate annular ring."""
-        from kicad_agent.dfm.checks import AnnularRingCheck
+        from volta.dfm.checks import AnnularRingCheck
 
         # Pad with 1.0mm diameter, drill 0.4mm -> annular ring = (1.0 - 0.4) / 2 = 0.3mm
         pad = self._make_box(
@@ -474,7 +474,7 @@ class TestBuiltinDfmChecks:
 
     def test_annular_ring_no_drill_data_skips(self):
         """AnnularRingCheck skips pad when no drill data available."""
-        from kicad_agent.dfm.checks import AnnularRingCheck
+        from volta.dfm.checks import AnnularRingCheck
 
         pad = self._make_box(
             x1=-0.25, y1=-0.25, x2=0.25, y2=0.25,
@@ -491,7 +491,7 @@ class TestBuiltinDfmChecks:
 
     def test_solder_mask_flags_close_pads(self):
         """SolderMaskCheck flags two pads closer than min solder mask sliver."""
-        from kicad_agent.dfm.checks import SolderMaskCheck
+        from volta.dfm.checks import SolderMaskCheck
 
         # Two pads very close together on F.Mask layer
         pad1 = self._make_box(
@@ -512,7 +512,7 @@ class TestBuiltinDfmChecks:
 
     def test_solder_mask_passes_adequate_spacing(self):
         """SolderMaskCheck passes pads with adequate solder mask bridge."""
-        from kicad_agent.dfm.checks import SolderMaskCheck
+        from volta.dfm.checks import SolderMaskCheck
 
         # Two pads far apart on F.Mask layer
         pad1 = self._make_box(
@@ -534,7 +534,7 @@ class TestBuiltinDfmChecks:
 
     def test_thermal_relief_flags_no_spokes(self):
         """ThermalReliefCheck flags pad on copper zone without thermal spokes."""
-        from kicad_agent.dfm.checks import ThermalReliefCheck
+        from volta.dfm.checks import ThermalReliefCheck
 
         # Pad inside a zone with same net, no traces connecting them
         pad = self._make_box(
@@ -557,7 +557,7 @@ class TestBuiltinDfmChecks:
 
     def test_thermal_relief_passes_with_spokes(self):
         """ThermalReliefCheck passes pad with thermal relief traces."""
-        from kicad_agent.dfm.checks import ThermalReliefCheck
+        from volta.dfm.checks import ThermalReliefCheck
 
         # Pad inside a zone with same net, traces connecting them (thermal spokes)
         pad = self._make_box(
@@ -587,7 +587,7 @@ class TestBuiltinDfmChecks:
 
     def test_min_trace_flags_thin_trace(self):
         """MinTraceWidthCheck flags trace with width below profile minimum."""
-        from kicad_agent.dfm.checks import MinTraceWidthCheck
+        from volta.dfm.checks import MinTraceWidthCheck
 
         thin_trace = self._make_path(
             points=((0, 0), (10, 0)),
@@ -603,7 +603,7 @@ class TestBuiltinDfmChecks:
 
     def test_min_trace_passes_adequate_width(self):
         """MinTraceWidthCheck passes trace with adequate width."""
-        from kicad_agent.dfm.checks import MinTraceWidthCheck
+        from volta.dfm.checks import MinTraceWidthCheck
 
         wide_trace = self._make_path(
             points=((0, 0), (10, 0)),
@@ -618,7 +618,7 @@ class TestBuiltinDfmChecks:
 
     def test_min_trace_skips_zero_width(self):
         """MinTraceWidthCheck skips traces with width=0 (unextracted)."""
-        from kicad_agent.dfm.checks import MinTraceWidthCheck
+        from volta.dfm.checks import MinTraceWidthCheck
 
         zero_trace = self._make_path(
             points=((0, 0), (10, 0)),
@@ -635,7 +635,7 @@ class TestBuiltinDfmChecks:
 
     def test_min_drill_flags_small_via(self):
         """MinDrillCheck flags via with drill below profile minimum."""
-        from kicad_agent.dfm.checks import MinDrillCheck
+        from volta.dfm.checks import MinDrillCheck
 
         via_drill = self._make_point(
             x=5, y=5, entity_type="via_drill", entity_id="v1",
@@ -652,7 +652,7 @@ class TestBuiltinDfmChecks:
 
     def test_min_drill_passes_adequate(self):
         """MinDrillCheck passes via with adequate drill size."""
-        from kicad_agent.dfm.checks import MinDrillCheck
+        from volta.dfm.checks import MinDrillCheck
 
         via_drill = self._make_point(
             x=5, y=5, entity_type="via_drill", entity_id="v2",
@@ -669,7 +669,7 @@ class TestBuiltinDfmChecks:
 
     def test_annular_ring_generic_vs_jlcpcb(self):
         """Check that different profiles produce different results."""
-        from kicad_agent.dfm.checks import AnnularRingCheck
+        from volta.dfm.checks import AnnularRingCheck
 
         # Pad with annular ring of 0.16mm: passes JLCPCB/generic (0.15mm) but
         # fails AISLER (0.2mm hard limit). DRC-07 corrected JLCPCB annular from
@@ -702,7 +702,7 @@ class TestBuiltinDfmChecks:
 
     def test_get_builtin_dfm_checks_returns_extended(self):
         """get_builtin_dfm_checks returns 50+ extended checks."""
-        from kicad_agent.dfm.checks import get_builtin_dfm_checks
+        from volta.dfm.checks import get_builtin_dfm_checks
 
         checks = get_builtin_dfm_checks()
         assert len(checks) >= 50
@@ -724,7 +724,7 @@ class TestBuiltinDfmChecksIntegration:
 
     def test_full_check_with_jlcpcb(self):
         """Run all 5 checks through DfmChecker with JLCPCB profile."""
-        from kicad_agent.dfm.checks import get_builtin_dfm_checks
+        from volta.dfm.checks import get_builtin_dfm_checks
 
         checker = DfmChecker(checks=get_builtin_dfm_checks())
         profile = get_builtin_profiles()["jlcpcb"]
@@ -755,8 +755,8 @@ class TestBuiltinDfmChecksIntegration:
 
     def test_full_check_clean_board(self):
         """Run all checks on a clean board (no original check violations)."""
-        from kicad_agent.dfm.checks import get_builtin_dfm_checks
-        from kicad_agent.dfm.checker import DfmChecker
+        from volta.dfm.checks import get_builtin_dfm_checks
+        from volta.dfm.checker import DfmChecker
 
         # Run only the 5 original checks so the clean-board assertion is valid
         original_names = {"ANNULAR_RING_01", "SOLDER_MASK_01", "THERMAL_RELIEF_01",

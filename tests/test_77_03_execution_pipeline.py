@@ -15,12 +15,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ops.executor import OperationExecutor
-from kicad_agent.ops.execution import SELF_SERIALIZING_OPS
-from kicad_agent.ops.handlers.schematic_query import _SCHEMATIC_QUERY_HANDLERS
-from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
-from kicad_agent.ops.ir_cache import IRCache
-from kicad_agent.ops.persistent_undo import PersistentUndoStack
+from volta.ops.executor import OperationExecutor
+from volta.ops.execution import SELF_SERIALIZING_OPS
+from volta.ops.handlers.schematic_query import _SCHEMATIC_QUERY_HANDLERS
+from volta.ops.handlers.query import _QUERY_HANDLERS
+from volta.ops.ir_cache import IRCache
+from volta.ops.persistent_undo import PersistentUndoStack
 
 
 # ---------------------------------------------------------------------------
@@ -83,7 +83,7 @@ class TestOBUG001FreshSchematicCache:
 
     def test_cache_has_fresh_raw_content_after_schematic_mutation(self, project_dir):
         """Mutate schematic and verify cache raw_content matches file on disk."""
-        import kicad_agent.ops.execution as exec_mod
+        import volta.ops.execution as exec_mod
 
         sch_file = project_dir / "test.kicad_sch"
         original_content = sch_file.read_text(encoding="utf-8")
@@ -143,8 +143,8 @@ class TestOBUG002StalePCBCache:
 
     def test_raw_written_pcb_does_not_recache_stale_data(self, project_dir_with_pcb):
         """When ir.raw_written is True, cache should be invalidated but not re-cached."""
-        import kicad_agent.ops.execution as exec_mod
-        from kicad_agent.ops.ir_cache import CacheEntry
+        import volta.ops.execution as exec_mod
+        from volta.ops.ir_cache import CacheEntry
 
         pcb_file = project_dir_with_pcb / "test.kicad_pcb"
         cache = IRCache(max_size=64)
@@ -177,7 +177,7 @@ class TestOBUG002StalePCBCache:
                     mock_parse_result.raw_content = "REAL PCB CONTENT"
                     mock_parse.return_value = mock_parse_result
                     with patch.object(exec_mod, "extract_uuids", return_value={}) as mock_extract:
-                        with patch("kicad_agent.ops.execution.PcbIR") as mock_pcb_ir_cls:
+                        with patch("volta.ops.execution.PcbIR") as mock_pcb_ir_cls:
                             mock_pcb_ir_cls.return_value = mock_ir
                             result = exec_mod.execute_pcb(
                                 op, pcb_file, cache=cache, undo_stack=None,
@@ -204,7 +204,7 @@ class TestOBUG003ConvertKicad6To10:
 
     def test_convert_kicad6_to_10_handler_writes_directly(self):
         """The handler writes the converted file directly, not via executor serialize."""
-        from kicad_agent.ops.handlers.schematic import _SCHEMATIC_HANDLERS
+        from volta.ops.handlers.schematic import _SCHEMATIC_HANDLERS
         handler = _SCHEMATIC_HANDLERS.get("convert_kicad6_to_10")
         assert handler is not None
 
@@ -219,8 +219,8 @@ class TestOBUG004ProjectTransaction:
 
     def test_project_execution_uses_transaction(self, project_dir_with_project_file):
         """execute_project should use Transaction for rollback on failure."""
-        import kicad_agent.ops.execution as exec_mod
-        from kicad_agent.ir.transaction import Transaction
+        import volta.ops.execution as exec_mod
+        from volta.ir.transaction import Transaction
 
         sym_lib = project_dir_with_project_file / "sym-lib-table"
         original_content = sym_lib.read_text(encoding="utf-8")
@@ -251,7 +251,7 @@ class TestOBUG004ProjectTransaction:
 
     def test_project_file_rolls_back_on_handler_failure(self, project_dir_with_project_file):
         """On handler failure, Transaction should roll back the file."""
-        import kicad_agent.ops.execution as exec_mod
+        import volta.ops.execution as exec_mod
 
         sym_lib = project_dir_with_project_file / "sym-lib-table"
         original_content = sym_lib.read_text(encoding="utf-8")
@@ -366,11 +366,11 @@ class TestOBUG006PrePCBGateMultiSheet:
 
         # The function iterates all .kicad_sch files; verify it doesn't crash
         # and the result indicates ERC was run on all sheets
-        from kicad_agent.ops.validation_gates import pre_pcb_gate
+        from volta.ops.validation_gates import pre_pcb_gate
 
         # We can't easily test ERC without a real kicad-cli, but we can verify
         # the code path processes multiple files by mocking check_erc_clean
-        with patch("kicad_agent.ops.validation_gates.check_erc_clean") as mock_erc:
+        with patch("volta.ops.validation_gates.check_erc_clean") as mock_erc:
             mock_erc.return_value = {
                 "clean": True,
                 "error_count": 0,
@@ -407,7 +407,7 @@ class TestOBUG007ReviewSchematicRouting:
 
     def test_review_schematic_routes_to_schematic_query_path(self, project_dir):
         """review_schematic on .kicad_sch file should use execute_schematic_query path."""
-        import kicad_agent.ops.executor as executor_mod
+        import volta.ops.executor as executor_mod
 
         # Create an op that would be review_schematic
         # We need to test routing, so we use a mock approach

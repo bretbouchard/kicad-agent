@@ -13,15 +13,15 @@ from kiutils.items.common import Position, Property
 from kiutils.items.schitems import Connection, LocalLabel
 from kiutils.schematic import Schematic, SchematicSymbol
 
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.ops.validation_gates import (
+from volta.ir.schematic_ir import SchematicIR
+from volta.ops.validation_gates import (
     check_footprint_assignments,
     check_erc_clean,
     pre_pcb_schematic_gate,
     pre_pcb_gate,
     validate_power_nets,
 )
-from kicad_agent.parser import parse_schematic
+from volta.parser import parse_schematic
 
 
 def _save_and_parse(sch_path: Path, sch: Schematic) -> SchematicIR:
@@ -95,7 +95,7 @@ class TestHierarchicalPower:
 
     def test_check_hierarchical_flag_default_true(self):
         """ValidatePowerNetsOp defaults check_hierarchical to True."""
-        from kicad_agent.ops._schema_validation import ValidatePowerNetsOp
+        from volta.ops._schema_validation import ValidatePowerNetsOp
         op = ValidatePowerNetsOp(target_file="test.kicad_sch")
         assert op.check_hierarchical is True
 
@@ -278,7 +278,7 @@ class TestPrePcbSchematicGate:
                 }
 
             monkeypatch.setattr(
-                "kicad_agent.ops.validation_gates.check_erc_clean",
+                "volta.ops.validation_gates.check_erc_clean",
                 _fake_erc,
             )
             result = pre_pcb_schematic_gate(sch_path)

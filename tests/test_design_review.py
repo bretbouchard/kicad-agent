@@ -16,13 +16,13 @@ Tests cover:
 
 import pytest
 
-from kicad_agent.analysis.topology_graph import (
+from volta.analysis.topology_graph import (
     CircuitTopology,
     NetClassification,
     TopologyEdge,
     TopologyNode,
 )
-from kicad_agent.analysis.intent_schemas import DesignGoal, DesignIntent, SubcircuitIntent
+from volta.analysis.intent_schemas import DesignGoal, DesignIntent, SubcircuitIntent
 
 
 # ---------------------------------------------------------------------------
@@ -237,7 +237,7 @@ class TestDesignFindingSchema:
 
     def test_validates_with_all_fields(self):
         """Test 1: DesignFinding validates with category, severity, description, location, suggestion."""
-        from kicad_agent.analysis.design_review import DesignFinding, ReviewCategory, ReviewSeverity
+        from volta.analysis.design_review import DesignFinding, ReviewCategory, ReviewSeverity
 
         finding = DesignFinding(
             category=ReviewCategory.MISSING_BYPASS_CAPS,
@@ -254,7 +254,7 @@ class TestDesignFindingSchema:
 
     def test_rejects_invalid_severity(self):
         """Test 2: DesignFinding rejects invalid severity values."""
-        from kicad_agent.analysis.design_review import DesignFinding, ReviewCategory
+        from volta.analysis.design_review import DesignFinding, ReviewCategory
 
         with pytest.raises(Exception):
             DesignFinding(
@@ -266,7 +266,7 @@ class TestDesignFindingSchema:
 
     def test_rejects_empty_description(self):
         """Test 3: DesignFinding rejects empty description."""
-        from kicad_agent.analysis.design_review import DesignFinding, ReviewCategory, ReviewSeverity
+        from volta.analysis.design_review import DesignFinding, ReviewCategory, ReviewSeverity
 
         with pytest.raises(Exception):
             DesignFinding(
@@ -294,7 +294,7 @@ class TestDesignReviewSchema:
 
     def test_validates_with_findings(self):
         """Test 4: DesignReview validates with findings list, summary stats, schematic_path."""
-        from kicad_agent.analysis.design_review import (
+        from volta.analysis.design_review import (
             DesignFinding,
             DesignReview,
             ReviewCategory,
@@ -316,7 +316,7 @@ class TestDesignReviewSchema:
 
     def test_computes_summary_counts(self):
         """Test 5: DesignReview computes summary counts by severity automatically."""
-        from kicad_agent.analysis.design_review import (
+        from volta.analysis.design_review import (
             DesignFinding,
             DesignReview,
             ReviewCategory,
@@ -359,7 +359,7 @@ class TestBypassCapReview:
 
     def test_flags_missing_bypass_cap(self):
         """Test 6: Identifies missing bypass cap on IC with power pins."""
-        from kicad_agent.analysis.design_review import DesignReviewer, ReviewCategory, ReviewSeverity
+        from volta.analysis.design_review import DesignReviewer, ReviewCategory, ReviewSeverity
 
         reviewer = DesignReviewer()
         review = reviewer.review(TOPOLOGY_NO_BYPASS)
@@ -372,7 +372,7 @@ class TestBypassCapReview:
 
     def test_does_not_flag_ic_with_bypass(self):
         """Test 7: Does NOT flag IC that has bypass cap."""
-        from kicad_agent.analysis.design_review import DesignReviewer, ReviewCategory
+        from volta.analysis.design_review import DesignReviewer, ReviewCategory
 
         reviewer = DesignReviewer()
         review = reviewer.review(TOPOLOGY_WITH_BYPASS)
@@ -394,7 +394,7 @@ class TestFeedbackCompensationReview:
 
     def test_flags_missing_feedback_compensation(self):
         """Test 8: Identifies missing feedback compensation cap on op-amp with feedback network."""
-        from kicad_agent.analysis.design_review import DesignReviewer, ReviewCategory
+        from volta.analysis.design_review import DesignReviewer, ReviewCategory
 
         reviewer = DesignReviewer()
         review = reviewer.review(TOPOLOGY_NO_COMP)
@@ -415,7 +415,7 @@ class TestPowerDecouplingReview:
 
     def test_flags_power_rail_without_filtering(self):
         """Test 9: Identifies power rail without filtering cap."""
-        from kicad_agent.analysis.design_review import DesignReviewer, ReviewCategory
+        from volta.analysis.design_review import DesignReviewer, ReviewCategory
 
         reviewer = DesignReviewer()
         review = reviewer.review(TOPOLOGY_NO_BULK_CAP)
@@ -439,7 +439,7 @@ class TestComponentValueReview:
         Note: This test uses a topology with a high-value resistor (470k) connected
         to an audio signal net, which should trigger an INFO finding.
         """
-        from kicad_agent.analysis.design_review import DesignReviewer, ReviewCategory
+        from volta.analysis.design_review import DesignReviewer, ReviewCategory
 
         # Build topology with a 470k resistor in signal path
         high_r = TopologyNode(
@@ -480,7 +480,7 @@ class TestSignalIntegrityReview:
 
     def test_flags_input_without_protection(self):
         """Test 11: Identifies input net without protection."""
-        from kicad_agent.analysis.design_review import DesignReviewer, ReviewCategory
+        from volta.analysis.design_review import DesignReviewer, ReviewCategory
 
         # Build topology with input net going directly to IC with no series R or diode
         ic = _make_ic_node("U1", "NE5532",
@@ -517,7 +517,7 @@ class TestIntentAwareSeverity:
 
     def test_critical_for_audio_processing_missing_bypass(self):
         """Test 12: CRITICAL severity for missing bypass on audio processing ICs."""
-        from kicad_agent.analysis.design_review import DesignReviewer, ReviewSeverity
+        from volta.analysis.design_review import DesignReviewer, ReviewSeverity
 
         intent = DesignIntent(
             overall_type="compressor",
@@ -537,7 +537,7 @@ class TestIntentAwareSeverity:
 
     def test_info_for_component_value_optimization(self):
         """Test 13: INFO severity for component value optimization suggestions."""
-        from kicad_agent.analysis.design_review import DesignReviewer, ReviewCategory, ReviewSeverity
+        from volta.analysis.design_review import DesignReviewer, ReviewCategory, ReviewSeverity
 
         # Well-designed circuit should only produce INFO-level findings at most
         reviewer = DesignReviewer()
@@ -560,7 +560,7 @@ class TestWellDesignedCircuit:
 
     def test_minimal_findings_for_well_designed(self):
         """Test 14: Returns empty/minimal findings for well-designed circuit."""
-        from kicad_agent.analysis.design_review import DesignReviewer, ReviewCategory
+        from volta.analysis.design_review import DesignReviewer, ReviewCategory
 
         reviewer = DesignReviewer()
         review = reviewer.review(WELL_DESIGNED)
@@ -584,7 +584,7 @@ class TestDeterminism:
 
     def test_same_input_same_output(self):
         """Test 15: Same input produces identical output."""
-        from kicad_agent.analysis.design_review import DesignReviewer
+        from volta.analysis.design_review import DesignReviewer
 
         reviewer = DesignReviewer()
         review1 = reviewer.review(TOPOLOGY_NO_BYPASS)

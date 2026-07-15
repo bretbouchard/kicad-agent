@@ -6,7 +6,7 @@
 #
 # Builds a one-folder (COLLECT) bundle that ships:
 #   - Python 3.11 runtime
-#   - kicad_agent library (from ../../src/kicad_agent)
+#   - volta library (from ../../src/volta)
 #   - Hidden imports: kiutils, sexpdata, networkx, pydantic
 #
 # NOT bundled:
@@ -48,8 +48,8 @@ ENTRY = HERE / "daemon_entry.py"
 
 if not ENTRY.exists():
     raise SystemExit(f"daemon_entry.py not found at {ENTRY}")
-if not (SRC_ROOT / "kicad_agent" / "__init__.py").exists():
-    raise SystemExit(f"kicad_agent package not found at {SRC_ROOT}/kicad_agent")
+if not (SRC_ROOT / "volta" / "__init__.py").exists():
+    raise SystemExit(f"volta package not found at {SRC_ROOT}/volta")
 
 # ---------------------------------------------------------------------------
 # Hidden imports
@@ -74,13 +74,13 @@ HIDDEN_IMPORTS = [
     "onnxruntime",
     # numpy IS needed now — onnxruntime depends on it
     "numpy",
-    # kicad_agent operation modules — keep the registry importable post-freeze
-    "kicad_agent",
-    "kicad_agent.ops",
-    "kicad_agent.ops.executor",
-    "kicad_agent.ops.registry",
-    "kicad_agent.ops.schematic_raw_writer",
-    "kicad_agent.ops.pcb_raw_writer",
+    # volta operation modules — keep the registry importable post-freeze
+    "volta",
+    "volta.ops",
+    "volta.ops.executor",
+    "volta.ops.registry",
+    "volta.ops.schematic_raw_writer",
+    "volta.ops.pcb_raw_writer",
     # Phase 162 daemon modules — must be importable post-freeze
     "protocol",
     "handlers",

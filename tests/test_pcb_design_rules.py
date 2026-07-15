@@ -11,13 +11,13 @@ from typing import Any
 
 import pytest
 
-from kicad_agent.analysis.design_rules import (
+from volta.analysis.design_rules import (
     DesignRule,
     DesignRuleViolation,
     RuleCategory,
     RuleSeverity,
 )
-from kicad_agent.analysis.design_rule_engine import DesignRuleEngine
+from volta.analysis.design_rule_engine import DesignRuleEngine
 
 
 # ---------------------------------------------------------------------------
@@ -82,7 +82,7 @@ class TestClearanceCheckRule:
 
     def test_rule_attributes(self) -> None:
         """Test 1: ClearanceCheckRule has correct class attributes."""
-        from kicad_agent.validation.pcb_design_rules import ClearanceCheckRule
+        from volta.validation.pcb_design_rules import ClearanceCheckRule
 
         rule = ClearanceCheckRule()
         assert rule.name == "PCB_CLEARANCE_01"
@@ -92,7 +92,7 @@ class TestClearanceCheckRule:
 
     def test_violation_below_threshold(self) -> None:
         """Test 2: Footprints at 0.1mm (below 0.2mm default) produce 1 violation."""
-        from kicad_agent.validation.pcb_design_rules import ClearanceCheckRule
+        from volta.validation.pcb_design_rules import ClearanceCheckRule
 
         rule = ClearanceCheckRule()
         model = MockSpatialModel(
@@ -109,7 +109,7 @@ class TestClearanceCheckRule:
 
     def test_no_violation_above_threshold(self) -> None:
         """Test 3: Footprints at 0.5mm (above 0.2mm default) produce 0 violations."""
-        from kicad_agent.validation.pcb_design_rules import ClearanceCheckRule
+        from volta.validation.pcb_design_rules import ClearanceCheckRule
 
         rule = ClearanceCheckRule()
         model = MockSpatialModel(
@@ -123,7 +123,7 @@ class TestClearanceCheckRule:
 
     def test_config_override_threshold(self) -> None:
         """Test 4: config min_clearance_mm=0.5 applies override threshold."""
-        from kicad_agent.validation.pcb_design_rules import ClearanceCheckRule
+        from volta.validation.pcb_design_rules import ClearanceCheckRule
 
         rule = ClearanceCheckRule()
         model = MockSpatialModel(
@@ -138,7 +138,7 @@ class TestClearanceCheckRule:
 
     def test_spatial_model_none_returns_empty(self) -> None:
         """Test 5: spatial_model=None returns empty list (graceful degradation)."""
-        from kicad_agent.validation.pcb_design_rules import ClearanceCheckRule
+        from volta.validation.pcb_design_rules import ClearanceCheckRule
 
         rule = ClearanceCheckRule()
         violations = rule.check(None, config={"spatial_model": None})
@@ -146,7 +146,7 @@ class TestClearanceCheckRule:
 
     def test_no_config_returns_empty(self) -> None:
         """Test 5b: No config at all returns empty list."""
-        from kicad_agent.validation.pcb_design_rules import ClearanceCheckRule
+        from volta.validation.pcb_design_rules import ClearanceCheckRule
 
         rule = ClearanceCheckRule()
         violations = rule.check(None)
@@ -163,7 +163,7 @@ class TestImpedanceCheckRule:
 
     def test_rule_attributes(self) -> None:
         """Test 6: ImpedanceCheckRule has correct class attributes."""
-        from kicad_agent.validation.pcb_design_rules import ImpedanceCheckRule
+        from volta.validation.pcb_design_rules import ImpedanceCheckRule
 
         rule = ImpedanceCheckRule()
         assert rule.name == "PCB_IMPEDANCE_01"
@@ -173,7 +173,7 @@ class TestImpedanceCheckRule:
 
     def test_violation_outside_tolerance(self) -> None:
         """Test 7: Z0=40.0 is outside 50.0 +/- 10%, produces 1 violation."""
-        from kicad_agent.validation.pcb_design_rules import ImpedanceCheckRule
+        from volta.validation.pcb_design_rules import ImpedanceCheckRule
 
         rule = ImpedanceCheckRule()
         model = MockSpatialModel(
@@ -195,7 +195,7 @@ class TestImpedanceCheckRule:
 
     def test_no_violation_within_tolerance(self) -> None:
         """Test 8: Z0=50.5 is within 50.0 +/- 10%, produces 0 violations."""
-        from kicad_agent.validation.pcb_design_rules import ImpedanceCheckRule
+        from volta.validation.pcb_design_rules import ImpedanceCheckRule
 
         rule = ImpedanceCheckRule()
         model = MockSpatialModel(
@@ -214,7 +214,7 @@ class TestImpedanceCheckRule:
 
     def test_no_constraints_returns_empty(self) -> None:
         """Test 9a: No constraints returns empty list."""
-        from kicad_agent.validation.pcb_design_rules import ImpedanceCheckRule
+        from volta.validation.pcb_design_rules import ImpedanceCheckRule
 
         rule = ImpedanceCheckRule()
         model = MockSpatialModel(
@@ -229,7 +229,7 @@ class TestImpedanceCheckRule:
 
     def test_no_layer_stackup_returns_empty(self) -> None:
         """Test 9b: No layer_stackup returns empty list."""
-        from kicad_agent.validation.pcb_design_rules import ImpedanceCheckRule
+        from volta.validation.pcb_design_rules import ImpedanceCheckRule
 
         rule = ImpedanceCheckRule()
         model = MockSpatialModel(footprints=[], layer_stackup=None)
@@ -242,7 +242,7 @@ class TestImpedanceCheckRule:
 
     def test_no_spatial_model_returns_empty(self) -> None:
         """Test 9c: spatial_model=None returns empty list."""
-        from kicad_agent.validation.pcb_design_rules import ImpedanceCheckRule
+        from volta.validation.pcb_design_rules import ImpedanceCheckRule
 
         rule = ImpedanceCheckRule()
         violations = rule.check(None, config={"spatial_model": None})
@@ -250,7 +250,7 @@ class TestImpedanceCheckRule:
 
     def test_deviation_fraction_override(self) -> None:
         """Test 9d: config deviation_fraction=0.05 narrows tolerance."""
-        from kicad_agent.validation.pcb_design_rules import ImpedanceCheckRule
+        from volta.validation.pcb_design_rules import ImpedanceCheckRule
 
         rule = ImpedanceCheckRule()
         model = MockSpatialModel(
@@ -288,7 +288,7 @@ class TestThermalProximityRule:
 
     def test_rule_attributes(self) -> None:
         """Test 10: ThermalProximityRule has correct class attributes."""
-        from kicad_agent.validation.pcb_design_rules import ThermalProximityRule
+        from volta.validation.pcb_design_rules import ThermalProximityRule
 
         rule = ThermalProximityRule()
         assert rule.name == "PCB_THERMAL_01"
@@ -298,7 +298,7 @@ class TestThermalProximityRule:
 
     def test_violation_below_keepout(self) -> None:
         """Test 11: Sensitive at (10, 10.5), source at (10, 10), dist=0.5mm < 2.0mm -> violation."""
-        from kicad_agent.validation.pcb_design_rules import ThermalProximityRule
+        from volta.validation.pcb_design_rules import ThermalProximityRule
 
         rule = ThermalProximityRule()
         model = MockSpatialModel(
@@ -319,7 +319,7 @@ class TestThermalProximityRule:
 
     def test_no_violation_above_keepout(self) -> None:
         """Test 12: Sensitive at (10, 15), source at (10, 10), dist=5.0mm > 2.0mm -> no violation."""
-        from kicad_agent.validation.pcb_design_rules import ThermalProximityRule
+        from volta.validation.pcb_design_rules import ThermalProximityRule
 
         rule = ThermalProximityRule()
         model = MockSpatialModel(
@@ -337,7 +337,7 @@ class TestThermalProximityRule:
 
     def test_config_override_keepout(self) -> None:
         """Test 13: config keepout_margin_mm=5.0 applies override."""
-        from kicad_agent.validation.pcb_design_rules import ThermalProximityRule
+        from volta.validation.pcb_design_rules import ThermalProximityRule
 
         rule = ThermalProximityRule()
         model = MockSpatialModel(
@@ -360,7 +360,7 @@ class TestThermalProximityRule:
 
     def test_spatial_model_none_returns_empty(self) -> None:
         """Test 14: spatial_model=None returns empty list."""
-        from kicad_agent.validation.pcb_design_rules import ThermalProximityRule
+        from volta.validation.pcb_design_rules import ThermalProximityRule
 
         rule = ThermalProximityRule()
         violations = rule.check(None, config={"spatial_model": None})
@@ -368,7 +368,7 @@ class TestThermalProximityRule:
 
     def test_no_thermal_constraints_returns_empty(self) -> None:
         """Test 14b: No thermal constraints returns empty list."""
-        from kicad_agent.validation.pcb_design_rules import ThermalProximityRule
+        from volta.validation.pcb_design_rules import ThermalProximityRule
 
         rule = ThermalProximityRule()
         model = MockSpatialModel(
@@ -393,7 +393,7 @@ class TestFactoryAndIntegration:
 
     def test_get_pcb_design_rules_returns_three(self) -> None:
         """Test 15: get_pcb_design_rules() returns list of 3 rule instances."""
-        from kicad_agent.validation.pcb_design_rules import (
+        from volta.validation.pcb_design_rules import (
             ClearanceCheckRule,
             ImpedanceCheckRule,
             ThermalProximityRule,
@@ -408,7 +408,7 @@ class TestFactoryAndIntegration:
 
     def test_rules_registered_with_engine(self) -> None:
         """Test 16: All 3 rules can be registered with DesignRuleEngine via add_rule()."""
-        from kicad_agent.validation.pcb_design_rules import get_pcb_design_rules
+        from volta.validation.pcb_design_rules import get_pcb_design_rules
 
         rules = get_pcb_design_rules()
         engine = DesignRuleEngine()
@@ -423,7 +423,7 @@ class TestFactoryAndIntegration:
 
     def test_engine_run_with_pcb_rules(self) -> None:
         """Test 17: DesignRuleEngine.run() with all 3 PCB rules completes without error."""
-        from kicad_agent.validation.pcb_design_rules import get_pcb_design_rules
+        from volta.validation.pcb_design_rules import get_pcb_design_rules
 
         rules = get_pcb_design_rules()
         model = MockSpatialModel(
@@ -461,7 +461,7 @@ class TestFactoryAndIntegration:
 
     def test_engine_run_all_clear(self) -> None:
         """Test 17b: Engine with passing config produces no violations."""
-        from kicad_agent.validation.pcb_design_rules import get_pcb_design_rules
+        from volta.validation.pcb_design_rules import get_pcb_design_rules
 
         rules = get_pcb_design_rules()
         model = MockSpatialModel(

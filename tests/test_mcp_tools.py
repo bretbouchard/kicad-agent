@@ -8,7 +8,7 @@ schema/registry drift cannot silently drop an op from the MCP tool surface.
 
 from __future__ import annotations
 
-from kicad_agent.mcp.edit_server import _generate_operation_tools
+from volta.mcp.edit_server import _generate_operation_tools
 
 
 # The 9 ops added across Phases 205-208 that must appear as MCP tools.

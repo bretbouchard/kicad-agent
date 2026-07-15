@@ -26,7 +26,7 @@ class TestCircuitTemplateSchema:
 
     def test_validates_with_all_required_fields(self):
         """CircuitTemplate validates with all required fields."""
-        from kicad_agent.training.circuit_templates import (
+        from volta.training.circuit_templates import (
             CircuitTemplate,
             ComponentTemplate,
             ComponentRange,
@@ -56,7 +56,7 @@ class TestCircuitTemplateSchema:
 
     def test_rejects_empty_component_templates(self):
         """CircuitTemplate rejects template with empty component_templates."""
-        from kicad_agent.training.circuit_templates import (
+        from volta.training.circuit_templates import (
             CircuitTemplate,
             ComponentRange,
             NetTemplate,
@@ -75,7 +75,7 @@ class TestCircuitTemplateSchema:
 
     def test_rejects_empty_net_templates(self):
         """CircuitTemplate rejects template with empty net_templates."""
-        from kicad_agent.training.circuit_templates import (
+        from volta.training.circuit_templates import (
             CircuitTemplate,
             ComponentTemplate,
             ComponentRange,
@@ -104,7 +104,7 @@ class TestComponentRange:
 
     def test_validates_min_less_than_max(self):
         """ComponentRange validates when min < max."""
-        from kicad_agent.training.circuit_templates import ComponentRange
+        from volta.training.circuit_templates import ComponentRange
 
         cr = ComponentRange(param_name="R1", min_value=100, max_value=10000)
         assert cr.min_value == 100
@@ -112,7 +112,7 @@ class TestComponentRange:
 
     def test_rejects_max_leq_min(self):
         """ComponentRange rejects max_value <= min_value."""
-        from kicad_agent.training.circuit_templates import ComponentRange
+        from volta.training.circuit_templates import ComponentRange
 
         with pytest.raises(Exception):
             ComponentRange(param_name="R1", min_value=100, max_value=100)
@@ -122,7 +122,7 @@ class TestComponentRange:
 
     def test_log_uniform_default_true(self):
         """ComponentRange defaults to log_uniform=True."""
-        from kicad_agent.training.circuit_templates import ComponentRange
+        from volta.training.circuit_templates import ComponentRange
 
         cr = ComponentRange(param_name="R1", min_value=100, max_value=10000)
         assert cr.log_uniform is True
@@ -133,14 +133,14 @@ class TestTemplateLibrary:
 
     def test_returns_exactly_10_templates(self):
         """get_all_templates() returns exactly 10 templates."""
-        from kicad_agent.training.circuit_templates import get_all_templates
+        from volta.training.circuit_templates import get_all_templates
 
         templates = get_all_templates()
         assert len(templates) == 10
 
     def test_each_template_has_unique_name(self):
         """Each template has a unique name."""
-        from kicad_agent.training.circuit_templates import get_all_templates
+        from volta.training.circuit_templates import get_all_templates
 
         templates = get_all_templates()
         names = [t.name for t in templates]
@@ -148,7 +148,7 @@ class TestTemplateLibrary:
 
     def test_each_template_has_valid_category(self):
         """Each template has a non-empty category."""
-        from kicad_agent.training.circuit_templates import get_all_templates
+        from volta.training.circuit_templates import get_all_templates
 
         templates = get_all_templates()
         for t in templates:
@@ -156,7 +156,7 @@ class TestTemplateLibrary:
 
     def test_each_template_has_callable_predicates(self):
         """Each template has valid_range_predicates that are strings (callable via eval)."""
-        from kicad_agent.training.circuit_templates import get_all_templates
+        from volta.training.circuit_templates import get_all_templates
 
         templates = get_all_templates()
         for t in templates:
@@ -167,7 +167,7 @@ class TestTemplateLibrary:
 
     def test_all_templates_have_non_empty_parameter_ranges(self):
         """All 10 templates have non-empty parameter_ranges with at least 1 parameter."""
-        from kicad_agent.training.circuit_templates import get_all_templates
+        from volta.training.circuit_templates import get_all_templates
 
         templates = get_all_templates()
         for t in templates:
@@ -181,7 +181,7 @@ class TestTemplateInstantiation:
 
     def test_instantiate_produces_deterministic_output(self):
         """instantiate_template with a seed produces deterministic output."""
-        from kicad_agent.training.circuit_templates import (
+        from volta.training.circuit_templates import (
             get_all_templates,
             instantiate_template,
         )
@@ -193,7 +193,7 @@ class TestTemplateInstantiation:
 
     def test_different_seeds_produce_different_output(self):
         """instantiate_template with different seeds produces different output."""
-        from kicad_agent.training.circuit_templates import (
+        from volta.training.circuit_templates import (
             get_all_templates,
             instantiate_template,
         )
@@ -206,7 +206,7 @@ class TestTemplateInstantiation:
 
     def test_all_parameters_in_range(self):
         """Sampled parameters fall within their defined ranges."""
-        from kicad_agent.training.circuit_templates import (
+        from volta.training.circuit_templates import (
             get_all_templates,
             instantiate_template,
         )
@@ -227,7 +227,7 @@ class TestValidityPredicates:
 
     def test_common_emitter_accepts_valid_params(self):
         """Common-emitter amplifier template generates valid parameter sets."""
-        from kicad_agent.training.circuit_templates import (
+        from volta.training.circuit_templates import (
             COMMON_EMITTER_AMP,
             instantiate_template,
         )
@@ -243,7 +243,7 @@ class TestValidityPredicates:
         The predicate checks C1/C2 <= 10 and C2/C1 <= 10. We verify that
         instantiate_template never produces a violating combination.
         """
-        from kicad_agent.training.circuit_templates import (
+        from volta.training.circuit_templates import (
             SALLEN_KEY_LPF,
             instantiate_template,
         )
@@ -257,7 +257,7 @@ class TestValidityPredicates:
 
     def test_all_templates_produce_valid_params_for_many_seeds(self):
         """All templates produce params satisfying their predicates for 50 seeds."""
-        from kicad_agent.training.circuit_templates import (
+        from volta.training.circuit_templates import (
             get_all_templates,
             instantiate_template,
             _eval_predicate,
@@ -283,9 +283,9 @@ class TestSyntheticGenerator:
 
     def test_create_intent_produces_valid_intent(self):
         """SyntheticGenerator.create_intent produces a valid GenerationIntent."""
-        from kicad_agent.generation.intent import GenerationIntent
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.synthetic_generator import SyntheticGenerator
+        from volta.generation.intent import GenerationIntent
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.synthetic_generator import SyntheticGenerator
 
         gen = SyntheticGenerator()
         template = get_all_templates()[0]
@@ -296,8 +296,8 @@ class TestSyntheticGenerator:
 
     def test_correct_component_count(self):
         """Generated GenerationIntent has correct component count matching template."""
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.synthetic_generator import SyntheticGenerator
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.synthetic_generator import SyntheticGenerator
 
         gen = SyntheticGenerator()
         template = get_all_templates()[0]
@@ -307,8 +307,8 @@ class TestSyntheticGenerator:
 
     def test_correct_net_count(self):
         """Generated GenerationIntent has correct net count matching template."""
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.synthetic_generator import SyntheticGenerator
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.synthetic_generator import SyntheticGenerator
 
         gen = SyntheticGenerator()
         template = get_all_templates()[0]
@@ -318,8 +318,8 @@ class TestSyntheticGenerator:
 
     def test_component_values_formatted(self):
         """All component values are non-empty strings."""
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.synthetic_generator import SyntheticGenerator
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.synthetic_generator import SyntheticGenerator
 
         gen = SyntheticGenerator()
         for template in get_all_templates():
@@ -331,8 +331,8 @@ class TestSyntheticGenerator:
 
     def test_deterministic_same_seed(self):
         """Two calls with same seed produce identical GenerationIntent."""
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.synthetic_generator import SyntheticGenerator
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.synthetic_generator import SyntheticGenerator
 
         gen = SyntheticGenerator()
         template = get_all_templates()[0]
@@ -343,8 +343,8 @@ class TestSyntheticGenerator:
 
     def test_diverse_different_seeds(self):
         """Two calls with different seeds produce different GenerationIntent."""
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.synthetic_generator import SyntheticGenerator
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.synthetic_generator import SyntheticGenerator
 
         gen = SyntheticGenerator()
         template = get_all_templates()[0]
@@ -355,8 +355,8 @@ class TestSyntheticGenerator:
 
     def test_generate_batch_produces_n_intents(self):
         """generate_batch produces N intents from a template with sequential seeds."""
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.synthetic_generator import SyntheticGenerator
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.synthetic_generator import SyntheticGenerator
 
         gen = SyntheticGenerator()
         template = get_all_templates()[0]
@@ -367,8 +367,8 @@ class TestSyntheticGenerator:
 
     def test_generate_batch_deduplicates_by_hash(self):
         """generate_batch deduplicates by hash."""
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.synthetic_generator import SyntheticGenerator
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.synthetic_generator import SyntheticGenerator
 
         gen = SyntheticGenerator()
         template = get_all_templates()[0]
@@ -379,8 +379,8 @@ class TestSyntheticGenerator:
 
     def test_generate_batch_skips_failures(self):
         """generate_batch skips seeds that fail validity predicates."""
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.synthetic_generator import SyntheticGenerator
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.synthetic_generator import SyntheticGenerator
 
         gen = SyntheticGenerator()
         template = get_all_templates()[0]
@@ -392,8 +392,8 @@ class TestSyntheticGenerator:
 
     def test_hash_intent_deterministic(self):
         """hash_intent produces deterministic SHA256 hash."""
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.synthetic_generator import SyntheticGenerator
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.synthetic_generator import SyntheticGenerator
 
         gen = SyntheticGenerator()
         template = get_all_templates()[0]
@@ -414,8 +414,8 @@ class TestAttemptSerialization:
 
     def test_attempt_to_dict(self):
         """attempt_to_dict converts GenerationAttempt to JSON-serializable dict."""
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.synthetic_generator import (
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.synthetic_generator import (
             SyntheticGenerator,
             attempt_to_dict,
         )
@@ -423,7 +423,7 @@ class TestAttemptSerialization:
         gen = SyntheticGenerator()
         template = get_all_templates()[0]
         intent = gen.create_intent(template, seed=42)
-        from kicad_agent.training.synthetic_generator import GenerationAttempt
+        from volta.training.synthetic_generator import GenerationAttempt
 
         attempt = GenerationAttempt(
             intent=intent,
@@ -440,8 +440,8 @@ class TestAttemptSerialization:
 
     def test_dict_to_attempt(self):
         """dict_to_attempt converts dict back to GenerationAttempt."""
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.synthetic_generator import (
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.synthetic_generator import (
             SyntheticGenerator,
             attempt_to_dict,
             dict_to_attempt,
@@ -450,7 +450,7 @@ class TestAttemptSerialization:
         gen = SyntheticGenerator()
         template = get_all_templates()[0]
         intent = gen.create_intent(template, seed=42)
-        from kicad_agent.training.synthetic_generator import GenerationAttempt
+        from volta.training.synthetic_generator import GenerationAttempt
 
         attempt = GenerationAttempt(
             intent=intent,
@@ -468,8 +468,8 @@ class TestAttemptSerialization:
 
     def test_round_trip_preserves_all_fields(self):
         """Round-trip preserves all fields including intent."""
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.synthetic_generator import (
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.synthetic_generator import (
             SyntheticGenerator,
             attempt_to_dict,
             dict_to_attempt,
@@ -478,7 +478,7 @@ class TestAttemptSerialization:
         gen = SyntheticGenerator()
         template = get_all_templates()[0]
         intent = gen.create_intent(template, seed=42)
-        from kicad_agent.training.synthetic_generator import GenerationAttempt
+        from volta.training.synthetic_generator import GenerationAttempt
 
         attempt = GenerationAttempt(
             intent=intent,
@@ -502,7 +502,7 @@ class TestAttemptSerialization:
 
     def test_attempt_to_dict_null_intent(self):
         """attempt_to_dict handles None intent."""
-        from kicad_agent.training.synthetic_generator import (
+        from volta.training.synthetic_generator import (
             GenerationAttempt,
             attempt_to_dict,
         )
@@ -524,7 +524,7 @@ class TestMassGenerationConfig:
 
     def test_validates_with_defaults(self):
         """MassGenerationConfig validates with defaults (target=10000, workers=4)."""
-        from kicad_agent.training.mass_generate import MassGenerationConfig
+        from volta.training.mass_generate import MassGenerationConfig
 
         config = MassGenerationConfig()
         assert config.target_count == 10000
@@ -533,21 +533,21 @@ class TestMassGenerationConfig:
 
     def test_rejects_workers_zero(self):
         """MassGenerationConfig rejects workers < 1."""
-        from kicad_agent.training.mass_generate import MassGenerationConfig
+        from volta.training.mass_generate import MassGenerationConfig
 
         with pytest.raises(Exception):
             MassGenerationConfig(n_workers=0)
 
     def test_rejects_target_zero(self):
         """MassGenerationConfig rejects target < 1."""
-        from kicad_agent.training.mass_generate import MassGenerationConfig
+        from volta.training.mass_generate import MassGenerationConfig
 
         with pytest.raises(Exception):
             MassGenerationConfig(target_count=0)
 
     def test_rejects_workers_above_max(self):
         """MassGenerationConfig rejects workers > 32."""
-        from kicad_agent.training.mass_generate import MassGenerationConfig
+        from volta.training.mass_generate import MassGenerationConfig
 
         with pytest.raises(Exception):
             MassGenerationConfig(n_workers=64)
@@ -558,7 +558,7 @@ class TestMassGenerationPipeline:
 
     def test_generate_mass_produces_all_templates(self):
         """generate_mass produces results for all 10 templates."""
-        from kicad_agent.training.mass_generate import (
+        from volta.training.mass_generate import (
             MassGenerationConfig,
             run_mass_generation,
         )
@@ -575,7 +575,7 @@ class TestMassGenerationPipeline:
 
     def test_output_is_deduplicated(self):
         """Output is deduplicated by circuit hash."""
-        from kicad_agent.training.mass_generate import (
+        from volta.training.mass_generate import (
             MassGenerationConfig,
             run_mass_generation,
         )
@@ -602,7 +602,7 @@ class TestMassGenerationPipeline:
 
     def test_jsonl_output_round_trips(self):
         """JSONL output can be loaded back and matches original."""
-        from kicad_agent.training.mass_generate import (
+        from volta.training.mass_generate import (
             MassGenerationConfig,
             run_mass_generation,
         )
@@ -630,7 +630,7 @@ class TestMassGenerationPipeline:
 
     def test_train_val_test_split_proportions(self):
         """Train/val/test split has correct proportions (80/10/10 within tolerance)."""
-        from kicad_agent.training.mass_generate import (
+        from volta.training.mass_generate import (
             MassGenerationConfig,
             run_mass_generation,
         )
@@ -659,7 +659,7 @@ class TestMassGenerationPipeline:
 
     def test_split_is_deterministic(self):
         """Split is deterministic for same seed."""
-        from kicad_agent.training.mass_generate import (
+        from volta.training.mass_generate import (
             MassGenerationConfig,
             run_mass_generation,
         )
@@ -690,7 +690,7 @@ class TestQualityMetrics:
 
     def test_compute_metrics_returns_expected_keys(self):
         """compute_metrics returns dict with expected keys."""
-        from kicad_agent.training.mass_generate import compute_metrics
+        from volta.training.mass_generate import compute_metrics
 
         metrics = compute_metrics([])
         assert hasattr(metrics, "total_circuits")
@@ -702,21 +702,21 @@ class TestQualityMetrics:
 
     def test_template_coverage_reports_all_templates(self):
         """Template coverage metric reports all 10 templates represented."""
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.mass_generate import compute_metrics
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.mass_generate import compute_metrics
 
         # Generate some sample data
-        from kicad_agent.training.synthetic_generator import (
+        from volta.training.synthetic_generator import (
             SyntheticGenerator,
             attempt_to_dict,
         )
-        from kicad_agent.training.circuit_templates import get_all_templates as gt
+        from volta.training.circuit_templates import get_all_templates as gt
 
         gen = SyntheticGenerator()
         attempts = []
         for template in gt():
             intent = gen.create_intent(template, seed=42)
-            from kicad_agent.training.synthetic_generator import GenerationAttempt
+            from volta.training.synthetic_generator import GenerationAttempt
 
             attempt = GenerationAttempt(
                 intent=intent,
@@ -732,13 +732,13 @@ class TestQualityMetrics:
 
     def test_component_diversity(self):
         """Component diversity metric reports unique component types."""
-        from kicad_agent.training.mass_generate import compute_metrics
-        from kicad_agent.training.synthetic_generator import (
+        from volta.training.mass_generate import compute_metrics
+        from volta.training.synthetic_generator import (
             SyntheticGenerator,
             attempt_to_dict,
         )
-        from kicad_agent.training.circuit_templates import get_all_templates
-        from kicad_agent.training.synthetic_generator import GenerationAttempt
+        from volta.training.circuit_templates import get_all_templates
+        from volta.training.synthetic_generator import GenerationAttempt
 
         gen = SyntheticGenerator()
         attempts = []
@@ -757,7 +757,7 @@ class TestQualityMetrics:
 
     def test_metrics_on_empty_input(self):
         """compute_metrics handles empty input gracefully."""
-        from kicad_agent.training.mass_generate import compute_metrics
+        from volta.training.mass_generate import compute_metrics
 
         metrics = compute_metrics([])
         assert metrics.total_circuits == 0
@@ -783,7 +783,7 @@ class TestCLI:
             [
                 sys.executable,
                 "-m",
-                "kicad_agent.training.mass_generate",
+                "volta.training.mass_generate",
                 "--dry-run",
             ],
             capture_output=True,

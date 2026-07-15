@@ -25,12 +25,12 @@ _SRC = Path(__file__).resolve().parent.parent / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from kicad_agent.io.atomic_write import atomic_write  # noqa: E402
-from kicad_agent.training.grpo_data_builder import (  # noqa: E402
+from volta.io.atomic_write import atomic_write  # noqa: E402
+from volta.training.grpo_data_builder import (  # noqa: E402
     GRPODataBuilder,
     GRPODataBuilderError,
 )
-from kicad_agent.training.rewards import AlignmentJitter  # noqa: E402
+from volta.training.rewards import AlignmentJitter  # noqa: E402
 
 logger = logging.getLogger("generate_grpo_variations")
 

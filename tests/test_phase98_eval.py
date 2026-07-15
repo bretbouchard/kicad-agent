@@ -19,11 +19,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.routing.orchestrator import (
+from volta.routing.orchestrator import (
     NetRouteResult,
     RoutingOrchestrationResult,
 )
-from kicad_agent.routing.strategy import DeterministicStrategy, RouterBackend
+from volta.routing.strategy import DeterministicStrategy, RouterBackend
 
 
 # ---------------------------------------------------------------------------
@@ -626,7 +626,7 @@ def _kicad_cli_available() -> bool:
 
 
 def _freerouting_available() -> bool:
-    from kicad_agent.routing.freerouting import is_freerouting_available
+    from volta.routing.freerouting import is_freerouting_available
     return is_freerouting_available()
 
 

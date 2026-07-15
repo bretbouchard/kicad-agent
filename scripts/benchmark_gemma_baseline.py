@@ -46,11 +46,11 @@ def benchmark_gemma(
         (should_finetune, report) where should_finetune is True if any
         gate category scored below threshold.
     """
-    from kicad_agent.analysis.benchmark_runner import (
+    from volta.analysis.benchmark_runner import (
         BenchmarkRunner,
         GemmaVisionAdapter,
     )
-    from kicad_agent.analysis.spatial_benchmark import TaskGenerator
+    from volta.analysis.spatial_benchmark import TaskGenerator
 
     adapter = GemmaVisionAdapter()
 

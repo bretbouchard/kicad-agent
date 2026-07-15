@@ -20,16 +20,16 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.crossfile.propagation import (
+from volta.crossfile.propagation import (
     PropagationResult,
     propagate_footprint_ref,
     propagate_symbol_ref,
 )
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.parser import parse_pcb, parse_schematic
-from kicad_agent.parser.uuid_extractor import extract_uuids
+from volta.ir.base import _clear_registry
+from volta.ir.pcb_ir import PcbIR
+from volta.ir.schematic_ir import SchematicIR
+from volta.parser import parse_pcb, parse_schematic
+from volta.parser.uuid_extractor import extract_uuids
 
 
 # ---------------------------------------------------------------------------

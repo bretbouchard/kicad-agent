@@ -8,9 +8,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.validation.gate_types import DesignStage, GateResult
-from kicad_agent.validation.gates.fix_providers import PlacementBoundsFixProvider
-from kicad_agent.validation.gates.repair_loop import (
+from volta.validation.gate_types import DesignStage, GateResult
+from volta.validation.gates.fix_providers import PlacementBoundsFixProvider
+from volta.validation.gates.repair_loop import (
     RepairAuditEntry,
     RepairLoop,
     serialize_audit_trail,

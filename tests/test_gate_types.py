@@ -5,7 +5,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from kicad_agent.validation.gate_types import (
+from volta.validation.gate_types import (
     DesignStage,
     GateDefinition,
     GateResult,

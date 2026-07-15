@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops.persistent_undo import PersistentUndoStack
-from kicad_agent.ops.undo_stack import UndoStack
+from volta.ops.persistent_undo import PersistentUndoStack
+from volta.ops.undo_stack import UndoStack
 
 
 @pytest.fixture

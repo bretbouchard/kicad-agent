@@ -9,13 +9,13 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ops._schema_sheet import (
+from volta.ir.base import _clear_registry
+from volta.ops._schema_sheet import (
     AddSheetOp,
     AddSheetPinOp,
     NavigateSheetsOp,
 )
-from kicad_agent.ops.schema import Operation
+from volta.ops.schema import Operation
 
 
 # ---------------------------------------------------------------------------
@@ -50,8 +50,8 @@ def schematic_path(tmp_path: Path) -> Path:
 def ir_with_sheet(schematic_path: Path) -> tuple:
     """Create a SchematicIR with one existing sheet, return (ir, sheet_uuid)."""
     _clear_registry()
-    from kicad_agent.ir.schematic_ir import SchematicIR
-    from kicad_agent.parser import parse_schematic
+    from volta.ir.schematic_ir import SchematicIR
+    from volta.parser import parse_schematic
 
     import uuid as uuid_mod
 
@@ -273,7 +273,7 @@ class TestExecutorDispatch:
     """Verify executor routes to correct handlers for sheet operations."""
 
     def test_add_sheet_dispatches(self, schematic_path: Path) -> None:
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         executor = OperationExecutor(base_dir=schematic_path.parent)
         result = executor.execute(Operation.model_validate({
@@ -291,7 +291,7 @@ class TestExecutorDispatch:
         assert result["details"]["sheet_name"] == "PowerSection"
 
     def test_navigate_hierarchy_dispatches(self, schematic_path: Path) -> None:
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         executor = OperationExecutor(base_dir=schematic_path.parent)
         result = executor.execute(Operation.model_validate({
@@ -305,7 +305,7 @@ class TestExecutorDispatch:
         assert "sheets" in result["details"]
 
     def test_add_sheet_pin_dispatches(self, schematic_path: Path) -> None:
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         # First add a sheet so we have a UUID to target
         executor = OperationExecutor(base_dir=schematic_path.parent)
@@ -345,9 +345,9 @@ class TestAddSheetHandler:
     """Direct handler tests for add_sheet."""
 
     def test_creates_sheet_in_graphical_items(self, schematic_path: Path) -> None:
-        from kicad_agent.ir.schematic_ir import SchematicIR
-        from kicad_agent.ops.sheet_ops import add_sheet
-        from kicad_agent.parser import parse_schematic
+        from volta.ir.schematic_ir import SchematicIR
+        from volta.ops.sheet_ops import add_sheet
+        from volta.parser import parse_schematic
 
         parse_result = parse_schematic(schematic_path)
         ir = SchematicIR(_parse_result=parse_result)
@@ -380,9 +380,9 @@ class TestAddSheetHandler:
         assert sheets[0].height == 30.0
 
     def test_sub_sheet_not_created_when_disabled(self, schematic_path: Path) -> None:
-        from kicad_agent.ir.schematic_ir import SchematicIR
-        from kicad_agent.ops.sheet_ops import add_sheet
-        from kicad_agent.parser import parse_schematic
+        from volta.ir.schematic_ir import SchematicIR
+        from volta.ops.sheet_ops import add_sheet
+        from volta.parser import parse_schematic
 
         parse_result = parse_schematic(schematic_path)
         ir = SchematicIR(_parse_result=parse_result)
@@ -400,9 +400,9 @@ class TestAddSheetHandler:
         assert not (schematic_path.parent / "nofile.kicad_sch").exists()
 
     def test_sub_sheet_not_overwritten_if_exists(self, schematic_path: Path) -> None:
-        from kicad_agent.ir.schematic_ir import SchematicIR
-        from kicad_agent.ops.sheet_ops import add_sheet
-        from kicad_agent.parser import parse_schematic
+        from volta.ir.schematic_ir import SchematicIR
+        from volta.ops.sheet_ops import add_sheet
+        from volta.parser import parse_schematic
 
         # Pre-create the child file
         child_path = schematic_path.parent / "existing_child.kicad_sch"
@@ -424,9 +424,9 @@ class TestAddSheetHandler:
         assert child_path.read_text() == "(kicad_sch (version 20250114))"
 
     def test_records_mutation(self, schematic_path: Path) -> None:
-        from kicad_agent.ir.schematic_ir import SchematicIR
-        from kicad_agent.ops.sheet_ops import add_sheet
-        from kicad_agent.parser import parse_schematic
+        from volta.ir.schematic_ir import SchematicIR
+        from volta.ops.sheet_ops import add_sheet
+        from volta.parser import parse_schematic
 
         parse_result = parse_schematic(schematic_path)
         ir = SchematicIR(_parse_result=parse_result)
@@ -458,7 +458,7 @@ class TestAddSheetPinHandler:
             position={"x": 55.0, "y": 30.0},
         )
 
-        from kicad_agent.ops.sheet_ops import add_sheet_pin
+        from volta.ops.sheet_ops import add_sheet_pin
         result = add_sheet_pin(op, ir, Path("/tmp/test.kicad_sch"))
 
         assert result["pin_name"] == "CLK"
@@ -484,14 +484,14 @@ class TestAddSheetPinHandler:
             position={"x": 0, "y": 0},
         )
 
-        from kicad_agent.ops.sheet_ops import add_sheet_pin
+        from volta.ops.sheet_ops import add_sheet_pin
         with pytest.raises(ValueError, match="No HierarchicalSheet found"):
             add_sheet_pin(op, ir, Path("/tmp/test.kicad_sch"))
 
     def test_multiple_pins_on_same_sheet(self, ir_with_sheet: tuple) -> None:
         ir, sheet_uuid = ir_with_sheet
 
-        from kicad_agent.ops.sheet_ops import add_sheet_pin
+        from volta.ops.sheet_ops import add_sheet_pin
 
         for name, ctype in [("SDA", "bidirectional"), ("SCL", "bidirectional"), ("VCC", "input")]:
             op = AddSheetPinOp(
@@ -514,9 +514,9 @@ class TestNavigateHierarchyHandler:
     """Direct handler tests for navigate_hierarchy."""
 
     def test_empty_schematic_returns_empty(self, schematic_path: Path) -> None:
-        from kicad_agent.ir.schematic_ir import SchematicIR
-        from kicad_agent.ops.sheet_ops import navigate_hierarchy
-        from kicad_agent.parser import parse_schematic
+        from volta.ir.schematic_ir import SchematicIR
+        from volta.ops.sheet_ops import navigate_hierarchy
+        from volta.parser import parse_schematic
 
         parse_result = parse_schematic(schematic_path)
         ir = SchematicIR(_parse_result=parse_result)
@@ -532,7 +532,7 @@ class TestNavigateHierarchyHandler:
         ir, sheet_uuid = ir_with_sheet
 
         op = NavigateSheetsOp(target_file="test.kicad_sch")
-        from kicad_agent.ops.sheet_ops import navigate_hierarchy
+        from volta.ops.sheet_ops import navigate_hierarchy
         result = navigate_hierarchy(op, ir, schematic_path)
 
         assert result["sheet_count"] == 1
@@ -546,7 +546,7 @@ class TestNavigateHierarchyHandler:
         ir, sheet_uuid = ir_with_sheet
 
         # Add a pin first
-        from kicad_agent.ops.sheet_ops import add_sheet_pin
+        from volta.ops.sheet_ops import add_sheet_pin
         pin_op = AddSheetPinOp(
             target_file="test.kicad_sch",
             sheet_uuid=sheet_uuid,
@@ -557,7 +557,7 @@ class TestNavigateHierarchyHandler:
         add_sheet_pin(pin_op, ir, schematic_path)
 
         op = NavigateSheetsOp(target_file="test.kicad_sch")
-        from kicad_agent.ops.sheet_ops import navigate_hierarchy
+        from volta.ops.sheet_ops import navigate_hierarchy
         result = navigate_hierarchy(op, ir, schematic_path)
 
         sheet = result["sheets"][0]
@@ -569,7 +569,7 @@ class TestNavigateHierarchyHandler:
         ir, _ = ir_with_sheet
 
         op = NavigateSheetsOp(target_file="test.kicad_sch")
-        from kicad_agent.ops.sheet_ops import navigate_hierarchy
+        from volta.ops.sheet_ops import navigate_hierarchy
         navigate_hierarchy(op, ir, schematic_path)
 
         assert ir.dirty is False
@@ -578,7 +578,7 @@ class TestNavigateHierarchyHandler:
         ir, _ = ir_with_sheet
 
         op = NavigateSheetsOp(target_file="test.kicad_sch", max_depth=0)
-        from kicad_agent.ops.sheet_ops import navigate_hierarchy
+        from volta.ops.sheet_ops import navigate_hierarchy
         result = navigate_hierarchy(op, ir, schematic_path)
 
         assert result["sheet_count"] == 0

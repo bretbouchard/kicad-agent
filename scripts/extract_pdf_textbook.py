@@ -25,7 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.training.text_corpus import (
+from volta.training.text_corpus import (
     TextCorpusDataset,
     TextCorpusSample,
     dedup_text_samples,

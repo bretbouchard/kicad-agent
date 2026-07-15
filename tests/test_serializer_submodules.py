@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.serializer.normalizer import normalize_kicad_output
-from kicad_agent.serializer.uuid_reinjector import UUIDMap
+from volta.serializer.normalizer import normalize_kicad_output
+from volta.serializer.uuid_reinjector import UUIDMap
 
 
 class TestNormalizerModule:

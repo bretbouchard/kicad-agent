@@ -17,13 +17,13 @@ from typing import NamedTuple
 
 import pytest
 
-from kicad_agent.analysis.topology_graph import (
+from volta.analysis.topology_graph import (
     CircuitTopology,
     TopologyEdge,
     TopologyNode,
 )
-from kicad_agent.analysis.types import NetClassification
-from kicad_agent.schematic_autolayout.layout_graph import (
+from volta.analysis.types import NetClassification
+from volta.schematic_autolayout.layout_graph import (
     KICAD_GRID_MM,
     RC_PIN_OFFSET_MM,
     LayoutCoordinate,

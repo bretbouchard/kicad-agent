@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.export.render import RenderResult, render_pcb
+from volta.export.render import RenderResult, render_pcb
 
 
 class TestRenderModuleDetailed:

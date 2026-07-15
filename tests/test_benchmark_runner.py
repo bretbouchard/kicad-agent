@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from kicad_agent.benchmarks.schemas import BenchmarkDataset, BenchmarkQuestion
+from volta.benchmarks.schemas import BenchmarkDataset, BenchmarkQuestion
 
 
 # --- Fixtures ---
@@ -139,7 +139,7 @@ class TestBaselineRandom:
 
     def test_returns_index_in_range(self) -> None:
         """Test 1: BaselineRandom returns index in [0,3] for any question."""
-        from kicad_agent.benchmarks.models import BaselineRandom
+        from volta.benchmarks.models import BaselineRandom
 
         model = BaselineRandom()
         q = _make_question()
@@ -149,7 +149,7 @@ class TestBaselineRandom:
 
     def test_random_distribution(self) -> None:
         """Test 2: BaselineRandom produces roughly uniform distribution over many calls."""
-        from kicad_agent.benchmarks.models import BaselineRandom
+        from volta.benchmarks.models import BaselineRandom
 
         model = BaselineRandom()
         q = _make_question()
@@ -162,8 +162,8 @@ class TestBaselineRandom:
 
     def test_achieves_approx_25_percent_accuracy(self) -> None:
         """Test 3: BaselineRandom achieves ~25% accuracy on 100+ questions (within 10%)."""
-        from kicad_agent.benchmarks.models import BaselineRandom
-        from kicad_agent.benchmarks.runner import BenchmarkRunner
+        from volta.benchmarks.models import BaselineRandom
+        from volta.benchmarks.runner import BenchmarkRunner
 
         # Build a dataset with 100 questions
         questions = []
@@ -201,7 +201,7 @@ class TestBaselineHeuristic:
 
     def test_returns_index_in_range(self) -> None:
         """Test 4: BaselineHeuristic returns index in [0,3] for any question."""
-        from kicad_agent.benchmarks.models import BaselineHeuristic
+        from volta.benchmarks.models import BaselineHeuristic
 
         model = BaselineHeuristic()
         q = _make_question()
@@ -212,8 +212,8 @@ class TestBaselineHeuristic:
     def test_heuristic_beats_random_on_topology(self) -> None:
         """Test 5: BaselineHeuristic achieves >25% accuracy on topology_recognition
         category when questions contain keyword-matching text."""
-        from kicad_agent.benchmarks.models import BaselineHeuristic
-        from kicad_agent.benchmarks.runner import BenchmarkRunner
+        from volta.benchmarks.models import BaselineHeuristic
+        from volta.benchmarks.runner import BenchmarkRunner
 
         questions: list[BenchmarkQuestion] = []
         # Create topology questions with amplifier keywords in both question and choices
@@ -244,7 +244,7 @@ class TestBaselineHeuristic:
 
     def test_heuristic_falls_back_to_random(self) -> None:
         """Test 6: BaselineHeuristic falls back to random when no keywords match."""
-        from kicad_agent.benchmarks.models import BaselineHeuristic
+        from volta.benchmarks.models import BaselineHeuristic
 
         model = BaselineHeuristic()
         # Question with no recognizable keywords
@@ -269,8 +269,8 @@ class TestBenchmarkRunner:
 
     def test_evaluate_returns_result_with_correct_total(self, small_dataset: BenchmarkDataset) -> None:
         """Test 7: BenchmarkRunner.evaluate() returns BenchmarkResult with correct total_questions."""
-        from kicad_agent.benchmarks.models import BaselineRandom
-        from kicad_agent.benchmarks.runner import BenchmarkRunner
+        from volta.benchmarks.models import BaselineRandom
+        from volta.benchmarks.runner import BenchmarkRunner
 
         model = BaselineRandom()
         runner = BenchmarkRunner(small_dataset, model)
@@ -279,8 +279,8 @@ class TestBenchmarkRunner:
 
     def test_accuracy_is_correct_ratio(self) -> None:
         """Test 8: BenchmarkResult.accuracy = correct / total."""
-        from kicad_agent.benchmarks.models import BaselineRandom
-        from kicad_agent.benchmarks.runner import BenchmarkRunner
+        from volta.benchmarks.models import BaselineRandom
+        from volta.benchmarks.runner import BenchmarkRunner
 
         # Use deterministic seed for repeatable test
         import random
@@ -310,8 +310,8 @@ class TestBenchmarkRunner:
 
     def test_category_accuracy_has_all_categories(self, small_dataset: BenchmarkDataset) -> None:
         """Test 9: BenchmarkResult.category_accuracy has entry for every category in dataset."""
-        from kicad_agent.benchmarks.models import BaselineRandom
-        from kicad_agent.benchmarks.runner import BenchmarkRunner
+        from volta.benchmarks.models import BaselineRandom
+        from volta.benchmarks.runner import BenchmarkRunner
 
         model = BaselineRandom()
         runner = BenchmarkRunner(small_dataset, model)
@@ -323,8 +323,8 @@ class TestBenchmarkRunner:
 
     def test_difficulty_accuracy_has_all_levels(self, small_dataset: BenchmarkDataset) -> None:
         """Test 10: BenchmarkResult.difficulty_accuracy has entry for easy/medium/hard."""
-        from kicad_agent.benchmarks.models import BaselineRandom
-        from kicad_agent.benchmarks.runner import BenchmarkRunner
+        from volta.benchmarks.models import BaselineRandom
+        from volta.benchmarks.runner import BenchmarkRunner
 
         model = BaselineRandom()
         runner = BenchmarkRunner(small_dataset, model)
@@ -336,8 +336,8 @@ class TestBenchmarkRunner:
 
     def test_empty_dataset_graceful(self) -> None:
         """Test 11: BenchmarkRunner handles empty-filtered dataset gracefully."""
-        from kicad_agent.benchmarks.models import BaselineRandom
-        from kicad_agent.benchmarks.runner import BenchmarkRunner
+        from volta.benchmarks.models import BaselineRandom
+        from volta.benchmarks.runner import BenchmarkRunner
 
         # Create single-question dataset, filter to non-existent category
         dataset = BenchmarkDataset(
@@ -357,8 +357,8 @@ class TestBenchmarkRunner:
 
     def test_filter_by_category(self, small_dataset: BenchmarkDataset) -> None:
         """Test 12: BenchmarkRunner can filter by category."""
-        from kicad_agent.benchmarks.models import BaselineRandom
-        from kicad_agent.benchmarks.runner import BenchmarkRunner
+        from volta.benchmarks.models import BaselineRandom
+        from volta.benchmarks.runner import BenchmarkRunner
 
         model = BaselineRandom()
         runner = BenchmarkRunner(small_dataset, model)
@@ -369,8 +369,8 @@ class TestBenchmarkRunner:
 
     def test_filter_by_difficulty(self, small_dataset: BenchmarkDataset) -> None:
         """Test 13: BenchmarkRunner can filter by difficulty."""
-        from kicad_agent.benchmarks.models import BaselineRandom
-        from kicad_agent.benchmarks.runner import BenchmarkRunner
+        from volta.benchmarks.models import BaselineRandom
+        from volta.benchmarks.runner import BenchmarkRunner
 
         model = BaselineRandom()
         runner = BenchmarkRunner(small_dataset, model)
@@ -381,8 +381,8 @@ class TestBenchmarkRunner:
 
     def test_filter_by_max_questions(self, small_dataset: BenchmarkDataset) -> None:
         """Test 14: BenchmarkRunner respects max_questions limit."""
-        from kicad_agent.benchmarks.models import BaselineRandom
-        from kicad_agent.benchmarks.runner import BenchmarkRunner
+        from volta.benchmarks.models import BaselineRandom
+        from volta.benchmarks.runner import BenchmarkRunner
 
         model = BaselineRandom()
         runner = BenchmarkRunner(small_dataset, model)
@@ -391,8 +391,8 @@ class TestBenchmarkRunner:
 
     def test_result_has_metadata(self, small_dataset: BenchmarkDataset) -> None:
         """Test 15: BenchmarkResult includes model_name, dataset_version, duration, timestamp."""
-        from kicad_agent.benchmarks.models import BaselineRandom
-        from kicad_agent.benchmarks.runner import BenchmarkRunner
+        from volta.benchmarks.models import BaselineRandom
+        from volta.benchmarks.runner import BenchmarkRunner
 
         model = BaselineRandom()
         runner = BenchmarkRunner(small_dataset, model)
@@ -414,8 +414,8 @@ class TestBenchmarkResultSerialization:
 
     def test_result_serializes_to_json(self, small_dataset: BenchmarkDataset) -> None:
         """Test 16: BenchmarkResult serializes to valid JSON."""
-        from kicad_agent.benchmarks.models import BaselineRandom
-        from kicad_agent.benchmarks.runner import BenchmarkRunner
+        from volta.benchmarks.models import BaselineRandom
+        from volta.benchmarks.runner import BenchmarkRunner
 
         model = BaselineRandom()
         runner = BenchmarkRunner(small_dataset, model)
@@ -431,8 +431,8 @@ class TestBenchmarkResultSerialization:
 
     def test_result_round_trip(self, small_dataset: BenchmarkDataset) -> None:
         """Test 17: BenchmarkResult survives JSON round-trip."""
-        from kicad_agent.benchmarks.models import BaselineRandom
-        from kicad_agent.benchmarks.runner import BenchmarkResult, BenchmarkRunner
+        from volta.benchmarks.models import BaselineRandom
+        from volta.benchmarks.runner import BenchmarkResult, BenchmarkRunner
 
         model = BaselineRandom()
         runner = BenchmarkRunner(small_dataset, model)
@@ -456,14 +456,14 @@ class TestModelContract:
 
     def test_benchmark_model_is_abstract(self) -> None:
         """Test 18: BenchmarkModel cannot be instantiated directly."""
-        from kicad_agent.benchmarks.models import BenchmarkModel
+        from volta.benchmarks.models import BenchmarkModel
 
         with pytest.raises(TypeError):
             BenchmarkModel()  # type: ignore[abstract]
 
     def test_models_share_base_class(self) -> None:
         """Test 19: Both model classes inherit from BenchmarkModel."""
-        from kicad_agent.benchmarks.models import BaselineHeuristic, BaselineRandom, BenchmarkModel
+        from volta.benchmarks.models import BaselineHeuristic, BaselineRandom, BenchmarkModel
 
         assert issubclass(BaselineRandom, BenchmarkModel)
         assert issubclass(BaselineHeuristic, BenchmarkModel)
@@ -479,7 +479,7 @@ class TestCLI:
 
     def test_cli_random_model_produces_result(self) -> None:
         """Test 20: CLI --model random writes valid JSON results to output file."""
-        from kicad_agent.benchmarks.__main__ import main
+        from volta.benchmarks.__main__ import main
 
         # Create temp dataset file
         dataset = BenchmarkDataset(
@@ -531,7 +531,7 @@ class TestCLI:
 
     def test_cli_heuristic_model(self) -> None:
         """Test 21: CLI --model heuristic produces valid results."""
-        from kicad_agent.benchmarks.__main__ import main
+        from volta.benchmarks.__main__ import main
 
         dataset = BenchmarkDataset(
             version="1.0.0",
@@ -575,7 +575,7 @@ class TestCLI:
 
     def test_cli_with_filters(self) -> None:
         """Test 22: CLI --categories and --difficulty filters work."""
-        from kicad_agent.benchmarks.__main__ import main
+        from volta.benchmarks.__main__ import main
 
         dataset = BenchmarkDataset(
             version="1.0.0",
@@ -625,7 +625,7 @@ class TestCLI:
 
     def test_cli_max_questions(self) -> None:
         """Test 23: CLI --max-questions limits evaluation."""
-        from kicad_agent.benchmarks.__main__ import main
+        from volta.benchmarks.__main__ import main
 
         dataset = BenchmarkDataset(
             version="1.0.0",

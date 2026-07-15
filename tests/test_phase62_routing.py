@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.routing.bridge import TrackSegment, ViaSegment
-from kicad_agent.routing.constraints import RoutingConstraints
+from volta.routing.bridge import TrackSegment, ViaSegment
+from volta.routing.constraints import RoutingConstraints
 
 
 # ---------------------------------------------------------------------------
@@ -27,7 +27,7 @@ class TestSpatialIndexSnap:
 
     def _make_graph(self, n: int = 10):
         """Create a routing graph with n*n nodes for testing."""
-        from kicad_agent.routing.graph import RoutingGraph
+        from volta.routing.graph import RoutingGraph
         bounds = (0.0, 0.0, float(n), float(n))
         return RoutingGraph(
             board_bounds=bounds,
@@ -66,7 +66,7 @@ class TestSpatialIndexSnap:
 
     def test_snap_with_layer(self) -> None:
         """Layer-specific snap works with spatial index."""
-        from kicad_agent.routing.graph import RoutingGraph
+        from volta.routing.graph import RoutingGraph
         graph = RoutingGraph(
             board_bounds=(0.0, 0.0, 5.0, 5.0),
             obstacles=[],
@@ -79,7 +79,7 @@ class TestSpatialIndexSnap:
 
     def test_empty_graph_returns_none(self) -> None:
         """Graph with no nodes near query returns None for snap."""
-        from kicad_agent.routing.graph import RoutingGraph
+        from volta.routing.graph import RoutingGraph
         graph = RoutingGraph(
             board_bounds=(0.0, 0.0, 0.1, 0.1),
             obstacles=[],
@@ -101,7 +101,7 @@ class TestMultiPinRouting:
 
     def _make_graph(self) -> "RoutingGraph":
         """Create a routing graph with enough space for multi-pin routing."""
-        from kicad_agent.routing.graph import RoutingGraph
+        from volta.routing.graph import RoutingGraph
         return RoutingGraph(
             board_bounds=(0.0, 0.0, 20.0, 20.0),
             obstacles=[],
@@ -110,7 +110,7 @@ class TestMultiPinRouting:
 
     def test_two_pin_backward_compat(self) -> None:
         """2-pin nets route exactly as before."""
-        from kicad_agent.routing.pathfinder import route_all_nets
+        from volta.routing.pathfinder import route_all_nets
         graph = self._make_graph()
         result = route_all_nets(graph, {
             "VCC": [(1.0, 1.0), (5.0, 5.0)],
@@ -120,7 +120,7 @@ class TestMultiPinRouting:
 
     def test_three_pin_net_connected(self) -> None:
         """3-pin net produces a path connecting all pins."""
-        from kicad_agent.routing.pathfinder import route_all_nets
+        from volta.routing.pathfinder import route_all_nets
         graph = self._make_graph()
         result = route_all_nets(graph, {
             "SPI": [(1.0, 1.0), (5.0, 1.0), (5.0, 5.0)],
@@ -133,7 +133,7 @@ class TestMultiPinRouting:
 
     def test_single_pin_net_skipped(self) -> None:
         """1-pin nets are skipped."""
-        from kicad_agent.routing.pathfinder import route_all_nets
+        from volta.routing.pathfinder import route_all_nets
         graph = self._make_graph()
         result = route_all_nets(graph, {
             "EMPTY": [(1.0, 1.0)],
@@ -142,7 +142,7 @@ class TestMultiPinRouting:
 
     def test_empty_netlist(self) -> None:
         """Empty netlist returns empty results."""
-        from kicad_agent.routing.pathfinder import route_all_nets
+        from volta.routing.pathfinder import route_all_nets
         graph = self._make_graph()
         result = route_all_nets(graph, {})
         assert result == {}
@@ -222,7 +222,7 @@ class TestClearanceCorridor:
     """Verify mark_path_as_obstacle blocks clearance corridor."""
 
     def _make_graph(self) -> "RoutingGraph":
-        from kicad_agent.routing.graph import RoutingGraph
+        from volta.routing.graph import RoutingGraph
         return RoutingGraph(
             board_bounds=(0.0, 0.0, 10.0, 10.0),
             obstacles=[],
@@ -267,22 +267,22 @@ class TestPointToSegmentDistance:
 
     def test_point_on_segment(self) -> None:
         """Point on the segment has distance 0."""
-        from kicad_agent.routing.graph import _point_to_segment_distance
+        from volta.routing.graph import _point_to_segment_distance
         assert _point_to_segment_distance(5.0, 0.0, 0.0, 0.0, 10.0, 0.0) == pytest.approx(0.0)
 
     def test_point_perpendicular(self) -> None:
         """Perpendicular distance to horizontal segment."""
-        from kicad_agent.routing.graph import _point_to_segment_distance
+        from volta.routing.graph import _point_to_segment_distance
         assert _point_to_segment_distance(5.0, 3.0, 0.0, 0.0, 10.0, 0.0) == pytest.approx(3.0)
 
     def test_point_beyond_endpoint(self) -> None:
         """Distance to nearest endpoint when projection falls outside."""
-        from kicad_agent.routing.graph import _point_to_segment_distance
+        from volta.routing.graph import _point_to_segment_distance
         d = _point_to_segment_distance(12.0, 0.0, 0.0, 0.0, 10.0, 0.0)
         assert d == pytest.approx(2.0)
 
     def test_zero_length_segment(self) -> None:
         """Zero-length segment returns distance to the point."""
-        from kicad_agent.routing.graph import _point_to_segment_distance
+        from volta.routing.graph import _point_to_segment_distance
         d = _point_to_segment_distance(3.0, 4.0, 0.0, 0.0, 0.0, 0.0)
         assert d == pytest.approx(5.0)

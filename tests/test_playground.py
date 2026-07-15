@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from kicad_agent.playground.app import create_app
+from volta.playground.app import create_app
 
 
 # ---------------------------------------------------------------------------
@@ -202,7 +202,7 @@ class TestPlaygroundCLI:
 
     def test_playground_importable(self):
         """Playground module is importable."""
-        from kicad_agent.playground import create_app
+        from volta.playground import create_app
         assert callable(create_app)
 
     def test_create_app_returns_fastapi(self):
@@ -232,34 +232,34 @@ class TestStaticFiles:
 
     def test_index_html_exists(self):
         """index.html exists in static directory."""
-        static_dir = Path(__file__).parent.parent / "src" / "kicad_agent" / "playground" / "static"
+        static_dir = Path(__file__).parent.parent / "src" / "volta" / "playground" / "static"
         assert (static_dir / "index.html").is_file()
 
     def test_app_js_exists(self):
         """app.js exists in static directory."""
-        static_dir = Path(__file__).parent.parent / "src" / "kicad_agent" / "playground" / "static"
+        static_dir = Path(__file__).parent.parent / "src" / "volta" / "playground" / "static"
         assert (static_dir / "app.js").is_file()
 
     def test_style_css_exists(self):
         """style.css exists in static directory."""
-        static_dir = Path(__file__).parent.parent / "src" / "kicad_agent" / "playground" / "static"
+        static_dir = Path(__file__).parent.parent / "src" / "volta" / "playground" / "static"
         assert (static_dir / "style.css").is_file()
 
     def test_index_html_contains_playground(self):
         """index.html contains playground UI structure."""
-        static_dir = Path(__file__).parent.parent / "src" / "kicad_agent" / "playground" / "static"
+        static_dir = Path(__file__).parent.parent / "src" / "volta" / "playground" / "static"
         content = (static_dir / "index.html").read_text()
         assert "playground" in content.lower()
         assert "upload" in content.lower()
 
     def test_app_js_contains_playground_app(self):
         """app.js contains PlaygroundApp class."""
-        static_dir = Path(__file__).parent.parent / "src" / "kicad_agent" / "playground" / "static"
+        static_dir = Path(__file__).parent.parent / "src" / "volta" / "playground" / "static"
         content = (static_dir / "app.js").read_text()
         assert "class PlaygroundApp" in content
 
     def test_style_css_contains_playground(self):
         """style.css contains playground styling."""
-        static_dir = Path(__file__).parent.parent / "src" / "kicad_agent" / "playground" / "static"
+        static_dir = Path(__file__).parent.parent / "src" / "volta" / "playground" / "static"
         content = (static_dir / "style.css").read_text()
         assert ".playground" in content

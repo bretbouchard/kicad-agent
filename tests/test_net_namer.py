@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops._schema_schematic_intel import SuggestNetNamesOp
-from kicad_agent.ops.schema import Operation
+from volta.ops._schema_schematic_intel import SuggestNetNamesOp
+from volta.ops.schema import Operation
 
 
 # ---------------------------------------------------------------------------
@@ -461,7 +461,7 @@ class TestGlobalLabelNet:
     """Net with global label returns that name with confidence=1.0."""
 
     def test_global_label_confidence_1(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_namer import suggest_net_names
+        from volta.schematic_routing.net_namer import suggest_net_names
         sch_path = _write_schematic(tmp_path, _sch_with_global_label_net())
         result = suggest_net_names(sch_path=sch_path)
         # Find the SDA suggestion
@@ -475,7 +475,7 @@ class TestGlobalLabelNet:
         assert sda_suggestion["basis"] == "global_label"
 
     def test_global_label_suggestion_has_pins(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_namer import suggest_net_names
+        from volta.schematic_routing.net_namer import suggest_net_names
         sch_path = _write_schematic(tmp_path, _sch_with_global_label_net())
         result = suggest_net_names(sch_path=sch_path)
         sda_suggestion = next(s for s in result["suggestions"] if s["suggested_name"] == "SDA")
@@ -496,7 +496,7 @@ class TestHierarchicalLabelNet:
     """Unnamed net with hierarchical label suggests that name."""
 
     def test_hierarchical_label_suggestion(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_namer import suggest_net_names
+        from volta.schematic_routing.net_namer import suggest_net_names
         sch_path = _write_schematic(tmp_path, _sch_with_hierarchical_label_net())
         result = suggest_net_names(sch_path=sch_path)
         reset_suggestion = None
@@ -518,7 +518,7 @@ class TestPowerConventionGND:
     """Net connected to GND pin suggests "GND" with basis=power_convention."""
 
     def test_gnd_pin_recognized(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_namer import suggest_net_names
+        from volta.schematic_routing.net_namer import suggest_net_names
         sch_path = _write_schematic(tmp_path, _sch_with_gnd_pin())
         result = suggest_net_names(sch_path=sch_path)
         # Find a suggestion with power_convention basis
@@ -536,7 +536,7 @@ class TestPowerConventionVCC:
     """Net connected to VCC pin suggests appropriate power name."""
 
     def test_vcc_pin_recognized(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_namer import suggest_net_names
+        from volta.schematic_routing.net_namer import suggest_net_names
         sch_path = _write_schematic(tmp_path, _sch_with_vcc_pin())
         result = suggest_net_names(sch_path=sch_path)
         power_suggestion = None
@@ -553,7 +553,7 @@ class TestPowerConventionVoltagePattern:
     """Net connected to +3V3 pin suggests that exact name."""
 
     def test_voltage_pattern_recognized(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_namer import suggest_net_names
+        from volta.schematic_routing.net_namer import suggest_net_names
         sch_path = _write_schematic(tmp_path, _sch_with_voltage_pattern_pin())
         result = suggest_net_names(sch_path=sch_path)
         power_suggestion = None
@@ -575,7 +575,7 @@ class TestComponentRefNaming:
     """Unnamed net with IC pin "SDA" suggests "U1_SDA"."""
 
     def test_ic_pin_suggests_ref_pin(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_namer import suggest_net_names
+        from volta.schematic_routing.net_namer import suggest_net_names
         sch_path = _write_schematic(tmp_path, _sch_with_ic_sda_pin())
         result = suggest_net_names(sch_path=sch_path)
         # Find a suggestion with component_ref basis
@@ -598,7 +598,7 @@ class TestFallbackNaming:
     """Net with no signals gets "R1_2" style name."""
 
     def test_passive_only_fallback(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_namer import suggest_net_names
+        from volta.schematic_routing.net_namer import suggest_net_names
         sch_path = _write_schematic(tmp_path, _sch_with_passive_only())
         result = suggest_net_names(sch_path=sch_path)
         # Find a suggestion with fallback basis
@@ -623,7 +623,7 @@ class TestNamingConvention:
     """naming_convention='ref_pin_number' produces 'U1_Pin5' style names."""
 
     def test_ref_pin_number_convention(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_namer import suggest_net_names
+        from volta.schematic_routing.net_namer import suggest_net_names
         sch_path = _write_schematic(tmp_path, _sch_with_ic_sda_pin())
         result = suggest_net_names(sch_path=sch_path, naming_convention="ref_pin_number")
         # With ref_pin_number, IC pins get "U1_Pin3" instead of "U1_SDA"
@@ -636,7 +636,7 @@ class TestNamingConvention:
         assert comp_suggestion["suggested_name"] == "U1_Pin3"
 
     def test_fallback_with_ref_pin_number(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_namer import suggest_net_names
+        from volta.schematic_routing.net_namer import suggest_net_names
         sch_path = _write_schematic(tmp_path, _sch_with_passive_only())
         result = suggest_net_names(sch_path=sch_path, naming_convention="ref_pin_number")
         fallback_suggestion = None
@@ -657,7 +657,7 @@ class TestSuggestionStats:
     """Verify total_nets, named_nets, suggested_nets counts."""
 
     def test_stats_structure(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_namer import suggest_net_names
+        from volta.schematic_routing.net_namer import suggest_net_names
         sch_path = _write_schematic(tmp_path, _sch_with_global_label_net())
         result = suggest_net_names(sch_path=sch_path)
         stats = result["stats"]
@@ -668,7 +668,7 @@ class TestSuggestionStats:
         assert stats["suggested_nets"] == len(result["suggestions"])
 
     def test_stats_consistency(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.net_namer import suggest_net_names
+        from volta.schematic_routing.net_namer import suggest_net_names
         sch_path = _write_schematic(tmp_path, _sch_with_global_label_net())
         result = suggest_net_names(sch_path=sch_path)
         stats = result["stats"]

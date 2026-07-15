@@ -43,7 +43,7 @@ def _clean_env(monkeypatch):
 
 def test_configure_sets_level():
     """configure_logging(level='DEBUG') sets root logger level to DEBUG."""
-    from kicad_agent.logging_config import configure_logging
+    from volta.logging_config import configure_logging
 
     configure_logging(level="DEBUG")
     assert logging.getLogger().level == logging.DEBUG
@@ -51,7 +51,7 @@ def test_configure_sets_level():
 
 def test_configure_sets_level_from_env(monkeypatch):
     """KICAD_LOG_LEVEL env var controls root log level."""
-    from kicad_agent.logging_config import configure_logging
+    from volta.logging_config import configure_logging
 
     monkeypatch.setenv("KICAD_LOG_LEVEL", "WARNING")
     configure_logging()
@@ -60,7 +60,7 @@ def test_configure_sets_level_from_env(monkeypatch):
 
 def test_json_output_valid_json():
     """configure_logging(json_output=True) produces valid JSON log lines."""
-    from kicad_agent.logging_config import configure_logging
+    from volta.logging_config import configure_logging
 
     configure_logging(level="INFO", json_output=True)
 
@@ -84,7 +84,7 @@ def test_json_output_valid_json():
 
 def test_console_output_not_json():
     """configure_logging(json_output=False) produces console-formatted output."""
-    from kicad_agent.logging_config import configure_logging
+    from volta.logging_config import configure_logging
 
     configure_logging(level="INFO", json_output=False)
 
@@ -107,7 +107,7 @@ def test_console_output_not_json():
 
 def test_idempotent():
     """Calling configure_logging twice produces exactly 1 handler, no errors."""
-    from kicad_agent.logging_config import configure_logging
+    from volta.logging_config import configure_logging
 
     configure_logging(level="INFO")
     handler_count_1 = len(logging.getLogger().handlers)
@@ -121,7 +121,7 @@ def test_idempotent():
 
 def test_stdlib_interception():
     """A module-level logging.getLogger call produces structured JSON after configure."""
-    from kicad_agent.logging_config import configure_logging
+    from volta.logging_config import configure_logging
 
     configure_logging(level="INFO", json_output=True)
 
@@ -132,7 +132,7 @@ def test_stdlib_interception():
     root.handlers[0].stream = stream
 
     # Use a stdlib logger like existing code does
-    module_logger = logging.getLogger("kicad_agent.ops.executor")
+    module_logger = logging.getLogger("volta.ops.executor")
     module_logger.info("operation completed")
 
     output = stream.getvalue().strip()
@@ -143,14 +143,14 @@ def test_stdlib_interception():
     # Should contain the log message
     assert "operation completed" in str(parsed.get("event", ""))
     # Should contain logger name
-    assert parsed.get("_record", {}).get("name") == "kicad_agent.ops.executor" or \
-           parsed.get("logger_name") == "kicad_agent.ops.executor" or \
-           "kicad_agent.ops.executor" in str(parsed)
+    assert parsed.get("_record", {}).get("name") == "volta.ops.executor" or \
+           parsed.get("logger_name") == "volta.ops.executor" or \
+           "volta.ops.executor" in str(parsed)
 
 
 def test_env_var_json_format(monkeypatch):
     """KICAD_LOG_FORMAT=json enables JSON output."""
-    from kicad_agent.logging_config import configure_logging
+    from volta.logging_config import configure_logging
 
     monkeypatch.setenv("KICAD_LOG_FORMAT", "json")
     configure_logging()
@@ -171,7 +171,7 @@ def test_env_var_json_format(monkeypatch):
 
 def test_invalid_level_defaults_to_info():
     """Invalid KICAD_LOG_LEVEL value defaults to INFO."""
-    from kicad_agent.logging_config import configure_logging
+    from volta.logging_config import configure_logging
 
     # Invalid level string should not crash, default to INFO
     configure_logging(level="INVALID_LEVEL")

@@ -17,7 +17,7 @@ class TestFixResult:
 
     def test_fix_result_holds_operations_description_and_success(self):
         """FixResult stores operations list, fix_description string, and success flag."""
-        from kicad_agent.llm.error_fixer import FixResult
+        from volta.llm.error_fixer import FixResult
 
         ops = ({"op_type": "add_wire", "target_file": "test.kicad_sch"},)
         result = FixResult(
@@ -31,7 +31,7 @@ class TestFixResult:
 
     def test_fix_result_frozen(self):
         """FixResult is immutable (frozen dataclass)."""
-        from kicad_agent.llm.error_fixer import FixResult
+        from volta.llm.error_fixer import FixResult
 
         result = FixResult(operations=(), fix_description="none", success=False)
         with pytest.raises(AttributeError):
@@ -43,7 +43,7 @@ class TestErrorFixer:
 
     def test_fix_returns_fixresult_with_operations(self, mock_anthropic_client):
         """ErrorFixer.fix returns FixResult with operations and description from LLM."""
-        from kicad_agent.llm.error_fixer import ErrorFixer, FixResult
+        from volta.llm.error_fixer import ErrorFixer, FixResult
 
         mock_anthropic_client.return_value = FakeMessage([
             FakeToolUseBlock("apply_fix_operations", {
@@ -75,7 +75,7 @@ class TestErrorFixer:
 
     def test_fix_includes_iteration_history_in_prompt(self, mock_anthropic_client):
         """ErrorFixer includes iteration_history in the prompt so LLM avoids repeating failed fixes."""
-        from kicad_agent.llm.error_fixer import ErrorFixer
+        from volta.llm.error_fixer import ErrorFixer
 
         mock_anthropic_client.return_value = FakeMessage([
             FakeToolUseBlock("apply_fix_operations", {
@@ -100,7 +100,7 @@ class TestErrorFixer:
 
     def test_fix_no_tool_use_returns_unsuccessful(self, mock_anthropic_client):
         """ErrorFixer returns FixResult with success=False when LLM returns no tool_use block."""
-        from kicad_agent.llm.error_fixer import ErrorFixer
+        from volta.llm.error_fixer import ErrorFixer
 
         # LLM returns only text, no tool use
         mock_anthropic_client.return_value = FakeMessage([
@@ -116,8 +116,8 @@ class TestErrorFixer:
 
     def test_fix_tool_uses_operation_schema(self, mock_anthropic_client):
         """FIX_TOOL uses get_operation_schema() for the operations array items schema."""
-        from kicad_agent.llm.error_fixer import FIX_TOOL
-        from kicad_agent.ops.schema import get_operation_schema
+        from volta.llm.error_fixer import FIX_TOOL
+        from volta.ops.schema import get_operation_schema
 
         op_schema = get_operation_schema()
         # FIX_TOOL's operations items should match the operation schema
@@ -128,7 +128,7 @@ class TestErrorFixer:
 
     def test_fix_with_empty_violations(self, mock_anthropic_client):
         """ErrorFixer handles empty violations list gracefully."""
-        from kicad_agent.llm.error_fixer import ErrorFixer
+        from volta.llm.error_fixer import ErrorFixer
 
         mock_anthropic_client.return_value = FakeMessage([
             FakeToolUseBlock("apply_fix_operations", {
@@ -145,7 +145,7 @@ class TestErrorFixer:
 
     def test_fix_result_default_success_false(self):
         """FixResult defaults to success=False when LLM does not cooperate."""
-        from kicad_agent.llm.error_fixer import FixResult
+        from volta.llm.error_fixer import FixResult
 
         result = FixResult(
             operations=(),
@@ -156,7 +156,7 @@ class TestErrorFixer:
 
     def test_fix_system_prompt_present(self):
         """FIX_SYSTEM_PROMPT is defined and non-empty."""
-        from kicad_agent.llm.error_fixer import FIX_SYSTEM_PROMPT
+        from volta.llm.error_fixer import FIX_SYSTEM_PROMPT
 
         assert isinstance(FIX_SYSTEM_PROMPT, str)
         assert len(FIX_SYSTEM_PROMPT) > 50

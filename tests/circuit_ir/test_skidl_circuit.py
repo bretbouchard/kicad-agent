@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.circuit_ir import (
+from volta.circuit_ir import (
     CircuitIR,
     NetDescriptor,
     PartDescriptor,
@@ -33,7 +33,7 @@ class TestImportGuard:
     def test_no_symbol_dir_warnings(self) -> None:
         """Importing circuit_ir must not emit KICAD*_SYMBOL_DIR warnings."""
         import importlib
-        import kicad_agent.circuit_ir as circuit_ir_mod
+        import volta.circuit_ir as circuit_ir_mod
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -59,7 +59,7 @@ class TestBuildCircuit:
 
     def test_builds_circuit_from_led_fixture(self) -> None:
         """build_circuit turns the LED schematic into a skdl.Circuit."""
-        from kicad_agent.circuit_ir import build_circuit
+        from volta.circuit_ir import build_circuit
 
         if not _LED_FIXTURE.exists():
             pytest.skip(f"Fixture not found: {_LED_FIXTURE}")
@@ -86,7 +86,7 @@ class TestBuildCircuit:
 
     def test_circuit_ir_carries_diagnostics(self) -> None:
         """CircuitIR.diagnostics is a tuple (possibly empty)."""
-        from kicad_agent.circuit_ir import build_circuit
+        from volta.circuit_ir import build_circuit
 
         if not _LED_FIXTURE.exists():
             pytest.skip(f"Fixture not found: {_LED_FIXTURE}")
@@ -96,7 +96,7 @@ class TestBuildCircuit:
 
     def test_extracted_parts_have_correct_lib_ids(self) -> None:
         """Parts have the expected lib_id values from the fixture."""
-        from kicad_agent.circuit_ir import build_circuit
+        from volta.circuit_ir import build_circuit
 
         if not _LED_FIXTURE.exists():
             pytest.skip(f"Fixture not found: {_LED_FIXTURE}")
@@ -111,7 +111,7 @@ class TestBuildCircuit:
 
     def test_nets_extracted(self) -> None:
         """Net descriptors are present in the CircuitIR."""
-        from kicad_agent.circuit_ir import build_circuit
+        from volta.circuit_ir import build_circuit
 
         if not _LED_FIXTURE.exists():
             pytest.skip(f"Fixture not found: {_LED_FIXTURE}")

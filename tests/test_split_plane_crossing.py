@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.validation.split_plane import (
+from volta.validation.split_plane import (
     SplitGap,
     SplitCrossing,
     _detect_trace_crossings,

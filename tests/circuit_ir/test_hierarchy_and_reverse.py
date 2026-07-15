@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.circuit_ir.hierarchy_flattener import flatten_to_circuit_ir
-from kicad_agent.circuit_ir.skidl_to_kicad import circuit_to_kicad_sch
-from kicad_agent.circuit_ir.types import CircuitIR
+from volta.circuit_ir.hierarchy_flattener import flatten_to_circuit_ir
+from volta.circuit_ir.skidl_to_kicad import circuit_to_kicad_sch
+from volta.circuit_ir.types import CircuitIR
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 _LED_FIXTURE = _FIXTURES / "schematic_intent" / "complete_led.kicad_sch"
@@ -51,7 +51,7 @@ class TestSkidlToKiCad:
         if not _LED_FIXTURE.exists():
             pytest.skip(f"Fixture not found: {_LED_FIXTURE}")
 
-        from kicad_agent.circuit_ir import build_circuit
+        from volta.circuit_ir import build_circuit
 
         circuit, _ = build_circuit(_LED_FIXTURE)
         out = tmp_path / "test_output.kicad_sch"
@@ -70,7 +70,7 @@ class TestSkidlToKiCad:
         if not _LED_FIXTURE.exists():
             pytest.skip(f"Fixture not found: {_LED_FIXTURE}")
 
-        from kicad_agent.circuit_ir import build_circuit
+        from volta.circuit_ir import build_circuit
 
         circuit, _ = build_circuit(_LED_FIXTURE)
         out = tmp_path / "test_placement.kicad_sch"
@@ -83,7 +83,7 @@ class TestSkidlToKiCad:
         if not _LED_FIXTURE.exists():
             pytest.skip(f"Fixture not found: {_LED_FIXTURE}")
 
-        from kicad_agent.circuit_ir import build_circuit
+        from volta.circuit_ir import build_circuit
 
         circuit, _ = build_circuit(_LED_FIXTURE)
         out = tmp_path / "test_refs.kicad_sch"
@@ -100,7 +100,7 @@ class TestRoundTrip:
         if not _LED_FIXTURE.exists():
             pytest.skip(f"Fixture not found: {_LED_FIXTURE}")
 
-        from kicad_agent.circuit_ir import build_circuit
+        from volta.circuit_ir import build_circuit
 
         # Original → SKIDL
         circuit, circuit_ir = build_circuit(_LED_FIXTURE)

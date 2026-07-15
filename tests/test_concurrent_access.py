@@ -1,6 +1,6 @@
 """Tests for O-BUG-008: Concurrent access warning mechanism.
 
-Validates that a .kicad_agent.lock file triggers a warning
+Validates that a .volta.lock file triggers a warning
 when another process is editing the same file.
 """
 from __future__ import annotations
@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops.execution import (
+from volta.ops.execution import (
     _check_concurrent_access,
     _LOCK_FILE_NAME,
 )
@@ -41,7 +41,7 @@ class TestConcurrentAccessOBUG008:
         lock_file = tmp_path / _LOCK_FILE_NAME
         lock_file.write_text("test.kicad_sch:pid=99999", encoding="utf-8")
 
-        with caplog.at_level(logging.WARNING, logger="kicad_agent.ops.execution"):
+        with caplog.at_level(logging.WARNING, logger="volta.ops.execution"):
             _check_concurrent_access(target)
 
         assert any(
@@ -54,7 +54,7 @@ class TestConcurrentAccessOBUG008:
         target = tmp_path / "test.kicad_sch"
         target.touch()
 
-        with caplog.at_level(logging.WARNING, logger="kicad_agent.ops.execution"):
+        with caplog.at_level(logging.WARNING, logger="volta.ops.execution"):
             _check_concurrent_access(target)
 
         assert not any(

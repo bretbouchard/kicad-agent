@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.ops.label_renamer import (
+from volta.ops.label_renamer import (
     _find_labels_by_name,
     rename_net_label,
 )
@@ -266,7 +266,7 @@ class TestRenameNetLabelOpSchema:
     """Tests for RenameNetLabelOp Pydantic schema."""
 
     def test_default_fields(self) -> None:
-        from kicad_agent.ops._schema_wire import RenameNetLabelOp
+        from volta.ops._schema_wire import RenameNetLabelOp
         op = RenameNetLabelOp(
             target_file="test.kicad_sch",
             old_name="OLD",
@@ -277,7 +277,7 @@ class TestRenameNetLabelOpSchema:
         assert op.dry_run is False
 
     def test_all_fields(self) -> None:
-        from kicad_agent.ops._schema_wire import RenameNetLabelOp
+        from volta.ops._schema_wire import RenameNetLabelOp
         op = RenameNetLabelOp(
             target_file="test.kicad_sch",
             old_name="A",
@@ -290,7 +290,7 @@ class TestRenameNetLabelOpSchema:
 
     @pytest.mark.parametrize("lt", ["label", "global", "hierarchical", "all"])
     def test_valid_label_types(self, lt: str) -> None:
-        from kicad_agent.ops._schema_wire import RenameNetLabelOp
+        from volta.ops._schema_wire import RenameNetLabelOp
         op = RenameNetLabelOp(
             target_file="test.kicad_sch",
             old_name="X",
@@ -300,7 +300,7 @@ class TestRenameNetLabelOpSchema:
         assert op.label_type == lt
 
     def test_invalid_label_type_rejected(self) -> None:
-        from kicad_agent.ops._schema_wire import RenameNetLabelOp
+        from volta.ops._schema_wire import RenameNetLabelOp
         import pydantic
         with pytest.raises(pydantic.ValidationError):
             RenameNetLabelOp(
@@ -311,7 +311,7 @@ class TestRenameNetLabelOpSchema:
             )
 
     def test_empty_old_name_rejected(self) -> None:
-        from kicad_agent.ops._schema_wire import RenameNetLabelOp
+        from volta.ops._schema_wire import RenameNetLabelOp
         import pydantic
         with pytest.raises(pydantic.ValidationError):
             RenameNetLabelOp(
@@ -321,7 +321,7 @@ class TestRenameNetLabelOpSchema:
             )
 
     def test_unsafe_chars_rejected(self) -> None:
-        from kicad_agent.ops._schema_wire import RenameNetLabelOp
+        from volta.ops._schema_wire import RenameNetLabelOp
         import pydantic
         with pytest.raises(pydantic.ValidationError):
             RenameNetLabelOp(
@@ -339,11 +339,11 @@ class TestHandlerDispatch:
     """Tests for handler registration and dispatch."""
 
     def test_handler_registered(self) -> None:
-        from kicad_agent.ops.handlers.schematic import _SCHEMATIC_HANDLERS
+        from volta.ops.handlers.schematic import _SCHEMATIC_HANDLERS
         assert "rename_net_label" in _SCHEMATIC_HANDLERS
 
     def test_handler_calls_rename_net_label(self) -> None:
-        from kicad_agent.ops.handlers.schematic import _SCHEMATIC_HANDLERS
+        from volta.ops.handlers.schematic import _SCHEMATIC_HANDLERS
         handler = _SCHEMATIC_HANDLERS["rename_net_label"]
         lbl = _make_mock_label("OLD")
         ir = _make_mock_ir(labels=[lbl])

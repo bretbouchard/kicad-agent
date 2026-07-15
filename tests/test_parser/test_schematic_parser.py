@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from kiutils.schematic import Schematic
 
-from kicad_agent.parser.schematic_parser import parse_schematic, ParseResult
+from volta.parser.schematic_parser import parse_schematic, ParseResult
 
 
 class TestParseSchematic:

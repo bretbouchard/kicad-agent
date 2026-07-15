@@ -8,9 +8,9 @@ import math
 
 import pytest
 
-from kicad_agent.generation.intent import ComponentSpec, NetSpec
-from kicad_agent.placement.graph import PlacementGraph, netlist_to_placement_graph
-from kicad_agent.placement.scoring import (
+from volta.generation.intent import ComponentSpec, NetSpec
+from volta.placement.graph import PlacementGraph, netlist_to_placement_graph
+from volta.placement.scoring import (
     PlacementScore,
     PlacementScorer,
     compute_congestion_estimate,

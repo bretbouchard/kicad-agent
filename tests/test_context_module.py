@@ -8,5 +8,5 @@ class TestContextModule:
 
     def test_import(self):
         """Context module is importable."""
-        from kicad_agent import context
+        from volta import context
         assert context is not None

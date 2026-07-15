@@ -13,16 +13,16 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.routing.constraints import RoutingConstraints
-from kicad_agent.routing.diagnostician import (
+from volta.routing.constraints import RoutingConstraints
+from volta.routing.diagnostician import (
     Blocker,
     BlockerDiagnostician,
     BlockerDiagnosis,
     diagnose_routing_failures,
 )
-from kicad_agent.routing.graph import RoutingGraph
-from kicad_agent.routing.pathfinder import RouteFailure, route_net
-from kicad_agent.spatial.primitives import SpatialBox
+from volta.routing.graph import RoutingGraph
+from volta.routing.pathfinder import RouteFailure, route_net
+from volta.spatial.primitives import SpatialBox
 
 
 def _route_and_fail(

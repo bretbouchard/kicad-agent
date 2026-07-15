@@ -8,14 +8,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.analysis.gap_analyzer import (
+from volta.analysis.gap_analyzer import (
     BoardInfo,
     GapReport,
     IncompleteNet,
     RoutingStats,
     UnroutedNet,
 )
-from kicad_agent.analysis.gap_fill_engine import GapFillEngine, GapFillResult
+from volta.analysis.gap_fill_engine import GapFillEngine, GapFillResult
 
 
 @pytest.fixture
@@ -170,8 +170,8 @@ class TestGapFillEngineIteration:
 
     def test_max_iterations_respected(self, temp_pcb, mock_gap_report):
         """Verify the loop never exceeds max_iterations."""
-        with patch("kicad_agent.analysis.gap_fill_engine.GapAnalyzer") as MockAnalyzer, \
-             patch("kicad_agent.ops.executor.OperationExecutor"):
+        with patch("volta.analysis.gap_fill_engine.GapAnalyzer") as MockAnalyzer, \
+             patch("volta.ops.executor.OperationExecutor"):
             analyzer_instance = MockAnalyzer.return_value
             analyzer_instance.analyze.return_value = mock_gap_report
 
@@ -192,8 +192,8 @@ class TestGapFillEngineIteration:
             net_naming_issues=(),
         )
 
-        with patch("kicad_agent.analysis.gap_fill_engine.GapAnalyzer") as MockAnalyzer, \
-             patch("kicad_agent.ops.executor.OperationExecutor"):
+        with patch("volta.analysis.gap_fill_engine.GapAnalyzer") as MockAnalyzer, \
+             patch("volta.ops.executor.OperationExecutor"):
             analyzer_instance = MockAnalyzer.return_value
             analyzer_instance.analyze.return_value = converged_report
 
@@ -221,7 +221,7 @@ class TestGapFillEngineSnapshot:
             net_naming_issues=(),
         )
 
-        with patch("kicad_agent.analysis.gap_fill_engine.GapAnalyzer") as MockAnalyzer:
+        with patch("volta.analysis.gap_fill_engine.GapAnalyzer") as MockAnalyzer:
             analyzer_instance = MockAnalyzer.return_value
             analyzer_instance.analyze.return_value = converged_report
 
@@ -248,8 +248,8 @@ class TestGapFillEngineSnapshot:
             net_naming_issues=(),
         )
 
-        with patch("kicad_agent.analysis.gap_fill_engine.GapAnalyzer") as MockAnalyzer, \
-             patch("kicad_agent.ops.executor.OperationExecutor"):
+        with patch("volta.analysis.gap_fill_engine.GapAnalyzer") as MockAnalyzer, \
+             patch("volta.ops.executor.OperationExecutor"):
             # First call succeeds, second raises, third (finally) succeeds
             analyzer_instance = MockAnalyzer.return_value
             analyzer_instance.analyze.side_effect = [

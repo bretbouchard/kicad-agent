@@ -10,15 +10,15 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.dfm.checker import DfmFinding, DfmReport, DfmSeverity
-from kicad_agent.validation.erc_drc import DrcResult
-from kicad_agent.validation.gate_types import GateResult
-from kicad_agent.validation.gates.manufacturing_gate import (
+from volta.dfm.checker import DfmFinding, DfmReport, DfmSeverity
+from volta.validation.erc_drc import DrcResult
+from volta.validation.gate_types import GateResult
+from volta.validation.gates.manufacturing_gate import (
     ManufacturingReadinessGate,
     _2LAYER_LAYERS,
     _4LAYER_LAYERS,
 )
-from kicad_agent.validation.gates.manufacturing_manifest import (
+from volta.validation.gates.manufacturing_manifest import (
     ManufacturingArtifact,
     ManufacturingManifest,
     generate_manifest,
@@ -417,8 +417,8 @@ class TestGateIntegration:
 
 class TestGateRegistration:
     def test_manufacturing_readiness_registered(self) -> None:
-        import kicad_agent.validation  # noqa: ensure gates registered
-        from kicad_agent.validation.gate_runner import get_gate_runner
+        import volta.validation  # noqa: ensure gates registered
+        from volta.validation.gate_runner import get_gate_runner
 
         runner = get_gate_runner()
         assert runner.get_gate("manufacturing_readiness") is not None

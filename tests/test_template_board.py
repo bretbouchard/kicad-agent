@@ -11,8 +11,8 @@ Covers:
 import tempfile
 from pathlib import Path
 
-from kicad_agent.generation.intent import BoardSpec, ComponentSpec, NetSpec, PositionSpec
-from kicad_agent.generation.template_board import generate_board
+from volta.generation.intent import BoardSpec, ComponentSpec, NetSpec, PositionSpec
+from volta.generation.template_board import generate_board
 
 
 class TestGenerateBoard:
@@ -80,7 +80,7 @@ class TestGenerateBoard:
         assert result.net_count == 1
 
         # Re-parse through the project's own parser for round-trip validation
-        from kicad_agent.parser import parse_pcb
+        from volta.parser import parse_pcb
 
         parse_result = parse_pcb(output)
         assert parse_result is not None

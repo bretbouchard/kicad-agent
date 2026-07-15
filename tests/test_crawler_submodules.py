@@ -10,7 +10,7 @@ class TestBulkFetcher:
 
     def test_import(self):
         """BulkFetcher is importable."""
-        from kicad_agent.crawler.bulk_fetcher import BulkFetcher
+        from volta.crawler.bulk_fetcher import BulkFetcher
         assert BulkFetcher is not None
 
 
@@ -19,7 +19,7 @@ class TestFileFetcher:
 
     def test_import(self):
         """FileFetcher is importable."""
-        from kicad_agent.crawler.file_fetcher import FileFetcher
+        from volta.crawler.file_fetcher import FileFetcher
         assert FileFetcher is not None
 
 
@@ -28,11 +28,11 @@ class TestGithubDiscovery:
 
     def test_import(self):
         """GithubDiscovery is importable."""
-        from kicad_agent.crawler.github_discovery import GithubDiscovery
+        from volta.crawler.github_discovery import GithubDiscovery
         assert GithubDiscovery is not None
 
     def test_creation(self):
         """GithubDiscovery can be created with a token."""
-        from kicad_agent.crawler.github_discovery import GithubDiscovery
+        from volta.crawler.github_discovery import GithubDiscovery
         discovery = GithubDiscovery(token="fake-test-token")
         assert discovery is not None

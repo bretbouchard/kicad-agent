@@ -11,14 +11,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ir.pcb_ir import (
+from volta.ir.pcb_ir import (
     _escape_sexpr_value,
     _inject_layer,
     _inject_lib_id,
     _inject_pad_net,
 )
-from kicad_agent.ops.create_file import _atomic_write
-from kicad_agent.ops.schema import (
+from volta.ops.create_file import _atomic_write
+from volta.ops.schema import (
     _UNSAFE_SEXPR_CHARS,
     _validate_sexpr_safe_string,
 )
@@ -34,8 +34,8 @@ class TestPathConfiment:
 
     def test_path_traversal_rejected(self, tmp_path: Path) -> None:
         """Executor rejects target_file paths outside base_dir."""
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=tmp_path)
         with pytest.raises(Exception):
@@ -51,8 +51,8 @@ class TestPathConfiment:
 
     def test_absolute_path_outside_rejected(self, tmp_path: Path) -> None:
         """Executor rejects absolute paths outside base_dir."""
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=tmp_path)
         with pytest.raises(Exception):
@@ -68,8 +68,8 @@ class TestPathConfiment:
 
     def test_valid_relative_path_accepted(self, tmp_path: Path) -> None:
         """Executor accepts valid relative paths inside base_dir."""
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         sch = tmp_path / "test.kicad_sch"
         sch.write_text("(kicad_sch (version 20231120) (generator kicad-agent))")
@@ -211,6 +211,6 @@ class TestMcpErrorSanitization:
 
     def test_server_imports_uuid(self):
         """Server module imports uuid for correlation ID generation."""
-        import kicad_agent.mcp.server as server_mod
+        import volta.mcp.server as server_mod
 
         assert hasattr(server_mod, "uuid")

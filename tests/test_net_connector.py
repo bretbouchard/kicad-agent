@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ops._schema_schematic_routing import ConnectPinsOp
+from volta.ops._schema_schematic_routing import ConnectPinsOp
 
 
 # ---------------------------------------------------------------------------
@@ -273,7 +273,7 @@ class TestNetConnector:
         Patches PinResolver so that __init__ gets a mock and resolve()
         returns the provided component data.
         """
-        from kicad_agent.schematic_routing.net_connector import NetConnector
+        from volta.schematic_routing.net_connector import NetConnector
 
         mock_resolver = _make_mock_resolver(components)
 
@@ -283,7 +283,7 @@ class TestNetConnector:
         tmpfile.write_text("(kicad_sch)", encoding="utf-8")
 
         with patch(
-            "kicad_agent.schematic_routing.net_connector.PinResolver",
+            "volta.schematic_routing.net_connector.PinResolver",
             return_value=mock_resolver,
         ):
             connector = NetConnector(tmpfile)

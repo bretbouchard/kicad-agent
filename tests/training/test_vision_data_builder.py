@@ -7,7 +7,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from kicad_agent.training.vision_data_builder import (
+from volta.training.vision_data_builder import (
     VisionDataRow,
     _extract_assistant_text,
     _row_to_hf_format,

@@ -15,14 +15,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.analysis.intent_schemas import SubcircuitIntent
-from kicad_agent.analysis.subcircuit_detector import Subcircuit, SubcircuitType
-from kicad_agent.generation.intent import ComponentSpec, NetSpec, PositionSpec
-from kicad_agent.placement.footprint_geometry import (
+from volta.analysis.intent_schemas import SubcircuitIntent
+from volta.analysis.subcircuit_detector import Subcircuit, SubcircuitType
+from volta.generation.intent import ComponentSpec, NetSpec, PositionSpec
+from volta.placement.footprint_geometry import (
     ComponentGeometry,
     extract_footprint_geometry,
 )
-from kicad_agent.placement.signal_flow import (
+from volta.placement.signal_flow import (
     SignalFlowGroup,
     SignalFlowGrouper,
     SignalFlowZone,
@@ -343,7 +343,7 @@ class TestLayoutAwarePlacerPassthrough:
 
     def test_passthrough_no_subcircuits(self):
         """LayoutAwarePlacer delegates to HybridPlacementEngine when no subcircuits."""
-        from kicad_agent.placement.layout_aware import (
+        from volta.placement.layout_aware import (
             LayoutAwarePlacer,
             LayoutAwareRequest,
         )
@@ -368,7 +368,7 @@ class TestLayoutAwarePlacerWithSubcircuits:
     """When Subcircuit[] provided, components are pre-grouped into zones."""
 
     def test_with_subcircuits_zones(self):
-        from kicad_agent.placement.layout_aware import (
+        from volta.placement.layout_aware import (
             LayoutAwarePlacer,
             LayoutAwareRequest,
         )
@@ -408,7 +408,7 @@ class TestLayoutAwarePlacerWithGeometry:
     """When ComponentGeometry dict provided, sizes are used in placement."""
 
     def test_with_geometry_sizes_injected(self):
-        from kicad_agent.placement.layout_aware import (
+        from volta.placement.layout_aware import (
             LayoutAwarePlacer,
             LayoutAwareRequest,
         )
@@ -452,7 +452,7 @@ class TestLayoutAwareRequestValidation:
     """LayoutAwareRequest validates board dimensions are positive."""
 
     def test_negative_board_width_rejected(self):
-        from kicad_agent.placement.layout_aware import LayoutAwareRequest
+        from volta.placement.layout_aware import LayoutAwareRequest
 
         with pytest.raises(Exception):
             LayoutAwareRequest(
@@ -462,7 +462,7 @@ class TestLayoutAwareRequestValidation:
             )
 
     def test_zero_board_height_rejected(self):
-        from kicad_agent.placement.layout_aware import LayoutAwareRequest
+        from volta.placement.layout_aware import LayoutAwareRequest
 
         with pytest.raises(Exception):
             LayoutAwareRequest(
@@ -472,7 +472,7 @@ class TestLayoutAwareRequestValidation:
             )
 
     def test_negative_clearance_rejected(self):
-        from kicad_agent.placement.layout_aware import LayoutAwareRequest
+        from volta.placement.layout_aware import LayoutAwareRequest
 
         with pytest.raises(Exception):
             LayoutAwareRequest(
@@ -487,7 +487,7 @@ class TestLayoutAwarePlacerWithConstraints:
     """LayoutAwareRequest with constraints produces zone assignments."""
 
     def test_constraints_produce_zones(self):
-        from kicad_agent.placement.layout_aware import (
+        from volta.placement.layout_aware import (
             LayoutAwarePlacer,
             LayoutAwareRequest,
         )
@@ -534,7 +534,7 @@ class TestConstraintAwareSAObjective:
 
     def test_constraint_penalty_adds_to_hpwl(self):
         """constraint_aware_sa_objective returns HPWL + penalty > pure HPWL."""
-        from kicad_agent.placement.layout_aware import LayoutAwarePlacer
+        from volta.placement.layout_aware import LayoutAwarePlacer
 
         placer = LayoutAwarePlacer()
 
@@ -564,7 +564,7 @@ class TestConstraintAwareSAObjective:
         )
 
         # Compute pure HPWL for reference
-        from kicad_agent.placement.scoring import compute_hpwl_score
+        from volta.placement.scoring import compute_hpwl_score
         hpwl_raw, _ = compute_hpwl_score(positions, graph)
 
         # The objective at positions should be >= hpwl (constraint penalty adds)
@@ -576,7 +576,7 @@ class TestConstraintAwareSAObjective:
 
     def test_decoupling_penalty_proportional_to_distance(self):
         """Penalty for decoupling cap far from IC is proportional to distance."""
-        from kicad_agent.placement.layout_aware import (
+        from volta.placement.layout_aware import (
             _DECOUPLING_PENALTY_WEIGHT,
             _MAX_DECOUPLING_DISTANCE_MM,
             LayoutAwarePlacer,
@@ -613,7 +613,7 @@ class TestConstraintAwareSAObjective:
 
     def test_diff_pair_penalty_increases_with_offset(self):
         """Penalty for differential pair misalignment increases with y-offset."""
-        from kicad_agent.placement.layout_aware import LayoutAwarePlacer
+        from volta.placement.layout_aware import LayoutAwarePlacer
 
         placer = LayoutAwarePlacer()
 
@@ -644,7 +644,7 @@ class TestConstraintAwareSAObjective:
 
     def test_zero_penalty_when_constraints_satisfied(self):
         """Penalty is zero when all constraints are satisfied."""
-        from kicad_agent.placement.layout_aware import LayoutAwarePlacer
+        from volta.placement.layout_aware import LayoutAwarePlacer
 
         placer = LayoutAwarePlacer()
 
@@ -670,7 +670,7 @@ class TestConstraintAwareSAObjective:
         result = objective(params)
 
         # Pure HPWL (constraint penalty should be 0)
-        from kicad_agent.placement.scoring import compute_hpwl_score
+        from volta.placement.scoring import compute_hpwl_score
         hpwl_raw, _ = compute_hpwl_score(positions, graph)
 
         # Result should equal HPWL since no penalties
@@ -687,11 +687,11 @@ class TestIntegrationThermalAndConstraints:
 
     def test_with_subcircuits_thermal_constraints(self):
         """LayoutAwarePlacer with subcircuits + thermal + constraints produces valid output."""
-        from kicad_agent.placement.layout_aware import (
+        from volta.placement.layout_aware import (
             LayoutAwarePlacer,
             LayoutAwareRequest,
         )
-        from kicad_agent.placement.thermal import ThermalProfile
+        from volta.placement.thermal import ThermalProfile
 
         components = _make_components(["U1", "R1", "U2", "R2", "U3", "R3"])
         sc1 = _make_subcircuit(
@@ -745,11 +745,11 @@ class TestIntegrationThermalAndConstraints:
 
     def test_with_only_thermal_profiles(self):
         """LayoutAwarePlacer with thermal profiles (no subcircuits) applies thermal separation."""
-        from kicad_agent.placement.layout_aware import (
+        from volta.placement.layout_aware import (
             LayoutAwarePlacer,
             LayoutAwareRequest,
         )
-        from kicad_agent.placement.thermal import ThermalProfile
+        from volta.placement.thermal import ThermalProfile
 
         components = _make_components(["U1", "U2", "R1"])
         thermal_profiles = [
@@ -772,7 +772,7 @@ class TestIntegrationThermalAndConstraints:
 
     def test_with_none_thermal_profiles_no_crash(self):
         """LayoutAwarePlacer with None thermal_profiles does not crash."""
-        from kicad_agent.placement.layout_aware import (
+        from volta.placement.layout_aware import (
             LayoutAwarePlacer,
             LayoutAwareRequest,
         )
@@ -796,11 +796,11 @@ class TestIntegrationThermalAndConstraints:
 
     def test_full_pipeline_20_components(self):
         """Full pipeline: 20 components, 3 subcircuits, 2 thermal profiles, constraint-aware SA."""
-        from kicad_agent.placement.layout_aware import (
+        from volta.placement.layout_aware import (
             LayoutAwarePlacer,
             LayoutAwareRequest,
         )
-        from kicad_agent.placement.thermal import ThermalProfile
+        from volta.placement.thermal import ThermalProfile
 
         refs = [f"U{i}" for i in range(1, 8)] + [f"R{i}" for i in range(1, 8)] + [f"C{i}" for i in range(1, 7)]
         components = _make_components(refs[:20])
@@ -856,7 +856,7 @@ class TestIntegrationThermalAndConstraints:
 
     def test_placement_score_reasonable(self):
         """Placement score is reasonable (>0.1) for a simple board."""
-        from kicad_agent.placement.layout_aware import (
+        from volta.placement.layout_aware import (
             LayoutAwarePlacer,
             LayoutAwareRequest,
         )

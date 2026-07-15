@@ -100,7 +100,7 @@ def run_sft_phase(args: argparse.Namespace, resumer) -> dict:
 
     # Lazy imports — training libs may not be installed locally
     try:
-        from kicad_agent.training.vision_lora_trainer import VisionLoRATrainer  # type: ignore[import-not-found]
+        from volta.training.vision_lora_trainer import VisionLoRATrainer  # type: ignore[import-not-found]
     except ImportError:
         logger.warning("VisionLoRATrainer not available — SFT phase would be skipped in smoke test")
         VisionLoRATrainer = None  # type: ignore[assignment]
@@ -147,7 +147,7 @@ def run_grpo_phase(args: argparse.Namespace, resumer, config: dict) -> dict:
     logger.info("Loaded %d GRPO rows from %s", len(grpo_rows), args.grpo_data)
 
     # Construct adapter from config
-    from kicad_agent.training.legibility_reward_adapter import LegibilityRewardAdapter
+    from volta.training.legibility_reward_adapter import LegibilityRewardAdapter
     adapter = LegibilityRewardAdapter.from_config(config)
     logger.info("Adapter constructed: weights=%s completeness_source=%s",
                 adapter.weights, adapter.completeness_source)
@@ -163,12 +163,12 @@ def run_grpo_phase(args: argparse.Namespace, resumer, config: dict) -> dict:
     start = time.monotonic()
 
     # Lazy imports — Phase 109 critic + Phase 110 trainer
-    from kicad_agent.analysis.legibility_critic import HybridLegibilityCritic
-    from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
-    from kicad_agent.ir.schematic_ir import SchematicIR
-    from kicad_agent.parser.schematic_parser import parse_schematic
-    from kicad_agent.training.grpo import AdvantageWeightedConfig, AdvantageWeightedTrainer
-    from kicad_agent.training.rewards import CapInputs
+    from volta.analysis.legibility_critic import HybridLegibilityCritic
+    from volta.analysis.schematic_spatial import SchematicSpatialExtractor
+    from volta.ir.schematic_ir import SchematicIR
+    from volta.parser.schematic_parser import parse_schematic
+    from volta.training.grpo import AdvantageWeightedConfig, AdvantageWeightedTrainer
+    from volta.training.rewards import CapInputs
 
     # Construct trainer (policy/reward/ref models would be real Gemma 4 here)
     trainer = AdvantageWeightedTrainer(
@@ -224,7 +224,7 @@ def main(argv: list[str] | None = None) -> int:
     config = _load_config(args.config)
 
     # 1. Construct CheckpointResumer
-    from kicad_agent.training.vastai_checkpoint_resumer import CheckpointResumer
+    from volta.training.vastai_checkpoint_resumer import CheckpointResumer
     resumer = CheckpointResumer(
         bucket=args.b2_bucket,
         local_dir=args.output_adapter.parent / "checkpoints",

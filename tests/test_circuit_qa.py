@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from kicad_agent.ops.erc_parser import ErcViolation
+from volta.ops.erc_parser import ErcViolation
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +164,7 @@ class TestCircuitQAPairSchema:
             "tags": ["power", "violation"],
         }
         defaults.update(overrides)
-        from kicad_agent.benchmarks.qa_schemas import CircuitQAPair
+        from volta.benchmarks.qa_schemas import CircuitQAPair
         return CircuitQAPair(**defaults)
 
     def test_valid_pair(self):
@@ -178,28 +178,28 @@ class TestCircuitQAPairSchema:
 
     def test_rejects_empty_question(self):
         """Test 2: CircuitQAPair rejects empty question."""
-        from kicad_agent.benchmarks.qa_schemas import CircuitQAPair
+        from volta.benchmarks.qa_schemas import CircuitQAPair
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             self._make_valid_pair(question="")
 
     def test_rejects_empty_answer(self):
         """Test 2b: CircuitQAPair rejects empty answer."""
-        from kicad_agent.benchmarks.qa_schemas import CircuitQAPair
+        from volta.benchmarks.qa_schemas import CircuitQAPair
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             self._make_valid_pair(answer="")
 
     def test_rejects_short_question(self):
         """Test 2c: CircuitQAPair rejects question shorter than 10 chars."""
-        from kicad_agent.benchmarks.qa_schemas import CircuitQAPair
+        from volta.benchmarks.qa_schemas import CircuitQAPair
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             self._make_valid_pair(question="Short?")
 
     def test_rejects_short_answer(self):
         """Test 2d: CircuitQAPair rejects answer shorter than 20 chars."""
-        from kicad_agent.benchmarks.qa_schemas import CircuitQAPair
+        from volta.benchmarks.qa_schemas import CircuitQAPair
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             self._make_valid_pair(answer="Too short")
@@ -255,7 +255,7 @@ class TestCircuitQADatasetSchema:
 
     def _make_valid_dataset(self, **overrides):
         """Create a valid CircuitQADataset with sensible defaults."""
-        from kicad_agent.benchmarks.qa_schemas import CircuitQAPair, CircuitQADataset
+        from volta.benchmarks.qa_schemas import CircuitQAPair, CircuitQADataset
         pairs = [
             CircuitQAPair(
                 id=f"qa-{i:04d}",
@@ -307,7 +307,7 @@ class TestQAGenerator:
 
     def _make_generator(self, seed=42):
         """Create a QAGenerator with mock source schematics."""
-        from kicad_agent.benchmarks.qa_generator import QAGenerator
+        from volta.benchmarks.qa_generator import QAGenerator
         source = {
             "name": "compressor",
             "violations": MOCK_VIOLATIONS,
@@ -472,7 +472,7 @@ class TestQAGenerator:
 
     def test_empty_source_list_uses_defaults(self):
         """Test that QAGenerator with empty source list falls back to defaults."""
-        from kicad_agent.benchmarks.qa_generator import QAGenerator
+        from volta.benchmarks.qa_generator import QAGenerator
         gen = QAGenerator(source_schematics=[], seed=42)
         # Should use default sources, not crash
         dataset = gen.generate_dataset(target_count=100)
@@ -480,7 +480,7 @@ class TestQAGenerator:
 
     def test_none_source_uses_defaults(self):
         """Test that QAGenerator with None source uses defaults."""
-        from kicad_agent.benchmarks.qa_generator import QAGenerator
+        from volta.benchmarks.qa_generator import QAGenerator
         gen = QAGenerator(source_schematics=None, seed=42)
         dataset = gen.generate_dataset(target_count=100)
         assert len(dataset.qa_pairs) >= 100

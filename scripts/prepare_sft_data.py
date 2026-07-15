@@ -42,7 +42,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.training.reward_model import RewardModel, predict_reward
+from volta.training.reward_model import RewardModel, predict_reward
 
 SYSTEM_PROMPT = (
     "You are a PCB design expert specializing in spatial reasoning. "
@@ -165,8 +165,8 @@ def _build_chain_text(raw: dict) -> str:
 
     # Board graph data
     if "graph_json" in raw:
-        from kicad_agent.training.real_dataset import RealBoardSample
-        from kicad_agent.training.board_chains import synthesize_board_chain
+        from volta.training.real_dataset import RealBoardSample
+        from volta.training.board_chains import synthesize_board_chain
 
         try:
             sample = RealBoardSample(
@@ -275,8 +275,8 @@ def convert_to_chatml(
 
 def run_chains_100k_pipeline(args) -> int:
     """Run the chains_100k.jsonl -> ChatML pipeline using sft module."""
-    from kicad_agent.training.sft.converter import convert_chains_to_chatml
-    from kicad_agent.training.sft.quality_filter import filter_by_reward_model, split_and_save
+    from volta.training.sft.converter import convert_chains_to_chatml
+    from volta.training.sft.quality_filter import filter_by_reward_model, split_and_save
 
     start = time.time()
     input_path = Path(args.chains_file)

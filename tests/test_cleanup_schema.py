@@ -6,7 +6,7 @@ Tests will FAIL until schemas are implemented.
 import pytest
 from pydantic import ValidationError
 
-from kicad_agent.ops._schema_gap import StripShortsOp, RemoveDanglingTracksOp
+from volta.ops._schema_gap import StripShortsOp, RemoveDanglingTracksOp
 
 
 # ---------------------------------------------------------------------------

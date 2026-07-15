@@ -34,11 +34,11 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.routing.orchestrator import (
+from volta.routing.orchestrator import (
     RoutingOrchestrationResult,
     RoutingOrchestrator,
 )
-from kicad_agent.routing.strategy import DeterministicStrategy
+from volta.routing.strategy import DeterministicStrategy
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -214,11 +214,11 @@ def load_ai_strategy(pcb_path: Path) -> Any:
         ImportError: if mlx_vlm is not installed.
         FileNotFoundError: if the adapter path does not exist.
     """
-    from kicad_agent.inference.vision_pipeline import (
+    from volta.inference.vision_pipeline import (
         KiCadVisionConfig,
         KiCadVisionPipeline,
     )
-    from kicad_agent.routing.ai_strategy import AiRoutingStrategy
+    from volta.routing.ai_strategy import AiRoutingStrategy
 
     if not _ADAPTER_PATH.exists():
         raise FileNotFoundError(

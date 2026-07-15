@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.analysis.legibility_critic import ClaudeLegibilityCritic
+from volta.analysis.legibility_critic import ClaudeLegibilityCritic
 
 
 def _build_client_with_response(response: object) -> MagicMock:

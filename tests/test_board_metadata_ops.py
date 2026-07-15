@@ -2,7 +2,7 @@
 import pytest
 from pathlib import Path
 
-from kicad_agent.ops._schema_pcb import (
+from volta.ops._schema_pcb import (
     ReadBoardMetadataOp,
     SetBoardMetadataOp,
     SetBoardRevisionOp,
@@ -11,7 +11,7 @@ from kicad_agent.ops._schema_pcb import (
 
 @pytest.fixture(autouse=True)
 def _clear_ir_registry():
-    from kicad_agent.ir.base import _clear_registry
+    from volta.ir.base import _clear_registry
     _clear_registry()
     yield
     _clear_registry()
@@ -41,9 +41,9 @@ def _create_pcb_with_title_block(tmpdir: Path) -> Path:
 
 def _build_ir(pcb_path: Path):
     """Parse PCB and build PcbIR (mimics executor setup)."""
-    from kicad_agent.parser.pcb_parser import parse_pcb
-    from kicad_agent.ir.pcb_ir import PcbIR
-    from kicad_agent.parser.uuid_extractor import extract_uuids
+    from volta.parser.pcb_parser import parse_pcb
+    from volta.ir.pcb_ir import PcbIR
+    from volta.parser.uuid_extractor import extract_uuids
     result = parse_pcb(pcb_path)
     uuid_map = extract_uuids(result.raw_content, "pcb")
     return PcbIR(_parse_result=result, _uuid_map=uuid_map)
@@ -51,7 +51,7 @@ def _build_ir(pcb_path: Path):
 
 def test_read_board_metadata_full(tmp_path):
     """read_board_metadata returns all title_block fields (META-01)."""
-    from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+    from volta.ops.handlers.query import _QUERY_HANDLERS
     pcb_path = _create_pcb_with_title_block(tmp_path)
     ir = _build_ir(pcb_path)
     handler = _QUERY_HANDLERS["read_board_metadata"]
@@ -65,7 +65,7 @@ def test_read_board_metadata_full(tmp_path):
 
 def test_read_board_metadata_no_title_block(tmp_path):
     """read_board_metadata on a board with no title_block returns empty fields."""
-    from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+    from volta.ops.handlers.query import _QUERY_HANDLERS
     pcb_path = tmp_path / "notb.kicad_pcb"
     pcb_path.write_text('(kicad_pcb (version 20241229) (generator "test") (paper "A4") (layers (0 "F.Cu" signal)))', encoding="utf-8")
     ir = _build_ir(pcb_path)
@@ -77,8 +77,8 @@ def test_read_board_metadata_no_title_block(tmp_path):
 
 def test_set_board_revision_round_trip(tmp_path):
     """set_board_revision writes rev; re-read returns new rev (META-02, META-06)."""
-    from kicad_agent.ops.handlers.pcb import _PCB_HANDLERS
-    from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+    from volta.ops.handlers.pcb import _PCB_HANDLERS
+    from volta.ops.handlers.query import _QUERY_HANDLERS
     pcb_path = _create_pcb_with_title_block(tmp_path)
     ir = _build_ir(pcb_path)
     # Set revision
@@ -94,8 +94,8 @@ def test_set_board_revision_round_trip(tmp_path):
 
 def test_set_board_metadata_partial_update(tmp_path):
     """set_board_metadata partial update changes only provided fields (META-03)."""
-    from kicad_agent.ops.handlers.pcb import _PCB_HANDLERS
-    from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+    from volta.ops.handlers.pcb import _PCB_HANDLERS
+    from volta.ops.handlers.query import _QUERY_HANDLERS
     pcb_path = _create_pcb_with_title_block(tmp_path)
     ir = _build_ir(pcb_path)
     handler = _PCB_HANDLERS["set_board_metadata"]
@@ -111,8 +111,8 @@ def test_set_board_metadata_partial_update(tmp_path):
 
 def test_set_board_metadata_comments(tmp_path):
     """set_board_metadata writes comments and round-trips them (META-03, META-06)."""
-    from kicad_agent.ops.handlers.pcb import _PCB_HANDLERS
-    from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+    from volta.ops.handlers.pcb import _PCB_HANDLERS
+    from volta.ops.handlers.query import _QUERY_HANDLERS
     pcb_path = _create_pcb_with_title_block(tmp_path)
     ir = _build_ir(pcb_path)
     handler = _PCB_HANDLERS["set_board_metadata"]
@@ -124,8 +124,8 @@ def test_set_board_metadata_comments(tmp_path):
 
 def test_set_board_metadata_inserts_when_absent(tmp_path):
     """set_board_metadata inserts a title_block when none exists."""
-    from kicad_agent.ops.handlers.pcb import _PCB_HANDLERS
-    from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+    from volta.ops.handlers.pcb import _PCB_HANDLERS
+    from volta.ops.handlers.query import _QUERY_HANDLERS
     pcb_path = tmp_path / "notb.kicad_pcb"
     pcb_path.write_text('(kicad_pcb (version 20241229) (generator "test") (paper "A4") (layers (0 "F.Cu" signal)))', encoding="utf-8")
     ir = _build_ir(pcb_path)
@@ -139,8 +139,8 @@ def test_set_board_metadata_inserts_when_absent(tmp_path):
 
 def test_title_block_special_chars_round_trip(tmp_path):
     """Special characters (parens, ampersands, escaped quotes) round-trip (META-07, Pitfall 2)."""
-    from kicad_agent.ops.handlers.pcb import _PCB_HANDLERS
-    from kicad_agent.ops.handlers.query import _QUERY_HANDLERS
+    from volta.ops.handlers.pcb import _PCB_HANDLERS
+    from volta.ops.handlers.query import _QUERY_HANDLERS
     pcb_path = _create_pcb_with_title_block(tmp_path)
     ir = _build_ir(pcb_path)
     handler = _PCB_HANDLERS["set_board_metadata"]
@@ -161,7 +161,7 @@ def test_modified_pcb_loads_in_kicad_cli(tmp_path):
     import shutil
     if not shutil.which("kicad-cli"):
         pytest.skip("kicad-cli not available")
-    from kicad_agent.ops.handlers.pcb import _PCB_HANDLERS
+    from volta.ops.handlers.pcb import _PCB_HANDLERS
     pcb_path = _create_pcb_with_title_block(tmp_path)
     ir = _build_ir(pcb_path)
     _PCB_HANDLERS["set_board_revision"](SetBoardRevisionOp(rev="3.0", target_file="test_meta.kicad_pcb"), ir, pcb_path)

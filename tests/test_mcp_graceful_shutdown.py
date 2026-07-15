@@ -9,11 +9,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import kicad_agent.mcp.edit_server as edit_server_mod
-from kicad_agent.mcp.edit_server import (
+import volta.mcp.edit_server as edit_server_mod
+from volta.mcp.edit_server import (
     dispatch_tool,
 )
-from kicad_agent.ops.executor import OperationExecutor
+from volta.ops.executor import OperationExecutor
 
 
 @pytest.fixture(autouse=True)

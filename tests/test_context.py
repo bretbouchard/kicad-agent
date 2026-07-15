@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.context import (
+from volta.context import (
     ProjectSummary,
     discover_kicad_files,
     enrich_summary,

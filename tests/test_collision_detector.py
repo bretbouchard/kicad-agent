@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops._schema_schematic_routing import (
+from volta.ops._schema_schematic_routing import (
     DetectPinOverlapsOp,
     DetectRoutingCollisionsOp,
 )
@@ -325,7 +325,7 @@ class TestCollisionDetector:
           Right pins (direction=180): body_x = 100+5.08 = 105.08, wire_x = 105.08-2.54 = 102.54
         All 8 left pins share x=97.46, all 8 right pins share x=102.54 => 2 collision zones.
         """
-        from kicad_agent.schematic_routing.collision_detector import CollisionDetector
+        from volta.schematic_routing.collision_detector import CollisionDetector
 
         path = _u22_ic_fixture()
         detector = CollisionDetector(path)
@@ -358,7 +358,7 @@ class TestCollisionDetector:
         No horizontal zones (pin 1 and pin 2 have different y values).
         The important thing: no zones involve pins from different components.
         """
-        from kicad_agent.schematic_routing.collision_detector import CollisionDetector
+        from volta.schematic_routing.collision_detector import CollisionDetector
 
         path = _single_component_fixture()
         detector = CollisionDetector(path)
@@ -381,7 +381,7 @@ class TestCollisionDetector:
         When no netlist is provided, overlaps default to severity="warning".
         To test severity="error", we need to provide a netlist.
         """
-        from kicad_agent.schematic_routing.collision_detector import CollisionDetector
+        from volta.schematic_routing.collision_detector import CollisionDetector
 
         path = _r55_r56_overlap_fixture()
         detector = CollisionDetector(path)
@@ -410,7 +410,7 @@ class TestCollisionDetector:
 
     def test_pin_overlap_different_nets_with_netlist(self):
         """Test 5 (extended): Overlap with netlist showing different nets -> severity="error"."""
-        from kicad_agent.schematic_routing.collision_detector import CollisionDetector
+        from volta.schematic_routing.collision_detector import CollisionDetector
 
         path = _r55_r56_overlap_fixture()
 
@@ -449,7 +449,7 @@ class TestCollisionDetector:
 
         Both R55 pin 1 and R56 pin 2 assigned to "same_net" in netlist.
         """
-        from kicad_agent.schematic_routing.collision_detector import CollisionDetector
+        from volta.schematic_routing.collision_detector import CollisionDetector
 
         path = _r55_r56_overlap_fixture()
 
@@ -486,7 +486,7 @@ class TestCollisionDetector:
         R1/R2/R3 at y=50 all have pin 1 wire at y=55.08 from different refs.
         That's a horizontal collision row.
         """
-        from kicad_agent.schematic_routing.collision_detector import CollisionDetector
+        from volta.schematic_routing.collision_detector import CollisionDetector
 
         path = _horizontal_row_fixture()
         detector = CollisionDetector(path)
@@ -505,7 +505,7 @@ class TestCollisionDetector:
 
     def test_collision_zone_has_description(self):
         """Each collision zone includes a human-readable description."""
-        from kicad_agent.schematic_routing.collision_detector import CollisionDetector
+        from volta.schematic_routing.collision_detector import CollisionDetector
 
         path = _u22_ic_fixture()
         detector = CollisionDetector(path)
@@ -518,7 +518,7 @@ class TestCollisionDetector:
 
     def test_collision_zone_has_range(self):
         """Each collision zone includes the min/max range."""
-        from kicad_agent.schematic_routing.collision_detector import CollisionDetector
+        from volta.schematic_routing.collision_detector import CollisionDetector
 
         path = _u22_ic_fixture()
         detector = CollisionDetector(path)
@@ -533,7 +533,7 @@ class TestCollisionDetector:
 
     def test_overlap_each_pin_has_net_info(self):
         """Each pin in an overlap report includes net information."""
-        from kicad_agent.schematic_routing.collision_detector import CollisionDetector
+        from volta.schematic_routing.collision_detector import CollisionDetector
 
         path = _r55_r56_overlap_fixture()
         detector = CollisionDetector(path)
@@ -551,7 +551,7 @@ class TestCollisionDetector:
         KiCad 10 uses quoted code values like (code \"1\") instead of (code 1).
         The netlist parser must handle both formats.
         """
-        from kicad_agent.schematic_routing.collision_detector import CollisionDetector
+        from volta.schematic_routing.collision_detector import CollisionDetector
 
         path = _r55_r56_overlap_fixture()
 

@@ -8,15 +8,15 @@ evaluator silently passes violating boards.
 import pytest
 from pathlib import Path
 
-from kicad_agent.dfm.profiles import load_profile
-from kicad_agent.manufacturing.vendor_drc import VendorDrcResult, run_vendor_drc
-from kicad_agent.validation.erc_drc import Severity
+from volta.dfm.profiles import load_profile
+from volta.manufacturing.vendor_drc import VendorDrcResult, run_vendor_drc
+from volta.validation.erc_drc import Severity
 
 
 @pytest.fixture(autouse=True)
 def _clear_ir_registry():
     """Avoid cross-test IR registration leaks (mirrors test_board_metadata_ops.py)."""
-    from kicad_agent.ir.base import _clear_registry
+    from volta.ir.base import _clear_registry
     _clear_registry()
     yield
     _clear_registry()
@@ -29,7 +29,7 @@ def _parse_board(content: str, tmp_path: Path):
     PcbIR via kiutils where _native_board is None, so the handler re-parses
     via NativeParser.parse_pcb. Tests mirror that path.
     """
-    from kicad_agent.parser.pcb_native_parser import NativeParser
+    from volta.parser.pcb_native_parser import NativeParser
 
     pcb_path = tmp_path / "eval_test.kicad_pcb"
     pcb_path.write_text(content, encoding="utf-8")

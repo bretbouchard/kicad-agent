@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ops.net_short_detector import (
+from volta.ops.net_short_detector import (
     _classify_severity,
     _export_and_parse_netlist,
     _find_shared_pins,
@@ -261,14 +261,14 @@ class TestDetectNetShortsOpSchema:
     """Tests for DetectNetShortsOp Pydantic schema validation."""
 
     def test_defaults(self) -> None:
-        from kicad_agent.ops._schema_schematic_intel import DetectNetShortsOp
+        from volta.ops._schema_schematic_intel import DetectNetShortsOp
         op = DetectNetShortsOp(target_file="test.kicad_sch")
         assert op.op_type == "detect_net_shorts"
         assert op.include is None
         assert op.severity == "all"
 
     def test_custom_fields(self) -> None:
-        from kicad_agent.ops._schema_schematic_intel import DetectNetShortsOp
+        from volta.ops._schema_schematic_intel import DetectNetShortsOp
         op = DetectNetShortsOp(
             target_file="test.kicad_sch",
             include=["GND", "+3V3"],
@@ -278,7 +278,7 @@ class TestDetectNetShortsOpSchema:
         assert op.severity == "critical"
 
     def test_invalid_severity(self) -> None:
-        from kicad_agent.ops._schema_schematic_intel import DetectNetShortsOp
+        from volta.ops._schema_schematic_intel import DetectNetShortsOp
         with pytest.raises(Exception):
             DetectNetShortsOp(
                 target_file="test.kicad_sch",
@@ -286,12 +286,12 @@ class TestDetectNetShortsOpSchema:
             )
 
     def test_rejects_absolute_path(self) -> None:
-        from kicad_agent.ops._schema_schematic_intel import DetectNetShortsOp
+        from volta.ops._schema_schematic_intel import DetectNetShortsOp
         with pytest.raises(Exception):
             DetectNetShortsOp(target_file="/etc/passwd.kicad_sch")
 
     def test_rejects_path_traversal(self) -> None:
-        from kicad_agent.ops._schema_schematic_intel import DetectNetShortsOp
+        from volta.ops._schema_schematic_intel import DetectNetShortsOp
         with pytest.raises(Exception):
             DetectNetShortsOp(target_file="../schematic.kicad_sch")
 
@@ -310,7 +310,7 @@ class TestDetectNetShortsIntegration:
         sheet: str = "/",
     ) -> MagicMock:
         """Create a mock ErcViolation for multiple_net_names."""
-        from kicad_agent.ops.erc_parser import ErcViolation
+        from volta.ops.erc_parser import ErcViolation
         return ErcViolation(
             sheet=sheet,
             type="multiple_net_names",
@@ -319,8 +319,8 @@ class TestDetectNetShortsIntegration:
             positions=[],
         )
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
-    @patch("kicad_agent.ops.erc_parser.parse_erc")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.erc_parser.parse_erc")
     def test_detects_power_to_ground_short(self, mock_parse_erc, mock_netlist) -> None:
         mock_netlist.return_value = {
             "+3V3": {("U1", "4"), ("U1", "5"), ("U1", "6"), ("C1", "2")},
@@ -341,8 +341,8 @@ class TestDetectNetShortsIntegration:
         assert "U1.4" in short["shared_pins"]
         assert short["pin_count"] == 3
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
-    @patch("kicad_agent.ops.erc_parser.parse_erc")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.erc_parser.parse_erc")
     def test_detects_ground_to_ground_short(self, mock_parse_erc, mock_netlist) -> None:
         mock_netlist.return_value = {
             "GNDA": {("R1", "1"), ("R2", "2")},
@@ -359,8 +359,8 @@ class TestDetectNetShortsIntegration:
         short = result["shorts"][0]
         assert short["severity"] == "medium"
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
-    @patch("kicad_agent.ops.erc_parser.parse_erc")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.erc_parser.parse_erc")
     def test_filters_by_severity(self, mock_parse_erc, mock_netlist) -> None:
         mock_netlist.return_value = {
             "+3V3": {("U1", "4")},
@@ -378,8 +378,8 @@ class TestDetectNetShortsIntegration:
         assert result["total"] == 1
         assert result["shorts"][0]["net_a"] == "+3V3"
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
-    @patch("kicad_agent.ops.erc_parser.parse_erc")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.erc_parser.parse_erc")
     def test_filters_by_include(self, mock_parse_erc, mock_netlist) -> None:
         mock_netlist.return_value = {
             "+3V3": {("U1", "4")},
@@ -400,8 +400,8 @@ class TestDetectNetShortsIntegration:
         assert result["total"] == 1
         assert result["shorts"][0]["net_a"] == "SDA"
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
-    @patch("kicad_agent.ops.erc_parser.parse_erc")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.erc_parser.parse_erc")
     def test_no_shorts(self, mock_parse_erc, mock_netlist) -> None:
         mock_netlist.return_value = {"GND": {("R1", "1")}}
         mock_parse_erc.return_value = []
@@ -411,8 +411,8 @@ class TestDetectNetShortsIntegration:
         assert result["total"] == 0
         assert result["shorts"] == []
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
-    @patch("kicad_agent.ops.erc_parser.parse_erc")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.erc_parser.parse_erc")
     def test_deduplicates_pairs(self, mock_parse_erc, mock_netlist) -> None:
         """ERC may report the same short from different sheet views."""
         mock_netlist.return_value = {
@@ -428,8 +428,8 @@ class TestDetectNetShortsIntegration:
 
         assert result["total"] == 1
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
-    @patch("kicad_agent.ops.erc_parser.parse_erc")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.erc_parser.parse_erc")
     def test_sorted_by_severity(self, mock_parse_erc, mock_netlist) -> None:
         mock_netlist.return_value = {
             "+3V3": {("U1", "4")},
@@ -452,7 +452,7 @@ class TestDetectNetShortsIntegration:
         assert result["shorts"][1]["severity"] == "high"
         assert result["shorts"][2]["severity"] == "medium"
 
-    @patch("kicad_agent.ops.net_short_detector._export_and_parse_netlist")
+    @patch("volta.ops.net_short_detector._export_and_parse_netlist")
     def test_handles_kicad_cli_failure(self, mock_netlist) -> None:
         mock_netlist.return_value = {}  # kicad-cli failure returns empty
 

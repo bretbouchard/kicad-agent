@@ -2,7 +2,7 @@
 
 import pytest
 
-from kicad_agent.routing.pathfinder import (
+from volta.routing.pathfinder import (
     RouteResult,
     build_routing_graph,
     route_net,

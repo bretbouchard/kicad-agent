@@ -24,8 +24,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from kicad_agent.routing.diagnostician import BlockerDiagnostician
-from kicad_agent.routing.pathfinder import route_net, RoutingGraph
+from volta.routing.diagnostician import BlockerDiagnostician
+from volta.routing.pathfinder import route_net, RoutingGraph
 
 
 def render_pcb_png(pcb_path: Path, out_png: Path, side: str = "top") -> bool:
@@ -57,13 +57,13 @@ def harvest_routing_failures(pcb_path: Path, max_nets: int = 30,
 
     Returns (failures, board_bounds).
     """
-    from kicad_agent.parser.pcb_native_parser import NativeParser
-    from kicad_agent.ir.pcb_ir import PcbIR
-    from kicad_agent.routing.constraints import RoutingConstraints
-    from kicad_agent.routing.diagnostician import BlockerDiagnostician
-    from kicad_agent.routing.pathfinder import route_net
-    from kicad_agent.routing.graph import RoutingGraph
-    from kicad_agent.spatial.primitives import SpatialBox
+    from volta.parser.pcb_native_parser import NativeParser
+    from volta.ir.pcb_ir import PcbIR
+    from volta.routing.constraints import RoutingConstraints
+    from volta.routing.diagnostician import BlockerDiagnostician
+    from volta.routing.pathfinder import route_net
+    from volta.routing.graph import RoutingGraph
+    from volta.spatial.primitives import SpatialBox
 
     print(f"  Loading PCB: {pcb_path.name}")
     content = pcb_path.read_text(encoding="utf-8")

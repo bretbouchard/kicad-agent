@@ -17,7 +17,7 @@ import pytest
 
 
 def test_loader_with_no_config_path_returns_empty_config():
-    from kicad_agent.conventions.loader import ConventionConfig, ConventionConfigLoader
+    from volta.conventions.loader import ConventionConfig, ConventionConfigLoader
 
     loader = ConventionConfigLoader(None)
     config = loader.load()
@@ -27,7 +27,7 @@ def test_loader_with_no_config_path_returns_empty_config():
 
 
 def test_loader_with_nonexistent_path_returns_empty_config(tmp_path):
-    from kicad_agent.conventions.loader import ConventionConfigLoader
+    from volta.conventions.loader import ConventionConfigLoader
 
     missing = tmp_path / "does_not_exist.yaml"
     loader = ConventionConfigLoader(missing)
@@ -38,7 +38,7 @@ def test_loader_with_nonexistent_path_returns_empty_config(tmp_path):
 
 def test_loader_disables_convention_listed_in_yaml(tmp_path):
     """When a convention name is registered in catalog, enabled:false disables it."""
-    from kicad_agent.conventions.loader import ConventionConfigLoader
+    from volta.conventions.loader import ConventionConfigLoader
 
     yaml_text = """
 conventions:
@@ -49,7 +49,7 @@ conventions:
     config_path.write_text(yaml_text)
 
     with mock.patch(
-        "kicad_agent.conventions.loader._KNOWN_CONVENTION_NAMES",
+        "volta.conventions.loader._KNOWN_CONVENTION_NAMES",
         frozenset({"SCHEMATIC_OVERLAP_01"}),
     ):
         loader = ConventionConfigLoader(config_path)
@@ -59,7 +59,7 @@ conventions:
 
 
 def test_loader_returns_thresholds_for_known_rule(tmp_path):
-    from kicad_agent.conventions.loader import ConventionConfigLoader
+    from volta.conventions.loader import ConventionConfigLoader
 
     yaml_text = """
 conventions:
@@ -72,7 +72,7 @@ conventions:
     config_path.write_text(yaml_text)
 
     with mock.patch(
-        "kicad_agent.conventions.loader._KNOWN_CONVENTION_NAMES",
+        "volta.conventions.loader._KNOWN_CONVENTION_NAMES",
         frozenset({"SCHEMATIC_OVERLAP_01"}),
     ):
         loader = ConventionConfigLoader(config_path)
@@ -83,7 +83,7 @@ conventions:
 
 
 def test_loader_rejects_unknown_convention_name(tmp_path):
-    from kicad_agent.conventions.loader import ConventionConfigLoader
+    from volta.conventions.loader import ConventionConfigLoader
 
     yaml_text = """
 conventions:
@@ -94,7 +94,7 @@ conventions:
     config_path.write_text(yaml_text)
 
     with mock.patch(
-        "kicad_agent.conventions.loader._KNOWN_CONVENTION_NAMES",
+        "volta.conventions.loader._KNOWN_CONVENTION_NAMES",
         frozenset({"SCHEMATIC_OVERLAP_01"}),
     ):
         loader = ConventionConfigLoader(config_path)
@@ -104,7 +104,7 @@ conventions:
 
 def test_loader_uses_yaml_safe_load(tmp_path):
     """T-111-01: Loader source uses yaml.safe_load (grep-enforced in <verify>)."""
-    from kicad_agent.conventions import loader as loader_mod
+    from volta.conventions import loader as loader_mod
 
     src = Path(loader_mod.__file__).read_text()
     assert "yaml.safe_load" in src
@@ -120,7 +120,7 @@ def test_loader_uses_yaml_safe_load(tmp_path):
 
 def test_loader_rejects_threshold_values_out_of_bounds(tmp_path):
     """T-111-03: Threshold values must be numeric within [-1e6, 1e6]."""
-    from kicad_agent.conventions.loader import ConventionConfigLoader
+    from volta.conventions.loader import ConventionConfigLoader
 
     yaml_text = """
 conventions:
@@ -132,7 +132,7 @@ conventions:
     config_path.write_text(yaml_text)
 
     with mock.patch(
-        "kicad_agent.conventions.loader._KNOWN_CONVENTION_NAMES",
+        "volta.conventions.loader._KNOWN_CONVENTION_NAMES",
         frozenset({"SCHEMATIC_OVERLAP_01"}),
     ):
         loader = ConventionConfigLoader(config_path)
@@ -141,7 +141,7 @@ conventions:
 
 
 def test_loader_rejects_non_numeric_threshold_values(tmp_path):
-    from kicad_agent.conventions.loader import ConventionConfigLoader
+    from volta.conventions.loader import ConventionConfigLoader
 
     yaml_text = """
 conventions:
@@ -153,7 +153,7 @@ conventions:
     config_path.write_text(yaml_text)
 
     with mock.patch(
-        "kicad_agent.conventions.loader._KNOWN_CONVENTION_NAMES",
+        "volta.conventions.loader._KNOWN_CONVENTION_NAMES",
         frozenset({"SCHEMATIC_OVERLAP_01"}),
     ):
         loader = ConventionConfigLoader(config_path)
@@ -163,7 +163,7 @@ conventions:
 
 def test_discover_finds_project_local_config(tmp_path):
     """P2-3: discover() walks up from cwd and finds .kicad-agent/conventions.yaml."""
-    from kicad_agent.conventions.loader import ConventionConfigLoader
+    from volta.conventions.loader import ConventionConfigLoader
 
     project_root = tmp_path
     (project_root / ".kicad-agent").mkdir()
@@ -180,7 +180,7 @@ def test_discover_finds_project_local_config(tmp_path):
 
 def test_discover_stops_at_git_ancestor(tmp_path):
     """P2-3: discover() stops at first .git ancestor — does not walk past it."""
-    from kicad_agent.conventions.loader import ConventionConfigLoader
+    from volta.conventions.loader import ConventionConfigLoader
 
     # Build: /tmp/outer/.kicad-agent/conventions.yaml  (should NOT be found)
     #        /tmp/outer/middle/.git                    (repo boundary)
@@ -203,7 +203,7 @@ def test_discover_stops_at_git_ancestor(tmp_path):
 
 def test_discover_returns_none_at_filesystem_root_when_no_config(tmp_path):
     """P2-3: discover() returns None when no .kicad-agent/conventions.yaml exists."""
-    from kicad_agent.conventions.loader import ConventionConfigLoader
+    from volta.conventions.loader import ConventionConfigLoader
 
     # tmp_path with no .kicad-agent dir and no .git — walk terminates at fs root
     found = ConventionConfigLoader.discover(start_dir=tmp_path)

@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.inference.best_of_n import ScoredChain
+from volta.inference.best_of_n import ScoredChain
 
 
 # ---------------------------------------------------------------------------
@@ -29,8 +29,8 @@ def test_extract_board_stats_pcb(tmp_path: Path) -> None:
     mock_result.kiutils_obj = mock_board
     mock_result.raw_content = "(kicad_pcb)"
 
-    with patch("kicad_agent.parser.pcb_parser.parse_pcb", return_value=mock_result):
-        from kicad_agent.inference.wrapper import InferenceWrapper
+    with patch("volta.parser.pcb_parser.parse_pcb", return_value=mock_result):
+        from volta.inference.wrapper import InferenceWrapper
 
         stats = InferenceWrapper._extract_board_stats(pcb_file)
 
@@ -53,8 +53,8 @@ def test_extract_board_stats_sch(tmp_path: Path) -> None:
     mock_result = MagicMock()
     mock_result.kiutils_obj = mock_sch
 
-    with patch("kicad_agent.parser.schematic_parser.parse_schematic", return_value=mock_result):
-        from kicad_agent.inference.wrapper import InferenceWrapper
+    with patch("volta.parser.schematic_parser.parse_schematic", return_value=mock_result):
+        from volta.inference.wrapper import InferenceWrapper
 
         stats = InferenceWrapper._extract_board_stats(sch_file)
 
@@ -68,7 +68,7 @@ def test_extract_board_stats_invalid_extension(tmp_path: Path) -> None:
     bad_file = tmp_path / "test.txt"
     bad_file.write_text("not a kicad file")
 
-    from kicad_agent.inference.wrapper import InferenceWrapper
+    from volta.inference.wrapper import InferenceWrapper
 
     with pytest.raises(ValueError, match="Unsupported"):
         InferenceWrapper._extract_board_stats(bad_file)
@@ -81,7 +81,7 @@ def test_extract_board_stats_invalid_extension(tmp_path: Path) -> None:
 
 def test_build_prompt_contains_board_metadata() -> None:
     """_build_prompt produces ChatML messages with board name and dimensions."""
-    from kicad_agent.inference.wrapper import BoardStats, InferenceWrapper
+    from volta.inference.wrapper import BoardStats, InferenceWrapper
 
     stats = BoardStats(
         board_name="TestBoard",
@@ -119,7 +119,7 @@ def test_generate_analysis_returns_scored_chain(tmp_path: Path) -> None:
 
     mock_chain_text = "Observation: Board has components at <point 5.0,10.0>"
 
-    with patch("kicad_agent.inference.wrapper.InferenceWrapper.analyze") as mock_analyze:
+    with patch("volta.inference.wrapper.InferenceWrapper.analyze") as mock_analyze:
         mock_analyze.return_value = ScoredChain(
             chain_text=mock_chain_text,
             format_score=0.85,
@@ -129,7 +129,7 @@ def test_generate_analysis_returns_scored_chain(tmp_path: Path) -> None:
             generation_time_s=1.5,
         )
 
-        from kicad_agent.inference.wrapper import generate_analysis
+        from volta.inference.wrapper import generate_analysis
 
         result = generate_analysis(str(pcb_file))
 
@@ -140,7 +140,7 @@ def test_generate_analysis_returns_scored_chain(tmp_path: Path) -> None:
 
 def test_generate_analysis_file_not_found() -> None:
     """generate_analysis raises FileNotFoundError for missing file."""
-    from kicad_agent.inference.wrapper import InferenceWrapper
+    from volta.inference.wrapper import InferenceWrapper
 
     wrapper = InferenceWrapper.__new__(InferenceWrapper)
     wrapper._n_best = 4
@@ -156,7 +156,7 @@ def test_generate_analysis_invalid_extension(tmp_path: Path) -> None:
     bad_file = tmp_path / "test.txt"
     bad_file.write_text("not a kicad file")
 
-    from kicad_agent.inference.wrapper import InferenceWrapper
+    from volta.inference.wrapper import InferenceWrapper
 
     wrapper = InferenceWrapper.__new__(InferenceWrapper)
     wrapper._n_best = 4

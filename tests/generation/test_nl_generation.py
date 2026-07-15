@@ -3,14 +3,14 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.generation.nl_to_skidl import (
+from volta.generation.nl_to_skidl import (
     GenerationRequest,
     parse_spec_targets,
     validate_skidl_code,
     generate_circuit,
     _template_generate,
 )
-from kicad_agent.generation.gate_chain import (
+from volta.generation.gate_chain import (
     run_gate_chain,
     GateName,
     GateStatus,

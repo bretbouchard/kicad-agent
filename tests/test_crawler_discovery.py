@@ -9,13 +9,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.crawler.github_discovery import (
+from volta.crawler.github_discovery import (
     GithubDiscovery,
     KicadFilePair,
     RepoInfo,
 )
-from kicad_agent.crawler.file_fetcher import FetchedFile, FileFetcher
-from kicad_agent.crawler.rate_limiter import RateLimiter
+from volta.crawler.file_fetcher import FetchedFile, FileFetcher
+from volta.crawler.rate_limiter import RateLimiter
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +102,7 @@ class TestRateLimiter:
         mock_client.get_rate_limit.return_value = _make_rate_limit(core_remaining=1000)
         limiter = RateLimiter(mock_client)
 
-        with patch("kicad_agent.crawler.rate_limiter.time.sleep") as mock_sleep:
+        with patch("volta.crawler.rate_limiter.time.sleep") as mock_sleep:
             limiter.wait_if_needed("core")
             mock_sleep.assert_not_called()
 
@@ -117,7 +117,7 @@ class TestRateLimiter:
 
         limiter = RateLimiter(mock_client)
 
-        with patch("kicad_agent.crawler.rate_limiter.time.sleep") as mock_sleep:
+        with patch("volta.crawler.rate_limiter.time.sleep") as mock_sleep:
             limiter.wait_if_needed("core")
             mock_sleep.assert_called_once()
             sleep_arg = mock_sleep.call_args[0][0]
@@ -134,7 +134,7 @@ class TestRateLimiter:
 
         limiter = RateLimiter(mock_client)
 
-        with patch("kicad_agent.crawler.rate_limiter.time.sleep") as mock_sleep:
+        with patch("volta.crawler.rate_limiter.time.sleep") as mock_sleep:
             limiter.wait_if_needed("core")
             mock_sleep.assert_not_called()
 
@@ -153,7 +153,7 @@ class TestRateLimiter:
         )
         limiter = RateLimiter(mock_client)
 
-        with patch("kicad_agent.crawler.rate_limiter.time.sleep") as mock_sleep:
+        with patch("volta.crawler.rate_limiter.time.sleep") as mock_sleep:
             limiter.wait_if_needed("search")
             mock_sleep.assert_not_called()
 
@@ -166,8 +166,8 @@ class TestRateLimiter:
 class TestGithubDiscovery:
     """Tests for GithubDiscovery repo search and file pair extraction."""
 
-    @patch("kicad_agent.crawler.github_discovery.Github")
-    @patch("kicad_agent.crawler.github_discovery.Auth")
+    @patch("volta.crawler.github_discovery.Github")
+    @patch("volta.crawler.github_discovery.Auth")
     def test_discover_repos_returns_repo_info_list(self, mock_auth, mock_github_cls):
         """discover_repos returns RepoInfo list with correct fields."""
         mock_client = MagicMock()
@@ -189,8 +189,8 @@ class TestGithubDiscovery:
         assert repos[0].description == "A test repo"
         assert repos[0].default_branch == "main"
 
-    @patch("kicad_agent.crawler.github_discovery.Github")
-    @patch("kicad_agent.crawler.github_discovery.Auth")
+    @patch("volta.crawler.github_discovery.Github")
+    @patch("volta.crawler.github_discovery.Auth")
     def test_discover_repos_deduplicates_by_full_name(self, mock_auth, mock_github_cls):
         """Two queries returning the same repo only produce one RepoInfo."""
         mock_client = MagicMock()
@@ -206,8 +206,8 @@ class TestGithubDiscovery:
         assert len(repos) == 1
         assert repos[0].full_name == "user/shared"
 
-    @patch("kicad_agent.crawler.github_discovery.Github")
-    @patch("kicad_agent.crawler.github_discovery.Auth")
+    @patch("volta.crawler.github_discovery.Github")
+    @patch("volta.crawler.github_discovery.Auth")
     def test_discover_repos_respects_max_repos(self, mock_auth, mock_github_cls):
         """discover_repos truncates results to max_repos."""
         mock_client = MagicMock()
@@ -222,8 +222,8 @@ class TestGithubDiscovery:
 
         assert len(repos) == 3
 
-    @patch("kicad_agent.crawler.github_discovery.Github")
-    @patch("kicad_agent.crawler.github_discovery.Auth")
+    @patch("volta.crawler.github_discovery.Github")
+    @patch("volta.crawler.github_discovery.Auth")
     def test_find_kicad_pairs_matches_by_base_name(self, mock_auth, mock_github_cls):
         """find_kicad_pairs matches .kicad_sch and .kicad_pcb by shared base name."""
         mock_client = MagicMock()
@@ -257,8 +257,8 @@ class TestGithubDiscovery:
         assert pairs[0].schematic_path == "board.kicad_sch"
         assert pairs[0].pcb_path == "board.kicad_pcb"
 
-    @patch("kicad_agent.crawler.github_discovery.Github")
-    @patch("kicad_agent.crawler.github_discovery.Auth")
+    @patch("volta.crawler.github_discovery.Github")
+    @patch("volta.crawler.github_discovery.Auth")
     def test_find_kicad_pairs_returns_empty_on_error(self, mock_auth, mock_github_cls):
         """find_kicad_pairs returns empty list when API call fails."""
         from github import GithubException
@@ -280,8 +280,8 @@ class TestGithubDiscovery:
 
         assert pairs == []
 
-    @patch("kicad_agent.crawler.github_discovery.Github")
-    @patch("kicad_agent.crawler.github_discovery.Auth")
+    @patch("volta.crawler.github_discovery.Github")
+    @patch("volta.crawler.github_discovery.Auth")
     def test_find_kicad_pairs_skips_orphaned_files(self, mock_auth, mock_github_cls):
         """find_kicad_pairs returns empty when no matching pairs exist."""
         mock_client = MagicMock()
@@ -311,8 +311,8 @@ class TestGithubDiscovery:
 
         assert pairs == []
 
-    @patch("kicad_agent.crawler.github_discovery.Github")
-    @patch("kicad_agent.crawler.github_discovery.Auth")
+    @patch("volta.crawler.github_discovery.Github")
+    @patch("volta.crawler.github_discovery.Auth")
     def test_discover_pairs_filters_repos_without_pairs(self, mock_auth, mock_github_cls):
         """discover_pairs only returns repos that have at least one file pair."""
         mock_client = MagicMock()
@@ -354,8 +354,8 @@ class TestGithubDiscovery:
         assert results[0][0].full_name == "user/r1"
         assert results[1][0].full_name == "user/r3"
 
-    @patch("kicad_agent.crawler.github_discovery.Github")
-    @patch("kicad_agent.crawler.github_discovery.Auth")
+    @patch("volta.crawler.github_discovery.Github")
+    @patch("volta.crawler.github_discovery.Auth")
     def test_find_kicad_pairs_handles_nested_paths(self, mock_auth, mock_github_cls):
         """find_kicad_pairs correctly extracts base names from nested paths."""
         mock_client = MagicMock()

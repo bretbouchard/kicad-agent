@@ -15,11 +15,11 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ir.base import _clear_registry
-from kicad_agent.ir.schematic_ir import SchematicIR
-from kicad_agent.ops.schema import Operation
-from kicad_agent.parser import parse_schematic
-from kicad_agent.serializer import serialize_schematic
+from volta.ir.base import _clear_registry
+from volta.ir.schematic_ir import SchematicIR
+from volta.ops.schema import Operation
+from volta.parser import parse_schematic
+from volta.serializer import serialize_schematic
 
 
 @pytest.fixture(autouse=True)
@@ -68,8 +68,8 @@ class TestRemoveWire:
 
     def test_removes_wire_by_uuid(self, schematic_with_wire: dict) -> None:
         """remove_wire removes a wire from graphicalItems by UUID."""
-        from kicad_agent.ops._schema_remove import RemoveWireOp
-        from kicad_agent.ops.remove_ops import remove_wire
+        from volta.ops._schema_remove import RemoveWireOp
+        from volta.ops.remove_ops import remove_wire
 
         ir = schematic_with_wire["ir"]
         wire_uuid = self._get_wire_uuid_at(ir, 0.0, 0.0, 10.0, 0.0)
@@ -86,8 +86,8 @@ class TestRemoveWire:
 
     def test_wire_removal_refused_dangling_endpoint(self, schematic_with_wire: dict) -> None:
         """remove_wire raises error when removal would leave endpoint dangling."""
-        from kicad_agent.ops._schema_remove import RemoveWireOp
-        from kicad_agent.ops.remove_ops import RemoveOpError, remove_wire
+        from volta.ops._schema_remove import RemoveWireOp
+        from volta.ops.remove_ops import RemoveOpError, remove_wire
 
         ir = schematic_with_wire["ir"]
 
@@ -105,8 +105,8 @@ class TestRemoveWire:
 
     def test_wire_removal_allowed_with_remaining_wire(self, schematic_with_wire: dict) -> None:
         """remove_wire succeeds when endpoint has remaining wire connections."""
-        from kicad_agent.ops._schema_remove import RemoveWireOp
-        from kicad_agent.ops.remove_ops import remove_wire
+        from volta.ops._schema_remove import RemoveWireOp
+        from volta.ops.remove_ops import remove_wire
 
         ir = schematic_with_wire["ir"]
 
@@ -126,8 +126,8 @@ class TestRemoveWire:
 
     def test_wire_removal_allowed_with_pin_at_endpoint(self, tmp_path: Path) -> None:
         """remove_wire succeeds when endpoint has a component pin."""
-        from kicad_agent.ops._schema_remove import RemoveWireOp
-        from kicad_agent.ops.remove_ops import remove_wire
+        from volta.ops._schema_remove import RemoveWireOp
+        from volta.ops.remove_ops import remove_wire
 
         src = FIXTURE_DIR / "RaspberryPi-uHAT" / "RaspberryPi-uHAT.kicad_sch"
         dst = tmp_path / "test.kicad_sch"
@@ -162,8 +162,8 @@ class TestRemoveWire:
 
     def test_error_on_wire_uuid_not_found(self, schematic_with_wire: dict) -> None:
         """remove_wire raises RemoveOpError when UUID not found."""
-        from kicad_agent.ops._schema_remove import RemoveWireOp
-        from kicad_agent.ops.remove_ops import RemoveOpError, remove_wire
+        from volta.ops._schema_remove import RemoveWireOp
+        from volta.ops.remove_ops import RemoveOpError, remove_wire
 
         op = RemoveWireOp(target_file="test.kicad_sch", uuid="nonexistent-uuid-1234")
         with pytest.raises(RemoveOpError, match="not found"):
@@ -171,8 +171,8 @@ class TestRemoveWire:
 
     def test_wire_removal_records_mutation(self, schematic_with_wire: dict) -> None:
         """remove_wire records mutation in IR mutation log."""
-        from kicad_agent.ops._schema_remove import RemoveWireOp
-        from kicad_agent.ops.remove_ops import remove_wire
+        from volta.ops._schema_remove import RemoveWireOp
+        from volta.ops.remove_ops import remove_wire
 
         ir = schematic_with_wire["ir"]
         ir.add_wire(start_x=0.0, start_y=0.0, end_x=0.0, end_y=10.0)
@@ -232,8 +232,8 @@ class TestRemoveLabel:
 
     def test_removes_local_label(self, schematic_with_labels: dict) -> None:
         """remove_label removes a local label by UUID."""
-        from kicad_agent.ops._schema_remove import RemoveLabelOp
-        from kicad_agent.ops.remove_ops import remove_label
+        from volta.ops._schema_remove import RemoveLabelOp
+        from volta.ops.remove_ops import remove_label
 
         ir = schematic_with_labels["ir"]
         uuid = self._find_label_uuid(ir, "TEST_LOCAL", "local")
@@ -248,8 +248,8 @@ class TestRemoveLabel:
 
     def test_removes_global_label(self, schematic_with_labels: dict) -> None:
         """remove_label removes a global label by UUID."""
-        from kicad_agent.ops._schema_remove import RemoveLabelOp
-        from kicad_agent.ops.remove_ops import remove_label
+        from volta.ops._schema_remove import RemoveLabelOp
+        from volta.ops.remove_ops import remove_label
 
         ir = schematic_with_labels["ir"]
         uuid = self._find_label_uuid(ir, "TEST_GLOBAL", "global")
@@ -262,8 +262,8 @@ class TestRemoveLabel:
 
     def test_removes_hierarchical_label(self, schematic_with_labels: dict) -> None:
         """remove_label removes a hierarchical label by UUID."""
-        from kicad_agent.ops._schema_remove import RemoveLabelOp
-        from kicad_agent.ops.remove_ops import remove_label
+        from volta.ops._schema_remove import RemoveLabelOp
+        from volta.ops.remove_ops import remove_label
 
         ir = schematic_with_labels["ir"]
         uuid = self._find_label_uuid(ir, "TEST_HIER", "hierarchical")
@@ -276,8 +276,8 @@ class TestRemoveLabel:
 
     def test_error_on_label_uuid_not_found(self, schematic_with_labels: dict) -> None:
         """remove_label raises RemoveOpError when UUID not found."""
-        from kicad_agent.ops._schema_remove import RemoveLabelOp
-        from kicad_agent.ops.remove_ops import RemoveOpError, remove_label
+        from volta.ops._schema_remove import RemoveLabelOp
+        from volta.ops.remove_ops import RemoveOpError, remove_label
 
         op = RemoveLabelOp(target_file="test.kicad_sch", uuid="nonexistent-uuid", label_type="local")
         with pytest.raises(RemoveOpError, match="not found"):
@@ -285,8 +285,8 @@ class TestRemoveLabel:
 
     def test_label_removal_records_mutation(self, schematic_with_labels: dict) -> None:
         """remove_label records mutation in IR mutation log."""
-        from kicad_agent.ops._schema_remove import RemoveLabelOp
-        from kicad_agent.ops.remove_ops import remove_label
+        from volta.ops._schema_remove import RemoveLabelOp
+        from volta.ops.remove_ops import remove_label
 
         ir = schematic_with_labels["ir"]
         uuid = self._find_label_uuid(ir, "TEST_LOCAL", "local")
@@ -322,8 +322,8 @@ class TestRemoveJunction:
 
     def test_removes_junction_by_uuid(self, schematic_with_junction: dict) -> None:
         """remove_junction removes a junction by UUID."""
-        from kicad_agent.ops._schema_remove import RemoveJunctionOp
-        from kicad_agent.ops.remove_ops import remove_junction
+        from volta.ops._schema_remove import RemoveJunctionOp
+        from volta.ops.remove_ops import remove_junction
 
         ir = schematic_with_junction["ir"]
         jct = ir.get_junction_by_uuid(
@@ -341,8 +341,8 @@ class TestRemoveJunction:
 
     def test_error_on_junction_uuid_not_found(self, schematic_with_junction: dict) -> None:
         """remove_junction raises RemoveOpError when UUID not found."""
-        from kicad_agent.ops._schema_remove import RemoveJunctionOp
-        from kicad_agent.ops.remove_ops import RemoveOpError, remove_junction
+        from volta.ops._schema_remove import RemoveJunctionOp
+        from volta.ops.remove_ops import RemoveOpError, remove_junction
 
         op = RemoveJunctionOp(target_file="test.kicad_sch", uuid="nonexistent-uuid")
         with pytest.raises(RemoveOpError, match="not found"):
@@ -350,8 +350,8 @@ class TestRemoveJunction:
 
     def test_junction_count_decreases(self, schematic_with_junction: dict) -> None:
         """After removal, junction count decreased by exactly 1."""
-        from kicad_agent.ops._schema_remove import RemoveJunctionOp
-        from kicad_agent.ops.remove_ops import remove_junction
+        from volta.ops._schema_remove import RemoveJunctionOp
+        from volta.ops.remove_ops import remove_junction
 
         ir = schematic_with_junction["ir"]
         junctions = ir._parse_result.kiutils_obj.junctions
@@ -365,8 +365,8 @@ class TestRemoveJunction:
 
     def test_other_junctions_unchanged(self, schematic_with_junction: dict) -> None:
         """Removing one junction does not affect other junctions."""
-        from kicad_agent.ops._schema_remove import RemoveJunctionOp
-        from kicad_agent.ops.remove_ops import remove_junction
+        from volta.ops._schema_remove import RemoveJunctionOp
+        from volta.ops.remove_ops import remove_junction
 
         ir = schematic_with_junction["ir"]
         junctions = ir._parse_result.kiutils_obj.junctions
@@ -381,8 +381,8 @@ class TestRemoveJunction:
 
     def test_junction_removal_records_mutation(self, schematic_with_junction: dict) -> None:
         """remove_junction records mutation in IR mutation log."""
-        from kicad_agent.ops._schema_remove import RemoveJunctionOp
-        from kicad_agent.ops.remove_ops import remove_junction
+        from volta.ops._schema_remove import RemoveJunctionOp
+        from volta.ops.remove_ops import remove_junction
 
         ir = schematic_with_junction["ir"]
         jct_uuid = ir._parse_result.kiutils_obj.junctions[-1].uuid
@@ -416,8 +416,8 @@ class TestRemoveNoConnect:
 
     def test_removes_no_connect_by_uuid(self, schematic_with_no_connect: dict) -> None:
         """remove_no_connect removes a no-connect flag by UUID."""
-        from kicad_agent.ops._schema_remove import RemoveNoConnectOp
-        from kicad_agent.ops.remove_ops import remove_no_connect
+        from volta.ops._schema_remove import RemoveNoConnectOp
+        from volta.ops.remove_ops import remove_no_connect
 
         ir = schematic_with_no_connect["ir"]
         nc = ir.get_no_connect_by_uuid(
@@ -435,8 +435,8 @@ class TestRemoveNoConnect:
 
     def test_error_on_no_connect_uuid_not_found(self, schematic_with_no_connect: dict) -> None:
         """remove_no_connect raises RemoveOpError when UUID not found."""
-        from kicad_agent.ops._schema_remove import RemoveNoConnectOp
-        from kicad_agent.ops.remove_ops import RemoveOpError, remove_no_connect
+        from volta.ops._schema_remove import RemoveNoConnectOp
+        from volta.ops.remove_ops import RemoveOpError, remove_no_connect
 
         op = RemoveNoConnectOp(target_file="test.kicad_sch", uuid="nonexistent-uuid")
         with pytest.raises(RemoveOpError, match="not found"):
@@ -444,8 +444,8 @@ class TestRemoveNoConnect:
 
     def test_no_connect_count_decreases(self, schematic_with_no_connect: dict) -> None:
         """After removal, no-connect count decreased by exactly 1."""
-        from kicad_agent.ops._schema_remove import RemoveNoConnectOp
-        from kicad_agent.ops.remove_ops import remove_no_connect
+        from volta.ops._schema_remove import RemoveNoConnectOp
+        from volta.ops.remove_ops import remove_no_connect
 
         ir = schematic_with_no_connect["ir"]
         nc_uuid = ir._parse_result.kiutils_obj.noConnects[-1].uuid
@@ -458,8 +458,8 @@ class TestRemoveNoConnect:
 
     def test_other_no_connects_unchanged(self, schematic_with_no_connect: dict) -> None:
         """Removing one no-connect does not affect other no-connects."""
-        from kicad_agent.ops._schema_remove import RemoveNoConnectOp
-        from kicad_agent.ops.remove_ops import remove_no_connect
+        from volta.ops._schema_remove import RemoveNoConnectOp
+        from volta.ops.remove_ops import remove_no_connect
 
         ir = schematic_with_no_connect["ir"]
         ncs = ir._parse_result.kiutils_obj.noConnects
@@ -474,8 +474,8 @@ class TestRemoveNoConnect:
 
     def test_no_connect_removal_records_mutation(self, schematic_with_no_connect: dict) -> None:
         """remove_no_connect records mutation in IR mutation log."""
-        from kicad_agent.ops._schema_remove import RemoveNoConnectOp
-        from kicad_agent.ops.remove_ops import remove_no_connect
+        from volta.ops._schema_remove import RemoveNoConnectOp
+        from volta.ops.remove_ops import remove_no_connect
 
         ir = schematic_with_no_connect["ir"]
         nc_uuid = ir._parse_result.kiutils_obj.noConnects[-1].uuid
@@ -503,7 +503,7 @@ class TestExecutorDispatchRemoveOps:
 
     def test_executor_dispatches_remove_junction(self, setup_schematic: dict) -> None:
         """OperationExecutor dispatches remove_junction op_type correctly."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         base_dir = setup_schematic["base_dir"]
         file_path = setup_schematic["file_path"]
@@ -541,7 +541,7 @@ class TestExecutorDispatchRemoveOps:
 
     def test_executor_dispatches_remove_no_connect(self, setup_schematic: dict) -> None:
         """OperationExecutor dispatches remove_no_connect op_type correctly."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         base_dir = setup_schematic["base_dir"]
         file_path = setup_schematic["file_path"]
@@ -579,7 +579,7 @@ class TestExecutorDispatchRemoveOps:
 
     def test_executor_dispatches_remove_label(self, setup_schematic: dict) -> None:
         """OperationExecutor dispatches remove_label op_type correctly."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         base_dir = setup_schematic["base_dir"]
         file_path = setup_schematic["file_path"]
@@ -625,7 +625,7 @@ class TestExecutorDispatchRemoveOps:
 
     def test_executor_dispatches_remove_wire(self, setup_schematic: dict) -> None:
         """OperationExecutor dispatches remove_wire op_type correctly."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         base_dir = setup_schematic["base_dir"]
         file_path = setup_schematic["file_path"]
@@ -691,7 +691,7 @@ class TestExecutorDispatchRemoveOps:
 
     def test_full_pipeline_remove_junction(self, setup_schematic: dict) -> None:
         """Full pipeline: validate -> add junction -> remove -> verify on disk."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         base_dir = setup_schematic["base_dir"]
         file_path = setup_schematic["file_path"]
@@ -735,7 +735,7 @@ class TestExecutorDispatchRemoveOps:
 
     def test_executor_returns_error_details_on_missing_uuid(self, setup_schematic: dict) -> None:
         """Executor returns failure when UUID not found."""
-        from kicad_agent.ops.executor import OperationExecutor
+        from volta.ops.executor import OperationExecutor
 
         base_dir = setup_schematic["base_dir"]
         executor = OperationExecutor(base_dir=base_dir)

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.routing.dsn_generator import generate_dsn
+from volta.routing.dsn_generator import generate_dsn
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _FIXTURE = _REPO_ROOT / "tests" / "fixtures" / "smd_test_board.kicad_pcb"
@@ -36,8 +36,8 @@ def test_r1_pad_bbox_fallback_when_no_crtyd(monkeypatch, tmp_path) -> None:
     """Footprint without F.CrtYd falls back to pad bounding box (non-zero)."""
     if not _FIXTURE.exists():
         pytest.skip(f"Fixture missing: {_FIXTURE}")
-    from kicad_agent.parser import pcb_native_parser as pnp_mod
-    from kicad_agent.parser.pcb_native_types import NativeFootprint
+    from volta.parser import pcb_native_parser as pnp_mod
+    from volta.parser.pcb_native_types import NativeFootprint
     import dataclasses
 
     content = _FIXTURE.read_text(encoding="utf-8")

@@ -19,27 +19,27 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from kicad_agent.validation.pipeline import (
+from volta.validation.pipeline import (
     ValidationPipeline,
     PipelineResult,
     PipelineStage,
     StageResult,
 )
-from kicad_agent.validation.erc_drc import ErcResult, DrcResult, Violation, Severity
-from kicad_agent.validation.structural import (
+from volta.validation.erc_drc import ErcResult, DrcResult, Violation, Severity
+from volta.validation.structural import (
     StructuralResult,
     StructuralViolation,
     ViolationKind,
 )
-from kicad_agent.ops.schema import (
+from volta.ops.schema import (
     Operation,
     AddComponentOp,
     ModifyPropertyOp,
     PositionSpec,
 )
-from kicad_agent.parser import parse_schematic
-from kicad_agent.ir import SchematicIR
-from kicad_agent.ir.base import _clear_registry
+from volta.parser import parse_schematic
+from volta.ir import SchematicIR
+from volta.ir.base import _clear_registry
 
 
 @pytest.fixture(autouse=True)
@@ -258,7 +258,7 @@ class TestRollbackOnUuidViolation:
 
         pipeline = ValidationPipeline()
         with patch(
-            "kicad_agent.validation.pipeline.validate_uuid_uniqueness",
+            "volta.validation.pipeline.validate_uuid_uniqueness",
             return_value=failed_uuid_result,
         ):
             result = pipeline.validate_and_apply(
@@ -318,7 +318,7 @@ class TestRollbackOnErcFailure:
 
         pipeline = ValidationPipeline()
         with patch(
-            "kicad_agent.validation.pipeline.run_erc",
+            "volta.validation.pipeline.run_erc",
             return_value=failed_erc_result,
         ):
             result = pipeline.validate_and_apply(
@@ -462,10 +462,10 @@ class TestRollbackOnDrcFailure:
     """Verify rollback triggers on DRC failure (Council M-7)."""
 
     def test_drc_failure_triggers_rollback(self, arduino_mega_pcb, tmp_output_dir):
-        from kicad_agent.parser import parse_pcb
-        from kicad_agent.parser.uuid_extractor import extract_uuids
-        from kicad_agent.ir import PcbIR
-        from kicad_agent.ops.schema import MoveComponentOp
+        from volta.parser import parse_pcb
+        from volta.parser.uuid_extractor import extract_uuids
+        from volta.ir import PcbIR
+        from volta.ops.schema import MoveComponentOp
 
         temp_pcb = tmp_output_dir / "test.kicad_pcb"
         shutil.copy2(arduino_mega_pcb, temp_pcb)
@@ -517,10 +517,10 @@ class TestRollbackOnDrcFailure:
 
         pipeline = ValidationPipeline()
         with patch(
-            "kicad_agent.validation.pipeline.run_drc",
+            "volta.validation.pipeline.run_drc",
             return_value=failed_drc_result,
         ), patch(
-            "kicad_agent.validation.pipeline.ValidationPipeline._serialize_ir_to_disk",
+            "volta.validation.pipeline.ValidationPipeline._serialize_ir_to_disk",
         ):
             result = pipeline.validate_and_apply(
                 operation,
@@ -540,8 +540,8 @@ class TestUnknownOpTypeRejected:
     """Verify unknown op_type is rejected (Council M-2)."""
 
     def test_unknown_op_type_fails_structural(self, arduino_mega_sch):
-        from kicad_agent.validation.structural import validate_structural
-        from kicad_agent.ops.schema import AddComponentOp
+        from volta.validation.structural import validate_structural
+        from volta.ops.schema import AddComponentOp
 
         parse_result = parse_schematic(arduino_mega_sch)
         ir = SchematicIR(_parse_result=parse_result)

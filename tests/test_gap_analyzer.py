@@ -1,4 +1,4 @@
-"""Tests for GapAnalyzer (kicad_agent.ai_tracking.gap_analyzer)."""
+"""Tests for GapAnalyzer (volta.ai_tracking.gap_analyzer)."""
 
 from __future__ import annotations
 
@@ -7,14 +7,14 @@ from datetime import datetime, timezone
 
 import pytest
 
-from kicad_agent.ai_tracking.gap_analyzer import (
+from volta.ai_tracking.gap_analyzer import (
     CostSavings,
     GapAnalyzer,
     GapReport,
     StageStats,
     TrainingGap,
 )
-from kicad_agent.ai_tracking.tracker import InterventionEvent
+from volta.ai_tracking.tracker import InterventionEvent
 
 
 # ---------------------------------------------------------------------------

@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ltspice.raw_reader import read_raw
-from kicad_agent.ltspice.types import SimulationResult, LTspiceTrace
+from volta.ltspice.raw_reader import read_raw
+from volta.ltspice.types import SimulationResult, LTspiceTrace
 
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "ltspice"

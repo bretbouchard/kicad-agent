@@ -14,12 +14,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.training.rewards.anti_hack import (
+from volta.training.rewards.anti_hack import (
     AlignmentJitter,
     CompactnessCap,
     CrossingsFloorCap,
 )
-from kicad_agent.training.rewards.cap_inputs import CapInputs
+from volta.training.rewards.cap_inputs import CapInputs
 
 
 # ---------------------------------------------------------------------------

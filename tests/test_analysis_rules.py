@@ -2,21 +2,21 @@
 
 import pytest
 
-from kicad_agent.analysis.design_rules import (
+from volta.analysis.design_rules import (
     DesignRule,
     DesignRuleViolation,
     RuleCategory,
     RuleSeverity,
 )
-from kicad_agent.analysis.design_rule_engine import DesignRuleEngine
-from kicad_agent.analysis.rule_config import RuleConfig, RuleConfigLoader
-from kicad_agent.analysis.rule_report import generate_json_report, generate_markdown_report
-from kicad_agent.analysis.schematic_reviewer import SchematicReviewer
-from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor as SchematicSpatialAnalyzer
-from kicad_agent.analysis.readability_rules import (
+from volta.analysis.design_rule_engine import DesignRuleEngine
+from volta.analysis.rule_config import RuleConfig, RuleConfigLoader
+from volta.analysis.rule_report import generate_json_report, generate_markdown_report
+from volta.analysis.schematic_reviewer import SchematicReviewer
+from volta.analysis.schematic_spatial import SchematicSpatialExtractor as SchematicSpatialAnalyzer
+from volta.analysis.readability_rules import (
     SchematicOverlapRule as ReadabilityRules,
 )
-from kicad_agent.analysis.readability_scorer import SchematicReadabilityScorer as ReadabilityScorer
+from volta.analysis.readability_scorer import SchematicReadabilityScorer as ReadabilityScorer
 
 
 class TestDesignRuleViolation:

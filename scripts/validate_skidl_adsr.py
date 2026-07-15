@@ -41,7 +41,7 @@ def main() -> None:
 
     # Step 2: Convert to SKIDL.
     print("\n[2] Converting to SKIDL...")
-    from kicad_agent.circuit_ir import build_circuit
+    from volta.circuit_ir import build_circuit
 
     circuit, circuit_ir = build_circuit(_ADSR_SCH)
     print(f"  Parts: {len(circuit_ir.parts)}")

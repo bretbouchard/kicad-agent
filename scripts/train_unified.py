@@ -34,8 +34,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.training.reward_model import RewardModel, train_reward_model
-from kicad_agent.training.tokenizer import ChainTokenizer
+from volta.training.reward_model import RewardModel, train_reward_model
+from volta.training.tokenizer import ChainTokenizer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -56,12 +56,12 @@ def load_board_graph_chains(data_dir: Path) -> list[tuple[str, tuple[float, floa
     Only matches data dirs with board graph data (has 'graph_json' field).
     Uses board_chains.py for correct + corrupted chains with labels.
     """
-    from kicad_agent.training.board_chains import (
+    from volta.training.board_chains import (
         synthesize_board_chain,
         synthesize_corrupted_board_chain,
         _compute_chain_labels,
     )
-    from kicad_agent.training.real_dataset import RealBoardSample
+    from volta.training.real_dataset import RealBoardSample
 
     samples = _load_jsonl_samples(data_dir)
     if not samples:
@@ -288,7 +288,7 @@ def _load_jsonl_samples(data_dir: Path) -> list[dict]:
 
 def _dict_to_board_sample(raw: dict):
     """Convert a JSONL dict to a RealBoardSample."""
-    from kicad_agent.training.real_dataset import RealBoardSample
+    from volta.training.real_dataset import RealBoardSample
 
     return RealBoardSample(
         sample_id=raw.get("sample_id", 0),

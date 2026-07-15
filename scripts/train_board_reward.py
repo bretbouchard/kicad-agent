@@ -30,15 +30,15 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.training.board_chains import (
+from volta.training.board_chains import (
     BoardReasoningChain,
     synthesize_board_chain,
     synthesize_corrupted_board_chain,
 )
-from kicad_agent.training.board_reward import score_board_chain
-from kicad_agent.training.real_dataset import RealBoardDataset
-from kicad_agent.training.reward_model import RewardModel, predict_reward, train_reward_model
-from kicad_agent.training.tokenizer import ChainTokenizer
+from volta.training.board_reward import score_board_chain
+from volta.training.real_dataset import RealBoardDataset
+from volta.training.reward_model import RewardModel, predict_reward, train_reward_model
+from volta.training.tokenizer import ChainTokenizer
 
 logging.basicConfig(
     level=logging.INFO,

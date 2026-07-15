@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.spatial.primitives import SpatialBox, SpatialPath, SpatialPoint
-from kicad_agent.spatial.rick_integration import (
+from volta.spatial.primitives import SpatialBox, SpatialPath, SpatialPoint
+from volta.spatial.rick_integration import (
     RickDomain,
     RickFinding,
     SpatialRickReport,
@@ -19,7 +19,7 @@ from kicad_agent.spatial.rick_integration import (
     generate_all_reports,
     generate_spatial_report,
 )
-from kicad_agent.validation.spatial_drc import SpatialViolation
+from volta.validation.spatial_drc import SpatialViolation
 
 
 @pytest.fixture

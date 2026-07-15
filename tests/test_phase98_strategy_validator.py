@@ -14,14 +14,14 @@ from dataclasses import dataclass
 
 import pytest
 
-from kicad_agent.routing.strategy import (
+from volta.routing.strategy import (
     BoardState,
     Keepout,
     Pin,
     RouterBackend,
     RoutingStrategyResult,
 )
-from kicad_agent.routing.strategy_validator import StrategyValidator
+from volta.routing.strategy_validator import StrategyValidator
 
 
 # --- Helpers -----------------------------------------------------------------

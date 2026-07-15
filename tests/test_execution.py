@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops.execution import _VALID_KICAD_EXTENSIONS
+from volta.ops.execution import _VALID_KICAD_EXTENSIONS
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +54,7 @@ class TestValidKicadExtensionsImport:
 
     def test_imported_from_pre_analysis(self):
         """M-03: execution.py imports _VALID_KICAD_EXTENSIONS from pre_analysis.py."""
-        from kicad_agent.ops.pre_analysis import _VALID_KICAD_EXTENSIONS as pre_analysis_ext
+        from volta.ops.pre_analysis import _VALID_KICAD_EXTENSIONS as pre_analysis_ext
         assert _VALID_KICAD_EXTENSIONS is pre_analysis_ext, \
             "execution.py should import from pre_analysis.py, not define locally"
 

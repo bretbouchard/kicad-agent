@@ -11,7 +11,7 @@ class TestAutoRouteFreeroutingSchema:
 
     def test_default_values(self):
         """AutoRouteFreeroutingOp should validate with correct defaults."""
-        from kicad_agent.ops._schema_gap import AutoRouteFreeroutingOp
+        from volta.ops._schema_gap import AutoRouteFreeroutingOp
 
         op = AutoRouteFreeroutingOp(target_file="test.kicad_pcb")
         assert op.op_type == "auto_route_freerouting"
@@ -21,14 +21,14 @@ class TestAutoRouteFreeroutingSchema:
 
     def test_custom_passes(self):
         """Should accept custom passes value."""
-        from kicad_agent.ops._schema_gap import AutoRouteFreeroutingOp
+        from volta.ops._schema_gap import AutoRouteFreeroutingOp
 
         op = AutoRouteFreeroutingOp(target_file="test.kicad_pcb", passes=50)
         assert op.passes == 50
 
     def test_custom_cleanup_flags(self):
         """Should accept custom cleanup flags."""
-        from kicad_agent.ops._schema_gap import AutoRouteFreeroutingOp
+        from volta.ops._schema_gap import AutoRouteFreeroutingOp
 
         op = AutoRouteFreeroutingOp(
             target_file="test.kicad_pcb",
@@ -41,7 +41,7 @@ class TestAutoRouteFreeroutingSchema:
 
     def test_passes_bounds(self):
         """Should reject passes outside 1-200 range."""
-        from kicad_agent.ops._schema_gap import AutoRouteFreeroutingOp
+        from volta.ops._schema_gap import AutoRouteFreeroutingOp
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError):
@@ -52,7 +52,7 @@ class TestAutoRouteFreeroutingSchema:
 
     def test_operation_union_accepts(self):
         """Operation discriminated union should accept auto_route_freerouting."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({
             "root": {
@@ -68,7 +68,7 @@ class TestAutoRouteFreeroutingRegistry:
 
     def test_registry_entry(self):
         """auto_route_freerouting should be in the operation registry."""
-        from kicad_agent.ops.registry import _RAW_CATALOG
+        from volta.ops.registry import _RAW_CATALOG
 
         assert "auto_route_freerouting" in _RAW_CATALOG
         entry = _RAW_CATALOG["auto_route_freerouting"]
@@ -79,14 +79,14 @@ class TestAutoRouteFreeroutingRegistry:
 
     def test_handler_registered(self):
         """auto_route_freerouting handler should be in _PCB_HANDLERS."""
-        from kicad_agent.ops.handlers import _PCB_HANDLERS
+        from volta.ops.handlers import _PCB_HANDLERS
 
         assert "auto_route_freerouting" in _PCB_HANDLERS
 
     def test_all_ae20_through_ae23_registered(self):
         """All ae-20 through ae-23 operations should be registered."""
-        from kicad_agent.ops.registry import _RAW_CATALOG
-        from kicad_agent.ops.handlers import _PCB_HANDLERS
+        from volta.ops.registry import _RAW_CATALOG
+        from volta.ops.handlers import _PCB_HANDLERS
 
         for ot in ["fill_zones", "strip_shorts", "remove_dangling_tracks", "auto_route_freerouting"]:
             assert ot in _RAW_CATALOG, f"{ot} missing from registry"

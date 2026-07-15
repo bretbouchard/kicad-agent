@@ -4,14 +4,14 @@ DOMAIN-01: TopologyBuilder produces CircuitTopology from SchematicGraph
 with directed signal flow inferred from IC pin types.
 """
 
-from kicad_agent.schematic_routing.schematic_graph import (
+from volta.schematic_routing.schematic_graph import (
     SchematicGraph,
     PinPosition,
     Wire,
     Label,
 )
 
-from kicad_agent.analysis.types import NetClassification, PinRole
+from volta.analysis.types import NetClassification, PinRole
 
 
 # ---------------------------------------------------------------------------
@@ -114,7 +114,7 @@ class TestTopologyNodeSchema:
     """TopologyNode frozen dataclass fields."""
 
     def test_create_node(self):
-        from kicad_agent.analysis.topology_graph import TopologyNode
+        from volta.analysis.topology_graph import TopologyNode
 
         node = TopologyNode(
             ref="U1",
@@ -131,7 +131,7 @@ class TestTopologyNodeSchema:
         assert len(node.power_pins) == 2
 
     def test_node_is_frozen(self):
-        from kicad_agent.analysis.topology_graph import TopologyNode
+        from volta.analysis.topology_graph import TopologyNode
 
         node = TopologyNode(
             ref="R1",
@@ -158,7 +158,7 @@ class TestTopologyEdgeSchema:
     """TopologyEdge frozen dataclass fields."""
 
     def test_create_edge(self):
-        from kicad_agent.analysis.topology_graph import TopologyEdge
+        from volta.analysis.topology_graph import TopologyEdge
 
         edge = TopologyEdge(
             net_name="SIG_IN",
@@ -174,7 +174,7 @@ class TestTopologyEdgeSchema:
         assert edge.classification == NetClassification.SIGNAL
 
     def test_edge_is_frozen(self):
-        from kicad_agent.analysis.topology_graph import TopologyEdge
+        from volta.analysis.topology_graph import TopologyEdge
 
         edge = TopologyEdge(
             net_name="VCC",
@@ -201,7 +201,7 @@ class TestCircuitTopologySchema:
     """CircuitTopology frozen dataclass fields."""
 
     def test_create_empty_topology(self):
-        from kicad_agent.analysis.topology_graph import CircuitTopology
+        from volta.analysis.topology_graph import CircuitTopology
 
         topo = CircuitTopology(
             nodes=(),
@@ -216,7 +216,7 @@ class TestCircuitTopologySchema:
         assert len(topo.edges) == 0
 
     def test_topology_is_frozen(self):
-        from kicad_agent.analysis.topology_graph import CircuitTopology
+        from volta.analysis.topology_graph import CircuitTopology
 
         topo = CircuitTopology(
             nodes=(),
@@ -243,7 +243,7 @@ class TestTopologyBuilderEmpty:
     """TopologyBuilder handles empty schematic."""
 
     def test_empty_graph_returns_empty_topology(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_empty_graph())
@@ -252,7 +252,7 @@ class TestTopologyBuilderEmpty:
         assert len(topo.signal_paths) == 0
 
     def test_empty_stats(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_empty_graph())
@@ -269,7 +269,7 @@ class TestTopologyBuilderSingleNode:
     """TopologyBuilder creates a node for a single component."""
 
     def test_single_resistor_produces_one_node(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_single_resistor_graph())
@@ -277,21 +277,21 @@ class TestTopologyBuilderSingleNode:
         assert topo.nodes[0].ref == "R1"
 
     def test_single_resistor_no_edges(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_single_resistor_graph())
         assert len(topo.edges) == 0
 
     def test_single_resistor_is_passive(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_single_resistor_graph())
         assert topo.nodes[0].component_type == "resistor"
 
     def test_single_resistor_two_pins(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_single_resistor_graph())
@@ -307,62 +307,62 @@ class TestComponentTypeMapping:
     """Component type is correctly derived from lib_id."""
 
     def test_resistor(self):
-        from kicad_agent.analysis.topology_graph import _classify_component_type
+        from volta.analysis.topology_graph import _classify_component_type
 
         assert _classify_component_type("Device:R") == "resistor"
 
     def test_capacitor(self):
-        from kicad_agent.analysis.topology_graph import _classify_component_type
+        from volta.analysis.topology_graph import _classify_component_type
 
         assert _classify_component_type("Device:C") == "capacitor"
 
     def test_inductor(self):
-        from kicad_agent.analysis.topology_graph import _classify_component_type
+        from volta.analysis.topology_graph import _classify_component_type
 
         assert _classify_component_type("Device:L") == "inductor"
 
     def test_diode(self):
-        from kicad_agent.analysis.topology_graph import _classify_component_type
+        from volta.analysis.topology_graph import _classify_component_type
 
         assert _classify_component_type("Device:D") == "diode"
 
     def test_transistor(self):
-        from kicad_agent.analysis.topology_graph import _classify_component_type
+        from volta.analysis.topology_graph import _classify_component_type
 
         assert _classify_component_type("Device:Q_NPN") == "transistor"
 
     def test_connector(self):
-        from kicad_agent.analysis.topology_graph import _classify_component_type
+        from volta.analysis.topology_graph import _classify_component_type
 
         assert _classify_component_type("Connector:Conn_01x02") == "connector"
 
     def test_ic_from_lib_id(self):
-        from kicad_agent.analysis.topology_graph import _classify_component_type
+        from volta.analysis.topology_graph import _classify_component_type
 
         assert _classify_component_type("Amplifier_Operational:NE5532") == "ic"
 
     def test_ic_from_part_number(self):
-        from kicad_agent.analysis.topology_graph import _classify_component_type
+        from volta.analysis.topology_graph import _classify_component_type
 
         assert _classify_component_type("NE5532") == "ic"
 
     def test_ic_rp2040(self):
-        from kicad_agent.analysis.topology_graph import _classify_component_type
+        from volta.analysis.topology_graph import _classify_component_type
 
         assert _classify_component_type("RP2040") == "ic"
 
     def test_misc_fallback(self):
-        from kicad_agent.analysis.topology_graph import _classify_component_type
+        from volta.analysis.topology_graph import _classify_component_type
 
         assert _classify_component_type("SomeUnknownPart") == "misc"
 
     def test_led(self):
-        from kicad_agent.analysis.topology_graph import _classify_component_type
+        from volta.analysis.topology_graph import _classify_component_type
 
         assert _classify_component_type("Device:LED") == "diode"
 
     def test_crystal(self):
-        from kicad_agent.analysis.topology_graph import _classify_component_type
+        from volta.analysis.topology_graph import _classify_component_type
 
         assert _classify_component_type("Device:Crystal") == "misc"
 
@@ -418,70 +418,70 @@ class TestPinRoleClassification:
     """IC pin roles correctly classified from pin names and lib_id."""
 
     def test_opamp_inplus_is_input(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="U1", pin_number="3", pin_name="IN+", position=(0, 0), body_position=(0, 0))
         assert builder._classify_pin_role("U1", pin, "NE5532") == PinRole.INPUT
 
     def test_opamp_inminus_is_input(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="U1", pin_number="2", pin_name="IN-", position=(0, 0), body_position=(0, 0))
         assert builder._classify_pin_role("U1", pin, "NE5532") == PinRole.INPUT
 
     def test_opamp_out_is_output(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="U1", pin_number="1", pin_name="OUT", position=(0, 0), body_position=(0, 0))
         assert builder._classify_pin_role("U1", pin, "NE5532") == PinRole.OUTPUT
 
     def test_opamp_vplus_is_power(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="U1", pin_number="8", pin_name="V+", position=(0, 0), body_position=(0, 0))
         assert builder._classify_pin_role("U1", pin, "NE5532") == PinRole.POWER
 
     def test_opamp_vminus_is_power(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="U1", pin_number="4", pin_name="V-", position=(0, 0), body_position=(0, 0))
         assert builder._classify_pin_role("U1", pin, "NE5532") == PinRole.POWER
 
     def test_vca_input_is_input(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="U3", pin_number="1", pin_name="INPUT", position=(0, 0), body_position=(0, 0))
         assert builder._classify_pin_role("U3", pin, "THAT4301") == PinRole.INPUT
 
     def test_vca_output_is_output(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="U3", pin_number="2", pin_name="OUTPUT", position=(0, 0), body_position=(0, 0))
         assert builder._classify_pin_role("U3", pin, "THAT4301") == PinRole.OUTPUT
 
     def test_vca_ecplus_is_input(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="U3", pin_number="3", pin_name="EC+", position=(0, 0), body_position=(0, 0))
         assert builder._classify_pin_role("U3", pin, "THAT4301") == PinRole.INPUT
 
     def test_analog_switch_vdd_is_power(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="U4", pin_number="14", pin_name="VDD", position=(0, 0), body_position=(0, 0))
         assert builder._classify_pin_role("U4", pin, "CD4066BE") == PinRole.POWER
 
     def test_analog_switch_vss_is_power(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="U4", pin_number="7", pin_name="VSS", position=(0, 0), body_position=(0, 0))
@@ -490,7 +490,7 @@ class TestPinRoleClassification:
     def test_analog_switch_signal_is_unknown_or_bidirectional(self):
         """Signal pins (A, B) on analog switch are not in IC_PIN_RULES,
         so they fall through to pattern matching or return UNKNOWN."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         # Pin named "A" matches _INPUT_PIN_PATTERNS but for CD4066 these are signal pins
@@ -501,35 +501,35 @@ class TestPinRoleClassification:
         assert role in (PinRole.INPUT, PinRole.UNKNOWN, PinRole.BIDIRECTIONAL)
 
     def test_resistor_pins_are_bidirectional(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="R1", pin_number="1", pin_name="1", position=(0, 0), body_position=(0, 0))
         assert builder._classify_pin_role("R1", pin, "Device:R") == PinRole.BIDIRECTIONAL
 
     def test_capacitor_pins_are_bidirectional(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="C1", pin_number="1", pin_name="1", position=(0, 0), body_position=(0, 0))
         assert builder._classify_pin_role("C1", pin, "Device:C") == PinRole.BIDIRECTIONAL
 
     def test_unknown_ic_in_is_input(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="U5", pin_number="1", pin_name="IN", position=(0, 0), body_position=(0, 0))
         assert builder._classify_pin_role("U5", pin, "SomeCustomIC") == PinRole.INPUT
 
     def test_unknown_ic_out_is_output(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="U5", pin_number="2", pin_name="OUT", position=(0, 0), body_position=(0, 0))
         assert builder._classify_pin_role("U5", pin, "SomeCustomIC") == PinRole.OUTPUT
 
     def test_unknown_ic_vcc_is_power(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         pin = PinPosition(ref="U5", pin_number="8", pin_name="VCC", position=(0, 0), body_position=(0, 0))
@@ -546,7 +546,7 @@ class TestSignalFlowDirection:
 
     def test_opamp_output_drives_resistor(self):
         """U1.OUT -> R1.1 produces directed edge U1 -> R1."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
@@ -558,7 +558,7 @@ class TestSignalFlowDirection:
 
     def test_resistor_to_opamp_input(self):
         """R1.2 -> U2.IN+ produces directed edge R1 -> U2 (or U1->U2 via R1)."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
@@ -568,7 +568,7 @@ class TestSignalFlowDirection:
 
     def test_power_net_edges_classified_as_power(self):
         """VCC net connecting to U1.V+ and U2.V+ classified as POWER."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
@@ -579,7 +579,7 @@ class TestSignalFlowDirection:
 
     def test_signal_path_traces_input_to_output(self):
         """Signal path from SIG_IN through U1 -> R1 -> U2 -> SIG_OUT."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
@@ -607,7 +607,7 @@ class TestOpampSubcircuit:
     """TopologyBuilder correctly classifies op-amp subcircuit components."""
 
     def test_opamp_nodes_are_ics(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
@@ -616,7 +616,7 @@ class TestOpampSubcircuit:
                 assert node.component_type == "ic"
 
     def test_resistor_node_is_passive(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
@@ -624,7 +624,7 @@ class TestOpampSubcircuit:
         assert r1.component_type == "resistor"
 
     def test_opamp_has_power_and_signal_pins(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
@@ -643,57 +643,57 @@ class TestNetClassifier:
     """NetClassifier correctly classifies nets by naming patterns."""
 
     def test_vcc_is_power(self):
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         assert c.classify("VCC") == NetClassification.POWER
 
     def test_plus12v_is_power(self):
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         assert c.classify("+12V") == NetClassification.POWER
 
     def test_gnd_is_ground(self):
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         assert c.classify("GND") == NetClassification.GROUND
 
     def test_agnd_is_ground(self):
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         assert c.classify("AGND") == NetClassification.GROUND
 
     def test_sda_is_control(self):
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         assert c.classify("SDA") == NetClassification.CONTROL
 
     def test_clk_10m_is_clock(self):
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         assert c.classify("CLK_10M") == NetClassification.CLOCK
 
     def test_sig_in_is_signal(self):
         """SIG_IN doesn't match any power/ground/clock/control pattern -> UNKNOWN."""
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         assert c.classify("SIG_IN") == NetClassification.UNKNOWN
 
     def test_unknown_net(self):
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         assert c.classify("Net_1") == NetClassification.UNKNOWN
 
     def test_topology_override_all_power_pins(self):
         """Net connecting only to power pins classified as POWER regardless of name."""
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         pin_roles = {("U1", "8"): PinRole.POWER, ("U2", "8"): PinRole.POWER}
@@ -702,7 +702,7 @@ class TestNetClassifier:
 
     def test_ordered_rules_first_match_wins(self):
         """Power name pattern takes precedence over topology check."""
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         # VCC is matched by name first, even if topology says all power pins
@@ -711,32 +711,32 @@ class TestNetClassifier:
         assert c.classify("GND") == NetClassification.GROUND
 
     def test_case_insensitive_vcc(self):
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         assert c.classify("vcc") == NetClassification.POWER
         assert c.classify("Vcc") == NetClassification.POWER
 
     def test_plus3v3_is_power(self):
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         assert c.classify("+3V3") == NetClassification.POWER
 
     def test_plus5v_is_power(self):
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         assert c.classify("+5V") == NetClassification.POWER
 
     def test_minus9v_is_power(self):
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         assert c.classify("-9V") == NetClassification.POWER
 
     def test_classify_many(self):
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         nets = {
@@ -845,7 +845,7 @@ class TestFeedbackDetection:
 
     def test_feedback_net_detected(self):
         """Feedback from U1 output through Rfb to U1 inverting input."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_feedback_graph())
@@ -855,7 +855,7 @@ class TestFeedbackDetection:
 
     def test_feedback_net_name(self):
         """Feedback net connects output stage back to input stage."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_feedback_graph())
@@ -864,7 +864,7 @@ class TestFeedbackDetection:
         assert len(feedback_nets) >= 1
 
     def test_feedback_count_in_stats(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_feedback_graph())
@@ -881,7 +881,7 @@ class TestSignalPathTracing:
 
     def test_opamp_subcircuit_signal_path(self):
         """Signal path from input through U1 -> R1 -> U2 -> output."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
@@ -897,7 +897,7 @@ class TestSignalPathTracing:
 
     def test_signal_path_skips_power_nets(self):
         """Signal paths do not traverse POWER-classified edges."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
@@ -909,7 +909,7 @@ class TestSignalPathTracing:
 
     def test_parallel_paths(self):
         """Parallel circuit produces multiple signal paths."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_parallel_path_graph())
@@ -926,7 +926,7 @@ class TestTopologyStats:
     """CircuitTopology.stats contains accurate counts."""
 
     def test_empty_stats(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_empty_graph())
@@ -936,7 +936,7 @@ class TestTopologyStats:
         assert topo.stats["feedback_count"] == 0
 
     def test_single_component_stats(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_single_resistor_graph())
@@ -944,7 +944,7 @@ class TestTopologyStats:
         assert topo.stats["net_count"] == 0  # Single component, no edges
 
     def test_opamp_subcircuit_stats(self):
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
@@ -963,7 +963,7 @@ class TestFullIntegration:
 
     def test_opamp_feedback_complete_topology(self):
         """Op-amp with feedback produces correct topology."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_feedback_graph())
@@ -986,9 +986,9 @@ class TestFullIntegration:
 
     def test_imports_work(self):
         """All public imports work correctly."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder, CircuitTopology
-        from kicad_agent.analysis.net_classifier import NetClassifier
-        from kicad_agent.analysis.types import NetClassification, PinRole
+        from volta.analysis.topology_graph import TopologyBuilder, CircuitTopology
+        from volta.analysis.net_classifier import NetClassifier
+        from volta.analysis.types import NetClassification, PinRole
 
         assert TopologyBuilder is not None
         assert CircuitTopology is not None
@@ -998,7 +998,7 @@ class TestFullIntegration:
 
     def test_net_classifier_standalone(self):
         """NetClassifier works independently."""
-        from kicad_agent.analysis.net_classifier import NetClassifier
+        from volta.analysis.net_classifier import NetClassifier
 
         c = NetClassifier()
         assert c.classify("VCC") == NetClassification.POWER
@@ -1017,33 +1017,33 @@ class TestSignalIntegrity:
     """SignalIntegrity enum classifies nets for signal integrity analysis."""
 
     def test_high_speed_exists(self):
-        from kicad_agent.analysis.net_classifier import SignalIntegrity
+        from volta.analysis.net_classifier import SignalIntegrity
 
         assert SignalIntegrity.HIGH_SPEED == "HIGH_SPEED"
 
     def test_low_frequency_exists(self):
-        from kicad_agent.analysis.net_classifier import SignalIntegrity
+        from volta.analysis.net_classifier import SignalIntegrity
 
         assert SignalIntegrity.LOW_FREQUENCY == "LOW_FREQUENCY"
 
     def test_dc_exists(self):
-        from kicad_agent.analysis.net_classifier import SignalIntegrity
+        from volta.analysis.net_classifier import SignalIntegrity
 
         assert SignalIntegrity.DC == "DC"
 
     def test_power_integrity_exists(self):
-        from kicad_agent.analysis.net_classifier import SignalIntegrity
+        from volta.analysis.net_classifier import SignalIntegrity
 
         assert SignalIntegrity.POWER_INTEGRITY == "POWER_INTEGRITY"
 
     def test_unknown_exists(self):
-        from kicad_agent.analysis.net_classifier import SignalIntegrity
+        from volta.analysis.net_classifier import SignalIntegrity
 
         assert SignalIntegrity.UNKNOWN == "UNKNOWN"
 
     def test_clock_net_is_high_speed(self):
         """Clock nets (CLK, MCLK, SCK) classified as HIGH_SPEED."""
-        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+        from volta.analysis.net_classifier import NetClassifier, SignalIntegrity
 
         c = NetClassifier()
         assert c.classify_signal_integrity("CLK_10M") == SignalIntegrity.HIGH_SPEED
@@ -1052,7 +1052,7 @@ class TestSignalIntegrity:
 
     def test_spi_i2c_nets_are_high_speed(self):
         """SPI/I2C nets (SDA, SCL, MOSI, MISO) classified as HIGH_SPEED."""
-        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+        from volta.analysis.net_classifier import NetClassifier, SignalIntegrity
 
         c = NetClassifier()
         assert c.classify_signal_integrity("SDA") == SignalIntegrity.HIGH_SPEED
@@ -1062,7 +1062,7 @@ class TestSignalIntegrity:
 
     def test_audio_nets_are_low_frequency(self):
         """Audio/analog signal nets classified as LOW_FREQUENCY."""
-        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+        from volta.analysis.net_classifier import NetClassifier, SignalIntegrity
 
         c = NetClassifier()
         assert c.classify_signal_integrity("AUDIO_IN") == SignalIntegrity.LOW_FREQUENCY
@@ -1070,7 +1070,7 @@ class TestSignalIntegrity:
 
     def test_power_rails_are_power_integrity(self):
         """Power rails classified as POWER_INTEGRITY."""
-        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+        from volta.analysis.net_classifier import NetClassifier, SignalIntegrity
 
         c = NetClassifier()
         assert c.classify_signal_integrity("VCC") == SignalIntegrity.POWER_INTEGRITY
@@ -1078,7 +1078,7 @@ class TestSignalIntegrity:
 
     def test_ground_nets_are_power_integrity(self):
         """Ground nets classified as POWER_INTEGRITY."""
-        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+        from volta.analysis.net_classifier import NetClassifier, SignalIntegrity
 
         c = NetClassifier()
         assert c.classify_signal_integrity("GND") == SignalIntegrity.POWER_INTEGRITY
@@ -1086,7 +1086,7 @@ class TestSignalIntegrity:
 
     def test_dc_bias_is_dc(self):
         """DC bias/reference nets classified as DC."""
-        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+        from volta.analysis.net_classifier import NetClassifier, SignalIntegrity
 
         c = NetClassifier()
         assert c.classify_signal_integrity("VREF") == SignalIntegrity.DC
@@ -1094,14 +1094,14 @@ class TestSignalIntegrity:
 
     def test_unknown_net_is_unknown(self):
         """Unrecognized nets classified as UNKNOWN."""
-        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+        from volta.analysis.net_classifier import NetClassifier, SignalIntegrity
 
         c = NetClassifier()
         assert c.classify_signal_integrity("random_net") == SignalIntegrity.UNKNOWN
 
     def test_topology_context_for_ambiguous_nets(self):
         """classify_signal_integrity uses topology context for ambiguous nets."""
-        from kicad_agent.analysis.net_classifier import NetClassifier, SignalIntegrity
+        from volta.analysis.net_classifier import NetClassifier, SignalIntegrity
 
         c = NetClassifier()
         # Net with all power pins should be POWER_INTEGRITY even with ambiguous name
@@ -1119,28 +1119,28 @@ class TestNetImportance:
     """NetImportance enum ranks net importance for analysis prioritization."""
 
     def test_critical_exists(self):
-        from kicad_agent.analysis.net_classifier import NetImportance
+        from volta.analysis.net_classifier import NetImportance
 
         assert NetImportance.CRITICAL == "CRITICAL"
 
     def test_high_exists(self):
-        from kicad_agent.analysis.net_classifier import NetImportance
+        from volta.analysis.net_classifier import NetImportance
 
         assert NetImportance.HIGH == "HIGH"
 
     def test_medium_exists(self):
-        from kicad_agent.analysis.net_classifier import NetImportance
+        from volta.analysis.net_classifier import NetImportance
 
         assert NetImportance.MEDIUM == "MEDIUM"
 
     def test_low_exists(self):
-        from kicad_agent.analysis.net_classifier import NetImportance
+        from volta.analysis.net_classifier import NetImportance
 
         assert NetImportance.LOW == "LOW"
 
     def test_power_nets_are_critical(self):
         """Power nets ranked as CRITICAL importance."""
-        from kicad_agent.analysis.net_classifier import NetClassifier, NetImportance
+        from volta.analysis.net_classifier import NetClassifier, NetImportance
 
         c = NetClassifier()
         assert c.rank_importance(NetClassification.POWER) == NetImportance.CRITICAL
@@ -1148,35 +1148,35 @@ class TestNetImportance:
 
     def test_clock_nets_are_critical(self):
         """Clock nets ranked as CRITICAL importance."""
-        from kicad_agent.analysis.net_classifier import NetClassifier, NetImportance
+        from volta.analysis.net_classifier import NetClassifier, NetImportance
 
         c = NetClassifier()
         assert c.rank_importance(NetClassification.CLOCK) == NetImportance.CRITICAL
 
     def test_feedback_nets_are_high(self):
         """Feedback nets ranked as HIGH importance."""
-        from kicad_agent.analysis.net_classifier import NetClassifier, NetImportance
+        from volta.analysis.net_classifier import NetClassifier, NetImportance
 
         c = NetClassifier()
         assert c.rank_importance(NetClassification.FEEDBACK) == NetImportance.HIGH
 
     def test_control_nets_are_high(self):
         """Control nets ranked as HIGH importance."""
-        from kicad_agent.analysis.net_classifier import NetClassifier, NetImportance
+        from volta.analysis.net_classifier import NetClassifier, NetImportance
 
         c = NetClassifier()
         assert c.rank_importance(NetClassification.CONTROL) == NetImportance.HIGH
 
     def test_signal_nets_are_medium(self):
         """Signal nets ranked as MEDIUM importance."""
-        from kicad_agent.analysis.net_classifier import NetClassifier, NetImportance
+        from volta.analysis.net_classifier import NetClassifier, NetImportance
 
         c = NetClassifier()
         assert c.rank_importance(NetClassification.SIGNAL) == NetImportance.MEDIUM
 
     def test_unknown_nets_are_low(self):
         """Unknown nets ranked as LOW importance."""
-        from kicad_agent.analysis.net_classifier import NetClassifier, NetImportance
+        from volta.analysis.net_classifier import NetClassifier, NetImportance
 
         c = NetClassifier()
         assert c.rank_importance(NetClassification.UNKNOWN) == NetImportance.LOW
@@ -1192,7 +1192,7 @@ class TestNetStats:
 
     def test_netstats_has_required_fields(self):
         """NetStats has fanout, is_stub, longest_path_from_input, component_count, is_multi_drop."""
-        from kicad_agent.analysis.topology_graph import NetStats
+        from volta.analysis.topology_graph import NetStats
 
         stat = NetStats(
             net_name="SIG_IN",
@@ -1213,7 +1213,7 @@ class TestNetStats:
 
     def test_net_with_multiple_receivers_has_fanout(self):
         """Net with 1 source and 3 receivers has fanout=3."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_fanout_graph())
@@ -1225,7 +1225,7 @@ class TestNetStats:
 
     def test_stub_detection(self):
         """Net connecting to dead-end component (test point, LED) detected as stub."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_stub_graph())
@@ -1236,7 +1236,7 @@ class TestNetStats:
 
     def test_multi_drop_detection(self):
         """Multi-drop net (1 source, 2+ receivers on different ICs) detected."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_fanout_graph())
@@ -1247,7 +1247,7 @@ class TestNetStats:
 
     def test_net_stats_in_topology_stats(self):
         """Net stats included in CircuitTopology.stats dict."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo = builder.from_schematic_graph(_opamp_subcircuit_graph())
@@ -1256,7 +1256,7 @@ class TestNetStats:
 
     def test_net_stats_deterministic(self):
         """All net stats computed deterministically."""
-        from kicad_agent.analysis.topology_graph import TopologyBuilder
+        from volta.analysis.topology_graph import TopologyBuilder
 
         builder = TopologyBuilder()
         topo1 = builder.from_schematic_graph(_opamp_subcircuit_graph())

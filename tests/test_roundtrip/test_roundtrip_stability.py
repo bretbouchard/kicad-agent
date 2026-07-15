@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.parser.uuid_extractor import extract_uuids
-from kicad_agent.validation.roundtrip import round_trip_stable, round_trip_compare
+from volta.parser.uuid_extractor import extract_uuids
+from volta.validation.roundtrip import round_trip_stable, round_trip_compare
 
 
 class TestRoundTripStability:

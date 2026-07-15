@@ -12,7 +12,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from kicad_agent.placement.predict import PlacementPrediction, _compute_confidence
+from volta.placement.predict import PlacementPrediction, _compute_confidence
 
 
 class TestPlacementPrediction:
@@ -113,12 +113,12 @@ class TestPlacementPredictorImport:
         """PlacementPredictor.__init__ imports torch; verify the class exists."""
         # We cannot fully instantiate without torch, but the class should
         # be importable at module level (torch is inside __init__).
-        from kicad_agent.placement.predict import PlacementPredictor
+        from volta.placement.predict import PlacementPredictor
         assert PlacementPredictor is not None
 
     def test_predictor_model_path_none(self) -> None:
         """PlacementPredictor with model_path=None should still work (random init)."""
         pytest.importorskip("torch")
-        from kicad_agent.placement.predict import PlacementPredictor
+        from volta.placement.predict import PlacementPredictor
         predictor = PlacementPredictor(model_path=None)
         assert predictor.is_ready is True

@@ -3,12 +3,12 @@
 CP-03: PCBConstraint as canonical source with pure converter functions.
 """
 
-from kicad_agent.constraints.converters import (
+from volta.constraints.converters import (
     to_net_class_defs,
     to_placement_constraints,
     to_routing_constraints,
 )
-from kicad_agent.constraints.types import (
+from volta.constraints.types import (
     ClearanceConstraint,
     ConstraintType,
     DecouplingConstraint,
@@ -16,9 +16,9 @@ from kicad_agent.constraints.types import (
     ImpedanceConstraint,
     ThermalConstraint,
 )
-from kicad_agent.placement.interactive import ConstraintSet
-from kicad_agent.project.design_rules import NetClassDef
-from kicad_agent.routing.constraints import RoutingConstraints
+from volta.placement.interactive import ConstraintSet
+from volta.project.design_rules import NetClassDef
+from volta.routing.constraints import RoutingConstraints
 
 
 class TestToRoutingConstraints:

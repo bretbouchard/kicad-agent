@@ -23,7 +23,7 @@ import pytest
 
 def test_lora_config():
     """SFTTrainingConfig creates valid LoraConfig with correct parameters."""
-    from kicad_agent.training.sft.trainer import SFTTrainingConfig, _build_lora_config
+    from volta.training.sft.trainer import SFTTrainingConfig, _build_lora_config
 
     config = SFTTrainingConfig()
     lora = _build_lora_config(config)
@@ -46,7 +46,7 @@ def test_lora_config():
 
 def test_sft_config_mps_compatible():
     """SFTConfig has fp16=False, bf16=False, dataloader_pin_memory=False, max_length=512."""
-    from kicad_agent.training.sft.trainer import SFTTrainingConfig, _build_sft_config
+    from volta.training.sft.trainer import SFTTrainingConfig, _build_sft_config
 
     config = SFTTrainingConfig()
     sft_config = _build_sft_config(config)
@@ -65,7 +65,7 @@ def test_device_auto_detection():
     """_get_device returns 'mps' when MPS is available."""
     import torch
 
-    from kicad_agent.training.sft.trainer import _get_device, SFTTrainingConfig
+    from volta.training.sft.trainer import _get_device, SFTTrainingConfig
 
     config = SFTTrainingConfig(device="auto")
 
@@ -88,7 +88,7 @@ def test_device_auto_detection():
 
 def test_evaluate_returns_scores():
     """evaluate_sft_model returns dict with avg_reward and other metrics."""
-    from kicad_agent.training.sft.evaluator import evaluate_sft_model
+    from volta.training.sft.evaluator import evaluate_sft_model
 
     mock_model = MagicMock()
     mock_tokenizer = MagicMock()
@@ -113,11 +113,11 @@ def test_evaluate_returns_scores():
     with patch("transformers.AutoModelForCausalLM.from_pretrained", return_value=mock_model), \
          patch("transformers.AutoTokenizer.from_pretrained", return_value=mock_tokenizer), \
          patch("peft.PeftModel.from_pretrained", return_value=mock_model), \
-         patch("kicad_agent.training.sft.evaluator.predict_reward") as mock_pred, \
-         patch("kicad_agent.training.sft.evaluator.RewardModel") as MockRM, \
-         patch("kicad_agent.training.sft.evaluator.generate_chain", return_value="Generated PCB text"):
+         patch("volta.training.sft.evaluator.predict_reward") as mock_pred, \
+         patch("volta.training.sft.evaluator.RewardModel") as MockRM, \
+         patch("volta.training.sft.evaluator.generate_chain", return_value="Generated PCB text"):
 
-        from kicad_agent.training.reward_model import PredictedReward
+        from volta.training.reward_model import PredictedReward
         mock_pred.return_value = PredictedReward(format_score=0.8, quality_score=0.7, accuracy_score=0.9)
         MockRM.load_trained.return_value = MagicMock()
 
@@ -142,7 +142,7 @@ def test_evaluate_returns_scores():
 def test_compare_returns_delta():
     """compare_base_vs_sft returns dict with delta_reward."""
     import tempfile
-    from kicad_agent.training.sft.evaluator import compare_base_vs_sft
+    from volta.training.sft.evaluator import compare_base_vs_sft
 
     base_result = {
         "avg_reward": 0.5,
@@ -173,7 +173,7 @@ def test_compare_returns_delta():
         test_path = f.name
 
     try:
-        with patch("kicad_agent.training.sft.evaluator.evaluate_sft_model") as mock_eval:
+        with patch("volta.training.sft.evaluator.evaluate_sft_model") as mock_eval:
             mock_eval.side_effect = [sft_result, base_result]
 
             result = compare_base_vs_sft(

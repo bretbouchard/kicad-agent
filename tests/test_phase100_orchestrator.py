@@ -10,12 +10,12 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.routing.orchestrator import (
+from volta.routing.orchestrator import (
     NetRouteResult,
     RoutingOrchestrator,
     RoutingOrchestrationResult,
 )
-from kicad_agent.routing.strategy import (
+from volta.routing.strategy import (
     BoardState,
     DeterministicStrategy,
     Pin,

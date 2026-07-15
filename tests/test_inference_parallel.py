@@ -17,12 +17,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from kicad_agent.inference.best_of_n import ScoredChain
+from volta.inference.best_of_n import ScoredChain
 
 
 def _make_wrapper(n_best: int = 4, max_workers: int = 4) -> "InferenceWrapper":
     """Create an InferenceWrapper with mocked internals for testing."""
-    from kicad_agent.inference.wrapper import InferenceWrapper
+    from volta.inference.wrapper import InferenceWrapper
 
     wrapper = InferenceWrapper.__new__(InferenceWrapper)
     wrapper._model_name = "test-model"
@@ -74,16 +74,16 @@ def test_parallel_completion_faster_than_sequential(tmp_path: Path) -> None:
     mock_result.raw_content = "(kicad_pcb)"
 
     # Mock reward model scoring
-    from kicad_agent.training.reward_model import PredictedReward
+    from volta.training.reward_model import PredictedReward
     wrapper._reward_model = MagicMock()
     wrapper._llm_client = MagicMock()
 
     def mock_predict(model, text):
         return PredictedReward(format_score=0.8, quality_score=0.7, accuracy_score=0.9)
 
-    with patch("kicad_agent.parser.pcb_parser.parse_pcb", return_value=mock_result), \
-         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict), \
-         patch("kicad_agent.training.reward_model.predict_reward", side_effect=mock_predict):
+    with patch("volta.parser.pcb_parser.parse_pcb", return_value=mock_result), \
+         patch("volta.inference.best_of_n.predict_reward", side_effect=mock_predict), \
+         patch("volta.training.reward_model.predict_reward", side_effect=mock_predict):
         start = time.monotonic()
         result = wrapper.analyze(pcb_file)
         elapsed = time.monotonic() - start
@@ -123,9 +123,9 @@ def test_all_n_chains_generated(tmp_path: Path) -> None:
     def mock_predict(model, text):
         return MagicMock(format_score=0.7, quality_score=0.7, accuracy_score=0.7)
 
-    with patch("kicad_agent.parser.pcb_parser.parse_pcb", return_value=mock_result), \
-         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict), \
-         patch("kicad_agent.training.reward_model.predict_reward", side_effect=mock_predict):
+    with patch("volta.parser.pcb_parser.parse_pcb", return_value=mock_result), \
+         patch("volta.inference.best_of_n.predict_reward", side_effect=mock_predict), \
+         patch("volta.training.reward_model.predict_reward", side_effect=mock_predict):
         wrapper.analyze(pcb_file)
 
     assert len(generated_chains) == 4, f"Expected 4 chains, got {len(generated_chains)}"
@@ -172,9 +172,9 @@ def test_best_of_n_returns_highest_score(tmp_path: Path) -> None:
         score_idx[0] += 1
         return MagicMock(format_score=s, quality_score=s, accuracy_score=s)
 
-    with patch("kicad_agent.parser.pcb_parser.parse_pcb", return_value=mock_result), \
-         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict), \
-         patch("kicad_agent.training.reward_model.predict_reward", side_effect=mock_predict):
+    with patch("volta.parser.pcb_parser.parse_pcb", return_value=mock_result), \
+         patch("volta.inference.best_of_n.predict_reward", side_effect=mock_predict), \
+         patch("volta.training.reward_model.predict_reward", side_effect=mock_predict):
         result = wrapper.analyze(pcb_file)
 
     assert "high-score-chain" in result.chain_text
@@ -209,9 +209,9 @@ def test_n_best_1_single_chain(tmp_path: Path) -> None:
     def mock_predict(model, text):
         return MagicMock(format_score=0.8, quality_score=0.8, accuracy_score=0.8)
 
-    with patch("kicad_agent.parser.pcb_parser.parse_pcb", return_value=mock_result), \
-         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict), \
-         patch("kicad_agent.training.reward_model.predict_reward", side_effect=mock_predict):
+    with patch("volta.parser.pcb_parser.parse_pcb", return_value=mock_result), \
+         patch("volta.inference.best_of_n.predict_reward", side_effect=mock_predict), \
+         patch("volta.training.reward_model.predict_reward", side_effect=mock_predict):
         result = wrapper.analyze(pcb_file)
 
     assert call_count[0] == 1
@@ -250,9 +250,9 @@ def test_thread_safety_shared_model(tmp_path: Path) -> None:
     def mock_predict(model, text):
         return MagicMock(format_score=0.8, quality_score=0.8, accuracy_score=0.8)
 
-    with patch("kicad_agent.parser.pcb_parser.parse_pcb", return_value=mock_result), \
-         patch("kicad_agent.inference.best_of_n.predict_reward", side_effect=mock_predict), \
-         patch("kicad_agent.training.reward_model.predict_reward", side_effect=mock_predict):
+    with patch("volta.parser.pcb_parser.parse_pcb", return_value=mock_result), \
+         patch("volta.inference.best_of_n.predict_reward", side_effect=mock_predict), \
+         patch("volta.training.reward_model.predict_reward", side_effect=mock_predict):
         result = wrapper.analyze(pcb_file)
 
     # With 4 max_workers and 4 chains, multiple threads should have been used
@@ -266,7 +266,7 @@ def test_thread_safety_shared_model(tmp_path: Path) -> None:
 
 def test_unload_model_releases_references() -> None:
     """unload_model() sets model and tokenizer to None."""
-    from kicad_agent.llm.local_client import LocalLLMClient
+    from volta.llm.local_client import LocalLLMClient
 
     client = LocalLLMClient(model="test-model", adapter_dir=None)
     # Simulate loaded state
@@ -289,7 +289,7 @@ def test_unload_model_releases_references() -> None:
 
 def test_chat_after_unload_reloads_model() -> None:
     """After unload_model(), chat() triggers lazy reload via _ensure_loaded()."""
-    from kicad_agent.llm.local_client import LocalLLMClient
+    from volta.llm.local_client import LocalLLMClient
 
     client = LocalLLMClient(model="test-model", adapter_dir=None)
     # Start with model loaded
@@ -324,7 +324,7 @@ def test_chat_after_unload_reloads_model() -> None:
 
 def test_n_best_zero_raises_value_error() -> None:
     """n_best=0 raises ValueError (existing behavior preserved)."""
-    from kicad_agent.inference.wrapper import InferenceWrapper
+    from volta.inference.wrapper import InferenceWrapper
 
     with pytest.raises(ValueError, match="n_best must be between"):
         InferenceWrapper(n_best=0)
@@ -337,7 +337,7 @@ def test_n_best_zero_raises_value_error() -> None:
 
 def test_max_workers_default_bound() -> None:
     """max_workers defaults to min(n_best, 4)."""
-    from kicad_agent.inference.wrapper import InferenceWrapper
+    from volta.inference.wrapper import InferenceWrapper
 
     # n_best=8 -> max_workers should be 4 (capped)
     wrapper = InferenceWrapper(n_best=8)

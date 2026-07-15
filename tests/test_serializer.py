@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.parser import parse_schematic
+from volta.parser import parse_schematic
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "Arduino_Mega"
 FIXTURE_SCH = "Arduino_Mega.kicad_sch"
@@ -35,7 +35,7 @@ def project_dir(tmp_path: Path) -> Path:
 
 def test_serialize_schematic_produces_valid_output(project_dir: Path) -> None:
     """serialize_schematic writes a valid .kicad_sch file."""
-    from kicad_agent.serializer import serialize_schematic
+    from volta.serializer import serialize_schematic
 
     sch_path = project_dir / FIXTURE_SCH
     output_path = project_dir / "output.kicad_sch"
@@ -52,12 +52,12 @@ def test_serialize_schematic_produces_valid_output(project_dir: Path) -> None:
 
 def test_serialize_schematic_rejects_wrong_file_type(project_dir: Path) -> None:
     """serialize_schematic raises ValueError for non-schematic parse results."""
-    from kicad_agent.parser.types import ParseResult
+    from volta.parser.types import ParseResult
 
     mock_result = MagicMock_parse_result(file_type="pcb")
     output_path = project_dir / "bad_output.kicad_sch"
 
-    from kicad_agent.serializer.schematic_ser import serialize_schematic
+    from volta.serializer.schematic_ser import serialize_schematic
 
     with pytest.raises(ValueError, match="file_type"):
         serialize_schematic(mock_result, output_path)
@@ -70,7 +70,7 @@ def test_serialize_schematic_rejects_wrong_file_type(project_dir: Path) -> None:
 
 def test_normalizer_fixes_scientific_notation() -> None:
     """Normalizer converts scientific notation to fixed-point."""
-    from kicad_agent.serializer.normalizer import normalize_kicad_output
+    from volta.serializer.normalizer import normalize_kicad_output
 
     content = "  (xy 1.5e-07 2.3e+05)\n"
     normalized = normalize_kicad_output(content)
@@ -82,7 +82,7 @@ def test_normalizer_fixes_scientific_notation() -> None:
 
 def test_normalizer_preserves_quoted_strings() -> None:
     """Normalizer does not modify scientific-looking text inside quoted strings."""
-    from kicad_agent.serializer.normalizer import normalize_kicad_output
+    from volta.serializer.normalizer import normalize_kicad_output
 
     content = '(property "Value" "1.5e-07 resistor")\n'
     normalized = normalize_kicad_output(content)
@@ -93,7 +93,7 @@ def test_normalizer_preserves_quoted_strings() -> None:
 
 def test_normalizer_converts_tabs_to_spaces() -> None:
     """Normalizer converts tabs to spaces."""
-    from kicad_agent.serializer.normalizer import normalize_kicad_output
+    from volta.serializer.normalizer import normalize_kicad_output
 
     content = "(kicad_sch\n\t(version 20231115)\n)"
     normalized = normalize_kicad_output(content)
@@ -107,7 +107,7 @@ def test_normalizer_converts_tabs_to_spaces() -> None:
 
 def test_schematic_round_trip(project_dir: Path) -> None:
     """Parse a schematic, serialize it, and verify the output is valid."""
-    from kicad_agent.serializer import normalize_kicad_output, serialize_schematic
+    from volta.serializer import normalize_kicad_output, serialize_schematic
 
     sch_path = project_dir / FIXTURE_SCH
     output_path = project_dir / "roundtrip.kicad_sch"
@@ -124,7 +124,7 @@ def test_schematic_round_trip(project_dir: Path) -> None:
 
 def test_schematic_round_trip_preserves_components(project_dir: Path) -> None:
     """Round-trip preserves the component count."""
-    from kicad_agent.serializer import serialize_schematic
+    from volta.serializer import serialize_schematic
 
     sch_path = project_dir / FIXTURE_SCH
     output_path = project_dir / "roundtrip_count.kicad_sch"

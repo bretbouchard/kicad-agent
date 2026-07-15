@@ -12,8 +12,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.parser.types import ParseResult
+from volta.ir.pcb_ir import PcbIR
+from volta.parser.types import ParseResult
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +48,7 @@ class TestCommitWriteVerification:
         new_content = "(kicad_pcb (version 20240101) (general (thickness 1.6)))"
 
         # Let atomic_write actually write the file so read-back verification passes
-        with patch("kicad_agent.io.atomic_write.atomic_write", side_effect=lambda fp, content: fp.write_text(content, encoding="utf-8")):
+        with patch("volta.io.atomic_write.atomic_write", side_effect=lambda fp, content: fp.write_text(content, encoding="utf-8")):
             ir.commit_raw_content(new_content)
 
         # Verify IR state was updated
@@ -61,7 +61,7 @@ class TestCommitWriteVerification:
         new_content = "(kicad_pcb (version 20240101) (general (thickness 1.6)))"
 
         # Patch atomic_write (local import), then make read_text return corruption
-        with patch("kicad_agent.io.atomic_write.atomic_write"):
+        with patch("volta.io.atomic_write.atomic_write"):
             original_read = Path.read_text
             def fake_read(self_arg, encoding="utf-8", **kwargs):
                 if "test.kicad_pcb" in str(self_arg):
@@ -77,7 +77,7 @@ class TestCommitWriteVerification:
         new_content = "(kicad_pcb (version 20240101) (general (thickness 1.6)))"
 
         # Patch atomic_write to actually write to the file, so read-back succeeds
-        with patch("kicad_agent.io.atomic_write.atomic_write", side_effect=lambda fp, content: fp.write_text(content, encoding="utf-8")):
+        with patch("volta.io.atomic_write.atomic_write", side_effect=lambda fp, content: fp.write_text(content, encoding="utf-8")):
             # Should NOT raise -- file written correctly
             ir.commit_raw_content(new_content)
 

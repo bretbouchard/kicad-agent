@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 from typing import Any
 
-from kicad_agent.inference.vision_pipeline import KiCadVisionConfig, KiCadVisionPipeline
+from volta.inference.vision_pipeline import KiCadVisionConfig, KiCadVisionPipeline
 
 
 class TestKiCadVisionConfig:
@@ -56,7 +56,7 @@ class TestKiCadVisionConfig:
 class TestKiCadVisionPipeline:
     """KiCadVisionPipeline unit tests (mocked mlx-vlm at source module level)."""
 
-    @patch("kicad_agent.inference.vision_pipeline.KiCadVisionPipeline._load_model")
+    @patch("volta.inference.vision_pipeline.KiCadVisionPipeline._load_model")
     def test_init_loads_model(self, mock_load):
         mock_load.return_value = (MagicMock(), MagicMock())
         config = KiCadVisionConfig()
@@ -66,7 +66,7 @@ class TestKiCadVisionPipeline:
 
     @patch("mlx_vlm.prompt_utils.apply_chat_template", return_value="formatted")
     @patch("mlx_vlm.generate", return_value="test output")
-    @patch("kicad_agent.inference.vision_pipeline.KiCadVisionPipeline._load_model")
+    @patch("volta.inference.vision_pipeline.KiCadVisionPipeline._load_model")
     def test_generate_from_image(self, mock_load, mock_gen, mock_template):
         mock_load.return_value = (MagicMock(), MagicMock())
         config = KiCadVisionConfig()
@@ -81,7 +81,7 @@ class TestKiCadVisionPipeline:
 
     @patch("mlx_vlm.prompt_utils.apply_chat_template", return_value="formatted")
     @patch("mlx_vlm.generate", return_value="text output")
-    @patch("kicad_agent.inference.vision_pipeline.KiCadVisionPipeline._load_model")
+    @patch("volta.inference.vision_pipeline.KiCadVisionPipeline._load_model")
     def test_generate_from_prompt(self, mock_load, mock_gen, mock_template):
         mock_load.return_value = (MagicMock(), MagicMock())
         pipeline = KiCadVisionPipeline(KiCadVisionConfig())
@@ -92,7 +92,7 @@ class TestKiCadVisionPipeline:
 
     @patch("mlx_vlm.prompt_utils.apply_chat_template", return_value="formatted")
     @patch("mlx_vlm.generate", side_effect=Exception("OOM"))
-    @patch("kicad_agent.inference.vision_pipeline.KiCadVisionPipeline._load_model")
+    @patch("volta.inference.vision_pipeline.KiCadVisionPipeline._load_model")
     def test_generate_from_image_handles_error(self, mock_load, mock_gen, mock_template):
         mock_load.return_value = (MagicMock(), MagicMock())
         pipeline = KiCadVisionPipeline(KiCadVisionConfig())
@@ -100,13 +100,13 @@ class TestKiCadVisionPipeline:
         result = pipeline.generate_from_image(MagicMock(), "prompt")
         assert result == ""
 
-    @patch("kicad_agent.inference.vision_pipeline.KiCadVisionPipeline._load_model")
+    @patch("volta.inference.vision_pipeline.KiCadVisionPipeline._load_model")
     def test_extract_text_string(self, mock_load):
         mock_load.return_value = (MagicMock(), MagicMock())
         pipeline = KiCadVisionPipeline(KiCadVisionConfig())
         assert pipeline._extract_text("hello") == "hello"
 
-    @patch("kicad_agent.inference.vision_pipeline.KiCadVisionPipeline._load_model")
+    @patch("volta.inference.vision_pipeline.KiCadVisionPipeline._load_model")
     def test_extract_text_generation_result(self, mock_load):
         mock_load.return_value = (MagicMock(), MagicMock())
         pipeline = KiCadVisionPipeline(KiCadVisionConfig())
@@ -114,7 +114,7 @@ class TestKiCadVisionPipeline:
         gen_result.text = "generated text"
         assert pipeline._extract_text(gen_result) == "generated text"
 
-    @patch("kicad_agent.inference.vision_pipeline.KiCadVisionPipeline._load_model")
+    @patch("volta.inference.vision_pipeline.KiCadVisionPipeline._load_model")
     def test_extract_text_empty(self, mock_load):
         mock_load.return_value = (MagicMock(), MagicMock())
         pipeline = KiCadVisionPipeline(KiCadVisionConfig())

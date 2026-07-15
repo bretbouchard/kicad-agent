@@ -13,11 +13,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.training.legibility_reward_adapter import (
+from volta.training.legibility_reward_adapter import (
     LegibilityRewardAdapter,
     RewardWeights,
 )
-from kicad_agent.training.rewards import (
+from volta.training.rewards import (
     CapInputs,
     CompactnessCap,
     CrossingsFloorCap,

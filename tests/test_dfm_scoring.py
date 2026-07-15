@@ -14,14 +14,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.dfm.checker import (
+from volta.dfm.checker import (
     DfmCheck,
     DfmChecker,
     DfmFinding,
     DfmReport,
     DfmSeverity,
 )
-from kicad_agent.dfm.profiles import (
+from volta.dfm.profiles import (
     ManufacturerProfile,
     get_builtin_profiles,
     load_profile,
@@ -139,7 +139,7 @@ class TestPanelizationScore:
 
     def test_no_fiducials_low_score(self):
         """Board with no fiducials, no tooling holes, non-standard orientation has low score."""
-        from kicad_agent.dfm.scoring import score_panelization_readiness
+        from volta.dfm.scoring import score_panelization_readiness
 
         primitives = [
             _make_box(x1=0, y1=0, x2=10, y2=10,
@@ -156,7 +156,7 @@ class TestPanelizationScore:
 
     def test_three_fiducials_high_score(self):
         """Board with 3 fiducials and tooling holes has high panelization score."""
-        from kicad_agent.dfm.scoring import score_panelization_readiness
+        from volta.dfm.scoring import score_panelization_readiness
 
         primitives = [
             # 3 fiducials
@@ -199,7 +199,7 @@ class TestPanelizationScore:
 
     def test_tooling_holes_contribute(self):
         """Adding tooling holes improves the score."""
-        from kicad_agent.dfm.scoring import score_panelization_readiness
+        from volta.dfm.scoring import score_panelization_readiness
 
         # No tooling holes
         primitives_no_th = [
@@ -227,7 +227,7 @@ class TestPanelizationScore:
 
     def test_non_standard_orientation_flags(self):
         """Component at non-standard rotation (45 degrees) is flagged."""
-        from kicad_agent.dfm.scoring import score_panelization_readiness
+        from volta.dfm.scoring import score_panelization_readiness
 
         primitives = [
             _make_box(x1=10, y1=10, x2=15, y2=15,
@@ -245,7 +245,7 @@ class TestPanelizationScore:
 
     def test_edge_clearance_checked(self):
         """Panelization score reflects edge clearance status."""
-        from kicad_agent.dfm.scoring import score_panelization_readiness
+        from volta.dfm.scoring import score_panelization_readiness
 
         # Component well inside board
         primitives_safe = [
@@ -270,7 +270,7 @@ class TestAssemblyChecks:
 
     def test_standard_orientation_passes(self):
         """Components at 0/90/180/270 degrees have no orientation findings."""
-        from kicad_agent.dfm.scoring import run_assembly_checks
+        from volta.dfm.scoring import run_assembly_checks
 
         primitives = [
             _make_box(x1=10, y1=10, x2=15, y2=15,
@@ -294,7 +294,7 @@ class TestAssemblyChecks:
 
     def test_non_standard_rotation_flagged(self):
         """Component at 45 degrees produces orientation finding."""
-        from kicad_agent.dfm.scoring import run_assembly_checks
+        from volta.dfm.scoring import run_assembly_checks
 
         primitives = [
             _make_box(x1=10, y1=10, x2=15, y2=15,
@@ -311,7 +311,7 @@ class TestAssemblyChecks:
 
     def test_close_components_flagged(self):
         """Components too close for pick-and-place produce spacing findings."""
-        from kicad_agent.dfm.scoring import run_assembly_checks
+        from volta.dfm.scoring import run_assembly_checks
 
         # Two components very close together (< clearance * 3)
         # generic min_clearance is 0.2mm, so threshold is 0.6mm
@@ -332,7 +332,7 @@ class TestAssemblyChecks:
 
     def test_polarized_component_info(self):
         """Polarized components (electrolytic caps, diodes) emit INFO findings."""
-        from kicad_agent.dfm.scoring import run_assembly_checks
+        from volta.dfm.scoring import run_assembly_checks
 
         primitives = [
             _make_box(x1=10, y1=10, x2=15, y2=15,
@@ -348,7 +348,7 @@ class TestAssemblyChecks:
 
     def test_assembly_score_range(self):
         """Assembly score is clamped to [0.0, 1.0]."""
-        from kicad_agent.dfm.scoring import run_assembly_checks
+        from volta.dfm.scoring import run_assembly_checks
 
         primitives = [
             _make_box(x1=10, y1=10, x2=15, y2=15,
@@ -367,7 +367,7 @@ class TestMultiStageDfm:
 
     def test_three_stages_run(self):
         """run_multistage_dfm returns MultiStageDfmReport with 3 stage reports."""
-        from kicad_agent.dfm.scoring import run_multistage_dfm
+        from volta.dfm.scoring import run_multistage_dfm
 
         primitives = [
             _make_path(
@@ -389,7 +389,7 @@ class TestMultiStageDfm:
 
     def test_footprint_audit_subset(self):
         """Footprint audit stage runs only ANNULAR_RING_01 and MIN_DRILL_01 checks."""
-        from kicad_agent.dfm.scoring import run_multistage_dfm
+        from volta.dfm.scoring import run_multistage_dfm
 
         primitives = [
             _make_box(x1=-1, y1=-1, x2=1, y2=1,
@@ -408,7 +408,7 @@ class TestMultiStageDfm:
 
     def test_placement_check_subset(self):
         """Placement check stage runs SOLDER_MASK_01 and THERMAL_RELIEF_01 checks."""
-        from kicad_agent.dfm.scoring import run_multistage_dfm
+        from volta.dfm.scoring import run_multistage_dfm
 
         primitives = [
             _make_box(x1=-1, y1=-1, x2=1, y2=1,
@@ -423,7 +423,7 @@ class TestMultiStageDfm:
 
     def test_post_route_check_subset(self):
         """Post-route stage runs MIN_TRACE_01 and MIN_DRILL_01 checks."""
-        from kicad_agent.dfm.scoring import run_multistage_dfm
+        from volta.dfm.scoring import run_multistage_dfm
 
         primitives = [
             _make_path(
@@ -443,7 +443,7 @@ class TestMultiStageDfm:
 
     def test_overall_score_is_minimum(self):
         """MultiStageDfmReport overall_score is minimum of stage scores and panelization."""
-        from kicad_agent.dfm.scoring import run_multistage_dfm
+        from volta.dfm.scoring import run_multistage_dfm
 
         primitives = [
             _make_path(
@@ -466,7 +466,7 @@ class TestMultiStageDfm:
 
     def test_total_findings_aggregated(self):
         """MultiStageDfmReport total_findings sums findings from all 3 stages."""
-        from kicad_agent.dfm.scoring import run_multistage_dfm
+        from volta.dfm.scoring import run_multistage_dfm
 
         primitives = [
             _make_path(

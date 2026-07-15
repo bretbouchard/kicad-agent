@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from kiutils.board import Board
 
-from kicad_agent.parser.pcb_parser import parse_pcb, ParseResult
+from volta.parser.pcb_parser import parse_pcb, ParseResult
 
 
 class TestParsePcb:

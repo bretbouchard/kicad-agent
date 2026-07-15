@@ -12,9 +12,9 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.spatial.primitives import SpatialPoint
-from kicad_agent.validation.erc_drc import DrcResult, ErcResult, Severity, Violation
-from kicad_agent.validation.spatial_drc import (
+from volta.spatial.primitives import SpatialPoint
+from volta.validation.erc_drc import DrcResult, ErcResult, Severity, Violation
+from volta.validation.spatial_drc import (
     SpatialViolation,
     _build_spatial_context,
     _find_nearest_footprint,
@@ -181,9 +181,9 @@ class TestSpatialContext:
 class TestFindNearestFootprint:
     def test_find_nearest_footprint(self):
         """Find nearest footprint using real Arduino_Mega fixture."""
-        from kicad_agent.parser import parse_pcb
-        from kicad_agent.parser.uuid_extractor import extract_uuids
-        from kicad_agent.ir.pcb_ir import PcbIR
+        from volta.parser import parse_pcb
+        from volta.parser.uuid_extractor import extract_uuids
+        from volta.ir.pcb_ir import PcbIR
 
         pcb_path = FIXTURE_DIR / "Arduino_Mega.kicad_pcb"
         result = parse_pcb(pcb_path)

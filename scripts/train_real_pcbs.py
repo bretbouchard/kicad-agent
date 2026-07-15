@@ -30,7 +30,7 @@ from pathlib import Path
 # Add src to path so this script works without installing the package
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.training.real_dataset import RealBoardDataset, run_local_pipeline  # noqa: E402
+from volta.training.real_dataset import RealBoardDataset, run_local_pipeline  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -123,7 +123,7 @@ def main() -> int:
 
     # --- Phase 2: Synthesize reasoning chains ---
     logger.info("Phase 2: Synthesizing board reasoning chains...")
-    from kicad_agent.training.board_chains import synthesize_board_chains  # noqa: E402
+    from volta.training.board_chains import synthesize_board_chains  # noqa: E402
 
     train_texts, train_labels = synthesize_board_chains(train_ds.samples, hard_negative_weight=args.corruption_weight)
     val_texts, val_labels = synthesize_board_chains(val_ds.samples, hard_negative_weight=args.corruption_weight)
@@ -133,8 +133,8 @@ def main() -> int:
 
     # --- Phase 3: Train tokenizer + reward model ---
     logger.info("Phase 3: Training tokenizer and reward model...")
-    from kicad_agent.training.tokenizer import ChainTokenizer  # noqa: E402
-    from kicad_agent.training.reward_model import (  # noqa: E402
+    from volta.training.tokenizer import ChainTokenizer  # noqa: E402
+    from volta.training.reward_model import (  # noqa: E402
         RewardModel,
         predict_reward,
         train_reward_model,
@@ -164,7 +164,7 @@ def main() -> int:
 
     # --- Phase 4: Evaluate ---
     logger.info("Phase 4: Evaluating trained model...")
-    from kicad_agent.training.board_chains import synthesize_corrupted_board_chain  # noqa: E402
+    from volta.training.board_chains import synthesize_corrupted_board_chain  # noqa: E402
 
     correct_scores = []
     for text in test_texts[::2]:  # even indices = correct chains

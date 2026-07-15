@@ -3,7 +3,7 @@
 
 Invoke via: python3.11 scripts/validate_safe_annotate_analog_board.py
 (or .venv/bin/python if installed). System python3 (3.9) cannot import
-kicad_agent — the project requires Python 3.10+ for PEP 604 unions.
+volta — the project requires Python 3.10+ for PEP 604 unions.
 
 Operates on a COPY in tmp — never touches the live analog-ecosystem repo
 (which is currently dirty with uncommitted files). Self-cleaning via
@@ -148,10 +148,10 @@ def main() -> int:
             return 2
 
         # Remove any stale lock files copied from the source repo — the
-        # .kicad_agent.lock would trigger a concurrent-access warning and
+        # .volta.lock would trigger a concurrent-access warning and
         # potentially cause the executor to refuse to write. We operate on
         # a COPY so there is no concurrent access.
-        for lock_name in (".kicad_agent.lock", ".kicad_lock"):
+        for lock_name in (".volta.lock", ".kicad_lock"):
             lock_file = channel / lock_name
             if lock_file.exists():
                 lock_file.unlink()
@@ -180,8 +180,8 @@ def main() -> int:
 
         # 3. Run safe_annotate on the COPY
         print("[3/5] Running safe_annotate (whole_project, reset) ...")
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         executor = OperationExecutor(base_dir=channel)
         op = Operation.model_validate(

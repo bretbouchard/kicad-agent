@@ -24,7 +24,7 @@ class TestNewZoneSchemas:
 
     def test_refill_copper_zone_with_uuid(self):
         """RefillCopperZoneOp validates with zone_uuid."""
-        from kicad_agent.ops._schema_pcb import RefillCopperZoneOp
+        from volta.ops._schema_pcb import RefillCopperZoneOp
         op = RefillCopperZoneOp(
             target_file="board.kicad_pcb",
             zone_uuid="12345678-1234-1234-1234-123456789abc",
@@ -34,7 +34,7 @@ class TestNewZoneSchemas:
 
     def test_refill_copper_zone_with_index(self):
         """RefillCopperZoneOp validates with zone_index."""
-        from kicad_agent.ops._schema_pcb import RefillCopperZoneOp
+        from volta.ops._schema_pcb import RefillCopperZoneOp
         op = RefillCopperZoneOp(
             target_file="board.kicad_pcb",
             zone_index=0,
@@ -43,14 +43,14 @@ class TestNewZoneSchemas:
 
     def test_refill_copper_zone_rejects_no_identifier(self):
         """RefillCopperZoneOp rejects when neither uuid nor index provided."""
-        from kicad_agent.ops._schema_pcb import RefillCopperZoneOp
+        from volta.ops._schema_pcb import RefillCopperZoneOp
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             RefillCopperZoneOp(target_file="board.kicad_pcb")
 
     def test_modify_zone_polygon_validates(self):
         """ModifyZonePolygonOp validates with uuid and polygon points."""
-        from kicad_agent.ops._schema_pcb import ModifyZonePolygonOp
+        from volta.ops._schema_pcb import ModifyZonePolygonOp
         op = ModifyZonePolygonOp(
             target_file="board.kicad_pcb",
             zone_uuid="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
@@ -61,7 +61,7 @@ class TestNewZoneSchemas:
 
     def test_modify_zone_polygon_rejects_less_than_3_points(self):
         """ModifyZonePolygonOp rejects polygon with < 3 points."""
-        from kicad_agent.ops._schema_pcb import ModifyZonePolygonOp
+        from volta.ops._schema_pcb import ModifyZonePolygonOp
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             ModifyZonePolygonOp(
@@ -72,7 +72,7 @@ class TestNewZoneSchemas:
 
     def test_add_keepout_area_validates(self):
         """AddKeepoutAreaOp validates with layer, keepout_type, polygon."""
-        from kicad_agent.ops._schema_pcb import AddKeepoutAreaOp
+        from volta.ops._schema_pcb import AddKeepoutAreaOp
         op = AddKeepoutAreaOp(
             target_file="board.kicad_pcb",
             layer="F.Cu",
@@ -84,7 +84,7 @@ class TestNewZoneSchemas:
 
     def test_add_keepout_area_rejects_invalid_type(self):
         """AddKeepoutAreaOp rejects invalid keepout_type."""
-        from kicad_agent.ops._schema_pcb import AddKeepoutAreaOp
+        from volta.ops._schema_pcb import AddKeepoutAreaOp
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             AddKeepoutAreaOp(
@@ -95,7 +95,7 @@ class TestNewZoneSchemas:
 
     def test_remove_keepout_area_with_uuid(self):
         """RemoveKeepoutAreaOp validates with zone_uuid."""
-        from kicad_agent.ops._schema_pcb import RemoveKeepoutAreaOp
+        from volta.ops._schema_pcb import RemoveKeepoutAreaOp
         op = RemoveKeepoutAreaOp(
             target_file="board.kicad_pcb",
             zone_uuid="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
@@ -104,7 +104,7 @@ class TestNewZoneSchemas:
 
     def test_remove_keepout_area_rejects_no_identifier(self):
         """RemoveKeepoutAreaOp rejects when neither uuid nor index provided."""
-        from kicad_agent.ops._schema_pcb import RemoveKeepoutAreaOp
+        from volta.ops._schema_pcb import RemoveKeepoutAreaOp
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             RemoveKeepoutAreaOp(target_file="board.kicad_pcb")
@@ -162,8 +162,8 @@ class TestPcbOpsZoneFunctions:
 
     def test_modify_zone_polygon_updates_via_raw_writer(self):
         """modify_zone_polygon() delegates to PcbRawWriter.modify_zone_polygon()."""
-        from kicad_agent.ops.pcb_ops import modify_zone_polygon
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_ops import modify_zone_polygon
+        from volta.ops.pcb_raw_writer import PcbRawWriter
 
         ir = MagicMock()
         ir.raw_content = PCB_WITH_FILLED_ZONE
@@ -176,8 +176,8 @@ class TestPcbOpsZoneFunctions:
 
     def test_refill_copper_zone_strips_filled_data(self):
         """refill_copper_zone() strips filled_polygon and filled_areas from zone."""
-        from kicad_agent.ops.pcb_ops import refill_copper_zone
-        from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+        from volta.ops.pcb_ops import refill_copper_zone
+        from volta.ops.pcb_raw_writer import PcbRawWriter
 
         ir = MagicMock()
         ir.raw_content = PCB_WITH_FILLED_ZONE
@@ -193,7 +193,7 @@ class TestPcbOpsZoneFunctions:
 
     def test_refill_copper_zone_by_index(self):
         """refill_copper_zone() works with zone_index fallback."""
-        from kicad_agent.ops.pcb_ops import refill_copper_zone
+        from volta.ops.pcb_ops import refill_copper_zone
 
         ir = MagicMock()
         ir.raw_content = PCB_WITH_FILLED_ZONE
@@ -204,7 +204,7 @@ class TestPcbOpsZoneFunctions:
 
     def test_add_keepout_area_inserts_zone(self):
         """add_keepout_area() builds and inserts a keepout zone."""
-        from kicad_agent.ops.pcb_ops import add_keepout_area
+        from volta.ops.pcb_ops import add_keepout_area
 
         ir = MagicMock()
         ir.raw_content = "(kicad_pcb\n)\n"
@@ -223,7 +223,7 @@ class TestPcbOpsZoneFunctions:
 
     def test_remove_keepout_area_removes_by_uuid(self):
         """remove_keepout_area() removes keepout zone via PcbRawWriter."""
-        from kicad_agent.ops.pcb_ops import remove_keepout_area
+        from volta.ops.pcb_ops import remove_keepout_area
 
         ir = MagicMock()
         ir.raw_content = PCB_WITH_FILLED_ZONE
@@ -245,7 +245,7 @@ class TestNetClassConflictDetection:
 
     def test_conflict_when_clearance_violates_other_class(self):
         """detect_net_class_conflicts() returns conflicts when clearance < other."""
-        from kicad_agent.project.design_rules import (
+        from volta.project.design_rules import (
             DesignRulesFile,
             NetClassDef,
             detect_net_class_conflicts,
@@ -269,7 +269,7 @@ class TestNetClassConflictDetection:
 
     def test_no_conflicts_when_clearance_ok(self):
         """detect_net_class_conflicts() returns empty list when no conflicts."""
-        from kicad_agent.project.design_rules import (
+        from volta.project.design_rules import (
             DesignRulesFile,
             NetClassDef,
             detect_net_class_conflicts,
@@ -291,7 +291,7 @@ class TestNetClassConflictDetection:
 
     def test_no_conflicts_for_single_class(self):
         """detect_net_class_conflicts() returns empty list with only one class."""
-        from kicad_agent.project.design_rules import (
+        from volta.project.design_rules import (
             DesignRulesFile,
             NetClassDef,
             detect_net_class_conflicts,
@@ -319,7 +319,7 @@ class TestRemoveNetClassHandler:
 
     def test_remove_net_class_includes_nets_warning(self):
         """_handle_remove_net_class logs nets reverting to Default."""
-        from kicad_agent.ops.handlers.project import _handle_remove_net_class
+        from volta.ops.handlers.project import _handle_remove_net_class
 
         # Create a real dru file with a net class that has nets
         dru_content = """\
@@ -359,27 +359,27 @@ class TestSchemaRegistration:
 
     def test_refill_copper_zone_in_all(self):
         """RefillCopperZoneOp is in schema.py __all__."""
-        from kicad_agent.ops.schema import __all__
+        from volta.ops.schema import __all__
         assert "RefillCopperZoneOp" in __all__
 
     def test_modify_zone_polygon_in_all(self):
         """ModifyZonePolygonOp is in schema.py __all__."""
-        from kicad_agent.ops.schema import __all__
+        from volta.ops.schema import __all__
         assert "ModifyZonePolygonOp" in __all__
 
     def test_add_keepout_area_in_all(self):
         """AddKeepoutAreaOp is in schema.py __all__."""
-        from kicad_agent.ops.schema import __all__
+        from volta.ops.schema import __all__
         assert "AddKeepoutAreaOp" in __all__
 
     def test_remove_keepout_area_in_all(self):
         """RemoveKeepoutAreaOp is in schema.py __all__."""
-        from kicad_agent.ops.schema import __all__
+        from volta.ops.schema import __all__
         assert "RemoveKeepoutAreaOp" in __all__
 
     def test_new_schemas_importable_from_schema(self):
-        """All new schemas can be imported from kicad_agent.ops.schema."""
-        from kicad_agent.ops.schema import (
+        """All new schemas can be imported from volta.ops.schema."""
+        from volta.ops.schema import (
             RefillCopperZoneOp,
             ModifyZonePolygonOp,
             AddKeepoutAreaOp,
@@ -393,7 +393,7 @@ class TestSchemaRegistration:
 
     def test_new_schemas_in_operation_union(self):
         """All new schemas are in the Operation discriminated union."""
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
         # Try to validate each op type through the union
         for op_type in ["refill_copper_zone", "modify_zone_polygon",
                         "add_keepout_area", "remove_keepout_area"]:

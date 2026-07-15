@@ -2,7 +2,7 @@
 
 import pytest
 
-from kicad_agent.analysis.circuit_classifier import (
+from volta.analysis.circuit_classifier import (
     CircuitClassifier,
     ClassificationResult,
 )

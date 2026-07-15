@@ -13,7 +13,7 @@ from uuid import uuid4
 
 import pytest
 
-from kicad_agent.ops.pcb_raw_writer import PcbRawWriter
+from volta.ops.pcb_raw_writer import PcbRawWriter
 
 
 # ---------------------------------------------------------------------------
@@ -474,7 +474,7 @@ class TestModifyZoneFieldNetResolution:
 
         # Read from file directly to avoid inspect.getsource indent issues on staticmethod
         source = Path(__file__).parent.parent.joinpath(
-            "src/kicad_agent/ops/pcb_raw_writer.py"
+            "src/volta/ops/pcb_raw_writer.py"
         ).read_text()
         tree = ast.parse(source)
         found = False

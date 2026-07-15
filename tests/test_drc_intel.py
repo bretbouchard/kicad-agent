@@ -12,9 +12,9 @@ from typing import Any
 
 import pytest
 
-from kicad_agent.spatial.primitives import SpatialPoint
-from kicad_agent.validation.erc_drc import DrcResult, Severity, Violation
-from kicad_agent.validation.drc_intel import (
+from volta.spatial.primitives import SpatialPoint
+from volta.validation.erc_drc import DrcResult, Severity, Violation
+from volta.validation.drc_intel import (
     EnrichedViolation,
     FixSuggester,
     IntelligentDrcAnalyzer,
@@ -24,7 +24,7 @@ from kicad_agent.validation.drc_intel import (
     _check_drc_version,
     _classify_violation,
 )
-from kicad_agent.validation.spatial_drc import SpatialViolation
+from volta.validation.spatial_drc import SpatialViolation
 
 
 # ---------------------------------------------------------------------------
@@ -491,14 +491,14 @@ class TestVersionLogging:
     def test_logs_warning_on_empty_version(self, caplog):
         drc = _make_drc_result(kicad_version="")
         analyzer = IntelligentDrcAnalyzer()
-        with caplog.at_level(logging.WARNING, logger="kicad_agent.validation.drc_intel"):
+        with caplog.at_level(logging.WARNING, logger="volta.validation.drc_intel"):
             analyzer.analyze(drc)
         assert any("no kicad_version" in r.message.lower() or "missing" in r.message.lower() for r in caplog.records)
 
     def test_logs_warning_on_old_version(self, caplog):
         drc = _make_drc_result(kicad_version="8.0.0")
         analyzer = IntelligentDrcAnalyzer()
-        with caplog.at_level(logging.WARNING, logger="kicad_agent.validation.drc_intel"):
+        with caplog.at_level(logging.WARNING, logger="volta.validation.drc_intel"):
             analyzer.analyze(drc)
         assert any("8" in r.message for r in caplog.records)
 

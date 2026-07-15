@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.training.dataset import MazeDataset, MazeSample
-from kicad_agent.training.manifest import DataManifest
+from volta.training.dataset import MazeDataset, MazeSample
+from volta.training.manifest import DataManifest
 
 
 # ---------------------------------------------------------------------------

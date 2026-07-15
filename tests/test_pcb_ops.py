@@ -13,20 +13,20 @@ from kiutils.board import Board
 from kiutils.items.common import Net, Position
 from kiutils.items.gritems import GrLine
 
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.ops.pcb_ops import (
+from volta.ir.pcb_ir import PcbIR
+from volta.ops.pcb_ops import (
     add_copper_zone,
     assign_net_class,
     set_board_outline,
 )
-from kicad_agent.parser import parse_pcb
-from kicad_agent.parser.uuid_extractor import extract_uuids
+from volta.parser import parse_pcb
+from volta.parser.uuid_extractor import extract_uuids
 
 
 @pytest.fixture(autouse=True)
 def _clear_ir_registry():
     """Clear IR registry between tests to prevent ParseResult reuse errors."""
-    from kicad_agent.ir.base import _clear_registry
+    from volta.ir.base import _clear_registry
     _clear_registry()
     yield
     _clear_registry()
@@ -36,7 +36,7 @@ def _create_minimal_pcb(tmpdir: Path, name: str = "test.kicad_pcb") -> tuple[Pat
     """Create a minimal PCB with a GND net, save it, and return parsed IR."""
     # Clear the IR registry to prevent id-collision failures when this helper
     # is called many times across tests in the same session.
-    from kicad_agent.ir.base import _clear_registry
+    from volta.ir.base import _clear_registry
     _clear_registry()
 
     pcb_path = tmpdir / name
@@ -316,7 +316,7 @@ class TestModifyCopperZone:
             add_copper_zone(ir, pcb_path, net_name="GND", layer="F.Cu", clearance=0.5)
             zone_uuid = ir.board.zones[0].tstamp
 
-            from kicad_agent.ops.pcb_ops import modify_copper_zone
+            from volta.ops.pcb_ops import modify_copper_zone
             result = modify_copper_zone(ir, pcb_path, zone_uuid=zone_uuid, clearance=0.3)
 
             assert result["modified"] is True
@@ -332,7 +332,7 @@ class TestModifyCopperZone:
             add_copper_zone(ir, pcb_path, net_name="GND", layer="F.Cu")
             zone_uuid = ir.board.zones[0].tstamp
 
-            from kicad_agent.ops.pcb_ops import modify_copper_zone
+            from volta.ops.pcb_ops import modify_copper_zone
             result = modify_copper_zone(ir, pcb_path, zone_uuid=zone_uuid, net_name="VCC")
 
             assert result["modified"] is True
@@ -346,7 +346,7 @@ class TestModifyCopperZone:
         with tempfile.TemporaryDirectory() as tmpdir:
             pcb_path, ir = _create_minimal_pcb(Path(tmpdir))
 
-            from kicad_agent.ops.pcb_ops import modify_copper_zone
+            from volta.ops.pcb_ops import modify_copper_zone
             with pytest.raises(ValueError, match="not found"):
                 modify_copper_zone(ir, pcb_path, zone_uuid="nonexistent-uuid")
 
@@ -358,7 +358,7 @@ class TestModifyCopperZone:
             add_copper_zone(ir, pcb_path, net_name="GND", layer="F.Cu", clearance=0.5)
             zone_uuid = ir.board.zones[0].tstamp
 
-            from kicad_agent.ops.pcb_ops import modify_copper_zone
+            from volta.ops.pcb_ops import modify_copper_zone
             result = modify_copper_zone(
                 ir, pcb_path,
                 zone_uuid=zone_uuid,
@@ -390,7 +390,7 @@ class TestRemoveCopperZone:
             assert "(zone" in raw_before
 
             # Use index-based removal (kiutils zones list works for count)
-            from kicad_agent.ops.pcb_ops import remove_copper_zone
+            from volta.ops.pcb_ops import remove_copper_zone
             result = remove_copper_zone(ir, pcb_path, zone_index=0)
 
             assert result["removed"] is True
@@ -413,7 +413,7 @@ class TestRemoveCopperZone:
 
             add_copper_zone(ir, pcb_path, net_name="GND", layer="F.Cu")
 
-            from kicad_agent.ops.pcb_ops import remove_copper_zone
+            from volta.ops.pcb_ops import remove_copper_zone
             result = remove_copper_zone(ir, pcb_path, zone_index=0)
 
             assert result["removed"] is True
@@ -429,7 +429,7 @@ class TestRemoveCopperZone:
         with tempfile.TemporaryDirectory() as tmpdir:
             pcb_path, ir = _create_minimal_pcb(Path(tmpdir))
 
-            from kicad_agent.ops.pcb_ops import remove_copper_zone
+            from volta.ops.pcb_ops import remove_copper_zone
             with pytest.raises(ValueError, match="Must specify"):
                 remove_copper_zone(ir, pcb_path)
 
@@ -438,7 +438,7 @@ class TestRemoveCopperZone:
         with tempfile.TemporaryDirectory() as tmpdir:
             pcb_path, ir = _create_minimal_pcb(Path(tmpdir))
 
-            from kicad_agent.ops.pcb_ops import remove_copper_zone
+            from volta.ops.pcb_ops import remove_copper_zone
             with pytest.raises(ValueError, match="not found"):
                 remove_copper_zone(ir, pcb_path, zone_uuid="nonexistent-uuid")
 
@@ -447,7 +447,7 @@ class TestRemoveCopperZone:
         with tempfile.TemporaryDirectory() as tmpdir:
             pcb_path, ir = _create_minimal_pcb(Path(tmpdir))
 
-            from kicad_agent.ops.pcb_ops import remove_copper_zone
+            from volta.ops.pcb_ops import remove_copper_zone
             with pytest.raises(IndexError):
                 remove_copper_zone(ir, pcb_path, zone_index=99)
 
@@ -492,8 +492,8 @@ class TestSetBoardOutlineOperation:
 
     def test_set_board_outline_operation(self):
         """Execute set_board_outline via executor, verify structured result."""
-        from kicad_agent.ops.executor import OperationExecutor
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.executor import OperationExecutor
+        from volta.ops.schema import Operation
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)

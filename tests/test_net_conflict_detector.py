@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops._schema_schematic_intel import DetectNetConflictsOp
-from kicad_agent.ops.schema import Operation
+from volta.ops._schema_schematic_intel import DetectNetConflictsOp
+from volta.ops.schema import Operation
 
 
 # ---------------------------------------------------------------------------
@@ -181,7 +181,7 @@ class TestNoConflicts:
     """Clean schematic returns empty conflicts list."""
 
     def test_clean_schematic_no_conflicts(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
+        from volta.schematic_routing.conflict_detector import detect_net_conflicts
         sch_path = _write_schematic(tmp_path, _clean_sch())
         result = detect_net_conflicts(sch_path=sch_path)
         assert "conflicts" in result
@@ -201,7 +201,7 @@ class TestShortedNets:
     """Two different labels at same position produces shorted_nets conflict."""
 
     def test_shorted_nets_detected(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
+        from volta.schematic_routing.conflict_detector import detect_net_conflicts
         sch_path = _write_schematic(tmp_path, _shorted_nets_sch())
         result = detect_net_conflicts(sch_path=sch_path)
         conflicts = result["conflicts"]
@@ -234,7 +234,7 @@ class TestCaseVariants:
     """Labels VCC and vcc produce case_variant conflict with severity warning."""
 
     def test_case_variant_detected(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
+        from volta.schematic_routing.conflict_detector import detect_net_conflicts
         sch_path = _write_schematic(tmp_path, _case_variant_sch())
         result = detect_net_conflicts(sch_path=sch_path)
         conflicts = result["conflicts"]
@@ -257,7 +257,7 @@ class TestMixedLabelTypes:
     """Same name as both global and local label produces mixed_label_types conflict."""
 
     def test_mixed_labels_detected(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
+        from volta.schematic_routing.conflict_detector import detect_net_conflicts
         sch_path = _write_schematic(tmp_path, _mixed_labels_sch())
         result = detect_net_conflicts(sch_path=sch_path)
         conflicts = result["conflicts"]
@@ -281,7 +281,7 @@ class TestUnlabeledJunction:
     """Junction with 3+ wire endpoints and no label produces unlabeled_junction conflict."""
 
     def test_unlabeled_junction_detected(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
+        from volta.schematic_routing.conflict_detector import detect_net_conflicts
         sch_path = _write_schematic(tmp_path, _unlabeled_junction_sch())
         result = detect_net_conflicts(sch_path=sch_path)
         conflicts = result["conflicts"]
@@ -306,7 +306,7 @@ class TestConflictStructure:
     """Each conflict dict contains required keys."""
 
     def test_conflict_has_required_keys(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
+        from volta.schematic_routing.conflict_detector import detect_net_conflicts
         sch_path = _write_schematic(tmp_path, _shorted_nets_sch())
         result = detect_net_conflicts(sch_path=sch_path)
         for c in result["conflicts"]:
@@ -329,7 +329,7 @@ class TestConflictStats:
     """Stats accurately reflect conflict counts."""
 
     def test_stats_consistency(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
+        from volta.schematic_routing.conflict_detector import detect_net_conflicts
         sch_path = _write_schematic(tmp_path, _shorted_nets_sch())
         result = detect_net_conflicts(sch_path=sch_path)
         stats = result["stats"]
@@ -344,7 +344,7 @@ class TestConflictStats:
         )
 
     def test_shorted_nets_increments_errors(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
+        from volta.schematic_routing.conflict_detector import detect_net_conflicts
         sch_path = _write_schematic(tmp_path, _shorted_nets_sch())
         result = detect_net_conflicts(sch_path=sch_path)
         assert result["stats"]["errors"] >= 1
@@ -359,7 +359,7 @@ class TestDisableChecks:
     """Individual checks can be disabled via schema flags."""
 
     def test_disable_case_variants(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
+        from volta.schematic_routing.conflict_detector import detect_net_conflicts
         sch_path = _write_schematic(tmp_path, _case_variant_sch())
         result = detect_net_conflicts(
             sch_path=sch_path,
@@ -372,7 +372,7 @@ class TestDisableChecks:
         )
 
     def test_disable_mixed_labels(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
+        from volta.schematic_routing.conflict_detector import detect_net_conflicts
         sch_path = _write_schematic(tmp_path, _mixed_labels_sch())
         result = detect_net_conflicts(
             sch_path=sch_path,
@@ -385,7 +385,7 @@ class TestDisableChecks:
         )
 
     def test_disable_unlabeled_junctions(self, tmp_path: Path) -> None:
-        from kicad_agent.schematic_routing.conflict_detector import detect_net_conflicts
+        from volta.schematic_routing.conflict_detector import detect_net_conflicts
         sch_path = _write_schematic(tmp_path, _unlabeled_junction_sch())
         result = detect_net_conflicts(
             sch_path=sch_path,

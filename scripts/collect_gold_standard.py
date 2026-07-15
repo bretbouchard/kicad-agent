@@ -30,7 +30,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from kicad_agent.training.routing_quality import (
+from volta.training.routing_quality import (
     RoutingQualityFeatures,
     compute_routing_quality,
     features_to_dict,
@@ -139,9 +139,9 @@ def parse_and_score(
 
     Returns a dict with features + metadata, or None on parse failure.
     """
-    from kicad_agent.parser.pcb_parser import parse_pcb
-    from kicad_agent.parser.uuid_extractor import extract_uuids
-    from kicad_agent.ir.pcb_ir import PcbIR
+    from volta.parser.pcb_parser import parse_pcb
+    from volta.parser.uuid_extractor import extract_uuids
+    from volta.ir.pcb_ir import PcbIR
 
     try:
         result = parse_pcb(pcb_path)

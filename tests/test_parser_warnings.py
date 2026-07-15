@@ -9,7 +9,7 @@ import logging
 
 import pytest
 
-from kicad_agent.parser.pcb_native_parser import (
+from volta.parser.pcb_native_parser import (
     NativeParser,
     _UNSUPPORTED_ELEMENTS,
     _check_unsupported,
@@ -97,7 +97,7 @@ class TestUnsupportedElementWarnings:
 
     def test_unsupported_element_triggers_warning(self, caplog):
         """Parsing a PCB with title_block should emit a warning."""
-        with caplog.at_level(logging.WARNING, logger="kicad_agent.parser.pcb_native_parser"):
+        with caplog.at_level(logging.WARNING, logger="volta.parser.pcb_native_parser"):
             NativeParser.parse_pcb_content(_PCB_WITH_UNSUPPORTED)
 
         assert any(
@@ -107,7 +107,7 @@ class TestUnsupportedElementWarnings:
 
     def test_supported_elements_no_warning(self, caplog):
         """Parsing a PCB with only supported elements should NOT emit unsupported warnings."""
-        with caplog.at_level(logging.WARNING, logger="kicad_agent.parser.pcb_native_parser"):
+        with caplog.at_level(logging.WARNING, logger="volta.parser.pcb_native_parser"):
             NativeParser.parse_pcb_content(_MINIMAL_PCB_SUPPORTED)
 
         unsupported_msgs = [
@@ -130,7 +130,7 @@ class TestCheckUnsupportedHelper:
 
     def test_unsupported_element_logs_warning(self, caplog):
         """_check_unsupported should log warning for unsupported elements."""
-        with caplog.at_level(logging.WARNING, logger="kicad_agent.parser.pcb_native_parser"):
+        with caplog.at_level(logging.WARNING, logger="volta.parser.pcb_native_parser"):
             _check_unsupported("thermal_relief_pads")
 
         assert any(
@@ -140,7 +140,7 @@ class TestCheckUnsupportedHelper:
 
     def test_unsupported_element_with_context(self, caplog):
         """_check_unsupported should include context in warning message."""
-        with caplog.at_level(logging.WARNING, logger="kicad_agent.parser.pcb_native_parser"):
+        with caplog.at_level(logging.WARNING, logger="volta.parser.pcb_native_parser"):
             _check_unsupported("keepout_areas", "footprint U1")
 
         assert any(
@@ -150,7 +150,7 @@ class TestCheckUnsupportedHelper:
 
     def test_supported_element_no_warning(self, caplog):
         """_check_unsupported should NOT log for supported elements."""
-        with caplog.at_level(logging.WARNING, logger="kicad_agent.parser.pcb_native_parser"):
+        with caplog.at_level(logging.WARNING, logger="volta.parser.pcb_native_parser"):
             _check_unsupported("net")
 
         unsupported_msgs = [
@@ -162,7 +162,7 @@ class TestCheckUnsupportedHelper:
 
     def test_warning_message_references_constant(self, caplog):
         """Warning message should reference _UNSUPPORTED_ELEMENTS for discoverability."""
-        with caplog.at_level(logging.WARNING, logger="kicad_agent.parser.pcb_native_parser"):
+        with caplog.at_level(logging.WARNING, logger="volta.parser.pcb_native_parser"):
             _check_unsupported("fp_text")
 
         assert any(

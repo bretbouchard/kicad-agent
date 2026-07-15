@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.project.adi_library.cache import FootprintCache
-from kicad_agent.project.adi_library.types import FetchResult
+from volta.project.adi_library.cache import FootprintCache
+from volta.project.adi_library.types import FetchResult
 
 
 class TestFootprintCacheInit:
@@ -43,7 +43,7 @@ class TestCacheOperations:
         """Add a .kicad_sym file to cache and retrieve it."""
         cache = FootprintCache(tmp_path / "adi_cache")
         sym_file = tmp_path / "test.kicad_sym"
-        sym_file.write_text("(kicad_symbol_lib (version 20220914) (generator kicad_agent))")
+        sym_file.write_text("(kicad_symbol_lib (version 20220914) (generator volta))")
         cache.add_entry("AD8606ARMZ", "manual", symbol_path=sym_file)
         paths = cache.get_cached_paths("AD8606ARMZ")
         assert paths["symbol"] is not None

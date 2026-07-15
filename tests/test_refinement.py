@@ -9,20 +9,20 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.generation.intent import (
+from volta.generation.intent import (
     BoardSpec,
     ComponentSpec,
     GenerationIntent,
     PowerSpec,
 )
-from kicad_agent.generation.refinement import (
+from volta.generation.refinement import (
     RefinementIteration,
     RefinementResult,
     analyze_erc_errors,
     refine_design,
 )
-from kicad_agent.generation.template_schematic import generate_schematic
-from kicad_agent.validation.erc_drc import ErcResult, Severity, Violation
+from volta.generation.template_schematic import generate_schematic
+from volta.validation.erc_drc import ErcResult, Severity, Violation
 
 KICAD_CLI_AVAILABLE = shutil.which("kicad-cli") is not None
 

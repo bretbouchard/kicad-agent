@@ -12,7 +12,7 @@ live during slow operations.
 
 Phase 162 ships four handlers:
     ping               — liveness probe, returns {"pong": true, ...}
-    list_operations    — returns the kicad_agent.ops.registry operation list
+    list_operations    — returns the volta.ops.registry operation list
     health_check       — executor + registry sanity check
     shutdown           — request graceful exit
 
@@ -477,19 +477,19 @@ def tools_call(params: Any, ctx: HandlerContext) -> dict[str, Any]:
     try:
         executor = ctx.executor()
         if executor is None:
-            # No factory wired — Phase 162 dev mode without kicad_agent installed.
+            # No factory wired — Phase 162 dev mode without volta installed.
             return {
                 "content": [{
                     "type": "text",
                     "text": _json.dumps({
                         "success": False,
-                        "error": "OperationExecutor unavailable (kicad_agent not bundled)",
+                        "error": "OperationExecutor unavailable (volta not bundled)",
                     }),
                 }],
                 "isError": True,
             }
         # Validate the operation through Pydantic, then execute.
-        from kicad_agent.ops.schema import Operation  # type: ignore[import-not-found]
+        from volta.ops.schema import Operation  # type: ignore[import-not-found]
         op = Operation.model_validate(arguments)
         # Patch the op_type if the caller passed name=kicad.X but arguments
         # didn't include op_type. MCP clients may rely solely on `name`.
@@ -884,7 +884,7 @@ def _run_erc_safe(sch_files: list[str]) -> dict[str, Any] | None:
          "per_file": [{path, clean, error_count, error_message}, ...]}
     """
     try:
-        from kicad_agent.validation.erc_drc import run_erc  # type: ignore[import-not-found]
+        from volta.validation.erc_drc import run_erc  # type: ignore[import-not-found]
     except Exception:
         return None
 
@@ -930,7 +930,7 @@ def _run_drc_safe(pcb_files: list[str]) -> dict[str, Any] | None:
     Returns None if kicad-cli unavailable or every file errored.
     """
     try:
-        from kicad_agent.validation.erc_drc import run_drc  # type: ignore[import-not-found]
+        from volta.validation.erc_drc import run_drc  # type: ignore[import-not-found]
     except Exception:
         return None
 
@@ -1077,7 +1077,7 @@ def kicad_native_check(params: Any, ctx: "HandlerContext") -> dict[str, Any]:
     pcb_files = [Path(f) for f in files if f.endswith(".kicad_pcb")]
 
     try:
-        from kicad_agent.validation.native_drc_runner import run_all_native_checks
+        from volta.validation.native_drc_runner import run_all_native_checks
         result = run_all_native_checks(
             sch_path=sch_files[0] if sch_files else None,
             pcb_path=pcb_files[0] if pcb_files else None,
@@ -1144,18 +1144,18 @@ def registered_methods() -> list[str]:
 # =============================================================================
 
 def _registered_operations() -> list[str]:
-    """Best-effort import of the kicad_agent operations registry.
+    """Best-effort import of the volta operations registry.
 
     Returns an empty list if the package isn't importable (e.g. broken
     PyInstaller bundle). Health checks should not raise on import
     failures — they should report them.
 
     The registry is exposed as `OPERATION_REGISTRY` (a dict keyed by op
-    name) in current kicad_agent. We also tolerate `OPERATIONS` (older
+    name) in current volta. We also tolerate `OPERATIONS` (older
     alias) and list-shaped registries for forward compatibility.
     """
     try:
-        from kicad_agent.ops import registry as reg  # type: ignore[import-not-found]
+        from volta.ops import registry as reg  # type: ignore[import-not-found]
     except Exception:
         return []
 
@@ -1186,7 +1186,7 @@ def _build_tool_descriptor(op_name: str) -> dict[str, Any] | None:
          "inputSchema": <JSON schema>}
     """
     try:
-        from kicad_agent.ops import registry as reg  # type: ignore[import-not-found]
+        from volta.ops import registry as reg  # type: ignore[import-not-found]
     except Exception:
         # No registry — return a minimal descriptor with the op name only.
         return {
@@ -1212,7 +1212,7 @@ def _build_tool_descriptor(op_name: str) -> dict[str, Any] | None:
     # Try to extract JSON schema from the Pydantic model for this op.
     input_schema: dict[str, Any]
     try:
-        from kicad_agent.ops.schema import Operation  # type: ignore[import-not-found]
+        from volta.ops.schema import Operation  # type: ignore[import-not-found]
         # Pydantic v2: construct a minimal validated Operation with this op_type,
         # then export its JSON schema. This is heavy (validates the discriminated
         # union), so we cache it via the op's model_json_schema() instead.
@@ -1247,7 +1247,7 @@ def _op_input_schema(op_name: str) -> dict[str, Any] | None:
     fall back to a permissive schema.
     """
     try:
-        from kicad_agent.ops.schema import Operation  # type: ignore[import-not-found]
+        from volta.ops.schema import Operation  # type: ignore[import-not-found]
         # The discriminated union lives in Operation.model_fields['root'].annotation.
         # Walk the union to find the matching model by op_type literal.
         annotation = Operation.model_fields["root"].annotation

@@ -6,7 +6,7 @@
 # is reproducible. Upgrade intentionally — PyInstaller sometimes has trouble
 # across major version bumps of these libraries.
 #
-# The kicad_agent library itself is NOT listed here; it is bundled from
+# The volta library itself is NOT listed here; it is bundled from
 # ../../src/ via the spec file's pathex + hiddenimports.
 
 kiutils==1.4.8

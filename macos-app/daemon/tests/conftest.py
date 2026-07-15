@@ -19,7 +19,7 @@ _DAEMON_ROOT = _HERE.parent
 if str(_DAEMON_ROOT) not in sys.path:
     sys.path.insert(0, str(_DAEMON_ROOT))
 
-# Also add the repo's src/ so `kicad_agent` is importable for handler tests.
+# Also add the repo's src/ so `volta` is importable for handler tests.
 _REPO_SRC = _DAEMON_ROOT.parents[1] / "src"
 if _REPO_SRC.exists() and str(_REPO_SRC) not in sys.path:
     sys.path.insert(0, str(_REPO_SRC))

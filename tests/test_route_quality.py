@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.validation.gates.route_quality import (
+from volta.validation.gates.route_quality import (
     RouteQualityMetrics,
     compute_route_quality,
     _count_routed_nets,

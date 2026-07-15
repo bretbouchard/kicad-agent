@@ -12,11 +12,11 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ir.pcb_ir import PcbIR
-from kicad_agent.ops.executor import OperationExecutor
-from kicad_agent.ops.schema import Operation
-from kicad_agent.parser import parse_pcb
-from kicad_agent.parser.uuid_extractor import extract_uuids
+from volta.ir.pcb_ir import PcbIR
+from volta.ops.executor import OperationExecutor
+from volta.ops.schema import Operation
+from volta.parser import parse_pcb
+from volta.parser.uuid_extractor import extract_uuids
 from kiutils.board import Board
 from kiutils.items.common import Net, Position
 from kiutils.items.gritems import GrLine
@@ -26,7 +26,7 @@ from kiutils.footprint import Footprint, Pad
 @pytest.fixture(autouse=True)
 def _clear_ir_registry():
     """Clear IR registry between tests."""
-    from kicad_agent.ir.base import _clear_registry
+    from volta.ir.base import _clear_registry
     _clear_registry()
 
 
@@ -94,7 +94,7 @@ class TestMoveFootprintSchema:
 
     def test_schema_validation(self):
         """Schema validates with required fields."""
-        from kicad_agent.ops._schema_pcb import MoveFootprintOp
+        from volta.ops._schema_pcb import MoveFootprintOp
         op = MoveFootprintOp(
             target_file="test.kicad_pcb",
             reference="R1",
@@ -107,7 +107,7 @@ class TestMoveFootprintSchema:
 
     def test_schema_with_angle(self):
         """Schema validates with explicit angle."""
-        from kicad_agent.ops._schema_pcb import MoveFootprintOp
+        from volta.ops._schema_pcb import MoveFootprintOp
         op = MoveFootprintOp(
             target_file="test.kicad_pcb",
             reference="R1",
@@ -119,7 +119,7 @@ class TestMoveFootprintSchema:
 
     def test_schema_empty_reference_rejected(self):
         """Empty reference is rejected."""
-        from kicad_agent.ops._schema_pcb import MoveFootprintOp
+        from volta.ops._schema_pcb import MoveFootprintOp
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
             MoveFootprintOp(

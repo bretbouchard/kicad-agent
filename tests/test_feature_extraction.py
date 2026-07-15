@@ -2,7 +2,7 @@
 
 import pytest
 
-from kicad_agent.analysis.feature_extraction import SubcircuitFeatures, extract_features
+from volta.analysis.feature_extraction import SubcircuitFeatures, extract_features
 
 
 class TestSubcircuitFeaturesDetailed:

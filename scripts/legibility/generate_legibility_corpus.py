@@ -150,7 +150,7 @@ def main() -> None:
     out_dir = Path("tests/fixtures/legibility")
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    from kicad_agent.circuit_ir import circuit_to_kicad_sch
+    from volta.circuit_ir import circuit_to_kicad_sch
 
     for name, gen in GENERATORS.items():
         try:

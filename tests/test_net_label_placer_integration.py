@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops.net_label_placer import (
+from volta.ops.net_label_placer import (
     _load_pin_map,
     _BUILTIN_PROFILES,
 )

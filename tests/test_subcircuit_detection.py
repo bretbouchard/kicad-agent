@@ -5,12 +5,12 @@ the CircuitTopology from Phase 45. CircuitClassifier uses rule-based
 classification matching violation_classifier ordered-rule pattern.
 """
 
-from kicad_agent.analysis.topology_graph import (
+from volta.analysis.topology_graph import (
     CircuitTopology,
     TopologyEdge,
     TopologyNode,
 )
-from kicad_agent.analysis.types import NetClassification
+from volta.analysis.types import NetClassification
 
 
 # ---------------------------------------------------------------------------
@@ -168,67 +168,67 @@ class TestSubcircuitType:
     """SubcircuitType enum has required values."""
 
     def test_preamplifier(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.PREAMP == "PREAMP"
 
     def test_compressor(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.COMPRESSOR == "COMPRESSOR"
 
     def test_eq(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.EQ == "EQ"
 
     def test_filter(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.FILTER == "FILTER"
 
     def test_vca(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.VCA == "VCA"
 
     def test_envelope(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.ENVELOPE == "ENVELOPE"
 
     def test_lfo(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.LFO == "LFO"
 
     def test_mixer(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.MIXER == "MIXER"
 
     def test_output_stage(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.OUTPUT_STAGE == "OUTPUT_STAGE"
 
     def test_power_supply(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.POWER_SUPPLY == "POWER_SUPPLY"
 
     def test_oscillator(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.OSCILLATOR == "OSCILLATOR"
 
     def test_digital_control(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.DIGITAL_CONTROL == "DIGITAL_CONTROL"
 
     def test_analog_switch(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.ANALOG_SWITCH == "ANALOG_SWITCH"
 
     def test_protection(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.PROTECTION == "PROTECTION"
 
     def test_unknown(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert SubcircuitType.UNKNOWN == "UNKNOWN"
 
     def test_all_15_types(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert len(SubcircuitType) == 15
 
 
@@ -241,7 +241,7 @@ class TestSubcircuitSchema:
     """Subcircuit frozen dataclass fields."""
 
     def test_create_subcircuit(self):
-        from kicad_agent.analysis.subcircuit_detector import Subcircuit, SubcircuitType
+        from volta.analysis.subcircuit_detector import Subcircuit, SubcircuitType
         sc = Subcircuit(
             subcircuit_id="SC-001",
             components=("U1", "R1", "R2"),
@@ -259,7 +259,7 @@ class TestSubcircuitSchema:
         assert sc.center_component == "U1"
 
     def test_subcircuit_is_frozen(self):
-        from kicad_agent.analysis.subcircuit_detector import Subcircuit, SubcircuitType
+        from volta.analysis.subcircuit_detector import Subcircuit, SubcircuitType
         sc = Subcircuit(
             subcircuit_id="SC-001",
             components=("U1",),
@@ -277,7 +277,7 @@ class TestSubcircuitSchema:
             pass
 
     def test_confidence_bounds(self):
-        from kicad_agent.analysis.subcircuit_detector import Subcircuit, SubcircuitType
+        from volta.analysis.subcircuit_detector import Subcircuit, SubcircuitType
         sc = Subcircuit(
             subcircuit_id="SC-001",
             components=("U1",),
@@ -291,7 +291,7 @@ class TestSubcircuitSchema:
         assert 0.0 <= sc.confidence <= 1.0
 
     def test_features_is_dict(self):
-        from kicad_agent.analysis.subcircuit_detector import Subcircuit, SubcircuitType
+        from volta.analysis.subcircuit_detector import Subcircuit, SubcircuitType
         sc = Subcircuit(
             subcircuit_id="SC-001",
             components=("U1",),
@@ -315,13 +315,13 @@ class TestSubcircuitDetectorEmpty:
     """SubcircuitDetector handles empty circuit."""
 
     def test_empty_returns_empty_list(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_empty_topology())
         assert result == []
 
     def test_empty_no_crash(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         # Should not raise any exception
         detector.detect(_empty_topology())
@@ -336,19 +336,19 @@ class TestSubcircuitDetectorSingleIC:
     """SubcircuitDetector clusters around single IC."""
 
     def test_single_ic_produces_one_subcircuit(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_single_ic_topology())
         assert len(result) == 1
 
     def test_single_ic_center_component(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_single_ic_topology())
         assert result[0].center_component == "U1"
 
     def test_single_ic_includes_passives(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_single_ic_topology())
         comps = set(result[0].components)
@@ -366,14 +366,14 @@ class TestSubcircuitDetectorMultiIC:
     """SubcircuitDetector partitions multi-IC circuit into subcircuits."""
 
     def test_multi_ic_produces_multiple_subcircuits(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_multi_ic_topology())
         assert len(result) >= 2
 
     def test_no_component_overlap(self):
         """Each component assigned to exactly one subcircuit."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_multi_ic_topology())
         all_components = []
@@ -384,7 +384,7 @@ class TestSubcircuitDetectorMultiIC:
 
     def test_all_components_assigned(self):
         """All components in topology are accounted for."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         topology = _multi_ic_topology()
         result = detector.detect(topology)
@@ -405,7 +405,7 @@ class TestSubcircuitDetectorBoundaryNets:
 
     def test_boundary_nets_exist(self):
         """Nets shared between subcircuits are boundary nets."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_multi_ic_topology())
         # At least one subcircuit should have boundary nets
@@ -417,7 +417,7 @@ class TestSubcircuitDetectorBoundaryNets:
 
     def test_boundary_nets_subset_of_all_nets(self):
         """Boundary nets are a subset of the subcircuit's nets."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_multi_ic_topology())
         for sc in result:
@@ -435,7 +435,7 @@ class TestSubcircuitDetectorPassiveGroups:
 
     def test_passive_only_returns_empty_or_unknown(self):
         """Passive-only circuit has no IC subcircuits."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_passive_only_topology())
         # No ICs -> no subcircuits centered on ICs
@@ -444,7 +444,7 @@ class TestSubcircuitDetectorPassiveGroups:
 
     def test_passive_assigned_to_nearest_ic(self):
         """Unassigned passives near an IC get absorbed into that IC's subcircuit."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         # Build topology with an IC and a passive that is connected but far
         nodes = [
@@ -479,14 +479,14 @@ class TestSubcircuitDetectorSequentialIds:
     """Subcircuit IDs are sequential."""
 
     def test_sequential_id_format(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_single_ic_topology())
         assert len(result) >= 1
         assert result[0].subcircuit_id == "SC-001"
 
     def test_multi_sequential_ids(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_multi_ic_topology())
         ids = [sc.subcircuit_id for sc in result]
@@ -505,7 +505,7 @@ class TestSubcircuitDetectorConfidence:
     """Confidence is between 0.0 and 1.0."""
 
     def test_confidence_in_range(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_single_ic_topology())
         for sc in result:
@@ -513,7 +513,7 @@ class TestSubcircuitDetectorConfidence:
 
     def test_known_ic_has_higher_confidence(self):
         """Known IC (NE5532) with feedback should have higher confidence."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_single_ic_topology())
         # Single IC with feedback should classify with decent confidence
@@ -531,7 +531,7 @@ class TestSubcircuitDetectorDeterminism:
     """Detection is deterministic for the same input."""
 
     def test_same_input_same_output(self):
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         topo = _multi_ic_topology()
         result1 = detector.detect(topo)
@@ -704,8 +704,8 @@ class TestCircuitClassifier:
 
     def test_opamp_preamplifier(self):
         """Op-amp with feedback resistors (no caps in feedback) -> PREAMP."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_opamp_preamplifier_features())
         assert result.subcircuit_type == SubcircuitType.PREAMP
@@ -713,8 +713,8 @@ class TestCircuitClassifier:
 
     def test_opamp_filter(self):
         """Op-amp with capacitors in feedback -> FILTER."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_opamp_filter_features())
         assert result.subcircuit_type == SubcircuitType.FILTER
@@ -722,8 +722,8 @@ class TestCircuitClassifier:
 
     def test_compressor_with_sidechain(self):
         """THAT4301 with sidechain -> COMPRESSOR."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_compressor_features())
         assert result.subcircuit_type == SubcircuitType.COMPRESSOR
@@ -731,8 +731,8 @@ class TestCircuitClassifier:
 
     def test_vca_without_sidechain(self):
         """THAT4301 without sidechain -> VCA."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_vca_no_sidechain_features())
         assert result.subcircuit_type == SubcircuitType.VCA
@@ -740,8 +740,8 @@ class TestCircuitClassifier:
 
     def test_power_supply(self):
         """LM7805 + filter caps -> POWER_SUPPLY."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_power_supply_features())
         assert result.subcircuit_type == SubcircuitType.POWER_SUPPLY
@@ -749,8 +749,8 @@ class TestCircuitClassifier:
 
     def test_digital_control(self):
         """RP2040 + crystal -> DIGITAL_CONTROL."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_digital_control_features())
         assert result.subcircuit_type == SubcircuitType.DIGITAL_CONTROL
@@ -758,8 +758,8 @@ class TestCircuitClassifier:
 
     def test_analog_switch(self):
         """CD4066 -> ANALOG_SWITCH."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_analog_switch_features())
         assert result.subcircuit_type == SubcircuitType.ANALOG_SWITCH
@@ -767,8 +767,8 @@ class TestCircuitClassifier:
 
     def test_output_stage(self):
         """Op-amp output buffer -> OUTPUT_STAGE (low component count)."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_output_stage_features())
         assert result.subcircuit_type == SubcircuitType.OUTPUT_STAGE
@@ -776,8 +776,8 @@ class TestCircuitClassifier:
 
     def test_oscillator(self):
         """CD4060 oscillator -> OSCILLATOR."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_oscillator_features())
         assert result.subcircuit_type == SubcircuitType.OSCILLATOR
@@ -785,8 +785,8 @@ class TestCircuitClassifier:
 
     def test_lfo(self):
         """CD4060 with RC timing -> LFO (takes precedence over OSCILLATOR)."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_lfo_features())
         assert result.subcircuit_type == SubcircuitType.LFO
@@ -794,8 +794,8 @@ class TestCircuitClassifier:
 
     def test_unknown_ic(self):
         """Unknown IC with ambiguous components -> UNKNOWN with low confidence."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_unknown_ic_features())
         assert result.subcircuit_type == SubcircuitType.UNKNOWN
@@ -803,8 +803,8 @@ class TestCircuitClassifier:
 
     def test_mixer(self):
         """Op-amp with multiple inputs -> MIXER."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_mixer_features())
         assert result.subcircuit_type == SubcircuitType.MIXER
@@ -816,21 +816,21 @@ class TestClassifierConfidence:
 
     def test_exact_match_high_confidence(self):
         """Exact rule match produces confidence > 0.8."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.circuit_classifier import CircuitClassifier
         c = CircuitClassifier()
         result = c.classify(_power_supply_features())
         assert result.confidence >= 0.9
 
     def test_unknown_low_confidence(self):
         """No rule match produces confidence < 0.5."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.circuit_classifier import CircuitClassifier
         c = CircuitClassifier()
         result = c.classify(_unknown_ic_features())
         assert result.confidence < 0.5
 
     def test_confidence_always_in_range(self):
         """All classification results have confidence in [0.0, 1.0]."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.circuit_classifier import CircuitClassifier
         c = CircuitClassifier()
         for features in [
             _opamp_preamplifier_features(),
@@ -847,20 +847,20 @@ class TestClassifierUnknowns:
     """Unknown/ambiguous handling."""
 
     def test_unknown_returns_unknown_type(self):
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify({"lib_id": "XYZ999", "component_type": "ic"})
         assert result.subcircuit_type == SubcircuitType.UNKNOWN
 
     def test_unknown_low_confidence(self):
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.circuit_classifier import CircuitClassifier
         c = CircuitClassifier()
         result = c.classify({"lib_id": "XYZ999", "component_type": "ic"})
         assert result.confidence < 0.5
 
     def test_unknown_matched_rule_description(self):
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.circuit_classifier import CircuitClassifier
         c = CircuitClassifier()
         result = c.classify({"lib_id": "XYZ999", "component_type": "ic"})
         assert result.matched_rule == "No rule matched"
@@ -871,8 +871,8 @@ class TestClassifierOrderedRules:
 
     def test_first_match_wins(self):
         """First matching rule wins, not the most specific."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         # Compressor features also match VCA rule, but compressor rule is first
         result = c.classify(_compressor_features())
@@ -880,16 +880,16 @@ class TestClassifierOrderedRules:
 
     def test_lfo_before_oscillator(self):
         """LFO rule matches before OSCILLATOR rule for CD4060 with RC."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_lfo_features())
         assert result.subcircuit_type == SubcircuitType.LFO
 
     def test_custom_rule_prepended(self):
         """Custom rules checked before default rules."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
 
         custom_rule = [
             (lambda f: f.get("lib_id") == "NE5532", SubcircuitType.EQ, 0.99, "Custom EQ rule"),
@@ -901,7 +901,7 @@ class TestClassifierOrderedRules:
 
     def test_classify_batch(self):
         """Batch classification returns one result per input."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.circuit_classifier import CircuitClassifier
         c = CircuitClassifier()
         features_list = [
             _opamp_preamplifier_features(),
@@ -910,7 +910,7 @@ class TestClassifierOrderedRules:
         ]
         results = c.classify_batch(features_list)
         assert len(results) == 3
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitType
         assert results[0].subcircuit_type == SubcircuitType.PREAMP
         assert results[1].subcircuit_type == SubcircuitType.POWER_SUPPLY
         assert results[2].subcircuit_type == SubcircuitType.UNKNOWN
@@ -998,7 +998,7 @@ class TestSubcircuitIntegration:
 
     def test_multi_ic_three_subcircuits(self):
         """Three ICs produce 3 subcircuits with correct types."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector, SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitDetector, SubcircuitType
         detector = SubcircuitDetector()
         result = detector.detect(_multi_type_topology())
         assert len(result) == 3
@@ -1010,7 +1010,7 @@ class TestSubcircuitIntegration:
 
     def test_compressor_block(self):
         """Compressor topology: THAT4301 + NE5532 produce 2 subcircuits."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector, SubcircuitType
+        from volta.analysis.subcircuit_detector import SubcircuitDetector, SubcircuitType
         detector = SubcircuitDetector()
         result = detector.detect(_compressor_block_topology())
         assert len(result) >= 2  # U1 (VCA/COMPRESSOR) + U2 (op-amp)
@@ -1023,7 +1023,7 @@ class TestSubcircuitIntegration:
 
     def test_signal_flow_through_subcircuits(self):
         """Signal flows through subcircuits via boundary nets."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_multi_type_topology())
         # Find subcircuits with boundary nets
@@ -1034,7 +1034,7 @@ class TestSubcircuitIntegration:
 
     def test_no_component_overlap_integration(self):
         """No component assigned to multiple subcircuits."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_multi_type_topology())
         all_components = []
@@ -1044,7 +1044,7 @@ class TestSubcircuitIntegration:
 
     def test_all_components_accounted_for(self):
         """All components in topology are assigned to a subcircuit."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         topo = _multi_type_topology()
         result = detector.detect(topo)
@@ -1056,7 +1056,7 @@ class TestSubcircuitIntegration:
 
     def test_features_include_counts(self):
         """Subcircuit.features includes component counts and net stats."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_multi_type_topology())
         for sc in result:
@@ -1069,7 +1069,7 @@ class TestSubcircuitIntegration:
 
     def test_subcircuit_sorted_by_id(self):
         """Results sorted by subcircuit_id."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_multi_type_topology())
         ids = [sc.subcircuit_id for sc in result]
@@ -1119,7 +1119,7 @@ class TestSubcircuitFeatures:
 
     def test_has_25_fields(self):
         """SubcircuitFeatures has all 25 fields."""
-        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
+        from volta.analysis.feature_extraction import SubcircuitFeatures
         import dataclasses
         field_names = {f.name for f in dataclasses.fields(SubcircuitFeatures)}
         expected = {
@@ -1140,7 +1140,7 @@ class TestSubcircuitFeatures:
 
     def test_frozen(self):
         """SubcircuitFeatures is frozen (immutable)."""
-        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
+        from volta.analysis.feature_extraction import SubcircuitFeatures
         features = SubcircuitFeatures(
             subcircuit_id="SC-001",
             ic_count=1, resistor_count=2, capacitor_count=2,
@@ -1163,7 +1163,7 @@ class TestSubcircuitFeatures:
 
     def test_json_serializable(self):
         """SubcircuitFeatures is JSON-serializable via dataclasses.asdict."""
-        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
+        from volta.analysis.feature_extraction import SubcircuitFeatures
         import json
         features = SubcircuitFeatures(
             subcircuit_id="SC-001",
@@ -1187,7 +1187,7 @@ class TestSubcircuitFeatures:
 
     def test_to_dict(self):
         """to_dict returns plain dict for sklearn DictVectorizer."""
-        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
+        from volta.analysis.feature_extraction import SubcircuitFeatures
         features = SubcircuitFeatures(
             subcircuit_id="SC-001",
             ic_count=1, resistor_count=2, capacitor_count=2,
@@ -1209,7 +1209,7 @@ class TestSubcircuitFeatures:
 
     def test_to_numeric_vector(self):
         """to_numeric_vector produces fixed-length float list for tensor conversion."""
-        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
+        from volta.analysis.feature_extraction import SubcircuitFeatures
         features = SubcircuitFeatures(
             subcircuit_id="SC-001",
             ic_count=1, resistor_count=2, capacitor_count=2,
@@ -1231,7 +1231,7 @@ class TestSubcircuitFeatures:
 
     def test_from_dict_roundtrip(self):
         """from_dict reconstructs SubcircuitFeatures from dict."""
-        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
+        from volta.analysis.feature_extraction import SubcircuitFeatures
         original = SubcircuitFeatures(
             subcircuit_id="SC-001",
             ic_count=1, resistor_count=2, capacitor_count=2,
@@ -1261,7 +1261,7 @@ class TestFeatureExtraction:
 
     def test_correct_component_counts(self):
         """extract_features counts ICs, resistors, capacitors correctly."""
-        from kicad_agent.analysis.feature_extraction import extract_features
+        from volta.analysis.feature_extraction import extract_features
         data = _mock_subcircuit_data()
         features = extract_features(
             component_refs=data["components"],
@@ -1281,7 +1281,7 @@ class TestFeatureExtraction:
 
     def test_identifies_feedback_loops(self):
         """extract_features detects feedback edges in subcircuit."""
-        from kicad_agent.analysis.feature_extraction import extract_features
+        from volta.analysis.feature_extraction import extract_features
         data = _mock_subcircuit_data()
         features = extract_features(
             component_refs=data["components"],
@@ -1298,7 +1298,7 @@ class TestFeatureExtraction:
 
     def test_identifies_power_connections(self):
         """extract_features detects power net connections."""
-        from kicad_agent.analysis.feature_extraction import extract_features
+        from volta.analysis.feature_extraction import extract_features
         data = _mock_subcircuit_data()
         features = extract_features(
             component_refs=data["components"],
@@ -1314,7 +1314,7 @@ class TestFeatureExtraction:
 
     def test_component_density(self):
         """component_density = total_components / net_count."""
-        from kicad_agent.analysis.feature_extraction import extract_features
+        from volta.analysis.feature_extraction import extract_features
         data = _mock_subcircuit_data()
         features = extract_features(
             component_refs=data["components"],
@@ -1330,7 +1330,7 @@ class TestFeatureExtraction:
 
     def test_primary_ic_type_opamp(self):
         """primary_ic_type returns 'opamp' for NE5532."""
-        from kicad_agent.analysis.feature_extraction import extract_features
+        from volta.analysis.feature_extraction import extract_features
         data = _mock_subcircuit_data()
         features = extract_features(
             component_refs=data["components"],
@@ -1346,7 +1346,7 @@ class TestFeatureExtraction:
 
     def test_deterministic(self):
         """Feature extraction is deterministic (same input -> same output)."""
-        from kicad_agent.analysis.feature_extraction import extract_features
+        from volta.analysis.feature_extraction import extract_features
         data = _mock_subcircuit_data()
         f1 = extract_features(
             component_refs=data["components"],
@@ -1381,7 +1381,7 @@ class TestFeatureExtractionEdgeCases:
 
     def test_passive_only_subcircuit(self):
         """Subcircuit with 0 ICs."""
-        from kicad_agent.analysis.feature_extraction import extract_features
+        from volta.analysis.feature_extraction import extract_features
         nodes = {
             "R1": _make_node("R1", "Device:R", "resistor", 2),
             "C1": _make_node("C1", "Device:C", "capacitor", 2),
@@ -1403,7 +1403,7 @@ class TestFeatureExtractionEdgeCases:
 
     def test_subcircuit_id_set(self):
         """subcircuit_id is properly set in features."""
-        from kicad_agent.analysis.feature_extraction import extract_features
+        from volta.analysis.feature_extraction import extract_features
         nodes = {
             "U1": _make_node("U1", "NE5532", "ic", 8),
         }
@@ -1422,7 +1422,7 @@ class TestFeatureExtractionEdgeCases:
 
     def test_no_feedback_edges(self):
         """Subcircuit with no feedback edges."""
-        from kicad_agent.analysis.feature_extraction import extract_features
+        from volta.analysis.feature_extraction import extract_features
         nodes = {
             "U1": _make_node("U1", "LM7805", "ic", 3),
             "C1": _make_node("C1", "Device:C", "capacitor", 2),
@@ -1442,7 +1442,7 @@ class TestFeatureExtractionEdgeCases:
 
     def test_crystal_detection(self):
         """Crystal components detected via lib_id."""
-        from kicad_agent.analysis.feature_extraction import extract_features
+        from volta.analysis.feature_extraction import extract_features
         nodes = {
             "U1": _make_node("U1", "RP2040", "ic", 40),
             "Y1": _make_node("Y1", "Device:Crystal", "misc", 2),
@@ -1461,7 +1461,7 @@ class TestFeatureExtractionEdgeCases:
 
     def test_primary_ic_types(self):
         """Various IC types correctly classified."""
-        from kicad_agent.analysis.feature_extraction import _classify_ic_type
+        from volta.analysis.feature_extraction import _classify_ic_type
         assert _classify_ic_type("NE5532") == "opamp"
         assert _classify_ic_type("TL072") == "opamp"
         assert _classify_ic_type("THAT4301") == "vca"
@@ -1476,7 +1476,7 @@ class TestFeatureExtractionEdgeCases:
 
     def test_ic_lib_ids_tuple(self):
         """ic_lib_ids captures all IC lib_ids in subcircuit."""
-        from kicad_agent.analysis.feature_extraction import extract_features
+        from volta.analysis.feature_extraction import extract_features
         nodes = {
             "U1": _make_node("U1", "NE5532", "ic", 8),
             "R1": _make_node("R1", "Device:R", "resistor", 2),
@@ -1504,8 +1504,8 @@ class TestConfidenceCalibration:
 
     def test_exact_ic_match_high_confidence(self):
         """Exact IC match (THAT4301 with sidechain) -> confidence > 0.8."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_compressor_features())
         assert result.subcircuit_type == SubcircuitType.COMPRESSOR
@@ -1513,7 +1513,7 @@ class TestConfidenceCalibration:
 
     def test_heuristic_match_medium_confidence(self):
         """Heuristic match (known op-amp pattern) -> confidence >= 0.5."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.circuit_classifier import CircuitClassifier
         c = CircuitClassifier()
         result = c.classify(_output_stage_features())
         assert result.confidence >= 0.5
@@ -1521,8 +1521,8 @@ class TestConfidenceCalibration:
 
     def test_no_match_low_confidence(self):
         """No rule match -> confidence < 0.5."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         result = c.classify(_unknown_ic_features())
         assert result.subcircuit_type == SubcircuitType.UNKNOWN
@@ -1530,7 +1530,7 @@ class TestConfidenceCalibration:
 
     def test_feature_vector_included_for_unknown(self):
         """ClassificationResult includes feature_vector for unknown classifications."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.circuit_classifier import CircuitClassifier
         c = CircuitClassifier()
         result = c.classify(_unknown_ic_features())
         assert result.feature_vector is not None
@@ -1539,9 +1539,9 @@ class TestConfidenceCalibration:
 
     def test_classify_accepts_subcircuit_features(self):
         """CircuitClassifier accepts SubcircuitFeatures in addition to raw dict."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.feature_extraction import SubcircuitFeatures
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.feature_extraction import SubcircuitFeatures
+        from volta.analysis.subcircuit_detector import SubcircuitType
 
         features = SubcircuitFeatures(
             subcircuit_id="SC-001",
@@ -1564,8 +1564,8 @@ class TestConfidenceCalibration:
 
     def test_custom_rule_override_confidence(self):
         """Custom rules can override default confidence for domain-specific tuning."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
 
         custom_rule = [
             (lambda f: f.get("lib_id") == "NE5532", SubcircuitType.EQ, 0.99, "Custom EQ rule"),
@@ -1586,7 +1586,7 @@ class TestUnknownHandling:
 
     def test_ambiguous_opamp_lower_confidence(self):
         """Op-amp that could be preamp OR output stage has lower confidence."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.circuit_classifier import CircuitClassifier
         c = CircuitClassifier()
         # Output stage features: ambiguous (op-amp with low component count)
         result = c.classify(_output_stage_features())
@@ -1595,14 +1595,14 @@ class TestUnknownHandling:
 
     def test_unknown_logged_with_feature_vector(self):
         """Unknown classifications have feature_vector populated for ML pipeline."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.circuit_classifier import CircuitClassifier
         c = CircuitClassifier()
         result = c.classify({"lib_id": "XYZ999", "component_type": "ic"})
         assert result.feature_vector is not None
 
     def test_known_high_confidence_no_feature_vector(self):
         """High-confidence matches do not include feature_vector (not needed for ML)."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.circuit_classifier import CircuitClassifier
         c = CircuitClassifier()
         result = c.classify(_power_supply_features())
         assert result.confidence >= 0.9
@@ -1620,7 +1620,7 @@ class TestBatchClassification:
 
     def test_batch_consistent_with_individual(self):
         """classify_batch returns same results as individual classify calls."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.circuit_classifier import CircuitClassifier
         c = CircuitClassifier()
         features_list = [
             _opamp_preamplifier_features(),
@@ -1635,8 +1635,8 @@ class TestBatchClassification:
 
     def test_batch_confidence_ordering(self):
         """Specific rules (high confidence) ordered before general rules."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+        from volta.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.subcircuit_detector import SubcircuitType
         c = CircuitClassifier()
         # Compressor has confidence 0.9 (specific), VCA has 0.85 (less specific)
         compressor = c.classify(_compressor_features())
@@ -1645,7 +1645,7 @@ class TestBatchClassification:
 
     def test_batch_returns_feature_vectors_for_unknowns(self):
         """Batch results include feature vectors for unknown classifications."""
-        from kicad_agent.analysis.circuit_classifier import CircuitClassifier
+        from volta.analysis.circuit_classifier import CircuitClassifier
         c = CircuitClassifier()
         results = c.classify_batch([
             _power_supply_features(),
@@ -1665,7 +1665,7 @@ class TestFeatureIntegration:
 
     def test_detect_returns_features_dict(self):
         """SubcircuitDetector.detect returns Subcircuits with feature data."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_multi_type_topology())
         assert len(result) >= 1
@@ -1677,7 +1677,7 @@ class TestFeatureIntegration:
 
     def test_all_subcircuits_have_feature_vectors(self):
         """All subcircuits in a topology have feature vectors."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_multi_type_topology())
         assert len(result) >= 2
@@ -1689,7 +1689,7 @@ class TestFeatureIntegration:
 
     def test_feature_determinism_across_runs(self):
         """Feature vectors from same schematic are deterministic across runs."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         topo = _multi_type_topology()
         result1 = detector.detect(topo)
@@ -1702,7 +1702,7 @@ class TestFeatureIntegration:
         import json
         import tempfile
         import os
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_multi_type_topology())
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
@@ -1724,7 +1724,7 @@ class TestFeatureIntegration:
 
     def test_end_to_end_feature_fields(self):
         """End-to-end: topology -> detection -> features include all key fields."""
-        from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector
+        from volta.analysis.subcircuit_detector import SubcircuitDetector
         detector = SubcircuitDetector()
         result = detector.detect(_multi_type_topology())
         assert len(result) >= 2

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.parser.pcb_netlist import extract_pcb_netlist
+from volta.parser.pcb_netlist import extract_pcb_netlist
 
 
 # Valid minimal PCB content with one pad

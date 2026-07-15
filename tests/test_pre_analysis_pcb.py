@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.ops.pre_analysis import PreAnalysisGate, PreAnalysisResult, PreAnalysisFinding
-from kicad_agent.ops.pre_analysis_pcb import analyze_pcb, _PCB_MUTATION_OP_TYPES
+from volta.ops.pre_analysis import PreAnalysisGate, PreAnalysisResult, PreAnalysisFinding
+from volta.ops.pre_analysis_pcb import analyze_pcb, _PCB_MUTATION_OP_TYPES
 
 
 class TestPreFlightGatePcb:
@@ -54,7 +54,7 @@ class TestPreFlightGatePcb:
             new_footprint_lib_id = "Package:DIP-8"
 
         # Patch the pad count resolver to return 1 (less than 3)
-        with patch("kicad_agent.ops.pre_analysis_pcb._resolve_footprint_pad_count", return_value=1):
+        with patch("volta.ops.pre_analysis_pcb._resolve_footprint_pad_count", return_value=1):
             analyze_pcb(SwapOp(), ir, Path("board.kicad_pcb"), result)
         assert result.blocked is True
         assert any(b.category == "pad_count_mismatch" for b in result.blockers)

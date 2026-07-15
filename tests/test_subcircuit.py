@@ -2,8 +2,8 @@
 
 import pytest
 
-from kicad_agent.analysis.subcircuit_detector import SubcircuitDetector, Subcircuit
-from kicad_agent.analysis.subcircuit_detector import SubcircuitType
+from volta.analysis.subcircuit_detector import SubcircuitDetector, Subcircuit
+from volta.analysis.subcircuit_detector import SubcircuitType
 
 
 class TestSubcircuitDetectorDetailed:

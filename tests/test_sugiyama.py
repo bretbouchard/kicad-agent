@@ -12,19 +12,19 @@ from unittest.mock import patch
 import networkx as nx
 import pytest
 
-from kicad_agent.analysis.topology_graph import (
+from volta.analysis.topology_graph import (
     CircuitTopology,
     TopologyEdge,
     TopologyNode,
 )
-from kicad_agent.analysis.types import NetClassification
-from kicad_agent.schematic_autolayout.layout_graph import (
+from volta.analysis.types import NetClassification
+from volta.schematic_autolayout.layout_graph import (
     KICAD_GRID_MM,
     LayoutEdge,
     LayoutGraph,
     LayoutNode,
 )
-from kicad_agent.schematic_autolayout.sugiyama import (
+from volta.schematic_autolayout.sugiyama import (
     DEFAULT_LAYER_SPACING_MM,
     DEFAULT_NODE_SPACING_MM,
     LayoutResult,

@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.ops.execution import get_pre_analysis_gate
-from kicad_agent.ops.batch_executor import _get_pre_analysis_gate
+from volta.ops.execution import get_pre_analysis_gate
+from volta.ops.batch_executor import _get_pre_analysis_gate
 
 
 class TestPreAnalysisGateSingletonOBUG011:

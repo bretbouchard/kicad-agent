@@ -10,8 +10,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.project.adi_library.fetcher import AdiFetcher
-from kicad_agent.project.adi_library.types import FetchResult
+from volta.project.adi_library.fetcher import AdiFetcher
+from volta.project.adi_library.types import FetchResult
 
 
 def _create_kicad_mod_zip(
@@ -27,7 +27,7 @@ def _create_kicad_mod_zip(
         if include_sym:
             zf.writestr(
                 f"{part_number}.kicad_sym",
-                f'(kicad_symbol_lib (version 20220914) (generator kicad_agent) '
+                f'(kicad_symbol_lib (version 20220914) (generator volta) '
                 f'(symbol "{part_number}"))',
             )
 
@@ -155,7 +155,7 @@ class TestLibraryRegistration:
 
         sym_file = project_dir / "test.kicad_sym"
         sym_file.write_text(
-            "(kicad_symbol_lib (version 20220914) (generator kicad_agent))"
+            "(kicad_symbol_lib (version 20220914) (generator volta))"
         )
 
         fetcher.import_files("AD8606ARMZ", symbol_path=sym_file)

@@ -24,13 +24,13 @@ class TestPinType:
 
     def test_has_eight_members(self):
         """PinType enum has 8 members."""
-        from kicad_agent.abstract_ast.models import PinType
+        from volta.abstract_ast.models import PinType
 
         assert len(PinType) == 8
 
     def test_contains_expected_types(self):
         """PinType has INPUT, OUTPUT, BIDI, PASSIVE, POWER_IN, POWER_OUT, UNSPECIFIED, NO_CONNECT."""
-        from kicad_agent.abstract_ast.models import PinType
+        from volta.abstract_ast.models import PinType
 
         expected = {"INPUT", "OUTPUT", "BIDI", "PASSIVE", "POWER_IN", "POWER_OUT", "UNSPECIFIED", "NO_CONNECT"}
         actual = {pt.name for pt in PinType}
@@ -41,14 +41,14 @@ class TestPosition:
     """Test Position helper model."""
 
     def test_position_has_x_y(self):
-        from kicad_agent.abstract_ast.models import Position
+        from volta.abstract_ast.models import Position
 
         p = Position(x=10.0, y=20.0)
         assert p.x == 10.0
         assert p.y == 20.0
 
     def test_wire_segment_has_start_end(self):
-        from kicad_agent.abstract_ast.models import WireSegment, Position
+        from volta.abstract_ast.models import WireSegment, Position
 
         ws = WireSegment(
             start=Position(x=0.0, y=0.0),
@@ -62,14 +62,14 @@ class TestAbstractPin:
     """Test AbstractPin model."""
 
     def test_validates_with_required_fields(self):
-        from kicad_agent.abstract_ast.models import AbstractPin, PinType
+        from volta.abstract_ast.models import AbstractPin, PinType
 
         pin = AbstractPin(number="1", name="OUT", pin_type=PinType.OUTPUT)
         assert pin.number == "1"
         assert pin.pin_type == PinType.OUTPUT
 
     def test_rejects_missing_fields(self):
-        from kicad_agent.abstract_ast.models import AbstractPin
+        from volta.abstract_ast.models import AbstractPin
 
         with pytest.raises(Exception):
             AbstractPin(number="", name="OUT", pin_type="output")
@@ -79,26 +79,26 @@ class TestAbstractComponent:
     """Test AbstractComponent model."""
 
     def test_validates_with_required_fields(self):
-        from kicad_agent.abstract_ast.models import AbstractComponent
+        from volta.abstract_ast.models import AbstractComponent
 
         comp = AbstractComponent(ref="R1", lib_id="Device:R", value="10k")
         assert comp.ref == "R1"
         assert comp.value == "10k"
 
     def test_rejects_empty_ref(self):
-        from kicad_agent.abstract_ast.models import AbstractComponent
+        from volta.abstract_ast.models import AbstractComponent
 
         with pytest.raises(Exception):
             AbstractComponent(ref="", lib_id="Device:R")
 
     def test_rejects_empty_lib_id(self):
-        from kicad_agent.abstract_ast.models import AbstractComponent
+        from volta.abstract_ast.models import AbstractComponent
 
         with pytest.raises(Exception):
             AbstractComponent(ref="R1", lib_id="")
 
     def test_rejects_duplicate_pin_numbers(self):
-        from kicad_agent.abstract_ast.models import AbstractComponent, AbstractPin, PinType
+        from volta.abstract_ast.models import AbstractComponent, AbstractPin, PinType
 
         with pytest.raises(Exception):
             AbstractComponent(
@@ -111,7 +111,7 @@ class TestAbstractComponent:
             )
 
     def test_optional_fields_default_correctly(self):
-        from kicad_agent.abstract_ast.models import AbstractComponent
+        from volta.abstract_ast.models import AbstractComponent
 
         comp = AbstractComponent(ref="R1", lib_id="Device:R")
         assert comp.value == ""
@@ -126,20 +126,20 @@ class TestAbstractNet:
     """Test AbstractNet model."""
 
     def test_validates_with_name_and_pin_refs(self):
-        from kicad_agent.abstract_ast.models import AbstractNet
+        from volta.abstract_ast.models import AbstractNet
 
         net = AbstractNet(name="VCC", pin_refs=[("U1", "8"), ("R1", "1")])
         assert net.name == "VCC"
         assert len(net.pin_refs) == 2
 
     def test_rejects_empty_name(self):
-        from kicad_agent.abstract_ast.models import AbstractNet
+        from volta.abstract_ast.models import AbstractNet
 
         with pytest.raises(Exception):
             AbstractNet(name="", pin_refs=[("R1", "1")])
 
     def test_rejects_empty_pin_refs(self):
-        from kicad_agent.abstract_ast.models import AbstractNet
+        from volta.abstract_ast.models import AbstractNet
 
         with pytest.raises(Exception):
             AbstractNet(name="VCC", pin_refs=[])
@@ -149,7 +149,7 @@ class TestAbstractSheet:
     """Test AbstractSheet model."""
 
     def test_validates_with_components_and_nets(self):
-        from kicad_agent.abstract_ast.models import AbstractSheet, AbstractComponent, AbstractNet
+        from volta.abstract_ast.models import AbstractSheet, AbstractComponent, AbstractNet
 
         sheet = AbstractSheet(
             name="main",
@@ -165,7 +165,7 @@ class TestAbstractCircuit:
     """Test AbstractCircuit model."""
 
     def test_validates_with_all_fields(self):
-        from kicad_agent.abstract_ast.models import AbstractCircuit, AbstractComponent, AbstractNet
+        from volta.abstract_ast.models import AbstractCircuit, AbstractComponent, AbstractNet
 
         circuit = AbstractCircuit(
             name="test_circuit",
@@ -176,7 +176,7 @@ class TestAbstractCircuit:
         assert len(circuit.components) == 1
 
     def test_json_round_trip_is_lossless(self):
-        from kicad_agent.abstract_ast.models import AbstractCircuit, AbstractComponent, AbstractNet, PinType, AbstractPin
+        from volta.abstract_ast.models import AbstractCircuit, AbstractComponent, AbstractNet, PinType, AbstractPin
 
         circuit = AbstractCircuit(
             name="round_trip_test",
@@ -241,7 +241,7 @@ class FixtureCircuits:
 
     @staticmethod
     def minimal_opamp_circuit():
-        from kicad_agent.abstract_ast.models import (
+        from volta.abstract_ast.models import (
             AbstractCircuit,
             AbstractComponent,
             AbstractNet,
@@ -274,7 +274,7 @@ class FixtureCircuits:
 
     @staticmethod
     def multi_sheet_circuit():
-        from kicad_agent.abstract_ast.models import (
+        from volta.abstract_ast.models import (
             AbstractCircuit,
             AbstractComponent,
             AbstractNet,
@@ -319,7 +319,7 @@ class TestCircuitValidator:
     def test_valid_circuit_passes(self):
         """Valid fixture circuit passes with no errors."""
         circuit = FixtureCircuits.minimal_opamp_circuit()
-        from kicad_agent.abstract_ast.validation import CircuitValidator
+        from volta.abstract_ast.validation import CircuitValidator
 
         issues = CircuitValidator.validate(circuit)
         errors = [i for i in issues if i.severity == "error"]
@@ -327,7 +327,7 @@ class TestCircuitValidator:
 
     def test_rejects_duplicate_refs_in_circuit(self):
         """CircuitValidator rejects duplicate component refs within a circuit."""
-        from kicad_agent.abstract_ast.validation import CircuitValidator
+        from volta.abstract_ast.validation import CircuitValidator
 
         circuit = FixtureCircuits.minimal_opamp_circuit()
         circuit.components.append(circuit.components[0].model_copy())
@@ -339,7 +339,7 @@ class TestCircuitValidator:
 
     def test_rejects_duplicate_refs_in_sheet(self):
         """CircuitValidator rejects duplicate refs within a sheet."""
-        from kicad_agent.abstract_ast.validation import CircuitValidator
+        from volta.abstract_ast.validation import CircuitValidator
 
         circuit = FixtureCircuits.multi_sheet_circuit()
         sheet = circuit.sheets[0]
@@ -352,8 +352,8 @@ class TestCircuitValidator:
 
     def test_rejects_nonexistent_component_ref(self):
         """CircuitValidator rejects net pin_refs referencing non-existent components."""
-        from kicad_agent.abstract_ast.models import AbstractCircuit, AbstractNet
-        from kicad_agent.abstract_ast.validation import CircuitValidator
+        from volta.abstract_ast.models import AbstractCircuit, AbstractNet
+        from volta.abstract_ast.validation import CircuitValidator
 
         circuit = AbstractCircuit(
             nets=[AbstractNet(name="ghost_net", pin_refs=[("X99", "1")])],
@@ -366,12 +366,12 @@ class TestCircuitValidator:
 
     def test_rejects_nonexistent_pin_on_component(self):
         """CircuitValidator rejects pin_refs referencing non-existent pin numbers."""
-        from kicad_agent.abstract_ast.validation import CircuitValidator
+        from volta.abstract_ast.validation import CircuitValidator
 
         circuit = FixtureCircuits.minimal_opamp_circuit()
         # Add a net referencing pin "99" on U1 which doesn't exist
         circuit.nets.append(
-            __import__("kicad_agent.abstract_ast.models", fromlist=["AbstractNet"]).AbstractNet(
+            __import__("volta.abstract_ast.models", fromlist=["AbstractNet"]).AbstractNet(
                 name="bad_net", pin_refs=[("U1", "99")]
             )
         )
@@ -383,7 +383,7 @@ class TestCircuitValidator:
 
     def test_returns_validation_issues(self):
         """CircuitValidator returns list of ValidationIssue with severity and description."""
-        from kicad_agent.abstract_ast.validation import CircuitValidator, ValidationIssue
+        from volta.abstract_ast.validation import CircuitValidator, ValidationIssue
 
         circuit = FixtureCircuits.minimal_opamp_circuit()
         issues = CircuitValidator.validate(circuit)
@@ -396,8 +396,8 @@ class TestCircuitValidator:
 
     def test_warns_on_single_pin_net(self):
         """CircuitValidator warns (not errors) on nets with only 1 pin connection."""
-        from kicad_agent.abstract_ast.models import AbstractCircuit, AbstractNet, AbstractComponent
-        from kicad_agent.abstract_ast.validation import CircuitValidator
+        from volta.abstract_ast.models import AbstractCircuit, AbstractNet, AbstractComponent
+        from volta.abstract_ast.validation import CircuitValidator
 
         circuit = AbstractCircuit(
             components=[AbstractComponent(ref="R1", lib_id="Device:R")],
@@ -412,8 +412,8 @@ class TestCircuitValidator:
 
     def test_warns_on_empty_circuit(self):
         """CircuitValidator warns on empty circuits (no components)."""
-        from kicad_agent.abstract_ast.models import AbstractCircuit
-        from kicad_agent.abstract_ast.validation import CircuitValidator
+        from volta.abstract_ast.models import AbstractCircuit
+        from volta.abstract_ast.validation import CircuitValidator
 
         circuit = AbstractCircuit()
         issues = CircuitValidator.validate(circuit)

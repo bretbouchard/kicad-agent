@@ -107,7 +107,7 @@ class TestSchematicMutationSchema:
 
     def test_valid_mutation_all_fields(self) -> None:
         """SchematicMutation validates with all required fields."""
-        from kicad_agent.benchmarks.mutation_engine import SchematicMutation
+        from volta.benchmarks.mutation_engine import SchematicMutation
 
         m = SchematicMutation(
             mutation_type="swap_values",
@@ -126,7 +126,7 @@ class TestSchematicMutationSchema:
 
     def test_all_mutation_types_valid(self) -> None:
         """All 7 mutation types are accepted by the schema."""
-        from kicad_agent.benchmarks.mutation_engine import SchematicMutation
+        from volta.benchmarks.mutation_engine import SchematicMutation
 
         valid_types = [
             "swap_values",
@@ -150,7 +150,7 @@ class TestSchematicMutationSchema:
 
     def test_invalid_mutation_type_rejected(self) -> None:
         """Invalid mutation type is rejected by the schema."""
-        from kicad_agent.benchmarks.mutation_engine import SchematicMutation
+        from volta.benchmarks.mutation_engine import SchematicMutation
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError):
@@ -165,7 +165,7 @@ class TestSchematicMutationSchema:
 
     def test_required_fields_present(self) -> None:
         """Missing required fields cause ValidationError."""
-        from kicad_agent.benchmarks.mutation_engine import SchematicMutation
+        from volta.benchmarks.mutation_engine import SchematicMutation
         from pydantic import ValidationError
 
         with pytest.raises(ValidationError):
@@ -181,14 +181,14 @@ class TestMutationEngine:
 
     def test_init_with_seed(self) -> None:
         """MutationEngine initializes with a seed for reproducibility."""
-        from kicad_agent.benchmarks.mutation_engine import MutationEngine
+        from volta.benchmarks.mutation_engine import MutationEngine
 
         engine = MutationEngine(seed=42)
         assert engine.rng is not None
 
     def test_reproducible_with_same_seed(self) -> None:
         """Two engines with the same seed produce identical results."""
-        from kicad_agent.benchmarks.mutation_engine import MutationEngine
+        from volta.benchmarks.mutation_engine import MutationEngine
 
         engine1 = MutationEngine(seed=123)
         engine2 = MutationEngine(seed=123)
@@ -197,7 +197,7 @@ class TestMutationEngine:
 
     def test_list_targets_minimal(self, minimal_sch: Path) -> None:
         """list_targets returns available mutation targets from a schematic."""
-        from kicad_agent.benchmarks.mutation_engine import MutationEngine
+        from volta.benchmarks.mutation_engine import MutationEngine
 
         engine = MutationEngine(seed=42)
         targets = engine.list_targets(str(minimal_sch))
@@ -211,7 +211,7 @@ class TestMutationEngine:
 
     def test_swap_values(self, minimal_sch: Path) -> None:
         """swap_values swaps property values between two components."""
-        from kicad_agent.benchmarks.mutation_engine import MutationEngine
+        from volta.benchmarks.mutation_engine import MutationEngine
 
         engine = MutationEngine(seed=42)
         mutation = engine.swap_values(str(minimal_sch), "R1", "C1")
@@ -223,7 +223,7 @@ class TestMutationEngine:
 
     def test_break_wire(self, minimal_sch: Path) -> None:
         """break_wire removes a wire segment creating dangling endpoints."""
-        from kicad_agent.benchmarks.mutation_engine import MutationEngine
+        from volta.benchmarks.mutation_engine import MutationEngine
 
         engine = MutationEngine(seed=42)
         targets = engine.list_targets(str(minimal_sch))
@@ -239,7 +239,7 @@ class TestMutationEngine:
 
     def test_remove_label(self, minimal_sch: Path) -> None:
         """remove_label removes a net label creating unnamed nets."""
-        from kicad_agent.benchmarks.mutation_engine import MutationEngine
+        from volta.benchmarks.mutation_engine import MutationEngine
 
         engine = MutationEngine(seed=42)
         mutation = engine.remove_label(str(minimal_sch), "VCC")
@@ -250,7 +250,7 @@ class TestMutationEngine:
 
     def test_short_pins(self, minimal_sch: Path) -> None:
         """short_pins moves a pin to overlap another creating a short."""
-        from kicad_agent.benchmarks.mutation_engine import MutationEngine
+        from volta.benchmarks.mutation_engine import MutationEngine
 
         engine = MutationEngine(seed=42)
         mutation = engine.short_pins(str(minimal_sch), "R1", "1", "C1", "1")
@@ -260,7 +260,7 @@ class TestMutationEngine:
 
     def test_floating_pin(self, minimal_sch: Path) -> None:
         """floating_pin disconnects a wire from a pin."""
-        from kicad_agent.benchmarks.mutation_engine import MutationEngine
+        from volta.benchmarks.mutation_engine import MutationEngine
 
         engine = MutationEngine(seed=42)
         mutation = engine.floating_pin(str(minimal_sch), "R1", "1")
@@ -269,7 +269,7 @@ class TestMutationEngine:
 
     def test_generate_mutations_count(self, minimal_sch: Path) -> None:
         """generate_mutations produces the requested number of mutations."""
-        from kicad_agent.benchmarks.mutation_engine import MutationEngine
+        from volta.benchmarks.mutation_engine import MutationEngine
 
         engine = MutationEngine(seed=42)
         mutations = engine.generate_mutations(str(minimal_sch), count=50)
@@ -283,7 +283,7 @@ class TestMutationEngine:
 
     def test_generate_mutations_reproducible(self, minimal_sch: Path) -> None:
         """generate_mutations with same seed produces identical results."""
-        from kicad_agent.benchmarks.mutation_engine import MutationEngine
+        from volta.benchmarks.mutation_engine import MutationEngine
 
         engine1 = MutationEngine(seed=42)
         engine2 = MutationEngine(seed=42)
@@ -295,7 +295,7 @@ class TestMutationEngine:
 
     def test_duplicate_net(self, minimal_sch: Path) -> None:
         """duplicate_net duplicates a net label creating name conflicts."""
-        from kicad_agent.benchmarks.mutation_engine import MutationEngine
+        from volta.benchmarks.mutation_engine import MutationEngine
 
         engine = MutationEngine(seed=42)
         mutation = engine.duplicate_net(str(minimal_sch), "VCC")
@@ -306,7 +306,7 @@ class TestMutationEngine:
 
     def test_wrong_polarity(self, minimal_sch: Path) -> None:
         """wrong_polarity swaps power pins creating reverse polarity."""
-        from kicad_agent.benchmarks.mutation_engine import MutationEngine
+        from volta.benchmarks.mutation_engine import MutationEngine
 
         engine = MutationEngine(seed=42)
         mutation = engine.wrong_polarity(str(minimal_sch), "R1")
@@ -317,7 +317,7 @@ class TestMutationEngine:
 
     def test_all_mutation_types_in_generate(self, minimal_sch: Path) -> None:
         """generate_mutations uses all 7 mutation types over enough samples."""
-        from kicad_agent.benchmarks.mutation_engine import MutationEngine
+        from volta.benchmarks.mutation_engine import MutationEngine
 
         engine = MutationEngine(seed=42)
         mutations = engine.generate_mutations(str(minimal_sch), count=200)
@@ -337,7 +337,7 @@ class TestCircuitProperty:
 
     def test_valid_property(self) -> None:
         """CircuitProperty validates with required fields."""
-        from kicad_agent.benchmarks.adversarial import CircuitProperty
+        from volta.benchmarks.adversarial import CircuitProperty
 
         prop = CircuitProperty(
             name="round_trip_preserves_content",
@@ -350,7 +350,7 @@ class TestCircuitProperty:
 
     def test_default_test_count(self) -> None:
         """CircuitProperty has a default test_count."""
-        from kicad_agent.benchmarks.adversarial import CircuitProperty
+        from volta.benchmarks.adversarial import CircuitProperty
 
         prop = CircuitProperty(
             name="test_prop",
@@ -361,7 +361,7 @@ class TestCircuitProperty:
 
     def test_verify_property_returns_results(self, minimal_sch: Path) -> None:
         """verify_property returns structured results for each iteration."""
-        from kicad_agent.benchmarks.adversarial import (
+        from volta.benchmarks.adversarial import (
             AdversarialTestSuite,
             CircuitProperty,
         )
@@ -387,7 +387,7 @@ class TestFuzzParser:
 
     def test_fuzz_result_valid(self) -> None:
         """FuzzResult validates with required fields."""
-        from kicad_agent.benchmarks.adversarial import FuzzResult
+        from volta.benchmarks.adversarial import FuzzResult
 
         result = FuzzResult(
             mutation="seed_12345",
@@ -404,7 +404,7 @@ class TestFuzzParser:
 
     def test_fuzz_parser_returns_results(self, minimal_sch: Path) -> None:
         """fuzz_parser returns FuzzResult for each random mutation."""
-        from kicad_agent.benchmarks.adversarial import AdversarialTestSuite
+        from volta.benchmarks.adversarial import AdversarialTestSuite
 
         suite = AdversarialTestSuite(seed=42)
         results = suite.fuzz_parser(str(minimal_sch), count=10)
@@ -417,7 +417,7 @@ class TestFuzzParser:
 
     def test_fuzz_parser_no_crashes(self, minimal_sch: Path) -> None:
         """fuzz_parser never crashes on 100 random mutations."""
-        from kicad_agent.benchmarks.adversarial import AdversarialTestSuite
+        from volta.benchmarks.adversarial import AdversarialTestSuite
 
         suite = AdversarialTestSuite(seed=42)
         results = suite.fuzz_parser(str(minimal_sch), count=100)
@@ -430,7 +430,7 @@ class TestAdversarialTestSuite:
 
     def test_generate_produces_all_categories(self, minimal_sch: Path) -> None:
         """generate() produces mutations, properties, and fuzz results."""
-        from kicad_agent.benchmarks.adversarial import AdversarialTestSuite
+        from volta.benchmarks.adversarial import AdversarialTestSuite
 
         suite = AdversarialTestSuite(seed=42)
         result = suite.generate([str(minimal_sch)])
@@ -440,7 +440,7 @@ class TestAdversarialTestSuite:
 
     def test_generate_mutation_count(self, minimal_sch: Path) -> None:
         """generate() produces 200 mutation tests."""
-        from kicad_agent.benchmarks.adversarial import AdversarialTestSuite
+        from volta.benchmarks.adversarial import AdversarialTestSuite
 
         suite = AdversarialTestSuite(seed=42)
         result = suite.generate([str(minimal_sch)])
@@ -448,7 +448,7 @@ class TestAdversarialTestSuite:
 
     def test_generate_fuzz_count(self, minimal_sch: Path) -> None:
         """generate() produces 500 fuzz tests."""
-        from kicad_agent.benchmarks.adversarial import AdversarialTestSuite
+        from volta.benchmarks.adversarial import AdversarialTestSuite
 
         suite = AdversarialTestSuite(seed=42)
         result = suite.generate([str(minimal_sch)])
@@ -456,7 +456,7 @@ class TestAdversarialTestSuite:
 
     def test_generate_property_count(self, minimal_sch: Path) -> None:
         """generate() produces 50+ property-based tests (5 properties x 10 iterations)."""
-        from kicad_agent.benchmarks.adversarial import AdversarialTestSuite
+        from volta.benchmarks.adversarial import AdversarialTestSuite
 
         suite = AdversarialTestSuite(seed=42)
         result = suite.generate([str(minimal_sch)])
@@ -464,7 +464,7 @@ class TestAdversarialTestSuite:
 
     def test_total_test_count_750_plus(self, minimal_sch: Path) -> None:
         """generate() produces 750+ total adversarial test cases."""
-        from kicad_agent.benchmarks.adversarial import AdversarialTestSuite
+        from volta.benchmarks.adversarial import AdversarialTestSuite
 
         suite = AdversarialTestSuite(seed=42)
         result = suite.generate([str(minimal_sch)])
@@ -473,7 +473,7 @@ class TestAdversarialTestSuite:
 
     def test_reproducible_with_seed(self, minimal_sch: Path) -> None:
         """AdversarialTestSuite with same seed produces identical results."""
-        from kicad_agent.benchmarks.adversarial import AdversarialTestSuite
+        from volta.benchmarks.adversarial import AdversarialTestSuite
 
         suite1 = AdversarialTestSuite(seed=42)
         suite2 = AdversarialTestSuite(seed=42)
@@ -486,7 +486,7 @@ class TestAdversarialTestSuite:
 
     def test_suite_serializes_to_json(self, minimal_sch: Path) -> None:
         """Adversarial test suite result serializes to valid JSON."""
-        from kicad_agent.benchmarks.adversarial import AdversarialTestSuite
+        from volta.benchmarks.adversarial import AdversarialTestSuite
 
         suite = AdversarialTestSuite(seed=42)
         result = suite.generate([str(minimal_sch)])

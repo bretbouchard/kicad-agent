@@ -18,8 +18,8 @@ from typing import Any
 
 import pytest
 
-from kicad_agent.conventions.base import Convention, Severity, Violation
-from kicad_agent.conventions.layout_view import (
+from volta.conventions.base import Convention, Severity, Violation
+from volta.conventions.layout_view import (
     ComponentView,
     LabelView,
     LayoutView,
@@ -214,8 +214,8 @@ def test_layout_view_from_schematic_ir_projects_components():
     fixture = Path(__file__).parent / "fixtures" / "Arduino_Mega" / "Arduino_Mega.kicad_sch"
     if not fixture.exists():
         pytest.skip("Arduino_Mega fixture not available")
-    from kicad_agent.parser.schematic_parser import parse_schematic
-    from kicad_agent.ir.schematic_ir import SchematicIR
+    from volta.parser.schematic_parser import parse_schematic
+    from volta.ir.schematic_ir import SchematicIR
 
     parse_result = parse_schematic(fixture)
     ir = SchematicIR(_parse_result=parse_result)

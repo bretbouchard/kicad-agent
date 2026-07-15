@@ -15,15 +15,15 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.spatial.primitives import SpatialBox, SpatialPoint
-from kicad_agent.spatial.reasoning_chains import (
+from volta.spatial.primitives import SpatialBox, SpatialPoint
+from volta.spatial.reasoning_chains import (
     ReasoningChain,
     ReasoningStep,
     _extract_violation_coordinates,
     synthesize_chain,
     synthesize_chains,
 )
-from kicad_agent.validation.erc_drc import DrcResult, ErcResult, Severity, Violation
+from volta.validation.erc_drc import DrcResult, ErcResult, Severity, Violation
 
 
 def _make_violation(

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from kicad_agent.config import AgentConfig, ModelConfig, RoutingConfig, load_config
+from volta.config import AgentConfig, ModelConfig, RoutingConfig, load_config
 
 
 # ---------------------------------------------------------------------------
@@ -90,10 +90,10 @@ class TestWorkflowRunner:
         mock_engine.fill_gaps.return_value = self._make_gap_result(success=True)
 
         with patch(
-            "kicad_agent.analysis.gap_fill_engine.GapFillEngine",
+            "volta.analysis.gap_fill_engine.GapFillEngine",
             return_value=mock_engine,
         ):
-            from kicad_agent.ops.workflow_runner import WorkflowRunner
+            from volta.ops.workflow_runner import WorkflowRunner
 
             runner = WorkflowRunner()
             result = runner.run("route_and_fill", __file__)  # any existing file
@@ -104,7 +104,7 @@ class TestWorkflowRunner:
         assert result.gap_fill_result is not None
 
     def test_route_and_fill_passes_config(self) -> None:
-        from kicad_agent.ops.workflow_runner import WorkflowRunner
+        from volta.ops.workflow_runner import WorkflowRunner
 
         mock_engine = MagicMock()
         mock_engine.fill_gaps.return_value = self._make_gap_result()
@@ -115,7 +115,7 @@ class TestWorkflowRunner:
         )
 
         with patch(
-            "kicad_agent.analysis.gap_fill_engine.GapFillEngine",
+            "volta.analysis.gap_fill_engine.GapFillEngine",
             return_value=mock_engine,
         ) as MockEngine:
             runner = WorkflowRunner(config=config)
@@ -129,7 +129,7 @@ class TestWorkflowRunner:
         )
 
     def test_route_and_fill_file_not_found(self) -> None:
-        from kicad_agent.ops.workflow_runner import WorkflowRunner
+        from volta.ops.workflow_runner import WorkflowRunner
 
         runner = WorkflowRunner()
         result = runner.run("route_and_fill", "/nonexistent/board.kicad_pcb")
@@ -142,10 +142,10 @@ class TestWorkflowRunner:
         mock_engine.fill_gaps.return_value = self._make_gap_result(success=False)
 
         with patch(
-            "kicad_agent.analysis.gap_fill_engine.GapFillEngine",
+            "volta.analysis.gap_fill_engine.GapFillEngine",
             return_value=mock_engine,
         ):
-            from kicad_agent.ops.workflow_runner import WorkflowRunner
+            from volta.ops.workflow_runner import WorkflowRunner
 
             runner = WorkflowRunner()
             result = runner.run("route_and_fill", __file__)
@@ -154,7 +154,7 @@ class TestWorkflowRunner:
         assert result.steps_completed == 0
 
     def test_unknown_workflow(self) -> None:
-        from kicad_agent.ops.workflow_runner import WorkflowRunner
+        from volta.ops.workflow_runner import WorkflowRunner
 
         runner = WorkflowRunner()
         result = runner.run("nonexistent_workflow", __file__)
@@ -167,10 +167,10 @@ class TestWorkflowRunner:
         mock_engine.fill_gaps.return_value = self._make_gap_result()
 
         with patch(
-            "kicad_agent.analysis.gap_fill_engine.GapFillEngine",
+            "volta.analysis.gap_fill_engine.GapFillEngine",
             return_value=mock_engine,
         ):
-            from kicad_agent.ops.workflow_runner import WorkflowRunner
+            from volta.ops.workflow_runner import WorkflowRunner
 
             runner = WorkflowRunner()
             result = runner.run("route_and_fill", __file__)
@@ -185,10 +185,10 @@ class TestWorkflowRunner:
         mock_engine.fill_gaps.return_value = self._make_gap_result()
 
         with patch(
-            "kicad_agent.analysis.gap_fill_engine.GapFillEngine",
+            "volta.analysis.gap_fill_engine.GapFillEngine",
             return_value=mock_engine,
         ):
-            from kicad_agent.ops.workflow_runner import WorkflowRunner
+            from volta.ops.workflow_runner import WorkflowRunner
 
             runner = WorkflowRunner()
             result = runner.run("route_and_fill", __file__)
@@ -202,13 +202,13 @@ class TestWorkflowList:
     """route_and_fill appears in workflow registry."""
 
     def test_route_and_fill_in_templates(self) -> None:
-        from kicad_agent.ops.workflows import WORKFLOW_TEMPLATES
+        from volta.ops.workflows import WORKFLOW_TEMPLATES
 
         assert "route_and_fill" in WORKFLOW_TEMPLATES
         assert WORKFLOW_TEMPLATES["route_and_fill"].file_types == [".kicad_pcb"]
 
     def test_list_workflows_includes_route_and_fill(self) -> None:
-        from kicad_agent.ops.workflows import list_workflows
+        from volta.ops.workflows import list_workflows
 
         names = [w["name"] for w in list_workflows()]
         assert "route_and_fill" in names

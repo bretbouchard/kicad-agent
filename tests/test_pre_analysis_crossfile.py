@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.ops.pre_analysis import PreAnalysisGate, PreAnalysisResult, PreAnalysisFinding
-from kicad_agent.ops.pre_analysis_crossfile import (
+from volta.ops.pre_analysis import PreAnalysisGate, PreAnalysisResult, PreAnalysisFinding
+from volta.ops.pre_analysis_crossfile import (
     analyze_crossfile,
     _CROSSFILE_MUTATION_OP_TYPES,
 )

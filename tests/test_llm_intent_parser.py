@@ -21,7 +21,7 @@ from tests.conftest_llm import FakeMessage, FakeTextBlock, FakeToolUseBlock
 
 def test_parse_returns_valid_generation_intent(mock_anthropic_client, sample_intent_dict):
     """IntentParser.parse('Design a 3.3V voltage regulator') returns valid GenerationIntent."""
-    from kicad_agent.llm.intent_parser import IntentParser
+    from volta.llm.intent_parser import IntentParser
 
     mock_anthropic_client.return_value = FakeMessage([
         FakeToolUseBlock("create_design_intent", sample_intent_dict)
@@ -45,7 +45,7 @@ def test_parse_returns_valid_generation_intent(mock_anthropic_client, sample_int
 
 def test_parse_raises_value_error_without_tool_use(mock_anthropic_client):
     """IntentParser.parse raises ValueError when LLM does not return a tool_use block."""
-    from kicad_agent.llm.intent_parser import IntentParser
+    from volta.llm.intent_parser import IntentParser
 
     mock_anthropic_client.return_value = FakeMessage([
         FakeTextBlock("I think you want a voltage regulator circuit...")
@@ -63,7 +63,7 @@ def test_parse_raises_value_error_without_tool_use(mock_anthropic_client):
 
 def test_parse_validates_library_id(mock_anthropic_client):
     """IntentParser.parse rejects invalid library_id characters via Pydantic ValidationError."""
-    from kicad_agent.llm.intent_parser import IntentParser
+    from volta.llm.intent_parser import IntentParser
 
     invalid_intent = {
         "name": "Bad Design",
@@ -95,7 +95,7 @@ def test_parse_validates_library_id(mock_anthropic_client):
 
 def test_intent_parser_uses_llm_client(mock_anthropic_client, sample_intent_dict):
     """IntentParser must use LLMClient for API calls, not import anthropic directly."""
-    from kicad_agent.llm.intent_parser import IntentParser
+    from volta.llm.intent_parser import IntentParser
 
     mock_anthropic_client.return_value = FakeMessage([
         FakeToolUseBlock("create_design_intent", sample_intent_dict)
@@ -103,7 +103,7 @@ def test_intent_parser_uses_llm_client(mock_anthropic_client, sample_intent_dict
 
     parser = IntentParser()
     # Verify it uses LLMClient by checking _client attribute type
-    from kicad_agent.llm.client import LLMClient
+    from volta.llm.client import LLMClient
     assert isinstance(parser._client, LLMClient)
 
     # Verify the call was made through the client

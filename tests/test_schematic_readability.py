@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.spatial.primitives import SpatialBox
+from volta.spatial.primitives import SpatialBox
 
 
 # ---------------------------------------------------------------------------
@@ -101,7 +101,7 @@ class TestSchematicSpatialExtractor:
 
     def test_extract_component_boxes_returns_correct_bounds(self):
         """Component boxes have correct center and size."""
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         ir = _make_mock_ir(components=[COMPONENTS_CLEAN[0]])
         ext = SchematicSpatialExtractor(ir)
@@ -117,7 +117,7 @@ class TestSchematicSpatialExtractor:
 
     def test_extract_component_boxes_handles_rotation(self):
         """Rotated components swap width/height."""
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         ir = _make_mock_ir(components=COMPONENTS_ROTATED)
         ext = SchematicSpatialExtractor(ir)
@@ -132,7 +132,7 @@ class TestSchematicSpatialExtractor:
 
     def test_extract_text_boxes_returns_ref_and_value(self):
         """Each component produces a ref box and a value box."""
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         ir = _make_mock_ir(components=[COMPONENTS_CLEAN[0]])
         ext = SchematicSpatialExtractor(ir)
@@ -148,7 +148,7 @@ class TestSchematicSpatialExtractor:
 
     def test_extract_label_boxes_returns_labels(self):
         """Label boxes have correct position and entity_id."""
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         ir = _make_mock_ir(labels=LABELS_CLEAN)
         ext = SchematicSpatialExtractor(ir)
@@ -160,7 +160,7 @@ class TestSchematicSpatialExtractor:
 
     def test_extract_wire_points_returns_endpoints(self):
         """Wire endpoints are extracted as SpatialPoint."""
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         wires = [{"start_x": 0.0, "start_y": 0.0, "end_x": 10.0, "end_y": 10.0, "uuid": "w1"}]
         ir = _make_mock_ir(wires=wires)
@@ -173,7 +173,7 @@ class TestSchematicSpatialExtractor:
 
     def test_extract_all_combines_everything(self):
         """extract_all returns all primitive types."""
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         ir = _make_mock_ir(
             components=[COMPONENTS_CLEAN[0]],
@@ -188,7 +188,7 @@ class TestSchematicSpatialExtractor:
 
     def test_empty_schematic_returns_empty(self):
         """Empty IR produces empty lists."""
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         ir = _make_mock_ir()
         ext = SchematicSpatialExtractor(ir)
@@ -210,7 +210,7 @@ class TestSchematicOverlapRule:
 
     def test_detects_full_overlap(self):
         """Two components at the same position = 100% IoU."""
-        from kicad_agent.analysis.readability_rules import SchematicOverlapRule
+        from volta.analysis.readability_rules import SchematicOverlapRule
 
         ir = _make_mock_ir(components=COMPONENTS_OVERLAP)
         topology = MagicMock()
@@ -226,7 +226,7 @@ class TestSchematicOverlapRule:
 
     def test_detects_partial_overlap(self):
         """Partial overlap produces WARNING severity."""
-        from kicad_agent.analysis.readability_rules import SchematicOverlapRule
+        from volta.analysis.readability_rules import SchematicOverlapRule
 
         # R1 at 50,50 (2.54x3.81), R2 at 51,50 (2.54x3.81) -- partial overlap
         ir = _make_mock_ir(components=[
@@ -244,7 +244,7 @@ class TestSchematicOverlapRule:
 
     def test_no_overlap_clean_schematic(self):
         """Well-spaced components produce no violations."""
-        from kicad_agent.analysis.readability_rules import SchematicOverlapRule
+        from volta.analysis.readability_rules import SchematicOverlapRule
 
         ir = _make_mock_ir(components=COMPONENTS_CLEAN)
         topology = MagicMock()
@@ -257,7 +257,7 @@ class TestSchematicOverlapRule:
 
     def test_severity_levels(self):
         """IoU >50% = CRITICAL, 10-50% = WARNING, <10% = INFO."""
-        from kicad_agent.analysis.readability_rules import _iou_to_severity, RuleSeverity
+        from volta.analysis.readability_rules import _iou_to_severity, RuleSeverity
 
         assert _iou_to_severity(0.8) == RuleSeverity.CRITICAL
         assert _iou_to_severity(0.3) == RuleSeverity.WARNING
@@ -274,7 +274,7 @@ class TestTextOverlapRule:
 
     def test_detects_overlapping_refs(self):
         """Two components at the same position produce overlapping text."""
-        from kicad_agent.analysis.readability_rules import TextOverlapRule
+        from volta.analysis.readability_rules import TextOverlapRule
 
         ir = _make_mock_ir(components=COMPONENTS_OVERLAP)
         topology = MagicMock()
@@ -287,7 +287,7 @@ class TestTextOverlapRule:
 
     def test_clean_text_no_violations(self):
         """Well-spaced components produce no text overlap violations."""
-        from kicad_agent.analysis.readability_rules import TextOverlapRule
+        from volta.analysis.readability_rules import TextOverlapRule
 
         ir = _make_mock_ir(components=COMPONENTS_CLEAN)
         topology = MagicMock()
@@ -300,7 +300,7 @@ class TestTextOverlapRule:
 
     def test_label_overlap_detected(self):
         """Overlapping labels are detected."""
-        from kicad_agent.analysis.readability_rules import TextOverlapRule
+        from volta.analysis.readability_rules import TextOverlapRule
 
         ir = _make_mock_ir(components=[], labels=LABELS_OVERLAP)
         topology = MagicMock()
@@ -322,7 +322,7 @@ class TestReadabilityRulesRegistry:
 
     def test_returns_6_rules(self):
         """get_schematic_readability_rules returns 6 rule instances."""
-        from kicad_agent.analysis.readability_rules import get_schematic_readability_rules
+        from volta.analysis.readability_rules import get_schematic_readability_rules
 
         rules = get_schematic_readability_rules()
         assert len(rules) == 6
@@ -345,8 +345,8 @@ class TestReadabilityScorer:
 
     def test_empty_schematic_scores_high(self):
         """Empty schematic scores high (0.9375 -- neutral organization without topology)."""
-        from kicad_agent.analysis.readability_scorer import SchematicReadabilityScorer
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.readability_scorer import SchematicReadabilityScorer
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         ir = _make_mock_ir()
         ext = SchematicSpatialExtractor(ir)
@@ -358,8 +358,8 @@ class TestReadabilityScorer:
 
     def test_clean_schematic_scores_higher_than_cramped(self):
         """Well-spaced schematic scores higher than cramped one."""
-        from kicad_agent.analysis.readability_scorer import SchematicReadabilityScorer
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.readability_scorer import SchematicReadabilityScorer
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         # Spread-out components (100mm apart)
         spread = [
@@ -379,8 +379,8 @@ class TestReadabilityScorer:
 
     def test_cramped_schematic_scores_low_spacing(self):
         """Overlapping components produce low spacing score."""
-        from kicad_agent.analysis.readability_scorer import SchematicReadabilityScorer
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.readability_scorer import SchematicReadabilityScorer
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         ir = _make_mock_ir(components=COMPONENTS_OVERLAP)
         ext = SchematicSpatialExtractor(ir)
@@ -391,8 +391,8 @@ class TestReadabilityScorer:
 
     def test_duplicate_labels_reduce_clarity(self):
         """Duplicate label names reduce clarity score."""
-        from kicad_agent.analysis.readability_scorer import SchematicReadabilityScorer
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.readability_scorer import SchematicReadabilityScorer
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         labels_dups = [
             {"name": "NET_A", "x": 40.0, "y": 50.0, "label_type": "global"},
@@ -407,8 +407,8 @@ class TestReadabilityScorer:
 
     def test_srs_is_weighted_average(self):
         """SRS equals average of 4 factors."""
-        from kicad_agent.analysis.readability_scorer import SchematicReadabilityScorer
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.readability_scorer import SchematicReadabilityScorer
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         ir = _make_mock_ir(components=COMPONENTS_CLEAN, labels=LABELS_CLEAN)
         ext = SchematicSpatialExtractor(ir)
@@ -420,8 +420,8 @@ class TestReadabilityScorer:
 
     def test_report_has_suggestions(self):
         """ReadabilityReport includes suggestions when scores are low."""
-        from kicad_agent.analysis.readability_scorer import SchematicReadabilityScorer
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.readability_scorer import SchematicReadabilityScorer
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         ir = _make_mock_ir(components=COMPONENTS_OVERLAP)
         ext = SchematicSpatialExtractor(ir)
@@ -433,8 +433,8 @@ class TestReadabilityScorer:
 
     def test_report_element_count(self):
         """Report includes count of analyzed elements."""
-        from kicad_agent.analysis.readability_scorer import SchematicReadabilityScorer
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.readability_scorer import SchematicReadabilityScorer
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         ir = _make_mock_ir(components=[COMPONENTS_CLEAN[0]])
         ext = SchematicSpatialExtractor(ir)
@@ -446,8 +446,8 @@ class TestReadabilityScorer:
 
     def test_organization_with_no_topology(self):
         """Organization scores 0.75 when no topology provided."""
-        from kicad_agent.analysis.readability_scorer import SchematicReadabilityScorer
-        from kicad_agent.analysis.schematic_spatial import SchematicSpatialExtractor
+        from volta.analysis.readability_scorer import SchematicReadabilityScorer
+        from volta.analysis.schematic_spatial import SchematicSpatialExtractor
 
         ir = _make_mock_ir(components=COMPONENTS_CLEAN)
         ext = SchematicSpatialExtractor(ir)
@@ -467,7 +467,7 @@ class TestDuplicateLabelRule:
 
     def test_detects_duplicate_labels_close(self):
         """Two labels with same name within 20mm are flagged."""
-        from kicad_agent.analysis.readability_rules import DuplicateLabelRule
+        from volta.analysis.readability_rules import DuplicateLabelRule
 
         labels = [
             {"name": "NET_A", "x": 40.0, "y": 50.0, "label_type": "global"},
@@ -485,7 +485,7 @@ class TestDuplicateLabelRule:
 
     def test_no_flag_for_far_apart_duplicates(self):
         """Same-name labels far apart (>50mm) are not flagged."""
-        from kicad_agent.analysis.readability_rules import DuplicateLabelRule
+        from volta.analysis.readability_rules import DuplicateLabelRule
 
         labels = [
             {"name": "NET_A", "x": 10.0, "y": 50.0, "label_type": "global"},
@@ -502,7 +502,7 @@ class TestDuplicateLabelRule:
 
     def test_no_flag_for_different_names(self):
         """Labels with different names are not flagged."""
-        from kicad_agent.analysis.readability_rules import DuplicateLabelRule
+        from volta.analysis.readability_rules import DuplicateLabelRule
 
         labels = [
             {"name": "IN", "x": 40.0, "y": 50.0, "label_type": "global"},
@@ -528,7 +528,7 @@ class TestLabelSpacingRule:
 
     def test_detects_close_labels(self):
         """Labels closer than 3mm are flagged."""
-        from kicad_agent.analysis.readability_rules import LabelSpacingRule
+        from volta.analysis.readability_rules import LabelSpacingRule
 
         labels = [
             {"name": "A", "x": 40.0, "y": 50.0, "label_type": "global"},
@@ -545,7 +545,7 @@ class TestLabelSpacingRule:
 
     def test_clean_labels_no_violation(self):
         """Well-separated labels produce no violations."""
-        from kicad_agent.analysis.readability_rules import LabelSpacingRule
+        from volta.analysis.readability_rules import LabelSpacingRule
 
         labels = [
             {"name": "A", "x": 40.0, "y": 50.0, "label_type": "global"},
@@ -571,7 +571,7 @@ class TestComponentSpacingRule:
 
     def test_detects_close_components(self):
         """Overlapping components are flagged as too close."""
-        from kicad_agent.analysis.readability_rules import ComponentSpacingRule
+        from volta.analysis.readability_rules import ComponentSpacingRule
 
         ir = _make_mock_ir(components=COMPONENTS_OVERLAP)
         topology = MagicMock()
@@ -584,7 +584,7 @@ class TestComponentSpacingRule:
 
     def test_clean_components_no_violation(self):
         """Well-spaced components produce no violations."""
-        from kicad_agent.analysis.readability_rules import ComponentSpacingRule
+        from volta.analysis.readability_rules import ComponentSpacingRule
 
         ir = _make_mock_ir(components=COMPONENTS_CLEAN)
         topology = MagicMock()
@@ -606,7 +606,7 @@ class TestWireClutterRule:
 
     def test_detects_wire_through_component(self):
         """Wire crossing through a component body is flagged."""
-        from kicad_agent.analysis.readability_rules import WireClutterRule
+        from volta.analysis.readability_rules import WireClutterRule
 
         # U1 at 100,50 size 10x8 -> box (95,46)-(105,54)
         # Wire from (90,50) to (110,50) passes right through
@@ -626,7 +626,7 @@ class TestWireClutterRule:
 
     def test_clean_wire_no_violation(self):
         """Wire outside component boxes is not flagged."""
-        from kicad_agent.analysis.readability_rules import WireClutterRule
+        from volta.analysis.readability_rules import WireClutterRule
 
         # Wire from (0,0) to (0,80) -- far from U1 at (100,50)
         wires = [{"start_x": 0.0, "start_y": 0.0, "end_x": 0.0, "end_y": 80.0, "uuid": "w1"}]

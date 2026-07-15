@@ -28,7 +28,7 @@ def _make_pcb_ir(board) -> "PcbIR":
     Uses PcbIR.__new__ to bypass __post_init__ validation (which requires
     a UUID map for kiutils path, but we use the native path).
     """
-    from kicad_agent.ir.pcb_ir import PcbIR
+    from volta.ir.pcb_ir import PcbIR
 
     ir = PcbIR.__new__(PcbIR)
     ir._parse_result = type("PR", (), {
@@ -47,7 +47,7 @@ def _make_pcb_ir(board) -> "PcbIR":
 def _make_board_with_zones(zones):
     """Create a NativeBoard with the given zones."""
     import dataclasses
-    from kicad_agent.parser.pcb_native_types import NativeBoard
+    from volta.parser.pcb_native_types import NativeBoard
 
     return dataclasses.replace(NativeBoard(), zones=tuple(zones))
 
@@ -61,7 +61,7 @@ class TestSplitGapFrozen:
     """SplitGap dataclass immutability and field access."""
 
     def test_fields(self) -> None:
-        from kicad_agent.validation.split_plane import SplitGap
+        from volta.validation.split_plane import SplitGap
 
         g = SplitGap(
             zone_a_id="z0", zone_b_id="z1",
@@ -74,14 +74,14 @@ class TestSplitGapFrozen:
         assert g.boundary_points == ((10.0, 20.0), (10.0, 30.0))
 
     def test_frozen_immutable(self) -> None:
-        from kicad_agent.validation.split_plane import SplitGap
+        from volta.validation.split_plane import SplitGap
 
         g = SplitGap(zone_a_id="z0", zone_b_id="z1", gap_mm=0.5, boundary_points=())
         with pytest.raises(AttributeError):
             g.gap_mm = 1.0  # type: ignore[misc]
 
     def test_empty_boundary_points(self) -> None:
-        from kicad_agent.validation.split_plane import SplitGap
+        from volta.validation.split_plane import SplitGap
 
         g = SplitGap(zone_a_id="a", zone_b_id="b", gap_mm=1.0, boundary_points=())
         assert g.boundary_points == ()
@@ -91,7 +91,7 @@ class TestSplitCrossingFrozen:
     """SplitCrossing dataclass immutability and field access."""
 
     def test_fields(self) -> None:
-        from kicad_agent.validation.split_plane import SplitCrossing
+        from volta.validation.split_plane import SplitCrossing
 
         c = SplitCrossing(
             trace_net="SIG1",
@@ -105,7 +105,7 @@ class TestSplitCrossingFrozen:
         assert c.zone_b == "z1"
 
     def test_frozen_immutable(self) -> None:
-        from kicad_agent.validation.split_plane import SplitCrossing
+        from volta.validation.split_plane import SplitCrossing
 
         c = SplitCrossing(trace_net="SIG1", crossing_point=(0, 0), zone_a="a", zone_b="b")
         with pytest.raises(AttributeError):
@@ -116,7 +116,7 @@ class TestSplitPlaneAnalysisDefault:
     """SplitPlaneAnalysis default/empty state."""
 
     def test_default_zero(self) -> None:
-        from kicad_agent.validation.split_plane import SplitPlaneAnalysis
+        from volta.validation.split_plane import SplitPlaneAnalysis
 
         a = SplitPlaneAnalysis(
             num_zones=0, num_splits=0, num_crossings=0,
@@ -129,7 +129,7 @@ class TestSplitPlaneAnalysisDefault:
         assert a.crossings == ()
 
     def test_frozen(self) -> None:
-        from kicad_agent.validation.split_plane import SplitPlaneAnalysis
+        from volta.validation.split_plane import SplitPlaneAnalysis
 
         a = SplitPlaneAnalysis(
             num_zones=2, num_splits=1, num_crossings=0,
@@ -148,7 +148,7 @@ class TestAnalyzeSplitPlaneOpSchema:
     """AnalyzeSplitPlaneOp Pydantic schema validation."""
 
     def test_valid_default(self) -> None:
-        from kicad_agent.ops._schema_pcb import AnalyzeSplitPlaneOp
+        from volta.ops._schema_pcb import AnalyzeSplitPlaneOp
 
         op = AnalyzeSplitPlaneOp(target_file="board.kicad_pcb")
         assert op.op_type == "analyze_split_plane"
@@ -156,7 +156,7 @@ class TestAnalyzeSplitPlaneOpSchema:
         assert op.min_gap_mm == 0.0
 
     def test_valid_custom(self) -> None:
-        from kicad_agent.ops._schema_pcb import AnalyzeSplitPlaneOp
+        from volta.ops._schema_pcb import AnalyzeSplitPlaneOp
 
         op = AnalyzeSplitPlaneOp(
             target_file="board.kicad_pcb",
@@ -167,7 +167,7 @@ class TestAnalyzeSplitPlaneOpSchema:
         assert op.min_gap_mm == 0.5
 
     def test_invalid_negative_gap(self) -> None:
-        from kicad_agent.ops._schema_pcb import AnalyzeSplitPlaneOp
+        from volta.ops._schema_pcb import AnalyzeSplitPlaneOp
 
         with pytest.raises(ValidationError):
             AnalyzeSplitPlaneOp(
@@ -176,7 +176,7 @@ class TestAnalyzeSplitPlaneOpSchema:
             )
 
     def test_registry_entry_exists(self) -> None:
-        from kicad_agent.ops.registry import OPERATION_REGISTRY
+        from volta.ops.registry import OPERATION_REGISTRY
 
         assert "analyze_split_plane" in OPERATION_REGISTRY
         meta = OPERATION_REGISTRY["analyze_split_plane"]
@@ -185,7 +185,7 @@ class TestAnalyzeSplitPlaneOpSchema:
         assert ".kicad_pcb" in meta.file_types
 
     def test_discriminated_union_accepts(self) -> None:
-        from kicad_agent.ops.schema import Operation
+        from volta.ops.schema import Operation
 
         op = Operation.model_validate({"root": {
             "op_type": "analyze_split_plane",
@@ -204,7 +204,7 @@ class TestAnalyzeSplitPlaneOpRegistration:
     """Verify analyze_split_plane is registered correctly."""
 
     def test_registered_in_raw_catalog(self) -> None:
-        from kicad_agent.ops.registry import _RAW_CATALOG
+        from volta.ops.registry import _RAW_CATALOG
 
         assert "analyze_split_plane" in _RAW_CATALOG
         assert _RAW_CATALOG["analyze_split_plane"]["is_readonly"] is True
@@ -212,7 +212,7 @@ class TestAnalyzeSplitPlaneOpRegistration:
         assert ".kicad_pcb" in _RAW_CATALOG["analyze_split_plane"]["file_types"]
 
     def test_handler_registered(self) -> None:
-        from kicad_agent.ops.handlers.pcb import _PCB_HANDLERS
+        from volta.ops.handlers.pcb import _PCB_HANDLERS
 
         assert "analyze_split_plane" in _PCB_HANDLERS
 
@@ -226,19 +226,19 @@ class TestComputeZoneBounds:
     """_compute_zone_bounds bounding box computation."""
 
     def test_unit_square(self) -> None:
-        from kicad_agent.validation.split_plane import _compute_zone_bounds
+        from volta.validation.split_plane import _compute_zone_bounds
 
         box = _compute_zone_bounds(((0, 0), (10, 0), (10, 10), (0, 10)))
         assert box == (0.0, 0.0, 10.0, 10.0)
 
     def test_offset_square(self) -> None:
-        from kicad_agent.validation.split_plane import _compute_zone_bounds
+        from volta.validation.split_plane import _compute_zone_bounds
 
         box = _compute_zone_bounds(((5, 5), (15, 5), (15, 15), (5, 15)))
         assert box == (5.0, 5.0, 15.0, 15.0)
 
     def test_negative_coords(self) -> None:
-        from kicad_agent.validation.split_plane import _compute_zone_bounds
+        from volta.validation.split_plane import _compute_zone_bounds
 
         box = _compute_zone_bounds(((-10, -5), (10, -5), (10, 5), (-10, 5)))
         assert box == (-10.0, -5.0, 10.0, 5.0)
@@ -248,28 +248,28 @@ class TestBoxesOverlap:
     """_boxes_overlap proximity check."""
 
     def test_overlapping_boxes(self) -> None:
-        from kicad_agent.validation.split_plane import _boxes_overlap
+        from volta.validation.split_plane import _boxes_overlap
 
         a = (0, 0, 10, 10)
         b = (5, 5, 15, 15)
         assert _boxes_overlap(a, b) is True
 
     def test_adjacent_boxes(self) -> None:
-        from kicad_agent.validation.split_plane import _boxes_overlap
+        from volta.validation.split_plane import _boxes_overlap
 
         a = (0, 0, 10, 10)
         b = (10, 0, 20, 10)
         assert _boxes_overlap(a, b) is True
 
     def test_separated_boxes(self) -> None:
-        from kicad_agent.validation.split_plane import _boxes_overlap
+        from volta.validation.split_plane import _boxes_overlap
 
         a = (0, 0, 10, 10)
         b = (20, 0, 30, 10)
         assert _boxes_overlap(a, b) is False
 
     def test_with_margin(self) -> None:
-        from kicad_agent.validation.split_plane import _boxes_overlap
+        from volta.validation.split_plane import _boxes_overlap
 
         a = (0, 0, 10, 10)
         b = (12, 0, 22, 10)
@@ -279,7 +279,7 @@ class TestBoxesOverlap:
         assert _boxes_overlap(a, b, margin=2.5) is True
 
     def test_contained_box(self) -> None:
-        from kicad_agent.validation.split_plane import _boxes_overlap
+        from volta.validation.split_plane import _boxes_overlap
 
         a = (0, 0, 100, 100)
         b = (10, 10, 20, 20)
@@ -290,21 +290,21 @@ class TestEstimateGap:
     """_estimate_gap minimum gap between bounding boxes."""
 
     def test_horizontal_gap(self) -> None:
-        from kicad_agent.validation.split_plane import _estimate_gap
+        from volta.validation.split_plane import _estimate_gap
 
         a = (0, 0, 10, 10)
         b = (12, 0, 22, 10)
         assert _estimate_gap(a, b) == 2.0
 
     def test_vertical_gap(self) -> None:
-        from kicad_agent.validation.split_plane import _estimate_gap
+        from volta.validation.split_plane import _estimate_gap
 
         a = (0, 0, 10, 10)
         b = (0, 15, 10, 25)
         assert _estimate_gap(a, b) == 5.0
 
     def test_overlapping_boxes(self) -> None:
-        from kicad_agent.validation.split_plane import _estimate_gap
+        from volta.validation.split_plane import _estimate_gap
 
         a = (0, 0, 10, 10)
         b = (5, 5, 15, 15)
@@ -312,7 +312,7 @@ class TestEstimateGap:
         assert _estimate_gap(a, b) == 0.0
 
     def test_diagonal_gap(self) -> None:
-        from kicad_agent.validation.split_plane import _estimate_gap
+        from volta.validation.split_plane import _estimate_gap
 
         a = (0, 0, 10, 10)
         b = (13, 14, 23, 24)
@@ -329,7 +329,7 @@ class TestExtractZonePolygons:
     """_extract_zone_polygons zone filtering and polygon extraction."""
 
     def test_no_zones(self) -> None:
-        from kicad_agent.validation.split_plane import _extract_zone_polygons
+        from volta.validation.split_plane import _extract_zone_polygons
 
         board = _make_board_with_zones([])
         ir = _make_pcb_ir(board)
@@ -337,8 +337,8 @@ class TestExtractZonePolygons:
         assert zones == []
 
     def test_matching_net(self) -> None:
-        from kicad_agent.validation.split_plane import _extract_zone_polygons
-        from kicad_agent.parser.pcb_native_types import NativeZone
+        from volta.validation.split_plane import _extract_zone_polygons
+        from volta.parser.pcb_native_types import NativeZone
 
         zone = NativeZone(
             net_name="GND", layer="B.Cu", uuid="z1",
@@ -352,8 +352,8 @@ class TestExtractZonePolygons:
         assert len(zones[0]["polygon_points"]) == 4
 
     def test_wrong_net_filtered(self) -> None:
-        from kicad_agent.validation.split_plane import _extract_zone_polygons
-        from kicad_agent.parser.pcb_native_types import NativeZone
+        from volta.validation.split_plane import _extract_zone_polygons
+        from volta.parser.pcb_native_types import NativeZone
 
         zone = NativeZone(
             net_name="VCC", layer="B.Cu", uuid="z1",
@@ -365,8 +365,8 @@ class TestExtractZonePolygons:
         assert zones == []
 
     def test_zone_without_enough_points_skipped(self) -> None:
-        from kicad_agent.validation.split_plane import _extract_zone_polygons
-        from kicad_agent.parser.pcb_native_types import NativeZone
+        from volta.validation.split_plane import _extract_zone_polygons
+        from volta.parser.pcb_native_types import NativeZone
 
         zone = NativeZone(
             net_name="GND", layer="B.Cu", uuid="z1",
@@ -378,8 +378,8 @@ class TestExtractZonePolygons:
         assert zones == []
 
     def test_zone_fallback_id(self) -> None:
-        from kicad_agent.validation.split_plane import _extract_zone_polygons
-        from kicad_agent.parser.pcb_native_types import NativeZone
+        from volta.validation.split_plane import _extract_zone_polygons
+        from volta.parser.pcb_native_types import NativeZone
 
         zone = NativeZone(
             net_name="GND", layer="B.Cu", uuid="",
@@ -401,7 +401,7 @@ class TestAnalyzeSplitPlaneNoZones:
     """analyze_split_plane with no zones on target net."""
 
     def test_empty_board(self) -> None:
-        from kicad_agent.validation.split_plane import analyze_split_plane
+        from volta.validation.split_plane import analyze_split_plane
 
         board = _make_board_with_zones([])
         ir = _make_pcb_ir(board)
@@ -413,7 +413,7 @@ class TestAnalyzeSplitPlaneNoZones:
         assert result.crossings == ()
 
     def test_board_no_zones_attr(self) -> None:
-        from kicad_agent.validation.split_plane import analyze_split_plane
+        from volta.validation.split_plane import analyze_split_plane
 
         board = _make_board_with_zones([])
         import dataclasses
@@ -427,8 +427,8 @@ class TestAnalyzeSplitPlaneSingleZone:
     """analyze_split_plane with only one zone (no split possible)."""
 
     def test_single_zone_no_split(self) -> None:
-        from kicad_agent.validation.split_plane import analyze_split_plane
-        from kicad_agent.parser.pcb_native_types import NativeZone
+        from volta.validation.split_plane import analyze_split_plane
+        from volta.parser.pcb_native_types import NativeZone
 
         zone = NativeZone(
             net_name="GND", layer="B.Cu", uuid="z1",
@@ -453,8 +453,8 @@ class TestAnalyzeSplitPlaneTwoZones:
 
     def test_adjacent_zones_diagonal_gap_detected(self) -> None:
         """Zones with a small diagonal gap -> split detected."""
-        from kicad_agent.validation.split_plane import analyze_split_plane
-        from kicad_agent.parser.pcb_native_types import NativeZone
+        from volta.validation.split_plane import analyze_split_plane
+        from volta.parser.pcb_native_types import NativeZone
 
         z1 = NativeZone(
             net_name="GND", layer="B.Cu", uuid="z1",
@@ -483,8 +483,8 @@ class TestAnalyzeSplitPlaneTwoZones:
         produce a split entry since gap >= 0 is True. Use min_gap_mm > 0
         to filter out non-splits.
         """
-        from kicad_agent.validation.split_plane import analyze_split_plane
-        from kicad_agent.parser.pcb_native_types import NativeZone
+        from volta.validation.split_plane import analyze_split_plane
+        from volta.parser.pcb_native_types import NativeZone
 
         z1 = NativeZone(
             net_name="GND", layer="B.Cu", uuid="z1",
@@ -505,8 +505,8 @@ class TestAnalyzeSplitPlaneTwoZones:
 
     def test_overlapping_zones_filtered_by_min_gap(self) -> None:
         """Overlapping zones filtered out with min_gap_mm > 0."""
-        from kicad_agent.validation.split_plane import analyze_split_plane
-        from kicad_agent.parser.pcb_native_types import NativeZone
+        from volta.validation.split_plane import analyze_split_plane
+        from volta.parser.pcb_native_types import NativeZone
 
         z1 = NativeZone(
             net_name="GND", layer="B.Cu", uuid="z1",
@@ -525,8 +525,8 @@ class TestAnalyzeSplitPlaneTwoZones:
 
     def test_far_apart_zones_not_split(self) -> None:
         """Zones too far apart (>1mm margin) -> not a split candidate."""
-        from kicad_agent.validation.split_plane import analyze_split_plane
-        from kicad_agent.parser.pcb_native_types import NativeZone
+        from volta.validation.split_plane import analyze_split_plane
+        from volta.parser.pcb_native_types import NativeZone
 
         z1 = NativeZone(
             net_name="GND", layer="B.Cu", uuid="z1",
@@ -546,8 +546,8 @@ class TestAnalyzeSplitPlaneTwoZones:
 
     def test_wrong_net_not_counted(self) -> None:
         """Zones on different net are not counted."""
-        from kicad_agent.validation.split_plane import analyze_split_plane
-        from kicad_agent.parser.pcb_native_types import NativeZone
+        from volta.validation.split_plane import analyze_split_plane
+        from volta.parser.pcb_native_types import NativeZone
 
         z1 = NativeZone(
             net_name="VCC", layer="B.Cu", uuid="z1",
@@ -565,8 +565,8 @@ class TestAnalyzeSplitPlaneTwoZones:
 
     def test_min_gap_filter(self) -> None:
         """Gaps below min_gap_mm threshold are filtered out."""
-        from kicad_agent.validation.split_plane import analyze_split_plane
-        from kicad_agent.parser.pcb_native_types import NativeZone
+        from volta.validation.split_plane import analyze_split_plane
+        from volta.parser.pcb_native_types import NativeZone
 
         z1 = NativeZone(
             net_name="GND", layer="B.Cu", uuid="z1",
@@ -587,8 +587,8 @@ class TestAnalyzeSplitPlaneTwoZones:
 
         _estimate_gap handles single-axis gaps: returns the non-zero gap.
         """
-        from kicad_agent.validation.split_plane import analyze_split_plane
-        from kicad_agent.parser.pcb_native_types import NativeZone
+        from volta.validation.split_plane import analyze_split_plane
+        from volta.parser.pcb_native_types import NativeZone
 
         # Pure horizontal gap, overlapping in y.
         z1 = NativeZone(
@@ -609,8 +609,8 @@ class TestAnalyzeSplitPlaneTwoZones:
 
     def test_three_zones_pairwise(self) -> None:
         """Three zones: two close (split), one far (no split)."""
-        from kicad_agent.validation.split_plane import analyze_split_plane
-        from kicad_agent.parser.pcb_native_types import NativeZone
+        from volta.validation.split_plane import analyze_split_plane
+        from volta.parser.pcb_native_types import NativeZone
 
         z1 = NativeZone(
             net_name="GND", layer="B.Cu", uuid="z1",
@@ -641,28 +641,28 @@ class TestExtractPoint:
     """_extract_point handles various point representations."""
 
     def test_tuple(self) -> None:
-        from kicad_agent.validation.split_plane import _extract_point
+        from volta.validation.split_plane import _extract_point
 
         assert _extract_point((2.5, 3.5)) == (2.5, 3.5)
 
     def test_list(self) -> None:
-        from kicad_agent.validation.split_plane import _extract_point
+        from volta.validation.split_plane import _extract_point
 
         assert _extract_point([1.0, 2.0]) == (1.0, 2.0)
 
     def test_uppercase_xy(self) -> None:
-        from kicad_agent.validation.split_plane import _extract_point
+        from volta.validation.split_plane import _extract_point
 
         pt = type("P", (), {"X": 3.0, "Y": 7.0})()
         assert _extract_point(pt) == (3.0, 7.0)
 
     def test_lowercase_xy(self) -> None:
-        from kicad_agent.validation.split_plane import _extract_point
+        from volta.validation.split_plane import _extract_point
 
         pt = type("P", (), {"x": 4.0, "y": 8.0})()
         assert _extract_point(pt) == (4.0, 8.0)
 
     def test_none_fallback(self) -> None:
-        from kicad_agent.validation.split_plane import _extract_point
+        from volta.validation.split_plane import _extract_point
 
         assert _extract_point(None) == (0.0, 0.0)

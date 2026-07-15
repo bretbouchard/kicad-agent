@@ -12,7 +12,7 @@ Security tests:
 import pytest
 from pydantic import ValidationError
 
-from kicad_agent.ops.schema import (
+from volta.ops.schema import (
     AddComponentOp,
     ModifyPropertyOp,
     MoveComponentOp,

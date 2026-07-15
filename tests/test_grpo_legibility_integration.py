@@ -16,12 +16,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from kicad_agent.training.grpo import AdvantageWeightedConfig, AdvantageWeightedTrainer
-from kicad_agent.training.legibility_reward_adapter import (
+from volta.training.grpo import AdvantageWeightedConfig, AdvantageWeightedTrainer
+from volta.training.legibility_reward_adapter import (
     LegibilityRewardAdapter,
     RewardWeights,
 )
-from kicad_agent.training.rewards import (
+from volta.training.rewards import (
     CapInputs,
     CompactnessCap,
     CrossingsFloorCap,
@@ -32,7 +32,7 @@ from kicad_agent.training.rewards import (
 def _make_reward_model():
     """Build a mock reward model.
 
-    Tests patch kicad_agent.training.reward_model.predict_reward directly to
+    Tests patch volta.training.reward_model.predict_reward directly to
     return a known PredictedReward, so the model object is just a placeholder.
     """
     return MagicMock()
@@ -40,9 +40,9 @@ def _make_reward_model():
 
 def _patch_predict_reward(monkeypatch, format_score=0.5, quality_score=0.5, accuracy_score=0.5):
     """Patch predict_reward to return a deterministic PredictedReward."""
-    from kicad_agent.training.reward_model import PredictedReward
+    from volta.training.reward_model import PredictedReward
     monkeypatch.setattr(
-        "kicad_agent.training.reward_model.predict_reward",
+        "volta.training.reward_model.predict_reward",
         lambda model, chain_text: PredictedReward(
             format_score=format_score, quality_score=quality_score, accuracy_score=accuracy_score,
         ),
@@ -183,7 +183,7 @@ def test_reward_decomposition_logged_with_critique(caplog, monkeypatch) -> None:
     })
     trainer.register_critique(7, critique, _make_cap_inputs())
 
-    with caplog.at_level(logging.INFO, logger="kicad_agent.training.grpo"):
+    with caplog.at_level(logging.INFO, logger="volta.training.grpo"):
         trainer.compute_group_rewards([["text"]], [sample])
 
     found = any("reward_decomposition" in rec.message for rec in caplog.records)
@@ -232,7 +232,7 @@ def test_critique_registry_lookup_by_sample_id(monkeypatch) -> None:
         call_count["n"] += 1
         return original(self, critique, cap_inputs)
 
-    from kicad_agent.training.legibility_reward_adapter import LegibilityRewardAdapter as _LRA
+    from volta.training.legibility_reward_adapter import LegibilityRewardAdapter as _LRA
     monkeypatch.setattr(_LRA, "compute_legibility", _counting_compute)
 
     trainer.compute_group_rewards([["text"]], [sample])

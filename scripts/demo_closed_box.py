@@ -67,11 +67,11 @@ def main() -> int:
     check_ngspice()
 
     # Late imports -- only after ngspice check passes (faster failure)
-    from kicad_agent.sim import (
+    from volta.sim import (
         build_preamp_circuit, circuit_to_spice_netlist,
         circuit_to_bom_markdown, optimize_preamp, plot_bode,
     )
-    from kicad_agent.spice import (
+    from volta.spice import (
         AnalysisType, generate_ac_testbench, get_model, run_simulation,
     )
 

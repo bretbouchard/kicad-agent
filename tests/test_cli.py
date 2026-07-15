@@ -40,8 +40,8 @@ VALID_MOVE = json.dumps({
 
 
 def _run(*args: str, cwd: str | None = None) -> subprocess.CompletedProcess[str]:
-    """Invoke the CLI via ``python -m kicad_agent.cli``."""
-    cmd = [sys.executable, "-m", "kicad_agent.cli", *args]
+    """Invoke the CLI via ``python -m volta.cli``."""
+    cmd = [sys.executable, "-m", "volta.cli", *args]
     # Inherit PYTHONPATH so the uninstalled source tree (src/) is importable.
     env = None
     src_dir = str(Path(__file__).resolve().parent.parent / "src")
@@ -175,8 +175,8 @@ def test_analyze_subcommand_calls_generate_analysis(tmp_path: Path, capsys) -> N
 
     mock_result = _make_mock_result()
 
-    with patch("kicad_agent.inference.wrapper.generate_analysis", return_value=mock_result) as mock_gen:
-        from kicad_agent.cli import main
+    with patch("volta.inference.wrapper.generate_analysis", return_value=mock_result) as mock_gen:
+        from volta.cli import main
         main(["analyze", str(pcb_file)])
 
     captured = capsys.readouterr()
@@ -191,8 +191,8 @@ def test_analyze_n_best_flag(tmp_path: Path, capsys) -> None:
 
     mock_result = _make_mock_result()
 
-    with patch("kicad_agent.inference.wrapper.generate_analysis", return_value=mock_result) as mock_gen:
-        from kicad_agent.cli import main
+    with patch("volta.inference.wrapper.generate_analysis", return_value=mock_result) as mock_gen:
+        from volta.cli import main
         main(["analyze", str(pcb_file), "--n-best", "8"])
 
     _, call_kwargs = mock_gen.call_args
@@ -220,8 +220,8 @@ def test_analyze_verbose_shows_scores(tmp_path: Path, capsys) -> None:
         generation_time_s=1.8,
     )
 
-    with patch("kicad_agent.inference.wrapper.generate_analysis", return_value=mock_result):
-        from kicad_agent.cli import main
+    with patch("volta.inference.wrapper.generate_analysis", return_value=mock_result):
+        from volta.cli import main
         main(["analyze", str(pcb_file), "--verbose"])
 
     captured = capsys.readouterr()

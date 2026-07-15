@@ -10,7 +10,7 @@ class TestDiffPair:
 
     def test_import(self):
         """DiffPairResult is importable."""
-        from kicad_agent.routing.diff_pair import DiffPairResult, route_differential_pair
+        from volta.routing.diff_pair import DiffPairResult, route_differential_pair
         assert DiffPairResult is not None
         assert callable(route_differential_pair)
 
@@ -20,7 +20,7 @@ class TestImpedance:
 
     def test_import(self):
         """ImpedanceResult and solve_trace_width are importable."""
-        from kicad_agent.routing.impedance import ImpedanceResult, solve_trace_width
+        from volta.routing.impedance import ImpedanceResult, solve_trace_width
         assert ImpedanceResult is not None
         assert callable(solve_trace_width)
 
@@ -30,7 +30,7 @@ class TestLengthMatching:
 
     def test_import(self):
         """LengthMatchResult and add_sawtooth_matching are importable."""
-        from kicad_agent.routing.length_matching import (
+        from volta.routing.length_matching import (
             LengthMatchResult,
             add_sawtooth_matching,
         )
@@ -43,7 +43,7 @@ class TestRoutingGeometry:
 
     def test_import(self):
         """Geometry module is importable."""
-        from kicad_agent.routing import geometry
+        from volta.routing import geometry
         assert geometry is not None
 
 
@@ -52,12 +52,12 @@ class TestRoutingGraph:
 
     def test_import(self):
         """RoutingGraph is importable."""
-        from kicad_agent.routing.graph import RoutingGraph
+        from volta.routing.graph import RoutingGraph
         assert RoutingGraph is not None
 
     def test_build_routing_graph_callable(self):
         """build_routing_graph is callable."""
-        from kicad_agent.routing.pathfinder import build_routing_graph
+        from volta.routing.pathfinder import build_routing_graph
         assert callable(build_routing_graph)
 
 
@@ -66,7 +66,7 @@ class TestRoutingBridge:
 
     def test_import(self):
         """Bridge module is importable."""
-        from kicad_agent.routing import bridge
+        from volta.routing import bridge
         assert hasattr(bridge, "TrackSegment")
         assert hasattr(bridge, "ViaSegment")
 
@@ -76,7 +76,7 @@ class TestFreerouting:
 
     def test_import(self):
         """Freerouting module is importable."""
-        from kicad_agent.routing import freerouting
+        from volta.routing import freerouting
         assert freerouting is not None
 
 
@@ -85,7 +85,7 @@ class TestInteractiveRouting:
 
     def test_import(self):
         """Interactive routing types are importable."""
-        from kicad_agent.routing.interactive import (
+        from volta.routing.interactive import (
             InteractiveRoutingSession,
             RoutingSuggestion,
             SuggestionStatus,

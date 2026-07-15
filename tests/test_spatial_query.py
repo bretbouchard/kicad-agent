@@ -9,12 +9,12 @@ from __future__ import annotations
 
 import pytest
 
-from kicad_agent.spatial.primitives import (
+from volta.spatial.primitives import (
     SpatialBox,
     SpatialPath,
     SpatialPoint,
 )
-from kicad_agent.spatial.query import SpatialQueryEngine
+from volta.spatial.query import SpatialQueryEngine
 
 
 @pytest.fixture

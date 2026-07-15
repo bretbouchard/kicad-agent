@@ -2,7 +2,7 @@
 
 import pytest
 
-from kicad_agent.routing.bridge import TrackSegment, ViaSegment
+from volta.routing.bridge import TrackSegment, ViaSegment
 
 
 class TestTrackSegmentDetailed:

@@ -13,9 +13,9 @@ from typing import Any
 
 import pytest
 
-from kicad_agent.routing.constraints import RoutingConstraints
-from kicad_agent.routing.graph import RoutingGraph
-from kicad_agent.routing.interactive import (
+from volta.routing.constraints import RoutingConstraints
+from volta.routing.graph import RoutingGraph
+from volta.routing.interactive import (
     InteractiveRoutingSession,
     RoutingSuggestion,
     SuggestionStatus,

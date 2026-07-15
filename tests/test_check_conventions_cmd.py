@@ -31,14 +31,14 @@ def _make_args(**kw) -> argparse.Namespace:
 
 
 def test_check_conventions_command_registered_in_subcommands():
-    from kicad_agent.cli import _SUBCOMMANDS
+    from volta.cli import _SUBCOMMANDS
 
     assert "check-conventions" in _SUBCOMMANDS
 
 
 def test_check_conventions_rejects_non_kicad_sch_path(tmp_path):
     """P2-2: non-.kicad_sch paths rejected with exit code 2."""
-    from kicad_agent.cli.check_conventions_cmd import check_conventions_command
+    from volta.cli.check_conventions_cmd import check_conventions_command
 
     bad = tmp_path / "not_a_schematic.txt"
     bad.write_text("hello")
@@ -48,7 +48,7 @@ def test_check_conventions_rejects_non_kicad_sch_path(tmp_path):
 
 
 def test_check_conventions_missing_schematic_exit_2(tmp_path):
-    from kicad_agent.cli.check_conventions_cmd import check_conventions_command
+    from volta.cli.check_conventions_cmd import check_conventions_command
 
     missing = tmp_path / "missing.kicad_sch"
     args = _make_args(schematic=str(missing))
@@ -58,11 +58,11 @@ def test_check_conventions_missing_schematic_exit_2(tmp_path):
 
 def test_check_conventions_no_violations_exits_0_markdown(capsys, tmp_path):
     """Empty fixture → markdown header + exit 0."""
-    from kicad_agent.cli.check_conventions_cmd import check_conventions_command
+    from volta.cli.check_conventions_cmd import check_conventions_command
 
     sch = _copy_fixture(tmp_path, "Arduino_Mega.kicad_sch")
     with mock.patch(
-        "kicad_agent.conventions.engine.ConventionEngine.run",
+        "volta.conventions.engine.ConventionEngine.run",
         return_value=[],
     ):
         rc = check_conventions_command(_make_args(schematic=str(sch)))
@@ -73,8 +73,8 @@ def test_check_conventions_no_violations_exits_0_markdown(capsys, tmp_path):
 
 def test_check_conventions_with_error_severity_exits_1(capsys, tmp_path):
     """Error-severity violations → exit 1."""
-    from kicad_agent.conventions.base import Violation
-    from kicad_agent.cli.check_conventions_cmd import check_conventions_command
+    from volta.conventions.base import Violation
+    from volta.cli.check_conventions_cmd import check_conventions_command
 
     sch = _copy_fixture(tmp_path, "Arduino_Mega.kicad_sch")
     fake_violations = [
@@ -87,7 +87,7 @@ def test_check_conventions_with_error_severity_exits_1(capsys, tmp_path):
         )
     ]
     with mock.patch(
-        "kicad_agent.conventions.engine.ConventionEngine.run",
+        "volta.conventions.engine.ConventionEngine.run",
         return_value=fake_violations,
     ):
         rc = check_conventions_command(_make_args(schematic=str(sch)))
@@ -96,8 +96,8 @@ def test_check_conventions_with_error_severity_exits_1(capsys, tmp_path):
 
 def test_check_conventions_json_output_is_valid_json(capsys, tmp_path):
     """--format json emits valid JSON with violations + count + summary."""
-    from kicad_agent.conventions.base import Violation
-    from kicad_agent.cli.check_conventions_cmd import check_conventions_command
+    from volta.conventions.base import Violation
+    from volta.cli.check_conventions_cmd import check_conventions_command
 
     sch = _copy_fixture(tmp_path, "Arduino_Mega.kicad_sch")
     fake_violations = [
@@ -110,7 +110,7 @@ def test_check_conventions_json_output_is_valid_json(capsys, tmp_path):
         )
     ]
     with mock.patch(
-        "kicad_agent.conventions.engine.ConventionEngine.run",
+        "volta.conventions.engine.ConventionEngine.run",
         return_value=fake_violations,
     ):
         rc = check_conventions_command(_make_args(schematic=str(sch), format="json"))
@@ -124,8 +124,8 @@ def test_check_conventions_json_output_is_valid_json(capsys, tmp_path):
 
 def test_check_conventions_output_writes_to_file(tmp_path):
     """--output report.md writes markdown to file via atomic_write."""
-    from kicad_agent.conventions.base import Violation
-    from kicad_agent.cli.check_conventions_cmd import check_conventions_command
+    from volta.conventions.base import Violation
+    from volta.cli.check_conventions_cmd import check_conventions_command
 
     sch = _copy_fixture(tmp_path, "Arduino_Mega.kicad_sch")
     out = tmp_path / "report.md"
@@ -139,7 +139,7 @@ def test_check_conventions_output_writes_to_file(tmp_path):
         )
     ]
     with mock.patch(
-        "kicad_agent.conventions.engine.ConventionEngine.run",
+        "volta.conventions.engine.ConventionEngine.run",
         return_value=fake_violations,
     ):
         rc = check_conventions_command(
@@ -153,7 +153,7 @@ def test_check_conventions_output_writes_to_file(tmp_path):
 
 def test_check_conventions_config_flag_loads_yaml(tmp_path):
     """--config path loads YAML and passes through to engine."""
-    from kicad_agent.cli.check_conventions_cmd import check_conventions_command
+    from volta.cli.check_conventions_cmd import check_conventions_command
 
     sch = _copy_fixture(tmp_path, "Arduino_Mega.kicad_sch")
     cfg = tmp_path / "conventions.yaml"
@@ -171,7 +171,7 @@ def test_check_conventions_config_flag_loads_yaml(tmp_path):
             return []
 
     with mock.patch(
-        "kicad_agent.cli.check_conventions_cmd.ConventionEngine", _SpyEngine
+        "volta.cli.check_conventions_cmd.ConventionEngine", _SpyEngine
     ):
         rc = check_conventions_command(
             _make_args(schematic=str(sch), config=str(cfg))
@@ -189,7 +189,7 @@ def test_check_conventions_source_uses_real_apis():
     """
     import ast
 
-    from kicad_agent.cli import check_conventions_cmd as mod
+    from volta.cli import check_conventions_cmd as mod
 
     src = Path(mod.__file__).read_text()
     # Parse and unparse to strip docstrings + comments
@@ -203,7 +203,7 @@ def test_check_conventions_source_uses_real_apis():
     code_only = ast.unparse(tree)
 
     # P0-2: real parser imported
-    assert "from kicad_agent.parser.schematic_parser import parse_schematic" in code_only
+    assert "from volta.parser.schematic_parser import parse_schematic" in code_only
     # P0-2: fictional parser API never called
     assert "parse_schematic_file(" not in code_only, "P0-2 FAIL: fictional API called"
     # P0-2: real writer referenced
@@ -218,9 +218,9 @@ def test_check_conventions_source_uses_real_apis():
 
 def test_check_conventions_apply_dedupes_by_rule_id(tmp_path):
     """P1-3: --apply dedupes violations by rule_id (each convention runs at most once)."""
-    from kicad_agent.conventions.base import Violation
-    from kicad_agent.conventions.layout_view import ComponentView, LayoutView
-    from kicad_agent.cli.check_conventions_cmd import check_conventions_command
+    from volta.conventions.base import Violation
+    from volta.conventions.layout_view import ComponentView, LayoutView
+    from volta.cli.check_conventions_cmd import check_conventions_command
 
     sch = _copy_fixture(tmp_path, "Arduino_Mega.kicad_sch")
     # 5 violations all sharing the same rule_id — apply() should run ONCE
@@ -255,18 +255,18 @@ def test_check_conventions_apply_dedupes_by_rule_id(tmp_path):
     )
 
     with mock.patch(
-        "kicad_agent.conventions.engine.ConventionEngine.run",
+        "volta.conventions.engine.ConventionEngine.run",
         return_value=fake_violations,
     ), mock.patch(
-        "kicad_agent.cli.check_conventions_cmd.get_v1_catalog",
+        "volta.cli.check_conventions_cmd.get_v1_catalog",
         return_value=fake_catalog,
     ), mock.patch(
-        "kicad_agent.cli.check_conventions_cmd.parse_schematic",
+        "volta.cli.check_conventions_cmd.parse_schematic",
         return_value=fake_parse_result,
     ), mock.patch(
-        "kicad_agent.io.atomic_write.atomic_write"
+        "volta.io.atomic_write.atomic_write"
     ), mock.patch(
-        "kicad_agent.ops.schematic_raw_writer.SchematicRawWriter.apply_mutations",
+        "volta.ops.schematic_raw_writer.SchematicRawWriter.apply_mutations",
         return_value="modified",
     ):
         rc = check_conventions_command(
@@ -280,7 +280,7 @@ def test_check_conventions_apply_dedupes_by_rule_id(tmp_path):
 
 def test_check_conventions_help_does_not_import_heavy_deps():
     """--help prints usage without importing MCP server (mirrors Phase 64 H-17)."""
-    from kicad_agent.cli.check_conventions_cmd import register_parser
+    from volta.cli.check_conventions_cmd import register_parser
 
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers()

@@ -11,11 +11,11 @@ from pathlib import Path
 
 import pytest
 
-from kicad_agent.ops.executor import (
+from volta.ops.executor import (
     OperationExecutor,
     _QUERY_HANDLERS,
 )
-from kicad_agent.ops.schema import Operation
+from volta.ops.schema import Operation
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 
@@ -164,10 +164,10 @@ class TestQueryExecutor:
 
     def test_are_connected_same_net(self, arduino_pcb_tmp):
         """Find two pads on GND and verify they are connected."""
-        from kicad_agent.analysis.connectivity import NetGraph
-        from kicad_agent.parser import parse_pcb
-        from kicad_agent.parser.uuid_extractor import extract_uuids
-        from kicad_agent.ir.pcb_ir import PcbIR
+        from volta.analysis.connectivity import NetGraph
+        from volta.parser import parse_pcb
+        from volta.parser.uuid_extractor import extract_uuids
+        from volta.ir.pcb_ir import PcbIR
 
         parse_result = parse_pcb(arduino_pcb_tmp)
         uuid_map = extract_uuids(parse_result.raw_content, "pcb")
@@ -195,10 +195,10 @@ class TestQueryExecutor:
 
     def test_are_connected_different_nets(self, arduino_pcb_tmp):
         """Find two pads on different nets and verify they are not directly connected."""
-        from kicad_agent.analysis.connectivity import NetGraph
-        from kicad_agent.parser import parse_pcb
-        from kicad_agent.parser.uuid_extractor import extract_uuids
-        from kicad_agent.ir.pcb_ir import PcbIR
+        from volta.analysis.connectivity import NetGraph
+        from volta.parser import parse_pcb
+        from volta.parser.uuid_extractor import extract_uuids
+        from volta.ir.pcb_ir import PcbIR
 
         parse_result = parse_pcb(arduino_pcb_tmp)
         uuid_map = extract_uuids(parse_result.raw_content, "pcb")
@@ -232,10 +232,10 @@ class TestQueryExecutor:
 
     def test_shortest_path_returns_path(self, arduino_pcb_tmp):
         """Find two pads on the same net and get the shortest path."""
-        from kicad_agent.analysis.connectivity import NetGraph
-        from kicad_agent.parser import parse_pcb
-        from kicad_agent.parser.uuid_extractor import extract_uuids
-        from kicad_agent.ir.pcb_ir import PcbIR
+        from volta.analysis.connectivity import NetGraph
+        from volta.parser import parse_pcb
+        from volta.parser.uuid_extractor import extract_uuids
+        from volta.ir.pcb_ir import PcbIR
 
         parse_result = parse_pcb(arduino_pcb_tmp)
         uuid_map = extract_uuids(parse_result.raw_content, "pcb")

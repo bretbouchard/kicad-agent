@@ -209,7 +209,7 @@ def _make_op(op_type: str, target_file: str, **kwargs) -> dict:
 
 
 def run_place_stage(executor, target_file: str) -> tuple[dict, float]:
-    from kicad_agent.ops.schema import Operation
+    from volta.ops.schema import Operation
     op_dict = _make_op("place_components_sch", target_file,
                        subcircuit_split=True, dry_run=False)
     op = Operation.model_validate({"root": op_dict})
@@ -220,7 +220,7 @@ def run_place_stage(executor, target_file: str) -> tuple[dict, float]:
 
 
 def run_route_stage(executor, target_file: str) -> tuple[dict, float]:
-    from kicad_agent.ops.schema import Operation
+    from volta.ops.schema import Operation
     op_dict = _make_op("route_wires_sch", target_file,
                        max_wire_length_mm=40.0, dry_run=False)
     op = Operation.model_validate({"root": op_dict})
@@ -231,7 +231,7 @@ def run_route_stage(executor, target_file: str) -> tuple[dict, float]:
 
 
 def run_label_stage(executor, target_file: str) -> tuple[dict, float]:
-    from kicad_agent.ops.schema import Operation
+    from volta.ops.schema import Operation
     op_dict = _make_op("apply_labels_sch", target_file,
                        label_size_mm=1.27, dry_run=False)
     op = Operation.model_validate({"root": op_dict})
@@ -247,7 +247,7 @@ def run_label_stage(executor, target_file: str) -> tuple[dict, float]:
 
 def test_fixture(name: str, src_path: Path, out_dir: Path, args=None) -> FixtureResult:
     """Run the full autolayout pipeline on one fixture."""
-    from kicad_agent.ops.executor import OperationExecutor
+    from volta.ops.executor import OperationExecutor
 
     res = FixtureResult(name=name)
     work_path = out_dir / f"{name}.kicad_sch"

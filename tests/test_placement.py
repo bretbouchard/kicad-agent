@@ -6,13 +6,13 @@ heuristic, and spatial scoring.
 
 import pytest
 
-from kicad_agent.generation.intent import ComponentSpec, NetSpec, PositionSpec
-from kicad_agent.generation.placement import (
+from volta.generation.intent import ComponentSpec, NetSpec, PositionSpec
+from volta.generation.placement import (
     PlacementEngine,
     PlacementResult,
     validate_placement_clearance,
 )
-from kicad_agent.spatial.primitives import SpatialBox
+from volta.spatial.primitives import SpatialBox
 
 
 # ---------------------------------------------------------------------------

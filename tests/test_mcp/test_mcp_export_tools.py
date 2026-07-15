@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from kicad_agent.mcp.edit_server import (
+from volta.mcp.edit_server import (
     _ALL_TOOLS,
     _META_TOOLS,
     _bom_result_to_mcp,
@@ -19,7 +19,7 @@ from kicad_agent.mcp.edit_server import (
     _render_result_to_mcp,
     dispatch_tool,
 )
-from kicad_agent.ops.executor import OperationExecutor
+from volta.ops.executor import OperationExecutor
 from mcp import types
 
 
@@ -216,7 +216,7 @@ class TestRenderPcbDispatch:
             command="kicad-cli pcb render ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_render_pcb", return_value=mock_result):
+        with patch("volta.mcp.edit_server._export_render_pcb", return_value=mock_result):
             result = await dispatch_tool(
                 "render_pcb", {"pcb_file": "board.kicad_pcb"}, executor, base_dir,
             )
@@ -236,7 +236,7 @@ class TestRenderPcbDispatch:
             command="kicad-cli pcb render --rotate ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_render_pcb", return_value=mock_result) as mock_fn:
+        with patch("volta.mcp.edit_server._export_render_pcb", return_value=mock_result) as mock_fn:
             await dispatch_tool(
                 "render_pcb", {
                     "pcb_file": "board.kicad_pcb",
@@ -254,7 +254,7 @@ class TestRenderPcbDispatch:
     @pytest.mark.asyncio
     async def test_render_pcb_file_not_found(self, mock_executor: tuple) -> None:
         executor, base_dir = mock_executor
-        with patch("kicad_agent.mcp.edit_server._export_render_pcb", side_effect=FileNotFoundError("board.kicad_pcb not found")):
+        with patch("volta.mcp.edit_server._export_render_pcb", side_effect=FileNotFoundError("board.kicad_pcb not found")):
             result = await dispatch_tool(
                 "render_pcb", {"pcb_file": "board.kicad_pcb"}, executor, base_dir,
             )
@@ -281,7 +281,7 @@ class TestSchematicSvgDispatch:
             command="kicad-cli sch export svg ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_schematic_svg_handler", return_value=mock_result):
+        with patch("volta.mcp.edit_server._export_schematic_svg_handler", return_value=mock_result):
             result = await dispatch_tool(
                 "export_schematic_svg", {"schematic_file": "schematic.kicad_sch"}, executor, base_dir,
             )
@@ -293,7 +293,7 @@ class TestSchematicSvgDispatch:
     @pytest.mark.asyncio
     async def test_export_schematic_svg_validation_error(self, mock_executor: tuple) -> None:
         executor, base_dir = mock_executor
-        with patch("kicad_agent.mcp.edit_server._export_schematic_svg_handler", side_effect=ValueError("Not a schematic")):
+        with patch("volta.mcp.edit_server._export_schematic_svg_handler", side_effect=ValueError("Not a schematic")):
             result = await dispatch_tool(
                 "export_schematic_svg", {"schematic_file": "bad.txt"}, executor, base_dir,
             )
@@ -320,7 +320,7 @@ class TestPcbSvgDispatch:
             command="kicad-cli pcb export svg ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_pcb_svg_handler", return_value=mock_result):
+        with patch("volta.mcp.edit_server._export_pcb_svg_handler", return_value=mock_result):
             result = await dispatch_tool(
                 "export_pcb_svg", {"pcb_file": "board.kicad_pcb"}, executor, base_dir,
             )
@@ -338,7 +338,7 @@ class TestPcbSvgDispatch:
             command="kicad-cli pcb export svg ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_pcb_svg_handler", return_value=mock_result) as mock_fn:
+        with patch("volta.mcp.edit_server._export_pcb_svg_handler", return_value=mock_result) as mock_fn:
             await dispatch_tool(
                 "export_pcb_svg", {
                     "pcb_file": "board.kicad_pcb",
@@ -367,7 +367,7 @@ class TestPcbPdfDispatch:
             command="kicad-cli pcb export pdf ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_pcb_pdf_handler", return_value=mock_result):
+        with patch("volta.mcp.edit_server._export_pcb_pdf_handler", return_value=mock_result):
             result = await dispatch_tool(
                 "export_pcb_pdf", {"pcb_file": "board.kicad_pcb"}, executor, base_dir,
             )
@@ -395,7 +395,7 @@ class TestSchematicBomDispatch:
             command="kicad-cli sch export bom ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_schematic_bom_handler", return_value=mock_result):
+        with patch("volta.mcp.edit_server._export_schematic_bom_handler", return_value=mock_result):
             result = await dispatch_tool(
                 "export_schematic_bom", {"schematic_file": "schematic.kicad_sch"}, executor, base_dir,
             )
@@ -416,7 +416,7 @@ class TestSchematicBomDispatch:
             command="kicad-cli sch export bom ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_schematic_bom_handler", return_value=mock_result) as mock_fn:
+        with patch("volta.mcp.edit_server._export_schematic_bom_handler", return_value=mock_result) as mock_fn:
             await dispatch_tool(
                 "export_schematic_bom", {
                     "schematic_file": "schematic.kicad_sch",
@@ -445,7 +445,7 @@ class TestPcbStepDispatch:
             command="kicad-cli pcb export step ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_pcb_step_handler", return_value=mock_result):
+        with patch("volta.mcp.edit_server._export_pcb_step_handler", return_value=mock_result):
             result = await dispatch_tool(
                 "export_pcb_step", {"pcb_file": "board.kicad_pcb"}, executor, base_dir,
             )
@@ -464,7 +464,7 @@ class TestPcbStepDispatch:
             command="kicad-cli pcb export step ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_pcb_step_handler", return_value=mock_result) as mock_fn:
+        with patch("volta.mcp.edit_server._export_pcb_step_handler", return_value=mock_result) as mock_fn:
             await dispatch_tool(
                 "export_pcb_step", {
                     "pcb_file": "board.kicad_pcb",
@@ -495,7 +495,7 @@ class TestPcbGerbersDispatch:
             command="kicad-cli pcb export gerbers ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_pcb_gerbers_handler", return_value=mock_result):
+        with patch("volta.mcp.edit_server._export_pcb_gerbers_handler", return_value=mock_result):
             result = await dispatch_tool(
                 "export_pcb_gerbers", {"pcb_file": "board.kicad_pcb"}, executor, base_dir,
             )
@@ -514,7 +514,7 @@ class TestPcbGerbersDispatch:
             command="kicad-cli pcb export gerbers ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_pcb_gerbers_handler", return_value=mock_result) as mock_fn:
+        with patch("volta.mcp.edit_server._export_pcb_gerbers_handler", return_value=mock_result) as mock_fn:
             await dispatch_tool(
                 "export_pcb_gerbers", {
                     "pcb_file": "board.kicad_pcb",
@@ -543,7 +543,7 @@ class TestPcbDrillDispatch:
             command="kicad-cli pcb export drill ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_pcb_drill_handler", return_value=mock_result):
+        with patch("volta.mcp.edit_server._export_pcb_drill_handler", return_value=mock_result):
             result = await dispatch_tool(
                 "export_pcb_drill", {"pcb_file": "board.kicad_pcb"}, executor, base_dir,
             )
@@ -561,7 +561,7 @@ class TestPcbDrillDispatch:
             command="kicad-cli pcb export drill ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_pcb_drill_handler", return_value=mock_result) as mock_fn:
+        with patch("volta.mcp.edit_server._export_pcb_drill_handler", return_value=mock_result) as mock_fn:
             await dispatch_tool(
                 "export_pcb_drill", {
                     "pcb_file": "board.kicad_pcb",
@@ -590,7 +590,7 @@ class TestPcbPositionDispatch:
             command="kicad-cli pcb export pos ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_pcb_position_handler", return_value=mock_result):
+        with patch("volta.mcp.edit_server._export_pcb_position_handler", return_value=mock_result):
             result = await dispatch_tool(
                 "export_pcb_position", {"pcb_file": "board.kicad_pcb"}, executor, base_dir,
             )
@@ -608,7 +608,7 @@ class TestPcbPositionDispatch:
             command="kicad-cli pcb export pos ...",
             stderr="",
         )
-        with patch("kicad_agent.mcp.edit_server._export_pcb_position_handler", return_value=mock_result) as mock_fn:
+        with patch("volta.mcp.edit_server._export_pcb_position_handler", return_value=mock_result) as mock_fn:
             await dispatch_tool(
                 "export_pcb_position", {
                     "pcb_file": "board.kicad_pcb",
@@ -632,42 +632,42 @@ class TestRenderModule:
     """Test the export/render.py module validation and structure."""
 
     def test_render_pcb_requires_pcb_file(self) -> None:
-        from kicad_agent.export.render import render_pcb
+        from volta.export.render import render_pcb
         with pytest.raises(ValueError, match="Expected .kicad_pcb"):
             render_pcb(Path("not_a_pcb.txt"))
 
     def test_render_pcb_path_traversal_rejected(self) -> None:
-        from kicad_agent.export.render import render_pcb
+        from volta.export.render import render_pcb
         with pytest.raises(ValueError, match="path traversal"):
             render_pcb(Path("../board.kicad_pcb"))
 
     def test_render_pcb_file_not_found(self) -> None:
-        from kicad_agent.export.render import render_pcb
+        from volta.export.render import render_pcb
         with pytest.raises(FileNotFoundError):
             render_pcb(Path("nonexistent.kicad_pcb"))
 
     def test_export_schematic_svg_requires_sch_file(self) -> None:
-        from kicad_agent.export.render import export_schematic_svg
+        from volta.export.render import export_schematic_svg
         with pytest.raises(ValueError, match="Expected .kicad_sch"):
             export_schematic_svg(Path("not_a_sch.txt"))
 
     def test_export_schematic_svg_path_traversal_rejected(self) -> None:
-        from kicad_agent.export.render import export_schematic_svg
+        from volta.export.render import export_schematic_svg
         with pytest.raises(ValueError, match="path traversal"):
             export_schematic_svg(Path("../schematic.kicad_sch"))
 
     def test_export_pcb_svg_requires_pcb_file(self) -> None:
-        from kicad_agent.export.render import export_pcb_svg
+        from volta.export.render import export_pcb_svg
         with pytest.raises(ValueError, match="Expected .kicad_pcb"):
             export_pcb_svg(Path("not_a_pcb.txt"))
 
     def test_export_pcb_pdf_requires_pcb_file(self) -> None:
-        from kicad_agent.export.render import export_pcb_pdf
+        from volta.export.render import export_pcb_pdf
         with pytest.raises(ValueError, match="Expected .kicad_pcb"):
             export_pcb_pdf(Path("not_a_pcb.txt"))
 
     def test_render_result_is_frozen_dataclass(self) -> None:
-        from kicad_agent.export.render import RenderResult
+        from volta.export.render import RenderResult
         result = RenderResult(
             success=True,
             output_path=Path("/tmp/render.png"),
@@ -681,18 +681,18 @@ class TestRenderModule:
             result.success = False  # type: ignore[misc]
 
     def test_export_module_exposes_render(self) -> None:
-        from kicad_agent.export import render_pcb
+        from volta.export import render_pcb
         assert callable(render_pcb)
 
     def test_export_module_exposes_svg_exports(self) -> None:
-        from kicad_agent.export import export_schematic_svg, export_pcb_svg
+        from volta.export import export_schematic_svg, export_pcb_svg
         assert callable(export_schematic_svg)
         assert callable(export_pcb_svg)
 
     def test_export_module_exposes_pcb_pdf(self) -> None:
-        from kicad_agent.export import export_pcb_pdf
+        from volta.export import export_pcb_pdf
         assert callable(export_pcb_pdf)
 
     def test_export_module_exposes_render_result(self) -> None:
-        from kicad_agent.export import RenderResult
+        from volta.export import RenderResult
         assert RenderResult is not None

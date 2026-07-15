@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from kicad_agent.ops.handlers.pcb_transfer import (
+from volta.ops.handlers.pcb_transfer import (
     UpdateFromSchematicOp,
     handle_update_from_schematic,
 )
@@ -41,7 +41,7 @@ class TestForceFlagRemoval:
 
     def test_no_force_references_in_module(self):
         """D-12: Zero 'force' parameter references in entire module."""
-        import kicad_agent.ops.handlers.pcb_transfer as mod
+        import volta.ops.handlers.pcb_transfer as mod
         source = inspect.getsource(mod)
         # No function-level force parameter (not in schema, not in handler)
         assert "force: bool" not in source
