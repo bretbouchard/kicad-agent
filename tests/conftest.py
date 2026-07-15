@@ -14,7 +14,7 @@ import pytest
 
 # Register LLM test fixtures from conftest_llm.py
 # Register placement test fixtures from conftest_placement.py
-pytest_plugins = ["conftest_llm", "conftest_placement"]
+pytest_plugins = ["tests.conftest_llm", "tests.conftest_placement"]
 
 # Test fixture directory for copied KiCad files
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
