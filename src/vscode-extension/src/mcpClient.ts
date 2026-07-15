@@ -1,7 +1,7 @@
 /**
- * MCP client for kicad-agent edit server.
+ * MCP client for volta edit server.
  *
- * Connects to the kicad-agent-edit MCP server via stdio transport,
+ * Connects to the volta-edit MCP server via stdio transport,
  * sending JSON-RPC 2.0 messages over stdin/stdout.
  *
  * Security (threat model):
@@ -96,7 +96,7 @@ export class McpClient extends EventEmitter {
       protocolVersion: '2024-11-05',
       capabilities: {},
       clientInfo: {
-        name: 'kicad-agent-vscode',
+        name: 'volta-vscode',
         version: '0.1.0',
       },
     });

@@ -32,7 +32,7 @@ struct LocalModelPathTests {
     func isAdapterPresentDetectsV2() throws {
         // Create a temp dir with the v2-standard filenames
         let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("kicad-agent-test-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("volta-test-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tmp) }
 
@@ -51,7 +51,7 @@ struct LocalModelPathTests {
     @Test("isAdapterPresent rejects v1's adapters.safetensors (the bug we fixed)")
     func isAdapterPresentRejectsV1Filename() throws {
         let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("kicad-agent-test-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("volta-test-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tmp) }
 

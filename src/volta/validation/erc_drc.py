@@ -210,7 +210,7 @@ def run_erc(schematic_path: Path, *, timeout: int = 120) -> ErcResult:
     tempdir = None
     pro_backup = None  # renamed .kicad_pro if present
     try:
-        tempdir = tempfile.mkdtemp(prefix="kicad-agent-erc-")
+        tempdir = tempfile.mkdtemp(prefix="volta-erc-")
         output_file = Path(tempdir) / "erc_report.json"
 
         # Issue #28: Temporarily rename .kicad_pro file if present.
@@ -367,7 +367,7 @@ def run_drc(
 
     tempdir = None
     try:
-        tempdir = tempfile.mkdtemp(prefix="kicad-agent-drc-")
+        tempdir = tempfile.mkdtemp(prefix="volta-drc-")
         output_file = Path(tempdir) / "drc_report.json"
 
         cmd = [

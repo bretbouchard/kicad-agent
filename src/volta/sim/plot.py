@@ -6,7 +6,7 @@ Two cases:
   2. AC has empty traces (pre-obp fallback): scalar-marker fallback
      (horizontal gain line, vertical bandwidth line).
 
-kicad-agent-qss fix: phase subplot now plots real vp(out) data extracted
+volta-qss fix: phase subplot now plots real vp(out) data extracted
 by spicelib.RawRead (was: honest "Phase data not available" stub). The
 obp fix populates v(out)_phase_deg as a Trace; this module just renders it.
 """

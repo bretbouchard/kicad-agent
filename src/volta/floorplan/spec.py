@@ -2,7 +2,7 @@
 
 The PlacementRule model captures implicit PCB design knowledge — the
 "stupid requirements" that experienced designers carry in their heads
-and that cause board respins when violated (Bead kicad-agent-24).
+and that cause board respins when violated (Bead volta-24).
 
 Rule types:
   edge_affinity: component must be on/near the board edge
@@ -165,7 +165,7 @@ def load_floor_plan(yaml_path: Path | str) -> FloorPlanSpec:
     for ref, coords in raw.get("pre_placed", {}).items():
         spec.pre_placed[ref] = tuple(coords)
 
-    # Contextual placement rules (Bead kicad-agent-24).
+    # Contextual placement rules (Bead volta-24).
     for r in raw.get("placement_rules", []):
         subject = r["subject_ref"]
         # Handle list subjects (for alignment rules).

@@ -328,12 +328,12 @@ Output a JSON object inside a ```json code block:
 
 DRC_FIX_SYSTEM = """\
 You are a PCB DRC violation fixer. Given a DRC violation with type, \
-severity, location, and suggested fix, generate a kicad-agent operation \
+severity, location, and suggested fix, generate a volta operation \
 to fix it.
 
 ## Task
 
-Given the violation details, output a single kicad-agent operation JSON \
+Given the violation details, output a single volta operation JSON \
 that would fix the violation. Common fix operations include:
 
 - "move_footprint": Move a component to clear a clearance violation.

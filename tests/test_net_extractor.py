@@ -25,7 +25,7 @@ from volta.ops.schema import Operation
 # ---------------------------------------------------------------------------
 
 SCHEMATIC_HEADER = """\
-(kicad_sch (version 20250114) (generator "kicad-agent-test")
+(kicad_sch (version 20250114) (generator "volta-test")
   (lib_symbols)
 """
 
@@ -127,7 +127,7 @@ def _sch_with_symbol_and_wires() -> str:
     """
     return (
         """\
-(kicad_sch (version 20250114) (generator "kicad-agent-test")
+(kicad_sch (version 20250114) (generator "volta-test")
   (lib_symbols
     (symbol "Device:R"
       (symbol "Device:R_0_1"
@@ -172,7 +172,7 @@ def _write_netlist(tmp_path: Path, nets: dict[str, list[tuple[str, str]]]) -> Pa
         "  (design",
         "    (source \"test.kicad_sch\")",
         "    (date \"2026-01-01\")",
-        "    (tool \"kicad-agent-test\"))",
+        "    (tool \"volta-test\"))",
         "  (components)",
         "  (nets",
     ]
@@ -371,7 +371,7 @@ class TestExtractNetsWithNetlist:
         # point lands at (75,50) -- matching the wire endpoint.
         sch_content = (
             """\
-(kicad_sch (version 20250114) (generator "kicad-agent-test")
+(kicad_sch (version 20250114) (generator "volta-test")
   (lib_symbols
     (symbol "Device:R"
       (symbol "Device:R_0_1"

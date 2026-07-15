@@ -25,7 +25,7 @@ from volta.ops.schema import Operation
 # ---------------------------------------------------------------------------
 
 SCHEMATIC_HEADER = """\
-(kicad_sch (version 20250114) (generator "kicad-agent-test")
+(kicad_sch (version 20250114) (generator "volta-test")
   (lib_symbols)
 """
 

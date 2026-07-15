@@ -1,4 +1,4 @@
-"""Tests for add_design_note op (kicad-agent-29).
+"""Tests for add_design_note op (volta-29).
 
 Design notes annotate schematics with WHY/WHAT/HOW intent. Verifies:
 - Op validates against schema

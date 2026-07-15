@@ -46,7 +46,7 @@ class TestPreRouteSnapshotPushed:
         pcb = _copy_fixture(tmp_path)
         orch = RoutingOrchestrator()
         orch.route_board(pcb, project_dir=tmp_path)
-        undo_dir = tmp_path / ".kicad-agent" / "undo"
+        undo_dir = tmp_path / ".volta" / "undo"
         assert undo_dir.exists()
         # At least one entry file should exist.
         entry_files = list(undo_dir.glob("*.json"))

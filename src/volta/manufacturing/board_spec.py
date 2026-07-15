@@ -53,7 +53,7 @@ class BoardSpec(BaseModel):
     """Manufacturing specification for a PCB board (META-04, META-05).
 
     Persisted as a sidecar JSON file (.kicad_build_spec.json) alongside the
-    .kicad_pcb file. NOT a KiCad file — this is kicad-agent's own extension.
+    .kicad_pcb file. NOT a KiCad file — this is volta's own extension.
     """
     schema_version: int = 1
     surface_finish: SurfaceFinish = SurfaceFinish.HASL

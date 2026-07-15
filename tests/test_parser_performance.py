@@ -66,7 +66,7 @@ def _generate_pcb_content(
     sexpdata.loads parses a single root S-expression.
     """
     # Header (opens kicad_pcb block)
-    header = '(kicad_pcb (version 20240108) (generator "kicad-agent-test")\n'
+    header = '(kicad_pcb (version 20240108) (generator "volta-test")\n'
 
     # General section
     general = """
@@ -427,7 +427,7 @@ class TestCacheManagement:
             tmp = Path(tmp_dir)
             fake_home = tmp / "home"
             fake_home.mkdir()
-            fake_cache = fake_home / ".cache" / "kicad-agent" / "adapters"
+            fake_cache = fake_home / ".cache" / "volta" / "adapters"
             fake_cache.mkdir(parents=True)
 
             # Create fake "downloaded" grpo adapter
@@ -454,7 +454,7 @@ class TestCacheManagement:
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             fake_home = Path(tmp_dir)
-            fake_cache = fake_home / ".cache" / "kicad-agent" / "adapters"
+            fake_cache = fake_home / ".cache" / "volta" / "adapters"
 
             with patch("pathlib.Path.home", return_value=fake_home):
                 # Nothing cached
@@ -477,7 +477,7 @@ class TestCacheManagement:
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             fake_home = Path(tmp_dir)
-            fake_cache = fake_home / ".cache" / "kicad-agent" / "adapters"
+            fake_cache = fake_home / ".cache" / "volta" / "adapters"
             fake_cache.mkdir(parents=True)
             grpo_dir = fake_cache / "grpo"
             grpo_dir.mkdir()

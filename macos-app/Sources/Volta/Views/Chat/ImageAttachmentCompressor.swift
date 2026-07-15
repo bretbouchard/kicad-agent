@@ -105,7 +105,7 @@ enum ImageAttachmentCompressor {
     /// filename so concurrent compressions don't clobber each other.
     private static func makeTempJPEGURL(for attachment: ImageAttachment) -> URL {
         let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("kicad-agent-attachments", isDirectory: true)
+            .appendingPathComponent("volta-attachments", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let baseName = (attachment.fileName as NSString).deletingPathExtension
         return dir.appendingPathComponent("\(UUID().uuidString)-\(baseName).jpg")

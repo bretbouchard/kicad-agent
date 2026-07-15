@@ -54,7 +54,7 @@ def test_demo_runs_clean_and_emits_artifacts(tmp_path: Path) -> None:
 
 @pytest.mark.slow
 def test_demo_uses_50_trials_by_default(tmp_path: Path) -> None:
-    """Default invocation: 20 trials (kicad-agent-e2b fix — narrowed E12 ranges).
+    """Default invocation: 20 trials (volta-e2b fix — narrowed E12 ranges).
 
     Verify via --help (fast, no sim). The prior version ran the full 50-trial
     demo (>200s with working ngspice sims) just to check the stdout marker
@@ -63,7 +63,7 @@ def test_demo_uses_50_trials_by_default(tmp_path: Path) -> None:
     default". Fast and authoritative.
 
     Note: function name retains "50" for git-blame continuity. The actual
-    default is now 20 per kicad-agent-e2b fix.
+    default is now 20 per volta-e2b fix.
     """
     result = subprocess.run(
         [str(VENV_PYTHON), str(DEMO), "--help"],
@@ -75,7 +75,7 @@ def test_demo_uses_50_trials_by_default(tmp_path: Path) -> None:
         f"--n-trials option missing from help:\n{result.stdout}"
     )
     # Argparse renders "default 20" in the help text for --n-trials
-    # (kicad-agent-e2b fix: narrowed E12 ranges → GPSampler converges in 20
+    # (volta-e2b fix: narrowed E12 ranges → GPSampler converges in 20
     # trials instead of 50).
     assert "default 20" in result.stdout, (
         f"help text should mention default 20 for --n-trials:\n{result.stdout}"

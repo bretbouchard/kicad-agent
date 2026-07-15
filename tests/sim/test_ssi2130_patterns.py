@@ -1,4 +1,4 @@
-"""Tests for SSI2130 VCO design patterns (kicad-agent-30/31/32/33).
+"""Tests for SSI2130 VCO design patterns (volta-30/31/32/33).
 
 4 builder functions, each emitting SPICE netlist for a Bart Instruments
 inspired circuit pattern. Tests verify:
@@ -19,7 +19,7 @@ from volta.sim.ssi2130_patterns import (
 
 
 class TestMeasurementTap:
-    """kicad-agent-30: Per-VCO measurement tap for digital autotune."""
+    """volta-30: Per-VCO measurement tap for digital autotune."""
 
     def test_default_has_pullup_and_buffer(self) -> None:
         nl = build_measurement_tap_spice_netlist()
@@ -42,7 +42,7 @@ class TestMeasurementTap:
 
 
 class TestHFTrimNetwork:
-    """kicad-agent-31: HF tracking trim network for discrete VCO cores."""
+    """volta-31: HF tracking trim network for discrete VCO cores."""
 
     def test_default_has_rc_lag_network(self) -> None:
         nl = build_hf_trim_spice_netlist()
@@ -60,7 +60,7 @@ class TestHFTrimNetwork:
 
 
 class TestLocalReferences:
-    """kicad-agent-32: Local ±2.5V references per voice submodule."""
+    """volta-32: Local ±2.5V references per voice submodule."""
 
     def test_default_has_dual_dividers(self) -> None:
         nl = build_local_refs_spice_netlist()
@@ -80,7 +80,7 @@ class TestLocalReferences:
 
 
 class TestPassiveCVSum:
-    """kicad-agent-33: Passive-summed multiple V/oct inputs."""
+    """volta-33: Passive-summed multiple V/oct inputs."""
 
     def test_default_has_4_cv_resistors_into_scale_trim(self) -> None:
         nl = build_passive_cv_sum_spice_netlist()

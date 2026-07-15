@@ -25,7 +25,7 @@
 //      for synced items so background daemon recovery can read keys without
 //      a fresh unlock; `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` for
 //      device-local items (stricter).
-//    - Service identifier scoping: `com.bretbouchard.kicad-agent` so our
+//    - Service identifier scoping: `com.bretbouchard.volta` so our
 //      keys never collide with other apps' Keychain entries.
 //    - Per-provider account identifiers: `apiKey.anthropic`, etc.
 //
@@ -91,7 +91,7 @@ enum KeychainError: Error, LocalizedError, Sendable, Equatable {
 /// on every store to decide the synchronizable + accessible attributes.
 ///
 /// Test isolation: the `service` initializer parameter lets tests use a
-/// distinct service identifier (`com.bretbouchard.kicad-agent.tests`)
+/// distinct service identifier (`com.bretbouchard.volta.tests`)
 /// so they never pollute the real keychain. CI also sets
 /// `KICAD_AGENT_TEST_KEYCHAIN=1` to engage the in-memory fallback when
 /// Security.framework can't be reached (CI sandboxes).
@@ -104,11 +104,11 @@ enum KeychainError: Error, LocalizedError, Sendable, Equatable {
 /// at .info level so it's visible but not noisy.
 final class KeychainManager: @unchecked Sendable {
     /// Production service identifier. Scoped to this app — no collisions.
-    static let defaultService = "com.bretbouchard.kicad-agent"
+    static let defaultService = "com.bretbouchard.volta"
 
     /// UserDefaults key for the iCloud-sync opt-out flag.
     /// Per MOD-04: defaults to true (ON). Settings UI flips to false.
-    static let iCloudSyncDefaultsKey = "com.bretbouchard.kicad-agent.byok.icloud-sync"
+    static let iCloudSyncDefaultsKey = "com.bretbouchard.volta.byok.icloud-sync"
 
     /// Service identifier used in Keychain queries.
     let service: String

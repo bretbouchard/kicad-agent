@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# resign_kicad_daemon.sh — re-sign the PyInstaller-bundled kicad-agent-daemon.
+# resign_kicad_daemon.sh — re-sign the PyInstaller-bundled volta-daemon.
 #
 # Why this exists:
 #   macOS enforces "non-platform" library signature validation when a binary
@@ -23,7 +23,7 @@
 
 set -euo pipefail
 
-DIST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../macos-app/daemon/dist/kicad-agent-daemon" && pwd)"
+DIST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../macos-app/daemon/dist/volta-daemon" && pwd)"
 
 if [ ! -d "$DIST_DIR" ]; then
     echo "ERROR: $DIST_DIR does not exist. Build the daemon with PyInstaller first."
@@ -31,7 +31,7 @@ if [ ! -d "$DIST_DIR" ]; then
 fi
 
 INTERNAL_DIR="$DIST_DIR/_internal"
-MAIN_BIN="$DIST_DIR/kicad-agent-daemon"
+MAIN_BIN="$DIST_DIR/volta-daemon"
 
 if [ ! -d "$INTERNAL_DIR" ]; then
     echo "ERROR: $INTERNAL_DIR does not exist. PyInstaller bundle is incomplete."

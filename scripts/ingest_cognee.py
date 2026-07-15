@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DATASET_NAME = "kicad-agent-reference"
+DATASET_NAME = "volta-reference"
 
 DOC_FILES = [
     "volta_reference.md",

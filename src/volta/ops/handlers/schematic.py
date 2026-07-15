@@ -651,7 +651,7 @@ def _handle_add_no_connect(op: Any, ir: SchematicIR, file_path: Path) -> dict[st
 
 @register_schematic("add_design_note")
 def _handle_add_design_note(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
-    """kicad-agent-29: annotate schematic with design intent (NOTE/REASON/MATH/BLOCK_HEADER)."""
+    """volta-29: annotate schematic with design intent (NOTE/REASON/MATH/BLOCK_HEADER)."""
     return ir.add_design_note(
         text=op.text,
         x=op.position.x,

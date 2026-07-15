@@ -1,9 +1,9 @@
 """Agent configuration loader (WORKFLOW-03).
 
-Loads routing, model, and workflow settings from kicad-agent.yaml,
+Loads routing, model, and workflow settings from volta.yaml,
 falling back to .kicad_pro project settings, then hardcoded defaults.
 
-Config precedence: CLI args > kicad-agent.yaml > .kicad_pro > defaults
+Config precedence: CLI args > volta.yaml > .kicad_pro > defaults
 
 Usage:
     from volta.config import load_config
@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-_CONFIG_FILENAME = "kicad-agent.yaml"
+_CONFIG_FILENAME = "volta.yaml"
 
 
 class RoutingConfig(BaseModel):
@@ -125,11 +125,11 @@ def load_config(
 ) -> AgentConfig:
     """Load agent configuration with precedence.
 
-    Precedence: config_path > project_dir/kicad-agent.yaml > .kicad_pro > defaults.
+    Precedence: config_path > project_dir/volta.yaml > .kicad_pro > defaults.
 
     Args:
         project_dir: Project directory to search for config files.
-        config_path: Explicit path to a kicad-agent.yaml (overrides discovery).
+        config_path: Explicit path to a volta.yaml (overrides discovery).
 
     Returns:
         Merged AgentConfig.
@@ -141,7 +141,7 @@ def load_config(
         if data:
             return AgentConfig.from_dict(data)
 
-    # Layer 2: kicad-agent.yaml in project dir
+    # Layer 2: volta.yaml in project dir
     if project_dir:
         project_dir = Path(project_dir)
         yaml_path = project_dir / _CONFIG_FILENAME

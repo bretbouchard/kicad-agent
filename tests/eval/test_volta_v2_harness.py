@@ -286,7 +286,7 @@ def test_verify_adapter_hash_checks_size():
     from tests.eval.volta_v2_harness import verify_adapter_hash
 
     from pathlib import Path
-    adapter_path = Path("/Volumes/Storage/models/kicad-agent/adapters/volta-12b-v2")
+    adapter_path = Path("/Volumes/Storage/models/volta/adapters/volta-12b-v2")
     result = verify_adapter_hash(adapter_path)
     assert result == True, "Adapter hash verification should pass"
 

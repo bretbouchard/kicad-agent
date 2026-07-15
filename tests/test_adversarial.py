@@ -1,7 +1,7 @@
 """Adversarial test generation: mutation engine, property-based tests, fuzz tests.
 
 Validates MutationEngine, AdversarialTestSuite, and fuzz testing infrastructure
-for proving kicad-agent robustness on deliberately broken inputs.
+for proving volta robustness on deliberately broken inputs.
 """
 
 from __future__ import annotations

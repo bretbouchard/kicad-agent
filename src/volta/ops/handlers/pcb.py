@@ -676,7 +676,7 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
             layer_trace_widths=layer_trace_widths,
         )
 
-    # --- Phase 1: Extract footprint + track obstacles (kicad-agent-7, Phase 99 Gap 1) ---
+    # --- Phase 1: Extract footprint + track obstacles (volta-7, Phase 99 Gap 1) ---
     obstacles = ir.extract_obstacles(clearance_mm=constraints.clearance_mm)
     logger.info(
         "Auto-route: extracted %d obstacles from %d footprints",
@@ -775,7 +775,7 @@ def _handle_auto_route(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
         forbidden_zones=getattr(op, "forbidden_zones", None),
     )
 
-    # --- Phase 4: Sequential routing with rip-up (kicad-agent-7) ---
+    # --- Phase 4: Sequential routing with rip-up (volta-7) ---
     # Route nets shortest-first. After each successful route, mark the
     # path as an obstacle so subsequent nets avoid it.
     net_id_map = ir.extract_net_id_map()
@@ -1824,10 +1824,10 @@ def _handle_auto_place_zoned(op: Any, ir: PcbIR, file_path: Path) -> dict[str, A
 
 @register_pcb("apply_floor_plan")
 def _handle_apply_floor_plan(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
-    """kicad-agent-24 op integration: apply a YAML floor plan to a PCB.
+    """volta-24 op integration: apply a YAML floor plan to a PCB.
 
     Phase 157 shipped FloorPlanSpec + PlacementRule infrastructure. This
-    handler exposes it as a kicad-agent op:
+    handler exposes it as a volta op:
       1. Load YAML floor plan (zones, keepouts, placement rules with rationale)
       2. Call floorplan.apply_floor_plan(content, spec) → FloorPlanResult
       3. If applied + no hard violations, write modified content via IR

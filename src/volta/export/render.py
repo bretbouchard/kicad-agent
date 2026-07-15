@@ -1,4 +1,4 @@
-"""3D rendering and visual export wrappers for kicad-agent.
+"""3D rendering and visual export wrappers for volta.
 
 Provides Python wrappers for kicad-cli render and visual export commands
 (SVG, PDF) for both schematics and PCBs. These are read-only convenience

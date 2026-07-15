@@ -35,7 +35,7 @@ class LocalLLMClient:
         temperature: Sampling temperature (0.0 = greedy).
     """
 
-    _HF_REPO = "bretbouchard/kicad-agent-pcb-adapter"
+    _HF_REPO = "bretbouchard/volta-pcb-adapter"
 
     @classmethod
     def pre_download_adapter(cls) -> Path:
@@ -51,7 +51,7 @@ class LocalLLMClient:
         Raises:
             RuntimeError: If download fails.
         """
-        cache_dir = Path.home() / ".cache" / "kicad-agent" / "adapters"
+        cache_dir = Path.home() / ".cache" / "volta" / "adapters"
         grpo_dir = cache_dir / "grpo"
         sft_dir = cache_dir / "sft"
 
@@ -95,7 +95,7 @@ class LocalLLMClient:
     def get_cache_info(cls) -> dict[str, str | bool | None]:
         """Return information about the local adapter cache.
 
-        Cache directory: Path.home()/.cache/kicad-agent/adapters/
+        Cache directory: Path.home()/.cache/volta/adapters/
 
         Returns:
             Dict with keys:
@@ -104,7 +104,7 @@ class LocalLLMClient:
             - sft_cached: True if SFT adapter is cached.
             - adapter_path: Path to preferred adapter (GRPO > SFT > None).
         """
-        cache_dir = Path.home() / ".cache" / "kicad-agent" / "adapters"
+        cache_dir = Path.home() / ".cache" / "volta" / "adapters"
         grpo_dir = cache_dir / "grpo"
         sft_dir = cache_dir / "sft"
 
@@ -163,7 +163,7 @@ class LocalLLMClient:
                 return local
 
         # 3. Download from HuggingFace Hub
-        cache_dir = Path.home() / ".cache" / "kicad-agent" / "adapters"
+        cache_dir = Path.home() / ".cache" / "volta" / "adapters"
         grpo_dir = cache_dir / "grpo"
         sft_dir = cache_dir / "sft"
 

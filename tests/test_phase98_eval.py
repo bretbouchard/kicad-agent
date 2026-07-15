@@ -705,7 +705,7 @@ class TestCategoryIntegration:
         """
         pytest.importorskip("mlx_vlm", reason="mlx_vlm not installed")
 
-        adapter_path = Path("/Volumes/Storage/models/kicad-agent/adapters/kicad-vision-v2-mlx/")
+        adapter_path = Path("/Volumes/Storage/models/volta/adapters/kicad-vision-v2-mlx/")
         if not adapter_path.exists():
             pytest.skip(f"Vision adapter not found at {adapter_path}")
 

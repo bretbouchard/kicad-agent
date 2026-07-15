@@ -148,9 +148,9 @@ class TestHappyPath:
             project_dir = output_dir / intent.name
             project_dir.mkdir(parents=True, exist_ok=True)
             sch_path = project_dir / f"{intent.name}.kicad_sch"
-            sch_path.write_text("(kicad_sch (version 20231120) (generator kicad-agent))")
+            sch_path.write_text("(kicad_sch (version 20231120) (generator volta))")
             pcb_path = project_dir / f"{intent.name}.kicad_pcb"
-            pcb_path.write_text("(kicad_pcb (version 20231120) (generator kicad-agent))")
+            pcb_path.write_text("(kicad_pcb (version 20231120) (generator volta))")
             return GenerationResult(
                 success=True,
                 project_dir=project_dir,
@@ -203,9 +203,9 @@ class TestHappyPath:
             project_dir = output_dir / intent.name
             project_dir.mkdir(parents=True, exist_ok=True)
             sch_path = project_dir / f"{intent.name}.kicad_sch"
-            sch_path.write_text("(kicad_sch (version 20231120) (generator kicad-agent))")
+            sch_path.write_text("(kicad_sch (version 20231120) (generator volta))")
             pcb_path = project_dir / f"{intent.name}.kicad_pcb"
-            pcb_path.write_text("(kicad_pcb (version 20231120) (generator kicad-agent))")
+            pcb_path.write_text("(kicad_pcb (version 20231120) (generator volta))")
             return GenerationResult(
                 success=True,
                 project_dir=project_dir,
@@ -475,7 +475,7 @@ class TestCritiqueSkipping:
             project_dir = output_dir / intent.name
             project_dir.mkdir(parents=True, exist_ok=True)
             sch_path = project_dir / f"{intent.name}.kicad_sch"
-            sch_path.write_text("(kicad_sch (version 20231120) (generator kicad-agent))")
+            sch_path.write_text("(kicad_sch (version 20231120) (generator volta))")
             return GenerationResult(
                 success=True,
                 project_dir=project_dir,
@@ -545,9 +545,9 @@ class TestSuccessCriteria:
             project_dir = output_dir / intent.name
             project_dir.mkdir(parents=True, exist_ok=True)
             sch_path = project_dir / f"{intent.name}.kicad_sch"
-            sch_path.write_text("(kicad_sch (version 20231120) (generator kicad-agent))")
+            sch_path.write_text("(kicad_sch (version 20231120) (generator volta))")
             pcb_path = project_dir / f"{intent.name}.kicad_pcb"
-            pcb_path.write_text("(kicad_pcb (version 20231120) (generator kicad-agent))")
+            pcb_path.write_text("(kicad_pcb (version 20231120) (generator volta))")
             return GenerationResult(
                 success=True,
                 project_dir=project_dir,

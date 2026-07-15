@@ -150,11 +150,11 @@ final class ProcessManager {
     /// Locate the bundled daemon executable.
     ///
     /// Resolution order:
-    /// 1. `<Bundle.main.resourcePath>/kicad-agent-daemon/kicad-agent-daemon` (production).
-    /// 2. `Bundle.main.url(forResource: "kicad-agent-daemon", withExtension: nil)`
+    /// 1. `<Bundle.main.resourcePath>/volta-daemon/volta-daemon` (production).
+    /// 2. `Bundle.main.url(forResource: "volta-daemon", withExtension: nil)`
     ///    (fallback if the resource is registered as a top-level file).
-    /// 3. `macos-app/daemon/dist/kicad-agent-daemon/kicad-agent-daemon` (dev SPM).
-    /// 4. `daemon/dist/kicad-agent-daemon/kicad-agent-daemon` (dev relative).
+    /// 3. `macos-app/daemon/dist/volta-daemon/volta-daemon` (dev SPM).
+    /// 4. `daemon/dist/volta-daemon/volta-daemon` (dev relative).
     /// 5. Hardcoded dev path.
     ///
     /// The .app bundle path is preferred so the sandboxed app finds the
@@ -163,25 +163,25 @@ final class ProcessManager {
     /// points inside the user's clone — dev convenience only, and the
     /// sandbox will block it in shipping builds.
     nonisolated static func resolveDaemonURL() -> URL? {
-        // 1. App bundle: Contents/Resources/kicad-agent-daemon/kicad-agent-daemon
+        // 1. App bundle: Contents/Resources/volta-daemon/volta-daemon
         if let resourcePath = Bundle.main.resourcePath {
             let bundled = (resourcePath as NSString)
-                .appendingPathComponent("kicad-agent-daemon/kicad-agent-daemon")
+                .appendingPathComponent("volta-daemon/volta-daemon")
             if FileManager.default.isExecutableFile(atPath: bundled) {
                 return URL(fileURLWithPath: bundled)
             }
         }
         // 2. Top-level bundle resource (registered as file, not directory).
-        if let bundleURL = Bundle.main.url(forResource: "kicad-agent-daemon", withExtension: nil),
+        if let bundleURL = Bundle.main.url(forResource: "volta-daemon", withExtension: nil),
            FileManager.default.isExecutableFile(atPath: bundleURL.path) {
             return bundleURL
         }
         // 3. Dev paths (cwd-relative + known repo path).
         let cwd = FileManager.default.currentDirectoryPath
         let distCandidates = [
-            "\(cwd)/macos-app/daemon/dist/kicad-agent-daemon/kicad-agent-daemon",
-            "\(cwd)/daemon/dist/kicad-agent-daemon/kicad-agent-daemon",
-            "/Users/bretbouchard/apps/kicad-agent/macos-app/daemon/dist/kicad-agent-daemon/kicad-agent-daemon",
+            "\(cwd)/macos-app/daemon/dist/volta-daemon/volta-daemon",
+            "\(cwd)/daemon/dist/volta-daemon/volta-daemon",
+            "/Users/bretbouchard/apps/volta/macos-app/daemon/dist/volta-daemon/volta-daemon",
         ]
         for path in distCandidates {
             if FileManager.default.isExecutableFile(atPath: path) {
@@ -194,7 +194,7 @@ final class ProcessManager {
     /// Locate a Python interpreter for last-resort dev mode.
     nonisolated static func resolvePythonURL() -> URL? {
         let candidates = [
-            "/Users/bretbouchard/apps/kicad-agent/.venv/bin/python",
+            "/Users/bretbouchard/apps/volta/.venv/bin/python",
             "/usr/local/bin/python3",
             "/opt/homebrew/bin/python3",
         ]

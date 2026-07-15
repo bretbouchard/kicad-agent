@@ -33,7 +33,7 @@ def schematic_path(tmp_path: Path) -> Path:
     content = (
         "(kicad_sch\n"
         "  (version 20250114)\n"
-        "  (generator kicad-agent)\n"
+        "  (generator volta)\n"
         f"  (uuid {uuid.uuid4()})\n"
         '  (paper "A4")\n'
         "  (lib_symbols)\n"

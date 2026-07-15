@@ -35,9 +35,9 @@ def parse_swift_coverage(cov_xml: Path) -> Dict[str, Tuple[float, int, int]]:
     by_layer: Dict[str, Tuple[int, int]] = {}
     for cls in root.iter("class"):
         filename = cls.get("filename", "")
-        if "/Sources/KiCadAgent/" not in filename:
+        if "/Sources/Volta/" not in filename:
             continue
-        parts = filename.split("/Sources/KiCadAgent/")
+        parts = filename.split("/Sources/Volta/")
         if len(parts) < 2:
             continue
         rel = parts[1]

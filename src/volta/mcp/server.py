@@ -11,7 +11,7 @@ Usage:
     kicad-component-search
 
     # Or via CLI
-    kicad-agent component-search
+    volta component-search
 """
 
 from __future__ import annotations
@@ -203,7 +203,7 @@ async def _rate_limited_thread_call(fn: Any, *args: Any, **kwargs: Any) -> Any:
 @asynccontextmanager
 async def server_lifespan(server: Server):  # type: ignore[type-arg]
     """Create EasyEdaClient once, share across all tool calls."""
-    cache_dir = Path("~/.cache/kicad-agent/components").expanduser()
+    cache_dir = Path("~/.cache/volta/components").expanduser()
     cache_dir.mkdir(parents=True, exist_ok=True)
     client = EasyEdaClient(cache_dir=cache_dir)
     yield {"client": client}

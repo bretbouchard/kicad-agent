@@ -1,4 +1,4 @@
-"""CLI test suite -- subprocess invocation of kicad-agent command."""
+"""CLI test suite -- subprocess invocation of volta command."""
 
 from __future__ import annotations
 
@@ -169,7 +169,7 @@ def _make_mock_result(**overrides) -> MagicMock:
 
 
 def test_analyze_subcommand_calls_generate_analysis(tmp_path: Path, capsys) -> None:
-    """`kicad-agent analyze board.kicad_pcb` calls generate_analysis and prints chain."""
+    """`volta analyze board.kicad_pcb` calls generate_analysis and prints chain."""
     pcb_file = tmp_path / "board.kicad_pcb"
     pcb_file.write_text("(kicad_pcb (version 20221018))")
 
@@ -185,7 +185,7 @@ def test_analyze_subcommand_calls_generate_analysis(tmp_path: Path, capsys) -> N
 
 
 def test_analyze_n_best_flag(tmp_path: Path, capsys) -> None:
-    """`kicad-agent analyze board.kicad_pcb --n-best 8` passes n_best=8."""
+    """`volta analyze board.kicad_pcb --n-best 8` passes n_best=8."""
     pcb_file = tmp_path / "board.kicad_pcb"
     pcb_file.write_text("(kicad_pcb (version 20221018))")
 
@@ -200,14 +200,14 @@ def test_analyze_n_best_flag(tmp_path: Path, capsys) -> None:
 
 
 def test_analyze_missing_file_exits_nonzero() -> None:
-    """`kicad-agent analyze missing.kicad_pcb` exits with error code 1."""
+    """`volta analyze missing.kicad_pcb` exits with error code 1."""
     result = _run("analyze", "/nonexistent/path.kicad_pcb")
     assert result.returncode != 0
     assert "not found" in result.stderr.lower() or "error" in result.stderr.lower()
 
 
 def test_analyze_verbose_shows_scores(tmp_path: Path, capsys) -> None:
-    """`kicad-agent analyze board.kicad_pcb --verbose` prints per-chain scores."""
+    """`volta analyze board.kicad_pcb --verbose` prints per-chain scores."""
     pcb_file = tmp_path / "board.kicad_pcb"
     pcb_file.write_text("(kicad_pcb (version 20221018))")
 

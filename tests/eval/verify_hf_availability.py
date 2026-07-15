@@ -98,7 +98,7 @@ def verify_local_adapter(local_path: str) -> int:
 def main():
     # First check local path (for offline/air-gapped environments)
     local_path = os.environ.get("VOLTA_ADAPTER_LOCAL_PATH",
-                                  "/Volumes/Storage/models/kicad-agent/adapters/volta-12b-v2")
+                                  "/Volumes/Storage/models/volta/adapters/volta-12b-v2")
     ok, issues = check_local_path(local_path)
     if ok:
         print(f"OK: Local adapter at {local_path} has all {len(REQUIRED_FILES)} required files")

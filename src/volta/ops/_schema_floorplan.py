@@ -1,10 +1,10 @@
-"""Schema for the apply_floor_plan operation (kicad-agent-24 op integration).
+"""Schema for the apply_floor_plan operation (volta-24 op integration).
 
 Phase 157 shipped the FloorPlanSpec + PlacementRule infrastructure but
-did not expose it as a kicad-agent op. This op closes that gap — users
+did not expose it as a volta op. This op closes that gap — users
 can now apply a YAML floor plan to a PCB via the standard op API:
 
-    /kicad-agent '{
+    /volta '{
         "op_type": "apply_floor_plan",
         "target_file": "board.kicad_pcb",
         "floor_plan_file": "board.floorplan.yaml"

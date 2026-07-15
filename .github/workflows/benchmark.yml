@@ -17,15 +17,15 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Run benchmark
         run: |
-          python -m kicad_agent.benchmarks \
+          python -m volta.benchmarks \
             --dataset benchmarks/pcb-mmlu-v1.json \
             --model heuristic \
             --output /tmp/current-results.json
       - name: Check regression
         run: |
           python -c "
-          from kicad_agent.benchmarks.regression import RegressionDetector
-          from kicad_agent.benchmarks.runner import BenchmarkResult
+          from volta.benchmarks.regression import RegressionDetector
+          from volta.benchmarks.runner import BenchmarkResult
           import json
           detector = RegressionDetector()
           baseline = detector.load_baseline()

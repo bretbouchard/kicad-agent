@@ -27,7 +27,7 @@ struct AnthropicProviderTests {
     // MARK: - Helpers
 
     private func makeKeychain() -> KeychainManager {
-        KeychainManager(service: "com.bretbouchard.kicad-agent.tests.\(UUID().uuidString)")
+        KeychainManager(service: "com.bretbouchard.volta.tests.\(UUID().uuidString)")
     }
 
     // MARK: - Tests

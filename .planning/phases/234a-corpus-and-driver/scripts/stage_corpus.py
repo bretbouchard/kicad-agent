@@ -14,16 +14,16 @@ import random
 from pathlib import Path
 from datetime import datetime
 
-REPO_ROOT = Path("/Users/bretbouchard/apps/kicad-agent")
+REPO_ROOT = Path("/Users/bretbouchard/apps/volta")
 PHASE_DIR = REPO_ROOT / ".planning" / "phases" / "234a-corpus-and-driver"
 CORPUS_DIR = PHASE_DIR / "corpus"
 MANIFEST_PATH = CORPUS_DIR / "manifest.json"
 
 FIXTURE_DIRS = [
     REPO_ROOT,  # x64-smart-grid.kicad_sch, x64-test.kicad_sch at repo root
-    REPO_ROOT / "kicad_agent-0.1.0" / "tests" / "fixtures",
-    REPO_ROOT / "kicad_agent-0.1.0" / "tests" / "data",
-    REPO_ROOT / "src" / "kicad_agent" / "tests" / "fixtures",
+    REPO_ROOT / "volta-0.1.0" / "tests" / "fixtures",
+    REPO_ROOT / "volta-0.1.0" / "tests" / "data",
+    REPO_ROOT / "src" / "volta" / "tests" / "fixtures",
     REPO_ROOT / "tests" / "fixtures",
     REPO_ROOT / "tests" / "data",
     REPO_ROOT / "output" / "legibility",

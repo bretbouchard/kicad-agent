@@ -27,7 +27,7 @@ router = APIRouter()
 async def handle_ws(websocket: WebSocket) -> None:
     """Handle WebSocket connections for real-time operation feedback."""
     await websocket.accept()
-    await websocket.send_json({"type": "connected", "message": "kicad-agent playground ready"})
+    await websocket.send_json({"type": "connected", "message": "volta playground ready"})
 
     try:
         while True:

@@ -2,7 +2,7 @@
  * KiCad Agent VS Code extension entry point.
  *
  * Activates for .kicad_sch and .kicad_pcb files. Connects to the
- * kicad-agent-edit MCP server via stdio and provides:
+ * volta-edit MCP server via stdio and provides:
  * - Context menu actions (Fix ERC, Suggest Improvements)
  * - Command palette commands (Run ERC, Run DRC, Visualize)
  * - Sidebar panels (Operation History, ERC Report)
@@ -27,7 +27,7 @@ let ercReport: ErcReportProvider | null = null;
 let watcher: KiCadFileWatcher | null = null;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  const config = vscode.workspace.getConfiguration('kicad-agent');
+  const config = vscode.workspace.getConfiguration('volta');
 
   // Get workspace root for project directory
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -37,7 +37,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   // Initialize MCP client
-  const serverCommand = config.get<string>('serverCommand', 'kicad-agent-edit');
+  const serverCommand = config.get<string>('serverCommand', 'volta-edit');
   client = new McpClient({
     serverCommand,
     projectDir: workspaceRoot,
@@ -47,8 +47,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     await client.connect();
   } catch (error) {
     vscode.window.showErrorMessage(
-      `Failed to connect to kicad-agent server: ${error}. ` +
-      'Ensure kicad-agent-edit is installed and in PATH.',
+      `Failed to connect to volta server: ${error}. ` +
+      'Ensure volta-edit is installed and in PATH.',
     );
     return;
   }
@@ -64,7 +64,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // Register commands
   context.subscriptions.push(
-    vscode.commands.registerCommand('kicad-agent.runErc', async () => {
+    vscode.commands.registerCommand('volta.runErc', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || !editor.document.fileName.endsWith('.kicad_sch')) {
         vscode.window.showWarningMessage('Open a .kicad_sch file to run ERC');
@@ -91,7 +91,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('kicad-agent.runDrc', async () => {
+    vscode.commands.registerCommand('volta.runDrc', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor || !editor.document.fileName.endsWith('.kicad_pcb')) {
         vscode.window.showWarningMessage('Open a .kicad_pcb file to run DRC');
@@ -117,7 +117,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('kicad-agent.fixErc', async (uri?: vscode.Uri) => {
+    vscode.commands.registerCommand('volta.fixErc', async (uri?: vscode.Uri) => {
       const filePath = uri?.fsPath ?? vscode.window.activeTextEditor?.document.fileName;
       if (!filePath || !filePath.endsWith('.kicad_sch')) {
         vscode.window.showWarningMessage('Select a .kicad_sch file to fix ERC');
@@ -141,7 +141,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('kicad-agent.suggestImprovements', async (uri?: vscode.Uri) => {
+    vscode.commands.registerCommand('volta.suggestImprovements', async (uri?: vscode.Uri) => {
       const filePath = uri?.fsPath ?? vscode.window.activeTextEditor?.document.fileName;
       if (!filePath) {
         vscode.window.showWarningMessage('Select a KiCad file');
@@ -170,7 +170,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('kicad-agent.visualize', async () => {
+    vscode.commands.registerCommand('volta.visualize', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) return;
       await vscode.window.withProgress(

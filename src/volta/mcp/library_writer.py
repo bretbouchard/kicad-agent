@@ -1,4 +1,4 @@
-"""Phase 204 kicad-agent-4 fix: KiCad symbol + footprint writer from EasyEDA CAD data.
+"""Phase 204 volta-4 fix: KiCad symbol + footprint writer from EasyEDA CAD data.
 
 Closes the gap in the existing component-search MCP server. The server had
 search_components + get_component_details but no symbol/footprint DOWNLOAD

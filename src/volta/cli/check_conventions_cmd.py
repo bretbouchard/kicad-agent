@@ -1,12 +1,12 @@
-"""CLI subcommand: kicad-agent check-conventions <schematic> (Plan 03 Task 1).
+"""CLI subcommand: volta check-conventions <schematic> (Plan 03 Task 1).
 
 Phase 111: Run the IEEE 315 / H&H convention catalog against a KiCad schematic.
 
 Usage:
-    kicad-agent check-conventions compressor.kicad_sch
-    kicad-agent check-conventions compressor.kicad_sch --format json --output report.json
-    kicad-agent check-conventions compressor.kicad_sch --apply  # run TRANSFORM conventions
-    kicad-agent check-conventions compressor.kicad_sch --config .kicad-agent/conventions.yaml
+    volta check-conventions compressor.kicad_sch
+    volta check-conventions compressor.kicad_sch --format json --output report.json
+    volta check-conventions compressor.kicad_sch --apply  # run TRANSFORM conventions
+    volta check-conventions compressor.kicad_sch --config .volta/conventions.yaml
 
 P0-2 (Council Round 1 fix): Uses REAL APIs:
   - parse_schematic(path)            [NOT parse_schematic_file — does not exist]
@@ -156,7 +156,7 @@ def register_parser(subparsers) -> None:
         "--config",
         type=str,
         default=None,
-        help="Path to .kicad-agent/conventions.yaml (default: auto-discover)",
+        help="Path to .volta/conventions.yaml (default: auto-discover)",
     )
     parser.add_argument(
         "--format",

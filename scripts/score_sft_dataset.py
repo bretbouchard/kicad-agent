@@ -4,7 +4,7 @@
 Walks --corpus-dir recursively for .kicad_sch files, scores each via the
 SFTLabeller verified chain, emits one JSONL row per file to --output.
 
-Output lands at /Volumes/Storage/models/kicad-agent/datasets/sft/srs_labels.jsonl
+Output lands at /Volumes/Storage/models/volta/datasets/sft/srs_labels.jsonl
 by convention (D-02). Falls back to local disk if /Volumes/Storage unmounted.
 
 Exit codes:

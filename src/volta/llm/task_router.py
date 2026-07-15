@@ -313,7 +313,7 @@ class TaskRouter:
 
 # === Default Router Instance ===
 
-DEFAULT_ADAPTER_PATH = "/Volumes/Storage/models/kicad-agent/adapters/gemma4-skidl-v5-mlx"
+DEFAULT_ADAPTER_PATH = "/Volumes/Storage/models/volta/adapters/gemma4-skidl-v5-mlx"
 
 _default_router: Optional[TaskRouter] = None
 

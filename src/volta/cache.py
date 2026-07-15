@@ -1,4 +1,4 @@
-"""General-purpose in-memory LRU cache for kicad-agent.
+"""General-purpose in-memory LRU cache for volta.
 
 Provides a simple, thread-safe key-value cache with TTL support and
 LRU eviction. Designed as a lightweight utility that domain-specific

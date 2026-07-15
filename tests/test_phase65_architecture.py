@@ -130,7 +130,7 @@ class TestM3PublicBoardStats:
         """CLI should use extract_board_stats, not _extract_board_stats."""
         import ast
 
-        cli_path = "/Users/bretbouchard/apps/kicad-agent/src/volta/cli.py"
+        cli_path = "/Users/bretbouchard/apps/volta/src/volta/cli.py"
         with open(cli_path) as f:
             source = f.read()
         # Should NOT contain _extract_board_stats in the CLI source
@@ -150,7 +150,7 @@ class TestM5BatchConnectLabelFallback:
     def test_no_empty_string_fallback_in_executor(self):
         """The batch_connect handler must not fall back to empty string for label names."""
         # After Plan 74 refactor, batch_connect handler moved to handlers/schematic.py
-        handler_path = "/Users/bretbouchard/apps/kicad-agent/src/volta/ops/handlers/schematic.py"
+        handler_path = "/Users/bretbouchard/apps/volta/src/volta/ops/handlers/schematic.py"
         with open(handler_path) as f:
             source = f.read()
 
@@ -175,7 +175,7 @@ class TestM6SolderMaskCaching:
         """The check method source must reference geom_cache."""
         import ast
 
-        checks_path = "/Users/bretbouchard/apps/kicad-agent/src/volta/dfm/checks.py"
+        checks_path = "/Users/bretbouchard/apps/volta/src/volta/dfm/checks.py"
         with open(checks_path) as f:
             source = f.read()
         assert "geom_cache" in source, (
@@ -283,7 +283,7 @@ class TestM10NarrowExcept:
     def test_no_bare_except_in_extract_ir_data(self):
         """Source must not use bare 'except Exception' in _extract_ir_data."""
         classifier_path = (
-            "/Users/bretbouchard/apps/kicad-agent/src/volta/ops/violation_classifier.py"
+            "/Users/bretbouchard/apps/volta/src/volta/ops/violation_classifier.py"
         )
         with open(classifier_path) as f:
             source = f.read()
@@ -295,7 +295,7 @@ class TestM10NarrowExcept:
 
     def test_uses_narrow_exceptions(self):
         classifier_path = (
-            "/Users/bretbouchard/apps/kicad-agent/src/volta/ops/violation_classifier.py"
+            "/Users/bretbouchard/apps/volta/src/volta/ops/violation_classifier.py"
         )
         with open(classifier_path) as f:
             source = f.read()
@@ -347,7 +347,7 @@ class TestM11PublicAccessors:
 
     def test_executor_uses_raw_written_not_private(self):
         """Executor must use public raw_written, not _raw_written."""
-        executor_path = "/Users/bretbouchard/apps/kicad-agent/src/volta/ops/executor.py"
+        executor_path = "/Users/bretbouchard/apps/volta/src/volta/ops/executor.py"
         with open(executor_path) as f:
             source = f.read()
 
@@ -361,7 +361,7 @@ class TestM11PublicAccessors:
 
     def test_executor_uses_mark_dirty_not_private(self):
         """Executor must use public mark_dirty(), not _dirty = True."""
-        executor_path = "/Users/bretbouchard/apps/kicad-agent/src/volta/ops/executor.py"
+        executor_path = "/Users/bretbouchard/apps/volta/src/volta/ops/executor.py"
         with open(executor_path) as f:
             source = f.read()
 

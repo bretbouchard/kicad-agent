@@ -1,4 +1,4 @@
-"""CLI subcommands package for kicad-agent.
+"""CLI subcommands package for volta.
 
 Re-exports ``main`` and all public names from the sibling ``cli.py``
 module so that ``from volta.cli import main`` works whether this

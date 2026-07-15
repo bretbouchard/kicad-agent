@@ -51,7 +51,7 @@ FIXTURES: dict[str, Path] = {
 _AI_FALLBACK_MARKER = "ai_fallback:"
 
 # Default adapter path (CONTEXT.md locked decision).
-_ADAPTER_PATH = Path("/Volumes/Storage/models/kicad-agent/adapters/kicad-vision-v2-mlx/")
+_ADAPTER_PATH = Path("/Volumes/Storage/models/volta/adapters/kicad-vision-v2-mlx/")
 
 
 # ---------------------------------------------------------------------------

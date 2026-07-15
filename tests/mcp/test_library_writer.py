@@ -1,4 +1,4 @@
-"""Tests for volta.mcp.library_writer (kicad-agent-4 fix)."""
+"""Tests for volta.mcp.library_writer (volta-4 fix)."""
 from __future__ import annotations
 
 from pathlib import Path

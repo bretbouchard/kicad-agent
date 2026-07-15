@@ -61,7 +61,7 @@ class PlacementPredictor:
         if model_path is None:
             # Default: look for placement.onnx in likely locations.
             # Frozen daemon (PyInstaller): _internal/placement.onnx
-            # App bundle: Contents/Resources/kicad-agent-daemon/_internal/placement.onnx
+            # App bundle: Contents/Resources/volta-daemon/_internal/placement.onnx
             # Dev: macos-app/daemon/placement.onnx
             import sys
             candidates = [

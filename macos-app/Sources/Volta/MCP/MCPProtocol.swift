@@ -17,7 +17,7 @@
 //                      (no id — fire-and-forget daemon → app)
 //
 //  Method namespacing (per Phase 167 plan):
-//      kicad.<op_name>     — kicad-agent operations (151 registered ops)
+//      kicad.<op_name>     — volta operations (151 registered ops)
 //      tools/list          — MCP lifecycle (returns all kicad.* as MCP tools)
 //      tools/call          — MCP lifecycle (dispatches a kicad.* op)
 //      initialize          — MCP handshake (capability exchange)

@@ -77,7 +77,7 @@ struct ProcessManagerTests {
     @Test("Checksum verification rejects tampered sidecar")
     func checksumRejectsTamper() async throws {
         guard let url = ProcessManager.resolveDaemonURL() else {
-            Issue.record("Daemon binary not built — run `pyinstaller kicad-agent-daemon.spec`")
+            Issue.record("Daemon binary not built — run `pyinstaller volta-daemon.spec`")
             return
         }
         let sidecar = url.appendingPathExtension("sha256")
@@ -127,7 +127,7 @@ struct ProcessManagerTests {
     )
     func spawnAndPing() async throws {
         guard ProcessManager.resolveDaemonURL() != nil else {
-            Issue.record("Daemon binary not built — run `pyinstaller kicad-agent-daemon.spec`")
+            Issue.record("Daemon binary not built — run `pyinstaller volta-daemon.spec`")
             return
         }
         let pm = ProcessManager()

@@ -44,7 +44,7 @@ _BASE_DSN = (
     / "freerouting"
     / "smd_test_board.dsn"
 )
-_JAR = Path.home() / ".kicad-agent" / "tools" / "freerouting.jar"
+_JAR = Path.home() / ".volta" / "tools" / "freerouting.jar"
 _BATCH_DIR = Path(__file__).resolve().parents[1] / "src" / "volta" / "routing"
 
 # U-detour fixed wire for NET_A: up to y=7000, across, back down.

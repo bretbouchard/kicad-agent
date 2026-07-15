@@ -24,7 +24,7 @@ jobs:
 
       - run: pip install -e ".[dev]"
 
-      - run: python -m pytest tests/ -x -v --tb=short --cov=kicad_agent
+      - run: python -m pytest tests/ -x -v --tb=short --cov=volta
 
   lint:
     runs-on: ubuntu-latest
@@ -52,4 +52,4 @@ jobs:
 
       - run: pip install -e ".[dev]"
 
-      - run: python -m mypy src/kicad_agent
+      - run: python -m mypy src/volta

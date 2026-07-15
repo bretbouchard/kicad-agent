@@ -1,4 +1,4 @@
-# Python dependencies bundled into the kicad-agent daemon by PyInstaller.
+# Python dependencies bundled into the volta daemon by PyInstaller.
 #
 # Phase 162 — Python Daemon Bundling.
 #

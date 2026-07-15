@@ -141,7 +141,7 @@ class AutoRouteFreeroutingOp(BaseModel):
     5. Remove dangling tracks/vias (optional cleanup)
 
     Consolidates the 5-script manual pipeline (export_dsn_raw.py + FreerouteBatch.java
-    + import_ses.py + strip_shorts.py + remove_dangling.py) into one kicad-agent
+    + import_ses.py + strip_shorts.py + remove_dangling.py) into one volta
     operation. No project needs its own Freerouting JAR copy.
 
     Attributes:

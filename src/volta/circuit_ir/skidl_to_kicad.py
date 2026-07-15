@@ -39,7 +39,7 @@ _KICAD_GRID_MM = 2.54
 # Minimal KiCad schematic template.
 # Note: NO (general (thickness ...)) — that's a PCB-only element.
 # Note: NO (generator_version ...) — kicad-cli rejects unknown values.
-_SCH_TEMPLATE = """(kicad_sch (version 20241129) (generator "kicad-agent")
+_SCH_TEMPLATE = """(kicad_sch (version 20241129) (generator "volta")
   (paper "A4")
   (lib_symbols
 {lib_symbols}

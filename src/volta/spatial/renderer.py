@@ -297,7 +297,7 @@ def render_pcb_layer(
     try:
         # Primary: kicad-cli SVG export
         cli_path = _find_kicad_cli()
-        tmpdir = tempfile.mkdtemp(prefix="kicad-agent-render-")
+        tmpdir = tempfile.mkdtemp(prefix="volta-render-")
 
         cmd = [
             cli_path, "pcb", "export", "svg",
@@ -357,7 +357,7 @@ def render_pcb_layer(
     # Save to output path
     if output_path is None:
         output_fd, output_str = tempfile.mkstemp(
-            suffix=".png", prefix="kicad-agent-layer-"
+            suffix=".png", prefix="volta-layer-"
         )
         os.close(output_fd)
         output_path = Path(output_str)
@@ -473,7 +473,7 @@ def render_pcb_layer_grid(
         _validate_output_path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
     else:
-        output_dir = Path(tempfile.mkdtemp(prefix="kicad-agent-grid-"))
+        output_dir = Path(tempfile.mkdtemp(prefix="volta-grid-"))
 
     results: list[dict[str, Any]] = []
     for layer in layers:

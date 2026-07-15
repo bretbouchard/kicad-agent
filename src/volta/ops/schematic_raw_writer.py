@@ -254,7 +254,7 @@ class SchematicRawWriter:
             f'      (effects (font (size 1.27 1.27)) (hide yes))\n'
             f'    )\n'
             f'    (instances\n'
-            f'      (project "kicad-agent"\n'
+            f'      (project "volta"\n'
             f'        (path "/00000000-0000-0000-0000-000000000000" "{uid}")\n'
             f'      )\n'
             f'    )\n'

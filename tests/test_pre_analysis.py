@@ -502,7 +502,7 @@ def _make_ir_with_global_labels(labels: list[dict]) -> SchematicIR:
     """
     sch = Schematic()
     sch.version = "20231120"
-    sch.generator = "kicad-agent-test"
+    sch.generator = "volta-test"
     sch.uuid = "00000000-0000-0000-0000-000000000001"
     sch.sheet = sch  # self-reference
 
@@ -803,7 +803,7 @@ class TestDuplicateLabelExecutorIntegration:
         # Build a schematic with a pre-existing global label "SDA"
         sch = Schematic()
         sch.version = "20231120"
-        sch.generator = "kicad-agent-test"
+        sch.generator = "volta-test"
         sch.uuid = "00000000-0000-0000-0000-000000000001"
         sch.sheet = sch
 
@@ -848,7 +848,7 @@ class TestDuplicateLabelExecutorIntegration:
         # Build a schematic with a pre-existing global label "SDA"
         sch = Schematic()
         sch.version = "20231120"
-        sch.generator = "kicad-agent-test"
+        sch.generator = "volta-test"
         sch.uuid = "00000000-0000-0000-0000-000000000001"
         sch.sheet = sch
 

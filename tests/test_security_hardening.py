@@ -72,7 +72,7 @@ class TestPathConfiment:
         from volta.ops.schema import Operation
 
         sch = tmp_path / "test.kicad_sch"
-        sch.write_text("(kicad_sch (version 20231120) (generator kicad-agent))")
+        sch.write_text("(kicad_sch (version 20231120) (generator volta))")
         executor = OperationExecutor(base_dir=tmp_path)
         result = executor.execute(Operation.model_validate({
             "root": {

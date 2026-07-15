@@ -301,7 +301,7 @@ class TestOBUG005ClearSavesManifest:
         )
 
         # Verify manifest has the entry
-        manifest_path = project_dir / ".kicad-agent" / "undo" / "manifest.json"
+        manifest_path = project_dir / ".volta" / "undo" / "manifest.json"
         assert manifest_path.exists()
         data = json.loads(manifest_path.read_text(encoding="utf-8"))
         assert len(data["entries"]) == 1

@@ -1,6 +1,6 @@
 """ConventionConfigLoader (Plan 01 Task 2).
 
-D-02 (CONTEXT): Project-local .kicad-agent/conventions.yaml loader. Mirrors
+D-02 (CONTEXT): Project-local .volta/conventions.yaml loader. Mirrors
                 Phase 48 RuleConfigLoader pattern.
 T-111-01: yaml.safe_load only (never yaml.load) — security.
 T-111-03: Threshold values bounded [-1e6, 1e6].
@@ -29,7 +29,7 @@ _MAX_THRESHOLD_VALUE = 1_000_000.0
 _MIN_THRESHOLD_VALUE = -1_000_000.0
 
 # D-02: project-local filename.
-_PROJECT_LOCAL_FILENAME = ".kicad-agent/conventions.yaml"
+_PROJECT_LOCAL_FILENAME = ".volta/conventions.yaml"
 
 # P2-3: stop marker — discover() halts at first ancestor containing this dir.
 _STOP_MARKER = ".git"
@@ -74,7 +74,7 @@ class ConventionConfig:
 
 
 class ConventionConfigLoader:
-    """Loads .kicad-agent/conventions.yaml per D-02.
+    """Loads .volta/conventions.yaml per D-02.
 
     Mirrors Phase 48 RuleConfigLoader (yaml.safe_load, threshold validation,
     unknown-name rejection). Construction is cheap; load() does the I/O.
@@ -89,7 +89,7 @@ class ConventionConfigLoader:
 
         P2-3 (Council): STOPS at the first ancestor containing a `.git` directory
         or at the filesystem root. NEVER walks indefinitely. This prevents a
-        planted .kicad-agent/conventions.yaml high in the filesystem from being
+        planted .volta/conventions.yaml high in the filesystem from being
         reached when the user's cwd is inside any git project.
 
         Returns:

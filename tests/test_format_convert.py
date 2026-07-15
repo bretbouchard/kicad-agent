@@ -40,7 +40,7 @@ def test_fix_header():
     content = '(kicad_sch (version 20211123) (generator eeschema)\n  (uuid a1b2c3d4-e5f6-7890-abcd-ef1234567890)\n)'
     result = _fix_header(content)
     assert "(version 20250114)" in result
-    assert '(generator "kicad-agent")' in result
+    assert '(generator "volta")' in result
     assert "(generator_version" in result
     assert "a1b2c3d4-e5f6-7890-abcd-ef1234567890" in result
 
@@ -159,7 +159,7 @@ def test_convert_already_kicad10():
     """Converting already-valid KiCad 10 content produces valid output."""
     kicad10_content = '''(kicad_sch
   (version 20250114)
-  (generator "kicad-agent")
+  (generator "volta")
   (generator_version "10.0.1")
   (uuid "00000000-0000-0000-0000-000000000001")
   (paper "A4")

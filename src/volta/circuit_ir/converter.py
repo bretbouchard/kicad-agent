@@ -36,13 +36,13 @@ class KiCadToSkidlConverter:
         if not sch_path.exists():
             raise FileNotFoundError(f"Schematic not found: {sch_path}")
         
-        # Use kicad-agent CLI for extract_nets (known-working path)
+        # Use volta CLI for extract_nets (known-working path)
         import subprocess, json, os
         old_cwd = os.getcwd()
         os.chdir(str(sch_path.parent))
         try:
             cli_result = subprocess.run(
-                ["kicad-agent", json.dumps({
+                ["volta", json.dumps({
                     "op_type": "extract_nets",
                     "target_file": sch_path.name
                 })],

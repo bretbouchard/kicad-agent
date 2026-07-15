@@ -3,7 +3,7 @@
 Headless subprocess wrapper for ngspice 45.2. Takes a .cir netlist,
 runs the simulation, and returns structured results.
 
-kicad-agent-obp fix: AC analysis parses .raw binary file via spicelib.RawRead
+volta-obp fix: AC analysis parses .raw binary file via spicelib.RawRead
 (was: regex against ngspice log). Populates AnalysisResult.traces with real
 complex-valued v(in), v(out), etc. and computes gain_db/bandwidth_hz from
 actual data. Regex retained as fallback for ngspice versions where -r flag
@@ -57,7 +57,7 @@ def run_simulation(
 
     try:
         # Run ngspice in batch mode with explicit -r to dump .raw binary.
-        # kicad-agent-obp: previously omitted -r, so .raw only existed when
+        # volta-obp: previously omitted -r, so .raw only existed when
         # the .cir file had a .print/.write statement. Now we ALWAYS dump
         # the raw to a known path so spicelib.RawRead can parse it.
         cmd = ["ngspice", "-b", "-r", str(raw_path), "-o", str(log_path), str(cir_path)]
@@ -142,7 +142,7 @@ def _parse_analysis(
 ) -> AnalysisResult:
     """Parse ngspice log + .raw file for analysis-specific results.
 
-    kicad-agent-obp: AC analysis now prefers .raw binary parse via
+    volta-obp: AC analysis now prefers .raw binary parse via
     spicelib.RawRead over regex against ngspice log. Falls back to regex
     if .raw file is missing (e.g., older ngspice without -r flag support
     or when ngspice errored before writing .raw).
@@ -258,7 +258,7 @@ def _compute_gain_and_bandwidth(traces: tuple[Trace, ...], input_node: str = "in
 def _extract_op_traces(raw) -> tuple[Trace, ...]:
     """Extract Operating Point plot data from a multi-plot .raw file.
 
-    kicad-agent-8vv: ngspice testbench (per generate_ac_testbench
+    volta-8vv: ngspice testbench (per generate_ac_testbench
     include_op=True) produces TWO plots: 'AC Analysis' + 'Operating Point'.
     The OP plot contains single-value v(node) and i(vsource) entries —
     the DC bias point computed before AC linearization.
@@ -320,12 +320,12 @@ def _extract_op_traces(raw) -> tuple[Trace, ...]:
 def _parse_ac(log: str, raw_path: Path | None = None) -> AnalysisResult:
     """Parse AC analysis results — prefer .raw, fall back to regex.
 
-    kicad-agent-obp: was regex-only against ngspice log. Now uses
+    volta-obp: was regex-only against ngspice log. Now uses
     spicelib.RawRead when raw_path exists, populating AnalysisResult.traces
     with real v(in)/v(out) magnitude and phase data. gain_db + bandwidth_hz
     computed from actual data, not regex-matched text.
 
-    kicad-agent-8vv: when generate_ac_testbench was called with
+    volta-8vv: when generate_ac_testbench was called with
     include_op=True (the default), the .raw contains a second 'Operating
     Point' plot. _extract_op_traces pulls those single-value entries
     (op:v(collector), op:i(vcc)_ma, etc.) and appends them to AC traces.
@@ -334,7 +334,7 @@ def _parse_ac(log: str, raw_path: Path | None = None) -> AnalysisResult:
     """
     import re
 
-    # Try .raw parse first (kicad-agent-obp fix).
+    # Try .raw parse first (volta-obp fix).
     traces: tuple[Trace, ...] = ()
     gain_db: float | None = None
     bandwidth_hz: float | None = None
@@ -387,7 +387,7 @@ def _parse_ac(log: str, raw_path: Path | None = None) -> AnalysisResult:
 def _parse_tran(log: str, raw_path: Path | None = None) -> AnalysisResult:
     """Parse transient analysis results.
 
-    kicad-agent-obp: now also parses .raw if present to populate traces
+    volta-obp: now also parses .raw if present to populate traces
     (was: empty traces). Real-valued time-domain traces use the time axis.
     """
     traces: tuple[Trace, ...] = ()

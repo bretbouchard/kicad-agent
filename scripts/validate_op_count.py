@@ -41,7 +41,7 @@ def count_schema_ops() -> int:
 def count_claude_md_ops() -> int | None:
     """Parse CLAUDE.md for the operation count number.
 
-    Looks for the pattern 'N operation types' in the kicad-agent operations
+    Looks for the pattern 'N operation types' in the volta operations
     description line.
     """
     text = CLAUDE_MD.read_text()

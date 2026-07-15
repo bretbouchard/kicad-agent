@@ -1,7 +1,7 @@
 """Plan 01 Task 2: ConventionConfigLoader tests (D-02 project-local YAML).
 
 Verifies:
-- D-02: Project-local .kicad-agent/conventions.yaml loaded when present, silent skip when absent
+- D-02: Project-local .volta/conventions.yaml loaded when present, silent skip when absent
 - Phase 48 RuleConfigLoader pattern mirrored (yaml.safe_load, threshold bounds, unknown-name rejection)
 - T-111-01: yaml.safe_load only (never yaml.load)
 - T-111-03: Threshold values bounded [-1e6, 1e6]
@@ -162,12 +162,12 @@ conventions:
 
 
 def test_discover_finds_project_local_config(tmp_path):
-    """P2-3: discover() walks up from cwd and finds .kicad-agent/conventions.yaml."""
+    """P2-3: discover() walks up from cwd and finds .volta/conventions.yaml."""
     from volta.conventions.loader import ConventionConfigLoader
 
     project_root = tmp_path
-    (project_root / ".kicad-agent").mkdir()
-    (project_root / ".kicad-agent" / "conventions.yaml").write_text("conventions: {}")
+    (project_root / ".volta").mkdir()
+    (project_root / ".volta" / "conventions.yaml").write_text("conventions: {}")
     (project_root / ".git").mkdir()  # mark repo boundary
     deep_dir = project_root / "src" / "subdir"
     deep_dir.mkdir(parents=True)
@@ -175,19 +175,19 @@ def test_discover_finds_project_local_config(tmp_path):
     found = ConventionConfigLoader.discover(start_dir=deep_dir)
     assert found is not None
     assert found.name == "conventions.yaml"
-    assert found.parent.name == ".kicad-agent"
+    assert found.parent.name == ".volta"
 
 
 def test_discover_stops_at_git_ancestor(tmp_path):
     """P2-3: discover() stops at first .git ancestor — does not walk past it."""
     from volta.conventions.loader import ConventionConfigLoader
 
-    # Build: /tmp/outer/.kicad-agent/conventions.yaml  (should NOT be found)
+    # Build: /tmp/outer/.volta/conventions.yaml  (should NOT be found)
     #        /tmp/outer/middle/.git                    (repo boundary)
     #        /tmp/outer/middle/inner/cwd               (start)
     outer = tmp_path
-    (outer / ".kicad-agent").mkdir()
-    (outer / ".kicad-agent" / "conventions.yaml").write_text("conventions: {}")
+    (outer / ".volta").mkdir()
+    (outer / ".volta" / "conventions.yaml").write_text("conventions: {}")
     middle = outer / "middle"
     middle.mkdir()
     (middle / ".git").mkdir()
@@ -195,21 +195,21 @@ def test_discover_stops_at_git_ancestor(tmp_path):
     cwd.mkdir(parents=True)
 
     found = ConventionConfigLoader.discover(start_dir=cwd)
-    # Walk hits .git at middle/ → stops before reaching outer/.kicad-agent
+    # Walk hits .git at middle/ → stops before reaching outer/.volta
     assert found is None, (
         f"P2-3 FAIL: discover() walked past .git boundary: found={found}"
     )
 
 
 def test_discover_returns_none_at_filesystem_root_when_no_config(tmp_path):
-    """P2-3: discover() returns None when no .kicad-agent/conventions.yaml exists."""
+    """P2-3: discover() returns None when no .volta/conventions.yaml exists."""
     from volta.conventions.loader import ConventionConfigLoader
 
-    # tmp_path with no .kicad-agent dir and no .git — walk terminates at fs root
+    # tmp_path with no .volta dir and no .git — walk terminates at fs root
     found = ConventionConfigLoader.discover(start_dir=tmp_path)
     # Either None or walks to fs root. To make this deterministic, ensure no
-    # .kicad-agent exists anywhere up the chain from tmp_path.
-    # On most systems tmp_path's ancestors don't have .kicad-agent, but to be safe
+    # .volta exists anywhere up the chain from tmp_path.
+    # On most systems tmp_path's ancestors don't have .volta, but to be safe
     # we just assert the result is None OR a path that genuinely exists.
     if found is not None:
         assert found.is_file()

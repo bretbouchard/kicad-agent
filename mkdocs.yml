@@ -1,6 +1,6 @@
-site_name: kicad-agent
+site_name: volta
 site_description: "AI-safe structural editing of KiCad schematic, PCB, symbol, and footprint files"
-site_url: "https://bretbouchard.github.io/kicad-agent"
+site_url: "https://bretbouchard.github.io/volta"
 
 theme:
   name: material

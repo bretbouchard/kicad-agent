@@ -23,7 +23,7 @@ from volta.ops.pcb_raw_writer import PcbRawWriter
 
 MINIMAL_PCB = """(kicad_pcb
   (version 20260125)
-  (generator "kicad-agent-test")
+  (generator "volta-test")
   (general (thickness 1.6))
   (layers
     (0 "F.Cu" signal)

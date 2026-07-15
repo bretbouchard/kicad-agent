@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 
 # Repo paths
-REPO_ROOT = Path("/Users/bretbouchard/apps/kicad-agent")
+REPO_ROOT = Path("/Users/bretbouchard/apps/volta")
 PYTHON_SRC = REPO_ROOT / "src"
 SWIFT_APP = REPO_ROOT / "macos-app"
 PHASE_DIR = REPO_ROOT / ".planning" / "phases" / "234a-corpus-and-driver"
@@ -37,7 +37,7 @@ def run_python_erc(schematic_path: Path) -> dict:
     Returns a normalized dict.
     """
     sys.path.insert(0, str(PYTHON_SRC))
-    from kicad_agent.validation.native_erc import run_native_erc
+    from volta.validation.native_erc import run_native_erc
 
     try:
         result = run_native_erc(schematic_path)
@@ -249,7 +249,7 @@ def cmd_parity_test(args) -> int:
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "sample_count": len(results),
         "engine": {
-            "python": "kicad_agent.validation.native_erc.run_native_erc",
+            "python": "volta.validation.native_erc.run_native_erc",
             "swift": "NativeERC.run (Phase 234A: pending wire-up)",
         },
         "results": results,

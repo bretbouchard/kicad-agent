@@ -1,5 +1,5 @@
 /**
- * High-level operation wrappers for kicad-agent MCP tools.
+ * High-level operation wrappers for volta MCP tools.
  *
  * Maps user-facing actions (Run ERC, Fix ERC, etc.) to MCP tool calls.
  */

@@ -59,7 +59,7 @@ class TestProjectContextModule:
             # Create minimal project structure
             pro_file = Path(tmp) / "test.kicad_pro"
             pro_file.write_text(
-                '{\n  "version": "8",\n  "generator": "kicad-agent"\n}\n'
+                '{\n  "version": "8",\n  "generator": "volta"\n}\n'
             )
             ctx = discover_project(Path(tmp))
             assert ctx is not None
@@ -70,7 +70,7 @@ class TestProjectContextModule:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "test.kicad_pro").write_text(
-                '{\n  "version": "8",\n  "generator": "kicad-agent"\n}\n'
+                '{\n  "version": "8",\n  "generator": "volta"\n}\n'
             )
             (root / "test.kicad_pcb").write_text("(kicad_pcb)")
             # Project-scoped builds/ directory (INTEG-04)
@@ -90,7 +90,7 @@ class TestProjectContextModule:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "test.kicad_pro").write_text(
-                '{\n  "version": "8",\n  "generator": "kicad-agent"\n}\n'
+                '{\n  "version": "8",\n  "generator": "volta"\n}\n'
             )
             ctx = discover_project(root)
             assert ctx.build_spec_files == []

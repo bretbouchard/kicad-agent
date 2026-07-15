@@ -32,14 +32,14 @@ def _parse(content: str) -> "NativeBoard":
 
 pytestmark = pytest.mark.slow
 
-_JAR = Path.home() / ".kicad-agent" / "tools" / "freerouting.jar"
+_JAR = Path.home() / ".volta" / "tools" / "freerouting.jar"
 _BATCH_DIR = Path(__file__).resolve().parents[1] / "src" / "volta" / "routing"
 
 
 # Minimal PCB content with two routed segments for testing.
 _PCB_WITH_TRACKS = '''(kicad_pcb
   (version 20241129)
-  (generator "kicad-agent-test")
+  (generator "volta-test")
   (general (thickness 1.6))
   (layers
     (0 "F.Cu" signal)

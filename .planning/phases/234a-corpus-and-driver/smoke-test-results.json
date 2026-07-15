@@ -2,7 +2,7 @@
   "timestamp": "2026-07-14T22:30:40.029733Z",
   "sample_count": 3,
   "engine": {
-    "python": "kicad_agent.validation.native_erc.run_native_erc",
+    "python": "volta.validation.native_erc.run_native_erc",
     "swift": "NativeERC.run (Phase 234A: pending wire-up)"
   },
   "results": [
@@ -2693,7 +2693,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/safe_annotate/multi_sheet_root.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/safe_annotate/multi_sheet_root.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],

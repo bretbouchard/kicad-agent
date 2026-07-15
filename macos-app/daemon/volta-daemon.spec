@@ -42,7 +42,7 @@ from PyInstaller.building.build_main import Analysis
 
 # Spec file lives at: macos-app/daemon/volta-daemon.spec
 HERE = Path(SPECPATH).resolve()
-REPO_ROOT = HERE.parents[1]  # macos-app/daemon -> macos-app -> kicad-agent
+REPO_ROOT = HERE.parents[1]  # macos-app/daemon -> macos-app -> volta
 SRC_ROOT = REPO_ROOT / "src"
 ENTRY = HERE / "daemon_entry.py"
 

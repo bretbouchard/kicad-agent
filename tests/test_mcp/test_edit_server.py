@@ -1,4 +1,4 @@
-"""Tests for the MCP edit server (kicad-agent-edit).
+"""Tests for the MCP edit server (volta-edit).
 
 Covers: tool generation, call dispatch, error handling, response capping,
 meta-tools, and ToolAnnotations assignment.
@@ -239,7 +239,7 @@ class TestCallDispatch:
         from volta.context import render_project_context
         # Create a minimal .kicad_sch so discovery finds something
         (tmp_path / "test.kicad_sch").write_text(
-            "(kicad_sch (version 20250114) (generator kicad-agent-test)\n"
+            "(kicad_sch (version 20250114) (generator volta-test)\n"
             "(paper \"A4\")\n"
             "(lib_symbols)\n"
             "(sheet_instances\n"
@@ -369,7 +369,7 @@ class TestServerSetup:
     """Server instantiation and configuration."""
 
     def test_server_name(self) -> None:
-        assert app.name == "kicad-agent-edit"
+        assert app.name == "volta-edit"
 
     def test_server_version(self) -> None:
         assert app.version == "0.1.0"

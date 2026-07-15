@@ -1,4 +1,4 @@
-(kicad_sch (version 20241129) (generator "kicad-agent")
+(kicad_sch (version 20241129) (generator "volta")
   (paper "A4")
   (lib_symbols
     (symbol "Connector_Generic:Conn_01x15"

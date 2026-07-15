@@ -114,7 +114,7 @@ def test_objective_times_out_on_slow_sim(monkeypatch: MonkeyPatch) -> None:
     # build_preamp_circuit (skidl first-import is slow, varies by system cache).
     # 40s gives slack for cold-cache build_preamp_circuit (Part lookups
     # re-parse Device.kicad_sym on first call per process — ~4-6s overhead
-    # tracked as kicad-agent-pzz follow-up). The assertion's purpose is
+    # tracked as volta-pzz follow-up). The assertion's purpose is
     # "shorter than the 120s ngspice default", not a tight timing guarantee.
     assert elapsed < 40.0, (
         f"objective should short-circuit at ~10s TRIAL_TIMEOUT_S + ~3-6s skidl setup, "

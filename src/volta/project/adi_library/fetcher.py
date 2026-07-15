@@ -361,7 +361,7 @@ class AdiFetcher:
             name=self._fp_lib_name,
             type="KiCad",
             uri="${KIPRJMOD}/.adi_cache/footprints",
-            descr="ADI parts fetched by kicad-agent",
+            descr="ADI parts fetched by volta",
         )
         table.add(entry)
         serialize_lib_table(table, fp_table_path)
@@ -387,7 +387,7 @@ class AdiFetcher:
             name=self._sym_lib_name,
             type="KiCad",
             uri="${KIPRJMOD}/.adi_cache/symbols",
-            descr="ADI parts fetched by kicad-agent",
+            descr="ADI parts fetched by volta",
         )
         table.add(entry)
         serialize_lib_table(table, sym_table_path)

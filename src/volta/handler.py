@@ -1,7 +1,7 @@
 """Skill handler: validates JSON operation requests, routes them, and executes mutations.
 
 The handler is the bridge between the GSD Skill interface and the
-kicad-agent Python backend.  It receives a JSON string from Claude,
+volta Python backend.  It receives a JSON string from Claude,
 validates it against the Pydantic operation schema, dispatches it to
 the OperationExecutor for file mutation, and returns a structured result.
 

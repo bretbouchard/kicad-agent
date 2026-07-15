@@ -7,8 +7,8 @@ Detects or downloads the canonical Volta v2 adapter, creates the
 environment (Python version, kicad-cli presence).
 
 Search order for canonical adapter:
-1. /Volumes/Storage/models/kicad-agent/adapters/kicad-vision-v2
-2. /Volumes/Storage/models/kicad-agent/adapters/volta-pcb-adapter-v2
+1. /Volumes/Storage/models/volta/adapters/kicad-vision-v2
+2. /Volumes/Storage/models/volta/adapters/volta-pcb-adapter-v2
 3. ~/Library/Application Support/VoltaPCB/models/volta-pcb-adapter-v2/
 4. HuggingFace cache: ~/.cache/huggingface/hub/bretbouchard--volta-pcb-adapter-v2/
 5. Optional: download from HF (if --download flag set)
@@ -32,8 +32,8 @@ SYMLINK_NAME = "volta-12b-v2"
 
 # Candidate paths for the canonical Volta v2 adapter (in priority order)
 STORAGE_PATHS = [
-    Path("/Volumes/Storage/models/kicad-agent/adapters/kicad-vision-v2"),
-    Path("/Volumes/Storage/models/kicad-agent/adapters/volta-pcb-adapter-v2"),
+    Path("/Volumes/Storage/models/volta/adapters/kicad-vision-v2"),
+    Path("/Volumes/Storage/models/volta/adapters/volta-pcb-adapter-v2"),
 ]
 
 APP_CACHE_PATHS = [

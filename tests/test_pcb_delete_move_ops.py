@@ -23,7 +23,7 @@ from volta.ops.pcb_raw_writer import PcbRawWriter
 
 MINIMAL_PCB = """(kicad_pcb
   (version 20260125)
-  (generator "kicad-agent-test")
+  (generator "volta-test")
   (general (thickness 1.6))
   (layers
     (0 "F.Cu" signal)
@@ -86,8 +86,8 @@ class TestDeleteSegment:
         # Put the decoy UUID inside a (text ...) quoted value -- not as a
         # real (uuid "...") field of any block.
         content_with_decoy = MINIMAL_PCB.replace(
-            '  (generator "kicad-agent-test")',
-            f'  (generator "kicad-agent-test")\n'
+            '  (generator "volta-test")',
+            f'  (generator "volta-test")\n'
             f'  (gr_text (at 5 5) (uuid "{decoy_uuid}") '
             f'(effects (font (size 1 1))) "label-{decoy_uuid}")',
         )

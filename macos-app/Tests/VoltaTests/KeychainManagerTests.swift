@@ -5,7 +5,7 @@
 //  Phase 166 — BYOK Keychain Storage
 //
 //  Tests for KeychainManager. Uses a unique test-service identifier
-//  (`com.bretbouchard.kicad-agent.tests`) so we never pollute the user's
+//  (`com.bretbouchard.volta.tests`) so we never pollute the user's
 //  real Keychain entries. Each test method uses a fresh UUID-suffixed
 //  service identifier to guarantee isolation.
 //
@@ -24,7 +24,7 @@ struct KeychainManagerTests {
     /// ponytail: unique service per test method to guarantee isolation
     /// from other test runs and from the production service identifier.
     private func makeManager() -> KeychainManager {
-        let service = "com.bretbouchard.kicad-agent.tests.\(UUID().uuidString)"
+        let service = "com.bretbouchard.volta.tests.\(UUID().uuidString)"
         return KeychainManager(service: service)
     }
 
@@ -151,7 +151,7 @@ struct KeychainManagerTests {
     @Test("iCloud sync defaults to ON")
     func iCloudSyncDefaultsOn() {
         // ponytail: fresh UserDefaults key per test to ensure default.
-        let key = "com.bretbouchard.kicad-agent.byok.icloud-sync.test-\(UUID().uuidString)"
+        let key = "com.bretbouchard.volta.byok.icloud-sync.test-\(UUID().uuidString)"
         let defaults = UserDefaults.standard
         defaults.removeObject(forKey: key)
         // KeychainManager's iCloudSyncEnabled uses a fixed defaults key —

@@ -1,4 +1,4 @@
-"""REST API routes for the kicad-agent playground.
+"""REST API routes for the volta playground.
 
 Endpoints:
     POST /api/upload - Upload a KiCad file
@@ -154,7 +154,7 @@ async def list_operations() -> JSONResponse:
 
 @router.post("/execute")
 async def execute_operation(request: Request, body: ExecuteRequest) -> JSONResponse:
-    """Execute a kicad-agent operation."""
+    """Execute a volta operation."""
     from volta.handler import handle_operation, validate_operation
 
     op_json = json.dumps(body.operation)

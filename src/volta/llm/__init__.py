@@ -6,11 +6,11 @@ inference via HybridLLMClient with cloud fallback.
 
 This module requires the ``anthropic`` package. Install with::
 
-    pip install kicad-agent[llm]
+    pip install volta[llm]
 
 For local inference (mlx-lm on Apple Silicon)::
 
-    pip install kicad-agent[local]
+    pip install volta[local]
 
 Usage::
 
@@ -36,7 +36,7 @@ def _check_anthropic_available() -> None:
     except ImportError:
         raise ImportError(
             "The 'anthropic' package is required for LLM features. "
-            "Install it with: pip install kicad-agent[llm]"
+            "Install it with: pip install volta[llm]"
         )
 
 

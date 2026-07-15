@@ -1,4 +1,4 @@
-"""FastAPI app factory for the kicad-agent playground.
+"""FastAPI app factory for the volta playground.
 
 Creates the FastAPI application with static file serving,
 API router mounting, and WebSocket support.
@@ -33,7 +33,7 @@ def create_app(
         Configured FastAPI app with API routes and static files.
     """
     app = FastAPI(
-        title="kicad-agent Playground",
+        title="volta Playground",
         description="Interactive web UI for exploring KiCad operations",
         version="0.1.0",
     )

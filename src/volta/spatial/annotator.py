@@ -100,7 +100,7 @@ class SvgAnnotator:
             output_path = svg_path.with_name(f"{svg_path.stem}_annotated{svg_path.suffix}")
 
         # Create annotation overlay group
-        overlay = create_svg_group(id_attr="kicad-agent-annotations")
+        overlay = create_svg_group(id_attr="volta-annotations")
 
         # Add numbered markers at each annotation position
         for i, ann in enumerate(annotations, 1):

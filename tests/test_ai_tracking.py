@@ -233,7 +233,7 @@ class TestStatsReport:
         analyzer = GapAnalyzer()
         report = analyzer.analyze([])
         output = format_stats_report(report)
-        assert "kicad-agent AI Performance Report" in output
+        assert "volta AI Performance Report" in output
         assert "Total events: 0" in output
 
     def test_format_report_with_data(self):

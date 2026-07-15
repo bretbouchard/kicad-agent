@@ -54,7 +54,7 @@ struct AdapterNotPublishedBanner: View {
                 Text("Volta v2 adapter is not yet published. Check back later or build from source.")
                     .font(.caption)
             }
-            Link("View issue tracker", destination: URL(string: "https://github.com/bretbouchard/kicad-agent/issues")!)
+            Link("View issue tracker", destination: URL(string: "https://github.com/bretbouchard/volta/issues")!)
                 .font(.caption)
                 .buttonStyle(.plain)
         }

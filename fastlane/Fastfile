@@ -33,7 +33,7 @@ lane :test do |options|
 
   # Python daemon tests with coverage
   Dir.chdir("..") do
-    sh("pytest --cov=kicad_agent --cov-fail-under=80")
+    sh("pytest --cov=volta --cov-fail-under=80")
   end
 
   UI.success("All tests pass")
@@ -131,7 +131,7 @@ lane :screenshots do |options|
   # Phase 196.1 wires XCUITest; Phase 203 uses snapshot to capture them.
   if Dir.exist?("../macos-app/UITests")
     snapshot(
-      scheme: "KiCadAgentUITests",
+      scheme: "VoltaUITests",
       devices: ["Mac"],
       languages: ["en-US"],
       output_directory: "../fastlane/screenshots"
@@ -276,7 +276,7 @@ lane :snapshot do |options|
   # Try XCUITest-driven capture first.
   if Dir.exist?("#{repo_root}/macos-app/UITests")
     snapshot(
-      scheme: "KiCadAgentUITests",
+      scheme: "VoltaUITests",
       devices: ["Mac"],
       languages: ["en-US"],
       output_directory: output_dir
@@ -318,17 +318,17 @@ end
 # =============================================================================
 # Lane: build_daemon — PyInstaller daemon build + codesign
 # =============================================================================
-# Phase 244: Build the kicad-agent-daemon via PyInstaller, then apply hardened
+# Phase 244: Build the volta-daemon via PyInstaller, then apply hardened
 # runtime + Developer ID signature.
-desc "Build the kicad-agent-daemon with PyInstaller and codesign"
+desc "Build the volta-daemon with PyInstaller and codesign"
 lane :build_daemon do |options|
-  UI.message("Phase 244 — Build + sign kicad-agent-daemon")
+  UI.message("Phase 244 — Build + sign volta-daemon")
 
   repo_root = File.expand_path("..", __dir__)
 
   # Run PyInstaller
-  Dir.chdir("#{repo_root}/kicad_agent-0.1.0") do
-    sh("pyinstaller --noconfirm --onedir --name kicad-agent-daemon src/kicad_agent/daemon/main.py") ||
+  Dir.chdir("#{repo_root}/volta-0.1.0") do
+    sh("pyinstaller --noconfirm --onedir --name volta-daemon src/volta/daemon/main.py") ||
       UI.user_error!("PyInstaller build failed")
   end
 
@@ -344,9 +344,9 @@ lane :build_daemon do |options|
     sh(
       "codesign --force --deep --options runtime " \
       "--sign \"#{ENV['DEVELOPER_ID']}\" " \
-      "#{repo_root}/kicad_agent-0.1.0/dist/kicad-agent-daemon"
+      "#{repo_root}/volta-0.1.0/dist/volta-daemon"
     )
   end
 
-  UI.success("Daemon built + signed → dist/kicad-agent-daemon")
+  UI.success("Daemon built + signed → dist/volta-daemon")
 end

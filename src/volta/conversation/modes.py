@@ -1,4 +1,4 @@
-"""Phase 204 kicad-agent-5q8: Conversation Modes — Design/Review/Debug/Optimization/Manufacturing/Teaching.
+"""Phase 204 volta-5q8: Conversation Modes — Design/Review/Debug/Optimization/Manufacturing/Teaching.
 
 Six modes that reframe the assistant's behavior. Each mode is a lens on
 the same circuit/project — same data, different questions, different outputs.
@@ -49,7 +49,7 @@ class Mode:
         focus_question: The one-line question this mode asks. UI display.
         system_prompt: LLM system prompt template. May contain {intent}
             placeholder filled at runtime.
-        enabled_tools: kicad-agent op_types this mode prefers. Tool routing
+        enabled_tools: volta op_types this mode prefers. Tool routing
             layer (future Phase 165 extension) uses this to filter the 142+
             ops down to the relevant subset.
         output_format: Output formatter hint. "structured" (findings list),
@@ -88,7 +88,7 @@ _DESIGN_MODE = Mode(
 
 Your job is forward-looking and generative. Ask clarifying questions,
 propose topologies, suggest components. Default to action: emit a
-schematic draft via kicad-agent ops rather than asking permission for
+schematic draft via volta ops rather than asking permission for
 every step.
 
 When the user's intent is ambiguous, ask ONE focused question (not three).
@@ -97,7 +97,7 @@ iterate via Review/Debug modes.
 
 User intent: {intent}
 
-Output: schematics, BOM, intent graphs. Format as kicad-agent op JSON
+Output: schematics, BOM, intent graphs. Format as volta op JSON
 when emitting mutations; prose when explaining choices.""",
     enabled_tools=(
         "add_component", "add_wire", "add_label", "add_power",
@@ -122,7 +122,7 @@ For each finding, give:
 - File + line/refdes
 - What's wrong (one sentence)
 - Why it matters (one sentence)
-- Suggested fix (as a kicad-agent op JSON when possible)
+- Suggested fix (as a volta op JSON when possible)
 
 DO NOT apply fixes — that's Design Mode's job. You diagnose.
 
@@ -236,7 +236,7 @@ textbooks like Horowitz & Hill, Williams' Analog Circuit Design).
 
 For every action:
 1. State what you're about to do (1 sentence)
-2. Do it (emit the kicad-agent op)
+2. Do it (emit the volta op)
 3. Explain what happened (1-2 sentences)
 4. Connect it to a broader concept (1 sentence)
 

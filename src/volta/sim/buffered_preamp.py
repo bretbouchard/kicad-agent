@@ -75,7 +75,7 @@ def build_buffered_preamp_spice_netlist(
             f"c_in={c_in}, c_out={c_out}, c_emitter={c_emitter}"
         )
 
-    return f"""* TL072-buffered CE preamp (kicad-agent-w1f)
+    return f"""* TL072-buffered CE preamp (volta-w1f)
 * Input Z = R_BIAS = {_sci(r_bias)} (TL072 JFET input Z ~10^12 Ω)
 VCC +12V 0 DC 12
 VEE -12V 0 DC -12

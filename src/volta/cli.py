@@ -1,24 +1,24 @@
-"""CLI wrapper for kicad-agent -- run operations from the terminal.
+"""CLI wrapper for volta -- run operations from the terminal.
 
 Usage examples::
 
     # Print the operation JSON Schema
-    kicad-agent --schema
+    volta --schema
 
     # Run an operation from inline JSON
-    kicad-agent '{"op_type": "add_component", ...}'
+    volta '{"op_type": "add_component", ...}'
 
     # Run an operation from a file
-    kicad-agent operation.json
+    volta operation.json
 
     # Validate without executing
-    kicad-agent --dry-run operation.json
+    volta --dry-run operation.json
 
     # Specify project directory
-    kicad-agent -p /path/to/project operation.json
+    volta -p /path/to/project operation.json
 
     # Collect training data from GitHub
-    kicad-agent collect --max-repos 100
+    volta collect --max-repos 100
 """
 
 from __future__ import annotations
@@ -55,7 +55,7 @@ _SUBCOMMAND_DESCRIPTIONS = {
     "demo": "Generate, validate, and render a schematic in one command.",
     "playground": "Start interactive web playground.",
     "dfm": "Run DFM (Design for Manufacturing) analysis on a KiCad PCB.",
-    "undo": "Undo the last kicad-agent operation on a file.",
+    "undo": "Undo the last volta operation on a file.",
     "redo": "Redo the most recently undone operation.",
     "workflow": "Run a named workflow (e.g. route-and-fill) on a KiCad file.",
     "check-conventions": "Run IEEE 315 / H&H conventions against a KiCad schematic.",
@@ -68,8 +68,8 @@ _SUBCOMMAND_DESCRIPTIONS = {
 
 def _print_help() -> None:
     """Print top-level help listing all available subcommands."""
-    print("usage: kicad-agent <subcommand> [options]")
-    print("       kicad-agent <operation-json-or-file> [options]")
+    print("usage: volta <subcommand> [options]")
+    print("       volta <operation-json-or-file> [options]")
     print()
     print("AI-safe structural editing of KiCad 10+ schematic, PCB, symbol, and footprint files.")
     print()
@@ -80,19 +80,19 @@ def _print_help() -> None:
         print(f"  {name:<{max_name_len + 2}} {desc}")
     print()
     print("Legacy operation mode:")
-    print("  kicad-agent '<json>'              Run an operation from inline JSON")
-    print("  kicad-agent operation.json         Run an operation from a JSON file")
-    print("  kicad-agent --schema               Print the operation JSON Schema")
-    print("  kicad-agent --dry-run <op>         Validate without executing")
+    print("  volta '<json>'              Run an operation from inline JSON")
+    print("  volta operation.json         Run an operation from a JSON file")
+    print("  volta --schema               Print the operation JSON Schema")
+    print("  volta --dry-run <op>         Validate without executing")
     print()
-    print("Use 'kicad-agent <subcommand> --help' for subcommand-specific options.")
+    print("Use 'volta <subcommand> --help' for subcommand-specific options.")
 
 
 def _build_operation_parser() -> argparse.ArgumentParser:
     """Parser for the legacy operation mode."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent",
-        description="Run kicad-agent operations from the terminal.",
+        prog="volta",
+        description="Run volta operations from the terminal.",
     )
 
     parser.add_argument(
@@ -147,7 +147,7 @@ def _build_operation_parser() -> argparse.ArgumentParser:
 def _build_collect_parser() -> argparse.ArgumentParser:
     """Parser for the 'collect' subcommand."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent collect",
+        prog="volta collect",
         description="Collect real-world KiCad training data from GitHub.",
     )
     parser.add_argument(
@@ -272,7 +272,7 @@ def _run_kicad_cli(args: list[str], capture: bool = False) -> subprocess.Complet
 def _handle_erc(argv: list[str]) -> None:
     """Handle the 'erc' subcommand — run Electrical Rules Check on a schematic."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent erc",
+        prog="volta erc",
         description="Run ERC (Electrical Rules Check) on a KiCad schematic.",
     )
     parser.add_argument("schematic", type=Path, help="Path to .kicad_sch file")
@@ -294,7 +294,7 @@ def _handle_erc(argv: list[str]) -> None:
 def _handle_drc(argv: list[str]) -> None:
     """Handle the 'drc' subcommand — run Design Rules Check on a PCB."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent drc",
+        prog="volta drc",
         description="Run DRC (Design Rules Check) on a KiCad PCB.",
     )
     parser.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
@@ -316,7 +316,7 @@ def _handle_drc(argv: list[str]) -> None:
 def _handle_export(argv: list[str]) -> None:
     """Handle the 'export' subcommand — export PCB to various formats."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent export",
+        prog="volta export",
         description="Export a KiCad PCB to Gerber, BOM, position, or STEP format.",
     )
     parser.add_argument("format", choices=["gerber", "bom", "position", "step"],
@@ -347,7 +347,7 @@ def _handle_export(argv: list[str]) -> None:
 def _handle_context(argv: list[str]) -> None:
     """Handle the 'context' subcommand — show project summary."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent context",
+        prog="volta context",
         description="Show a summary of a KiCad project.",
     )
     parser.add_argument("project_dir", type=Path, nargs="?", default=Path("."),
@@ -425,7 +425,7 @@ def _handle_context(argv: list[str]) -> None:
 def _handle_route(argv: list[str]) -> None:
     """Handle the 'route' subcommand — auto-route nets on a PCB."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent route",
+        prog="volta route",
         description="Auto-route nets on a KiCad PCB using A* pathfinding.",
     )
     parser.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
@@ -470,7 +470,7 @@ def _handle_route(argv: list[str]) -> None:
 def _build_analyze_parser() -> argparse.ArgumentParser:
     """Parser for the 'analyze' subcommand -- local PCB reasoning."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent analyze",
+        prog="volta analyze",
         description="Analyze a PCB or schematic using the fine-tuned local model.",
     )
     parser.add_argument(
@@ -592,7 +592,7 @@ def _handle_analyze(argv: list[str]) -> None:
 def _handle_component_search(argv: list[str]) -> None:
     """Handle the 'component-search' subcommand — start MCP server."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent component-search",
+        prog="volta component-search",
         description="Start the component search MCP server.",
     )
     parser.parse_args(argv)  # Handles --help / -h automatically
@@ -604,7 +604,7 @@ def _handle_component_search(argv: list[str]) -> None:
 def _handle_ai_stats(argv: list[str]) -> None:
     """Handle the 'ai-stats' subcommand — show local-first AI intervention metrics."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent ai-stats",
+        prog="volta ai-stats",
         description="Show local-first AI intervention metrics and training gaps.",
     )
     parser.add_argument(
@@ -651,7 +651,7 @@ def _handle_design_rules(argv: list[str]) -> None:
     from volta.cli.design_rules_cmd import register_parser, design_rules_command
 
     parser = argparse.ArgumentParser(
-        prog="kicad-agent design-rules",
+        prog="volta design-rules",
         description="Run domain-specific design rules against a KiCad schematic.",
     )
     subparsers = parser.add_subparsers()
@@ -674,7 +674,7 @@ def _handle_check_conventions(argv: list[str]) -> None:
     )
 
     parser = argparse.ArgumentParser(
-        prog="kicad-agent check-conventions",
+        prog="volta check-conventions",
         description="Run IEEE 315 / H&H conventions against a KiCad schematic.",
     )
     subparsers = parser.add_subparsers()
@@ -694,7 +694,7 @@ def _handle_dfm(argv: list[str]) -> None:
     from volta.dfm.cli import register_dfm_parser, dfm_command
 
     parser = argparse.ArgumentParser(
-        prog="kicad-agent dfm",
+        prog="volta dfm",
         description="Run DFM (Design for Manufacturing) analysis on a KiCad PCB.",
     )
     subparsers = parser.add_subparsers()
@@ -735,7 +735,7 @@ def _handle_handoff(argv: list[str]) -> None:
     sub-actions) mirroring ``_handle_drc``.
     """
     parser = argparse.ArgumentParser(
-        prog="kicad-agent handoff",
+        prog="volta handoff",
         description="Export a complete manufacturer handoff package from a KiCad PCB.",
     )
     parser.add_argument("pcb", type=Path, help="Path to .kicad_pcb file")
@@ -767,7 +767,7 @@ def _handle_build(argv: list[str]) -> None:
     Nested subcommands mirroring the ``_handle_dfm`` subparser shape.
     """
     parser = argparse.ArgumentParser(
-        prog="kicad-agent build",
+        prog="volta build",
         description="Create, list, or show versioned build snapshots of a KiCad PCB.",
     )
     subparsers = parser.add_subparsers(dest="action", required=True)
@@ -823,7 +823,7 @@ def _handle_drc_vendor(argv: list[str]) -> None:
     (TM-2) -- the CLI does not re-validate.
     """
     parser = argparse.ArgumentParser(
-        prog="kicad-agent drc-vendor",
+        prog="volta drc-vendor",
         description="Run vendor-specific DRC checks or list vendor DRC profiles.",
     )
     subparsers = parser.add_subparsers(dest="action", required=True)
@@ -867,7 +867,7 @@ def _handle_board_metadata(argv: list[str]) -> None:
     (TM-5) -- no new write logic in the CLI.
     """
     parser = argparse.ArgumentParser(
-        prog="kicad-agent board-metadata",
+        prog="volta board-metadata",
         description="Read or set KiCad PCB title-block metadata (title, rev, company, date).",
     )
     subparsers = parser.add_subparsers(dest="action", required=True)
@@ -922,7 +922,7 @@ def _handle_review_schematic(argv: list[str]) -> None:
     from volta.cli.review_schematic_cmd import review_schematic_command
 
     parser = argparse.ArgumentParser(
-        prog="kicad-agent review-schematic",
+        prog="volta review-schematic",
         description="Review a schematic for readability and spatial quality.",
     )
     parser.add_argument("schematic", type=str, help="Path to .kicad_sch file")
@@ -939,7 +939,7 @@ def _handle_review_schematic(argv: list[str]) -> None:
 def _handle_critique(argv: list[str]) -> None:
     """Handle the 'critique' subcommand -- AI legibility critic on a schematic."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent critique",
+        prog="volta critique",
         description="AI legibility critic — Gemma primary + Claude R-4 fallback.",
     )
     parser.add_argument("schematic", type=Path, help="Path to .kicad_sch file")
@@ -1017,7 +1017,7 @@ def _print_critique_table(details: dict) -> None:
 def _handle_pre_pcb_gate(argv: list[str]) -> None:
     """Handle the 'pre-pcb-gate' subcommand -- hard schematic readiness gate."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent pre-pcb-gate",
+        prog="volta pre-pcb-gate",
         description="Run the hard schematic readiness gate before PCB layout.",
     )
     parser.add_argument("schematic", type=Path, help="Path to root .kicad_sch file")
@@ -1059,7 +1059,7 @@ def _handle_gate(argv: list[str]) -> None:
     import argparse
 
     parser = argparse.ArgumentParser(
-        prog="kicad-agent gate",
+        prog="volta gate",
         description="Run design stage gates or show gate status.",
     )
     subparsers = parser.add_subparsers(dest="action", help="Gate action")
@@ -1196,7 +1196,7 @@ def _handle_demo(argv: list[str]) -> None:
     from pathlib import Path as _Path
 
     parser = argparse.ArgumentParser(
-        prog="kicad-agent demo",
+        prog="volta demo",
         description="Generate, validate, and render a schematic in one command.",
     )
     parser.add_argument(
@@ -1228,7 +1228,7 @@ def _handle_demo(argv: list[str]) -> None:
         tier_labels = {"basic": "Basic", "intermediate": "Intermediate", "advanced": "Advanced"}
         for name, desc, difficulty in templates:
             print(f"  {tier_labels[difficulty]:14s} {name:25s} {desc}")
-        print(f"\nUse: kicad-agent demo --template <name>")
+        print(f"\nUse: volta demo --template <name>")
         sys.exit(0)
 
     pipeline = DemoPipeline(output_dir=args.output_dir)
@@ -1244,10 +1244,10 @@ def _handle_demo(argv: list[str]) -> None:
 
 
 def _handle_undo(argv: list[str]) -> None:
-    """Handle 'kicad-agent undo [file]'."""
+    """Handle 'volta undo [file]'."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent undo",
-        description="Undo the last kicad-agent operation on a file.",
+        prog="volta undo",
+        description="Undo the last volta operation on a file.",
     )
     parser.add_argument("file", nargs="?", help="File to undo (default: latest)")
     parser.add_argument("-p", "--project-dir", type=Path, default=None, help="Project directory")
@@ -1269,9 +1269,9 @@ def _handle_undo(argv: list[str]) -> None:
 
 
 def _handle_redo(argv: list[str]) -> None:
-    """Handle 'kicad-agent redo [file]'."""
+    """Handle 'volta redo [file]'."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent redo",
+        prog="volta redo",
         description="Redo the most recently undone operation.",
     )
     parser.add_argument("file", nargs="?", help="File to redo (default: latest)")
@@ -1296,7 +1296,7 @@ def _handle_redo(argv: list[str]) -> None:
 def _handle_playground(argv: list[str]) -> None:
     """Handle the 'playground' subcommand -- start interactive web UI."""
     parser = argparse.ArgumentParser(
-        prog="kicad-agent playground",
+        prog="volta playground",
         description="Start interactive web playground.",
     )
     parser.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
@@ -1318,13 +1318,13 @@ def _handle_playground(argv: list[str]) -> None:
             "Ensure you are on a trusted network.",
             file=sys.stderr,
         )
-    print(f"kicad-agent playground: http://{args.host}:{args.port}")
+    print(f"volta playground: http://{args.host}:{args.port}")
     print("Press Ctrl+C to stop")
     uvicorn.run(app, host=args.host, port=args.port)
 
 
 def _handle_workflow(argv: list[str]) -> None:
-    """Handle 'kicad-agent workflow <subcommand> [options]'."""
+    """Handle 'volta workflow <subcommand> [options]'."""
     if not argv or argv[0] in ("--help", "-h", "list"):
         if argv and argv[0] == "list":
             from volta.ops.workflows import list_workflows
@@ -1332,7 +1332,7 @@ def _handle_workflow(argv: list[str]) -> None:
             for wf in workflows:
                 print(f"  {wf['name']:<25} {wf['description']} ({wf['steps']} steps)")
             sys.exit(0)
-        print("usage: kicad-agent workflow <command> [options]")
+        print("usage: volta workflow <command> [options]")
         print()
         print("Commands:")
         print("  route-and-fill <pcb>  Analyze and fill routing gaps")
@@ -1344,7 +1344,7 @@ def _handle_workflow(argv: list[str]) -> None:
         print("  --no-ai               Disable AI (deterministic fallback)")
         print("  --target-pct PCT      Target route percentage (default: 95)")
         print("  --max-iter N          Max fill iterations 1-3 (default: 3)")
-        print("  --config PATH         Path to kicad-agent.yaml")
+        print("  --config PATH         Path to volta.yaml")
         print("  -p, --project-dir     Project directory")
         sys.exit(0)
 
@@ -1353,7 +1353,7 @@ def _handle_workflow(argv: list[str]) -> None:
 
     if subcmd == "route-and-fill":
         parser = argparse.ArgumentParser(
-            prog="kicad-agent workflow route-and-fill",
+            prog="volta workflow route-and-fill",
             description="Analyze and fill routing gaps on a PCB.",
         )
         parser.add_argument("pcb", help="Path to .kicad_pcb file")
@@ -1361,7 +1361,7 @@ def _handle_workflow(argv: list[str]) -> None:
         parser.add_argument("--no-ai", action="store_true", default=False, help="Disable AI")
         parser.add_argument("--target-pct", type=float, default=None, help="Target route %% (default: 95)")
         parser.add_argument("--max-iter", type=int, default=None, help="Max iterations 1-3 (default: 3)")
-        parser.add_argument("--config", type=Path, default=None, help="Path to kicad-agent.yaml")
+        parser.add_argument("--config", type=Path, default=None, help="Path to volta.yaml")
         parser.add_argument("-p", "--project-dir", type=Path, default=None, help="Project directory")
         args = parser.parse_args(subcmd_argv)
 
@@ -1388,12 +1388,12 @@ def _handle_workflow(argv: list[str]) -> None:
 
     elif subcmd == "run":
         parser = argparse.ArgumentParser(
-            prog="kicad-agent workflow run",
+            prog="volta workflow run",
             description="Run a named workflow template.",
         )
         parser.add_argument("template", help="Workflow template name")
         parser.add_argument("pcb", help="Path to target file")
-        parser.add_argument("--config", type=Path, default=None, help="Path to kicad-agent.yaml")
+        parser.add_argument("--config", type=Path, default=None, help="Path to volta.yaml")
         parser.add_argument("-p", "--project-dir", type=Path, default=None, help="Project directory")
         args = parser.parse_args(subcmd_argv)
 
@@ -1410,12 +1410,12 @@ def _handle_workflow(argv: list[str]) -> None:
 
     else:
         print(f"Unknown workflow command: {subcmd}", file=sys.stderr)
-        print("Use 'kicad-agent workflow list' to see available workflows.", file=sys.stderr)
+        print("Use 'volta workflow list' to see available workflows.", file=sys.stderr)
         sys.exit(1)
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Entry point for the kicad-agent CLI."""
+    """Entry point for the volta CLI."""
     if argv is None:
         argv = sys.argv[1:]
 

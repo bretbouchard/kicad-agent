@@ -1,9 +1,9 @@
 {
-  "name": "kicad-agent",
+  "name": "volta",
   "displayName": "KiCad Agent",
   "description": "AI-assisted KiCad schematic and PCB editing via MCP",
   "version": "0.1.0",
-  "publisher": "kicad-agent",
+  "publisher": "volta",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -16,48 +16,48 @@
   "contributes": {
     "commands": [
       {
-        "command": "kicad-agent.runErc",
+        "command": "volta.runErc",
         "title": "KiCad: Run ERC"
       },
       {
-        "command": "kicad-agent.runDrc",
+        "command": "volta.runDrc",
         "title": "KiCad: Run DRC"
       },
       {
-        "command": "kicad-agent.visualize",
+        "command": "volta.visualize",
         "title": "KiCad: Visualize"
       },
       {
-        "command": "kicad-agent.fixErc",
+        "command": "volta.fixErc",
         "title": "KiCad: Fix ERC Violations"
       },
       {
-        "command": "kicad-agent.suggestImprovements",
+        "command": "volta.suggestImprovements",
         "title": "KiCad: Suggest Improvements"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "kicad-agent.fixErc",
+          "command": "volta.fixErc",
           "when": "resourceExtname == .kicad_sch",
           "group": "kicad@1"
         },
         {
-          "command": "kicad-agent.suggestImprovements",
+          "command": "volta.suggestImprovements",
           "when": "resourceExtname == .kicad_sch || resourceExtname == .kicad_pcb",
           "group": "kicad@2"
         }
       ]
     },
     "views": {
-      "kicad-agent-sidebar": [
+      "volta-sidebar": [
         {
-          "id": "kicad-agent.history",
+          "id": "volta.history",
           "name": "Operation History"
         },
         {
-          "id": "kicad-agent.ercReport",
+          "id": "volta.ercReport",
           "name": "ERC Report"
         }
       ]
@@ -65,7 +65,7 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "kicad-agent-sidebar",
+          "id": "volta-sidebar",
           "title": "KiCad Agent",
           "icon": "resources/icon.svg"
         }
@@ -74,17 +74,17 @@
     "configuration": {
       "title": "KiCad Agent",
       "properties": {
-        "kicad-agent.serverCommand": {
+        "volta.serverCommand": {
           "type": "string",
-          "default": "kicad-agent-edit",
+          "default": "volta-edit",
           "description": "Command to start the MCP edit server"
         },
-        "kicad-agent.autoErcOnSave": {
+        "volta.autoErcOnSave": {
           "type": "boolean",
           "default": true,
           "description": "Automatically run ERC when saving .kicad_sch files"
         },
-        "kicad-agent.maxHistoryItems": {
+        "volta.maxHistoryItems": {
           "type": "number",
           "default": 100,
           "description": "Maximum number of history items to retain"

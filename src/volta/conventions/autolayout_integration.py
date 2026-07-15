@@ -90,7 +90,7 @@ def suggest_placement_adjustments(
 
 
 def discover_config() -> ConventionConfig:
-    """Auto-discover and load .kicad-agent/conventions.yaml.
+    """Auto-discover and load .volta/conventions.yaml.
 
     Returns empty ConventionConfig if the file is absent or invalid. This is
     the convenience wrapper Phase 108 calls at startup.

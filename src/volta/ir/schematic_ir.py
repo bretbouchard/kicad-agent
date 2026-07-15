@@ -946,7 +946,7 @@ class SchematicIR(BaseIR):
         target_ref: str | None = None,
         font_size_mm: float = 1.27,
     ) -> dict[str, Any]:
-        """Add a design-intent annotation to the schematic (kicad-agent-29).
+        """Add a design-intent annotation to the schematic (volta-29).
 
         Inserts a kiutils Text element capturing the WHY/WHAT/HOW of a design
         choice. Unlike net labels or refdes, design notes preserve design

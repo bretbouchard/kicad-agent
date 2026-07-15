@@ -25,7 +25,7 @@ from volta.ops.schema import Operation
 # ---------------------------------------------------------------------------
 
 SCHEMATIC_HEADER = """\
-(kicad_sch (version 20250114) (generator "kicad-agent-test")
+(kicad_sch (version 20250114) (generator "volta-test")
 """
 
 SCHEMATIC_FOOTER = ")"
@@ -382,7 +382,7 @@ def _write_netlist(tmp_path: Path, nets: dict[str, list[tuple[str, str]]]) -> Pa
         "  (design",
         "    (source \"test.kicad_sch\")",
         "    (date \"2026-01-01\")",
-        "    (tool \"kicad-agent-test\"))",
+        "    (tool \"volta-test\"))",
         "  (components)",
         "  (nets",
     ]

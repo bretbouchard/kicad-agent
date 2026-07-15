@@ -1,7 +1,7 @@
 """Tests for CLI undo/redo commands and .gitignore integration.
 
-Issue #7: Verify kicad-agent undo/redo CLI commands work end-to-end
-and .kicad-agent/ is auto-added to .gitignore.
+Issue #7: Verify volta undo/redo CLI commands work end-to-end
+and .volta/ is auto-added to .gitignore.
 """
 
 import subprocess
@@ -85,7 +85,7 @@ class TestCliUndo:
 class TestGitignore:
 
     def test_gitignore_created(self, tmp_path):
-        """PersistentUndoStack creates .gitignore with .kicad-agent/."""
+        """PersistentUndoStack creates .gitignore with .volta/."""
         project_dir = tmp_path / "new_project"
         project_dir.mkdir()
 
@@ -93,7 +93,7 @@ class TestGitignore:
 
         gitignore = project_dir / ".gitignore"
         assert gitignore.exists()
-        assert ".kicad-agent/" in gitignore.read_text()
+        assert ".volta/" in gitignore.read_text()
 
     def test_gitignore_no_duplicate(self, tmp_path):
         """Second init doesn't duplicate the entry."""
@@ -105,7 +105,7 @@ class TestGitignore:
 
         gitignore = project_dir / ".gitignore"
         content = gitignore.read_text()
-        assert content.count(".kicad-agent/") == 1
+        assert content.count(".volta/") == 1
 
     def test_gitignore_appends_to_existing(self, tmp_path):
         """Appends to existing .gitignore without clobbering."""
@@ -119,7 +119,7 @@ class TestGitignore:
         content = gitignore.read_text()
         assert "*.bak" in content
         assert "build/" in content
-        assert ".kicad-agent/" in content
+        assert ".volta/" in content
 
     def test_subprocess_undo_no_history(self, project_dir):
         """Undo via subprocess exits 1 when no history exists."""

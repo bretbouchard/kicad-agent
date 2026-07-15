@@ -7,8 +7,8 @@
   "dedup_count": 81,
   "fixture_dirs": [
     ".",
-    "kicad_agent-0.1.0/tests/fixtures",
-    "kicad_agent-0.1.0/tests/data",
+    "volta-0.1.0/tests/fixtures",
+    "volta-0.1.0/tests/data",
     "tests/fixtures",
     "tests/data",
     "output/legibility"
@@ -16,567 +16,567 @@
   "schematics": [
     {
       "path": "output/legibility/20260704_141538/S5_esp32_breakout.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141538/S5_esp32_breakout.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141538/S5_esp32_breakout.kicad_sch",
       "sha256": "a3a89b7875559a353c16145775eb5fc698fa27743ad19a1f42968b055dce0007",
       "size_bytes": 111293,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/safe_annotate/multi_sheet_root.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/safe_annotate/multi_sheet_root.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/safe_annotate/multi_sheet_root.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/safe_annotate/multi_sheet_root.kicad_sch",
       "sha256": "9064709e83b68dfc302a1ac60d24390b8f61808939bd44f65e267189a3859ea6",
       "size_bytes": 875,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_143722/S3_opamp_preamp.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_143722/S3_opamp_preamp.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_143722/S3_opamp_preamp.kicad_sch",
       "sha256": "c1544872a46c9efe6f6ebb2b2cdca64d4adcfc59f262c0589242729274a41894",
       "size_bytes": 14399,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141445/S6_arduino_mega.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141445/S6_arduino_mega.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141445/S6_arduino_mega.kicad_sch",
       "sha256": "a552db09488e95e08288d33b9f045400bec47221050a02fff5137f654f86dbb3",
       "size_bytes": 259255,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_144015/S6_arduino_mega.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_144015/S6_arduino_mega.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_144015/S6_arduino_mega.kicad_sch",
       "sha256": "c79ef99d64d072439a53abaa680f13befcc4de3faaa5aefab16b400ffe91212b",
       "size_bytes": 171352,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/schematic_intent/complete_led.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/schematic_intent/complete_led.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/schematic_intent/complete_led.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/schematic_intent/complete_led.kicad_sch",
       "sha256": "181e377da58bf1dcbd47f62dcf2f8c12da427793b604cc659dc28e96908c68d1",
       "size_bytes": 4655,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141445/S4_audio_mixer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141445/S4_audio_mixer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141445/S4_audio_mixer.kicad_sch",
       "sha256": "f5c595fa05aa3671577952d1786fd9dafe09418bf3597b9b574b7454ad5eafca",
       "size_bytes": 33771,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/RaspberryPi-uHAT/RaspberryPi-uHAT.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/RaspberryPi-uHAT/RaspberryPi-uHAT.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/RaspberryPi-uHAT/RaspberryPi-uHAT.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/RaspberryPi-uHAT/RaspberryPi-uHAT.kicad_sch",
       "sha256": "cd5a4fc8b42bee6573727d9265fa32de7aa0511656b86c1a830bf7dcbfff7a59",
       "size_bytes": 70116,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141553/S5_esp32_breakout.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141553/S5_esp32_breakout.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141553/S5_esp32_breakout.kicad_sch",
       "sha256": "b8ce5ed7f091ab17329611b24c1f1facbb68adf2089447817ea272b3bbf233a4",
       "size_bytes": 111293,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_142549/S1_led_bringer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_142549/S1_led_bringer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_142549/S1_led_bringer.kicad_sch",
       "sha256": "96f5c2e7d00d9c7f124bf0d6012d98ff70035a36fc41881bd8b7f4f8ac0abb4a",
       "size_bytes": 7241,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141237/S4_audio_mixer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141237/S4_audio_mixer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141237/S4_audio_mixer.kicad_sch",
       "sha256": "b7843f6073da5961d06586818be99d1b0c7e46c749a0111c81c977f96ccf1081",
       "size_bytes": 13820,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_143722/S1_led_bringer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_143722/S1_led_bringer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_143722/S1_led_bringer.kicad_sch",
       "sha256": "1a70908f8ec287ef49150e1e7918805cd6e9bbc3edb1e975959039eb3b2fed59",
       "size_bytes": 7450,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_144015/S1_led_bringer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_144015/S1_led_bringer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_144015/S1_led_bringer.kicad_sch",
       "sha256": "a50234669e2e53d4a6454ba70f4d47503e73645789705ae886d0125918f5ce17",
       "size_bytes": 6778,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_143952/S6_arduino_mega.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_143952/S6_arduino_mega.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_143952/S6_arduino_mega.kicad_sch",
       "sha256": "aca295a01a4c1dafbfdfb101d1033ac7642e914682293170fd2e49b4ec81a338",
       "size_bytes": 182375,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/data/hierarchical/single_sheet.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/data/hierarchical/single_sheet.kicad_sch",
+      "path": "volta-0.1.0/tests/data/hierarchical/single_sheet.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/data/hierarchical/single_sheet.kicad_sch",
       "sha256": "15b8b656eb5e2815863fd3d9e0c986ace42fd0f9337c6438062d960b0aa46ca4",
       "size_bytes": 1215,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141553/S4_audio_mixer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141553/S4_audio_mixer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141553/S4_audio_mixer.kicad_sch",
       "sha256": "dfc786be1fee5962a5a85a68d5ea28d73de0a0aafd7249e472b751e7a605e358",
       "size_bytes": 33771,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141445/S1_led_bringer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141445/S1_led_bringer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141445/S1_led_bringer.kicad_sch",
       "sha256": "9e279f9d2a79eb04cd0a2ecf16eb39ddd92f1fd1e7d840761eae6f364cfab1d0",
       "size_bytes": 7302,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141436/S1_led_bringer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141436/S1_led_bringer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141436/S1_led_bringer.kicad_sch",
       "sha256": "9736a23cdd0218f1e4584656c214f01514e13db9766bc63037179d3446fd03b8",
       "size_bytes": 7302,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141538/S4_audio_mixer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141538/S4_audio_mixer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141538/S4_audio_mixer.kicad_sch",
       "sha256": "c4dd74047af13b5980cea01e44ba0524f397c8725a592d9899d34c292af79aa7",
       "size_bytes": 33771,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_144015/S4_audio_mixer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_144015/S4_audio_mixer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_144015/S4_audio_mixer.kicad_sch",
       "sha256": "caca40ba293bbe91f6c8e6f2c7b2e00a494076a7447debe04498cfa1b325cf49",
       "size_bytes": 17534,
       "source_dir": "."
     },
     {
       "path": "x64-smart-grid.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/x64-smart-grid.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/x64-smart-grid.kicad_sch",
       "sha256": "b0d5c2a16c2134cd81a0fe94c0145314b1c4645467f81e93fbee52955a26a590",
       "size_bytes": 153629,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141237/S2_rc_filter.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141237/S2_rc_filter.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141237/S2_rc_filter.kicad_sch",
       "sha256": "0c1bd86a684f5affc221325a20d6d309bf8d004d7363e5e9f4a36de238f39e91",
       "size_bytes": 5535,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141445/S3_opamp_preamp.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141445/S3_opamp_preamp.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141445/S3_opamp_preamp.kicad_sch",
       "sha256": "03f1ad381ba8f02efdbd944190515a69593a52974c4c825f4d74e8615cdb1753",
       "size_bytes": 13914,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_142728/S4_audio_mixer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_142728/S4_audio_mixer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_142728/S4_audio_mixer.kicad_sch",
       "sha256": "780ed5283ef37147e9e40af0a65c973f0b2c3b55770cb3d2d14acbfd4875bc61",
       "size_bytes": 33710,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/safe_annotate/with_instances.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/safe_annotate/with_instances.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/safe_annotate/with_instances.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/safe_annotate/with_instances.kicad_sch",
       "sha256": "a3d77283d26eb18e97374aaea1a340bb5c16d1f273ba93cf1fd8fb33dd22dfdc",
       "size_bytes": 2178,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141553/S1_led_bringer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141553/S1_led_bringer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141553/S1_led_bringer.kicad_sch",
       "sha256": "ddb10d8978c70ccbc9a70505f4d1aad4947801336726990ad7ba96a1af2a43d8",
       "size_bytes": 7302,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/astable_555/astable_555.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/astable_555/astable_555.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/astable_555/astable_555.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/astable_555/astable_555.kicad_sch",
       "sha256": "84792ed317f4258e809e558427d5a55567bbc2ab214752cad671515bd57a7276",
       "size_bytes": 26236,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/data/kicad6_test.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/data/kicad6_test.kicad_sch",
+      "path": "volta-0.1.0/tests/data/kicad6_test.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/data/kicad6_test.kicad_sch",
       "sha256": "c770579a45423af534565bec39c0b06ef2d0467fc9868c339c98a1311b3185f1",
       "size_bytes": 857,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141538/S6_arduino_mega.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141538/S6_arduino_mega.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141538/S6_arduino_mega.kicad_sch",
       "sha256": "7f45fa91995ff0107c471f767d86d2a73afc4009a0a436851431aa5a19183404",
       "size_bytes": 259255,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141538/S1_led_bringer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141538/S1_led_bringer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141538/S1_led_bringer.kicad_sch",
       "sha256": "ad99dcef97a08ff2d12b617501eb8bc86d1bf3ff374c02e542bbf50d3d1482de",
       "size_bytes": 7302,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_143722/S6_arduino_mega.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_143722/S6_arduino_mega.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_143722/S6_arduino_mega.kicad_sch",
       "sha256": "24845d7f24ff0aacbba256218f290389b935fcf6f54cba41e59db011eeafc428",
       "size_bytes": 259255,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141538/S3_opamp_preamp.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141538/S3_opamp_preamp.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141538/S3_opamp_preamp.kicad_sch",
       "sha256": "feb000dca69c661b0723fa6be71868f0288a1c857c13ceac4567f3839ef00ea6",
       "size_bytes": 13914,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_142728/S2_rc_filter.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_142728/S2_rc_filter.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_142728/S2_rc_filter.kicad_sch",
       "sha256": "7d83f23786ab65744bd2605c70cd92fc6f0af90455a86f230df338db261d54f7",
       "size_bytes": 6480,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/legibility/S1_led_bringer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/legibility/S1_led_bringer.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/legibility/S1_led_bringer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/legibility/S1_led_bringer.kicad_sch",
       "sha256": "3c0446b578de6e6d32f8409e3d351a46a35c5c1394265a996547f650ac05eea8",
       "size_bytes": 6778,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141553/S2_rc_filter.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141553/S2_rc_filter.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141553/S2_rc_filter.kicad_sch",
       "sha256": "8e8461a455c19a8cd5baacde6bb130e49fd310b6e01edea78b40541c90217587",
       "size_bytes": 6541,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_sch",
       "sha256": "d2484eebd0942aac1c079f91ada9dc1fd3e17f7e7d362672558a8f214b5fb8a7",
       "size_bytes": 170496,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/safe_annotate/multi_sheet_child_a.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/safe_annotate/multi_sheet_child_a.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/safe_annotate/multi_sheet_child_a.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/safe_annotate/multi_sheet_child_a.kicad_sch",
       "sha256": "402fa68525d61f2715909cb61db710563ca0135ee8d482bacad2a9e038c64c67",
       "size_bytes": 2021,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_142728/S6_arduino_mega.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_142728/S6_arduino_mega.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_142728/S6_arduino_mega.kicad_sch",
       "sha256": "7b7be3ff7d52a4a940ed91c6aabfe053f12f74e58c60b226539d39c09c054974",
       "size_bytes": 259255,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/data/hierarchical/root.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/data/hierarchical/root.kicad_sch",
+      "path": "volta-0.1.0/tests/data/hierarchical/root.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/data/hierarchical/root.kicad_sch",
       "sha256": "791776893876691b3f8af98c845c9107161c896c8c6529aeb90984eebdea2b16",
       "size_bytes": 1029,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_142728/S1_led_bringer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_142728/S1_led_bringer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_142728/S1_led_bringer.kicad_sch",
       "sha256": "4ab0ef01090e59e85ca8f38028f8b45c8d8f1893638cc75a36aa0a88eb9131dd",
       "size_bytes": 7241,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/data/hierarchical/sub_b.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/data/hierarchical/sub_b.kicad_sch",
+      "path": "volta-0.1.0/tests/data/hierarchical/sub_b.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/data/hierarchical/sub_b.kicad_sch",
       "sha256": "77ce61d270c60f5ff68e7b46d317fa7f1f407ce260b4011d483e133f87665d36",
       "size_bytes": 1833,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/legibility/S2_rc_filter.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/legibility/S2_rc_filter.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/legibility/S2_rc_filter.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/legibility/S2_rc_filter.kicad_sch",
       "sha256": "3efe678c9e2adc7a6b1f4214f068844b31c28aa61732be175a6a4d52dfcc360f",
       "size_bytes": 6021,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/legibility/S3_opamp_preamp.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/legibility/S3_opamp_preamp.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/legibility/S3_opamp_preamp.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/legibility/S3_opamp_preamp.kicad_sch",
       "sha256": "70b5811190d191843981f3f65e332cb32858a962e5bdb577e7b1519b2105c445",
       "size_bytes": 9222,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_143722/S4_audio_mixer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_143722/S4_audio_mixer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_143722/S4_audio_mixer.kicad_sch",
       "sha256": "3b44909a7eadaf1c45067f2c9539bf8e1fa4ed7debf64a5fc5c6258bc878b6d7",
       "size_bytes": 35339,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_143952/S1_led_bringer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_143952/S1_led_bringer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_143952/S1_led_bringer.kicad_sch",
       "sha256": "f29ad03dcb45e92caf7bdf2c753dfb8b6e400cb0cda710a38d861fb153123b52",
       "size_bytes": 7276,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/schematic_intent/missing_footprint.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/schematic_intent/missing_footprint.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/schematic_intent/missing_footprint.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/schematic_intent/missing_footprint.kicad_sch",
       "sha256": "68f5171b5886f529e269076069b84ea4d2de1308a833a02e970b6799474a9cc0",
       "size_bytes": 4638,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_143952/S4_audio_mixer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_143952/S4_audio_mixer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_143952/S4_audio_mixer.kicad_sch",
       "sha256": "5a7aca1622b5371dabe08559cac76b1c4b54a832c10a25be91a446e053d7cbfd",
       "size_bytes": 20380,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/data/hierarchical/sub_a.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/data/hierarchical/sub_a.kicad_sch",
+      "path": "volta-0.1.0/tests/data/hierarchical/sub_a.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/data/hierarchical/sub_a.kicad_sch",
       "sha256": "b32d17021a6d38854d0a546d15e0038f664de512f7f1662253ab1523f59f2bed",
       "size_bytes": 1817,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141553/S3_opamp_preamp.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141553/S3_opamp_preamp.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141553/S3_opamp_preamp.kicad_sch",
       "sha256": "e20666ac9e9f666a7c8d5c661ad2ed019bee52ecca92c2bc79b17303cbfaf67b",
       "size_bytes": 13914,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141538/S2_rc_filter.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141538/S2_rc_filter.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141538/S2_rc_filter.kicad_sch",
       "sha256": "c4d28c4258bdb16d0995b0a65535a1df8592db9455a825f080a2f3c2309103a5",
       "size_bytes": 6541,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/schematic_intent/dnp_component.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/schematic_intent/dnp_component.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/schematic_intent/dnp_component.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/schematic_intent/dnp_component.kicad_sch",
       "sha256": "0a558e8a89248492db09458d8ce22cdc50dbed7feffed774f544576a77900734",
       "size_bytes": 5412,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_143722/S2_rc_filter.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_143722/S2_rc_filter.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_143722/S2_rc_filter.kicad_sch",
       "sha256": "1f91486a839cbac318eb5720a3f5de8ae8b5d81dcc232315129c16c3f86fb994",
       "size_bytes": 6691,
       "source_dir": "."
     },
     {
       "path": "x64-test.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/x64-test.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/x64-test.kicad_sch",
       "sha256": "6bd39fc88fe15cdbc347e57ce7aae0f5850aa27347bef94cab8c98c6259e8ef2",
       "size_bytes": 162867,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141445/S5_esp32_breakout.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141445/S5_esp32_breakout.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141445/S5_esp32_breakout.kicad_sch",
       "sha256": "4a9ad5c294f5186ff25fd4b7a19cf0fdcda4f206db4f83668699d6f850e79284",
       "size_bytes": 111293,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141237/S5_esp32_breakout.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141237/S5_esp32_breakout.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141237/S5_esp32_breakout.kicad_sch",
       "sha256": "9d9d3bbb62e1ff9f0e6862553e22dc389343dfc742e6a43ca91aa9096911b767",
       "size_bytes": 34860,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_142728/S5_esp32_breakout.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_142728/S5_esp32_breakout.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_142728/S5_esp32_breakout.kicad_sch",
       "sha256": "3d5b162d70bf28dc3d569754432ac6166360208a2a015dc5920860efa422d48e",
       "size_bytes": 111232,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141237/S6_arduino_mega.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141237/S6_arduino_mega.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141237/S6_arduino_mega.kicad_sch",
       "sha256": "ab0e6540b8b024659b7ce250d67776eb4a27733f75eeb7659d88cdc5a7389398",
       "size_bytes": 259255,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141237/S1_led_bringer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141237/S1_led_bringer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141237/S1_led_bringer.kicad_sch",
       "sha256": "092596e002c597678eafe3eac95f78f12d659afe0f5f6370a689e92397b6483d",
       "size_bytes": 6291,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_142549/S6_arduino_mega.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_142549/S6_arduino_mega.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_142549/S6_arduino_mega.kicad_sch",
       "sha256": "059972f9471bbb18b19450c4ec4a4c6488ed159d0dd5e61a44720d93a1448dbf",
       "size_bytes": 259255,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_144015/S2_rc_filter.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_144015/S2_rc_filter.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_144015/S2_rc_filter.kicad_sch",
       "sha256": "3c84e1ac98095d28b13dd285b7e0c75bd16005106593e0cc79082ee1cf5762f3",
       "size_bytes": 6021,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141039/S1_led_bringer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141039/S1_led_bringer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141039/S1_led_bringer.kicad_sch",
       "sha256": "73d11c257d9ce0d60b94bf3c964f287cdc5d172498de25bcf850279d97bb187d",
       "size_bytes": 62170,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_142728/S3_opamp_preamp.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_142728/S3_opamp_preamp.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_142728/S3_opamp_preamp.kicad_sch",
       "sha256": "d52b684da214ea66b1f9886a8cd0e4fe804a41244a4eebbe469f23ebe0e5c08e",
       "size_bytes": 13853,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_143722/S5_esp32_breakout.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_143722/S5_esp32_breakout.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_143722/S5_esp32_breakout.kicad_sch",
       "sha256": "0fd0766eab2ae291197b31ebf2be0cf469f87e33def5720a74f2dfff4fa7a46a",
       "size_bytes": 116426,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_142549/S5_esp32_breakout.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_142549/S5_esp32_breakout.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_142549/S5_esp32_breakout.kicad_sch",
       "sha256": "a6f73ab6f11979779371672ef83522eb7130133e37bf345fae4084698342b58e",
       "size_bytes": 111232,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_143952/S3_opamp_preamp.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_143952/S3_opamp_preamp.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_143952/S3_opamp_preamp.kicad_sch",
       "sha256": "44bdcd17e36e70a15875ac7895b44d2104df5e1b2fbbe7d5dcf497171d782482",
       "size_bytes": 10461,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141553/S6_arduino_mega.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141553/S6_arduino_mega.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141553/S6_arduino_mega.kicad_sch",
       "sha256": "35f5e26aa3f4707544ac6859068132691dc03e6578727da08942079f68987db4",
       "size_bytes": 259255,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_142549/S3_opamp_preamp.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_142549/S3_opamp_preamp.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_142549/S3_opamp_preamp.kicad_sch",
       "sha256": "7708e984eee5c4b14c8dabb1dfd5961c101b305385660b21616fb8df8a421a23",
       "size_bytes": 13853,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_142549/S4_audio_mixer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_142549/S4_audio_mixer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_142549/S4_audio_mixer.kicad_sch",
       "sha256": "06522a315dde94b251a6e7046ec52d5eeb79512187a76ba88bf0a4c22cc82bd6",
       "size_bytes": 33710,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_143952/S2_rc_filter.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_143952/S2_rc_filter.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_143952/S2_rc_filter.kicad_sch",
       "sha256": "50cd7e861d77f49b01ecf2efe6d697884c5f3ac79808edb91231b662fb79bf28",
       "size_bytes": 6515,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141237/S3_opamp_preamp.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141237/S3_opamp_preamp.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141237/S3_opamp_preamp.kicad_sch",
       "sha256": "49307198fc5084dcc8066b1481daa875bde987f51af6bef97ad5baa6a809a7fd",
       "size_bytes": 7976,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/legibility/S4_audio_mixer.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/legibility/S4_audio_mixer.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/legibility/S4_audio_mixer.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/legibility/S4_audio_mixer.kicad_sch",
       "sha256": "b4000b7bdf2e163f178d58012be05a43b48287dcce34c5270f1c102de041bae9",
       "size_bytes": 17158,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_141445/S2_rc_filter.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_141445/S2_rc_filter.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_141445/S2_rc_filter.kicad_sch",
       "sha256": "f30b9ad9e6cd8a214cb0b6c27f31ffb5b7bb43986b4c5e2d22f066cffef042be",
       "size_bytes": 6541,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/schematic_intent/missing_metadata.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/schematic_intent/missing_metadata.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/schematic_intent/missing_metadata.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/schematic_intent/missing_metadata.kicad_sch",
       "sha256": "2b6af4f4fe11f0a8a8018ae7bdce776f28592c4eb133a45b6d0e18180f4d96cc",
       "size_bytes": 4468,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_143952/S5_esp32_breakout.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_143952/S5_esp32_breakout.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_143952/S5_esp32_breakout.kicad_sch",
       "sha256": "9848060873632d87ceac0cf99cb1ee529e5baa1ac6cf11b7ee43b2f9b5b58ebe",
       "size_bytes": 56135,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/safe_annotate/single_sheet_unannotated.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/safe_annotate/single_sheet_unannotated.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/safe_annotate/single_sheet_unannotated.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/safe_annotate/single_sheet_unannotated.kicad_sch",
       "sha256": "bec7069c70765dbc679958c25b79bedf36f005fc4670237b232656ca5f6122c4",
       "size_bytes": 2022,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/safe_annotate/multi_sheet_child_b.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/safe_annotate/multi_sheet_child_b.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/safe_annotate/multi_sheet_child_b.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/safe_annotate/multi_sheet_child_b.kicad_sch",
       "sha256": "5f0cacc6af8802bd6799637fb6e9c4f1bd01ca2686977513dfeafd2e544fcfac",
       "size_bytes": 2021,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_142549/S2_rc_filter.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_142549/S2_rc_filter.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_142549/S2_rc_filter.kicad_sch",
       "sha256": "286da9d237b4bb652bee3477fcfed6c9a03d42d5a18d07d3d6233612f918b671",
       "size_bytes": 6480,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_144015/S5_esp32_breakout.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_144015/S5_esp32_breakout.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_144015/S5_esp32_breakout.kicad_sch",
       "sha256": "814eb37c53d2014bf157f616a8fc77d8dfa1c9ba3ff2ac1b9a2c544a35385e93",
       "size_bytes": 45895,
       "source_dir": "."
     },
     {
       "path": "output/legibility/20260704_144015/S3_opamp_preamp.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/output/legibility/20260704_144015/S3_opamp_preamp.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/output/legibility/20260704_144015/S3_opamp_preamp.kicad_sch",
       "sha256": "1e625a473bb01282a7acc1b978095808b7e065890ef8f862a19667b316c3c872",
       "size_bytes": 9350,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/legibility/S5_esp32_breakout.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/legibility/S5_esp32_breakout.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/legibility/S5_esp32_breakout.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/legibility/S5_esp32_breakout.kicad_sch",
       "sha256": "7a1f975d689488448da8dda3688669b6327a599f1d3869bc2f398e5d504810b6",
       "size_bytes": 46220,
       "source_dir": "."
     },
     {
-      "path": "kicad_agent-0.1.0/tests/fixtures/safe_annotate/single_sheet_annotated_clean.kicad_sch",
-      "absolute_path": "/Users/bretbouchard/apps/kicad-agent/kicad_agent-0.1.0/tests/fixtures/safe_annotate/single_sheet_annotated_clean.kicad_sch",
+      "path": "volta-0.1.0/tests/fixtures/safe_annotate/single_sheet_annotated_clean.kicad_sch",
+      "absolute_path": "/Users/bretbouchard/apps/volta/volta-0.1.0/tests/fixtures/safe_annotate/single_sheet_annotated_clean.kicad_sch",
       "sha256": "eda907491dcfb8e922c77c90a8ac7f38411d47d7e648c1b9ca0f5ff569245204",
       "size_bytes": 2022,
       "source_dir": "."

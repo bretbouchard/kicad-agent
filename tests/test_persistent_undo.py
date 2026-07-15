@@ -104,7 +104,7 @@ class TestPersistentUndoStack:
     def test_manifest_corruption_handled_gracefully(self, project_dir):
         """Garbage in manifest.json doesn't crash init."""
         project_dir.mkdir(parents=True, exist_ok=True)
-        undo_dir = project_dir / ".kicad-agent" / "undo"
+        undo_dir = project_dir / ".volta" / "undo"
         undo_dir.mkdir(parents=True, exist_ok=True)
         (undo_dir / "manifest.json").write_text("NOT VALID JSON{{{")
 
@@ -115,7 +115,7 @@ class TestPersistentUndoStack:
     def test_missing_entry_file_handled(self, project_dir):
         """Entry in manifest but file deleted → skip gracefully."""
         project_dir.mkdir(parents=True, exist_ok=True)
-        undo_dir = project_dir / ".kicad-agent" / "undo"
+        undo_dir = project_dir / ".volta" / "undo"
         undo_dir.mkdir(parents=True, exist_ok=True)
 
         # Write manifest referencing a non-existent file
@@ -235,11 +235,11 @@ class TestPersistentUndoStack:
         assert entry.post_mtime == 1234567890
 
     def test_empty_project_dir(self, tmp_path):
-        """Stack creates .kicad-agent/undo/ automatically."""
+        """Stack creates .volta/undo/ automatically."""
         empty_dir = tmp_path / "new_project"
         # Don't create the directory — let PersistentUndoStack handle it
         stack = PersistentUndoStack(project_dir=empty_dir, max_size=5)
-        assert (empty_dir / ".kicad-agent" / "undo").is_dir()
+        assert (empty_dir / ".volta" / "undo").is_dir()
 
     def test_fallback_to_in_memory(self):
         """UndoStack works as standalone in-memory fallback."""

@@ -11,7 +11,7 @@
 #
 # Locations (checked in order):
 #   1. Already present (skip)
-#   2. External drive: /Volumes/Storage/models/kicad-agent/adapters/
+#   2. External drive: /Volumes/Storage/models/volta/adapters/
 #   3. HuggingFace Hub: bretbouchard/kicad-vision-lora-adapter (PEFT only)
 #
 # Phase 106 (model repoint) requires this adapter for inference. The adapter
@@ -30,7 +30,7 @@ if [[ "${1:-}" == "--peft" ]]; then FETCH_MLX=false; fi
 
 MLX_DEST="$PROJECT_ROOT/output/kicad-vision-v2-mlx"
 PEFT_DEST="$PROJECT_ROOT/output/kicad_vision_adapter_v2/checkpoint-2000"
-EXTERNAL_MLX="/Volumes/Storage/models/kicad-agent/adapters/kicad-vision-v2-mlx"
+EXTERNAL_MLX="/Volumes/Storage/models/volta/adapters/kicad-vision-v2-mlx"
 
 echo "=== C-03: Gemma Vision Adapter Fetch ==="
 echo "Project root: $PROJECT_ROOT"

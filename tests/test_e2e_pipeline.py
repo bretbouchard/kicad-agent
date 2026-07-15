@@ -39,7 +39,7 @@ def project_dir(tmp_path: Path) -> Path:
 def test_intent_to_file_add_component(project_dir: Path) -> None:
     """Full pipeline: add_component JSON -> executor -> IR mutation -> file output.
 
-    The core value proposition of kicad-agent: LLM generates JSON intent,
+    The core value proposition of volta: LLM generates JSON intent,
     the agent parses it, mutates the schematic, and produces a valid file.
     """
     op_json = json.dumps({

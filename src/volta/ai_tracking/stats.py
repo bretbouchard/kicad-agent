@@ -29,7 +29,7 @@ def format_stats_report(report: GapReport) -> str:
 
     Output format::
 
-        === kicad-agent AI Performance Report ===
+        === volta AI Performance Report ===
         Total events: 700
 
         --- Local Success Rate by Stage ---
@@ -52,7 +52,7 @@ def format_stats_report(report: GapReport) -> str:
     lines: list[str] = []
 
     # Header
-    lines.append("=== kicad-agent AI Performance Report ===")
+    lines.append("=== volta AI Performance Report ===")
     lines.append(f"Total events: {report.total_events}")
     lines.append("")
 

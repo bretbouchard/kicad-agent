@@ -3,7 +3,7 @@
 RED phase: These tests define the expected behavior for:
 - ingest_cognee.py resolves docs/ directory relative to project root
 - Reads all 4 reference doc files
-- Uses dedicated dataset name 'kicad-agent-reference'
+- Uses dedicated dataset name 'volta-reference'
 - ingest_doc() is a pure function returning JSON-serializable dicts
 - verify_ingestion() is a pure function returning verification query dicts
 - main() writes JSONL to stdout or --output file
@@ -57,7 +57,7 @@ class TestDocResolution:
 
     def test_dataset_name_is_dedicated(self) -> None:
         """DATASET_NAME should not be the default 'main_dataset'."""
-        assert DATASET_NAME == "kicad-agent-reference"
+        assert DATASET_NAME == "volta-reference"
         assert DATASET_NAME != "main_dataset"
 
 
@@ -142,7 +142,7 @@ class TestVerifyIngestion:
             assert entry["tool"] == "recall"
 
     def test_datasets_contains_kicad_dataset(self) -> None:
-        """Each verification entry should query the kicad-agent-reference dataset."""
+        """Each verification entry should query the volta-reference dataset."""
         result = verify_ingestion()
         for entry in result:
             assert DATASET_NAME in entry["datasets"]

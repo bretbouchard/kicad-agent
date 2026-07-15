@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Repair Arduino_Mega fixture: malformed placed symbols (one-shot).
 
-Phase 108 Task 2 follow-up (Bead kicad-agent-25). The Arduino_Mega
+Phase 108 Task 2 follow-up (Bead volta-25). The Arduino_Mega
 fixture accumulated corrupt symbols across multiple generation scripts.
 KiCad 10's strict parser rejects symbols missing required fields:
 ``(dnp no)``, non-empty ``(property "Value" ...)``, ``(pin ...)`` UUID

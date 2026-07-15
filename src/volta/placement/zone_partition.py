@@ -92,7 +92,7 @@ def build_keepouts_from_zone(
 
     Returns a list of (x1, y1, x2, y2) tuples representing all OTHER
     zones as keepout regions. This bridges zone-aware placement with
-    kicad-agent's keepout-based engine.
+    volta's keepout-based engine.
 
     Args:
         target_zone_name: The zone the component is assigned to.

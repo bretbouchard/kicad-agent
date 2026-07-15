@@ -37,7 +37,7 @@ def generate_ac_testbench(
             "singular matrix: check node <out>" because the output node
             floats at DC.
         include_op: Also run .OP (operating point) analysis. Default True
-            per kicad-agent-8vv fix — produces a second "Operating Point"
+            per volta-8vv fix — produces a second "Operating Point"
             plot in the .raw file with node voltages + supply currents.
             _parse_ac extracts i(vcc) as the measured collector current,
             replacing the optimizer's heuristic. Set False for pure AC

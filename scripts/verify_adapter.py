@@ -9,7 +9,7 @@ loads and validates on any system with PEFT/transformers installed.
 
 Usage:
     python scripts/verify_adapter.py \
-        --adapter-path /Volumes/Storage/models/kicad-agent/adapters/kicad-vision-v1 \
+        --adapter-path /Volumes/Storage/models/volta/adapters/kicad-vision-v1 \
         --test-image training_output/vision_data/images/sample_000000.png
 
 Prerequisites:

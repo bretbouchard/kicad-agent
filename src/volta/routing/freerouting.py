@@ -41,7 +41,7 @@ _FREEROUTING_JAR = "freerouting.jar"
 # Built 2026-05-13 with Java 25.0.2 (Eclipse Adoptium 25.0.2+10-LTS).
 # Newer than upstream v2.2.4 release — includes multi-layer routing fix (v2.2.3)
 # and board-hash stagnation detection (v2.2.4). Byte-identical copies at:
-#   ~/.kicad-agent/tools/freerouting.jar  (canonical, loaded via _find_freerouting)
+#   ~/.volta/tools/freerouting.jar  (canonical, loaded via _find_freerouting)
 #   ~/apps/freerouting/freerouting.jar    (reference copy)
 # sha1: 4a2a586f8e749bed0810da9722b959703db8974a
 _FREEROUTING_BUILD_REVISION = "20f1a72e546b9b23c7ba5127086885cfacbdd4be"
@@ -57,7 +57,7 @@ def _find_freerouting() -> str | None:
 
     Search order:
     1. FREEROUTING_JAR environment variable
-    2. kicad-agent config directory
+    2. volta config directory
     3. Common install locations
 
     Returns:
@@ -70,8 +70,8 @@ def _find_freerouting() -> str | None:
     if env_jar and Path(env_jar).exists():
         return env_jar
 
-    # Check kicad-agent config directory
-    config_dir = Path.home() / ".kicad-agent" / "tools"
+    # Check volta config directory
+    config_dir = Path.home() / ".volta" / "tools"
     jar_path = config_dir / _FREEROUTING_JAR
     if jar_path.exists():
         return str(jar_path)
@@ -102,8 +102,8 @@ def _find_freeroute_batch(jar_path: str) -> Path | None:
     """Find compiled FreerouteBatch.class for classpath execution.
 
     Search order:
-    1. Same directory as the JAR (e.g. ~/.kicad-agent/tools/FreerouteBatch.class)
-    2. kicad-agent routing module directory (bundled at install time)
+    1. Same directory as the JAR (e.g. ~/.volta/tools/FreerouteBatch.class)
+    2. volta routing module directory (bundled at install time)
 
     If .class not found but .java exists in the routing module directory,
     attempt to compile it using ``javac``.
@@ -120,7 +120,7 @@ def _find_freeroute_batch(jar_path: str) -> Path | None:
     if (jar_dir / "FreerouteBatch.class").exists():
         return jar_dir
 
-    # Check kicad-agent routing module directory
+    # Check volta routing module directory
     routing_dir = Path(__file__).parent
     class_file = routing_dir / "FreerouteBatch.class"
     java_file = routing_dir / "FreerouteBatch.java"

@@ -28,7 +28,7 @@ STRATEGY_PAIRS = Path("/Volumes/Storage/schgen/strategy_data_v2/strategy_trainin
 OUT_DIR = Path("/Volumes/Storage/schgen/unified_v2")
 
 # Maze downsampling target (the maze data is in HF arrow format, we reference it)
-MAZE_VISION = Path("/Users/bretbouchard/apps/kicad-agent/training_output/maze_vision_data/train")
+MAZE_VISION = Path("/Users/bretbouchard/apps/volta/training_output/maze_vision_data/train")
 MAZE_TARGET = 20000
 
 

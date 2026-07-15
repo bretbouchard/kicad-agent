@@ -66,7 +66,7 @@ _SYMBOL_DIR = _ensure_skidl_env()
 # Now safe to import skidl.
 import skidl  # noqa: E402
 
-# kicad-agent-pzz fix (revised): redirect skidl's backup_lib file to a stable
+# volta-pzz fix (revised): redirect skidl's backup_lib file to a stable
 # cache dir instead of disabling it. Original fix (no-op backup_parts) broke
 # skidl's in-memory symbol cache — every Part() lookup re-parsed the full
 # Device.kicad_sym library (~8-12s per build_preamp_circuit call vs <1s).
@@ -80,13 +80,13 @@ import skidl  # noqa: E402
 #   (c) the cache file persists across sessions for warm-start speedup
 #
 # Cache dir resolution uses stdlib only (no platformdirs dep):
-#   macOS:   ~/Library/Caches/kicad-agent/skidl
-#   Linux:   ${XDG_CACHE_HOME:-~/.cache}/kicad-agent/skidl
+#   macOS:   ~/Library/Caches/volta/skidl
+#   Linux:   ${XDG_CACHE_HOME:-~/.cache}/volta/skidl
 if sys.platform == "darwin":
     _CACHE_BASE = Path.home() / "Library" / "Caches"
 else:
     _CACHE_BASE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
-_CACHE_DIR = _CACHE_BASE / "kicad-agent" / "skidl"
+_CACHE_DIR = _CACHE_BASE / "volta" / "skidl"
 _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 _CACHE_FILE = _CACHE_DIR / "backup_sklib.py"
 
@@ -94,7 +94,7 @@ skidl.config.backup_lib_name = "volta_cache"  # type: ignore[attr-defined]
 skidl.config.backup_lib_file_name = str(_CACHE_FILE)  # type: ignore[attr-defined]
 skidl.config.query_backup_lib = True  # type: ignore[attr-defined]
 
-# kicad-agent-7xj fix: memoize skidl.utilities.get_abs_filename.
+# volta-7xj fix: memoize skidl.utilities.get_abs_filename.
 # Profiling showed Part() took ~500ms each because skidl.schlib.SchLib.__init__
 # calls get_abs_filename(descend=-1) on EVERY Part() construction, BEFORE
 # checking the SchLib._cache. The descend=-1 triggers an unlimited recursive

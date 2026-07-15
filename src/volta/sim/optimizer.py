@@ -31,7 +31,7 @@ E12_BASE: tuple[float, ...] = (
 )
 
 # Resistors — narrowed per RESEARCH.md L829-836 to fit demo time budget
-# (kicad-agent-e2b). Each resistor now has its own per-role range based on
+# (volta-e2b). Each resistor now has its own per-role range based on
 # the CE preamp bias equations rather than a single 100Ω-820kΩ mega-space:
 #   R1 (collector load):    1.0k  .. 82k    (2 decades, Vc ~mid-rail)
 #   R2 (base bias upper):   10k   .. 820k   (2 decades, ~10x R3)
@@ -133,7 +133,7 @@ def objective(trial: optuna.Trial) -> float:
     if ac is None or not ac.passed or ac.gain_db is None:
         return float("inf")
 
-    # kicad-agent-8vv: prefer measured Ic from .OP analysis (op:i(vcc)_ma
+    # volta-8vv: prefer measured Ic from .OP analysis (op:i(vcc)_ma
     # trace, populated when generate_ac_testbench has include_op=True which
     # is the default). Falls back to the (Vcc-Vce_sat)/R1 heuristic if the
     # OP trace isn't present (e.g., pure-AC testbench or older ngspice).
@@ -172,10 +172,10 @@ def optimize_preamp(
     Returns:
         Completed optuna.Study. Use study.best_trial for the optimum.
     """
-    # kicad-agent-233: Optuna sqlite storage now lives in a stable user-data
+    # volta-233: Optuna sqlite storage now lives in a stable user-data
     # dir, not cwd. Default:
-    #   macOS:   ~/Library/Application Support/kicad-agent/sweeps/eurorack_preamp.db
-    #   Linux:   ${XDG_DATA_HOME:-~/.local/share}/kicad-agent/sweeps/eurorack_preamp.db
+    #   macOS:   ~/Library/Application Support/volta/sweeps/eurorack_preamp.db
+    #   Linux:   ${XDG_DATA_HOME:-~/.local/share}/volta/sweeps/eurorack_preamp.db
     # Override with OPTUNA_STORAGE env var (must be a full sqlite:///<abs_path>
     # URL — relative paths still go to cwd to support tests via tmp_path).
     import sys
@@ -185,7 +185,7 @@ def optimize_preamp(
             data_base = Path.home() / "Library" / "Application Support"
         else:
             data_base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
-        sweeps_dir = data_base / "kicad-agent" / "sweeps"
+        sweeps_dir = data_base / "volta" / "sweeps"
         sweeps_dir.mkdir(parents=True, exist_ok=True)
         storage = f"sqlite:///{sweeps_dir / 'eurorack_preamp.db'}"
     if storage.startswith("sqlite:///"):

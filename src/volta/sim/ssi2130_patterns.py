@@ -6,10 +6,10 @@
 verify before fabrication.
 
 Closes 4 bd tickets:
-  kicad-agent-30: Per-VCO measurement tap for digital autotune
-  kicad-agent-31: HF tracking trim network for discrete VCO cores
-  kicad-agent-32: Local ±2.5V references per voice submodule
-  kicad-agent-33: Passive-summed multiple V/oct inputs
+  volta-30: Per-VCO measurement tap for digital autotune
+  volta-31: HF tracking trim network for discrete VCO cores
+  volta-32: Local ±2.5V references per voice submodule
+  volta-33: Passive-summed multiple V/oct inputs
 
 Each pattern is a `build_*_spice_netlist()` function returning a SPICE
 .cir body. Caller prepends get_model() for any opamps/transistors used.
@@ -28,7 +28,7 @@ def _validate_positive(*vals: float) -> None:
 
 
 # ---------------------------------------------------------------------------
-# kicad-agent-30: Per-VCO measurement tap for digital autotune
+# volta-30: Per-VCO measurement tap for digital autotune
 # ---------------------------------------------------------------------------
 
 def build_measurement_tap_spice_netlist(
@@ -59,7 +59,7 @@ def build_measurement_tap_spice_netlist(
         COMPARATOR_OUT -- MCU_TIMER_CAP
     """
     _validate_positive(r_pullup, r_in, r_feedback, c_filter)
-    return f"""* SSI2130 measurement tap for digital autotune (kicad-agent-30)
+    return f"""* SSI2130 measurement tap for digital autotune (volta-30)
 * Buffers SQUARE_OUT through TL072 + comparator for MCU capture input
 V5V +5V 0 DC 5
 
@@ -81,7 +81,7 @@ VREF COMP_REF 0 DC 2.5
 
 
 # ---------------------------------------------------------------------------
-# kicad-agent-31: HF tracking trim network for discrete VCO cores
+# volta-31: HF tracking trim network for discrete VCO cores
 # ---------------------------------------------------------------------------
 
 def build_hf_trim_spice_netlist(
@@ -111,7 +111,7 @@ def build_hf_trim_spice_netlist(
         r_feedback: Loop-closing feedback resistor (default 10kΩ).
     """
     _validate_positive(r_hft, c_hft, r_feedback)
-    return f"""* HF tracking trim network for discrete VCO cores (kicad-agent-31)
+    return f"""* HF tracking trim network for discrete VCO cores (volta-31)
 * Mirrors SSI2130 §5.2 closed-loop compensation for MMBT3904 expo pairs
 V12 +12V 0 DC 12
 VM12 -12V 0 DC -12
@@ -130,7 +130,7 @@ R_FEEDBACK HFT_BASE EXPO_OUT {r_feedback:g}
 
 
 # ---------------------------------------------------------------------------
-# kicad-agent-32: Local ±2.5V references per voice submodule
+# volta-32: Local ±2.5V references per voice submodule
 # ---------------------------------------------------------------------------
 
 def build_local_refs_spice_netlist(
@@ -164,7 +164,7 @@ def build_local_refs_spice_netlist(
         c_ref: Reference bypass cap (default 1µF — filters rail noise).
     """
     _validate_positive(r_top, r_bot, r_balance, c_ref)
-    return f"""* Local ±2.5V references per voice submodule (kicad-agent-32)
+    return f"""* Local ±2.5V references per voice submodule (volta-32)
 * Resistive divider from +5V → buffered center tap → VREF_POS (2.5V)
 * Mirror divider from -5V → VREF_NEG (-2.5V)
 V5V +5V 0 DC 5
@@ -190,7 +190,7 @@ X_BUF_N VREF_NEG VREF_NEG_BUF +12V -12V VREF_NEG_BUF TL072
 
 
 # ---------------------------------------------------------------------------
-# kicad-agent-33: Passive-summed multiple V/oct inputs
+# volta-33: Passive-summed multiple V/oct inputs
 # ---------------------------------------------------------------------------
 
 def build_passive_cv_sum_spice_netlist(
@@ -224,7 +224,7 @@ def build_passive_cv_sum_spice_netlist(
         r_cv1-4: 4 CV input summing resistors (default 100kΩ each).
     """
     _validate_positive(r_cv1, r_cv2, r_cv3, r_cv4)
-    return f"""* Passive-summed V/oct CV inputs (kicad-agent-33)
+    return f"""* Passive-summed V/oct CV inputs (volta-33)
 * Eliminates 4 op-amp buffers per VCO via passive summing into SSI2130 SCALE_TRIM
 * SSI2130 SCALE_TRIM input Z ~1MΩ → signal loss ~3%, trimmed out by SCALE_TRIM pot
 

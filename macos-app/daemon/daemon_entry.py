@@ -1,5 +1,5 @@
 """
-daemon_entry.py — PyInstaller entry point for the bundled kicad-agent daemon.
+daemon_entry.py — PyInstaller entry point for the bundled volta daemon.
 
 Phase 162 — Python Daemon Bundling.
 

@@ -431,7 +431,7 @@ def _minimal_kicad_sch() -> str:
     """Build a minimal valid .kicad_sch content for testing."""
     return """(kicad_sch
   (version 20260112)
-  (generator "kicad-agent-test")
+  (generator "volta-test")
   (generator_version "10.0")
   (uuid "00000000-0000-0000-0000-000000000001")
   (paper "A4")

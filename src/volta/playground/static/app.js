@@ -1,5 +1,5 @@
 /**
- * kicad-agent Playground frontend.
+ * volta Playground frontend.
  * Vanilla JS -- no build step, no framework dependencies.
  */
 
@@ -30,7 +30,7 @@ class PlaygroundApp {
     handleMessage(msg) {
         switch (msg.type) {
             case 'connected':
-                this.log('Connected to kicad-agent');
+                this.log('Connected to volta');
                 break;
             case 'progress':
                 this.log(msg.message);

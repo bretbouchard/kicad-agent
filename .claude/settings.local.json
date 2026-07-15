@@ -2,7 +2,7 @@
   "permissions": {
     "allow": [
       "Skill(gsd-new-project)",
-      "Skill(kicad-agent)",
+      "Skill(volta)",
       "mcp__beads__beads_create",
       "mcp__beads__beads_update",
       "mcp__beads__beads_list",

@@ -49,7 +49,7 @@ class TestLoadConfig:
         assert config == AgentConfig()
 
     def test_yaml_precedence(self, tmp_path: Path) -> None:
-        yaml_file = tmp_path / "kicad-agent.yaml"
+        yaml_file = tmp_path / "volta.yaml"
         yaml_file.write_text(
             "routing:\n  target_route_pct: 85.0\nmodels:\n  use_ai: false\n",
             encoding="utf-8",

@@ -1,11 +1,11 @@
-"""CLI subcommand: kicad-agent review-schematic <file>
+"""CLI subcommand: volta review-schematic <file>
 
 READ-01/02/03/04: Review a schematic for readability and spatial quality.
 
 Usage:
-    kicad-agent review-schematic compressor.kicad_sch
-    kicad-agent review-schematic compressor.kicad_sch --vision
-    kicad-agent review-schematic compressor.kicad_sch --format json
+    volta review-schematic compressor.kicad_sch
+    volta review-schematic compressor.kicad_sch --vision
+    volta review-schematic compressor.kicad_sch --format json
 """
 from __future__ import annotations
 

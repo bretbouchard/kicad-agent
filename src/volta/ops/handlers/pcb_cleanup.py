@@ -1,7 +1,7 @@
 """PCB cleanup handlers: strip_shorts and remove_dangling_tracks.
 
 Ports the proven strip_shorts.py and remove_dangling.py workaround scripts
-into kicad-agent's handler system. Both use raw S-expression text manipulation
+into volta's handler system. Both use raw S-expression text manipulation
 (NOT kiutils -- kiutils corrupts PCBs).
 
 strip_shorts: Removes track segments that cause DRC shorting_items violations.

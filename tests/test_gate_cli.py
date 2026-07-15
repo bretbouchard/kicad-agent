@@ -1,4 +1,4 @@
-"""Tests for kicad-agent gate CLI subcommand."""
+"""Tests for volta gate CLI subcommand."""
 
 import json
 import subprocess
@@ -44,7 +44,7 @@ def _make_gate_runner_aware():
 
 
 class TestGateStatusCLI:
-    """Test 'kicad-agent gate status' subcommand."""
+    """Test 'volta gate status' subcommand."""
 
     def test_status_shows_current_stage(self, capsys):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -82,7 +82,7 @@ class TestGateStatusCLI:
 
 
 class TestGateRunCLI:
-    """Test 'kicad-agent gate run' subcommand."""
+    """Test 'volta gate run' subcommand."""
 
     def test_run_on_empty_schematic_passes(self, capsys):
         """Empty schematic (no components) should pass with ERC disabled."""
@@ -118,7 +118,7 @@ class TestGateRunCLI:
 
 
 class TestGateHelpCLI:
-    """Test 'kicad-agent gate' help output."""
+    """Test 'volta gate' help output."""
 
     def test_gate_no_action_shows_help(self, capsys):
         with pytest.raises(SystemExit) as exc_info:

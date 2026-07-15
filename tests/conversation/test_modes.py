@@ -1,4 +1,4 @@
-"""Tests for Conversation Modes MVP (kicad-agent-5q8)."""
+"""Tests for Conversation Modes MVP (volta-5q8)."""
 from __future__ import annotations
 
 import pytest
@@ -78,7 +78,7 @@ class TestModeDefinitions:
         """Design Mode enables generative op tools."""
         tools = get_mode("design").enabled_tools
         assert "add_component" in tools
-        assert "add_design_note" in tools  # kicad-agent-29 op
+        assert "add_design_note" in tools  # volta-29 op
         assert "build_preamp_circuit" in tools  # Phase 204 canonical
 
     def test_review_mode_has_audit_tools(self) -> None:

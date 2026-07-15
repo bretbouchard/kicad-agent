@@ -415,7 +415,7 @@ private struct iCloudDisableWarningSheet: View {
 #Preview("With test keychain") {
     // ponytail: test service identifier so the preview never touches the
     // user's real Keychain.
-    let kc = KeychainManager(service: "com.bretbouchard.kicad-agent.preview")
+    let kc = KeychainManager(service: "com.bretbouchard.volta.preview")
     return BYOKSettingsView(keychain: kc)
         .frame(width: 700, height: 800)
 }

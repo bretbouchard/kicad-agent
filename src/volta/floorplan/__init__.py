@@ -3,7 +3,7 @@
 Captures design intent (zones, keepouts, contextual placement rules)
 in a YAML spec, then lowers it into the existing placement engine.
 
-The contextual placement rules (Bead kicad-agent-24) are the key
+The contextual placement rules (Bead volta-24) are the key
 innovation: edge_affinity, avoid, approach, orientation, region,
 alignment — each carrying a rationale for AI training.
 """

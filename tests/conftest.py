@@ -1,4 +1,4 @@
-"""Shared test fixtures for kicad-agent parser tests.
+"""Shared test fixtures for volta parser tests.
 
 Provides paths to KiCad test fixture files copied into the project at:
     tests/fixtures/

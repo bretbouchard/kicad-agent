@@ -24,8 +24,8 @@ Phase 163 adds:
 Phase 167 adds (per MCP spec — modelcontextprotocol.io/specification):
     initialize          — MCP handshake (capability exchange)
     initialized         — MCP handshake completion (notification, no reply)
-    tools/list          — returns all 151 kicad-agent ops as MCP tools
-    tools/call          — dispatches a kicad-agent op via OperationExecutor
+    tools/list          — returns all 151 volta ops as MCP tools
+    tools/call          — dispatches a volta op via OperationExecutor
 
 Phase 168 adds the full execute/<op> dispatch surface.
 
@@ -318,7 +318,7 @@ def external_http_set_enabled(params: Any, ctx: HandlerContext) -> dict[str, Any
 #
 # These four handlers bring the bundled daemon into MCP compliance so any
 # MCP-compatible client (Claude Code, Cursor, etc.) can connect via stdio
-# and discover/invoke all 151 kicad-agent operations as MCP tools.
+# and discover/invoke all 151 volta operations as MCP tools.
 #
 # Wire format examples:
 #   initialize:
@@ -327,7 +327,7 @@ def external_http_set_enabled(params: Any, ctx: HandlerContext) -> dict[str, Any
 #                "clientInfo":{"name":"Volta","version":"1.0"}}}
 #     → {"jsonrpc":"2.0","id":1,"result":{
 #          "protocolVersion":"2024-11-05",
-#          "serverInfo":{"name":"kicad-agent-daemon","version":"0.1.0"},
+#          "serverInfo":{"name":"volta-daemon","version":"0.1.0"},
 #          "capabilities":{"tools":{}}}}
 #
 #   tools/list:
@@ -349,7 +349,7 @@ def external_http_set_enabled(params: Any, ctx: HandlerContext) -> dict[str, Any
 MCP_PROTOCOL_VERSION = "2024-11-05"
 
 # Daemon identity (used in initialize response serverInfo).
-MCP_SERVER_NAME = "kicad-agent-daemon"
+MCP_SERVER_NAME = "volta-daemon"
 MCP_SERVER_VERSION = "0.1.0"
 
 
@@ -366,7 +366,7 @@ def initialize(params: Any, ctx: HandlerContext) -> dict[str, Any]:
 
     Returns:
         {"protocolVersion": "2024-11-05",
-         "serverInfo": {"name": "kicad-agent-daemon", "version": "0.1.0"},
+         "serverInfo": {"name": "volta-daemon", "version": "0.1.0"},
          "capabilities": {"tools": {}}}
     """
     # Params are informational — we don't downgrade based on client version.
@@ -405,7 +405,7 @@ def initialized(params: Any, ctx: HandlerContext) -> None:
 
 
 def tools_list(params: Any, ctx: HandlerContext) -> dict[str, Any]:
-    """MCP tools/list — enumerate all kicad-agent operations as MCP tools.
+    """MCP tools/list — enumerate all volta operations as MCP tools.
 
     Returns each operation as an MCP tool descriptor:
         {"name": "kicad.add_component",
@@ -425,7 +425,7 @@ def tools_list(params: Any, ctx: HandlerContext) -> dict[str, Any]:
 
 
 def tools_call(params: Any, ctx: HandlerContext) -> dict[str, Any]:
-    """MCP tools/call — dispatch a kicad-agent operation by name.
+    """MCP tools/call — dispatch a volta operation by name.
 
     Params:
         {"name": "kicad.add_component",
@@ -443,7 +443,7 @@ def tools_call(params: Any, ctx: HandlerContext) -> dict[str, Any]:
          "isError": true}
 
     MCP convention is to wrap operation results in a `content` array so
-    clients can render text/images/etc uniformly. kicad-agent ops return
+    clients can render text/images/etc uniformly. volta ops return
     JSON dicts, so we JSON-encode and wrap as a single text content item.
     """
     import json as _json
@@ -1175,7 +1175,7 @@ def _registered_operations() -> list[str]:
 
 
 def _build_tool_descriptor(op_name: str) -> dict[str, Any] | None:
-    """Construct an MCP tool descriptor for a kicad-agent operation.
+    """Construct an MCP tool descriptor for a volta operation.
 
     Returns None if the operation isn't importable (skip silently — the
     tools/list response should be robust to individual op failures).
@@ -1191,7 +1191,7 @@ def _build_tool_descriptor(op_name: str) -> dict[str, Any] | None:
         # No registry — return a minimal descriptor with the op name only.
         return {
             "name": f"kicad.{op_name}",
-            "description": f"kicad-agent operation: {op_name}",
+            "description": f"volta operation: {op_name}",
             "inputSchema": {"type": "object", "additionalProperties": True},
         }
 
@@ -1204,10 +1204,10 @@ def _build_tool_descriptor(op_name: str) -> dict[str, Any] | None:
         description = (
             getattr(op_meta, "description", None)
             or getattr(op_meta, "summary", None)
-            or f"kicad-agent operation: {op_name}"
+            or f"volta operation: {op_name}"
         )
     else:
-        description = f"kicad-agent operation: {op_name}"
+        description = f"volta operation: {op_name}"
 
     # Try to extract JSON schema from the Pydantic model for this op.
     input_schema: dict[str, Any]

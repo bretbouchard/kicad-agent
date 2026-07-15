@@ -7,7 +7,7 @@ These tests exercise the MCP lifecycle handlers directly:
 
     initialize  → returns protocolVersion, serverInfo, capabilities
     initialized → returns None (notification, no reply)
-    tools/list  → returns 151 kicad-agent operations as MCP tool descriptors
+    tools/list  → returns 151 volta operations as MCP tool descriptors
     tools/call  → dispatches to OperationExecutor
 
 Coverage:
@@ -97,7 +97,7 @@ class TestInitialize:
         result = initialize({}, ctx)
         assert "serverInfo" in result
         assert isinstance(result["serverInfo"], dict)
-        assert result["serverInfo"]["name"] == "kicad-agent-daemon"
+        assert result["serverInfo"]["name"] == "volta-daemon"
 
     def test_returns_server_info_with_version(self, ctx: HandlerContext) -> None:
         result = initialize({}, ctx)
@@ -124,7 +124,7 @@ class TestInitialize:
         result = initialize(params, ctx)
         # Server ignores client capabilities but responds with its own.
         assert result["protocolVersion"] == "2024-11-05"
-        assert result["serverInfo"]["name"] == "kicad-agent-daemon"
+        assert result["serverInfo"]["name"] == "volta-daemon"
 
 
 # =============================================================================

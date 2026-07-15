@@ -130,7 +130,7 @@ def _fix_header(content: str) -> str:
     new_header = (
         f'(kicad_sch\n'
         f'  (version 20250114)\n'
-        f'  (generator "kicad-agent")\n'
+        f'  (generator "volta")\n'
         f'  (generator_version "10.0.1")\n'
         f'  (uuid "{existing_uuid}")'
     )

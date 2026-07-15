@@ -28,7 +28,7 @@ from volta.ops._schema_schematic_routing import ResolvePinPositionsOp
 
 def _make_sch_content(lib_symbols: str, symbols: str) -> str:
     """Wrap lib_symbols and symbols into a valid .kicad_sch skeleton."""
-    return f"""(kicad_sch (version 20250114) (generator "kicad-agent-test")
+    return f"""(kicad_sch (version 20250114) (generator "volta-test")
   (uuid "00000000-0000-0000-0000-000000000001")
   (paper "A4")
   {lib_symbols}

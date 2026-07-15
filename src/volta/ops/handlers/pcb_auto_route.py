@@ -3,7 +3,7 @@
 Implements ae-23 auto_route_freerouting as a full pipeline:
   DSN export -> Freerouting headless route -> SES import -> strip_shorts -> remove_dangling_tracks
 
-Consolidates the 5-script manual pipeline into a single kicad-agent operation.
+Consolidates the 5-script manual pipeline into a single volta operation.
 Cleanup stages are best-effort -- routing is the critical path.
 """
 

@@ -41,10 +41,10 @@ class TestTransactionSnapshot:
             assert txn.snapshot_path.read_text(encoding="utf-8") == "original content"
 
     def test_snapshot_in_temp_dir(self, test_file: Path) -> None:
-        """Snapshot is stored in a temp directory with kicad-agent prefix."""
+        """Snapshot is stored in a temp directory with volta prefix."""
         with Transaction(test_file) as txn:
             assert txn.snapshot_path is not None
-            assert "kicad-agent" in str(txn.snapshot_path.parent)
+            assert "volta" in str(txn.snapshot_path.parent)
 
 
 class TestTransactionCommit:
@@ -387,7 +387,7 @@ class TestSilentFailureHardening:
         # Create project structure that PersistentUndoStack expects
         project_dir = tmp_path / "project"
         project_dir.mkdir()
-        undo_dir = project_dir / ".kicad-agent" / "undo"
+        undo_dir = project_dir / ".volta" / "undo"
         undo_dir.mkdir(parents=True)
 
         # Create a corrupt entry file BEFORE creating stack

@@ -2,7 +2,7 @@
   "timestamp": "2026-07-15T19:38:30.003732Z",
   "sample_count": 81,
   "engine": {
-    "python": "kicad_agent.validation.native_erc.run_native_erc",
+    "python": "volta.validation.native_erc.run_native_erc",
     "swift": "NativeERC.run (Phase 234A: pending wire-up)"
   },
   "results": [
@@ -2913,7 +2913,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/safe_annotate/multi_sheet_root.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/safe_annotate/multi_sheet_root.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],
@@ -5414,7 +5414,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/schematic_intent/complete_led.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/schematic_intent/complete_led.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],
@@ -5595,7 +5595,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/RaspberryPi-uHAT/RaspberryPi-uHAT.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/RaspberryPi-uHAT/RaspberryPi-uHAT.kicad_sch",
       "python": {
         "ok": true,
         "violations": [
@@ -10351,7 +10351,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/data/hierarchical/single_sheet.kicad_sch",
+      "schematic": "volta-0.1.0/tests/data/hierarchical/single_sheet.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],
@@ -11577,7 +11577,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/safe_annotate/with_instances.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/safe_annotate/with_instances.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],
@@ -11673,7 +11673,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/astable_555/astable_555.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/astable_555/astable_555.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],
@@ -11746,7 +11746,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/data/kicad6_test.kicad_sch",
+      "schematic": "volta-0.1.0/tests/data/kicad6_test.kicad_sch",
       "python": {
         "ok": true,
         "violations": [
@@ -14333,7 +14333,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/legibility/S1_led_bringer.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/legibility/S1_led_bringer.kicad_sch",
       "python": {
         "ok": true,
         "violations": [
@@ -14437,7 +14437,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/Arduino_Mega/Arduino_Mega.kicad_sch",
       "python": {
         "ok": true,
         "violations": [
@@ -15459,7 +15459,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/safe_annotate/multi_sheet_child_a.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/safe_annotate/multi_sheet_child_a.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],
@@ -16649,7 +16649,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/data/hierarchical/root.kicad_sch",
+      "schematic": "volta-0.1.0/tests/data/hierarchical/root.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],
@@ -16745,7 +16745,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/data/hierarchical/sub_b.kicad_sch",
+      "schematic": "volta-0.1.0/tests/data/hierarchical/sub_b.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],
@@ -16804,7 +16804,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/legibility/S2_rc_filter.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/legibility/S2_rc_filter.kicad_sch",
       "python": {
         "ok": true,
         "violations": [
@@ -16860,7 +16860,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/legibility/S3_opamp_preamp.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/legibility/S3_opamp_preamp.kicad_sch",
       "python": {
         "ok": true,
         "violations": [
@@ -17229,7 +17229,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/schematic_intent/missing_footprint.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/schematic_intent/missing_footprint.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],
@@ -17454,7 +17454,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/data/hierarchical/sub_a.kicad_sch",
+      "schematic": "volta-0.1.0/tests/data/hierarchical/sub_a.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],
@@ -17694,7 +17694,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/schematic_intent/dnp_component.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/schematic_intent/dnp_component.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],
@@ -34711,7 +34711,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/legibility/S4_audio_mixer.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/legibility/S4_audio_mixer.kicad_sch",
       "python": {
         "ok": true,
         "violations": [
@@ -34906,7 +34906,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/schematic_intent/missing_metadata.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/schematic_intent/missing_metadata.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],
@@ -35514,7 +35514,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/safe_annotate/single_sheet_unannotated.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/safe_annotate/single_sheet_unannotated.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],
@@ -35562,7 +35562,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/safe_annotate/multi_sheet_child_b.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/safe_annotate/multi_sheet_child_b.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],
@@ -36359,7 +36359,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/legibility/S5_esp32_breakout.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/legibility/S5_esp32_breakout.kicad_sch",
       "python": {
         "ok": true,
         "violations": [
@@ -36917,7 +36917,7 @@
       }
     },
     {
-      "schematic": "kicad_agent-0.1.0/tests/fixtures/safe_annotate/single_sheet_annotated_clean.kicad_sch",
+      "schematic": "volta-0.1.0/tests/fixtures/safe_annotate/single_sheet_annotated_clean.kicad_sch",
       "python": {
         "ok": true,
         "violations": [],

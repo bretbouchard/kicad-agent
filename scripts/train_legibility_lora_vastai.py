@@ -17,11 +17,11 @@ Hardening:
 
 Usage (on Vast.ai instance):
     python3 scripts/train_legibility_lora_vastai.py \
-        --sft-data /Volumes/Storage/models/kicad-agent/datasets/sft/srs_labels.jsonl \
-        --grpo-data /Volumes/Storage/models/kicad-agent/datasets/grpo/exploration.jsonl \
-        --base-model /Volumes/Storage/models/kicad-agent/models/gemma-4-12b-v2 \
-        --output-adapter /Volumes/Storage/models/kicad-agent/adapters/legibility-v1 \
-        --b2-bucket kicad-agent-checkpoints \
+        --sft-data /Volumes/Storage/models/volta/datasets/sft/srs_labels.jsonl \
+        --grpo-data /Volumes/Storage/models/volta/datasets/grpo/exploration.jsonl \
+        --base-model /Volumes/Storage/models/volta/models/gemma-4-12b-v2 \
+        --output-adapter /Volumes/Storage/models/volta/adapters/legibility-v1 \
+        --b2-bucket volta-checkpoints \
         --sft-steps 2000 --grpo-steps 2000 --save-steps 50 --seed 42 \
         --max-checkpoint-mb 100
 """

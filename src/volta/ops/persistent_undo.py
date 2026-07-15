@@ -2,7 +2,7 @@
 
 Issue #7: The in-memory UndoStack is lost between process invocations.
 This module provides a file-based persistence layer that stores undo entries
-in ``.kicad-agent/undo/`` within the project directory.
+in ``.volta/undo/`` within the project directory.
 
 Storage format: One JSON file per entry, named by timestamp and sequence number.
 Atomic writes via temp-file-and-rename. Thread-safe via the parent class lock.
@@ -31,7 +31,7 @@ from volta.ops.undo_stack import UndoEntry, UndoStack
 
 logger = logging.getLogger(__name__)
 
-_UNDO_DIR_NAME = ".kicad-agent"
+_UNDO_DIR_NAME = ".volta"
 _UNDO_SUBDIR = "undo"
 _MANIFEST_FILE = "manifest.json"
 
@@ -42,13 +42,13 @@ _MAX_SAFE_NAME = 60
 class PersistentUndoStack(UndoStack):
     """UndoStack with file-based persistence in the project directory.
 
-    Stores undo entries as JSON files in ``<project_dir>/.kicad-agent/undo/``.
+    Stores undo entries as JSON files in ``<project_dir>/.volta/undo/``.
     A manifest.json tracks the ordered list of entry files per path.
 
     On init, loads any existing entries from disk. On push/pop, updates
     both the in-memory deques and the disk store.
 
-    The ``.kicad-agent/`` directory should be gitignored.
+    The ``.volta/`` directory should be gitignored.
 
     Args:
         project_dir: Root directory of the KiCad project.
@@ -69,16 +69,16 @@ class PersistentUndoStack(UndoStack):
         # Ensure directory exists
         self._undo_dir.mkdir(parents=True, exist_ok=True)
 
-        # Auto-add .kicad-agent/ to .gitignore
+        # Auto-add .volta/ to .gitignore
         self._ensure_gitignore()
 
         # Load existing entries from disk
         self._load_from_disk()
 
     def _ensure_gitignore(self) -> None:
-        """Add .kicad-agent/ to .gitignore if not already present."""
+        """Add .volta/ to .gitignore if not already present."""
         gitignore = self._project_dir / ".gitignore"
-        entry = ".kicad-agent/"
+        entry = ".volta/"
         try:
             if gitignore.exists():
                 content = gitignore.read_text(encoding="utf-8")

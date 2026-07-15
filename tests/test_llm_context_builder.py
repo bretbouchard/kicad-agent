@@ -203,5 +203,5 @@ def test_llm_module_raises_import_error_without_anthropic(monkeypatch):
             if attr in llm_module.__dict__:
                 del llm_module.__dict__[attr]
 
-        with pytest.raises(ImportError, match="pip install kicad-agent\\[llm\\]"):
+        with pytest.raises(ImportError, match="pip install volta\\[llm\\]"):
             llm_module.LLMClient

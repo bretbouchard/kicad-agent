@@ -133,7 +133,7 @@ class Transaction:
             )
 
         # D-08/D-10: Full file copy to temp directory
-        self._snap_dir = tempfile.mkdtemp(prefix="kicad-agent-")
+        self._snap_dir = tempfile.mkdtemp(prefix="volta-")
         self._snapshot_path = Path(self._snap_dir) / self._file_path.name
         shutil.copy2(self._file_path, self._snapshot_path)
         # Council H-03: Restrict snapshot file permissions

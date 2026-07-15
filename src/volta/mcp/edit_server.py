@@ -1,14 +1,14 @@
-"""MCP server exposing all kicad-agent operations as individually named tools.
+"""MCP server exposing all volta operations as individually named tools.
 
 Dynamic tool generation from Pydantic Operation discriminated union.
 Follows the same pattern as the existing component-search server.
 
 Usage:
     # Start as MCP server (stdio transport)
-    kicad-agent-edit
+    volta-edit
 
     # Configure project directory
-    KICAD_PROJECT_DIR=/path/to/project kicad-agent-edit
+    KICAD_PROJECT_DIR=/path/to/project volta-edit
 """
 
 from __future__ import annotations
@@ -170,7 +170,7 @@ _META_TOOLS = [
     types.Tool(
         name="get_operation_schema",
         description=(
-            "Get the full JSON Schema for all kicad-agent operations. "
+            "Get the full JSON Schema for all volta operations. "
             "Use this to discover available operations and their parameters."
         ),
         inputSchema={"type": "object", "properties": {}},
@@ -731,7 +731,7 @@ async def server_lifespan(server: Server):  # type: ignore[type-arg]
     yield {"executor": executor, "base_dir": base_dir}
 
 
-app = Server("kicad-agent-edit", version="0.1.0", lifespan=server_lifespan)
+app = Server("volta-edit", version="0.1.0", lifespan=server_lifespan)
 
 
 @app.list_tools()
@@ -1303,7 +1303,7 @@ async def _run_server() -> None:
 
 
 def main() -> None:
-    """CLI entry point for kicad-agent-edit."""
+    """CLI entry point for volta-edit."""
     from volta.logging_config import configure_logging
     configure_logging()
 

@@ -349,7 +349,7 @@ struct ChatView: View {
             return nil
         }
         let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("kicad-agent-attachments", isDirectory: true)
+            .appendingPathComponent("volta-attachments", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let url = dir.appendingPathComponent("paste-\(UUID().uuidString).png")
         do {

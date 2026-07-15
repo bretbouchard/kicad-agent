@@ -4,7 +4,7 @@
 Walks --corpus-dir for .kicad_sch files, generates --n-variations perturbed
 variations per base, scores each via the verified SRS chain, emits JSONL.
 
-Output lands at /Volumes/Storage/models/kicad-agent/datasets/grpo/exploration.jsonl
+Output lands at /Volumes/Storage/models/volta/datasets/grpo/exploration.jsonl
 by convention (D-02). Falls back to local disk if /Volumes/Storage unmounted.
 
 Exit codes:

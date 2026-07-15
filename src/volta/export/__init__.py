@@ -1,4 +1,4 @@
-"""Manufacturing export wrappers for kicad-agent.
+"""Manufacturing export wrappers for volta.
 
 Provides Python wrappers for all kicad-cli export commands, 3D rendering,
 and board statistics extraction. Each function validates inputs, invokes

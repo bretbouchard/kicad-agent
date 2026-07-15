@@ -1,7 +1,7 @@
 """Routing audit trail: JSONL writer with fsync durability (H5).
 
 Every routing decision is logged as one JSONL line in
-``<project_dir>/.kicad-agent/audit/routing_<timestamp>.jsonl``. The file
+``<project_dir>/.volta/audit/routing_<timestamp>.jsonl``. The file
 is append-only, streaming-friendly (tail -f), and grep-friendly.
 
 H5 durability: writes use os.fsync after each line to flush kernel buffers.

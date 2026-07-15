@@ -1,12 +1,12 @@
-"""CLI subcommand: kicad-agent design-rules <schematic>
+"""CLI subcommand: volta design-rules <schematic>
 
 DOMAIN-04: Run domain-specific design rules against a schematic.
 
 Usage:
-    kicad-agent design-rules compressor.kicad_sch
-    kicad-agent design-rules compressor.kicad_sch --config design-rules.yaml
-    kicad-agent design-rules compressor.kicad_sch --format json --output report.json
-    kicad-agent design-rules compressor.kicad_sch --format markdown --output report.md
+    volta design-rules compressor.kicad_sch
+    volta design-rules compressor.kicad_sch --config design-rules.yaml
+    volta design-rules compressor.kicad_sch --format json --output report.json
+    volta design-rules compressor.kicad_sch --format markdown --output report.md
 """
 from __future__ import annotations
 

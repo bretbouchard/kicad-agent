@@ -81,7 +81,7 @@ class SamacSysClient:
             timeout=httpx.Timeout(timeout, connect=10.0),
             follow_redirects=True,
             headers={
-                "User-Agent": "kicad-agent/0.1.0",
+                "User-Agent": "volta/0.1.0",
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             },
         )

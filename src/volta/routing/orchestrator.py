@@ -258,7 +258,7 @@ class RoutingOrchestrator:
         self._validate_strategy_result(strategy_result, netlist)
 
         # 6. Set up audit log.
-        audit_path = proj / ".kicad-agent" / "audit" / f"routing_{int(time.time())}.jsonl"
+        audit_path = proj / ".volta" / "audit" / f"routing_{int(time.time())}.jsonl"
         audit_log = RoutingAuditLog(audit_path)
 
         # 7. Dispatch each net per strategy assignment.
@@ -493,7 +493,7 @@ class RoutingOrchestrator:
             return results, fallback
 
         # Run Freerouting on the full board (batch — it routes all nets at once).
-        output_dir = pcb_path.parent / ".kicad-agent" / "freerouting"
+        output_dir = pcb_path.parent / ".volta" / "freerouting"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         fr_result = route_with_freerouting(pcb_path, output_dir=output_dir)

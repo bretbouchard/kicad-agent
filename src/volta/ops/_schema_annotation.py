@@ -1,4 +1,4 @@
-"""Schema for the add_design_note operation (kicad-agent-29).
+"""Schema for the add_design_note operation (volta-29).
 
 Design notes are intent-bearing text annotations on schematics:
 - WHY a value was chosen (REASON)

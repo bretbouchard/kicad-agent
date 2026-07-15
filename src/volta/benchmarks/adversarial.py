@@ -1,4 +1,4 @@
-"""Adversarial test suite orchestrator for kicad-agent robustness testing.
+"""Adversarial test suite orchestrator for volta robustness testing.
 
 Combines three testing strategies:
   1. Mutation testing: deliberately break schematics to test detection

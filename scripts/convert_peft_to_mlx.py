@@ -6,8 +6,8 @@ rewrites adapter_config.json with mlx-compatible fields.
 
 Usage:
     python scripts/convert_peft_to_mlx.py \
-        --input /Volumes/Storage/models/kicad-agent/adapters/kicad-vision-v1 \
-        --output /Volumes/Storage/models/kicad-agent/adapters/kicad-vision-v1-mlx
+        --input /Volumes/Storage/models/volta/adapters/kicad-vision-v1 \
+        --output /Volumes/Storage/models/volta/adapters/kicad-vision-v1-mlx
 
 The adapter trained on Vast.ai (CUDA/PEFT) uses:
   - adapter_model.safetensors with keys like:

@@ -107,12 +107,12 @@ class TestRoutePathOutsideCwd:
 
 
 class TestTopLevelHelp:
-    """H-16: ``kicad-agent --help`` (or ``-h`` or no args) should print a
+    """H-16: ``volta --help`` (or ``-h`` or no args) should print a
     help message listing all available subcommands with descriptions.
     """
 
     def test_help_flag_lists_subcommands(self) -> None:
-        """``kicad-agent --help`` exits 0 and lists subcommands."""
+        """``volta --help`` exits 0 and lists subcommands."""
         result = _run("--help")
         assert result.returncode == 0
         # Check that key subcommands appear in output
@@ -120,21 +120,21 @@ class TestTopLevelHelp:
             assert subcmd in result.stdout, f"Expected subcommand '{subcmd}' in --help output"
 
     def test_help_flag_shows_descriptions(self) -> None:
-        """``kicad-agent --help`` includes descriptions for subcommands."""
+        """``volta --help`` includes descriptions for subcommands."""
         result = _run("--help")
         assert result.returncode == 0
         assert "Auto-route" in result.stdout or "auto-route" in result.stdout.lower()
         assert "ERC" in result.stdout or "Electrical Rules Check" in result.stdout
 
     def test_short_help_flag(self) -> None:
-        """``kicad-agent -h`` exits 0 and lists subcommands."""
+        """``volta -h`` exits 0 and lists subcommands."""
         result = _run("-h")
         assert result.returncode == 0
         assert "route" in result.stdout
         assert "analyze" in result.stdout
 
     def test_no_args_shows_help(self) -> None:
-        """Running ``kicad-agent`` with no args shows help (exits 0)."""
+        """Running ``volta`` with no args shows help (exits 0)."""
         result = _run()
         assert result.returncode == 0
         assert "Subcommands" in result.stdout
@@ -152,17 +152,17 @@ class TestTopLevelHelp:
 
 
 class TestComponentSearchHelp:
-    """H-17: ``kicad-agent component-search --help`` should print usage
+    """H-17: ``volta component-search --help`` should print usage
     information and exit, not start the MCP server.
     """
 
     def test_component_search_help_exits_zero(self) -> None:
-        """``kicad-agent component-search --help`` exits 0."""
+        """``volta component-search --help`` exits 0."""
         result = _run("component-search", "--help")
         assert result.returncode == 0
 
     def test_component_search_help_prints_usage(self) -> None:
-        """``kicad-agent component-search --help`` prints usage info."""
+        """``volta component-search --help`` prints usage info."""
         result = _run("component-search", "--help")
         assert "component-search" in result.stdout
         assert "usage" in result.stdout.lower()

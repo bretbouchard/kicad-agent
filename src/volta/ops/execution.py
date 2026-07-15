@@ -7,7 +7,7 @@ Each function is a standalone extraction from OperationExecutor methods,
 taking explicit parameters instead of self to keep executor.py small.
 
 Concurrency safety (O-BUG-008):
-    kicad-agent is NOT safe for concurrent access to the same file. Two
+    volta is NOT safe for concurrent access to the same file. Two
     processes (or threads) editing the same .kicad_sch or .kicad_pcb file
     simultaneously will corrupt it. A ``.volta.lock`` file mechanism
     warns (does not block) when concurrent editors are detected.

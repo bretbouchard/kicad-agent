@@ -1,13 +1,13 @@
-"""CLI subcommand: kicad-agent dfm <board>
+"""CLI subcommand: volta dfm <board>
 
 DFM-05: Run DFM (Design for Manufacturing) analysis on a PCB.
 
 Usage:
-    kicad-agent dfm board.kicad_pcb
-    kicad-agent dfm board.kicad_pcb --manufacturer jlcpcb
-    kicad-agent dfm board.kicad_pcb --manufacturer pcbway --format json --output report.json
-    kicad-agent dfm board.kicad_pcb --profile custom_profile.yaml
-    kicad-agent dfm board.kicad_pcb --stage post-route
+    volta dfm board.kicad_pcb
+    volta dfm board.kicad_pcb --manufacturer jlcpcb
+    volta dfm board.kicad_pcb --manufacturer pcbway --format json --output report.json
+    volta dfm board.kicad_pcb --profile custom_profile.yaml
+    volta dfm board.kicad_pcb --stage post-route
 """
 from __future__ import annotations
 

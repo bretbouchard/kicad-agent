@@ -123,7 +123,7 @@ class AdapterRegistry:
 
     def __init__(
         self,
-        base_dir: Path = Path("/Volumes/Storage/models/kicad-agent/adapters"),
+        base_dir: Path = Path("/Volumes/Storage/models/volta/adapters"),
     ) -> None:
         self._base_dir = base_dir
 

@@ -1,4 +1,4 @@
-"""Phase 204 kicad-agent-5q8: Conversation modes — Design/Review/Debug/Optimization/Manufacturing/Teaching.
+"""Phase 204 volta-5q8: Conversation modes — Design/Review/Debug/Optimization/Manufacturing/Teaching.
 
 Six modes that reframe the assistant's behavior. Each mode is a lens on
 the same circuit/project. See modes.py for full documentation.
