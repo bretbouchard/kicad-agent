@@ -481,3 +481,19 @@ Gap-closure phases (237-244) added 2026-07-14 to track the 8 high-priority gaps 
 Phase 245 (wire Volta v2 LoRA adapter) added 2026-07-14 after training completed: step 3000, loss 0.0288, accuracy 98.66%. Adapter downloaded and SHA256-verified; instance 44774137 destroyed. Phase 245 marked complete 2026-07-15: 2 commits (942dcf0, ca6ddb1), HF repo live at bretbouchard/volta-pcb-adapter-v2, 8/8 must-haves passed.
 Phases 246 (Python eval harness) + 247 (gap closure) added 2026-07-15 per user instruction "eval first, then gaps". Eval harness measures v2 quality on held-out test set; gap closure addresses remaining docs/GAP-ANALYSIS-CURRENT.md items including MLXLLM TODO(245).
 
+
+## Deferred
+
+Deferred work awaiting trigger conditions or future milestones. Tracked in
+Beads with `council-deferred` labels.
+
+### v8.0 Deferred (CloudKit / external library maturity)
+
+- [ ] **B2** Real-time multi-user collaboration (gated on CloudKit subscription)
+- [ ] **B4** Live distributor pricing in BOM (gated on vendor API access)
+- [ ] **B6** Altium/Eagle/KiCad 5/gEDA import (gated on parser library maturity)
+- [ ] **D4** Collaborative "review" of model-emitted design (gated on CloudKit)
+
+### v7.0 Deferred
+
+- [ ] **D3** Real-time cost tracking dashboard (deferred to v7.0 cost dashboard)
