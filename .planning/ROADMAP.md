@@ -449,7 +449,7 @@ User's instruction: "move to phase 234a and all other phases." Suggested order:
 10. **Phase 242** (onboarding) — P1, first-impressions
 11. **Phase 244** (fastlane notarization) — P0, ships v6 to App Store
 12. **Phase 245** (wire Volta v2 LoRA adapter) — ✅ DONE 2026-07-15 — enables real local PCB inference, prerequisite for eval harness
-13. **Phase 246** (Python eval harness) — next, measures v2 quality on held-out test set
+13. **Phase 246** (Python eval harness) — ✅ DONE 2026-07-15 — 32/32 tests, Council APPROVED, 10/10 must-haves. E2E inference pending vast.ai GPU.
 14. **Phase 247** (gap closure) — after eval, addresses remaining gaps + MLXLLM TODO
 15. **Phase 236** (Vision Input camera) — L effort, do last
 16. **Phase 235** (Complex Op Implementations) — already partially shipped, audit + close the 4 known stubs via 237/243

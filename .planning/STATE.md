@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v9.0
-milestone_name: native-erc-drc-engine
-status: complete
-stopped_at: Phase 218 native ERC/DRC engine complete + batch tested against 50 real boards (100% pass rate). Direction pivot: kicad-cli dependency eliminated, App Store viable.
-last_updated: "2026-07-11T14:00:00.000Z"
-last_activity: 2026-07-11
+milestone: v11.0
+milestone_name: — Gap-Closure Phases
+status: executing
+stopped_at: Phase 246 complete — moving to 247
+last_updated: "2026-07-15T15:00:00.000Z"
+last_activity: 2026-07-15
 progress:
-  total_phases: 9
-  completed_phases: 9
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  total_phases: 25
+  completed_phases: 16
+  total_plans: 18
+  completed_plans: 17
+  percent: 89
 ---
 
 # Project State
@@ -21,12 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-10)
 
 **Core value:** LLM -> intent JSON -> AST mutation -> valid KiCad file. Zero corruption, every time.
-**Current focus:** Phase 218 complete — Native ERC/DRC engine eliminates kicad-cli dependency entirely. 18 checks run in pure Python inside the App Sandbox. Batch tested against 50 real-world KiCad schematics: 100% pass rate, 0 crashes, 0 false negatives, 3 super-passes (found errors kicad-cli missed).
-Last activity: 2026-07-11
+**Current focus:** Phase 247 — gap-closure (next)
+Last activity: 2026-07-15 — Phase 246 complete (DONE)
 
 ## Integration Status (Honest)
 
 ### What works end-to-end (App Store sandbox-compatible)
+
 - ✅ Chat → LLM router → streaming tokens (Phase 211)
 - ✅ Messages persist to SwiftData (Phase 211)
 - ✅ Daemon operations from chat (Phase 212)
@@ -37,17 +38,22 @@ Last activity: 2026-07-11
 - ✅ 355 Swift tests pass, 0 fail (Phase 217)
 
 ### The kicad-cli dependency is ELIMINATED (Phase 218)
+
 - Native ERC engine: pin-type conflicts (11×11 matrix), power net validation,
   no-connect validation, dangling wires — all pure Python
+
 - Native DRC engine: copper spacing, netclass width, min track width,
   courtyard overlap, hole-to-hole, annular ring — all shapely geometry
+
 - Advanced DRC: net-tie handling, thermal spokes, matched-length groups,
   diff pair coupling, teardrop detection, custom DRC rule evaluator
+
 - 18 checks total + 50 existing DFM checks = 68 checks
 - Batch tested: 50/50 schematics pass against kicad-cli ground truth
 - 3 super-passes (found real errors kicad-cli missed)
 
 ### What's wired but needs external setup
+
 - CloudKit sync: requires CK_CONTAINER_ID env var
 - MLX generation: requires ~8GB model download on first launch from HuggingFace
 - Schematic SVG export / PCB render: requires kicad-cli in non-sandboxed builds
@@ -56,10 +62,10 @@ Last activity: 2026-07-11
 
 ## Current Position
 
-Phase: 217
-Plan: Complete
-Status: Ready to execute
-Last activity: 2026-07-11 -- Phase 209 planning complete
+Phase: 246 (volta-v2-eval-harness) — COMPLETE
+Plan: 1 of 1
+Status: Phase 246 complete — 32/32 tests, Council APPROVED, all 10 must-haves satisfied
+Last activity: 2026-07-15 -- Phase 246 complete
 
 ## Previous Milestone: v6.0 KiCad Agent — The Closed Box (COMPLETE)
 
@@ -392,6 +398,7 @@ Phase 156 (SKIDL Converter) — not started (roadmap defined). Absorbed into v6.
 - Phase 245 added: Wire Volta v2 LoRA adapter into macOS app — replace MLXLocalProvider placeholder with real PEFT inference on google/gemma-4-12b-it. Adapter at `output/volta-pcb-adapter-v2-upload/adapter_model.safetensors` (524MB, SHA256 cbc121cc... verified, 656 bfloat16 tensors across 48 layers, 7 target modules). Training: step 3000/3000, loss 0.0288, accuracy 98.66%, 48.5M tokens, A100 80GB, 19.2h, zero crashes. Instance 44774137 destroyed. Eval harness + additional gap closure to follow as separate phases.
 - **Phase 245 DONE 2026-07-15**: 2 commits (942dcf0 feat, ca6ddb1 docs), HF repo live at `bretbouchard/volta-pcb-adapter-v2` with 7 files, 8/8 must-haves passed, Council APPROVED with 0 P0/P1 findings. MLXLLM TODO(245) graceful-degradation noted as known limitation.
 - Phase 246 added: Python eval harness for Volta v2 — load adapter via peft+transformers, measure PCB generation quality on 50-sample held-out test set (ERC pass rate, syntactic correctness, schema completeness, BLEU/ROUGE vs gold). Output report + summary. Sets quality baseline before production rollout.
+- **Phase 246 DONE 2026-07-15**: 7 commits (c7622b4 + 0c5c3af + 3 fix commits + 2 docs), 10/10 must-haves passed, 32/32 tests pass (28 original + 4 security regression tests), Council APPROVED with 0 P0/P1 findings. Sandbox locked down (CR-01: `__import__` whitelisted to skidl.* only), thread-based timeout enforcement (WR-01), SHA256 verification for adapter (WR-02), typo rename (IN-01). E2E inference run pending — needs vast.ai GPU + HF auth.
 - Phase 247 added: Gap closure against docs/GAP-ANALYSIS-CURRENT.md — triage all open gaps with four-state taxonomy (IMPLEMENTED / ADDED-AS-PHASE / SUPERSEDED-BY-ALTERNATIVE / DEFERRED-TO-NAMED-TARGET). Includes MLXLLM TODO(245) follow-up, iOS/vision adapter gaps, real-inference E2E test gap.
 
 ### v4.1 Stage-Safe PCB Flow (Phases 85-94)
