@@ -65,7 +65,7 @@ lane :beta do |options|
     output_directory: "#{repo_root}/build",
     export_options: {
       provisioningProfiles: {
-        "com.bretbouchard.volta" => "1240dfd2-e0f2-40d9-82c8-e749df43af36"
+        "com.bretbouchard.volta" => "6bc01c0e-1179-4ece-a148-a5dcad67b554"
       },
       signingStyle: "manual"
     },
