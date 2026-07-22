@@ -1,8 +1,8 @@
-# volta
+# Volta PCB
 
 **Design real circuit boards by describing what you want.**
 
-Type *"I need a preamp with 18dB gain"* — get a manufacturable PCB. No EDA experience required.
+Type *"I need a preamp with 18dB gain"* — get a manufacturable PCB. No electrical enginnering, PCB or EDA experience required.
 
 ```
 "I need an ESP32 breakout with USB-C power and I2C pull-ups"
@@ -17,7 +17,7 @@ Natural Language → SKIDL code → KiCad schematic → PCB → Gerbers → Orde
 
 ## What This Does
 
-volta is an AI-native EDA platform. It takes a natural-language circuit request and produces a complete, manufacturable PCB design — schematic, layout, routing, and manufacturing files. Along the way, every stage has hard validation gates: ERC (electrical rules), SPICE (analog simulation), and DRC (design rules). Bad designs never advance.
+Volta is an AI-native EDA platform. It takes a natural-language circuit request and produces a complete, manufacturable PCB design — schematic, layout, routing, and manufacturing files. Along the way, every stage has hard validation gates: ERC (electrical rules), SPICE (analog simulation), and DRC (design rules). Bad designs never advance.
 
 **The pipeline:**
 1. **NL → SKIDL** — A Gemma 4 12B multimodal model generates SKIDL Python code (the circuit's DNA)
