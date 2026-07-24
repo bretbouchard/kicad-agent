@@ -112,3 +112,18 @@ __init___sklib.py
 
 # Stale build artifacts (sdist/wheel output before rename)
 kicad_agent-*/
+
+# --- Local / ephemeral artifacts (2026-07-24 cleanup) ---
+
+# ZCode plan-mode session files (local working artifacts, not project docs)
+.zcode/
+
+# Test-generated report output (*.rpt) — PCB stats, etc.
+# (alongside the existing *-erc.rpt / *-drc.rpt rules above)
+*.rpt
+
+# macOS interrupted-editor temp files (e.g. .!40634!filename)
+.!*!*
+
+# fastlane run report — regenerates on every `fastlane` invocation; pure noise
+fastlane/report.xml

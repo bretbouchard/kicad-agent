@@ -27,6 +27,9 @@ push-state.json
 
 proxied_server_client_info.json
 
+# Auto-import state cache (local-only, tracks import size/mtime)
+.auto-import-issues.jsonl
+
 # Worktree redirect file (contains relative path to main repo's .beads/)
 # Must not be committed as paths would be wrong in other clones
 redirect

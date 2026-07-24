@@ -61,6 +61,38 @@ Generate distribution cert + provisioning profile via match
 
 First-time setup. Documents what user needs to do.
 
+### build
+
+```sh
+[bundle exec] fastlane build
+```
+
+Debug build with no signing (local dev)
+
+### build_release
+
+```sh
+[bundle exec] fastlane build_release
+```
+
+Release build, signed with match, not notarized
+
+### snapshot
+
+```sh
+[bundle exec] fastlane snapshot
+```
+
+Generate App Store screenshots
+
+### build_daemon
+
+```sh
+[bundle exec] fastlane build_daemon
+```
+
+Build the volta-daemon with PyInstaller and codesign
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.

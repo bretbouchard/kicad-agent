@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  org.volta.tree-watch — reactive watchdog for the macos-app/ working tree.
+
+  Starts at login, restarts on crash (no thrash via ThrottleInterval). Invokes
+  the system pyenv python3 shim (NOT the repo .venv) because watchfiles is only
+  importable there. See scripts/volta_tree_watch.py for the forensic rationale.
+
+  Install: bash scripts/install_tree_watch.sh   (copies this to ~/Library/LaunchAgents)
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>org.volta.tree-watch</string>
+
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/bretbouchard/.pyenv/shims/python3</string>
+		<string>/Users/bretbouchard/apps/kicad-agent/scripts/volta_tree_watch.py</string>
+	</array>
+
+	<key>WorkingDirectory</key>
+	<string>/Users/bretbouchard/apps/kicad-agent</string>
+
+	<key>ProcessType</key>
+	<string>Background</string>
+
+	<key>RunAtLoad</key>
+	<true/>
+
+	<!-- Restart on crash, but don't thrash. SuccessfulExit=false means: only
+	     relaunch if the process exited non-zero (real crash), leave it alone
+	     on a clean SIGTERM/SIGINT exit. ThrottleInterval floors restart spacing. -->
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+	<key>ThrottleInterval</key>
+	<integer>30</integer>
+
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>HOME</key>
+		<string>/Users/bretbouchard</string>
+		<key>PATH</key>
+		<string>/Users/bretbouchard/.pyenv/shims:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin</string>
+	</dict>
+
+	<key>StandardOutPath</key>
+	<string>/Users/bretbouchard/Library/Logs/volta-tree-watch.stdout.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/bretbouchard/Library/Logs/volta-tree-watch.stderr.log</string>
+</dict>
+</plist>

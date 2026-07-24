@@ -9,11 +9,43 @@
 #   3. App Store Connect app record
 # When these are unavailable, lanes run in --skip / --readonly stub mode.
 
+# Volta keeps its App Store Connect key configuration in the gitignored
+# repository-root .env file. Override ambient credentials so another Fastlane
+# project cannot accidentally upload Volta with its own API key.
+volta_env_file = File.expand_path("../.env", __dir__)
+Dotenv.overload(volta_env_file) if File.exist?(volta_env_file)
+
 default_bundle_id = "com.bretbouchard.volta"
 volta_asc_apple_id = "6789455514"   # App Store Connect > App Information > Apple ID
 volta_sku = "volta"                  # App Store Connect SKU
 
+# The Swift app source lives in repo-root macos-app/. If it goes missing from
+# the working tree (observed: a full-directory rm leaves every lane crashing
+# with a misleading "directory handling" error deep in Dir.chdir), lanes die
+# confusingly. This guard detects that state, explains it, and restores the
+# tracked files from git — converting a cryptic failure into a clear message.
+def ensure_macos_app_present!
+  macos_app = File.expand_path("#{__dir__}/../macos-app")
+  return if Dir.exist?(macos_app) &&
+            Dir.exist?("#{macos_app}/Sources") &&
+            File.exist?("#{macos_app}/project.yml")
+
+  deleted_count = `git -C "#{macos_app}/.." status --short -- macos-app/`.lines.count { _1.start_with?(" D") }
+  if deleted_count.positive?
+    UI.message("macos-app/ is deleted in the working tree (#{deleted_count} tracked files missing). " \
+               "Restoring from git HEAD…")
+    restore_ok = system("git -C \"#{macos_app}/..\" archive HEAD macos-app/ | tar -xf -")
+    UI.user_error!("macos-app/ is missing and git restore failed. " \
+                   "Run manually: `git -C \"#{macos_app}/..\" restore --source=HEAD macos-app/`") unless restore_ok
+    UI.success("Restored macos-app/ (#{deleted_count} files) from git HEAD")
+  else
+    UI.user_error!("macos-app/ is missing and git shows no deletion to restore from. " \
+                   "The Swift app source may not be checked out in this clone.")
+  end
+end
+
 before_all do
+  ensure_macos_app_present!
   ensure_env_vars(
     APP_IDENTIFIER: default_bundle_id
   ) unless ENV["CI"].nil?
@@ -48,6 +80,38 @@ lane :beta do |options|
   UI.message("Volta PCB — TestFlight build & upload")
 
   repo_root = File.expand_path("..", __dir__)
+  api_key = nil
+
+  if ENV["APP_STORE_CONNECT_API_KEY_ID"]
+    ensure_env_vars(
+      env_vars: %w[
+        APP_STORE_CONNECT_API_KEY_ID
+        APP_STORE_CONNECT_API_KEY_ISSUER_ID
+        APP_STORE_CONNECT_API_KEY_FILEPATH
+        MATCH_PASSWORD
+      ]
+    )
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
+      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_FILEPATH"],
+      duration: 1200,
+      in_house: false
+    )
+
+    # Install the certificate/profile pair that was created together by match.
+    # Do this before archiving so Xcode cannot pair a newer distribution
+    # certificate with an older provisioning profile.
+    match(
+      type: "appstore",
+      platform: "macos",
+      app_identifier: default_bundle_id,
+      api_key: api_key,
+      git_url: "https://github.com/bretbouchard/VoltaCertRepo",
+      readonly: true
+    )
+  end
 
   # Generate Xcode project if missing.
   Dir.chdir("#{repo_root}/macos-app") do
@@ -64,25 +128,15 @@ lane :beta do |options|
     export_method: "app-store",
     output_directory: "#{repo_root}/build",
     export_options: {
-      provisioningProfiles: {
-        "com.bretbouchard.volta" => "6bc01c0e-1179-4ece-a148-a5dcad67b554"
-      },
       signingStyle: "manual"
     },
     xcargs: "-allowProvisioningUpdates -skipMacroValidation -skipPackagePluginValidation"
   )
 
   # Upload to TestFlight.
-  if ENV["APP_STORE_CONNECT_API_KEY_ID"].nil?
+  if api_key.nil?
     UI.important("ASC API key not set — skipping pilot upload")
   else
-    api_key = app_store_connect_api_key(
-      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
-      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
-      key_filepath: ENV["APP_STORE_CONNECT_API_KEY_FILEPATH"],
-      duration: 1200,
-      in_house: false
-    )
     pilot(
       app_identifier: default_bundle_id,
       apple_id: volta_asc_apple_id,
