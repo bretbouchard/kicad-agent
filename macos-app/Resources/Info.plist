@@ -31,6 +31,8 @@
             <string>KiCad Schematic</string>
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
             <key>LSItemContentTypes</key>
             <array>
                 <string>org.kicad.kicad-schematic</string>
@@ -41,6 +43,8 @@
             <string>KiCad PCB</string>
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Alternate</string>
             <key>LSItemContentTypes</key>
             <array>
                 <string>org.kicad.kicad-pcb</string>
