@@ -5,6 +5,6 @@
 // validation/engine code here as a proper library target.
 public enum VoltaPCBCoreVersion {
     public static let version = "1.0.0"
-    public static let build = "226"
+    public static let build = "Phase1-Task0"
 }
 
