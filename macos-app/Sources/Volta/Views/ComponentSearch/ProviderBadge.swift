@@ -33,6 +33,8 @@ struct ProviderBadge: View {
         case "octopart": return "Octopart"
         case "octopart-cad": return "SnapEDA"
         case "jlcparts": return "JLC"
+        case "jlcpcb": return "Assembly"
+        case "lcsc": return "LCSC"
         default: return providerName.capitalized
         }
     }
@@ -46,6 +48,8 @@ struct ProviderBadge: View {
         case "octopart": return .purple
         case "octopart-cad": return .indigo
         case "jlcparts": return .orange
+        case "jlcpcb": return .teal
+        case "lcsc": return .cyan
         default: return .gray
         }
     }
