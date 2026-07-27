@@ -642,6 +642,7 @@ struct SettingsSheet: View {
 
     enum SettingsTab: String, CaseIterable, Identifiable {
         case providers = "Providers"
+        case components = "Components"
         case externalMCP = "External MCP"
         case memory = "Memory"
         case collaboration = "Collaboration"
@@ -671,6 +672,11 @@ struct SettingsSheet: View {
                 ProviderRoutingSettingsView(router: modelRouter)
                     .tabItem { Label("Providers", systemImage: "cpu") }
                     .tag(SettingsTab.providers)
+
+                // Phase 3.5 — Component data source credentials (BYOC)
+                ComponentProviderSettingsView()
+                    .tabItem { Label("Components", systemImage: "chip") }
+                    .tag(SettingsTab.components)
 
                 // Phase 215 — Memory tab
                 MemorySettingsTab()
