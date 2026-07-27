@@ -31,6 +31,7 @@ struct ProviderBadge: View {
         case "easyeda2kicad": return "EasyEDA"
         case "mouser": return "Mouser"
         case "octopart": return "Octopart"
+        case "octopart-cad": return "SnapEDA"
         case "jlcparts": return "JLC"
         default: return providerName.capitalized
         }
@@ -43,6 +44,7 @@ struct ProviderBadge: View {
         case "easyeda2kicad": return .blue
         case "mouser": return .red
         case "octopart": return .purple
+        case "octopart-cad": return .indigo
         case "jlcparts": return .orange
         default: return .gray
         }
