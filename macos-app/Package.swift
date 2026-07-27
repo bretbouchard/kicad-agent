@@ -49,6 +49,12 @@ let package = Package(
         .package(
             url: "https://github.com/huggingface/swift-transformers",
             from: "1.3.3"
+        ),
+        // Phase 1 / Task 5: GRDB.swift for component data cache.
+        // Type-safe SQLite wrapper, supports FTS for component search.
+        .package(
+            url: "https://github.com/groue/GRDB.swift",
+            from: "7.0.0"
         )
     ],
     targets: [
@@ -68,7 +74,8 @@ let package = Package(
                 .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
                 .product(name: "MLXHuggingFace", package: "mlx-swift-lm"),
                 .product(name: "HuggingFace", package: "swift-huggingface"),
-                .product(name: "Tokenizers", package: "swift-transformers")
+                .product(name: "Tokenizers", package: "swift-transformers"),
+                .product(name: "GRDB", package: "GRDB.swift")
             ],
             swiftSettings: [
                 .unsafeFlags(["-target", "arm64-apple-macosx27.0"]),
