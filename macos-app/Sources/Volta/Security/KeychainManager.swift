@@ -320,6 +320,123 @@ final class KeychainManager: @unchecked Sendable {
         return configured
     }
 
+    // MARK: - Generic Credential Storage (ARCH-P1-04)
+    //
+    // String-based account identifiers for providers needing multiple
+    // secrets (e.g., Digi-Key Client ID + Client Secret). The KCProviderKind
+    // API above delegates to these methods.
+
+    /// Store (or update) a credential value for a string-based account identifier.
+    /// Used by providers that need multiple secrets or don't fit KCProviderKind.
+    func storeCredential(_ value: String, account: String) throws {
+        guard !value.isEmpty else { throw KeychainError.emptyKey }
+
+        if useInMemory {
+            Self.memoryLock.lock()
+            defer { Self.memoryLock.unlock() }
+            Self.memoryStore["\(service)::\(account)"] = value
+            return
+        }
+
+        let data = Data(value.utf8)
+        let accessible = iCloudSyncEnabled
+            ? kSecAttrAccessibleAfterFirstUnlock
+            : kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+
+        // Delete existing first (delete+add is the battle-tested pattern).
+        try? deleteCredential(account: account)
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecAttrAccessible as String: accessible,
+            kSecAttrSynchronizable as String: iCloudSyncEnabled ? kCFBooleanTrue! : kCFBooleanFalse!,
+            kSecValueData as String: data
+        ]
+
+        let status = SecItemAdd(query as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            if status == errSecMissingEntitlement {
+                Logger.models.info("BYOK: Keychain entitlement missing — falling back to in-memory store")
+                Self.memoryLock.lock()
+                defer { Self.memoryLock.unlock() }
+                Self.memoryStore["\(service)::\(account)"] = value
+                return
+            }
+            Logger.models.error("Keychain SecItemAdd failed: OSStatus \(status)")
+            throw KeychainError.osStatus(status)
+        }
+        Logger.models.info("Credential stored for account=\(account)")
+    }
+
+    /// Load a credential by account identifier. Returns nil if not found.
+    func loadCredential(account: String) throws -> String? {
+        if useInMemory {
+            Self.memoryLock.lock()
+            defer { Self.memoryLock.unlock() }
+            return Self.memoryStore["\(service)::\(account)"]
+        }
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecReturnData as String: kCFBooleanTrue!,
+            kSecAttrSynchronizable as String: kSecAttrSynchronizableAny
+        ]
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        if status == errSecItemNotFound { return nil }
+        if status == errSecMissingEntitlement {
+            Self.memoryLock.lock()
+            defer { Self.memoryLock.unlock() }
+            return Self.memoryStore["\(service)::\(account)"]
+        }
+        guard status == errSecSuccess else {
+            Logger.models.error("Keychain SecItemCopyMatching failed: OSStatus \(status)")
+            throw KeychainError.osStatus(status)
+        }
+        guard let data = item as? Data,
+              let value = String(data: data, encoding: .utf8) else {
+            throw KeychainError.invalidEncoding
+        }
+        return value
+    }
+
+    /// Delete a credential by account identifier. Idempotent.
+    func deleteCredential(account: String) throws {
+        if useInMemory {
+            Self.memoryLock.lock()
+            defer { Self.memoryLock.unlock() }
+            Self.memoryStore.removeValue(forKey: "\(service)::\(account)")
+            return
+        }
+
+        for synchronizable in [kCFBooleanTrue!, kCFBooleanFalse!] {
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: account,
+                kSecAttrSynchronizable as String: synchronizable
+            ]
+            let status = SecItemDelete(query as CFDictionary)
+            if status == errSecMissingEntitlement {
+                Self.memoryLock.lock()
+                defer { Self.memoryLock.unlock() }
+                Self.memoryStore.removeValue(forKey: "\(service)::\(account)")
+                continue
+            }
+            if status != errSecSuccess && status != errSecItemNotFound {
+                Logger.models.error("Keychain SecItemDelete failed: OSStatus \(status)")
+                throw KeychainError.osStatus(status)
+            }
+        }
+        Logger.models.info("Credential deleted for account=\(account)")
+    }
+
     // MARK: - Internal helpers
 
     /// Account identifier per provider. Namespaced so a single service
