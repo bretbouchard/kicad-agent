@@ -75,10 +75,13 @@ final class EasyEdaProvider: CADModelProvider, @unchecked Sendable {
         // Ensure cache directory exists.
         try FileManager.default.createDirectory(at: partCacheDir, withIntermediateDirectories: true)
 
-        // Run: easyeda2kicad --full --lcsc_id=CXXXX --output=<dir>
+        // Run: easyeda2kicad --full --lcsc_id=CXXXX --output=<dir>/<lcsc>.kicad_sym --overwrite
+        // The CLI expects a .kicad_sym file path as --output, not a directory.
+        // It creates <basename>.kicad_sym, <basename>.pretty/*.kicad_mod, <basename>.3dshapes/*.wrl
+        let outputFile = partCacheDir.appendingPathComponent("\(lcscPartNumber).kicad_sym")
         let result = try await processRunner.run(
             executable: executablePath,
-            arguments: ["--full", "--lcsc_id=\(lcscPartNumber)", "--output=\(partCacheDir.path)"]
+            arguments: ["--full", "--lcsc_id=\(lcscPartNumber)", "--output=\(outputFile.path)", "--overwrite"]
         )
 
         if result.exitCode != 0 {
@@ -91,6 +94,7 @@ final class EasyEdaProvider: CADModelProvider, @unchecked Sendable {
         }
 
         // Validate and cache output files (SEC-P2-02).
+        // Scan the cache dir recursively — files may be in .pretty/ or .3dshapes/ subdirs.
         let validated = validateAndMapFiles(in: partCacheDir, lcscPartNumber: lcscPartNumber)
         return validated
     }
@@ -98,14 +102,15 @@ final class EasyEdaProvider: CADModelProvider, @unchecked Sendable {
     // MARK: - File Validation (SEC-P2-02)
 
     /// Validate output files before accepting them as cached CAD models.
+    /// Scans recursively — files may be in .pretty/ or .3dshapes/ subdirs.
     private func validateAndMapFiles(in dir: URL, lcscPartNumber: String) -> [CADModelRef] {
         let fm = FileManager.default
-        guard let entries = try? fm.contentsOfDirectory(atPath: dir.path) else { return [] }
+        guard let enumerator = fm.enumerator(atPath: dir.path) else { return [] }
 
         var refs: [CADModelRef] = []
         let now = Date()
 
-        for entry in entries {
+        while let entry = enumerator.nextObject() as? String {
             let fileURL = dir.appendingPathComponent(entry)
             guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else { continue }
             let prefix = content.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -118,10 +123,8 @@ final class EasyEdaProvider: CADModelProvider, @unchecked Sendable {
             } else if entry.hasSuffix(".wrl") && prefix.hasPrefix("#VRML V2.0") {
                 format = .wrl
             } else if entry.hasSuffix(".step") || entry.hasSuffix(".stp") {
-                // STEP files validated by magic number, not text prefix
                 format = .step
             } else {
-                Logger.models.warning("EasyEda: rejecting unvalidated file \(entry) — prefix mismatch")
                 continue
             }
 
