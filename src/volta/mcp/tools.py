@@ -1,15 +1,19 @@
 """Tool definitions and response formatting for the component search MCP server.
 
-Wraps EasyEdaClient with input validation, value mapping, and structured responses.
-All EasyEdaClient calls are synchronous, so callers should use asyncio.to_thread().
+Uses the ComponentSource ABC to dispatch queries to any registered source.
+The default registry includes EasyEdaSource and DigiKeySource (when configured).
+Callers can register additional sources at runtime.
+
+All ComponentSource calls are synchronous; callers should use asyncio.to_thread().
 """
 
 from __future__ import annotations
 
 import re
-from dataclasses import asdict
 from typing import Any
 
+from volta.crawler.component_source import ComponentRegistry, ComponentSource
+from volta.crawler.digikey_source import DigiKeySource
 from volta.crawler.easyeda_api import (
     EasyEdaClient,
     EasyEdaComponentData,
@@ -17,6 +21,7 @@ from volta.crawler.easyeda_api import (
     EasyEdaPin,
     JlcpcbComponent,
 )
+from volta.crawler.easyeda_source import EasyEdaSource
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -27,8 +32,6 @@ _MAX_LIMIT = 50
 _LCSC_RE = re.compile(r"^C\d+$")
 
 # EasyEDA pin type int → KiCad electrical type string
-# EasyEDA docs: 0=unspecified, 1=input, 2=output, 3=bidirectional, 4=power
-# We map to the closest KiCad electrical_type equivalents.
 _PIN_TYPE_MAP: dict[int, str] = {
     0: "passive",
     1: "input",
@@ -43,12 +46,32 @@ _PART_TYPE_MAP: dict[str, str] = {
     "extended": "expand",
 }
 
-# Rate limiting: minimum seconds between API calls
-_MIN_CALL_INTERVAL = 0.3
+
+# ---------------------------------------------------------------------------
+# Default registry factory
+# ---------------------------------------------------------------------------
+
+
+def create_default_registry(
+    easyeda_client: EasyEdaClient | None = None,
+) -> ComponentRegistry:
+    """Create a ComponentRegistry with all available sources registered.
+
+    Args:
+        easyeda_client: Optional EasyEdaClient instance (for cache dir config).
+
+    Returns:
+        ComponentRegistry with EasyEdaSource always registered and
+        DigiKeySource registered if credentials are available.
+    """
+    registry = ComponentRegistry()
+    registry.register(EasyEdaSource(client=easyeda_client))
+    registry.register(DigiKeySource())
+    return registry
 
 
 # ---------------------------------------------------------------------------
-# Input validation
+# Input validation (unchanged)
 # ---------------------------------------------------------------------------
 
 
@@ -57,7 +80,6 @@ class ValidationError(ValueError):
 
 
 def _validate_keyword(keyword: str) -> str:
-    """Validate and normalize a search keyword."""
     keyword = keyword.strip()
     if not keyword:
         raise ValidationError("keyword must not be empty")
@@ -67,7 +89,6 @@ def _validate_keyword(keyword: str) -> str:
 
 
 def _validate_lcsc_id(lcsc_id: str) -> str:
-    """Validate an LCSC part number (e.g., 'C83700')."""
     lcsc_id = lcsc_id.strip()
     if not _LCSC_RE.match(lcsc_id):
         raise ValidationError(f"invalid LCSC part number: {lcsc_id!r} (expected format: C followed by digits)")
@@ -75,14 +96,12 @@ def _validate_lcsc_id(lcsc_id: str) -> str:
 
 
 def _validate_limit(value: int, name: str = "limit") -> int:
-    """Validate a limit parameter."""
     if value < 1 or value > _MAX_LIMIT:
         raise ValidationError(f"{name} must be between 1 and {_MAX_LIMIT}")
     return value
 
 
 def _map_part_type(part_type: str | None) -> str | None:
-    """Map user-facing part_type to API value."""
     if part_type is None:
         return None
     api_value = _PART_TYPE_MAP.get(part_type)
@@ -92,12 +111,55 @@ def _map_part_type(part_type: str | None) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Response formatting
+# Response formatting (vendor-neutral)
+# ---------------------------------------------------------------------------
+
+
+def _format_component_v2(comp: Any) -> dict[str, Any]:
+    """Format a vendor-neutral Component for MCP response."""
+    return {
+        "part_number": comp.part_number,
+        "manufacturer": comp.manufacturer,
+        "description": comp.description,
+        "category": comp.category,
+        "pricing": [
+            {
+                "distributor": p.distributor,
+                "unit_price": p.unit_price,
+                "min_order_qty": p.min_order_qty,
+                "currency": p.currency,
+                "tiers": [dict(t) for t in p.tiered_pricing] if p.tiered_pricing else [],
+            }
+            for p in comp.pricing
+        ],
+        "stock": [
+            {
+                "distributor": s.distributor,
+                "quantity": s.quantity,
+                "lead_time": s.lead_time,
+            }
+            for s in comp.stock
+        ],
+        "specs": dict(comp.specs),
+        "datasheet": comp.datasheet_url,
+        "lcsc": comp.lcsc_part_number,
+        "sources": [
+            {
+                "provider": s.provider,
+                "provider_part_id": s.provider_part_id,
+                "confidence": s.confidence,
+            }
+            for s in comp.sources
+        ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Legacy response formatting (backward compat with existing MCP clients)
 # ---------------------------------------------------------------------------
 
 
 def _format_pin(pin: EasyEdaPin) -> dict[str, Any]:
-    """Format a pin with human-readable type."""
     return {
         "number": pin.pin_number,
         "name": pin.pin_name,
@@ -109,7 +171,6 @@ def _format_pin(pin: EasyEdaPin) -> dict[str, Any]:
 
 
 def _format_pad(pad: EasyEdaFootprintPad) -> dict[str, Any]:
-    """Format a pad."""
     return {
         "number": pad.pad_number,
         "x": pad.pos_x,
@@ -122,7 +183,6 @@ def _format_pad(pad: EasyEdaFootprintPad) -> dict[str, Any]:
 
 
 def _format_component(comp: JlcpcbComponent) -> dict[str, Any]:
-    """Format a JLCPCB component for MCP response."""
     return {
         "lcsc": comp.lcsc,
         "name": comp.name,
@@ -138,7 +198,6 @@ def _format_component(comp: JlcpcbComponent) -> dict[str, Any]:
 
 
 def _format_component_data(data: EasyEdaComponentData) -> dict[str, Any]:
-    """Format full component CAD data for MCP response."""
     return {
         "lcsc": data.lcsc,
         "title": data.title,
@@ -149,7 +208,6 @@ def _format_component_data(data: EasyEdaComponentData) -> dict[str, Any]:
 
 
 def _format_suggestion(comp: JlcpcbComponent) -> dict[str, Any]:
-    """Lightweight format for autocomplete suggestions."""
     return {
         "lcsc": comp.lcsc,
         "name": comp.name,
@@ -159,7 +217,47 @@ def _format_suggestion(comp: JlcpcbComponent) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Tool implementations
+# Tool implementations — multi-source (new API)
+# ---------------------------------------------------------------------------
+
+
+def search_all_sources(
+    registry: ComponentRegistry,
+    keyword: str,
+    limit: int = 10,
+) -> dict[str, Any]:
+    """Search across all registered sources and return merged results.
+
+    Args:
+        registry: ComponentRegistry with registered sources.
+        keyword: Search query (e.g., "STM32", "NE555", "100nF 0402").
+        limit: Maximum results per source (1-50).
+
+    Returns:
+        Dict mapping source name to {results, total}.
+
+    Raises:
+        ValidationError: If inputs fail validation.
+    """
+    keyword = _validate_keyword(keyword)
+    limit = _validate_limit(limit)
+
+    raw = registry.search_all(keyword, limit=limit)
+
+    return {
+        source_name: {
+            "results": [_format_component_v2(c) for c in comps],
+            "total": total,
+        }
+        for source_name, (comps, total) in raw.items()
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tool implementations — legacy (backward compat)
+# ---------------------------------------------------------------------------
+# These retain the original EasyEdaClient-specific API for existing MCP clients.
+# New code should use search_all_sources() with a ComponentRegistry.
 # ---------------------------------------------------------------------------
 
 
@@ -169,19 +267,9 @@ def search_components(
     limit: int = 10,
     part_type: str | None = None,
 ) -> dict[str, Any]:
-    """Search JLCPCB components by keyword.
+    """Search JLCPCB components by keyword. (Legacy — uses EasyEdaClient directly.)
 
-    Args:
-        client: EasyEdaClient instance.
-        keyword: Search query (e.g., "STM32", "NE555", "100nF 0402").
-        limit: Maximum results to return (1-50).
-        part_type: "basic" for Basic parts, "extended" for Extended, None for both.
-
-    Returns:
-        Dict with "results" list and "total" count.
-
-    Raises:
-        ValidationError: If inputs fail validation.
+    New code should use search_all_sources() with a ComponentRegistry instead.
     """
     keyword = _validate_keyword(keyword)
     limit = _validate_limit(limit)
@@ -190,11 +278,10 @@ def search_components(
     components, total = client.search_jlcpcb(
         keyword=keyword,
         page=1,
-        page_size=min(limit, 25),  # JLCPCB max page size is 25
+        page_size=min(limit, 25),
         part_type=api_part_type,
     )
 
-    # If limit > 25, fetch additional pages
     if limit > 25 and len(components) < limit:
         page = 2
         while len(components) < limit and len(components) < total:
@@ -219,19 +306,7 @@ def get_component_details(
     client: EasyEdaClient,
     lcsc_id: str,
 ) -> dict[str, Any]:
-    """Get full CAD data for a specific LCSC component.
-
-    Args:
-        client: EasyEdaClient instance.
-        lcsc_id: LCSC part number (e.g., "C83700").
-
-    Returns:
-        Dict with lcsc, title, package, pins, and pads.
-
-    Raises:
-        ValidationError: If lcsc_id is malformed.
-        ValueError: If component not found.
-    """
+    """Get full CAD data for a specific LCSC component. (Legacy)"""
     lcsc_id = _validate_lcsc_id(lcsc_id)
 
     data = client.get_component_cad_data(lcsc_id)
@@ -247,20 +322,7 @@ def search_and_detail(
     detail_limit: int = 3,
     search_limit: int = 10,
 ) -> dict[str, Any]:
-    """Search components and fetch full CAD data for top results.
-
-    Args:
-        client: EasyEdaClient instance.
-        keyword: Search query.
-        detail_limit: Number of top results to fetch CAD data for (1-10).
-        search_limit: Total search results to return (1-50).
-
-    Returns:
-        Dict with "results" (top N with full pins/pads) and "total".
-
-    Raises:
-        ValidationError: If inputs fail validation.
-    """
+    """Search components and fetch full CAD data for top results. (Legacy)"""
     keyword = _validate_keyword(keyword)
     search_limit = _validate_limit(search_limit)
     detail_limit = _validate_limit(detail_limit, name="detail_limit")
@@ -288,7 +350,6 @@ def search_and_detail(
 
     results = [_format_component(c) for c in components[:search_limit]]
 
-    # Fetch CAD data for top N
     for i in range(min(detail_limit, len(results))):
         lcsc = results[i]["lcsc"]
         data = client.get_component_cad_data(lcsc)
@@ -307,19 +368,7 @@ def get_component_suggestions(
     keyword: str,
     limit: int = 5,
 ) -> dict[str, Any]:
-    """Quick suggestion list for autocomplete-style UX.
-
-    Args:
-        client: EasyEdaClient instance.
-        keyword: Search query.
-        limit: Maximum suggestions (1-50).
-
-    Returns:
-        Dict with "suggestions" list (lcsc, name, package, stock only).
-
-    Raises:
-        ValidationError: If inputs fail validation.
-    """
+    """Quick suggestion list for autocomplete-style UX. (Legacy)"""
     keyword = _validate_keyword(keyword)
     limit = _validate_limit(limit)
 

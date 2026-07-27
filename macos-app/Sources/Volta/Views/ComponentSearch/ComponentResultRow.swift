@@ -43,10 +43,21 @@ struct ComponentResultRow: View {
 
                 Spacer()
 
-                // Provider badges
+                // Provider badges + freshness dot
                 HStack(spacing: 3) {
                     ForEach(component.sources, id: \.id) { source in
                         ProviderBadge(providerName: source.provider)
+                    }
+                    if let lastUpdated = component.sources.map(\.lastUpdated).max() {
+                        let age = Date().timeIntervalSince(lastUpdated)
+                        let freshness = FreshnessCalculator.freshness(
+                            age: age,
+                            ttl: FreshnessCalculator.pricingTTL
+                        )
+                        Circle()
+                            .fill(freshness.color)
+                            .frame(width: 6, height: 6)
+                            .help(FreshnessCalculator.formatAge(age))
                     }
                 }
             }
