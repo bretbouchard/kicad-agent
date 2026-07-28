@@ -144,6 +144,7 @@ Complete routing stack production-ready:
 - **AI Interface**: JSON operation schema, never raw text — **Why**: Prevents file corruption
 - **Validation**: Every edit must pass ERC/DRC before commit — **Why**: Catch errors before they compound
 - **Architecture**: LLM → intent → AST mutation → serializer → validated file — **Why**: Deterministic, diffable, testable, repairable
+- **Sandbox Discipline**: All subprocesses and bundled tools (Python daemon, Freerouting JAR, helper binaries) must resolve from `Bundle.main.resourcePath`. No host-filesystem lookups (e.g. `/Applications/KiCad/`), no `which`/PATH resolution, no `pip install` requiring user environment. Volta owns its dependencies — users install Volta, not pcbnew, easyeda2kicad, or any third-party CLI. — **Why**: macOS App Sandbox enforces this anyway; we codify it so every future addition lands sandbox-clean by default.
 
 ## Tooling Baseline
 
