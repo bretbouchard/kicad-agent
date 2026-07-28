@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: — Gap-Closure Phases
-status: planning-complete
-stopped_at: Phase 253 routing plugin system — execution-ready (Volta Component Integration v8.0 active)
-last_updated: "2026-07-28T03:00:00.000Z"
+status: execute
+stopped_at: Phase 253 Task 2 REDO — DSN port complete (4 commits, 47/47 routing tests pass)
+last_updated: "2026-07-28T07:30:00.000Z"
 last_activity: 2026-07-28
 progress:
   total_phases: 31
   completed_phases: 21
   total_plans: 24
-  completed_plans: 22
+  completed_plans: 23
   percent: 92
 ---
 
@@ -666,11 +666,19 @@ Next: plan Phase 205 (Board Metadata Foundation) — title_block parse/write + B
 
 ### Phase 253: Routing Plugin System (migrated 2026-07-28)
 
-- **Status:** Execution-ready (research complete, code pending Volta PCB Swift worktree)
+- **Status:** Task 2 REDO (DSN port) complete on `wt/dsn-port` branch. Task 6 sandbox cleanup executed in earlier session.
 - **Goal:** Apply the provider plugin pattern to auto-routing engines (Freerouting, KiCad native, optional DeepPCB)
 - **Cloud routing verdict:** DeepPCB enterprise-only ($900/mo, no public REST docs, no self-serve) — see `.planning/research/PHASE4_DEEPPPCB_VERDICT.md`. Quilter AI removed from scope (Bret decision 2026-07-28)
 - **ADs:** RoutingProvider mirrors ComponentDataProvider shape (Sendable + ProviderAvailability + registry pattern); domain isolation in adapters; vendor-neutral RoutingRules; long-running op semantics (cancellation, progress streaming); cloud routing research-gated
-- **Files:** `.planning/phases/253-routing-plugin-system/PLAN.md` + `PHASE4_EXECUTION_NOTES.md`
+- **Task 2 REDO commits** (worktree `wt/dsn-port`):
+  - `4ab5e6c` feat(routing): SpecctraDSNWriter — pure-Swift DSN generator
+  - `a04de09` feat(routing): SpecctraDSNReader + DSNConverter cleanup
+  - `1de05fa` feat(routing): SegmentSplicer — SES to KiCad splice
+  - `52a42cb` feat(routing): FreeroutingProvider — native Swift pipeline + SegmentSplicer fixes
+- **Task 2 REDO tests:** 47/47 routing tests pass (DSNConverter 9/9, SegmentSplicer 6/6, SpecctraDSNReader 5/5, FreeroutingProvider 11/11, RoutingTypes 8/8, RoutingProviderRegistry 8/8).
+- **Gate 2 review:** APPROVED (see `253-COUNCIL-EXEC-REVIEW.md`). 0 P0/P1 findings; 5 deferred items in `deferred-items.md` (pre-existing test failures outside Commit 4 scope).
+- **Sandbox rule:** VERIFIED — no Python `pcbnew` or `kicad-cli` at runtime. Single non-code reference is a documentation comment.
+- **Files:** `.planning/phases/253-routing-plugin-system/PLAN.md` + `PHASE4_EXECUTION_NOTES.md` + `253-COUNCIL-EXEC-REVIEW.md` + `deferred-items.md`
 - **Migration source:** `~/.buzz/PLANS/volta-component-integration/phases/4-routing-plugin-system/` (historical, do not edit)
 
 ### Phase 254: Compliance + File Import (migrated 2026-07-28)
