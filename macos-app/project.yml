@@ -196,6 +196,10 @@ targets:
       # Excluded from the app target because the TestingMacros plugin
       # is unavailable there.
       - path: Sources/Volta/Testing
+      # Bundle PCB fixtures into the test target so Bundle.module can find them.
+      # Used by Phase 4 Task 2 Freerouting round-trip smoke tests.
+      - path: Tests/VoltaTests/Routing/Fixtures
+        buildPhase: resources
     dependencies:
       - target: VoltaPCB
     settings:

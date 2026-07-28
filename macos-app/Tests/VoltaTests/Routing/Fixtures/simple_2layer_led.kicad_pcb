@@ -1,0 +1,111 @@
+(kicad-pcb
+  (version 20240606)
+  (generator "volta-fixture")
+  (generator_version "9.0")
+  (general
+    (thickness 1.6)
+    (legacy_arduino_format 0)
+    (legacy_nets 0)
+  )
+  (paper "A4")
+  (title_block
+    (title "simple_2layer_led")
+    (date "2026-07-28")
+    (rev "1")
+    (comment "Phase 4 Task 2 — minimal 2-layer Freerouting fixture for end-to-end round-trip smoke test")
+  )
+  (layers
+    (0 "F.Cu" signal "F.Cu" none)
+    (2 "B.Cu" signal "B.Cu" none)
+    (9 "F.SilkS" user "F.Silks" none)
+    (11 "B.SilkS" user "B.Silks" none)
+    (13 "F.Fab" user "F.Fab" none)
+    (15 "B.Fab" user "B.Fab" none)
+    (43 "F.CrtYd" user "F.Courtyard" none)
+    (44 "B.CrtYd" user "B.Courtyard" none)
+    (71 "Edge.Cuts" user "Edge.Cuts" none)
+  )
+  (setup
+    (pad_to_mask_clearance 0)
+    (allow_soldermask_bridges 0)
+    (aux_axis_origin 0 0)
+    (grid_origin 0 0)
+    (pcbplotparams
+      (layerselection "0x0001000c_ffffffff")
+      (plot_on_all_layers_selection "0x00000000_00000000")
+      (disableapertmacros 0)
+      (usegerberextensions 0)
+      (usegerberattributes 0)
+      (pdf_center 0)
+      (pdftrackvia 0)
+    )
+  )
+  (net 0 "")
+  (net 1 "GND")
+  (net 2 "VCC")
+  (net 3 "NET_LED")
+  (net 4 "NET_R1")
+  (net_class "Default" "Default"
+    (clearance 0.2)
+    (trace_width 0.25)
+    (via_size 0.8)
+    (via_drill 0.4)
+    (uvia_size 0.3)
+    (uvia_drill 0.1)
+  )
+
+  ; ── J1: 2-pin connector (VCC, GND) ──
+  (footprint "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical"
+    (layer "F.Cu")
+    (uuid "11111111-0000-0000-0000-000000000001")
+    (at 10.0 10.0)
+    (property "Reference" "J1" (at 0 -2.5 0) (layer "F.SilkS") (uuid "11111111-0000-0000-0000-000000000101")
+      (effects (font (size 1 1) (thickness 0.15))))
+    (property "Value"   "Conn_01x02" (at 0 2.5 0) (layer "F.SilkS") (uuid "11111111-0000-0000-0000-000000000102")
+      (effects (font (size 1 1) (thickness 0.15))))
+    (pad "1" thru_hole rect (at 0 0) (size 1.7 1.7) (drill 1.0) (layers "*.Cu" "*.Mask") (net 2 "VCC") (uuid "11111111-0000-0000-0000-0000000001a1"))
+    (pad "2" thru_hole circ (at 0 2.54) (size 1.7 1.7) (drill 1.0) (layers "*.Cu" "*.Mask") (net 1 "GND") (uuid "11111111-0000-0000-0000-0000000001a2"))
+  )
+
+  ; ── R1: 0603 resistor between NET_R1 and GND ──
+  (footprint "Resistor_SMD:R_0603_1608Metric"
+    (layer "F.Cu")
+    (uuid "22222222-0000-0000-0000-000000000002")
+    (at 25.0 15.0)
+    (property "Reference" "R1" (at 0 -1.5 0) (layer "F.SilkS") (uuid "22222222-0000-0000-0000-000000000201")
+      (effects (font (size 1 1) (thickness 0.15))))
+    (property "Value" "330" (at 0 1.5 0) (layer "F.SilkS") (uuid "22222222-0000-0000-0000-000000000202")
+      (effects (font (size 1 1) (thickness 0.15))))
+    (pad "1" smd roundrect (at -0.825 0) (size 0.8 0.95) (layers "F.Cu" "F.Paste" "F.Mask") (net 4 "NET_R1") (uuid "22222222-0000-0000-0000-0000000002a1")
+      (roundrect_rratio 0.25))
+    (pad "2" smd roundrect (at 0.825 0) (size 0.8 0.95) (layers "F.Cu" "F.Paste" "F.Mask") (net 1 "GND") (uuid "22222222-0000-0000-0000-0000000002a2")
+      (roundrect_rratio 0.25))
+  )
+
+  ; ── D1: 0603 LED between NET_LED and NET_R1 (forms series: VCC → LED → R1 → GND) ──
+  (footprint "LED_SMD:LED_0603_1608Metric"
+    (layer "F.Cu")
+    (uuid "33333333-0000-0000-0000-000000000003")
+    (at 40.0 15.0)
+    (property "Reference" "D1" (at 0 -1.5 0) (layer "F.SilkS") (uuid "33333333-0000-0000-0000-000000000301")
+      (effects (font (size 1 1) (thickness 0.15))))
+    (property "Value" "LED" (at 0 1.5 0) (layer "F.SilkS") (uuid "33333333-0000-0000-0000-000000000302")
+      (effects (font (size 1 1) (thickness 0.15))))
+    (pad "1" smd roundrect (at -0.825 0) (size 0.8 0.95) (layers "F.Cu" "F.Paste" "F.Mask") (net 3 "NET_LED") (uuid "33333333-0000-0000-0000-0000000003a1")
+      (roundrect_rratio 0.25))
+    (pad "2" smd roundrect (at 0.825 0) (size 0.8 0.95) (layers "F.Cu" "F.Paste" "F.Mask") (net 4 "NET_R1") (uuid "33333333-0000-0000-0000-0000000003a2")
+      (roundrect_rratio 0.25))
+  )
+
+  ; ── Edge cuts (board outline): 50mm × 30mm rect ──
+  (gr_line (start 5 5) (end 55 5) (layer "Edge.Cuts") (width 0.05) (uuid "eeeeeeee-0000-0000-0000-000000000001"))
+  (gr_line (start 55 5) (end 55 35) (layer "Edge.Cuts") (width 0.05) (uuid "eeeeeeee-0000-0000-0000-000000000002"))
+  (gr_line (start 55 35) (end 5 35) (layer "Edge.Cuts") (width 0.05) (uuid "eeeeeeee-0000-0000-0000-000000000003"))
+  (gr_line (start 5 35) (end 5 5) (layer "Edge.Cuts") (width 0.05) (uuid "eeeeeeee-0000-0000-0000-000000000004"))
+
+  ; No (segment ...) blocks — this is the input to Freerouting.
+  ; After Freerouting runs, output DSN will contain the (wire ...) entries
+  ; representing the routes that should be applied back into this board.
+
+  (embedded_fonts no)
+)
