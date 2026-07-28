@@ -175,7 +175,7 @@ struct ERCParityTests {
 
     @Test("erc-cli binary is available (or suite is skipped)")
     func ercCLIAvailable() {
-        // ponystail: don't gate the suite on a build artifact the dev may
+        // ponytail: don't gate the suite on a build artifact the dev may
         // have cleaned. Print a paper trail and skip; the parity tests
         // below also skip if the binary is missing.
         guard let binary = Self.locateERCCLI() else {

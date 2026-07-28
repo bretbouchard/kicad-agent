@@ -101,7 +101,7 @@ final class CacheManagerTests: XCTestCase {
 
     func test_cadCacheDirPath() throws {
         let cache = try makeCache()
-        let dir = cache.cadCacheDir(provider: "easyeda2kicad", lcscPartNumber: "C2040")
+        let dir = cache.cadCacheDir(provider: "easyeda", lcscPartNumber: "C2040")
         XCTAssertTrue(dir.path.contains("C2040"))
     }
 }

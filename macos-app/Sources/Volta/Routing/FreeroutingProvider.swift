@@ -48,10 +48,10 @@ public enum FreeroutingError: Error, LocalizedError, Equatable {
     public var errorDescription: String? {
         switch self {
         case .javaNotFound:
-            return "Java runtime not found. Install OpenJDK: `brew install openjdk` and ensure `java` is on PATH."
+            return "Java runtime not found. Install OpenJDK and set $JAVA_HOME (e.g. `brew install openjdk` then `export JAVA_HOME=$(/usr/libexec/java_home)`)."
         case .jarNotFound(let searched):
             let list = searched.joined(separator: "\n  • ")
-            return "Freerouting JAR not found. Searched:\n  • \(list)\nDownload from freerouting.app or `brew install freerouting`."
+            return "Freerouting JAR not found. Searched:\n  • \(list)\nThe freerouting.jar is bundled in the app; this error means the bundle is corrupted. Set $FREEROUTING_JAR_PATH for development to override the bundled JAR."
         case .nonZeroExit(let code, let stderr):
             return "Freerouting exited with code \(code). stderr: \(stderr.prefix(500))"
         case .timeout(let seconds):
@@ -86,6 +86,7 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
     // MARK: - Injected deps
 
     private let runner: any ProcessRunner
+    private let javaLocator: JavaLocator
     private let jarPathOverride: URL?
     private let dsnWriter: SpecctraDSNWriter
     private let dsnReader: SpecctraDSNReader
@@ -100,8 +101,10 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
 
     /// Production initializer (uses the real Process runner).
     public convenience init(jarPathOverride: URL? = nil) {
+        let realRunner = RealProcessRunner()
         self.init(
-            runner: RealProcessRunner(),
+            runner: realRunner,
+            javaLocator: JavaLocator(runner: realRunner),
             jarPathOverride: jarPathOverride,
             dsnWriter: SpecctraDSNWriter(),
             dsnReader: SpecctraDSNReader(),
@@ -112,12 +115,14 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
     /// Designated initializer for tests in the same module.
     init(
         runner: any ProcessRunner,
+        javaLocator: JavaLocator? = nil,
         jarPathOverride: URL? = nil,
         dsnWriter: SpecctraDSNWriter = SpecctraDSNWriter(),
         dsnReader: SpecctraDSNReader = SpecctraDSNReader(),
         splicer: SegmentSplicer = SegmentSplicer()
     ) {
         self.runner = runner
+        self.javaLocator = javaLocator ?? JavaLocator(runner: runner)
         self.jarPathOverride = jarPathOverride
         self.dsnWriter = dsnWriter
         self.dsnReader = dsnReader
@@ -284,33 +289,10 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
     // MARK: - Detection helpers
 
     /// Probe for a working Java install. Returns the absolute path or nil.
-    /// Sandbox-clean: only $JAVA_HOME + /usr/libexec/java_home (no PATH/which).
+    /// Delegates to `JavaLocator`, which uses the injected `ProcessRunner` so
+    /// subprocess IO never blocks the cooperative thread pool.
     func probeJava() async -> String? {
-        // 1. $JAVA_HOME first (user-set env var = explicit user intent).
-        if let home = ProcessInfo.processInfo.environment["JAVA_HOME"] {
-            let url = URL(fileURLWithPath: "\(home)/bin/java")
-            if FileManager.default.isExecutableFile(atPath: url.path) {
-                return url.path
-            }
-        }
-        // 2. /usr/libexec/java_home (macOS system framework — not PATH, not which).
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/libexec/java_home")
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-        do {
-            try process.run()
-            process.waitUntilExit()
-            guard process.terminationStatus == 0 else { return nil }
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            guard let home = String(data: data, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines), !home.isEmpty else { return nil }
-            let javaURL = URL(fileURLWithPath: "\(home)/bin/java")
-            return FileManager.default.isExecutableFile(atPath: javaURL.path) ? javaURL.path : nil
-        } catch {
-            return nil
-        }
+        await javaLocator.locate()
     }
 
     /// Resolve the Freerouting JAR URL via sandbox-clean lookups.

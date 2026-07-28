@@ -53,6 +53,46 @@ struct FreeroutingProviderTests {
         #expect(reason.contains("Freerouting") || reason.contains("JAR") || reason.contains("jar") || reason.contains("Bundle"))
     }
 
+    @Test("Availability is .unavailable(javaNotFound) when JavaLocator returns nil")
+    func availabilityNoJava() async {
+        // Unset JAVA_HOME so JavaLocator falls through to the stubbed runner.
+        unsetenv("JAVA_HOME")
+        defer {
+            // Best-effort restore — leave unset, downstream tests set it explicitly.
+        }
+
+        // Stub the JavaLocator with a runner that always reports no Java
+        // found. This makes the availability path deterministic in CI.
+        let stubRunner = StubProcessRunner(
+            result: ProcessResult(stdout: "", stderr: "", exitCode: 1)
+        )
+        let locator = JavaLocator(runner: stubRunner)
+        let provider = FreeroutingProvider(
+            runner: FreeroutingProcessRunner(whichResults: [:], runResults: [:]),
+            javaLocator: locator
+        )
+        // Even when JAR is overridden, no java ⇒ .unavailable(javaNotFound).
+        let providerWithJar = FreeroutingProvider(
+            runner: FreeroutingProcessRunner(whichResults: [:], runResults: [:]),
+            javaLocator: locator,
+            jarPathOverride: Self.freshFakeJAR()
+        )
+
+        let avail1 = await provider.availability
+        guard case .unavailable(let reason1) = avail1 else {
+            Issue.record("Expected .unavailable, got \(avail1)")
+            return
+        }
+        #expect(reason1.lowercased().contains("java"))
+
+        let avail2 = await providerWithJar.availability
+        guard case .unavailable(let reason2) = avail2 else {
+            Issue.record("Expected .unavailable, got \(avail2)")
+            return
+        }
+        #expect(reason2.lowercased().contains("java"))
+    }
+
     @Test("Availability is .available when JAR override + java detected")
     func availabilityReady() async {
         // The runner's `which()` is retained by the mock but the sandbox-clean
@@ -499,5 +539,24 @@ final class FreeroutingProcessRunner: ProcessRunner, @unchecked Sendable {
         case .whichFailed(let code):
             return ProcessResult(stdout: "", stderr: "", exitCode: code)
         }
+    }
+}
+
+// MARK: - StubProcessRunner
+
+/// Minimal ProcessRunner stub used by the JavaLocator-aware
+/// `availabilityNoJava` test. Returns a single canned ProcessResult for
+/// every run() call — no per-key dispatch, no real subprocess IO.
+///
+/// Distinct from `FreeroutingProcessRunner` above because that mock
+/// inspects keys/labels tied to Freerouting's shell-out semantics, not
+/// JavaLocator's `/usr/libexec/java_home` call.
+final class StubProcessRunner: ProcessRunner, @unchecked Sendable {
+    let result: ProcessResult
+    init(result: ProcessResult) {
+        self.result = result
+    }
+    func run(executable: String, arguments: [String]) async throws -> ProcessResult {
+        result
     }
 }
