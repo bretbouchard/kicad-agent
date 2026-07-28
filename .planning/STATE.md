@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: — Gap-Closure Phases
 status: planning-complete
-stopped_at: Phase 250 portable build complete — autonomous sweep done
-last_updated: "2026-07-15T16:30:00.000Z"
-last_activity: 2026-07-15
+stopped_at: Phase 253 routing plugin system — execution-ready (Volta Component Integration v8.0 active)
+last_updated: "2026-07-28T03:00:00.000Z"
+last_activity: 2026-07-28
 progress:
   total_phases: 31
   completed_phases: 21
@@ -641,3 +641,54 @@ Next: plan Phase 205 (Board Metadata Foundation) — title_block parse/write + B
   - InteractiveRoutingSession.ingest_freerouting_result (SES wires → suggestions)
   - Strategy output validation (H4 — unknown nets/invalid backends raise ValueError)
   - 66 Phase 100 tests + 357 regression tests pass (431 total, zero regressions)
+
+---
+
+## Volta Component Integration (v8.0) — added 2026-07-28
+
+**New milestone layered on top of v11.0 gap-closure (complete).** Phases 251-254 track the four-protocol plugin architecture work (ComponentData, CADModel, Routing, Compliance) for the Volta PCB Swift macOS app.
+
+### Phase 251: Mouser API Integration
+
+- **Status:** Planning (Bret WIP, untracked)
+- **Goal:** Integrate Mouser API as ComponentDataProvider
+- **API Key:** Stored in macOS Keychain (`com.volta.mouser.api_key`) — Bret added 2026-07-28
+- **Files:** `.planning/phases/251-mouser-api-integration/PLAN.md`
+- **Companion code (untracked):** `macos-app/Sources/Volta/Providers/Local/`, `macos-app/Tests/VoltaTests/Providers/Mouser/MouserProviderTests.swift` (modified, +139/-1)
+
+### Phase 252: Compliance Provider System
+
+- **Status:** Planning (Bret WIP, untracked)
+- **Goal:** ComplianceProvider protocol + LocalComplianceProvider + SnapMagicFileImport
+- **Strategy:** Local compliance rules (offline) + SnapMagic file import (manual workflow). SiliconExpert dropped — enterprise-only access confirmed blocked for indie ISV (same dead-end pattern as SnapMagic API)
+- **Files:** `.planning/phases/252-compliance-provider-system/PLAN.md`
+- **Companion code (untracked):** `macos-app/Sources/Volta/Compliance/`, `macos-app/Sources/Volta/Protocols/`
+
+### Phase 253: Routing Plugin System (migrated 2026-07-28)
+
+- **Status:** Execution-ready (research complete, code pending Volta PCB Swift worktree)
+- **Goal:** Apply the provider plugin pattern to auto-routing engines (Freerouting, KiCad native, optional DeepPCB)
+- **Cloud routing verdict:** DeepPCB enterprise-only ($900/mo, no public REST docs, no self-serve) — see `.planning/research/PHASE4_DEEPPPCB_VERDICT.md`. Quilter AI removed from scope (Bret decision 2026-07-28)
+- **ADs:** RoutingProvider mirrors ComponentDataProvider shape (Sendable + ProviderAvailability + registry pattern); domain isolation in adapters; vendor-neutral RoutingRules; long-running op semantics (cancellation, progress streaming); cloud routing research-gated
+- **Files:** `.planning/phases/253-routing-plugin-system/PLAN.md` + `PHASE4_EXECUTION_NOTES.md`
+- **Migration source:** `~/.buzz/PLANS/volta-component-integration/phases/4-routing-plugin-system/` (historical, do not edit)
+
+### Phase 254: Compliance + File Import (migrated 2026-07-28)
+
+- **Status:** Planning (companion to Phase 252 — covers UI/file-import side)
+- **Goal:** ComplianceProvider + SnapMagic file import flow + local compliance rules UI
+- **Files:** `.planning/phases/254-compliance-file-import/PLAN.md`
+- **Migration source:** `~/.buzz/PLANS/volta-component-integration/phases/5-compliance-file-import/` (historical, do not edit)
+
+### Volta Component Integration Scope (decision 2026-07-28)
+
+- **Mouser API key**: added — MouserProvider should now be live; verify via app search on a Mouser-stocked MPN
+- **Quilter AI**: dropped from Phase 253 — Bret decision (no public access)
+- **SiliconExpert**: dropped from Phase 252/254 — Bret decision (enterprise-only access confirmed blocked)
+- **DeepPCB**: research verdict DEFERRED — enterprise-only access; re-evaluate trigger: docs.deeppcb.ai/api becomes public OR self-serve signup opens
+
+### Source-of-Truth Note (2026-07-28)
+
+- **Repo `.planning/` IS canonical** for all Volta Component Integration planning going forward. Bret decision: "i want the planning to be in the repos . that way it track from here and other tools"
+- `~/.buzz/PLANS/volta-component-integration/` is now a historical mirror; do not edit. Cleanup target: Phase 1-3 mirror files (already superseded by git history of commits `0b62ac6`, `d657ab9`, `f1621d1`, `2ecb6c8`, `5572c0c`)
+- Phases 1-3 (component-provider-foundation, multi-source-expansion, assembly-backup-sources) were already merged to master before this migration; their buzz-workspace mirror files (`phases/1-…`, `phases/2-…`, `phases/3-…`, plus `COVERAGE-REVIEW.md`, `API_CONTRACTS.md`, `DIGIKEY_*`) are archived, not authoritative
