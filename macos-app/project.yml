@@ -89,6 +89,10 @@ targets:
       - path: Resources/Assets.xcassets
       - path: Resources/AppIcon.icns
         buildPhase: resources
+      # Bundled Freerouting JAR (Git LFS — see .gitattributes). Resolved at
+      # runtime via Bundle.main.url(forResource: "freerouting", withExtension: "jar").
+      - path: Resources/freerouting.jar
+        buildPhase: resources
       - path: Resources/PrivacyInfo.xcprivacy
         buildPhase: resources
         buildPhase: resources

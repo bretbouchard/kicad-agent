@@ -72,7 +72,6 @@ public enum TestRegistry {
         "APIKeyValidatorTests",
         "KCCostLedgerTests",
         "KCTaskClassifierTests",
-        "KiCadCLIDetectorTests",
         "KiCadModelProviderProtocolTests",
         "KiCadModelRouterTests",
         "KeychainManagerTests",

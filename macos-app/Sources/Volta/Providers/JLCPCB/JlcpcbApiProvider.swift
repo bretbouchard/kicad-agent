@@ -30,7 +30,7 @@ import VoltaPCBCore
 ///
 /// Adds the `.assemblyData` capability — tells users whether a part
 /// can be assembled by JLCPCB's PCBA service. Cross-references LCSC
-/// part numbers for CAD model lookup via easyeda2kicad.
+/// part numbers for CAD model lookup via the EasyEDA provider.
 final class JlcpcbApiProvider: ComponentDataProvider, @unchecked Sendable {
     let name = "jlcpcb"
     let displayName = "Assembly Data"

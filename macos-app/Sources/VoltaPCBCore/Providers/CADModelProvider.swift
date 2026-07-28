@@ -10,7 +10,7 @@
 //  files plus CADModelRef records pointing at them.
 //
 //  Expected implementations (Phase 1+):
-//    - EasyEdaProvider        (easyeda2kicad CLI wrapper, LCSC lookup)
+//    - EasyEdaProvider        (direct web API, LCSC lookup)
 //    - KiCadHttpLibsProvider  (KiCad HTTP library API)
 //    - SnapMagicFileProvider  (local .zip / individual file import)
 //
@@ -29,11 +29,11 @@ import Foundation
 /// Protocol for providers that supply CAD models (footprints, symbols, 3D models).
 /// Implementations: EasyEdaProvider, KiCadHttpLibsProvider, SnapMagicFileProvider.
 public protocol CADModelProvider: Sendable {
-    /// Unique machine identifier (e.g., "easyeda2kicad"). Stable across
+    /// Unique machine identifier (e.g., "easyeda"). Stable across
     /// releases — used as the cache partition key and CADModelRef.source.
     var name: String { get }
 
-    /// User-facing display name (e.g., "easyeda2kicad"). Shown in Settings.
+    /// User-facing display name (e.g., "EasyEDA"). Shown in Settings.
     var displayName: String { get }
 
     /// Capabilities this provider offers.

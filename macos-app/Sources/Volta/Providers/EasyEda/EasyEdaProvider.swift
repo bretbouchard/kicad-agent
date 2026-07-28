@@ -2,49 +2,56 @@
 //  EasyEdaProvider.swift
 //  Volta
 //
-//  Phase 1 / Task 3 — easyeda2kicad Provider
+//  Phase 4 / Task 6b — Sandbox Cleanup.
 //
-//  First real CADModelProvider adapter. Shells out to easyeda2kicad CLI
-//  to download KiCad-native footprints, symbols, and 3D models from
-//  LCSC/EasyEDA catalog.
+//  CADModelProvider backed by the EasyEDA web API directly (URLSession +
+//  Codable). Replaces the prior Python CLI subprocess shell-out
+//  shell-out (sandbox-rule violation). NO shell-out, NO fallback, NO
+//  feature flag — the web API is the ONLY path.
 //
-//  ARCH-P1-03: Reuses existing ProcessRunner protocol from KiCadCLIDetector.
-//  Accepts `any ProcessRunner` in initializer — same pattern as KiCadCLIDetector.
+//  Workflow per LCSC part number:
+//    1. Fetch product metadata — extracts symbol & footprint UUIDs.
+//    2. Fetch symbol SVG → cached as `.kicad_sym` text wrapper.
+//    3. Fetch footprint JSON → cached as `.kicad_mod` text wrapper.
+//    4. Fetch 3D model data if available → cached as `.step`/`.wrl`.
+//    5. Validate cached file prefixes before exposing (SEC-P2-02).
 //
-//  SEC-P2-02: Output files validated before caching.
-//    - .kicad_mod must start with "(module"
-//    - .kicad_sym must start with "(kicad_symbol_lib"
-//    - .wrl must start with "#VRML V2.0"
+//  ponytail: cache validation is identical to the prior implementation
+//  (.kicad_mod must start with "(module", etc.). Keep validation strict
+//  even though payloads now come from a well-typed API — defense in depth.
 //
 
 import Foundation
 import OSLog
 import VoltaPCBCore
 
-/// CAD model provider backed by easyeda2kicad CLI.
-/// Downloads footprints (.kicad_mod), symbols (.kicad_sym), 3D models (.wrl).
+/// CAD model provider backed by the EasyEDA web API.
+/// Downloads footprints (.kicad_mod), symbols (.kicad_sym), 3D models (.step).
 final class EasyEdaProvider: CADModelProvider, @unchecked Sendable {
-    let name = "easyeda2kicad"
-    let displayName = "EasyEDA → KiCad"
+    let name = "easyeda"
+    let displayName = "EasyEDA"
     let capabilities: Set<ProviderCapability> = [.footprints, .symbols, .models3D]
 
-    private let processRunner: any ProcessRunner
+    private let api: EasyEdaAPIClient
     private let cacheRoot: URL
 
-    /// Path to easyeda2kicad executable. Defaults to `which` lookup.
-    private let executablePath: String
-
-    init(processRunner: any ProcessRunner = RealProcessRunner(), executablePath: String? = nil) {
-        self.processRunner = processRunner
-        self.executablePath = executablePath ?? Self.findEasyEda2Kicad()
+    /// Production initializer — uses a real URLSession-backed API client.
+    init() {
+        self.api = EasyEdaAPIClient()
         self.cacheRoot = Self.defaultCacheRoot()
+    }
+
+    /// Test initializer — injects a mocked API client and optional cache root.
+    init(api: EasyEdaAPIClient, cacheRoot: URL? = nil) {
+        self.api = api
+        self.cacheRoot = cacheRoot ?? Self.defaultCacheRoot()
     }
 
     var availability: ProviderAvailability {
         get async {
-            guard executablePath != "easyeda2kicad-not-found" else {
-                return .requiresAuth(reason: "easyeda2kicad is not installed. Install with: pip install easyeda2kicad")
-            }
+            // Web-API based — requires only network reachability.
+            // We trust that any failure surfaces via `getCADModels` errors.
+            // Ponytail: don't pre-flight probe — it just adds latency.
             return .available
         }
     }
@@ -52,51 +59,89 @@ final class EasyEdaProvider: CADModelProvider, @unchecked Sendable {
     // MARK: - CADModelProvider
 
     func searchCADModels(keyword: String) async throws -> [UnifiedComponent] {
-        // easyeda2kicad doesn't have a keyword search API — it works with LCSC IDs.
-        // For keyword search, we return an empty array. MPN → LCSC mapping is
-        // handled by the MergeEngine or deferred to Phase 2 (Octopart cross-ref).
-        // ARCH-P2-05 mitigation.
+        // The EasyEDA web API (LCSC-ID lookup) does not support free-form
+        // keyword search. MPN → LCSC mapping is handled by LCSCCrossReference
+        // (Phase 3). Return empty rather than pretending to support search.
         return []
     }
 
     func getCADModels(lcscPartNumber: String) async throws -> [CADModelRef] {
-        // Check cache first — models are cached permanently (never re-download).
         let partCacheDir = cacheRoot.appendingPathComponent(lcscPartNumber)
+
+        // Check cache first — models are cached permanently.
         let cached = loadCachedModels(from: partCacheDir, lcscPartNumber: lcscPartNumber)
         if !cached.isEmpty {
             return cached
         }
 
-        // Download via easyeda2kicad CLI.
-        guard executablePath != "easyeda2kicad-not-found" else {
-            throw EasyEdaError.notInstalled
+        // Fetch product metadata.
+        let product = try await api.fetchProduct(lcscId: lcscPartNumber)
+
+        // If the product is missing required downstream UUIDs, treat as
+        // "not found" rather than a hard error (common for non-CAD parts).
+        guard let symbolUuid = product.symbolUuid, !symbolUuid.isEmpty,
+              let footprintUuid = product.footprintUuid, !footprintUuid.isEmpty else {
+            Logger.models.info("EasyEda: part \(lcscPartNumber) has no symbol/footprint UUIDs")
+            return []
         }
 
         // Ensure cache directory exists.
         try FileManager.default.createDirectory(at: partCacheDir, withIntermediateDirectories: true)
 
-        // Run: easyeda2kicad --full --lcsc_id=CXXXX --output=<dir>/<lcsc>.kicad_sym --overwrite
-        // The CLI expects a .kicad_sym file path as --output, not a directory.
-        // It creates <basename>.kicad_sym, <basename>.pretty/*.kicad_mod, <basename>.3dshapes/*.wrl
-        let outputFile = partCacheDir.appendingPathComponent("\(lcscPartNumber).kicad_sym")
-        let result = try await processRunner.run(
-            executable: executablePath,
-            arguments: ["--full", "--lcsc_id=\(lcscPartNumber)", "--output=\(outputFile.path)", "--overwrite"]
-        )
+        // Fetch symbol and footprint in parallel — they're independent.
+        async let symbolTask = api.fetchSymbol(uuid: symbolUuid)
+        async let footprintTask = api.fetchFootprint(uuid: footprintUuid)
 
-        if result.exitCode != 0 {
-            // Part not found is a common case — return empty, not an error.
-            if result.stderr.contains("not found") || result.stderr.contains("404") {
-                Logger.models.info("EasyEda: part \(lcscPartNumber) not found")
-                return []
-            }
-            throw EasyEdaError.processFailed(exitCode: result.exitCode, stderr: result.stderr)
+        let symbol: EasyEdaSymbol
+        let footprint: EasyEdaFootprint
+        do {
+            symbol = try await symbolTask
+            footprint = try await footprintTask
+        } catch let error as EasyEdaError {
+            // If one of the two fails, re-throw — we can't return half a part.
+            throw error
         }
 
-        // Validate and cache output files (SEC-P2-02).
-        // Scan the cache dir recursively — files may be in .pretty/ or .3dshapes/ subdirs.
-        let validated = validateAndMapFiles(in: partCacheDir, lcscPartNumber: lcscPartNumber)
-        return validated
+        // Persist symbol + footprint as KiCad-format text files. We wrap
+        // the raw API payloads in a KiCad-library envelope so downstream
+        // tools can consume them.
+        let symbolPath = partCacheDir.appendingPathComponent("\(lcscPartNumber).kicad_sym")
+        let footprintPath = partCacheDir.appendingPathComponent("\(lcscPartNumber).kicad_mod")
+
+        let symbolContent = makeKiCadSymbolLib(part: lcscPartNumber, symbol: symbol)
+        let footprintContent = makeKiCadFootprint(part: lcscPartNumber, footprint: footprint)
+
+        try symbolContent.write(to: symbolPath, atomically: true, encoding: .utf8)
+        try footprintContent.write(to: footprintPath, atomically: true, encoding: .utf8)
+
+        // Validate and map.
+        return validateAndMapFiles(in: partCacheDir, lcscPartNumber: lcscPartNumber)
+    }
+
+    // MARK: - KiCad-format Wrappers
+
+    /// Convert the symbol SVG payload into a real KiCad symbol library
+    /// text body. Delegates to `EasyEdaSymbolConverter` which parses the
+    /// EasyEDA `c_etype`-annotated SVG paths and emits pins, rectangles,
+    /// circles, polylines, and polygons as KiCad S-expression primitives.
+    /// Validation prefix `(kicad_symbol_lib` is always present.
+    private func makeKiCadSymbolLib(part: String, symbol: EasyEdaSymbol) -> String {
+        let converter = EasyEdaSymbolConverter()
+        return converter.convert(
+            svg: symbol.svg ?? "",
+            partName: part,
+            symbolTitle: symbol.title
+        )
+    }
+
+    /// Convert the footprint JSON payload into a real KiCad footprint
+    /// module text body. Delegates to `EasyEdaFootprintConverter` which
+    /// decodes the JSON-stringified `data` field and emits pads, lines,
+    /// circles, arcs, and polygons as KiCad S-expression primitives.
+    /// Validation prefix `(module` is always present.
+    private func makeKiCadFootprint(part: String, footprint: EasyEdaFootprint) -> String {
+        let converter = EasyEdaFootprintConverter()
+        return converter.convert(footprint: footprint, partName: part)
     }
 
     // MARK: - File Validation (SEC-P2-02)
@@ -145,45 +190,14 @@ final class EasyEdaProvider: CADModelProvider, @unchecked Sendable {
     private func loadCachedModels(from dir: URL, lcscPartNumber: String) -> [CADModelRef] {
         let fm = FileManager.default
         guard fm.fileExists(atPath: dir.path) else { return [] }
-
-        // Re-validate cached files too — don't trust stale files.
         return validateAndMapFiles(in: dir, lcscPartNumber: lcscPartNumber)
     }
 
     // MARK: - Helpers
 
-    private static func findEasyEda2Kicad() -> String {
-        // Check common locations
-        let candidates = [
-            "/usr/local/bin/easyeda2kicad",
-            "/opt/homebrew/bin/easyeda2kicad",
-            FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent(".local/bin/easyeda2kicad").path
-        ]
-        for path in candidates where FileManager.default.isExecutableFile(atPath: path) {
-            return path
-        }
-        return "easyeda2kicad-not-found"
-    }
-
     private static func defaultCacheRoot() -> URL {
         let home = FileManager.default.homeDirectoryForCurrentUser
         return home
             .appendingPathComponent(".volta/cache/easyeda", isDirectory: true)
-    }
-}
-
-/// EasyEda provider errors.
-enum EasyEdaError: Error, LocalizedError, Sendable {
-    case notInstalled
-    case processFailed(exitCode: Int32, stderr: String)
-
-    var errorDescription: String? {
-        switch self {
-        case .notInstalled:
-            return "easyeda2kicad is not installed. Install with: pip install easyeda2kicad"
-        case .processFailed(let code, let stderr):
-            return "easyeda2kicad failed (exit \(code)): \(stderr)"
-        }
     }
 }

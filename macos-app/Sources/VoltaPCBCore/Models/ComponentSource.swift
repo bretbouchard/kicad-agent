@@ -19,7 +19,7 @@ public struct ComponentSource: Sendable, Identifiable, Hashable, Codable {
     /// Stable unique ID for Identifiable conformance (SwiftUI lists, etc.).
     public let id: UUID
 
-    /// Machine identifier of the provider (e.g., "digikey", "easyeda2kicad").
+    /// Machine identifier of the provider (e.g., "digikey", "easyeda").
     public let provider: String
 
     /// Source-specific part ID (e.g., Digi-Key's "497-11924-ND").

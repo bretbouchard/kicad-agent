@@ -5,21 +5,19 @@
 //  Phase 253 Task 2 — Freerouting Routing Provider
 //
 //  RoutingProvider implementation that shells out to the Freerouting
-//  autorouter (a Java JAR). Detects java + JAR at known paths, runs
-//  Freerouting with a Specctra DSN input/output pair, and splices
-//  the resulting routes back into the original .kicad_pcb via the
-//  pure-Swift SpecctraDSNReader + SegmentSplicer pipeline.
+//  autorouter (a Java JAR). Detects java + JAR via sandbox-clean
+//  lookups (Bundle.main for JAR, /usr/libexec/java_home + JAVA_HOME
+//  for Java), runs Freerouting with a Specctra DSN input/output pair,
+//  and splices the resulting routes back into the original .kicad_pcb
+//  via the pure-Swift SpecctraDSNReader + SegmentSplicer pipeline.
 //
 //  Detection strategy, in order:
-//    1. `which java` via /usr/bin/env (user PATH)
-//    2. `/usr/bin/java` (system Java)
+//    1. $JAVA_HOME/bin/java (user-set env var = explicit user intent)
+//    2. /usr/libexec/java_home (macOS system framework — not PATH)
 //
-//  JAR search paths:
-//    - /Applications/Freerouting.app/Contents/Java/freerouting.jar
-//    - /Applications/Freerouting.app/Contents/Java/Freerouting.jar
-//    - /opt/homebrew/Cellar/freerouting/*/libexec/freerouting.jar
-//    - ~/.volta/tools/freerouting.jar
-//    - ~/Library/Application Support/freerouting/freerouting.jar
+//  JAR lookup:
+//    1. Bundle.main.url(forResource: "freerouting", withExtension: "jar")
+//    2. $FREEROUTING_JAR_PATH env var (dev-only escape hatch)
 //
 //  ponytail: zero IO during availability if previously-cached path is
 //  still on disk. Re-probe only on demand (lazy invalidation via
@@ -50,10 +48,10 @@ public enum FreeroutingError: Error, LocalizedError, Equatable {
     public var errorDescription: String? {
         switch self {
         case .javaNotFound:
-            return "Java runtime not found. Install OpenJDK: `brew install openjdk` and ensure `java` is on PATH."
+            return "Java runtime not found. Install OpenJDK and set $JAVA_HOME (e.g. `brew install openjdk` then `export JAVA_HOME=$(/usr/libexec/java_home)`)."
         case .jarNotFound(let searched):
             let list = searched.joined(separator: "\n  • ")
-            return "Freerouting JAR not found. Searched:\n  • \(list)\nDownload from freerouting.app or `brew install freerouting`."
+            return "Freerouting JAR not found. Searched:\n  • \(list)\nThe freerouting.jar is bundled in the app; this error means the bundle is corrupted. Set $FREEROUTING_JAR_PATH for development to override the bundled JAR."
         case .nonZeroExit(let code, let stderr):
             return "Freerouting exited with code \(code). stderr: \(stderr.prefix(500))"
         case .timeout(let seconds):
@@ -81,16 +79,6 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
 
     // MARK: - Configuration
 
-    /// Default JAR search paths. Public so tests / settings UI can read.
-    public static let defaultJARSearchPaths: [String] = [
-        "/Applications/Freerouting.app/Contents/Java/freerouting.jar",
-        "/Applications/Freerouting.app/Contents/Java/Freerouting.jar",
-        "/opt/homebrew/Cellar/freerouting/*/libexec/freerouting.jar",
-        "/Library/Application Support/freerouting/freerouting.jar",
-        NSString(string: "~/Library/Application Support/freerouting/freerouting.jar").expandingTildeInPath,
-        NSString(string: "~/.volta/tools/freerouting.jar").expandingTildeInPath,
-    ]
-
     /// Memory budget for the Java process. -Xmx2g is enough for boards
     /// up to ~500 components; larger boards should override via rules.
     private static let defaultJavaMemoryMB = 2048
@@ -98,6 +86,7 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
     // MARK: - Injected deps
 
     private let runner: any ProcessRunner
+    private let javaLocator: JavaLocator
     private let jarPathOverride: URL?
     private let dsnWriter: SpecctraDSNWriter
     private let dsnReader: SpecctraDSNReader
@@ -112,8 +101,10 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
 
     /// Production initializer (uses the real Process runner).
     public convenience init(jarPathOverride: URL? = nil) {
+        let realRunner = RealProcessRunner()
         self.init(
-            runner: RealProcessRunner(),
+            runner: realRunner,
+            javaLocator: JavaLocator(runner: realRunner),
             jarPathOverride: jarPathOverride,
             dsnWriter: SpecctraDSNWriter(),
             dsnReader: SpecctraDSNReader(),
@@ -124,12 +115,14 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
     /// Designated initializer for tests in the same module.
     init(
         runner: any ProcessRunner,
+        javaLocator: JavaLocator? = nil,
         jarPathOverride: URL? = nil,
         dsnWriter: SpecctraDSNWriter = SpecctraDSNWriter(),
         dsnReader: SpecctraDSNReader = SpecctraDSNReader(),
         splicer: SegmentSplicer = SegmentSplicer()
     ) {
         self.runner = runner
+        self.javaLocator = javaLocator ?? JavaLocator(runner: runner)
         self.jarPathOverride = jarPathOverride
         self.dsnWriter = dsnWriter
         self.dsnReader = dsnReader
@@ -153,8 +146,8 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
             guard let javaPath = await probeJava() else {
                 return .unavailable(reason: FreeroutingError.javaNotFound.localizedDescription)
             }
-            guard let jarPath = locateJAR() else {
-                return .unavailable(reason: FreeroutingError.jarNotFound(searched: Self.defaultJARSearchPaths).localizedDescription)
+            guard let jarPath = jarPath() else {
+                return .unavailable(reason: FreeroutingError.jarNotFound(searched: [jarSearchSummary()]).localizedDescription)
             }
             cachedJavaPath = javaPath
             cachedJarPath = jarPath
@@ -176,13 +169,13 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
         guard let javaPath = await probeJava() else {
             throw FreeroutingError.javaNotFound
         }
-        let jarPath: URL
+        let resolvedJarPath: URL
         if let override = jarPathOverride, FileManager.default.fileExists(atPath: override.path) {
-            jarPath = override
-        } else if let found = locateJAR() {
-            jarPath = found
+            resolvedJarPath = override
+        } else if let found = jarPath() {
+            resolvedJarPath = found
         } else {
-            throw FreeroutingError.jarNotFound(searched: Self.defaultJARSearchPaths)
+            throw FreeroutingError.jarNotFound(searched: [jarSearchSummary()])
         }
 
         // 2. Native Swift: parse the .kicad_pcb, generate DSN, stage workspace.
@@ -203,7 +196,7 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
         // 3. Shell out to java -jar freerouting.jar -de input -do output.
         let arguments = [
             "-Xmx\(Self.defaultJavaMemoryMB)m",
-            "-jar", jarPath.path,
+            "-jar", resolvedJarPath.path,
             "-de", inputDSN.path,
             "-do", outputDSN.path,
             "-mt", "1",
@@ -296,76 +289,32 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
     // MARK: - Detection helpers
 
     /// Probe for a working Java install. Returns the absolute path or nil.
+    /// Delegates to `JavaLocator`, which uses the injected `ProcessRunner` so
+    /// subprocess IO never blocks the cooperative thread pool.
     func probeJava() async -> String? {
-        // Try `/usr/bin/env which java` first to honor user PATH.
-        let candidates: [[String]] = [
-            ["/usr/bin/env", "which", "java"],
-            ["/usr/bin/which", "java"],
-        ]
-        for cmd in candidates {
-            do {
-                let result = try await runner.run(
-                    executable: cmd[0],
-                    arguments: Array(cmd.dropFirst())
-                )
-                if result.exitCode == 0 {
-                    let path = result.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !path.isEmpty, FileManager.default.isExecutableFile(atPath: path) {
-                        return path
-                    }
-                }
-            } catch {
-                continue
-            }
+        await javaLocator.locate()
+    }
+
+    /// Resolve the Freerouting JAR URL via sandbox-clean lookups.
+    /// 1. `Bundle.main.url(forResource: "freerouting", withExtension: "jar")`
+    /// 2. `ProcessInfo.processInfo.environment["FREEROUTING_JAR_PATH"]` (dev escape hatch)
+    func jarPath() -> URL? {
+        if let bundled = Bundle.main.url(forResource: "freerouting", withExtension: "jar"),
+           FileManager.default.fileExists(atPath: bundled.path) {
+            return bundled
         }
-        // Fallback: probe /usr/bin/java directly (some macOS system installs).
-        let systemPath = "/usr/bin/java"
-        if FileManager.default.isExecutableFile(atPath: systemPath) {
-            return systemPath
+        if let envPath = ProcessInfo.processInfo.environment["FREEROUTING_JAR_PATH"],
+           FileManager.default.fileExists(atPath: envPath) {
+            return URL(fileURLWithPath: envPath)
         }
         return nil
     }
 
-    /// Locate the Freerouting JAR on disk. Honors the override first,
-    /// then walks the default search paths. Returns the first match.
-    func locateJAR() -> URL? {
-        if let override = jarPathOverride, FileManager.default.fileExists(atPath: override.path) {
-            return override
-        }
-        for path in Self.defaultJARSearchPaths {
-            let expanded = NSString(string: path).expandingTildeInPath
-            if expanded.contains("*") {
-                // Glob expand (Homebrew cellar path). Use FileManager
-                // glob since Foundation has no built-in glob.
-                if let resolved = globFirst(path: expanded) {
-                    return resolved
-                }
-            } else if FileManager.default.fileExists(atPath: expanded) {
-                return URL(fileURLWithPath: expanded)
-            }
-        }
-        return nil
-    }
-
-    /// Glob a single-star path (only one wildcard supported) and return
-    /// the first match as a URL. Returns nil if nothing matches.
-    private func globFirst(path: String) -> URL? {
-        let parts = path.split(separator: "*", maxSplits: 1, omittingEmptySubsequences: false)
-        guard parts.count == 2 else { return nil }
-        let prefix = String(parts[0])
-        let suffix = String(parts[1])
-        let dir = URL(fileURLWithPath: prefix).deletingLastPathComponent().path
-        guard let entries = try? FileManager.default.contentsOfDirectory(atPath: dir) else {
-            return nil
-        }
-        let fileName = prefix.split(separator: "/").last.map(String.init) ?? ""
-        let matched = entries.first { entry in
-            entry.hasPrefix(fileName) && entry.hasSuffix(suffix.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
-        }
-        if let matched = matched {
-            return URL(fileURLWithPath: dir).appendingPathComponent(matched).appendingPathComponent(suffix.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
-        }
-        return nil
+    /// Human-readable description of where we looked for the JAR, for
+    /// surfacing actionable install/setup guidance to the user.
+    private func jarSearchSummary() -> String {
+        let env = ProcessInfo.processInfo.environment["FREEROUTING_JAR_PATH"] ?? "(unset)"
+        return "Bundle.main (freerouting.jar) and $FREEROUTING_JAR_PATH=\(env)"
     }
 
     // MARK: - Metric parsing

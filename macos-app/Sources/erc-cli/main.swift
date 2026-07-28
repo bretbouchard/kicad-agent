@@ -3,7 +3,7 @@
 //  erc-cli — Phase 234B Swift CLI harness for NativeERC
 //
 //  Reads a KiCad schematic, runs the native Swift ERC engine, prints JSON.
-//  Used by batch_erc_parity.py to compare against the Python native_erc.
+//  Used by the ERC parity test suite (Tests/VoltaTests/ERC/ERCParityTests.swift).
 //
 //  Build: see Scripts/build_erc_cli.sh
 //  Usage: erc-cli <schematic.kicad_sch>
@@ -29,12 +29,17 @@ func jsonOutput(_ dict: [String: Any]) -> String {
 
 // MARK: - SchematicIR → violations normalization
 
-// We need to convert NativeErcResult's internal format into the
-// normalized format that batch_erc_parity.py expects. The Python
-// normalize_python_result() expects:
-//   check_id, severity, ref, net, message
-// We map Swift's checkId → check_id, description → message, and keep
-// ref/net/severity as-is.
+// The Swift ERC parity test suite (Tests/VoltaTests/ERC/ERCParityTests.swift)
+// compares this CLI's JSON output against a direct in-process call to
+// NativeERC.run(...). The normalization below keeps the load-bearing fields
+// (check_id, severity, ref, net) stable across both code paths.
+//
+// Field mapping (Swift → CLI JSON):
+//   checkId  → check_id
+//   severity → severity
+//   ref      → ref
+//   net      → net
+//   description → message
 
 func violationToDict(_ v: [String: Any]) -> [String: Any] {
     var d: [String: Any] = [
@@ -79,7 +84,7 @@ func main() {
     let result = NativeERC.run(schematicURL: url)
     let raw = result.toDict()
 
-    // Re-shape to parity-driver schema
+    // Re-shape to CLI JSON schema (consumed by ERCParityTests).
     let violations = (raw["violations"] as? [[String: Any]] ?? []).map(violationToDict)
     let out: [String: Any] = [
         "ok": true,

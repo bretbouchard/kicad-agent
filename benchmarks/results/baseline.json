@@ -2,23 +2,23 @@
   "model_name": "BaselineHeuristic",
   "dataset_version": "1.0.0",
   "total_questions": 500,
-  "correct": 157,
-  "accuracy": 0.314,
+  "correct": 144,
+  "accuracy": 0.288,
   "category_accuracy": {
-    "troubleshooting": 0.2857142857142857,
+    "troubleshooting": 0.25396825396825395,
     "topology_recognition": 0.3709677419354839,
     "design_rules": 0.3387096774193548,
-    "power_design": 0.25396825396825395,
-    "net_purpose": 0.24193548387096775,
+    "power_design": 0.14285714285714285,
+    "net_purpose": 0.1935483870967742,
     "signal_flow": 0.2698412698412698,
-    "pin_function": 0.20634920634920634,
+    "pin_function": 0.19047619047619047,
     "component_identification": 0.5483870967741935
   },
   "difficulty_accuracy": {
-    "medium": 0.30132450331125826,
-    "easy": 0.42,
-    "hard": 0.24489795918367346
+    "medium": 0.24503311258278146,
+    "easy": 0.41,
+    "hard": 0.29591836734693877
   },
-  "evaluated_at": "2026-06-01T00:20:38.775777+00:00",
+  "evaluated_at": "2026-07-28T18:06:14.991439+00:00",
   "duration_seconds": 0.0
 }

@@ -118,26 +118,22 @@ final class ValidationManager {
         }
     }
 
-    /// Check if kicad-cli is installed (macOS only — informational).
-    func checkKiCadCLI(client: MCPClient?) async -> String {
-        #if os(macOS)
-        guard let client else { return "Daemon not connected (using native engine)" }
-        do {
-            let result = try await client.callRaw("kicad_cli_check", params: [:])
-            if let dict = result as? [String: Any] {
-                let status = dict["status"] as? String ?? "unknown"
-                if status == "ready" {
-                    return "KiCad \(dict["version"] ?? "?") ✓"
-                }
-                return "KiCad CLI: \(status)"
-            }
-        } catch {
-            return "Using native engine (kicad-cli check failed)"
-        }
-        return "Using native engine"
-        #else
-        return "Native engine (iOS)"
-        #endif
+    /// Status badge text — honest about the scope gap between native and
+    /// external KiCad. NativeERC provides Electrical Rule Check (unconnected
+    /// pins, power-pin shorts). Full Design Rule Check (clearance, trace
+    /// width, via drill) requires opening the project in the KiCad app.
+    /// Per Phase 4 §6a sandbox cleanup: no subprocess probing of host
+    /// filesystem (kicad-cli banned by sandbox rule cf1fb3b).
+    func statusBadge() -> String {
+        return "Native ERC only — DRC via KiCad app"
+    }
+
+    /// Tooltip explaining the scope gap (shown on hover/long-press).
+    func statusBadgeTooltip() -> String {
+        return "Native Swift provides Electrical Rule Check (unconnected pins, " +
+               "power-pin shorts). Full Design Rule Check (clearance, trace " +
+               "width, via drill) requires opening the project in the KiCad " +
+               "app — kicad-cli is not bundled (GPLv3 sandbox rule)."
     }
 }
 

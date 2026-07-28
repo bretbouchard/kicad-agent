@@ -67,7 +67,7 @@ final class MergeEngineV2Tests: XCTestCase {
     func test_providerPriorityRanking() {
         let priority = ProviderPriority.default
 
-        // Default order: digikey < octopart < mouser < easyeda2kicad < easyeda < jlcparts
+        // Default order: digikey < octopart < mouser < easyeda < jlcparts
         XCTAssertLessThan(priority.rank(for: "digikey"), priority.rank(for: "jlcparts"))
         XCTAssertLessThan(priority.rank(for: "digikey"), priority.rank(for: "mouser"))
         XCTAssertLessThan(priority.rank(for: "octopart"), priority.rank(for: "jlcparts"))

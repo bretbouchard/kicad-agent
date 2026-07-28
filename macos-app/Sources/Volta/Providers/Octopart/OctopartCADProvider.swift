@@ -6,7 +6,7 @@
 //
 //  CADModelProvider backed by Nexar GraphQL API.
 //  Octopart aggregates 850K+ KiCad models (SnapEDA-sourced).
-//  Secondary CAD source — used when easyeda2kicad misses.
+//  Secondary CAD source — used when the EasyEDA provider misses.
 //
 
 import Foundation

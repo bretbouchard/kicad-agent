@@ -6,7 +6,7 @@
 //  Phase 170 — Verification Loop Integration
 //
 //  Post-op verification gate. Runs:
-//    1. Deterministic check: ERC (schematic) / DRC (PCB) via kicad-cli,
+//    1. Deterministic check: ERC (schematic) / DRC (PCB) via native Swift,
 //       driven through the daemon `kicad.post_check` MCP method which
 //       wraps the existing `validation/erc_drc.py` + `ops/validation_gates.py`
 //       infrastructure.

@@ -19,7 +19,7 @@ import Foundation
 ///   2. Octopart/Nexar (aggregator, near-real-time)
 ///   3. Mouser (first-party, near-real-time)
 ///   4. JLCPCB (assembly data, real-time)
-///   5. easyeda2kicad (CAD models)
+///   5. easyeda (CAD models via public web API)
 ///   6. jlcparts (offline snapshot, stale)
 final class ProviderPriority: @unchecked Sendable {
     /// Ordered list of provider names. Index 0 = highest priority.
@@ -33,7 +33,6 @@ final class ProviderPriority: @unchecked Sendable {
         "octopart",
         "mouser",
         "jlcpcb",
-        "easyeda2kicad",
         "easyeda",
         "jlcparts",
     ]) {

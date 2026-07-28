@@ -184,13 +184,10 @@ struct LiquidGlassShell: View {
 
     private func makePreviewRenderer() -> (any PreviewRenderer)? {
         #if os(macOS)
-        // Prefer daemon (real kicad-cli) when MCP is wired; otherwise fall
-        // back to native Swift renderer. Either way the chat always shows
-        // a real preview — no more "no preview" dead state when the daemon
-        // is down. Phase 238.
-        if let client = daemonSupervisor.mcpClient {
-            return DaemonPreviewRenderer(client: client)
-        }
+        // Native Swift renderer only — kicad-cli is not bundled (GPLv3
+        // sandbox rule cf1fb3b). Daemon does not provide preview rendering.
+        // Phase 4 §6a: removed "prefer daemon" preference language; native
+        // ERC/DRC/render is the only path.
         return SwiftSVGRenderer()
         #else
         return SwiftSVGRenderer()
