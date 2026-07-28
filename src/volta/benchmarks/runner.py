@@ -8,6 +8,7 @@ breakdowns.
 
 from __future__ import annotations
 
+import random
 import time
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -101,6 +102,11 @@ class BenchmarkRunner:
         Returns:
             BenchmarkResult with accuracy breakdowns.
         """
+        # Seed RNG so baseline models with random fallback (BaselineRandom,
+        # BaselineHeuristic on unmatched questions) produce deterministic
+        # outputs across CI runs. Required for stable regression detection
+        # in benchmarks/results/baseline.json comparisons.
+        random.seed(42)
         start = time.time()
 
         questions = self._filter_questions(
