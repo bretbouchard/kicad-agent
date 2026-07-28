@@ -2,20 +2,16 @@
 //  DSNConverter.swift
 //  Volta
 //
-//  Phase 253 Task 2 — Specctra DSN Parser
+//  Phase 253 Task 2 — Specctra DSN Parser (tokenizer + summary extractor)
 //
-//  Minimal Specctra DSN parser. Extracts fields needed for RoutingMetrics
-//  (wires, vias, unrouted nets, layers, parser identity, resolution) from
-//  Freerouting's input/output DSN files.
-//
-//  Scope notes:
-//    - This is NOT a full DSN writer/generator. Freerouting itself writes
-//      DSN on the output side; KiCad's `kicad-cli pcb export specctra`
-//      (or Python pcbnew) generates input DSN. We only parse.
-//    - Full .kicad_pcb ↔ DSN round-trip is delegated to Python (pcbnew
-//      bindings) since kicad-cli 9.x has no specctra subcommand. The
-//      adapter is responsible for invoking that helper before/after
-//      shelling out to java.
+//  Minimal Specctra DSN parser. Two responsibilities:
+//    1. Tokenization primitives used by the full DSN round-trip pipeline
+//       (tokenize, findSection, validateBalance). These are the single
+//       source of tokenization truth — SpecctraDSNReader, SpecctraDSNWriter,
+//       and SegmentSplicer all share them.
+//    2. RoutingMetrics-level summary extraction (wires, vias, unrouted nets,
+//       layers, parser identity, resolution) for Freerouting's input/output
+//       DSN files.
 //
 //  Format primer: Specctra DSN is S-expression based. Example minimal file:
 //
@@ -155,9 +151,22 @@ public enum DSNConverter {
         var tokens: [String] = []
         var current = ""
         var inQuote = false
-        for char in text {
+        let characters = Array(text)
+
+        for index in characters.indices {
+            let char = characters[index]
+            let nextChar = index < characters.index(before: characters.endIndex)
+                ? characters[characters.index(after: index)]
+                : nil
+
             if char == "\"" {
-                inQuote.toggle()
+                // Specctra declares its quote delimiter as `(string_quote ")`.
+                // That standalone quote is a bare token, not the start of a
+                // quoted string. All other quotes retain normal toggle rules.
+                let isStringQuoteDirective = !inQuote && current.isEmpty && nextChar == ")"
+                if !isStringQuoteDirective {
+                    inQuote.toggle()
+                }
                 current.append(char)
             } else if !inQuote && (char == "(" || char == ")") {
                 if !current.isEmpty {
@@ -210,9 +219,22 @@ public enum DSNConverter {
         var line = 1
         var openLine = 0
         var inQuote = false
-        for char in text {
+        let characters = Array(text)
+
+        for index in characters.indices {
+            let char = characters[index]
+            let nextChar = index < characters.index(before: characters.endIndex)
+                ? characters[characters.index(after: index)]
+                : nil
+
             if char == "\n" { line += 1 }
-            if char == "\"" { inQuote.toggle(); continue }
+            if char == "\"" {
+                // Match tokenize(_:): `(string_quote ")` contains one bare
+                // quote token and must not put the rest of the file in quote mode.
+                if !inQuote && nextChar == ")" { continue }
+                inQuote.toggle()
+                continue
+            }
             if inQuote { continue }
             if char == "(" {
                 if depth == 0 { openLine = line }
@@ -242,9 +264,9 @@ public enum DSNConverter {
         var version = ""
         for i in 0..<parserTokens.count {
             if parserTokens[i] == "host_cad", i + 2 < parserTokens.count {
-                host = stripQuotes(parserTokens[i + 2])
+                host = stripQuotesAndUnescape(parserTokens[i + 2])
             } else if parserTokens[i] == "host_version", i + 2 < parserTokens.count {
-                version = stripQuotes(parserTokens[i + 2])
+                version = stripQuotesAndUnescape(parserTokens[i + 2])
             }
         }
         return version.isEmpty ? host : "\(host) \(version)"
@@ -273,7 +295,7 @@ public enum DSNConverter {
         var i = 0
         while i < toks.count - 1 {
             if toks[i] == "(", toks[i + 1] == "layer", i + 2 < toks.count {
-                layers.append(stripQuotes(toks[i + 2]))
+                layers.append(stripQuotesAndUnescape(toks[i + 2]))
             }
             i += 1
         }
@@ -319,7 +341,7 @@ public enum DSNConverter {
         var i = 0
         while i < failed.count - 1 {
             if failed[i] == "(", failed[i + 1] == "net", i + 2 < failed.count {
-                nets.append(stripQuotes(failed[i + 2]))
+                nets.append(stripQuotesAndUnescape(failed[i + 2]))
             }
             i += 1
         }
@@ -329,10 +351,39 @@ public enum DSNConverter {
     // MARK: - Helpers
 
     /// Strip surrounding double quotes from a token, if present.
+    ///
+    /// Deprecated: use `stripQuotesAndUnescape(_:)` which also unescapes
+    /// the Specctra DSN doubled-quote convention (`""` → `"`). Kept for
+    /// one release for source compatibility with callers that don't yet
+    /// deal with net names or pin names containing literal quotes.
+    @available(*, deprecated, message: "Use stripQuotesAndUnescape() for Specctra DSN doubled-quote handling")
     static func stripQuotes(_ token: String) -> String {
         guard token.count >= 2, token.first == "\"", token.last == "\"" else {
             return token
         }
         return String(token.dropFirst().dropLast())
+    }
+
+    /// Strip surrounding double quotes AND unescape Specctra DSN doubled-quote
+    /// sequences (`""` → `"`) per Council L-05 / WR-03. Used by
+    /// SpecctraDSNReader for net name parsing and pin name extraction where
+    /// a literal `"` in the source name has been encoded as `""`.
+    ///
+    /// Examples:
+    ///   - `"plain"` → `plain`
+    ///   - `"a""b"` → `a"b`
+    ///   - `plain` → `plain` (no-op when no surrounding quotes)
+    static func stripQuotesAndUnescape(_ token: String) -> String {
+        // Step 1: strip outer quotes if both present.
+        let stripped: String
+        if token.count >= 2, token.first == "\"", token.last == "\"" {
+            stripped = String(token.dropFirst().dropLast())
+        } else {
+            stripped = token
+        }
+        // Step 2: Specctra DSN doubled-quote escaping — `""` → `"`.
+        // The escape sequence is two consecutive `"` characters inside the
+        // already-unquoted string. We replace literal `""` with `"`.
+        return stripped.replacingOccurrences(of: "\"\"", with: "\"")
     }
 }

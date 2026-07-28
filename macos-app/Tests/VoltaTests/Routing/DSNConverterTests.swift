@@ -4,11 +4,9 @@
 //
 //  Phase 253 Task 2 — Specctra DSN Converter Tests
 //
-//  DSNConverter parses Specctra DSN files (the format Freerouting takes
-//  and produces) and surfaces a minimal DSNSummary struct with the
-//  fields needed for RoutingMetrics (wires, vias, unrouted nets).
-//  Full .kicad_pcb ↔ DSN round-trip conversion lives in Python via
-//  pcbnew bindings (out of scope for this Swift layer).
+//  DSNConverter owns the shared Specctra tokenizer and summary extraction.
+//  SpecctraDSNReader builds semantic wiring geometry on those same tokens
+//  for the native Swift DSN round-trip pipeline.
 //
 
 import Testing

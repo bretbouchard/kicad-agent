@@ -296,7 +296,7 @@ public struct SpecctraDSNWriter: Sendable {
         let images = buildImages(board: board, padstacks: padstacks)
         for imgName in images.keys.sorted() {
             guard let img = images[imgName] else { continue }
-            lines.append("    (image \"\(escapeDSN(imgName))\")")
+            lines.append("    (image \"\(escapeDSN(imgName))\"")
             lines.append("      (side \(img.side))")
             if let outline = img.outline {
                 let (ox1, oy1, ox2, oy2) = outline
@@ -477,10 +477,10 @@ public struct SpecctraDSNWriter: Sendable {
         let allNets = collectNetNames(board: board)
         let defaultNets = allNets.subtracting(netsInNamedClasses).sorted()
         if defaultNets.isEmpty {
-            lines.append("    (class default \"\")")
+            lines.append("    (class default \"\"")
         } else {
             let defaultMembers = defaultNets.joined(separator: " ")
-            lines.append("    (class default \"\" \(defaultMembers))")
+            lines.append("    (class default \"\" \(defaultMembers)")
         }
         lines.append("      (circuit")
         lines.append("        (use_layer \(layers.joined(separator: " ")))")
