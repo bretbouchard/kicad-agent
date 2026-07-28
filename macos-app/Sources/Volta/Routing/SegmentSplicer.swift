@@ -167,10 +167,14 @@ public struct SegmentSplicer: Sendable {
     }
 
     private func format(_ value: Double) -> String {
-        String(format: "%.6f", locale: Locale(identifier: "en_US_POSIX"), value)
-            .trimmingCharacters(in: CharacterSet(charactersIn: "0"))
-            .trimmingCharacters(in: CharacterSet(charactersIn: "."))
-            .replacingOccurrences(of: "-0", with: "0")
+        // Format with 6 decimal places, then strip trailing zeros and the
+        // decimal point if it becomes trailing. Preserve leading zeros
+        // (e.g. "0.250000" → "0.25", NOT "25" or ".25").
+        let raw = String(format: "%.6f", locale: Locale(identifier: "en_US_POSIX"), value)
+        var trimmed = raw
+        while trimmed.hasSuffix("0") { trimmed.removeLast() }
+        if trimmed.hasSuffix(".") { trimmed.removeLast() }
+        return trimmed.replacingOccurrences(of: "-0", with: "0")
     }
 
     private func escapeAtom(_ value: String) -> String {

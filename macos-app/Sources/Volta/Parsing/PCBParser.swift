@@ -243,7 +243,15 @@ struct PCBParser {
         let atNode = node.find("at")
         let sizeNode = node.find("size")
         let drillNode = node.find("drill")
-        let layers = node.find("layers")?.childString(0) ?? "F.Cu"
+        // KiCad encodes via layers as `(layers "F.Cu" "B.Cu")` — join all
+        // child strings so two-layer vias round-trip correctly. Falls back
+        // to "F.Cu" only when no layers are present.
+        let layersNode = node.find("layers")
+        let layers: String = {
+            guard let layersNode else { return "F.Cu" }
+            let parts = layersNode.children.compactMap { $0.stringValue }
+            return parts.isEmpty ? "F.Cu" : parts.joined(separator: " ")
+        }()
 
         let netNode = node.find("net")
         let netNum = Int(netNode?.childString(0) ?? "0") ?? 0

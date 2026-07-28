@@ -6,14 +6,13 @@
 //
 //  RoutingProvider implementation that shells out to the Freerouting
 //  autorouter (a Java JAR). Detects java + JAR at known paths, runs
-//  Freerouting with a Specctra DSN input/output pair, and parses
-//  metrics from the router log.
+//  Freerouting with a Specctra DSN input/output pair, and splices
+//  the resulting routes back into the original .kicad_pcb via the
+//  pure-Swift SpecctraDSNReader + SegmentSplicer pipeline.
 //
 //  Detection strategy, in order:
 //    1. `which java` via /usr/bin/env (user PATH)
 //    2. `/usr/bin/java` (system Java)
-//    3. `java -version` to confirm it actually runs (some installs have
-//       `java` shim that 404s on macOS)
 //
 //  JAR search paths:
 //    - /Applications/Freerouting.app/Contents/Java/freerouting.jar
@@ -23,23 +22,18 @@
 //    - ~/Library/Application Support/freerouting/freerouting.jar
 //
 //  ponytail: zero IO during availability if previously-cached path is
-//  still on disk. We re-probe only on demand (lazy invalidation via
+//  still on disk. Re-probe only on demand (lazy invalidation via
 //  app-launch reset).
 //
-//  Integration scope: shell-out + log parse ONLY. The KiCad ↔ DSN
-//  conversion is delegated to a Python helper (pcbnew bindings) since
-//  kicad-cli 9.x has no specctra subcommand. The adapter raises a
-//  clear .dsnConversionUnavailable error if the helper script is
-//  missing, and surfaces the helper's stderr in the log file.
+//  Native Swift pipeline (no Python pcbnew at runtime):
+//    .kicad_pcb → PCBParser → SpecctraDSNWriter.write → Freerouting JAR
+//    Freerouting JAR → SpecctraDSNReader.read → SegmentSplicer.splice
+//    → updated .kicad_pcb on disk.
 //
 
 import Foundation
 import OSLog
 import VoltaPCBCore
-
-#if canImport(VoltaKiCadBridge)
-// Reserved for the Python pcbnew helper bridge. Out of scope for this task.
-#endif
 
 // MARK: - FreeroutingError
 
@@ -50,8 +44,8 @@ public enum FreeroutingError: Error, LocalizedError, Equatable {
     case jarNotFound(searched: [String])
     case nonZeroExit(code: Int32, stderr: String)
     case timeout(seconds: Int)
-    case dsnConversionUnavailable(reason: String)
     case invalidDSNOutput(path: String, reason: String)
+    case splicingFailed(reason: String)
 
     public var errorDescription: String? {
         switch self {
@@ -64,10 +58,10 @@ public enum FreeroutingError: Error, LocalizedError, Equatable {
             return "Freerouting exited with code \(code). stderr: \(stderr.prefix(500))"
         case .timeout(let seconds):
             return "Freerouting timed out after \(seconds) seconds. Increase rules.timeout or simplify the board."
-        case .dsnConversionUnavailable(let reason):
-            return "DSN conversion unavailable: \(reason). Install pcbnew bindings: `pip install pcbnew` from your KiCad install."
         case .invalidDSNOutput(let path, let reason):
             return "Freerouting produced an invalid DSN at \(path): \(reason)"
+        case .splicingFailed(let reason):
+            return "Splicing Freerouting output into the .kicad_pcb failed: \(reason)"
         }
     }
 }
@@ -105,6 +99,9 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
 
     private let runner: any ProcessRunner
     private let jarPathOverride: URL?
+    private let dsnWriter: SpecctraDSNWriter
+    private let dsnReader: SpecctraDSNReader
+    private let splicer: SegmentSplicer
 
     // Cached detection results (refreshed lazily when invalidated).
     private var cachedJavaPath: String?
@@ -115,13 +112,28 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
 
     /// Production initializer (uses the real Process runner).
     public convenience init(jarPathOverride: URL? = nil) {
-        self.init(runner: RealProcessRunner(), jarPathOverride: jarPathOverride)
+        self.init(
+            runner: RealProcessRunner(),
+            jarPathOverride: jarPathOverride,
+            dsnWriter: SpecctraDSNWriter(),
+            dsnReader: SpecctraDSNReader(),
+            splicer: SegmentSplicer()
+        )
     }
 
     /// Designated initializer for tests in the same module.
-    init(runner: any ProcessRunner, jarPathOverride: URL? = nil) {
+    init(
+        runner: any ProcessRunner,
+        jarPathOverride: URL? = nil,
+        dsnWriter: SpecctraDSNWriter = SpecctraDSNWriter(),
+        dsnReader: SpecctraDSNReader = SpecctraDSNReader(),
+        splicer: SegmentSplicer = SegmentSplicer()
+    ) {
         self.runner = runner
         self.jarPathOverride = jarPathOverride
+        self.dsnWriter = dsnWriter
+        self.dsnReader = dsnReader
+        self.splicer = splicer
     }
 
     // MARK: - Availability
@@ -173,11 +185,11 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
             throw FreeroutingError.jarNotFound(searched: Self.defaultJARSearchPaths)
         }
 
-        // 2. Prepare DSN workspace. The actual .kicad_pcb → DSN conversion
-        //    is delegated to a Python helper (pcbnew). For now we treat the
-        //    input as if it were already a DSN — the adapter's caller is
-        //    responsible for staging the conversion. We still document the
-        //    error path for when that stage fails.
+        // 2. Native Swift: parse the .kicad_pcb, generate DSN, stage workspace.
+        let pcbText = try String(contentsOf: pcbFile, encoding: .utf8)
+        let board = try PCBParser.parse(pcbText)
+        let dsnText = dsnWriter.write(board)
+
         let workDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("freerouting-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
@@ -186,21 +198,7 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
         let inputDSN = workDir.appendingPathComponent("input.dsn")
         let outputDSN = workDir.appendingPathComponent("output.dsn")
         let logFile = workDir.appendingPathComponent("freerouting.log")
-
-        // If the caller passed a .kicad_pcb, we assume a sibling helper has
-        // already produced inputDSN. We copy the inputDSN to track it.
-        // The actual conversion lives outside this Swift layer (Python
-        // helper invoked by the Volta host app); for direct unit tests
-        // the caller stages inputDSN themselves.
-        if !FileManager.default.fileExists(atPath: inputDSN.path) {
-            // Try the convention: caller pre-staged input.dsn next to pcbFile.
-            let sibling = pcbFile.deletingLastPathComponent().appendingPathComponent("input.dsn")
-            if FileManager.default.fileExists(atPath: sibling.path) {
-                try FileManager.default.copyItem(at: sibling, to: inputDSN)
-            } else {
-                throw FreeroutingError.dsnConversionUnavailable(reason: "No input.dsn found at \(inputDSN.path) — host app must run pcbnew export before invoking Freerouting.")
-            }
-        }
+        try dsnText.write(to: inputDSN, atomically: true, encoding: .utf8)
 
         // 3. Shell out to java -jar freerouting.jar -de input -do output.
         let arguments = [
@@ -258,12 +256,24 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
         // 5. Persist log + parse metrics from output DSN.
         try (result.stdout + "\n" + result.stderr).write(to: logFile, atomically: true, encoding: .utf8)
 
-        let metrics = parseMetrics(stdout: result.stdout, summary: parseOutputSummary(outputDSN))
+        let outputText = try String(contentsOf: outputDSN, encoding: .utf8)
+        let routedBoard: SpecctraBoard
+        do {
+            routedBoard = try dsnReader.read(outputText)
+        } catch {
+            throw FreeroutingError.invalidDSNOutput(path: outputDSN.path, reason: error.localizedDescription)
+        }
 
-        // 6. The mutated .kicad_pcb lives at pcbFile. Freerouting wrote
-        //    routes into outputDSN; the host app is responsible for the
-        //    DSN → .kicad_pcb import (Python pcbnew). For now we report
-        //    the outputDSN in the result so callers can locate it.
+        // 6. Splice Freerouting's output back into the original .kicad_pcb.
+        let spliced: SplicedResult
+        do {
+            spliced = try splicer.splice(specctraBoard: routedBoard, into: pcbText)
+        } catch {
+            throw FreeroutingError.splicingFailed(reason: error.localizedDescription)
+        }
+        try spliced.pcbContent.write(to: pcbFile, atomically: true, encoding: .utf8)
+
+        let metrics = parseMetrics(stdout: result.stdout, summary: parseOutputSummary(outputDSN))
         progress?(.completed)
         return RoutingResult(
             pcbFile: pcbFile,
@@ -380,7 +390,11 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
             // unrouted nets may be a single number; if summary has a list, prefer that.
             if summary?.unroutedNets.isEmpty ?? true {
                 let count = parseTrailingNumber(after: "unrouted nets:", in: stdout[range.upperBound...]) ?? 0
-                unrouted = (1...count).map { "NET_\($0)" }
+                // `1...count` would trap if count == 0; clamp + skip when zero.
+                let safeCount = max(0, count)
+                if safeCount > 0 {
+                    unrouted = (1...safeCount).map { "NET_\($0)" }
+                }
             }
         }
 

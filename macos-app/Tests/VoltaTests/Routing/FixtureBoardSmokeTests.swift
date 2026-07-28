@@ -36,12 +36,6 @@ struct FixtureBoardSmokeTests {
     /// entire suite rather than fail if the fixture is missing — fixtures
     /// are documentation, not load-bearing test data.
     private static func locateFixture() -> URL? {
-        if let url = Bundle.module.url(
-            forResource: "simple_2layer_led",
-            withExtension: "kicad_pcb"
-        ) {
-            return url
-        }
         // Fallback: try the source tree directly. Useful when running tests
         // from Xcode before the resource bundle has been rebuilt.
         let candidates = [

@@ -259,14 +259,18 @@ public enum DSNConverter {
         guard let parserRange = findSection(named: "parser", in: Array(tokens)) else {
             return nil
         }
-        let parserTokens = tokens[parserRange]
+        // Re-slice with absolute indices, then convert to a flat Array.
+        // Array(tokens)[parserRange] preserves the lower bound as startIndex,
+        // so iterating with `0..<count` and subscripting [i] would crash.
+        // Array(...) flattens to startIndex=0 — safe for 0-based indexing.
+        let parserTokens = Array(Array(tokens)[parserRange])
         var host = "unknown"
         var version = ""
         for i in 0..<parserTokens.count {
-            if parserTokens[i] == "host_cad", i + 2 < parserTokens.count {
-                host = stripQuotesAndUnescape(parserTokens[i + 2])
-            } else if parserTokens[i] == "host_version", i + 2 < parserTokens.count {
-                version = stripQuotesAndUnescape(parserTokens[i + 2])
+            if parserTokens[i] == "host_cad", i + 1 < parserTokens.count {
+                host = stripQuotesAndUnescape(parserTokens[i + 1])
+            } else if parserTokens[i] == "host_version", i + 1 < parserTokens.count {
+                version = stripQuotesAndUnescape(parserTokens[i + 1])
             }
         }
         return version.isEmpty ? host : "\(host) \(version)"
@@ -277,7 +281,8 @@ public enum DSNConverter {
         guard let r = findSection(named: "resolution", in: Array(tokens)) else {
             return nil
         }
-        let toks = tokens[r]
+        // Flatten to Array so the count-based subscript at the bottom is safe.
+        let toks = Array(Array(tokens)[r])
         // (resolution mm <number>)
         if toks.count >= 4, let n = Int(toks[toks.count - 2]) {
             return n
@@ -290,7 +295,7 @@ public enum DSNConverter {
         guard let r = findSection(named: "structure", in: Array(tokens)) else {
             return []
         }
-        let toks = tokens[r]
+        let toks = Array(Array(tokens)[r])
         var layers: [String] = []
         var i = 0
         while i < toks.count - 1 {
@@ -307,7 +312,7 @@ public enum DSNConverter {
         guard let r = findSection(named: "network", in: Array(tokens)) else {
             return (0, 0, 0)
         }
-        let toks = tokens[r]
+        let toks = Array(Array(tokens)[r])
         var nets = 0
         var wires = 0
         var vias = 0
@@ -332,11 +337,11 @@ public enum DSNConverter {
         guard let wiringRange = findSection(named: "wiring", in: Array(tokens)) else {
             return []
         }
-        let toks = tokens[wiringRange]
-        guard let failedRange = findSection(named: "wires_failed", in: Array(toks)) else {
+        let toks = Array(Array(tokens)[wiringRange])
+        guard let failedRange = findSection(named: "wires_failed", in: toks) else {
             return []
         }
-        let failed = toks[failedRange]
+        let failed = Array(toks[failedRange])
         var nets: [String] = []
         var i = 0
         while i < failed.count - 1 {
