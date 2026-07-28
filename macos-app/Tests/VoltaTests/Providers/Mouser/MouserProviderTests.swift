@@ -61,7 +61,7 @@ struct MouserProviderTests {
     // MARK: - Wave 2 Tests
 
     @Test("Task 251-02: Search by exact part number")
-    func searchByPartNumber() async {
+    func searchByPartNumber() async throws {
         // Test exact MPN lookup returns correct part
         if ProcessInfo.processInfo.environment["MOUSER_API_KEY"] != nil {
             let results = try await provider.search(keyword: "STM32F411RET6")
@@ -73,7 +73,7 @@ struct MouserProviderTests {
     }
 
     @Test("Task 251-02: Search by keyword")
-    func searchByKeyword() async {
+    func searchByKeyword() async throws {
         // Test keyword search returns relevant results
         if ProcessInfo.processInfo.environment["MOUSER_API_KEY"] != nil {
             let results = try await provider.search(keyword: "Arduino")
@@ -85,7 +85,7 @@ struct MouserProviderTests {
     }
 
     @Test("Task 251-02: Empty results handling")
-    func emptyResults() async {
+    func emptyResults() async throws {
         // Test that nonsense searches return empty arrays, not errors
         if ProcessInfo.processInfo.environment["MOUSER_API_KEY"] != nil {
             let results = try await provider.search(keyword: "NONEXISTENTPARTXYZ123")
@@ -94,7 +94,7 @@ struct MouserProviderTests {
     }
 
     @Test("Task 251-02: Query parameter validation")
-    func queryValidation() async {
+    func queryValidation() async throws {
         // Test special characters are properly encoded
         if ProcessInfo.processInfo.environment["MOUSER_API_KEY"] != nil {
             let results = try await provider.search(keyword: "STM32F411RET6+TR")
@@ -104,7 +104,7 @@ struct MouserProviderTests {
     }
 
     @Test("Task 251-03: Stock data structure")
-    func stockDataStructure() async {
+    func stockDataStructure() async throws {
         // Test stock information is properly parsed
         if ProcessInfo.processInfo.environment["MOUSER_API_KEY"] != nil {
             let results = try await provider.search(keyword: "STM32F411RET6")
@@ -112,14 +112,14 @@ struct MouserProviderTests {
             if let part = firstWithStock {
                 let stockEntry = part.stock!.first
                 #expect(stockEntry?.distributor == "Mouser")
-                #expect(stockEntry?.quantityAvailable >= 0)
+                #expect((stockEntry?.quantityAvailable ?? 0) >= 0)
                 #expect(stockEntry?.lastUpdated != nil)
             }
         }
     }
 
     @Test("Task 251-03: Multiple warehouse handling")
-    func multipleWarehouses() async {
+    func multipleWarehouses() async throws {
         // Test that stock data can come from multiple sources
         if ProcessInfo.processInfo.environment["MOUSER_API_KEY"] != nil {
             let results = try await provider.search(keyword: "STM32F411RET6")
@@ -130,7 +130,7 @@ struct MouserProviderTests {
     }
 
     @Test("Task 251-04: Part details success")
-    func partDetailsSuccess() async {
+    func partDetailsSuccess() async throws {
         // Test getDetails returns full component information
         if ProcessInfo.processInfo.environment["MOUSER_API_KEY"] != nil {
             let details = try await provider.getDetails(partNumber: "STM32F411RET6")
@@ -143,7 +143,7 @@ struct MouserProviderTests {
     }
 
     @Test("Task 251-04: Part details not found")
-    func partDetailsNotFound() async {
+    func partDetailsNotFound() async throws {
         // Test getDetails returns nil for non-existent parts
         if ProcessInfo.processInfo.environment["MOUSER_API_KEY"] != nil {
             let details = try await provider.getDetails(partNumber: "NONEXISTENTPARTXYZ123")
@@ -153,7 +153,7 @@ struct MouserProviderTests {
     }
 
     @Test("Task 251-04: Pricing tier parsing")
-    func pricingTierParsing() async {
+    func pricingTierParsing() async throws {
         // Test that pricing tiers are properly extracted
         if ProcessInfo.processInfo.environment["MOUSER_API_KEY"] != nil {
             let results = try await provider.search(keyword: "STM32F411RET6")
@@ -168,7 +168,7 @@ struct MouserProviderTests {
     }
 
     @Test("Task 251-04: Datasheet URL extraction")
-    func datasheetURLExtraction() async {
+    func datasheetURLExtraction() async throws {
         // Test datasheet URLs are properly extracted
         if ProcessInfo.processInfo.environment["MOUSER_API_KEY"] != nil {
             let results = try await provider.search(keyword: "STM32F411RET6")
@@ -180,7 +180,7 @@ struct MouserProviderTests {
     }
 
     @Test("Task 251-04: Specifications extraction")
-    func specificationsExtraction() async {
+    func specificationsExtraction() async throws {
         // Test parametric specs are extracted
         if ProcessInfo.processInfo.environment["MOUSER_API_KEY"] != nil {
             let results = try await provider.search(keyword: "STM32F411RET6")

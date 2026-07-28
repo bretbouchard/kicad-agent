@@ -132,8 +132,14 @@ enum LifecycleInference {
             return (.nrnd, 0.9)
         }
 
+        // Check for obsolete indicators (distinct from EOL)
+        let obsoleteKeywords = ["obsolete"]
+        if obsoleteKeywords.contains(where: { normalized.contains($0) }) {
+            return (.obsolete, 0.95)
+        }
+
         // Check for EOL indicators
-        let eolKeywords = ["end of life", "eol", "obsolete", "no longer available", "production ended"]
+        let eolKeywords = ["end of life", "eol", "no longer available", "production ended"]
         if eolKeywords.contains(where: { normalized.contains($0) }) {
             return (.eol, 0.95)
         }

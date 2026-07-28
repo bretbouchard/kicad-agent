@@ -36,7 +36,7 @@ final class ComplianceProviderTests: XCTestCase {
         XCTAssertEqual(statuses.count, 5, "Should have 5 lifecycle status cases")
 
         // Test Sendable conformance
-        XCTAssertTypeEqual(LifecycleStatus.active, LifecycleStatus.active)
+        XCTAssertTrue(LifecycleStatus.active == LifecycleStatus.active)
     }
 
     func testLifecycleStatusDescription() {
@@ -68,7 +68,7 @@ final class ComplianceProviderTests: XCTestCase {
         XCTAssertEqual(statuses.count, 3, "Should have 3 RoHS status cases")
 
         // Test Sendable conformance
-        XCTAssertTypeEqual(RoHSStatus.compliant, RoHSStatus.compliant)
+        XCTAssertTrue(RoHSStatus.compliant == RoHSStatus.compliant)
     }
 
     func testRoHSStatusDescription() {
