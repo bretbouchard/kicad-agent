@@ -5,8 +5,9 @@
 //  Phase 3 / Task 3 — LCSC Cross-Reference Engine
 //
 //  Maps manufacturer part numbers (MPN) to LCSC part numbers so that
-//  easyeda2kicad can download CAD models and JLCPCB can check assembly
-//  availability. Uses an in-memory cache with optional SQLite persistence.
+//  the EasyEDA provider can download CAD models and JLCPCB can check
+//  assembly availability. Uses an in-memory cache with optional SQLite
+//  persistence.
 //
 //  Confidence scoring:
 //    - Exact MPN match:        1.0

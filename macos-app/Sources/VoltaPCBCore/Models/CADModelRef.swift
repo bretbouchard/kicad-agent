@@ -26,7 +26,7 @@ public struct CADModelRef: Sendable, Codable, Hashable {
     public let format: CADModelFormat
 
     /// Machine identifier of the provider that supplied this model
-    /// (e.g., "easyeda2kicad", "kicad-http-libs").
+    /// (e.g., "easyeda", "kicad-http-libs").
     public let source: String
 
     /// When the file was cached. Used for cache eviction + freshness checks.

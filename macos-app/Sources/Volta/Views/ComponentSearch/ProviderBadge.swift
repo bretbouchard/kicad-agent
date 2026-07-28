@@ -28,7 +28,7 @@ struct ProviderBadge: View {
     private var displayName: String {
         switch providerName {
         case "digikey": return "Digi-Key"
-        case "easyeda2kicad": return "EasyEDA"
+        case "easyeda": return "EasyEDA"
         case "mouser": return "Mouser"
         case "octopart": return "Octopart"
         case "octopart-cad": return "SnapEDA"
@@ -43,7 +43,7 @@ struct ProviderBadge: View {
     private var color: Color {
         switch providerName {
         case "digikey": return .yellow
-        case "easyeda2kicad": return .blue
+        case "easyeda": return .blue
         case "mouser": return .red
         case "octopart": return .purple
         case "octopart-cad": return .indigo

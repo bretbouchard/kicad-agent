@@ -11,7 +11,7 @@
 //    - Nexar/Octopart (Client ID + Client Secret — OAuth2)
 //    - JLCPCB Assembly API (API Key — header-based)
 //
-//  Local sources that need no credentials (easyeda2kicad, jlcparts) are
+//  Local sources that need no credentials (EasyEDA, jlcparts) are
 //  shown with status info but no key fields.
 //
 //  Keys are stored in macOS Keychain via KeychainManager generic credentials.
@@ -249,10 +249,10 @@ struct ComponentProviderSettingsView: View {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
-                    Text("easyeda2kicad CLI")
+                    Text("EasyEDA")
                         .fontWeight(.medium)
                 }
-                Text("No key needed — open source CLI tool for CAD models.")
+                Text("No key needed — public web API for CAD models.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
