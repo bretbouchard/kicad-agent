@@ -1,230 +1,275 @@
-# Council of Ricks — Gate 2 Execution Review
+# Council of Ricks — Gate 2 Execution Review (Task 6 Sandbox Cleanup)
 
 **Phase:** 253 (Routing Plugin System)
-**Plans reviewed:** Task 2 REDO (DSN port) — all four commits
+**Task:** 6 — Sandbox Cleanup Sweep (4 commits)
 **Review date:** 2026-07-28
-**Reviewers:** Rick Sanchez (code), Rick C-137 (security), Slick Rick (SLC), Evil Morty (synthesis), Rick Prime (design), Rickfucius (history)
-**Verdict:** **APPROVE — execution satisfies Gate 1 plan requirements**
+**Reviewer:** Evil Morty (Council of Ricks Orchestrator)
+**Plan:** `.planning/phases/253-routing-plugin-system/TASK6_SANDBOX_CLEANUP_PLAN.md`
 
----
+## Commits under review
 
-## Executive Summary
+| # | SHA | Title |
+|---|-----|-------|
+| 6a | `f33e876` | refactor(ki-cad): delete KiCadCLIDetector + KiCadInstallStatus |
+| 6b | `d89d63a` | refactor(easy-eda): rewrite provider to direct web API |
+| 6c+6e | `fdc56ee` | refactor(routing): bundle freerouting.jar + sandbox-clean Java resolution |
+| 6d | `14210a7` | test(erc): replace batch_erc_parity.py with Swift ERCParityTests |
 
-- **Commits reviewed:** 4 (4ab5e6c, a04de09, 1de05fa, 52a42cb)
-- **Total findings (Gate 2):** 5
-- **Critical (P0):** 0
-- **High (P1):** 0
-- **Medium (P2):** 1
-- **Low (P3):** 4
+## Sandbox discipline (codified in `PROJECT.md` `cf1fb3b`)
 
-The native Swift pipeline executes end-to-end without Python pcbnew or
-kicad-cli at runtime. All Commit 4 routing test suites pass (47/47).
-Pre-existing failures are scoped out per deviation rule scope-boundary
-and tracked in `deferred-items.md`.
-
----
-
-## Commit Inventory
-
-| # | Hash | Subject |
-|---|------|---------|
-| 1 | 4ab5e6c | feat(routing): SpecctraDSNWriter — pure-Swift DSN generator |
-| 2 | a04de09 | feat(routing): SpecctraDSNReader + DSNConverter cleanup |
-| 3 | 1de05fa | feat(routing): SegmentSplicer — SES to KiCad splice |
-| 4 | 52a42cb | feat(routing): FreeroutingProvider — native Swift pipeline + SegmentSplicer fixes |
-
----
-
-## Stack Assessment
-
-- **Project type:** macOS native app (Swift, SwiftUI)
-- **Build system:** Xcode/xcodebuild
-- **Concurrency:** Swift 6 strict concurrency
-- **Platform:** macOS 26+
-- **Sandbox rule:** Codified at `cf1fb3b` in PROJECT.md
-- **No Python pcbnew / kicad-cli at runtime:** VERIFIED
-  (single non-code reference is documentation comment in
-  FreeroutingProvider.swift:28 stating "no Python pcbnew at runtime")
-
----
-
-## Security Review (Rick C-137)
-
-**Status:** PASS
-
-### Verified
-
-| Check | Result |
-|-------|--------|
-| Tool boundary scoped to routing task | PASS — RoutingProvider protocol isolated |
-| No external credential access | PASS — FreeroutingProvider only shells to java + JAR |
-| Blast radius bounded to .kicad_pcb file | PASS — splicing confined to pcbFile parameter |
-| Rollback verified | PASS — git checkpoint before Commit 4 |
-| Prompt injection defense | N/A — no external content processing |
-| Audit trail complete | PASS — git log + deferred-items.md |
-
-### Shell-out audit
-
-- `probeJava()` runs `/usr/bin/env which java` and `/usr/bin/which java`
-  via ProcessRunner — read-only PATH probe, no execution of arbitrary
-  user code.
-- Freerouting invocation uses hardcoded args (`-Xmx{m}m -jar {jar} -de
-  {input} -do {output} -mt 1 --log-stdout`). No user-controlled args
-  beyond the JAR path (validated by `FileManager.fileExists`).
-- Temp workspace scoped to `FileManager.default.temporaryDirectory`
-  with UUID subdirectory and `defer { try? removeItem }`.
+> All subprocesses and bundled tools (Python daemon, Freerouting JAR, helper binaries) must resolve from `Bundle.main.resourcePath`. No host-filesystem lookups (e.g. `/Applications/KiCad/`), no `which`/PATH resolution, no `pip install` requiring user environment.
 
 ---
 
 ## SLC Validation (Slick Rick)
 
-**Status:** PASS
+**Status:** PARTIAL PASS
 
 ### SLC Anti-Patterns Detected
 
-None. No workarounds, no stubs, no TODOs, no "good enough" fallbacks.
-The pcbnew/kicad-cli fallback path was deleted per plan.
+- **Workarounds**: 0 found in commits under review
+- **Stub methods**: 1 found (P1 — see 6b finding below)
+- **TODO/FIXME without tickets**: 0 new (pre-existing TODOs in unrelated files not counted)
+- **Incomplete implementations**: 1 found (P1 — EasyEda conversion logic missing)
 
-### Gate 1 findings — closure status
+### SLC Criteria Assessment
 
-| ID | Finding | Plan response | Closure |
-|----|---------|---------------|---------|
-| C-02 | Feature flag keeps sandbox-violating fallback | Removed `pcbnew`/`kicad-cli` references from FreeroutingProvider.route() | IMPLEMENTED |
-| H-01 | DSNConverter.swift comments reference kicad-cli/Python pcbnew | DSNConverter.swift fully rewritten in commit a04de09 — old Python conversion path comments removed | IMPLEMENTED |
-| WR-01 | Pin name doubled-quote escaping | SpecctraDSNWriter.escapeDSN handles `""` correctly | IMPLEMENTED |
-| WR-02 | Empty pin number → placeholder | SpecctraDSNWriter emits `"pad"` for empty pin number | IMPLEMENTED |
-| WR-03 | SnapAngle enum prevents T-99-01-04 string injection | SpecctraDSNWriter.SnapAngle enum constrains inputs | IMPLEMENTED |
-| WR-04 | kicad-component-search tool list verification | Not in Commit 4 scope | DEFERRED (cross-phase) |
+- [x] **Simple**: Sandbox cleanup is clear in purpose. Each commit removes one violation class.
+- [ ] **Lovable**: EasyEda provider produces non-functional CAD models (empty KiCad envelopes with no geometry). Users downloading parts will get unusable files.
+- [x] **Complete**: KiCad detector deletion, Freerouting JAR bundling, and ERC parity test replacement are complete.
+- [x] **Secure**: No host-filesystem lookups remain in `macos-app/Sources/Volta/Routing/`. No `which`/PATH resolution. JAR is LFS-tracked with verified SHA-256.
 
----
-
-## Code Review (Rick Sanchez)
-
-**Status:** PASS
-
-### Verified patterns
-
-- **Immutability:** All public types are `struct` with `let` properties
-  and `Sendable` conformance (verified: PCBBoard, SpecctraBoard,
-  SpliceStats, SegmentSplicer, FreeroutingProvider).
-- **Error handling:** Comprehensive `LocalizedError` enum on
-  `FreeroutingError`, `SegmentSplicerError`.
-- **Input validation:** `validatePCB` in SegmentSplicer rejects empty
-  PCB, missing root, malformed root before splice.
-- **Boundary validation:** Splicer re-parses output via PCBParser to
-  reject malformed output.
-
-### Issues found in Commit 4 (Rule 1 auto-fixes)
-
-| ID | Issue | Fix |
-|----|-------|-----|
-| E1 | DSNConverter ArraySlice indexing trap | `Array(Array(tokens)[r])` flattens startIndex=0 |
-| E2 | DSNConverter host_cad value offset | `i+2` → `i+1` (value is at next token) |
-| E3 | FreeroutingProvider `(1...count)` Range trap | `max(0, count)` + guard |
-| E4 | SegmentSplicer `format()` stripped leading "0" | Trim trailing zeros only, preserve "0." prefix |
-| E5 | PCBParser.parseVia only read first layer child | Join all child strings with separator |
-
-All E1-E5 are IMPLEMENTED in Commit 4 (52a42cb).
+**SLC Decision**: REJECT — stub method violation in EasyEda provider
 
 ---
 
-## Architectural Review (Rick Prime)
+## Code Quality Review (Rick Sanchez)
 
-**Status:** PASS
+### 6a (f33e876) — KiCadCLIDetector Deletion
 
-### Pipeline integrity
+**Status**: PASS
 
-```
-.kicad_pcb → PCBParser.parse(text) → PCBBoard
-           → SpecctraDSNWriter.write(board) → DSN text
-           → file.write(inputDSN)
-           → java -jar freerouting.jar -de input -do output
-           → file.read(outputDSN)
-           → SpecctraDSNReader.read(text) → SpecctraBoard
-           → SegmentSplicer.splice(specctraBoard, pcbText) → SplicedResult
-           → file.write(pcbFile, spliced.pcbContent)
-```
+- `KiCadCLIDetector.swift` (292 LOC), `KiCadInstallStatus.swift` (102 LOC), `KiCadCLIDetectorTests.swift` (429 LOC) — all deleted
+- `ProcessRunner.swift` extracted to `Common/` — protocol preserved, `RealProcessRunner` intact
+- `ValidationPanel.swift:127` — `statusBadge()` returns exactly "Native ERC only — DRC via KiCad app" (matches plan requirement)
+- `LiquidGlassShell.swift:184-189` — "prefer daemon" preference dropped, native Swift renderer only
+- `QualityTesting.swift:72` — `KiCadCLIDetectorTests` removed from TestRegistry
+- `PostOpGate.swift:9` — comment updated "via kicad-cli" to "via native Swift"
+- `grep -rn "KiCadCLIDetector|KiCadInstallStatus|kicad_cli_check" macos-app/Sources/` — 0 functional matches (1 comment reference in ProcessRunner.swift header)
 
-Each stage has its own typed IR with explicit Sendable boundaries. No
-shared mutable state. The pure-Swift pipeline requires no Python
-interpreter at runtime.
+### 6b (d89d63a) — EasyEda Provider Rewrite
 
-### Test coverage
+**Status**: FAIL — see P1 finding below
 
-| Suite | Tests | Pass |
-|-------|-------|------|
-| DSNConverterTests | 9 | 9 |
-| SegmentSplicerTests | 6 | 6 |
-| SpecctraDSNReaderTests | 5 | 5 |
-| FreeroutingProviderTests | 11 | 11 |
-| RoutingTypesTests | 8 | 8 |
-| RoutingProviderRegistryTests | 8 | 8 |
-| KiCadCLIDetectorTests | 25 | 25 |
-| **Total Commit 4 routing tests** | **47** | **47** |
+- `EasyEdaAPI.swift` (214 LOC) — URLSession + strict Codable, `EasyEdaError.responseSchemaMismatch` exists with raw body
+- `EasyEdaProvider.swift` — no shell-out, no feature flag, no `findEasyEda2Kicad()`
+- `EasyEdaAPITests.swift` (319 LOC) — URLProtocol stubs, offline mocking
+- `EasyEdaErrorTests.swift` (48 LOC) — all error cases covered
+- `ProviderPriority.swift` — `"easyeda2kicad"` removed from array, `"easyeda"` remains (functional change, verified intended)
+- Doc comment cleanups in JLCPCB/LCSC/Octopart/CADModelProvider/CADModelRef/ComponentSource — all correct
+- `grep -rn "easyeda2kicad" macos-app/Sources/` — 0 matches (confirmed)
 
----
+### 6c+6e (fdc56ee) — Freerouting JAR Bundling + Java Resolution
 
-## Cross-Phase Consistency (Rickfucius)
+**Status**: PASS
 
-**Status:** PASS
+- `.gitattributes` — LFS tracking for `macos-app/Resources/freerouting.jar`
+- `git lfs ls-files` — `f5ed374182 * macos-app/Resources/freerouting.jar` (LFS-tracked)
+- `shasum -a 256` — `f5ed374182900ccc78e473518bbb9f6b869f4a07159495f663a76f52bb10523b` (matches commit message)
+- `FreeroutingProvider.swift:319-329` — `jarPath()` uses `Bundle.main.url(forResource:withExtension:)` first, `$FREEROUTING_JAR_PATH` second (dev escape hatch only)
+- `FreeroutingProvider.swift:288-314` — `probeJava()` uses `$JAVA_HOME` + `/usr/libexec/java_home` (no `which`/PATH)
+- `defaultJARSearchPaths` and `locateJAR()` deleted — `grep -rn "defaultJARSearchPaths|locateJAR" macos-app/Sources/Volta/Routing/` returns 0 matches
+- `project.yml` — JAR added to resources build phase
+- No `#if DEBUG` hardcoded paths (grep confirms)
+- `grep -rn "/Users/bretbouchard/apps/freerouting" macos-app/Sources/` — 0 matches
+- `grep -rn "/usr/bin/env.*which|/usr/bin/which" macos-app/Sources/Volta/Routing/` — 0 matches
 
-- Commit sequence matches the dependency order declared in PLAN.md:
-  Writer → Reader → Splicer → Provider.
-- RoutingProvider protocol foundation (bf29795) was already in place
-  before Commit 1; new code respects the protocol contract.
-- No rollback of prior work observed.
+### 6d (14210a7) — ERC Parity Tests
 
----
+**Status**: PASS
 
-## Findings — Four-State Resolution
-
-### IMPLEMENTED (resolved in Commit 4)
-
-**E1-E5** — see Code Review table.
-
-### ADDED-AS-PHASE
-
-None.
-
-### SUPERSEDED-BY-ALTERNATIVE
-
-None.
-
-### DEFERRED-TO-NAMED-TARGET
-
-**D1 — SpecctraDSNWriterTests 3 failures** (path/edge_cuts format +
-wiring gating). Trigger: future regression-fix phase. Logged in
-`deferred-items.md`.
-
-**D2 — FixtureBoardSmokeTests "Fixture has zero segments"**.
-Trigger: maintainer review of fixture vs assertion intent. Logged in
-`deferred-items.md`.
-
-**D3 — MLXLocalProviderTests 2 failures (VRAM, displayName)**.
-Trigger: MLX hardening phase. Logged in `deferred-items.md`.
-
-**D4 — MemoryModelsTests schema count 7 vs 6**. Trigger: schema sync
-with Confucius v6.0.0. Logged in `deferred-items.md`.
-
-**D5 — ProcessManagerTests tampered sidecar**. Trigger: checksum
-verification hardening. Logged in `deferred-items.md`.
-
-None of D1-D5 are P0 or P1; all are MEDIUM or LOW severity; all are
-PRE-EXISTING and outside Commit 4 scope per deviation rule.
+- `batch_erc_parity.py` (284 LOC) deleted from `.planning/phases/234a-corpus-and-driver/scripts/`
+- `ERCParityTests.swift` (248 LOC) — real Swift test using `Process` to spawn `erc-cli`, `JSONDecoder` to parse, `NativeERC.run()` for direct comparison
+- `erc-cli/main.swift` — comment-only change (verified: only doc comments updated, no code logic changed)
+- `grep -rn "batch_erc_parity" macos-app/` — 0 matches (confirmed)
 
 ---
 
-## Gate 2 Verdict
+## Security Review (Rick C-137)
 
-**APPROVE.**
+**Status**: PASS
 
-- All four commits land cleanly with descriptive messages.
-- Commit 4 source code compiles under Swift 6 strict concurrency.
-- All 47 routing tests pass.
-- Sandbox rule respected (no Python pcbnew at runtime).
-- Pre-existing failures documented and deferred, not silently dropped.
-- Four-state resolution taxonomy applied to all findings.
-- No P0/P1 findings in SUPERSEDED or DEFERRED state.
+- No host-filesystem lookups in `macos-app/Sources/Volta/Routing/`
+- No `which`/PATH resolution in routing pipeline
+- JAR verified via SHA-256 checksum
+- `EasyEdaAPIClient` uses `URLSessionConfiguration.ephemeral` (no persistent cookies/cache)
+- Default URLSession trust evaluation (system root CAs) — acceptable for public API with no credentials transmitted
+- No new secret exposure or credential handling introduced
 
-Phase 253 Task 2 is ready for Council Gate 2 closure and final GSD
-artifacts.
+---
+
+## Architecture Review (Rick Prime)
+
+**Status**: PASS with notes
+
+- `ProcessRunner` extraction to `Common/ProcessRunner.swift` is architecturally sound — shared abstraction used by `FreeroutingProvider` and (previously) `EasyEdaProvider` tests
+- `EasyEdaAPIClient` design is clean: strict Codable, envelope-or-direct decode, `Sendable` conformance, injectable `URLSession` for testing
+- `EasyEdaError` taxonomy is well-structured: `networkError`, `httpError`, `responseSchemaMismatch`, `incompleteProduct`
+- `ERCParityTests` correctly uses `Process` for CLI subprocess + in-process `NativeERC.run()` comparison
+- Note: `probeJava()` now uses `Process` directly instead of `ProcessRunner` protocol — see P2 finding
+
+---
+
+## Historical Context (Rickfucius)
+
+- Phase 163 introduced `KiCadCLIDetector` for external CLI detection — correct at the time, now sandbox-violating per `cf1fb3b`
+- `easyeda2kicad` was a Python CLI that performed full EasyEDA-to-KiCad format conversion (SVG to symbol, JSON to footprint). The new web API client fetches raw API payloads but does NOT replicate the conversion logic.
+- `batch_erc_parity.py` was a Phase 234A Python harness — replacing it with Swift `ERCParityTests` aligns with the Python-to-Swift migration pattern established in Phase 234B.
+
+---
+
+## Findings
+
+### [P1] COMMIT 6b: EasyEda provider stub envelopes produce non-functional CAD models
+
+- **Commit**: d89d63a
+- **Category**: SLC
+- **File**: `macos-app/Sources/Volta/Providers/EasyEda/EasyEdaProvider.swift:126-151`
+- **Issue**: `makeKiCadSymbolLib()` and `makeKiCadFootprint()` produce minimal KiCad-format envelopes that pass the validation gate (`(kicad_symbol_lib` and `(module` prefix checks) but contain NO actual CAD geometry. The symbol has a single zero-length hidden pin at origin. The footprint has no pads, no outline, no courtyards. The `EasyEdaSymbol.svg` field (containing the real symbol SVG from the API) and `EasyEdaFootprint.data` field (containing the real footprint JSON) are fetched but NEVER written to disk or used. The prior `easyeda2kicad` CLI performed full format conversion; the new implementation fetches data but discards it, writing empty envelopes instead.
+- **Evidence**:
+  ```swift
+  // makeKiCadSymbolLib produces:
+  (kicad_symbol_lib
+      (version 20211014)
+      (generator "easyeda-volta")
+      (symbol "S001"
+          (pin unspecified (at 0 0 0) (length 0) hide yes))
+          (symbol "C2040" (extends "RP2040"))
+      )
+  )
+  // makeKiCadFootprint produces:
+  (module "Footprint"
+      (layer F.Cu)
+      (descr "Generated by Volta from EasyEDA F001")
+      (fp_text reference "C2040")
+  )
+  ```
+  The `symbol.svg` and `footprint.data` fields are fetched via `api.fetchSymbol()` and `api.fetchFootprint()` but never appear in the output files.
+- **Resolution**: ADDED-AS-PHASE
+- **Suggested fix**: Implement real EasyEDA-to-KiCad format conversion (parse `EasyEdaSymbol.svg` into KiCad symbol pins/graphics, parse `EasyEdaFootprint.data` JSON into KiCad pad/outline/courtyard geometry). Alternatively, if conversion is out of scope for Phase 4, document the provider as metadata-only and remove `.footprints` and `.symbols` from `capabilities` until conversion is implemented. The plan's assumption that "the easyeda2kicad CLI is just a wrapper around [the API]" was incorrect — the CLI performed significant format conversion that is not replicated here.
+
+### [P2] COMMIT 6c+6e: probeJava() blocks cooperative thread pool
+
+- **Commit**: fdc56ee
+- **Category**: Architecture
+- **File**: `macos-app/Sources/Volta/Routing/FreeroutingProvider.swift:297-313`
+- **Issue**: `probeJava()` is an `async` function that calls `process.waitUntilExit()` synchronously, blocking a Swift cooperative thread pool thread. The previous implementation used `ProcessRunner` which dispatched to `DispatchQueue.global()`. Blocking async context can starve the cooperative thread pool under load.
+- **Evidence**:
+  ```swift
+  func probeJava() async -> String? {
+      // ...
+      try process.run()
+      process.waitUntilExit()  // <-- BLOCKS cooperative thread
+      // ...
+  }
+  ```
+- **Resolution**: ADDED-AS-PHASE
+- **Suggested fix**: Wrap `Process` execution in `withCheckedThrowingContinuation` + `DispatchQueue.global().async` (same pattern as `RealProcessRunner`), or extract to a `JavaLocator` type that uses the injected `ProcessRunner`.
+
+### [P2] COMMIT 6c+6e: probeJava() bypasses ProcessRunner protocol
+
+- **Commit**: fdc56ee
+- **Category**: Architecture / Test
+- **File**: `macos-app/Sources/Volta/Routing/FreeroutingProvider.swift:288-314`
+- **Issue**: `probeJava()` uses `Process` directly instead of the injected `ProcessRunner` protocol. This makes Java detection untestable — tests cannot mock the `/usr/libexec/java_home` subprocess result. The `FreeroutingProcessRunner` mock in `FreeroutingProviderTests.swift` still has a `whichResults` field that is now dead code (test `availabilityNoJar` passes `whichResults: [:]`). Additionally, the plan called for a separate `JavaLocator.swift` file (~80 LOC) and `JavaLocatorTests.swift` (~100 LOC) — neither was created.
+- **Evidence**: `probeJava()` instantiates `Process()` directly; `FreeroutingProcessRunner.whichResults` is never read by any code path in the new implementation.
+- **Resolution**: ADDED-AS-PHASE
+- **Suggested fix**: Route `probeJava()` through `ProcessRunner` (e.g., `runner.run(executable: "/usr/libexec/java_home", arguments: [])`). Extract to `JavaLocator.swift` per plan. Create `JavaLocatorTests.swift` with stubbed output.
+
+### [P2] COMMIT 6b: CacheManagerTests uses stale provider name "easyeda2kicad"
+
+- **Commit**: d89d63a (missed update)
+- **Category**: Test
+- **File**: `macos-app/Tests/VoltaTests/Cache/CacheManagerTests.swift:104`
+- **Issue**: Test calls `cache.cadCacheDir(provider: "easyeda2kicad", ...)` but the provider was renamed to `"easyeda"`. The test still passes (it only checks the path contains "C2040") but uses a provider name that no longer exists in production.
+- **Evidence**:
+  ```swift
+  let dir = cache.cadCacheDir(provider: "easyeda2kicad", lcscPartNumber: "C2040")
+  ```
+- **Resolution**: IMPLEMENTED (should be fixed in this phase)
+- **Suggested fix**: Change `"easyeda2kicad"` to `"easyeda"`.
+
+### [P3] COMMIT 6b: MergeEngineV2Tests stale comment
+
+- **Commit**: d89d63a (missed update)
+- **Category**: Doc
+- **File**: `macos-app/Tests/VoltaTests/Providers/Merge/MergeEngineV2Tests.swift:70`
+- **Issue**: Comment says "Default order: digikey < octopart < mouser < easyeda2kicad < easyeda < jlcparts" but `easyeda2kicad` was removed from the priority array.
+- **Resolution**: IMPLEMENTED (should be fixed in this phase)
+- **Suggested fix**: Update comment to "Default order: digikey < octopart < mouser < easyeda < jlcparts".
+
+### [P3] COMMIT 6c+6e: Stale FreeroutingError messages
+
+- **Commit**: fdc56ee
+- **Category**: Doc
+- **File**: `macos-app/Sources/Volta/Routing/FreeroutingProvider.swift:51,54`
+- **Issue**: `javaNotFound` message says "ensure `java` is on PATH" — but the whole point of 6e was to remove PATH-based resolution. `jarNotFound` message says "Download from freerouting.app or `brew install freerouting`" — but the JAR is now BUNDLED.
+- **Resolution**: IMPLEMENTED (should be fixed in this phase)
+- **Suggested fix**: Update `javaNotFound` to reference `$JAVA_HOME` or `java_home`. Update `jarNotFound` to say "Bundled freerouting.jar not found — the app bundle may be corrupted."
+
+### [P3] COMMIT 6d: ERCParityTests typo "ponystail"
+
+- **Commit**: 14210a7
+- **Category**: Style
+- **File**: `macos-app/Tests/VoltaTests/ERC/ERCParityTests.swift:110` (approx)
+- **Issue**: Comment says `// ponystail:` instead of `// ponytail:`.
+- **Resolution**: IMPLEMENTED (should be fixed in this phase)
+- **Suggested fix**: Fix spelling to `ponytail`.
+
+### [P3] COMMIT 6c+6e: JavaLocator.swift / JavaLocatorTests.swift not created (plan deviation)
+
+- **Commit**: fdc56ee
+- **Category**: Architecture
+- **File**: N/A (files not created)
+- **Issue**: Plan called for `macos-app/Sources/Volta/Routing/JavaLocator.swift` (~80 LOC) and `macos-app/Tests/VoltaTests/Routing/JavaLocatorTests.swift` (~100 LOC). Neither was created — `probeJava()` logic was inlined in `FreeroutingProvider.swift` instead.
+- **Resolution**: SUPERSEDED-BY-ALTERNATIVE (inline implementation is functionally equivalent; separate file extraction deferred to refactor phase)
+- **Suggested fix**: Accept the inline implementation as a deviation. If testability becomes a concern, extract to `JavaLocator.swift` per the P2 finding above.
+
+### [P3] COMMIT 6a: Daemon kicad_cli_check dead code (out of scope)
+
+- **Commit**: f33e876 (not cleaned up)
+- **Category**: Architecture
+- **File**: `macos-app/daemon/handlers.py:221`, `macos-app/daemon/tests/test_kicad_cli_and_http.py`
+- **Issue**: The daemon still has `def kicad_cli_check(...)` registered as an MCP method, which calls `shutil.which("kicad-cli")` and probes `/Applications/KiCad/kicad-cli` (host-filesystem lookups). The Swift app no longer calls this handler (ValidationPanel dropped the MCP call), making it dead code. Plan line 22 explicitly says "The Python daemon is NOT a violation under the new rule — No action needed."
+- **Resolution**: DEFERRED-TO-NAMED-TARGET (daemon cleanup tracked for Phase 5 Python-to-Swift migration per plan "Out of scope" section)
+- **Suggested fix**: Track for Phase 5. Remove `kicad_cli_check` from `handlers.py` method registry when daemon is migrated or decommissioned.
+
+---
+
+## Council Consensus
+
+**Wave Alpha (Core):**
+- Rick Sanchez (Code): REJECT (P1 stub method)
+- Rick C-137 (Security): PASS (no sandbox violations introduced)
+- Slick Rick (SLC): REJECT (stub method violation)
+
+**Wave Beta (Wisdom):**
+- Rick Prime (Design/Architecture): PASS with notes (probeJava thread blocking + ProcessRunner bypass)
+- Rickfucius (Historian): Patterns confirm easyeda2kicad performed conversion; gap is real
+
+**Final:**
+- Evil Morty: **REJECT**
+
+---
+
+## Verdict: REJECT
+
+**Summary**: 9 findings (0 P0, 1 P1, 3 P2, 5 P3). The P1 finding (EasyEda provider stub envelopes) blocks merge. The `makeKiCadSymbolLib` and `makeKiCadFootprint` functions produce non-functional CAD models — they pass the validation gate's prefix check but contain no actual geometry (no pins, no pads). The `EasyEdaSymbol.svg` and `EasyEdaFootprint.data` fields are fetched from the API but never written to disk. The prior `easyeda2kicad` CLI performed full EasyEDA-to-KiCad format conversion that is not replicated here. The plan's assumption that "the CLI is just a wrapper around the API" was incorrect.
+
+The P1 must be resolved before merge: either implement real format conversion, or document the provider as metadata-only (remove `.footprints` and `.symbols` from `capabilities`) until conversion lands in a follow-up phase. All other findings (P2/P3) are tracked with ADDED-AS-PHASE or IMPLEMENTED resolutions.
+
+**Finding counts**: P0=0, P1=1, P2=3, P3=5
+
+---
+
+**Review completed**: 2026-07-28
