@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import VoltaPCBCore
 
 // MARK: - Compliance Provider Protocol
 

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import VoltaPCBCore
 
 /// Local compliance provider using cached component data
 /// Implements offline compliance tracking without external API dependencies
