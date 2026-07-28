@@ -34,25 +34,14 @@ struct FreeroutingProviderTests {
 
     // MARK: - Availability
 
-    @Test("Availability is .unavailable when java not on PATH")
-    func availabilityNoJava() async {
-        let runner = FreeroutingProcessRunner(
-            whichResults: ["java": .whichFailed(exitCode: 1)],
-            runResults: [:]
-        )
-        let provider = FreeroutingProvider(runner: runner)
-        let avail = await provider.availability
-        guard case .unavailable(let reason) = avail else {
-            Issue.record("Expected .unavailable, got \(avail)")
-            return
-        }
-        #expect(reason.contains("Java"))
-    }
-
-    @Test("Availability is .unavailable when java found but JAR missing")
+    @Test("Availability is .unavailable when JAR not in Bundle and no env override")
     func availabilityNoJar() async {
+        // With the sandbox-clean rewrite, JAR lookup is Bundle.main first then
+        // $FREEROUTING_JAR_PATH. Tests run in xctest's bundle which does not
+        // include the JAR, and we do not set the env var here, so we expect
+        // an .unavailable result with a JAR-not-found reason.
         let runner = FreeroutingProcessRunner(
-            whichResults: ["java": .pathFound("/usr/bin/java")],
+            whichResults: [:],
             runResults: [:]
         )
         let provider = FreeroutingProvider(runner: runner)
@@ -61,22 +50,47 @@ struct FreeroutingProviderTests {
             Issue.record("Expected .unavailable, got \(avail)")
             return
         }
-        #expect(reason.contains("Freerouting") || reason.contains("JAR") || reason.contains("jar"))
+        #expect(reason.contains("Freerouting") || reason.contains("JAR") || reason.contains("jar") || reason.contains("Bundle"))
     }
 
-    @Test("Availability is .available when java + JAR both found")
+    @Test("Availability is .available when JAR override + java detected")
     func availabilityReady() async {
+        // The runner's `which()` is retained by the mock but the sandbox-clean
+        // probeJava() no longer calls it — it uses $JAVA_HOME + /usr/libexec/java_home.
+        // Skip if no Java is available on this test host (e.g. CI without JDK).
         let runner = FreeroutingProcessRunner(
-            whichResults: ["java": .pathFound("/usr/bin/java")],
+            whichResults: [:],
             runResults: [:]
         )
         let jarURL = Self.freshFakeJAR()
+        let probe = FreeroutingProvider(runner: runner, jarPathOverride: jarURL)
+        guard (await probe.probeJava()) != nil else {
+            // No Java on this host — treat as environment skip, not a failure.
+            return
+        }
         let provider = FreeroutingProvider(
             runner: runner,
             jarPathOverride: jarURL
         )
         let avail = await provider.availability
         #expect(avail == .available)
+    }
+
+    @Test("jarPath() falls back to $FREEROUTING_JAR_PATH env var when Bundle lacks the JAR")
+    func jarPathEnvFallback() throws {
+        // Use a temp JAR so the existence check passes without polluting the bundle.
+        let fakeJar = Self.freshFakeJAR()
+        setenv("FREEROUTING_JAR_PATH", fakeJar.path, 1)
+        defer { unsetenv("FREEROUTING_JAR_PATH") }
+
+        let runner = FreeroutingProcessRunner(whichResults: [:], runResults: [:])
+        let provider = FreeroutingProvider(runner: runner)
+        let resolved = provider.jarPath()
+        // Bundle.main may or may not include the JAR in the test target.
+        // If Bundle has it, Bundle wins; otherwise the env fallback must win.
+        // Either way, jarPath() must return a non-nil URL pointing at a real file.
+        #expect(resolved != nil)
+        #expect(FileManager.default.fileExists(atPath: resolved!.path))
     }
 
     // MARK: - Route
@@ -408,8 +422,8 @@ struct FreeroutingProviderTests {
 /// of RealProcessRunner so the provider can be tested without spawning
 /// real subprocesses.
 ///
-/// Renamed from `MockProcessRunner` to avoid the redeclaration that exists
-/// between this file and `KiCadCLIDetectorTests.swift` (volta-db9).
+/// Renamed from `MockProcessRunner` to avoid potential redeclaration
+/// collisions with other test files that mock ProcessRunner.
 final class FreeroutingProcessRunner: ProcessRunner, @unchecked Sendable {
     /// What `which <executable>` should return per binary name.
     enum WhichResult: Equatable, Sendable {
