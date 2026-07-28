@@ -59,7 +59,7 @@ public struct SpecctraDSNWriter: Sendable {
 }
 
 public enum SnapAngle: String, Sendable {
-    case none, fortyfiveDegree = "fortyfive_degree", ninetyDegree = "ninety_degree"
+    case none, fortyFive = "fortyfive_degree", ninetyDegree = "ninety_degree"
 }
 ```
 
@@ -79,9 +79,15 @@ public enum SnapAngle: String, Sendable {
 
 **Files:** `macos-app/Sources/Volta/Routing/SpecctraDSNWriter.swift` (~600 LOC target)
 
-### D2: `SpecctraDSNReader.swift`
+### D2: `SpecctraDSNReader.swift` + `DSNConverter.swift` cleanup
 
-Extension of existing `DSNConverter.swift` to capture full wire/via geometry, not just counts for `RoutingMetrics`.
+**Relationship (Council H-03):** SpecctraDSNReader is the semantic interpreter on top of `DSNConverter`. The single tokenizer lives in `DSNConverter` (`tokenize()`, `findSection()`, `validateBalance()`). SpecctraDSNReader calls `DSNConverter.tokenize()` and `DSNConverter.findSection()` to parse the (wiring ...) section and capture full wire/via geometry, not just counts for `RoutingMetrics`. **One tokenizer, one semantic layer — no divergent parsing.**
+
+**DSNConverter.swift header cleanup (Council H-01):** Current header comments (lines 13-16) say "Full .kicad_pcb DSN round-trip is delegated to Python (pcbnew bindings) since kicad-cli 9.x has no specctra subcommand." After Task 2 lands, this is false — the round-trip is native Swift. As part of D2:
+
+1. Update header comments to reflect native Swift DSN pipeline — remove all references to Python pcbnew, kicad-cli, and shell-out as conversion mechanisms. The acceptance grep `grep -rn "pcbnew\|pip install pcbnew\|Python pcbnew" macos-app/Sources/Volta/Routing/` MUST return 0 matches.
+2. Add `DSNConverter.stripQuotesAndUnescape()` helper (Council L-05) that handles Specctra DSN doubled-quote escaping per Council WR-03: outer quotes stripped, then `""` → `"` unescape. Used by SpecctraDSNReader for net name parsing.
+3. Deprecate `DSNConverter.stripQuotes()` (kept for one release for source compatibility, marked `@available(*, deprecated, message: "Use stripQuotesAndUnescape()")`).
 
 **API surface:**
 ```swift
@@ -112,11 +118,13 @@ public struct SpecctraVia: Sendable {
 ```
 
 **Behavior:**
-- Parse the (wiring ...) section emitted by Freerouting
-- Quoted/unquoted net name handling (the SES regex fix from `23b5539`)
+- Parse the (wiring ...) section emitted by Freerouting via `DSNConverter.findSection()` (no re-tokenization)
+- Quoted/unquoted net name handling via `DSNConverter.stripQuotesAndUnescape()` (the SES regex fix from `23b5539`, plus `""` → `"` per Council L-05)
 - Padstack layer mapping: KiCad "*.Cu" → F.Cu/B.Cu based on component side
 
-**Files:** `macos-app/Sources/Volta/Routing/SpecctraDSNReader.swift` (~200 LOC target)
+**Files:**
+- `macos-app/Sources/Volta/Routing/SpecctraDSNReader.swift` (~200 LOC target, semantic layer)
+- `macos-app/Sources/Volta/Routing/DSNConverter.swift` (modify, ~30 LOC net change for header cleanup + `stripQuotesAndUnescape()`)
 
 ### D3: `SegmentSplicer.swift`
 
@@ -190,19 +198,29 @@ Three test files in `macos-app/Tests/VoltaTests/Routing/`:
 
 Total test LOC: ~550
 
+**Test fixture provenance (Council M-01):**
+
+- **Board fixture:** `macos-app/Tests/VoltaTests/Routing/Fixtures/simple_2layer_led.kicad_pcb` — verified exists, ships at `0a22012`. 48 footprints, 57 nets, 76 segments. Reused across all three test files.
+- **DSN snapshot fixtures:** Port the expected DSN strings from `git show fe68b91:tests/test_phase105_c02_dsn_wiring.py` — extract the golden strings and embed as Swift string literals in `SpecctraDSNWriterTests.swift` and `SpecctraDSNReaderTests.swift`. The Python fixture data is the only authoritative source — these are not regenerated, they are ported verbatim to ensure writer output matches Python exactly.
+- **Parity harness:** `git show fe68b91:tests/test_phase105_c02_dsn_wiring.py` is the round-trip test. The Swift equivalent (`SpecctraDSNReaderTests.swift` test (d)) writes the board via SpecctraDSNWriter, reads it back via SpecctraDSNReader, asserts geometry matches within 1µm tolerance.
+- **No external fixtures:** Tests do NOT depend on the live Freerouting JAR (that's an integration smoke test, not a unit test). Tests are pure-Swift and run in CI without Java/Freerouting.
+
 ## Commit strategy
 
-Three commits, each independently shippable + revertable:
+Four commits (Council M-05: split original commit 3 into 3a + 3b for smaller blast radius), each independently shippable + revertable:
 
-1. **`feat(routing): SpecctraDSNWriter — pure-Swift DSN generator`** — D1 + D5/writer tests
-2. **`feat(routing): SpecctraDSNReader — full geometry capture`** — D2 + D5/reader tests
-3. **`feat(routing): SegmentSplicer + FreeroutingProvider native pipeline`** — D3 + D4 + D5/splicer tests
+1. **`feat(routing): SpecctraDSNWriter — pure-Swift DSN generator`** — D1 + D5/writer tests + fixture port
+2. **`feat(routing): SpecctraDSNReader + DSNConverter cleanup — single tokenizer, semantic wiring layer`** — D2 (SpecctraDSNReader + DSNConverter header cleanup + `stripQuotesAndUnescape()`) + D5/reader tests
+3a. **`feat(routing): SegmentSplicer — SES to KiCad splice`** — D3 + D5/splicer tests, splicer-only
+3b. **`feat(routing): FreeroutingProvider native pipeline — delete pcbnew fallback`** — D4 (FreeroutingProvider wiring) + dsnConversionUnavailable case deletion + tests
 
 Each commit:
 - Compiles clean under Swift 6.2 strict concurrency
 - Tests pass (`swift test` for the VoltaTests target)
 - No new external dependencies
 - Removes the corresponding pcbnew reference (cumulative across commits)
+- Independently revertable (3a reverts the splicer; 3b reverts the wiring without touching the splicer)
+
 
 ## Acceptance criteria
 
@@ -212,6 +230,7 @@ Each commit:
 - [ ] All 4 routing test files (DSNConverter + 3 new) pass on xcodebuild VoltaTests
 - [ ] Existing 6 fixture assertions on `simple_2layer_led.kicad_pcb` still pass
 - [ ] `FreeroutingError` enum no longer has `.dsnConversionUnavailable` case
+- [ ] `grep -rn "pcbnew\|pip install pcbnew\|Python pcbnew\|kicad-cli\|kicad_cli" macos-app/Sources/Volta/Routing/` returns 0 matches (catches DSNConverter header comments per Council H-01)
 
 ## Risks + mitigations
 
@@ -225,7 +244,7 @@ Each commit:
 
 ## Out of scope
 
-- Stackup-based padstack details for 4+ copper layers (R-4 in `fe68b91`) — port only the 2-layer default path. R-4 lands as Task 2b follow-up if a 4-layer test fixture exists.
+- **R-4 stackup-based padstacks for 4+ copper layers** (Council L-01): Port only the 2-layer default path. R-4 lands as Task 2b follow-up when a 4-layer test fixture exists. **Tracking:** Bead with labels `council-deferred,phase-253,deferred-to-task-2b` — created at execution time, with trigger condition "4-layer test fixture exists" and visibility in ROADMAP "## Deferred" section.
 - Cloud routing adapter (Task 4 — already complete as research, no code)
 - KiCadNativeRouterProvider stub (Task 3 — separate plan)
 - Routing settings UI (Task 5 — separate plan)
