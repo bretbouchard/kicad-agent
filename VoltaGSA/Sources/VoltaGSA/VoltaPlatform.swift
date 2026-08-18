@@ -67,6 +67,9 @@ public struct VoltaPlatform: Sendable {
         // Platform.boot already registered the standard fs/process
         // capabilities for the roots given above.
         await platform.broker.register(ElectronicsExportCapability(allowedRoots: roots))
+        await platform.broker.register(
+            ElectronicsManufacturingQuoteCapability(allowedRoots: roots)
+        )
 
         return VoltaPlatform(
             platform: platform,
@@ -87,7 +90,12 @@ public struct VoltaPlatform: Sendable {
             scope: GrantScope(
                 kinds: [.create, .mutate, .delete],
                 typeNames: ElectronicsSchema.allTypeNames,
-                capabilities: ["electronics.export", "fs.write", "fs.read"]
+                capabilities: [
+                    "electronics.export",
+                    "electronics.manufacturing.quote",
+                    "fs.write",
+                    "fs.read",
+                ]
             ),
             grantedBy: VoltaPrincipals.bootstrap
         ))

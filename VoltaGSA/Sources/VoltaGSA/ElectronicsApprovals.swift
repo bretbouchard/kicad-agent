@@ -41,6 +41,33 @@ public struct ElectronicsApprovals: Sendable {
         ))
     }
 
+    /// Authority for an agent to request a manufacturing quote: invoke
+    /// `electronics.manufacturing.quote` for the TTL window. A quote request
+    /// is the outward-facing step of fabrication — it hands a board package
+    /// to a manufacturer (JLCPCB et al.) — so the Phase 2 plan routes it
+    /// behind a capability with approvals (M2.4 first flow). The package
+    /// under quote is digest-verified at invocation; the request package
+    /// itself is written as sha256 evidence.
+    public func requestManufacturingQuoteAuthority(
+        requester: Principal,
+        human: Principal,
+        projectName: String,
+        provider: String
+    ) async -> ApprovalRequest {
+        await ledger.submit(ApprovalRequest(
+            title: "Request manufacturing quote for “\(projectName)”",
+            decision: "Allow \(requester.rawValue) to submit manufacturing quote-request packages for \(projectName) to \(provider) (capability electronics.manufacturing.quote) for \(Int(Self.defaultTTL / 60)) minutes.",
+            supportingEvidence: [
+                "The Gerber/BOM export package under quote is verified against its recorded sha256 before the request is built.",
+                "The provider-facing quote-request package is written inside the platform's allowed roots and recorded as artifact evidence with its digest.",
+            ],
+            requestedOf: human,
+            requestedBy: requester,
+            grantsScope: GrantScope(capabilities: ["electronics.manufacturing.quote"]),
+            grantsTTL: Self.defaultTTL
+        ))
+    }
+
     /// Authority for an agent to delete a governed project: delete over
     /// the electronics types for the TTL window. Deletion is a tombstone —
     /// history survives, but the objects leave the live world permanently

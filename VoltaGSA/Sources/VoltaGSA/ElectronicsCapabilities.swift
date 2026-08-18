@@ -88,6 +88,149 @@ enum ArtifactSupport {
         }
         return sha256Hex(data) == reference.sha256
     }
+
+    /// Verifies an EXISTING file inside the sandbox: physically resolves
+    /// `path`, enforces the allowed-roots containment (same whole-component
+    /// rule as `resolveURL`), reads it, and confirms its sha256 matches the
+    /// claim. Returns the verified bytes. Used by capabilities that consume
+    /// another capability's artifact as input — the M2.4 manufacturing flow
+    /// quotes a digest-verified export package, never a bare path.
+    static func verifiedExistingFile(
+        path: String,
+        sha256: String,
+        allowedRoots: [URL]
+    ) throws -> Data {
+        let url = physicallyResolvedURL(URL(fileURLWithPath: path))
+        let roots = allowedRoots.map(physicallyResolvedURL)
+        guard roots.contains(where: { root in
+            url.path == root.path || url.path.hasPrefix(root.path + "/")
+        }) else {
+            throw CapabilityInputError.outsideSandbox(url.path)
+        }
+        guard let data = try? Data(contentsOf: url) else {
+            throw CapabilityInputError.missingField("gerber package is not readable at \(url.path)")
+        }
+        let actual = sha256Hex(data)
+        guard actual == sha256 else {
+            throw CapabilityInputError.notPermitted(
+                "gerber package digest mismatch at \(url.path): claimed \(sha256), actual \(actual)"
+            )
+        }
+        return data
+    }
+}
+
+// MARK: - electronics.manufacturing.quote
+
+/// The M2.4 seed for Volta's consequential manufacturing flow — the first
+/// operation the Phase 2 plan routes behind a capability ("manufacturing
+/// quote requests", `plans/VOLTA_PHASE2_EXECUTION_PLAN_2026-08-17.md`
+/// M2.4). Following the governed end-to-end proof of the handoff plan, the
+/// quote consumes a digest-verified export package
+/// (`ElectronicsExportCapability` output — the Gerber/BOM packaging seed)
+/// and produces the canonical, provider-facing quote-request package for
+/// the manufacturer Volta already talks to (JLCPCB,
+/// `Providers/JLCPCB/JlcpcbApiProvider.swift`): project, provider,
+/// quantity, board spec, and the sha256-pinned package reference. Outward-
+/// facing by design — authority arrives only through an approval flow
+/// (`ElectronicsApprovals.requestManufacturingQuoteAuthority`), never
+/// ambiently.
+public struct ElectronicsManufacturingQuoteCapability: Capability {
+    public static let schemaTag = "volta.mfg-quote/1"
+
+    public let id = CapabilityID(name: "electronics.manufacturing.quote", version: 1)
+    public let effect =
+        "Writes a canonical manufacturing quote-request package (sorted-key JSON, schema \(ElectronicsManufacturingQuoteCapability.schemaTag)) for a digest-verified export package, inside the allowed roots. Outward-facing manufacturing flow (M2.4)."
+
+    private let allowedRoots: [URL]
+
+    public init(allowedRoots: [URL]) {
+        self.allowedRoots = allowedRoots
+    }
+
+    public func invoke(_ input: WorldValue) async throws -> CapabilityResult {
+        guard case .object(let fields) = input,
+              case .string(let projectName)? = fields["projectName"],
+              case .string(let provider)? = fields["provider"],
+              case .int(let quantity)? = fields["quantity"]
+        else {
+            throw CapabilityInputError.missingField(
+                "projectName (string), provider (string), quantity (int) required"
+            )
+        }
+        guard let boardSpec = fields["boardSpec"] else {
+            throw CapabilityInputError.missingField("boardSpec (object) required")
+        }
+        guard case .string(let outputDir)? = fields["outputDir"] else {
+            throw CapabilityInputError.missingField("outputDir (string) required")
+        }
+        // The package under quote is pinned by digest, not by trust in the
+        // caller: KERNEL-006 verification happens BEFORE anything is built
+        // or written.
+        guard let packageValue = fields["gerberPackage"],
+              let package = ArtifactSupport.artifactReference(in: packageValue)
+        else {
+            throw CapabilityInputError.missingField(
+                "gerberPackage (object with path + sha256) required"
+            )
+        }
+        let packageBytes = try ArtifactSupport.verifiedExistingFile(
+            path: package.path,
+            sha256: package.sha256,
+            allowedRoots: allowedRoots
+        )
+
+        let manifest = try JSONSerialization.data(
+            withJSONObject: [
+                "schema": Self.schemaTag,
+                "projectName": projectName,
+                "provider": provider,
+                "quantity": quantity,
+                "boardSpec": try WorldValueCodec.toJSON(boardSpec),
+                "gerberPackage": [
+                    "path": package.path,
+                    "sha256": package.sha256,
+                    "bytes": packageBytes.count,
+                ],
+            ],
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+
+        let file = "mfg-quote-\(projectName.replacingOccurrences(of: "/", with: "-"))-\(provider)-\(UUID().uuidString.prefix(8)).json"
+        let url = try ArtifactSupport.resolveURL(
+            directory: outputDir,
+            file: file,
+            allowedRoots: allowedRoots
+        )
+        let written = try ArtifactSupport.write(manifest, to: url)
+
+        return CapabilityResult(
+            output: .object([
+                "path": .string(url.path),
+                "bytes": .int(written.bytes),
+                "sha256": .string(written.sha256),
+                "provider": .string(provider),
+                "quantity": .int(quantity),
+                "packageSha256": .string(package.sha256),
+            ]),
+            evidence: Evidence(
+                kind: .artifact,
+                claim: "electronics.manufacturing.quote wrote \(written.bytes) bytes to \(url.path) (sha256 \(written.sha256)) for \(provider), quantity \(quantity), package sha256 \(package.sha256)",
+                producer: Principal(rawValue: "capability:electronics.manufacturing.quote"),
+                payload: .object([
+                    "path": .string(url.path),
+                    "sha256": .string(written.sha256),
+                    "bytes": .int(written.bytes),
+                    "provider": .string(provider),
+                    "packageSha256": .string(package.sha256),
+                ])
+            )
+        )
+    }
+
+    public func verify(_ result: CapabilityResult) -> Bool {
+        ArtifactSupport.verifyArtifact(result)
+    }
 }
 
 // MARK: - electronics.export

@@ -2,13 +2,14 @@ import Foundation
 import CryptoKit
 import GSAModeledWorld
 
-/// The governed-electronics schema inside the Modeled World (M2.3): type
-/// names and the stable-identity rule that maps Volta's existing KiCad-model
-/// IDs onto GSA object identities (KERNEL-001). Identity is derived
-/// deterministically, so the same Volta project/schematic/component imports
-/// to the same `WorldObjectID` across restarts, processes, and re-imports —
-/// unlike the app-side `GSAPlatformHost` seed, which minted fresh
-/// `WorldObjectID()`s and matched objects by "first live of type".
+/// The governed-electronics schema inside the Modeled World (M2.3,
+/// complete): type names and the stable-identity rule that maps Volta's
+/// existing KiCad-model IDs onto GSA object identities (KERNEL-001).
+/// Identity is derived deterministically, so the same Volta
+/// project/schematic/component imports to the same `WorldObjectID` across
+/// restarts, processes, and re-imports — unlike the app-side
+/// `GSAPlatformHost` seed, which minted fresh `WorldObjectID()`s and
+/// matched objects by "first live of type".
 ///
 /// ## Schema grounding (Volta sources)
 ///
