@@ -41,6 +41,7 @@ dev = [
     "onnxruntime>=1.20",
     "nltk>=3.9",
     "rouge_score>=0.1.2",
+    "build>=1.2",
 ]
 llm = [
     "anthropic>=0.61.0",

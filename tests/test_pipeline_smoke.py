@@ -9,6 +9,9 @@ import pytest
 
 from volta.training.smoke_test import run_sft_smoke_test, run_grpo_smoke_test
 
+# torch nested-tensor prototype warning escalates under filterwarnings=error.
+pytestmark = pytest.mark.filterwarnings("ignore:The PyTorch API of nested tensors")
+
 
 def _torch_available() -> bool:
     try:

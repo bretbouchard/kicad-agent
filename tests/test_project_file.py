@@ -606,7 +606,9 @@ class TestModifyDesignRule:
         from volta.project.design_rules import parse_design_rules
         dru = parse_design_rules(dru_file)
         rule = next(r for r in dru.custom_rules if r.name == "HV_clearance")
-        assert rule.constraint_values == {"min": "1.0"}
+        # Serialized via the normalizer: all-zero decimals collapse to
+        # integer form ("1.0" -> "1"); numerically identical.
+        assert rule.constraint_values == {"min": "1"}
         # constraint_type unchanged
         assert rule.constraint_type == "clearance"
 

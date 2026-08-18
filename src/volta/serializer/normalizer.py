@@ -62,8 +62,21 @@ def normalize_kicad_output(content: str) -> str:
     content = _fix_scientific_notation(content)
     content = _fix_at_angle(content)
     content = _fix_trailing_zero_floats(content)
+    content = _strip_empty_tstamps(content)
     content = _normalize_whitespace(content)
     return content
+
+
+def _strip_empty_tstamps(content: str) -> str:
+    """Remove valueless ``(tstamp )`` nodes kiutils emits for KiCad 10 files.
+
+    kiutils models segment identity as ``tstamp`` and does not parse the
+    KiCad 10 ``(uuid ...)`` form, so uuid-only boards serialize an empty
+    ``(tstamp )`` that crashes kiutils' own re-parse (IndexError on
+    item[1]). The uuid reinjector restores real identity separately, so
+    the empty node is dropped here.
+    """
+    return re.sub(r"[ ]*\(tstamp[ ]*\)", "", content)
 
 
 def _fix_trailing_zero_floats(content: str) -> str:

@@ -61,6 +61,13 @@ def run_sft_smoke_test(output_dir: Path | None = None) -> dict:
     n_samples = 10
     n_epochs = 2
 
+    import warnings
+
+    # torch's nested-tensor prototype warning fires inside Transformer.forward;
+    # it is informational and floods test output (and escalates under
+    # filterwarnings=error). Suppress for the duration of the smoke run.
+    warnings.filterwarnings("ignore", message="The PyTorch API of nested tensors")
+
     # Generate tiny dataset with one small board config
     dataset = generate_dataset(
         n_samples=n_samples,
