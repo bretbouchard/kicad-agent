@@ -30,6 +30,7 @@ let package = Package(
         )
     ],
     dependencies: [
+        .package(path: "../../gsa-platform"),
         // Phase 164: MLX-Swift for in-process Metal-accelerated LLM inference.
         .package(
             url: "https://github.com/ml-explore/mlx-swift",
@@ -68,6 +69,7 @@ let package = Package(
             name: "Volta",
             dependencies: [
                 "VoltaPCBCore",
+                .product(name: "GSAPlatform", package: "gsa-platform"),
                 .product(name: "MLX", package: "mlx-swift"),
                 .product(name: "MLXNN", package: "mlx-swift"),
                 .product(name: "MLXLLM", package: "mlx-swift-lm"),

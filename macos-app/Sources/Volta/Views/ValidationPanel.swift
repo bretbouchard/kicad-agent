@@ -17,6 +17,25 @@ struct ValidationResult: Identifiable {
     let errorCount: Int
     let warningCount: Int
     let failures: [String]
+    let governed: GovernedValidationEvidence?
+}
+
+struct GovernedValidationEvidence: Equatable {
+    let projectReference: String
+    let revisionReference: String
+    let schematicReference: String
+    let sheetReference: String
+    let componentReference: String
+    let netReference: String
+    let bomReference: String
+    let pcbReference: String
+    let footprintReference: String
+    let verificationArtifactReference: String
+    let objectReference: String
+    let claim: String
+    let gateSatisfied: Bool
+    let liveEvidenceCount: Int
+    let historianChainCount: Int
 }
 
 /// View model for running ERC/DRC checks.
@@ -28,7 +47,12 @@ final class ValidationManager {
     var isRunning: Bool = false
 
     /// Run ERC on a .kicad_sch file using Swift native engine.
-    func runERC(filePath: String, client: MCPClient?) async {
+    func runERC(
+        filePath: String,
+        client: MCPClient?,
+        gsaPlatformHost: GSAPlatformHost?,
+        governedContext: GSAPlatformHost.GovernedProjectContext
+    ) async {
         isRunning = true
         defer { isRunning = false }
 
@@ -39,18 +63,34 @@ final class ValidationManager {
         let failures = result.violations
             .filter { $0.severity == .error }
             .map { $0.description }
+        let governed = await recordGovernedEvidence(
+            checkType: "ERC",
+            filePath: filePath,
+            decision: result.passed ? "passed" : "failed",
+            errorCount: result.errorCount,
+            warningCount: result.warningCount,
+            failures: failures,
+            gsaPlatformHost: gsaPlatformHost,
+            governedContext: governedContext
+        )
 
         results.insert(ValidationResult(
             checkType: "ERC",
             decision: result.passed ? "passed" : "failed",
             errorCount: result.errorCount,
             warningCount: result.warningCount,
-            failures: failures
+            failures: failures,
+            governed: governed
         ), at: 0)
     }
 
     /// Run DRC on a .kicad_pcb file using Swift native engine.
-    func runDRC(filePath: String, client: MCPClient?) async {
+    func runDRC(
+        filePath: String,
+        client: MCPClient?,
+        gsaPlatformHost: GSAPlatformHost?,
+        governedContext: GSAPlatformHost.GovernedProjectContext
+    ) async {
         isRunning = true
         defer { isRunning = false }
 
@@ -101,20 +141,86 @@ final class ValidationManager {
 
             let errors = violations.filter { $0.severity == "error" }
             let failures = errors.map { $0.description }
+            let governed = await recordGovernedEvidence(
+                checkType: "DRC",
+                filePath: filePath,
+                decision: errors.isEmpty ? "passed" : "failed",
+                errorCount: errors.count,
+                warningCount: violations.filter { $0.severity == "warning" }.count,
+                failures: failures,
+                gsaPlatformHost: gsaPlatformHost,
+                governedContext: governedContext
+            )
 
             results.insert(ValidationResult(
                 checkType: "DRC",
                 decision: errors.isEmpty ? "passed" : "failed",
                 errorCount: errors.count,
                 warningCount: violations.filter { $0.severity == "warning" }.count,
-                failures: failures
+                failures: failures,
+                governed: governed
             ), at: 0)
         } catch {
             results.insert(ValidationResult(
                 checkType: "DRC", decision: "indeterminate",
                 errorCount: 0, warningCount: 0,
-                failures: ["Parse error: \(error.localizedDescription)"]
+                failures: ["Parse error: \(error.localizedDescription)"],
+                governed: nil
             ), at: 0)
+        }
+    }
+
+    private func recordGovernedEvidence(
+        checkType: String,
+        filePath: String,
+        decision: String,
+        errorCount: Int,
+        warningCount: Int,
+        failures: [String],
+        gsaPlatformHost: GSAPlatformHost?,
+        governedContext: GSAPlatformHost.GovernedProjectContext
+    ) async -> GovernedValidationEvidence? {
+        guard let gsaPlatformHost else { return nil }
+        if gsaPlatformHost.state == .idle {
+            gsaPlatformHost.boot()
+        }
+
+        let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+        while gsaPlatformHost.state == .booting, ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+        guard gsaPlatformHost.state == .ready else { return nil }
+
+        do {
+            let evidence = try await gsaPlatformHost.recordVerificationEvidence(
+                checkType: checkType,
+                filePath: filePath,
+                passed: decision == "passed",
+                warningCount: warningCount,
+                errorCount: errorCount,
+                failures: failures,
+                context: governedContext
+            )
+            return GovernedValidationEvidence(
+                projectReference: evidence.projectReference,
+                revisionReference: evidence.revisionReference,
+                schematicReference: evidence.schematicReference,
+                sheetReference: evidence.sheetReference,
+                componentReference: evidence.componentReference,
+                netReference: evidence.netReference,
+                bomReference: evidence.bomReference,
+                pcbReference: evidence.pcbReference,
+                footprintReference: evidence.footprintReference,
+                verificationArtifactReference: evidence.verificationArtifactReference,
+                objectReference: evidence.objectReference,
+                claim: evidence.claim,
+                gateSatisfied: evidence.gateSatisfied,
+                liveEvidenceCount: evidence.liveEvidenceCount,
+                historianChainCount: evidence.historianChainCount
+            )
+        } catch {
+            Logger.ui.error("Governed verification evidence failed: \(error.localizedDescription)")
+            return nil
         }
     }
 
@@ -189,6 +295,12 @@ struct ValidationResultsPanel: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
+            }
+
+            if let governed = result.governed {
+                Text("Governed evidence: \(governed.gateSatisfied ? "satisfied" : "unsatisfied") · \(governed.liveEvidenceCount) live · \(governed.historianChainCount) trace")
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 4)

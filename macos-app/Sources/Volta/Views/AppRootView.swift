@@ -29,6 +29,7 @@ import OSLog
 struct AppRootView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(DaemonSupervisor.self) private var daemonSupervisor
+    @Environment(GSAPlatformHost.self) private var gsaPlatformHost
 
     @Query(sort: \Project.lastModifiedAt, order: .reverse) private var projects: [Project]
     @Query private var onboardingStates: [OnboardingState]
@@ -68,6 +69,19 @@ struct AppRootView: View {
             },
             message: {
                 Text(daemonSupervisor.state.failureMessage ?? "Unknown daemon error.")
+            }
+        )
+        .alert(
+            "Governance platform unavailable",
+            isPresented: gsaPlatformFailedBinding,
+            actions: {
+                Button("Retry") {
+                    gsaPlatformHost.boot()
+                }
+                Button("Dismiss", role: .cancel) {}
+            },
+            message: {
+                Text(gsaPlatformHost.failureMessage ?? "Unknown platform error.")
             }
         )
     }
@@ -122,6 +136,16 @@ struct AppRootView: View {
             set: { newValue in
                 if !newValue { showErrorRecovery = false }
             }
+        )
+    }
+
+    private var gsaPlatformFailedBinding: Binding<Bool> {
+        Binding(
+            get: {
+                if case .failed = gsaPlatformHost.state { return true }
+                return false
+            },
+            set: { _ in }
         )
     }
 
@@ -232,6 +256,7 @@ extension DaemonState {
 #Preview("App Root — Empty") {
     AppRootView()
         .environment(DaemonSupervisor())
+        .environment(GSAPlatformHost())
         .modelContainer(for: [Project.self, Conversation.self, OnboardingState.self], inMemory: true)
 }
 
@@ -245,6 +270,14 @@ extension DaemonState {
     ctx.insert(project)
     return AppRootView()
         .environment(DaemonSupervisor())
+        .environment(GSAPlatformHost())
         .modelContainer(container)
 }
 #endif
+
+extension GSAPlatformHost {
+    var failureMessage: String? {
+        if case .failed(let reason) = state { return reason }
+        return nil
+    }
+}

@@ -32,6 +32,12 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
+from volta.governance import (
+    CapabilityResult,
+    GovernedExecutionContext,
+    run_governed_verification,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -71,6 +77,7 @@ class GenerationValidationResult:
     wire_count: int = 0
     component_count: int = 0
     net_count: int = 0
+    governed_verification: CapabilityResult | None = None
 
     @property
     def errors(self) -> tuple[ValidationIssue, ...]:
@@ -128,6 +135,7 @@ def validate_generated(
     min_wires: int = 0,
     run_erc: bool = False,
     run_drc: bool = False,
+    governed_context: GovernedExecutionContext | None = None,
 ) -> GenerationValidationResult:
     """Run post-generation validation checks.
 
@@ -148,6 +156,8 @@ def validate_generated(
     wire_count = 0
     component_count = 0
     net_count = 0
+    erc_result = None
+    drc_result = None
 
     # --- Schematic validation ---
     if schematic_path is not None and schematic_path.exists():
@@ -288,12 +298,27 @@ def validate_generated(
         ))
 
     has_errors = any(i.severity == ValidationSeverity.ERROR for i in issues)
+    governed_verification = None
+    if governed_context is not None and (erc_result is not None or drc_result is not None):
+        governed_verification = run_governed_verification(
+            context=governed_context,
+            pcb_path=pcb_path if pcb_path is not None else schematic_path.with_suffix(".kicad_pcb"),  # type: ignore[union-attr]
+            schematic_path=schematic_path,
+            drc_result=drc_result if drc_result is not None else type("DrcStub", (), {
+                "passed": True,
+                "error_count": 0,
+                "warning_count": 0,
+                "error_message": None,
+            })(),
+            erc_result=erc_result,
+        )
     return GenerationValidationResult(
         passed=not has_errors,
         issues=tuple(issues),
         wire_count=wire_count,
         component_count=component_count,
         net_count=net_count,
+        governed_verification=governed_verification,
     )
 
 

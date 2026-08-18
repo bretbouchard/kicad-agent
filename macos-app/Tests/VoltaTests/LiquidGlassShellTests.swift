@@ -39,6 +39,7 @@ struct LiquidGlassShellTests {
         let view = LiquidGlassShell(project: project)
             .environment(WindowManager())
             .environment(DaemonSupervisor())
+            .environment(GSAPlatformHost())
             .modelContainer(container)
         _ = view
         try await Task.sleep(for: .milliseconds(50))
@@ -57,6 +58,7 @@ struct LiquidGlassShellTests {
         let view = LiquidGlassShell(project: project)
             .environment(WindowManager())
             .environment(DaemonSupervisor())
+            .environment(GSAPlatformHost())
             .preferredColorScheme(.dark)
             .modelContainer(container)
         _ = view
@@ -76,6 +78,7 @@ struct LiquidGlassShellTests {
         let view = LiquidGlassShell(project: project)
             .environment(WindowManager())
             .environment(DaemonSupervisor())
+            .environment(GSAPlatformHost())
             .dynamicTypeSize(.accessibility3)
             .modelContainer(container)
         _ = view
@@ -95,6 +98,7 @@ struct LiquidGlassShellTests {
         let view = LiquidGlassShell(project: project)
             .environment(WindowManager())
             .environment(DaemonSupervisor())
+            .environment(GSAPlatformHost())
             .accessibilityShowsLargeContentViewer()
             .modelContainer(container)
         _ = view

@@ -23,6 +23,9 @@ struct VerifyView: View {
 
                 rendersSection
                 exportsSection
+                verificationSection
+                governedSection
+                manufacturingSection
                 decisionsSection
                 durationSection
 
@@ -86,6 +89,176 @@ struct VerifyView: View {
         }
     }
 
+    @ViewBuilder
+    private var verificationSection: some View {
+        if let verification = summary.governedVerification {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text("Governed Verification")
+                    .font(Typography.heading)
+                HStack {
+                    Image(systemName: verification.gateSatisfied ? "checkmark.shield" : "xmark.shield")
+                        .foregroundStyle(ColorTokens.secondaryText)
+                    Text(verification.gateSatisfied ? "Gate satisfied" : "Gate unsatisfied")
+                        .font(Typography.body)
+                    Spacer()
+                    Text("\(verification.liveEvidenceCount) evidence · \(verification.historianChainCount) trace")
+                        .font(Typography.caption.monospacedDigit())
+                        .foregroundStyle(ColorTokens.tertiaryText)
+                }
+                Text(verification.claim)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(verification.projectReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(verification.revisionReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(verification.schematicReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(verification.sheetReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(verification.componentReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(verification.netReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(verification.bomReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(verification.pcbReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(verification.footprintReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(verification.verificationArtifactReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(verification.objectReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+            }
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    @ViewBuilder
+    private var governedSection: some View {
+        if let governed = summary.governedExport {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text("Governed Release")
+                    .font(Typography.heading)
+                HStack {
+                    Image(systemName: "lock.doc")
+                        .foregroundStyle(ColorTokens.secondaryText)
+                    Text(governed.fileName)
+                        .font(Typography.body)
+                    Spacer()
+                    Text("\(governed.evidenceCount) evidence")
+                        .font(Typography.caption.monospacedDigit())
+                        .foregroundStyle(ColorTokens.tertiaryText)
+                }
+                Text("Approval \(governed.approvalRequestID.uuidString.prefix(8))")
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(governed.projectReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(governed.revisionReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(governed.schematicReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(governed.sheetReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(governed.componentReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(governed.netReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(governed.bomReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(governed.pcbReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(governed.footprintReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(governed.objectReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+            }
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    @ViewBuilder
+    private var manufacturingSection: some View {
+        if let handoff = summary.governedManufacturingHandoff {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text("Manufacturing Handoff")
+                    .font(Typography.heading)
+                HStack {
+                    Image(systemName: "shippingbox")
+                        .foregroundStyle(ColorTokens.secondaryText)
+                    Text(handoff.fileName)
+                        .font(Typography.body)
+                    Spacer()
+                    Text("\(handoff.evidenceCount) evidence")
+                        .font(Typography.caption.monospacedDigit())
+                        .foregroundStyle(ColorTokens.tertiaryText)
+                }
+                Text("Approval \(handoff.approvalRequestID.uuidString.prefix(8))")
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                if let linkedVerificationClaim = handoff.linkedVerificationClaim {
+                    Text(linkedVerificationClaim)
+                        .font(Typography.caption.monospaced())
+                        .foregroundStyle(ColorTokens.tertiaryText)
+                }
+                Text(handoff.projectReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(handoff.revisionReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(handoff.schematicReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(handoff.sheetReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(handoff.componentReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(handoff.netReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(handoff.bomReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(handoff.pcbReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(handoff.footprintReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+                Text(handoff.objectReference)
+                    .font(Typography.caption.monospaced())
+                    .foregroundStyle(ColorTokens.tertiaryText)
+            }
+            .accessibilityElement(children: .combine)
+        }
+    }
+
     private var decisionsSection: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text("Decisions Made")
@@ -107,9 +280,17 @@ struct VerifyView: View {
 
     private var actionRow: some View {
         HStack {
-            Button("Share Files", action: onShare)
+            if let governedExportURL = summary.governedExportURL {
+                ShareLink(item: governedExportURL) {
+                    Text("Share Files")
+                }
                 .buttonStyle(.bordered)
                 .accessibilityHint("Opens share sheet with generated files")
+            } else {
+                Button("Share Files", action: onShare)
+                    .buttonStyle(.bordered)
+                    .accessibilityHint("Opens share sheet with generated files")
+            }
             Spacer()
             Button("Complete Phase", action: onComplete)
                 .buttonStyle(.borderedProminent)

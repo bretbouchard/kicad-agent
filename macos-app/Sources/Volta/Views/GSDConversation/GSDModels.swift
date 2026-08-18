@@ -127,6 +127,9 @@ struct CompletionSummary: Sendable, Equatable {
     let schematicPath: URL?
     let pcbPath: URL?
     let exports: [ExportArtifact]
+    let governedExport: GovernedExportSummary?
+    let governedManufacturingHandoff: GovernedManufacturingHandoffSummary?
+    let governedVerification: GovernedVerificationSummary?
     let decisionsCount: Int
     let totalDurationSeconds: Int
 
@@ -135,6 +138,9 @@ struct CompletionSummary: Sendable, Equatable {
         schematicPath: URL? = nil,
         pcbPath: URL? = nil,
         exports: [ExportArtifact] = [],
+        governedExport: GovernedExportSummary? = nil,
+        governedManufacturingHandoff: GovernedManufacturingHandoffSummary? = nil,
+        governedVerification: GovernedVerificationSummary? = nil,
         decisionsCount: Int = 0,
         totalDurationSeconds: Int = 0
     ) {
@@ -142,6 +148,9 @@ struct CompletionSummary: Sendable, Equatable {
         self.schematicPath = schematicPath
         self.pcbPath = pcbPath
         self.exports = exports
+        self.governedExport = governedExport
+        self.governedManufacturingHandoff = governedManufacturingHandoff
+        self.governedVerification = governedVerification
         self.decisionsCount = decisionsCount
         self.totalDurationSeconds = totalDurationSeconds
     }
@@ -155,6 +164,101 @@ struct CompletionSummary: Sendable, Equatable {
         let hours = minutes / 60
         let remMinutes = minutes % 60
         return "\(hours)h \(remMinutes)m"
+    }
+
+    var governedExportURL: URL? {
+        guard let governedExport else { return nil }
+        return URL(fileURLWithPath: governedExport.artifactPath)
+    }
+}
+
+/// Governing metadata for a consequential exported artifact.
+struct GovernedExportSummary: Sendable, Equatable {
+    let projectReference: String
+    let revisionReference: String
+    let schematicReference: String
+    let sheetReference: String
+    let componentReference: String
+    let netReference: String
+    let bomReference: String
+    let pcbReference: String
+    let footprintReference: String
+    let objectReference: String
+    let artifactPath: String
+    let approvalRequestID: UUID
+    let evidenceCount: Int
+
+    init(
+        projectReference: String,
+        revisionReference: String,
+        schematicReference: String,
+        sheetReference: String,
+        componentReference: String,
+        netReference: String,
+        bomReference: String,
+        pcbReference: String,
+        footprintReference: String,
+        objectReference: String,
+        artifactPath: String,
+        approvalRequestID: UUID,
+        evidenceCount: Int
+    ) {
+        self.projectReference = projectReference
+        self.revisionReference = revisionReference
+        self.schematicReference = schematicReference
+        self.sheetReference = sheetReference
+        self.componentReference = componentReference
+        self.netReference = netReference
+        self.bomReference = bomReference
+        self.pcbReference = pcbReference
+        self.footprintReference = footprintReference
+        self.objectReference = objectReference
+        self.artifactPath = artifactPath
+        self.approvalRequestID = approvalRequestID
+        self.evidenceCount = evidenceCount
+    }
+
+    var fileName: String {
+        URL(fileURLWithPath: artifactPath).lastPathComponent
+    }
+}
+
+struct GovernedVerificationSummary: Sendable, Equatable {
+    let projectReference: String
+    let revisionReference: String
+    let schematicReference: String
+    let sheetReference: String
+    let componentReference: String
+    let netReference: String
+    let bomReference: String
+    let pcbReference: String
+    let footprintReference: String
+    let verificationArtifactReference: String
+    let objectReference: String
+    let claim: String
+    let gateSatisfied: Bool
+    let liveEvidenceCount: Int
+    let historianChainCount: Int
+}
+
+struct GovernedManufacturingHandoffSummary: Sendable, Equatable {
+    let projectReference: String
+    let revisionReference: String
+    let schematicReference: String
+    let sheetReference: String
+    let componentReference: String
+    let netReference: String
+    let bomReference: String
+    let pcbReference: String
+    let footprintReference: String
+    let objectReference: String
+    let artifactPath: String
+    let approvalRequestID: UUID
+    let linkedVerificationClaim: String?
+    let evidenceCount: Int
+
+    var fileName: String {
+        URL(fileURLWithPath: artifactPath).lastPathComponent
     }
 }
 

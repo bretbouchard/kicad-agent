@@ -23,6 +23,7 @@
 import SwiftUI
 import SwiftData
 import OSLog
+import AppKit
 
 /// The Liquid Glass chat shell — main content area for a selected Project.
 struct LiquidGlassShell: View {
@@ -30,6 +31,7 @@ struct LiquidGlassShell: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
     @Environment(WindowManager.self) private var windowManager
+    @Environment(GSAPlatformHost.self) private var gsaPlatformHost
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -56,6 +58,11 @@ struct LiquidGlassShell: View {
     // ~1.6s then clears. nil = no toast visible.
     @State private var copyToast: String? = nil
     @State private var copyToastTask: Task<Void, Never>? = nil
+    @State private var governedReleaseSummary: CompletionSummary?
+    @State private var showGovernedReleaseSummary: Bool = false
+    @State private var governedReleaseError: String?
+    @State private var isPreparingGovernedRelease: Bool = false
+    @State private var pendingGovernedReleaseGate: GateContext?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -80,6 +87,41 @@ struct LiquidGlassShell: View {
         ) { result in
             handleFileImport(result)
         }
+        .sheet(isPresented: $showGovernedReleaseSummary) {
+            if let governedReleaseSummary {
+                VerifyView(
+                    summary: governedReleaseSummary,
+                    previewRenderer: nil,
+                    onComplete: { showGovernedReleaseSummary = false },
+                    onShare: revealGovernedArtifactInFinder
+                )
+                .frame(minWidth: 560, minHeight: 480)
+            }
+        }
+        .sheet(item: $pendingGovernedReleaseGate) { gate in
+            ApprovalGatesView(gate: gate, onResolve: { resolution in
+                resolveGovernedReleaseGate(gate, resolution: resolution)
+            })
+            .frame(minWidth: 560, minHeight: 420)
+        }
+        .alert(
+            "Governed export failed",
+            isPresented: Binding(
+                get: { governedReleaseError != nil },
+                set: { newValue in
+                    if !newValue { governedReleaseError = nil }
+                }
+            ),
+            actions: {
+                Button("Retry") {
+                    Task { await prepareGovernedReleaseSummary() }
+                }
+                Button("Dismiss", role: .cancel) {}
+            },
+            message: {
+                Text(governedReleaseError ?? "Unknown governed export failure.")
+            }
+        )
         .overlay(alignment: .top) {
             // Copy-to-clipboard confirmation toast. Floats in from above
             // the header for ~1.6s, then fades. A11y: reads the message
@@ -267,18 +309,38 @@ struct LiquidGlassShell: View {
     // MARK: - Validation Panel (Phase 216)
 
     private var validationPanel: some View {
-        HStack(alignment: .top, spacing: 12) {
+        let governedContext = GSAPlatformHost.GovernedProjectContext(
+            projectID: project.id,
+            projectName: project.name,
+            conversationID: selectedConversation?.id,
+            revision: max(project.conversations.count, 1)
+        )
+        return HStack(alignment: .top, spacing: 12) {
             VStack(spacing: 4) {
                 Button("Run ERC") {
                     #if os(macOS)
-                    Task { await validationManager.runERC(filePath: selectedConversation?.title ?? "board.kicad_sch", client: daemonSupervisor.mcpClient) }
+                    Task {
+                        await validationManager.runERC(
+                            filePath: selectedConversation?.title ?? "board.kicad_sch",
+                            client: daemonSupervisor.mcpClient,
+                            gsaPlatformHost: gsaPlatformHost,
+                            governedContext: governedContext
+                        )
+                    }
                     #endif
                 }
                 .buttonStyle(.bordered)
 
                 Button("Run DRC") {
                     #if os(macOS)
-                    Task { await validationManager.runDRC(filePath: selectedConversation?.title ?? "board.kicad_pcb", client: daemonSupervisor.mcpClient) }
+                    Task {
+                        await validationManager.runDRC(
+                            filePath: selectedConversation?.title ?? "board.kicad_pcb",
+                            client: daemonSupervisor.mcpClient,
+                            gsaPlatformHost: gsaPlatformHost,
+                            governedContext: governedContext
+                        )
+                    }
                     #endif
                 }
                 .buttonStyle(.bordered)
@@ -332,9 +394,67 @@ struct LiquidGlassShell: View {
                     conversation: conversation, role: .assistant, content: "", status: .streaming
                 ))
             }
+            Task { @MainActor in
+                await recordGovernedImport(for: url, conversation: conversation)
+            }
 
         case .failure(let error):
             Logger.ui.error("File import failed: \(error.localizedDescription)")
+        }
+    }
+
+    @MainActor
+    private func recordGovernedImport(for url: URL, conversation: Conversation) async {
+        if gsaPlatformHost.state == .idle {
+            gsaPlatformHost.boot()
+        }
+
+        let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+        while gsaPlatformHost.state == .booting, ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+
+        guard gsaPlatformHost.state == .ready else {
+            Logger.ui.error("Governed import skipped: platform not ready")
+            return
+        }
+
+        let governedContext = GSAPlatformHost.GovernedProjectContext(
+            projectID: project.id,
+            projectName: project.name,
+            conversationID: conversation.id,
+            revision: max(project.conversations.count, 1)
+        )
+
+        do {
+            let governedImport = try await gsaPlatformHost.recordImportedDesign(
+                fileURL: url,
+                context: governedContext
+            )
+            let content = """
+            Governed import recorded for \(url.lastPathComponent).
+            Claim: \(governedImport.claim)
+            Trace: \(governedImport.liveEvidenceCount) live evidence, \(governedImport.historianChainCount) historian events.
+            """
+            let systemMessage = Message(
+                conversation: conversation,
+                role: .system,
+                content: content,
+                status: .complete
+            )
+            modelContext.insert(systemMessage)
+            chatMessages.append(
+                ChatMessage(
+                    id: systemMessage.id,
+                    role: .system,
+                    content: content,
+                    status: .complete,
+                    sentAt: .now
+                )
+            )
+            try? modelContext.save()
+        } catch {
+            Logger.ui.error("Governed import recording failed: \(error.localizedDescription)")
         }
     }
 
@@ -490,6 +610,139 @@ struct LiquidGlassShell: View {
         }
     }
 
+    @MainActor
+    private func prepareGovernedReleaseSummary() async {
+        guard !isPreparingGovernedRelease else { return }
+        isPreparingGovernedRelease = true
+        governedReleaseError = nil
+        defer { isPreparingGovernedRelease = false }
+
+        if gsaPlatformHost.state == .idle {
+            gsaPlatformHost.boot()
+        }
+
+        let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+        while gsaPlatformHost.state == .booting, ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+
+        guard gsaPlatformHost.state == .ready else {
+            governedReleaseError = gsaPlatformHost.failureMessage ?? "Governance platform is not ready."
+            return
+        }
+
+        let startedAt = ContinuousClock.now
+        let governedContext = GSAPlatformHost.GovernedProjectContext(
+            projectID: project.id,
+            projectName: project.name,
+            conversationID: selectedConversation?.id,
+            revision: max(project.conversations.count, 1)
+        )
+
+        do {
+            let release = try await gsaPlatformHost.runGovernedBoardReleaseExport(context: governedContext)
+            let manufacturingHandoff = try await gsaPlatformHost.runGovernedManufacturingHandoff(context: governedContext)
+            let elapsed = Int(startedAt.duration(to: .now).components.seconds)
+            governedReleaseSummary = GovernedReleaseSummaryBuilder.build(
+                from: release,
+                manufacturingHandoff: manufacturingHandoff,
+                verification: gsaPlatformHost.lastVerificationEvidence,
+                totalDurationSeconds: elapsed
+            )
+            showGovernedReleaseSummary = true
+        } catch {
+            governedReleaseError = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func presentGovernedReleaseGate() {
+        pendingGovernedReleaseGate = GateContext(
+            type: .opConfirmation,
+            intent: "Prepare governed board release and manufacturing handoff",
+            operation: "governed_release_and_manufacturing_handoff",
+            verificationResult: gsaPlatformHost.lastVerificationEvidence.map {
+                VerificationSnapshot(
+                    passed: $0.passed,
+                    warningCount: $0.warningCount,
+                    errorCount: $0.errorCount,
+                    notes: $0.claim
+                )
+            },
+            requirementId: "M2.4"
+        )
+    }
+
+    @MainActor
+    private func resolveGovernedReleaseGate(_ gate: GateContext, resolution: GateResolution) {
+        recordGateDecision(gate, resolution: resolution)
+        pendingGovernedReleaseGate = nil
+
+        switch resolution {
+        case .approve:
+            Task { await prepareGovernedReleaseSummary() }
+        case .reject(let reason):
+            showToast(reason.isEmpty ? "Governed handoff canceled" : "Governed handoff: \(reason)")
+        case .showMe:
+            break
+        }
+    }
+
+    @MainActor
+    private func recordGateDecision(_ gate: GateContext, resolution: GateResolution) {
+        guard let conversation = selectedConversation else { return }
+
+        let resolutionState: GateDecision
+        let decisionKey: String
+        let reasoning: String
+
+        switch resolution {
+        case .approve(let decision):
+            resolutionState = decision
+            decisionKey = DecisionKey.gateApprove
+            reasoning = "Approved governed release and manufacturing handoff."
+        case .reject(let reason):
+            resolutionState = .deferred
+            decisionKey = DecisionKey.gateReject
+            reasoning = reason
+        case .showMe:
+            return
+        }
+
+        let payload = """
+        {"gateType":"\(gate.type.rawValue)","operation":"\(gate.operation)","intent":"\(gate.intent)"}
+        """
+        let decision = Decision(
+            conversation: conversation,
+            decisionKey: decisionKey,
+            oldValueJSON: "{}",
+            newValueJSON: payload,
+            reasoning: reasoning,
+            resolution: resolutionState,
+            requirementId: gate.requirementId,
+            gateId: gate.id
+        )
+        modelContext.insert(decision)
+        try? modelContext.save()
+    }
+
+    @MainActor
+    private func showToast(_ message: String) {
+        copyToast = message
+        copyToastTask?.cancel()
+        copyToastTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_600_000_000)
+            if !Task.isCancelled {
+                copyToast = nil
+            }
+        }
+    }
+
+    private func revealGovernedArtifactInFinder() {
+        guard let artifactURL = governedReleaseSummary?.governedExportURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([artifactURL])
+    }
+
     // MARK: - Toolbar
 
     @ToolbarContentBuilder
@@ -530,11 +783,14 @@ struct LiquidGlassShell: View {
             .accessibilityLabel("Toggle validation panel")
             .accessibilityHint("Run ERC/DRC checks")
 
-            ShareLink(item: project.name) {
-                Label("Share", systemImage: "square.and.arrow.up")
+            Button {
+                presentGovernedReleaseGate()
+            } label: {
+                Label(isPreparingGovernedRelease ? "Preparing Export" : "Share", systemImage: "square.and.arrow.up")
             }
+            .disabled(isPreparingGovernedRelease)
             .accessibilityLabel("Share project")
-            .accessibilityHint("Opens the macOS share sheet")
+            .accessibilityHint("Requests approval for the governed release and manufacturing handoff, then opens the completion summary")
 
             // Phase 220+: copy the active conversation to the system
             // clipboard as plain text. Disabled when no conversation is

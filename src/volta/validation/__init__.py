@@ -1,5 +1,7 @@
 """KiCad file validation: round-trip stability, ERC, DRC, format checks, and pipeline."""
 
+from importlib import import_module
+
 from volta.validation.roundtrip import round_trip_stable, round_trip_compare
 from volta.validation.erc_drc import (
     run_erc,
@@ -52,6 +54,17 @@ try:
         PipelineResult,
         PipelineStage,
         StageResult,
+    )
+except ImportError:
+    pass
+
+try:
+    from volta.validation.post_gen import (
+        validate_generated,
+        format_validation_report,
+        GenerationValidationResult,
+        ValidationIssue,
+        ValidationSeverity,
     )
 except ImportError:
     pass
@@ -131,4 +144,37 @@ __all__ = [
     "GateRunner",
     "get_gate_runner",
     "register_gate",
+    "ValidationPipeline",
+    "PipelineResult",
+    "PipelineStage",
+    "StageResult",
+    "validate_generated",
+    "format_validation_report",
+    "GenerationValidationResult",
+    "ValidationIssue",
+    "ValidationSeverity",
 ]
+
+
+_LAZY_EXPORTS = {
+    "ValidationPipeline": ("volta.validation.pipeline", "ValidationPipeline"),
+    "PipelineResult": ("volta.validation.pipeline", "PipelineResult"),
+    "PipelineStage": ("volta.validation.pipeline", "PipelineStage"),
+    "StageResult": ("volta.validation.pipeline", "StageResult"),
+    "validate_generated": ("volta.validation.post_gen", "validate_generated"),
+    "format_validation_report": ("volta.validation.post_gen", "format_validation_report"),
+    "GenerationValidationResult": ("volta.validation.post_gen", "GenerationValidationResult"),
+    "ValidationIssue": ("volta.validation.post_gen", "ValidationIssue"),
+    "ValidationSeverity": ("volta.validation.post_gen", "ValidationSeverity"),
+}
+
+
+def __getattr__(name: str):
+    """Lazily resolve optional validation exports under import-order pressure."""
+    if name not in _LAZY_EXPORTS:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module_name, attr_name = _LAZY_EXPORTS[name]
+    module = import_module(module_name)
+    value = getattr(module, attr_name)
+    globals()[name] = value
+    return value

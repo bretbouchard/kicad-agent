@@ -30,6 +30,7 @@ struct VoltaApp: App {
     /// Daemon supervisor. Tracks daemon lifecycle (spawn, health, shutdown).
 #if os(macOS)
     @State private var daemonSupervisor: DaemonSupervisor = DaemonSupervisor()
+    @State private var gsaPlatformHost: GSAPlatformHost = GSAPlatformHost()
 #endif
 
     /// Multi-window registry. Phase 171 — tracks open project windows + cap.
@@ -49,6 +50,7 @@ struct VoltaApp: App {
             AppRootView()
                 #if os(macOS)
                 .environment(daemonSupervisor)
+                .environment(gsaPlatformHost)
                 #endif
                 .environment(windowManager)
                 .environmentObject(providerRegistry)
@@ -76,6 +78,7 @@ struct VoltaApp: App {
                     // land in the terminal instead of the app window.
                     NSApp.setActivationPolicy(.regular)
                     NSApp.activate(ignoringOtherApps: true)
+                    gsaPlatformHost.boot()
                     daemonSupervisor.start()
                     #endif
                     // Phase 210: scan for local model, show download prompt if missing.
@@ -91,9 +94,6 @@ struct VoltaApp: App {
         }
         .windowResizability(.contentMinSize)
         .windowToolbarStyle(.unified(showsTitle: true))
-        .commands {
-            // ponytail: cmd+N handled natively by WindowGroup. Add app-level commands here.
-        }
         .modelContainer(for: ModelSchemaRegistry.v600Schema)
     }
 }

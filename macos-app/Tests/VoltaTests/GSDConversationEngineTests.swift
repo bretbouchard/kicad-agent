@@ -114,6 +114,54 @@ struct GSDConversationEngineTests {
         #expect(summary.formattedDuration == "2h 34m")
     }
 
+    @Test("CompletionSummary exposes governed export URL")
+    func governedExportURL() {
+        let summary = CompletionSummary(
+            phaseName: "P",
+            governedExport: GovernedExportSummary(
+                projectReference: "project:demo",
+                revisionReference: "revision:demo",
+                schematicReference: "schematic:demo",
+                sheetReference: "sheet:demo",
+                componentReference: "component:demo",
+                netReference: "net:demo",
+                bomReference: "bom:demo",
+                pcbReference: "pcb:demo",
+                footprintReference: "footprint:demo",
+                objectReference: "object:demo",
+                artifactPath: "/tmp/volta-board-release.zip",
+                approvalRequestID: UUID(),
+                evidenceCount: 3
+            )
+        )
+        #expect(summary.governedExportURL?.path == "/tmp/volta-board-release.zip")
+    }
+
+    @Test("CompletionSummary carries governed manufacturing handoff")
+    func governedManufacturingHandoff() {
+        let summary = CompletionSummary(
+            phaseName: "P",
+            governedManufacturingHandoff: GovernedManufacturingHandoffSummary(
+                projectReference: "project:demo",
+                revisionReference: "revision:demo",
+                schematicReference: "schematic:demo",
+                sheetReference: "sheet:demo",
+                componentReference: "component:demo",
+                netReference: "net:demo",
+                bomReference: "bom:demo",
+                pcbReference: "pcb:demo",
+                footprintReference: "footprint:demo",
+                objectReference: "object:demo",
+                artifactPath: "/tmp/volta-board-handoff.zip",
+                approvalRequestID: UUID(),
+                linkedVerificationClaim: "volta.drc.verification:demo",
+                evidenceCount: 4
+            )
+        )
+        #expect(summary.governedManufacturingHandoff?.fileName == "volta-board-handoff.zip")
+        #expect(summary.governedManufacturingHandoff?.objectReference == "object:demo")
+    }
+
     // MARK: - Conversation Forking (CHAT-08)
 
     @Test("Conversation fork captures parent and message id")

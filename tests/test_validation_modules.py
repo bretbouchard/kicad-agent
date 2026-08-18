@@ -35,8 +35,19 @@ class TestValidatorBase:
 
     def test_import(self):
         """Validation pipeline is importable."""
-        from volta.validation.pipeline import ValidationPipeline
+        from volta.validation import ValidationPipeline, validate_generated
         assert ValidationPipeline is not None
+        assert validate_generated is not None
+
+
+class TestManufacturingExports:
+    """Tests for manufacturing package exports."""
+
+    def test_import(self):
+        """Manufacturing build and handoff exports are importable."""
+        from volta.manufacturing import Build, export_handoff
+        assert Build is not None
+        assert export_handoff is not None
 
 
 class TestTopologyUtils:

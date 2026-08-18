@@ -29,6 +29,12 @@ struct CompletionSummaryCard: View {
                 }
                 HStack(spacing: Spacing.lg) {
                     statItem(label: "Exports", value: "\(summary.exports.count)")
+                    if summary.governedExport != nil {
+                        statItem(label: "Governed", value: "Yes")
+                    }
+                    if summary.governedManufacturingHandoff != nil {
+                        statItem(label: "Handoff", value: "Yes")
+                    }
                     statItem(label: "Decisions", value: "\(summary.decisionsCount)")
                     statItem(label: "Duration", value: summary.formattedDuration)
                 }

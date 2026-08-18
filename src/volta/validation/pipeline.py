@@ -37,6 +37,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from volta.governance import (
+    CapabilityResult,
+    GovernedExecutionContext,
+    run_governed_verification,
+)
 from volta.validation.erc_drc import run_erc, run_drc, ErcResult, DrcResult
 from volta.validation.structural import (
     validate_structural,
@@ -95,6 +100,7 @@ class PipelineResult:
     failure_stage: Optional[PipelineStage] = None
     rolled_back: bool = False
     target_file: Optional[Path] = None
+    governed_verification: Optional[CapabilityResult] = None
 
     @property
     def stage_count(self) -> int:
@@ -199,6 +205,7 @@ class ValidationPipeline:
         mutation_fn: Callable[[Operation, BaseIR], None],
         run_erc_check: bool = False,
         run_drc_check: bool = False,
+        governed_context: GovernedExecutionContext | None = None,
     ) -> PipelineResult:
         """Run the full validation pipeline: structural -> mutate -> validate -> commit/rollback.
 
@@ -235,6 +242,8 @@ class ValidationPipeline:
         stages.append(
             StageResult(stage=PipelineStage.STRUCTURAL_PRE, passed=True, detail="Structural pre-check passed")
         )
+
+        governed_verification: Optional[CapabilityResult] = None
 
         # Stage 2: Mutation within Transaction
         file_path = Path(ir.file_path)
@@ -303,6 +312,18 @@ class ValidationPipeline:
                         StageResult(stage=PipelineStage.DRC, passed=True, detail=f"DRC passed ({drc_result.warning_count} warnings)")
                     )
 
+                if governed_context is not None and (erc_result is not None or drc_result is not None):
+                    governed_verification = run_governed_verification(
+                        context=governed_context,
+                        pcb_path=file_path if ir.file_type == "pcb" else file_path.with_suffix(".kicad_pcb"),
+                        schematic_path=file_path if ir.file_type == "schematic" else None,
+                        drc_result=drc_result if drc_result is not None else DrcResult(
+                            passed=True,
+                            file_path=file_path if ir.file_type == "pcb" else file_path.with_suffix(".kicad_pcb"),
+                        ),
+                        erc_result=erc_result,
+                    )
+
                 # Stage 6: Commit
                 txn_result = txn.commit()
                 stages.append(
@@ -328,6 +349,7 @@ class ValidationPipeline:
             drc_result=drc_result,
             transaction_result=txn_result,
             target_file=target_file,
+            governed_verification=governed_verification,
         )
 
     def verify_net_consistency(

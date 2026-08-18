@@ -2,7 +2,11 @@
 
 from importlib.metadata import PackageNotFoundError, version
 
+from volta.platform_runtime import VoltaPlatformRuntime
+
 try:
     __version__ = version("volta")
 except PackageNotFoundError:  # pragma: no cover
     __version__ = "0.1.0"  # keep in sync with pyproject.toml [project].version
+
+__all__ = ["__version__", "VoltaPlatformRuntime"]
