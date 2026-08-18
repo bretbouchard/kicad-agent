@@ -35,6 +35,7 @@ let package = Package(
                 .product(name: "GSAEvidence", package: "gsa-platform"),
                 .product(name: "GSACapabilityKernel", package: "gsa-platform"),
                 .product(name: "GSAArtifacts", package: "gsa-platform"),
+                .product(name: "GSD", package: "gsa-platform"),
                 .product(name: "GSAStewardshipRuntime", package: "gsa-platform"),
             ],
             path: "Sources/VoltaGSA",
