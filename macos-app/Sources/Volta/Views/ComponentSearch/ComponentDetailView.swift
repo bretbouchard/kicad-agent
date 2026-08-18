@@ -11,10 +11,23 @@ import VoltaPCBCore
 
 /// Detailed view for a single component — all data from merged providers.
 struct ComponentDetailView: View {
+    @Environment(GSAPlatformHost.self) private var gsaPlatformHost
+
     let component: UnifiedComponent
 
     /// Closure called when user taps refresh. Parent view handles re-query.
     var onRefresh: (() -> Void)?
+
+    @State private var assemblyAvailability: AssemblyAvailability?
+    @State private var governedProviderCheck: GSAPlatformHost.ProviderCheckResult?
+    @State private var governedComplianceCheck: GSAPlatformHost.ComplianceCheckResult?
+    @State private var isCheckingAssembly = false
+    @State private var isCheckingCompliance = false
+    @State private var assemblyCheckError: String?
+    @State private var complianceCheckError: String?
+
+    private let assemblyProvider = JlcpcbApiProvider()
+    private let complianceProvider = LocalComplianceProvider()
 
     /// Most recent source update timestamp (for overall freshness).
     private var lastUpdated: Date? {
@@ -38,6 +51,12 @@ struct ComponentDetailView: View {
                     specsSection(specs)
                 }
 
+                if component.lcscPartNumber != nil {
+                    assemblySection
+                }
+
+                complianceSection
+
                 if let cad = component.cadModels, !cad.isEmpty {
                     cadSection(cad)
                 }
@@ -57,6 +76,139 @@ struct ComponentDetailView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private var assemblySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Assembly Data")
+                    .font(.headline)
+                Spacer()
+                if isCheckingAssembly {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Button("Check Assembly") {
+                        Task { await performGovernedAssemblyCheck() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+
+            if let lcscPartNumber = component.lcscPartNumber {
+                Text("LCSC: \(lcscPartNumber)")
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+            }
+
+            if let assemblyAvailability {
+                HStack {
+                    AssemblyBadge(status: assemblyStatus(for: assemblyAvailability))
+                    if let deliveryTime = assemblyAvailability.deliveryTime {
+                        Text(deliveryTime)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    if let assemblyFee = assemblyAvailability.assemblyFee {
+                        Text(String(format: "$%.2f fee", assemblyFee))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Text(assemblyAvailability.inStock ? "Provider reports assembly stock available." : "Provider reports assembly stock unavailable.")
+                    .font(.caption)
+                    .foregroundStyle(assemblyAvailability.inStock ? Color.secondary : Color.orange)
+            }
+
+            if let governedProviderCheck {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(governedProviderCheck.claim)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                    Text("\(governedProviderCheck.liveEvidenceCount) live evidence · \(governedProviderCheck.historianChainCount) trace")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(governedProviderCheck.providerReference)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                    Text(governedProviderCheck.pcbReference)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let assemblyCheckError {
+                Label(assemblyCheckError, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.blue.opacity(0.05))
+        )
+    }
+
+    @ViewBuilder
+    private var complianceSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Compliance")
+                    .font(.headline)
+                Spacer()
+                if isCheckingCompliance {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Button("Check Compliance") {
+                        Task { await performGovernedComplianceCheck() }
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+
+            if let governedComplianceCheck {
+                HStack {
+                    Text(governedComplianceCheck.lifecycleStatus.uppercased())
+                        .font(.caption2.weight(.medium))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.15))
+                        .clipShape(Capsule())
+                    Text(governedComplianceCheck.rohsStatus.uppercased())
+                        .font(.caption2.weight(.medium))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.green.opacity(0.15))
+                        .clipShape(Capsule())
+                    Text("Risk \(governedComplianceCheck.riskScore)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Text(governedComplianceCheck.claim)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                Text("\(governedComplianceCheck.liveEvidenceCount) live evidence · \(governedComplianceCheck.historianChainCount) trace")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(governedComplianceCheck.componentReference)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+            }
+
+            if let complianceCheckError {
+                Label(complianceCheckError, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.orange.opacity(0.05))
+        )
     }
 
     private var headerSection: some View {
@@ -211,6 +363,78 @@ struct ComponentDetailView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+
+    private func assemblyStatus(for availability: AssemblyAvailability) -> AssemblyStatus {
+        if availability.isBasicAssembly { return .basicAssembly }
+        if availability.isAssemblyReady { return .extendedAssembly }
+        return .notAssemblyReady
+    }
+
+    @MainActor
+    private func performGovernedAssemblyCheck() async {
+        guard let lcscPartNumber = component.lcscPartNumber, !lcscPartNumber.isEmpty else {
+            assemblyCheckError = "No LCSC part number available for assembly lookup."
+            return
+        }
+
+        isCheckingAssembly = true
+        assemblyCheckError = nil
+        defer { isCheckingAssembly = false }
+
+        do {
+            guard let availability = try await assemblyProvider.checkAssemblyAvailability(lcscPartNumber: lcscPartNumber) else {
+                assemblyAvailability = nil
+                governedProviderCheck = nil
+                assemblyCheckError = "Assembly provider returned no data for \(lcscPartNumber)."
+                return
+            }
+
+            assemblyAvailability = availability
+            let context = GSAPlatformHost.GovernedProjectContext(
+                projectID: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
+                projectName: "Component Search",
+                conversationID: nil,
+                revision: 1
+            )
+            governedProviderCheck = try await gsaPlatformHost.recordProviderAssemblyCheck(
+                providerName: assemblyProvider.name,
+                subjectIdentifier: lcscPartNumber,
+                availability: availability,
+                context: context
+            )
+        } catch {
+            assemblyCheckError = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    private func performGovernedComplianceCheck() async {
+        isCheckingCompliance = true
+        complianceCheckError = nil
+        defer { isCheckingCompliance = false }
+
+        do {
+            let lifecycleStatus = try await complianceProvider.getLifecycleStatus(mpn: component.partNumber)
+            let rohsStatus = try await complianceProvider.checkRoHSCompliance(mpn: component.partNumber)
+            let riskAssessment = try await complianceProvider.assessRisk(mpn: component.partNumber)
+            let context = GSAPlatformHost.GovernedProjectContext(
+                projectID: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
+                projectName: "Component Search",
+                conversationID: nil,
+                revision: 1
+            )
+            governedComplianceCheck = try await gsaPlatformHost.recordComplianceCheck(
+                providerName: "local-compliance",
+                subjectIdentifier: component.partNumber,
+                lifecycleStatus: lifecycleStatus,
+                rohsStatus: rohsStatus,
+                riskAssessment: riskAssessment,
+                context: context
+            )
+        } catch {
+            complianceCheckError = error.localizedDescription
         }
     }
 }

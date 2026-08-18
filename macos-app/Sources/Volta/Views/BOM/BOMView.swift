@@ -301,7 +301,7 @@ private struct BOMItemRow: View {
 
 // MARK: - Assembly Badge
 
-private struct AssemblyBadge: View {
+struct AssemblyBadge: View {
     let status: AssemblyStatus
 
     var body: some View {

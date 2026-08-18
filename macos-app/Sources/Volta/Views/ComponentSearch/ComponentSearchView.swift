@@ -73,6 +73,12 @@ struct ComponentSearchView: View {
         }
         .navigationTitle("Components")
         .frame(minWidth: 400, minHeight: 500)
+        .sheet(item: $selectedComponent) { component in
+            ComponentDetailView(component: component, onRefresh: {
+                performSearch()
+            })
+            .frame(minWidth: 640, minHeight: 520)
+        }
     }
 
     private func performSearch() {
