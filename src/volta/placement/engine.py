@@ -87,6 +87,13 @@ class PlacementRequest(BaseModel):
         default_factory=list,
         description="Forbidden regions: [(x1, y1, x2, y2), ...]",
     )
+    placement_rules: list[dict] = Field(
+        default_factory=list,
+        description=(
+            "Contextual design-intent rules (volta-24): dicts with rule_id, "
+            "rule_type, source, refs, payload, rationale"
+        ),
+    )
     min_clearance: float = Field(
         default=1.0,
         gt=0,
@@ -128,6 +135,24 @@ class PlacementOutput(BaseModel):
 # ---------------------------------------------------------------------------
 # Hybrid engine
 # ---------------------------------------------------------------------------
+
+
+
+def _build_placement_rules(request: "PlacementRequest") -> tuple:
+    """Parse serialized placement rules (volta-24) into PlacementRule objects."""
+    from volta.placement.constraints import PlacementRule, RuleSource, RuleType
+
+    return tuple(
+        PlacementRule(
+            rule_id=r.get("rule_id", ""),
+            rule_type=RuleType(r["rule_type"]),
+            source=RuleSource(r.get("source", "explicit")),
+            refs=tuple(r.get("refs", ())),
+            payload=r.get("payload", {}),
+            rationale=r.get("rationale", ""),
+        )
+        for r in getattr(request, "placement_rules", [])
+    )
 
 
 class HybridPlacementEngine:
@@ -211,6 +236,35 @@ class HybridPlacementEngine:
         )
         is_valid, violations = validator.validate(positions, component_sizes)
 
+        # volta-24 gate: contextual rule violations reported alongside DRC.
+        rule_violation_dicts: list = []
+        if request.placement_rules:
+            from volta.placement.constraints import (
+                PlacementRuleSet,
+                validate_constraints,
+            )
+
+            rule_violations = validate_constraints(
+                PlacementRuleSet(
+                    board_width=request.board_width,
+                    board_height=request.board_height,
+                    rules=_build_placement_rules(request),
+                ),
+                positions,
+            )
+            rule_violation_dicts.extend(
+                {
+                    "type": "placement_rule",
+                    "rule_id": v.rule_id,
+                    "rule_type": v.rule_type.value,
+                    "component_refs": [v.ref],
+                    "message": v.description,
+                    "distance_mm": v.actual_mm,
+                    "severity": "warning",
+                }
+                for v in rule_violations
+            )
+
         # Safety net: resolve any residual overlaps (skip fixed components)
         has_any, overlap_count = validator.has_overlaps(positions, component_sizes)
         if has_any:
@@ -229,6 +283,35 @@ class HybridPlacementEngine:
                     resolved[ref] = pos
             positions = resolved
             is_valid, violations = validator.validate(positions, component_sizes)
+
+        # volta-24 gate: contextual rule violations reported alongside DRC.
+        rule_violation_dicts: list = []
+        if request.placement_rules:
+            from volta.placement.constraints import (
+                PlacementRuleSet,
+                validate_constraints,
+            )
+
+            rule_violations = validate_constraints(
+                PlacementRuleSet(
+                    board_width=request.board_width,
+                    board_height=request.board_height,
+                    rules=_build_placement_rules(request),
+                ),
+                positions,
+            )
+            rule_violation_dicts.extend(
+                {
+                    "type": "placement_rule",
+                    "rule_id": v.rule_id,
+                    "rule_type": v.rule_type.value,
+                    "component_refs": [v.ref],
+                    "message": v.description,
+                    "distance_mm": v.actual_mm,
+                    "severity": "warning",
+                }
+                for v in rule_violations
+            )
 
         # Score positions
         scorer = PlacementScorer(
@@ -260,7 +343,7 @@ class HybridPlacementEngine:
             score=score_result.total_score,
             hpwl=score_result.hpwl,
             valid=is_valid,
-            violations=violation_dicts,
+            violations=violation_dicts + rule_violation_dicts,
             source=source,
             component_scores=component_scores,
         )
@@ -313,6 +396,7 @@ class HybridPlacementEngine:
             fixed_positions=request.fixed_positions,
             keepout_zones=request.keepout_zones,
             min_clearance=request.min_clearance,
+            placement_rules=_build_placement_rules(request),
         )
         positions = interactive_placement(
             graph, constraints, predictor=self._predictor
@@ -344,6 +428,7 @@ class HybridPlacementEngine:
         constraints = ConstraintSet(
             keepout_zones=request.keepout_zones,
             min_clearance=request.min_clearance,
+            placement_rules=_build_placement_rules(request),
         )
         positions = interactive_placement(
             graph, constraints, predictor=self._predictor

@@ -79,6 +79,9 @@ class ConstraintSet:
     )
     min_clearance: float = 1.0
     max_sa_iterations: int = 500
+    # volta-24: contextual design-intent rules (avoid/approach/edge/
+    # region/orientation) enforced as an additional SA penalty term.
+    placement_rules: tuple = ()
 
 
 # ---------------------------------------------------------------------------
@@ -138,6 +141,19 @@ def interactive_placement(
     # Step 4: Build component size lookup
     component_sizes = _extract_component_sizes(graph)
 
+    # volta-24: hard-snap region/edge rules onto initial positions.
+    if constraints.placement_rules:
+        from volta.placement.constraints import (
+            PlacementRuleSet,
+            apply_initial_constraints,
+        )
+        ruleset = PlacementRuleSet(
+            board_width=board_w,
+            board_height=board_h,
+            rules=tuple(constraints.placement_rules),
+        )
+        initial_free = apply_initial_constraints(ruleset, initial_free)
+
     # Step 5: SA refinement
     n_free = len(free_refs)
     x0 = numpy.zeros(n_free * 2)
@@ -172,6 +188,21 @@ def interactive_placement(
             current_free, fixed, component_sizes, constraints.min_clearance
         )
 
+        # volta-24: contextual rule penalty (avoid/approach/edge/region/
+        # orientation) — squared-mm terms, same scale as clearance.
+        rule_penalty = 0.0
+        if constraints.placement_rules:
+            from volta.placement.constraints import (
+                PlacementRuleSet,
+                constraint_penalty,
+            )
+            ruleset = PlacementRuleSet(
+                board_width=board_w,
+                board_height=board_h,
+                rules=tuple(constraints.placement_rules),
+            )
+            rule_penalty = constraint_penalty(ruleset, all_positions)
+
         # Keepout zone penalty
         keepout_penalty = _compute_keepout_penalty(
             current_free, constraints.keepout_zones
@@ -182,7 +213,8 @@ def interactive_placement(
             current_free, component_sizes, constraints.min_clearance
         )
 
-        return hpwl + clearance_penalty + keepout_penalty + overlap_penalty
+        return (hpwl + clearance_penalty + keepout_penalty
+                + overlap_penalty + rule_penalty)
 
     result = dual_annealing(
         objective,
