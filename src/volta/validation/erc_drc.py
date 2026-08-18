@@ -209,6 +209,7 @@ def run_erc(schematic_path: Path, *, timeout: int = 120) -> ErcResult:
 
     tempdir = None
     pro_backup = None  # renamed .kicad_pro if present
+    pro_file: Path | None = None
     try:
         tempdir = tempfile.mkdtemp(prefix="volta-erc-")
         output_file = Path(tempdir) / "erc_report.json"
@@ -307,9 +308,13 @@ def run_erc(schematic_path: Path, *, timeout: int = 120) -> ErcResult:
 
     finally:
         # Restore .kicad_pro if we renamed it (issue #28)
-        if pro_backup is not None and pro_backup.exists():
+        if pro_backup is not None and pro_backup.exists() and pro_file is not None:
             try:
-                pro_backup.rename(pro_backup.with_suffix(".kicad_pro"))
+                # Restore to the ORIGINAL path. with_suffix(".kicad_pro")
+                # replaces the last suffix (.bak), yielding
+                # board.kicad_pro.kicad_pro — which corrupted the fixture
+                # dir on every ERC run and broke project discovery.
+                pro_backup.rename(pro_file)
             except Exception:
                 logger.warning("Failed to restore %s", pro_backup.name)
         if tempdir is not None:
