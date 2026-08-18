@@ -65,6 +65,10 @@ struct MessageBubbleView: View {
                 inlineArtifact(artifact)
             }
 
+            if !message.placementViolations.isEmpty {
+                placementViolationsSection
+            }
+
             // Cost + status row
             footer
         }
@@ -113,6 +117,34 @@ struct MessageBubbleView: View {
             .font(Typography.body.weight(.semibold))
             .foregroundStyle(ColorTokens.tertiaryText)
             .accessibilityHidden(true)
+    }
+
+    /// volta-24: placement-rule gate results — compact, transcript-safe.
+    private var placementViolationsSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(
+                "Placement rules (\(message.placementViolations.count) violated)",
+                systemImage: "exclamationmark.triangle"
+            )
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.orange)
+            ForEach(message.placementViolations, id: \.ruleId) { v in
+                HStack(alignment: .top, spacing: 6) {
+                    Text(v.ref)
+                        .font(.caption.weight(.medium).monospaced())
+                        .foregroundStyle(.secondary)
+                    Text(v.message)
+                        .font(.caption)
+                    if let required = v.requiredMM {
+                        Text(String(format: "need %.0fmm", required))
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .background(.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
     }
 
     private var attachmentsRow: some View {

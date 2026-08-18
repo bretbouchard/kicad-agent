@@ -55,6 +55,8 @@ struct ChatMessage: Identifiable, Sendable, Equatable {
     var attachments: [ImageAttachment]
     /// Optional artifact rendered alongside (schematic/PCB).
     var renderArtifact: RenderArtifact?
+    /// volta-24: placement-rule gate results rendered in the transcript.
+    var placementViolations: [PlacementRuleViolation]
 
     init(
         id: UUID = UUID(),
@@ -65,7 +67,8 @@ struct ChatMessage: Identifiable, Sendable, Equatable {
         costEstimate: CostEstimate? = nil,
         modelBadge: String? = nil,
         attachments: [ImageAttachment] = [],
-        renderArtifact: RenderArtifact? = nil
+        renderArtifact: RenderArtifact? = nil,
+        placementViolations: [PlacementRuleViolation] = []
     ) {
         self.id = id
         self.role = role
@@ -76,6 +79,7 @@ struct ChatMessage: Identifiable, Sendable, Equatable {
         self.modelBadge = modelBadge
         self.attachments = attachments
         self.renderArtifact = renderArtifact
+        self.placementViolations = placementViolations
     }
 }
 

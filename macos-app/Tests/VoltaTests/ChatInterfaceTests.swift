@@ -526,3 +526,37 @@ struct ChatInterfaceTests {
         )
     }
 }
+
+// MARK: - volta-24: placement violations in transcript
+
+extension ChatInterfaceTests {
+    @Test("ChatMessage carries placement violations to the transcript")
+    @MainActor
+    func chatMessageCarriesPlacementViolations() {
+        let message = ChatMessage(
+            role: .assistant,
+            content: "Placed 12 components.",
+            status: .complete,
+            placementViolations: [
+                PlacementRuleViolation(
+                    ruleId: "keep-apart",
+                    ruleType: .avoid,
+                    ref: "R1",
+                    message: "R1 is 3.0mm from R2 — rule requires closer than 30.0mm",
+                    actualMM: 3.0,
+                    requiredMM: 30.0
+                ),
+            ]
+        )
+        #expect(message.placementViolations.count == 1)
+        #expect(message.placementViolations[0].ruleId == "keep-apart")
+        let bubble = MessageBubbleView(message: message, previewRenderer: MockPreviewRenderer())
+        #expect(bubble != nil)
+    }
+
+    @Test("Messages without violations stay equal through round-trip fields")
+    func placementViolationsDefaultEmpty() {
+        let m = ChatMessage(role: .user, content: "hi", status: .complete)
+        #expect(m.placementViolations.isEmpty)
+    }
+}
