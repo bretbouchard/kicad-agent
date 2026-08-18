@@ -150,8 +150,11 @@ class TestMouserSourceHeaders:
             call_args = mock_urlopen.call_args
             request = call_args[0][0]
 
-            # Check headers include API key
-            assert "test-api-key" in request.headers.get("X-Mouser-ApiKey", "")
+            # Check headers include API key (urllib normalizes header case)
+            api_key_header = next(
+                (v for k, v in request.headers.items() if k.lower() == "x-mouser-apikey"), ""
+            )
+            assert "test-api-key" in api_key_header
 
     @patch("urllib.request.urlopen")
     def test_search_includes_content_type_header(self, mock_urlopen: Mock):
@@ -164,10 +167,13 @@ class TestMouserSourceHeaders:
             source = MouserSource()
             source.search("test", limit=10)
 
-            # Verify Content-Type header
+            # Verify Content-Type header (urllib normalizes header case)
             call_args = mock_urlopen.call_args
             request = call_args[0][0]
-            assert request.headers.get("Content-Type") == "application/json"
+            content_type = next(
+                (v for k, v in request.headers.items() if k.lower() == "content-type"), ""
+            )
+            assert content_type == "application/json"
 
 
 class TestMouserSourcePropertyMapping:

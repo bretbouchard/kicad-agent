@@ -22,6 +22,7 @@ from volta.crawler.easyeda_api import (
     JlcpcbComponent,
 )
 from volta.crawler.easyeda_source import EasyEdaSource
+from volta.crawler.mouser_source import MouserSource
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -67,6 +68,7 @@ def create_default_registry(
     registry = ComponentRegistry()
     registry.register(EasyEdaSource(client=easyeda_client))
     registry.register(DigiKeySource())
+    registry.register(MouserSource())
     return registry
 
 
