@@ -61,6 +61,9 @@ def test_read_board_metadata_full(tmp_path):
     assert result["rev"] == "1.0"
     assert result["company"] == "Old Co"
     assert result["board_spec"] is None  # no sidecar
+    assert result["governed_read"]["capability_name"] == "design.metadata.read"
+    assert result["governed_read"]["status"] == "succeeded"
+    assert result["governed_read"]["object_count"] >= 2
 
 
 def test_read_board_metadata_no_title_block(tmp_path):
@@ -73,6 +76,7 @@ def test_read_board_metadata_no_title_block(tmp_path):
     result = handler(ReadBoardMetadataOp(target_file="notb.kicad_pcb"), ir, pcb_path)
     assert result["title"] == ""
     assert result["rev"] == ""
+    assert result["governed_read"]["has_board_spec"] is False
 
 
 def test_set_board_revision_round_trip(tmp_path):

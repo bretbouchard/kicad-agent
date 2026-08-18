@@ -159,6 +159,32 @@ class TestPlaygroundAPI:
         resp = client.get("/api/preview/nonexistent")
         assert resp.status_code == 404
 
+    def test_runtime_diagnostics_endpoint(self, client):
+        """GET /api/diagnostics returns the booted runtime snapshot."""
+        resp = client.get("/api/diagnostics")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "runtime" in data
+        assert data["runtime"]["operation_count"] == 0
+
+    def test_runtime_export_endpoint_tracks_execution(self, client):
+        """GET /api/runtime/export exposes runtime events after execution."""
+        execute_resp = client.post(
+            "/api/execute",
+            json={"operation": {
+                "op_type": "list_net_classes",
+                "target_file": "test.kicad_dru",
+            }},
+        )
+        assert execute_resp.status_code == 200
+
+        export_resp = client.get("/api/runtime/export")
+        assert export_resp.status_code == 200
+        runtime = export_resp.json()["runtime"]
+        assert runtime["diagnostics"]["operation_count"] == 1
+        assert len(runtime["events"]) == 1
+        assert runtime["events"][0]["operation_type"] == "list_net_classes"
+
 
 # ---------------------------------------------------------------------------
 # TestPlaygroundWebSocket
@@ -220,6 +246,11 @@ class TestPlaygroundCLI:
         """create_app respects max_upload_mb parameter."""
         app = create_app(max_upload_mb=5)
         assert app.state.max_upload_bytes == 5 * 1024 * 1024
+
+    def test_create_app_boots_runtime(self, tmp_path):
+        """create_app boots a project-scoped runtime on app state."""
+        app = create_app(upload_dir=tmp_path)
+        assert app.state.runtime.project_dir == tmp_path
 
 
 # ---------------------------------------------------------------------------

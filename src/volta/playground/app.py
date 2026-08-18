@@ -13,6 +13,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from volta.platform_runtime import VoltaPlatformRuntime
 from volta.playground.api import router as api_router
 from volta.playground.ws import router as ws_router
 
@@ -54,6 +55,7 @@ def create_app(
     app.state.upload_dir = upload_dir
     app.state.max_upload_bytes = max_upload_mb * 1024 * 1024
     app.state.sessions: dict[str, dict] = {}
+    app.state.runtime = VoltaPlatformRuntime.boot(upload_dir)
 
     # Mount API routes
     app.include_router(api_router, prefix="/api")

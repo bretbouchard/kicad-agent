@@ -162,6 +162,9 @@ class TestDrcVendorHandler:
         assert result["profile_name"] == "Generic Conservative 2-Layer"
         assert result["vendor"] == "Generic Conservative 2-Layer"
         assert result["kicad_drc"] is None  # run_kicad_drc=False
+        assert result["governed_verification"]["capability_name"] == "verification.batch"
+        assert result["governed_verification"]["status"] == "failed"
+        assert result["governed_verification"]["evidence_count"] >= 2
 
     def test_drc_vendor_clean_board_passes_via_handler(self, tmp_path):
         """Clean board -> passed=True."""
@@ -173,6 +176,8 @@ class TestDrcVendorHandler:
         result = handler(op, ir, pcb_path)
         assert result["passed"] is True
         assert len(result["violations"]) == 0
+        assert result["governed_verification"]["status"] == "succeeded"
+        assert result["governed_verification"]["object_count"] >= 2
 
     def test_drc_vendor_run_kicad_drc_graceful_degradation(self, tmp_path):
         """run_kicad_drc=True degrades gracefully if kicad-cli absent (error dict, not crash)."""

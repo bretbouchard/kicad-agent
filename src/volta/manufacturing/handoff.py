@@ -32,6 +32,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from volta.governance import (
+    CapabilityResult,
+    GovernedExecutionContext,
+    run_governed_handoff,
+    run_governed_verification,
+)
 from volta.dfm.profiles import ManufacturerProfile, load_profile
 from volta.export.bom import BomResult, export_bom_profile
 from volta.export.general import (
@@ -96,6 +102,8 @@ class HandoffResult:
     build: Build | None
     validation: HandoffValidation
     error_message: str = ""
+    governed_verification: CapabilityResult | None = None
+    governed_handoff: CapabilityResult | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -259,6 +267,7 @@ def export_handoff(
     include_step: bool = True,
     include_render: bool = False,
     skip_validation: bool = False,
+    governed_context: GovernedExecutionContext | None = None,
 ) -> HandoffResult:
     """Produce a complete manufacturer handoff zip bundle.
 
@@ -330,6 +339,7 @@ def export_handoff(
     erc_violations = 0
     vendor_drc_violations = 0
 
+    vendor_result: Any | None = None
     if not skip_validation:
         # DRC
         drc_result = run_drc(pcb_path)
@@ -364,6 +374,17 @@ def export_handoff(
         erc_violations=erc_violations,
         vendor_drc_violations=vendor_drc_violations,
     )
+    governed_verification: CapabilityResult | None = None
+    if governed_context is not None and not skip_validation:
+        governed_verification = run_governed_verification(
+            context=governed_context,
+            pcb_path=pcb_path,
+            schematic_path=resolved_sch,
+            drc_result=drc_result,
+            erc_result=erc_result if resolved_sch is not None else None,
+            vendor=vendor,
+            vendor_result=vendor_result,
+        )
 
     # Block on any hard False (Pitfall 5). None (inconclusive) does NOT block.
     blockers: list[str] = []
@@ -381,6 +402,7 @@ def export_handoff(
             build=None,
             validation=validation,
             error_message=f"pre-handoff validation failed: {', '.join(blockers)}",
+            governed_verification=governed_verification,
         )
 
     # Step 4: Create build dir (handle sub-second timestamp collision).
@@ -598,6 +620,25 @@ def export_handoff(
                     zf.write(artifact_file, arcname=artifact_file.name)
 
         # Step 11: Return success.
+        governed_handoff = (
+            run_governed_handoff(
+                context=governed_context,
+                pcb_path=pcb_path,
+                project_dir=project_dir,
+                result=HandoffResult(
+                    success=True,
+                    zip_path=str(zip_path.relative_to(project_dir)),
+                    manifest=manifest,
+                    build=None,
+                    validation=validation,
+                    governed_verification=governed_verification,
+                ),
+                vendor=vendor,
+                schematic_path=resolved_sch,
+            )
+            if governed_context is not None
+            else None
+        )
         return HandoffResult(
             success=True,
             zip_path=str(zip_path.relative_to(project_dir)),
@@ -605,6 +646,8 @@ def export_handoff(
             build=None,
             validation=validation,
             error_message="",
+            governed_verification=governed_verification,
+            governed_handoff=governed_handoff,
         )
     except Exception as exc:
         # Step 10: no partial state — rmtree the build dir on any failure.
@@ -617,6 +660,7 @@ def export_handoff(
             build=None,
             validation=validation,
             error_message=f"export_handoff failed: {exc}",
+            governed_verification=governed_verification,
         )
 
 

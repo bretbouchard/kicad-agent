@@ -4,6 +4,8 @@ Endpoints:
     POST /api/upload - Upload a KiCad file
     GET  /api/operations - List available operations
     POST /api/execute - Execute an operation
+    GET  /api/diagnostics - Runtime diagnostics snapshot
+    GET  /api/runtime/export - Runtime export snapshot
     POST /api/erc - Run ERC on uploaded file
     POST /api/drc - Run DRC on uploaded file
     GET  /api/preview/{session_id} - SVG preview of uploaded file
@@ -171,8 +173,32 @@ async def execute_operation(request: Request, body: ExecuteRequest) -> JSONRespo
         session = request.app.state.sessions[body.session_id]
         project_dir = Path(session["path"]).parent
 
-    result = handle_operation(op_json, project_dir=project_dir)
+    runtime = getattr(request.app.state, "runtime", None)
+    if runtime is not None and (project_dir is None or runtime.project_dir == project_dir):
+        result = runtime.execute_operation(op_json)
+    else:
+        result = handle_operation(op_json, project_dir=project_dir)
     return JSONResponse({"result": asdict(result) if result else None})
+
+
+@router.get("/diagnostics")
+async def runtime_diagnostics(request: Request) -> JSONResponse:
+    """Return the booted runtime diagnostics snapshot."""
+
+    runtime = getattr(request.app.state, "runtime", None)
+    if runtime is None:
+        return JSONResponse({"runtime": None})
+    return JSONResponse({"runtime": runtime.diagnostics()})
+
+
+@router.get("/runtime/export")
+async def runtime_export(request: Request) -> JSONResponse:
+    """Return a full runtime export snapshot."""
+
+    runtime = getattr(request.app.state, "runtime", None)
+    if runtime is None:
+        return JSONResponse({"runtime": None})
+    return JSONResponse({"runtime": runtime.export()})
 
 
 @router.post("/erc")

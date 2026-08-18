@@ -71,9 +71,16 @@ def _handle_read_board_metadata(op: Any, ir: PcbIR, file_path: Path) -> dict[str
             comments = [comments_map.get(i, "") for i in range(1, max_n + 1)]
 
     # Load board_spec sidecar if present (META-04)
+    from volta.governance import GovernedExecutionContext, run_governed_metadata_read
     from volta.manufacturing.board_spec import load_board_spec
+    from volta.platform_runtime import get_active_governed_context
 
     spec = load_board_spec(file_path)
+    governed_result = run_governed_metadata_read(
+        context=get_active_governed_context() or GovernedExecutionContext(),
+        pcb_path=file_path,
+        board_spec=spec,
+    )
 
     return {
         "title": title,
@@ -82,6 +89,13 @@ def _handle_read_board_metadata(op: Any, ir: PcbIR, file_path: Path) -> dict[str
         "company": company,
         "comments": comments,
         "board_spec": spec.model_dump() if spec else None,
+        "governed_read": {
+            "capability_name": governed_result.invocation.capability_name,
+            "subject_id": governed_result.invocation.subject_id,
+            "status": governed_result.status.value,
+            "object_count": len(governed_result.payload["governed_objects"]),
+            "has_board_spec": spec is not None,
+        },
     }
 
 
@@ -100,8 +114,10 @@ def _handle_drc_vendor(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     from dataclasses import asdict
 
     from volta.dfm.profiles import load_profile
+    from volta.governance import GovernedExecutionContext, run_governed_verification
     from volta.manufacturing.vendor_drc import run_vendor_drc
     from volta.parser.pcb_native_parser import NativeParser
+    from volta.platform_runtime import get_active_governed_context
 
     profile = load_profile(op.vendor)  # raises ValueError if unknown
     board = NativeParser.parse_pcb(file_path)
@@ -122,6 +138,22 @@ def _handle_drc_vendor(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
 
     out = asdict(result)
     out["kicad_drc"] = kicad_drc_result
+    governed_result = run_governed_verification(
+        context=get_active_governed_context() or GovernedExecutionContext(),
+        pcb_path=file_path,
+        schematic_path=None,
+        drc_result=kicad_drc_result or result,
+        erc_result=None,
+        vendor=op.vendor,
+        vendor_result=result,
+    )
+    out["governed_verification"] = {
+        "capability_name": governed_result.invocation.capability_name,
+        "subject_id": governed_result.invocation.subject_id,
+        "status": governed_result.status.value,
+        "evidence_count": len(governed_result.evidence),
+        "object_count": len(governed_result.payload["governed_objects"]),
+    }
     # `passed` reflects VENDOR DRC only. kicad_drc is separate — user can check both.
     # If kicad_drc failed with errors, that does NOT affect vendor passed status.
     return out
@@ -141,4 +173,3 @@ def _handle_list_vendor_drc_profiles(op: Any, ir: PcbIR, file_path: Path) -> dic
 
     profiles = [asdict(p) for p in list_drc_profiles()]
     return {"profiles": profiles, "count": len(profiles)}
-

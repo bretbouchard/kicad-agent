@@ -511,6 +511,7 @@ class TestExportHandoff:
 
     def test_handoff_manifest_has_validation_proof(self, tmp_path: Path, monkeypatch) -> None:
         """Manifest records drc_passed/erc_passed/violation counts (HANDOFF-09)."""
+        from volta.governance import GovernedExecutionContext
         from volta.manufacturing.handoff import export_handoff
 
         pcb_path = _create_pcb_with_title_block(tmp_path)
@@ -522,6 +523,7 @@ class TestExportHandoff:
             sch_path=None,
             project_dir=tmp_path,
             skip_validation=True,
+            governed_context=GovernedExecutionContext(),
         )
         assert result.success
         m = result.manifest
@@ -529,6 +531,9 @@ class TestExportHandoff:
         assert m.drc_passed is None
         assert m.erc_passed is None
         assert m.vendor_drc_passed is None
+        assert result.governed_handoff is not None
+        assert result.governed_handoff.invocation.capability_name == "manufacturing.handoff.export"
+        assert result.governed_handoff.status.value == "succeeded"
 
     def test_handoff_vendor_drc_blocks_on_failure(self, tmp_path: Path, monkeypatch) -> None:
         """Vendor DRC fail (passed=False, no error_message) -> no zip."""

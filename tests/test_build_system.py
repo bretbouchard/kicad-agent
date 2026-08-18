@@ -496,6 +496,25 @@ class TestBuildCreate:
         assert loaded.status.value == "draft"
         assert loaded.build_dir == result["build_dir"]
 
+    def test_build_create_returns_governed_metadata(self, tmp_path: Path) -> None:
+        """build_create exposes governed traceability metadata for Phase 2."""
+        from volta.ops._schema_pcb import BuildCreateOp
+        from volta.ops.handlers.query import _QUERY_HANDLERS
+
+        pcb_path = _create_pcb_with_title_block(tmp_path, rev="1.7")
+        (tmp_path / "test_build.kicad_sch").write_text("(kicad_sch ...)", encoding="utf-8")
+        ir = _build_ir(pcb_path)
+        handler = _QUERY_HANDLERS["build_create"]
+        result = handler(
+            BuildCreateOp(target_file="test_build.kicad_pcb", skip_validation=True),
+            ir, pcb_path,
+        )
+
+        assert result["success"] is True
+        assert result["governed_build"]["capability_name"] == "manufacturing.build.snapshot"
+        assert result["governed_build"]["status"] == "succeeded"
+        assert result["governed_build"]["evidence_count"] == 1
+
 
 # ---------------------------------------------------------------------------
 # TestBuildList
@@ -716,4 +735,3 @@ class TestBuildShow:
         assert result["success"] is True
         assert "diff" not in result
         assert "diff_error" not in result
-

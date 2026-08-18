@@ -72,7 +72,11 @@ async def _handle_execute(websocket: WebSocket, data: dict) -> None:
 
     loop = asyncio.get_event_loop()
     try:
-        result = await loop.run_in_executor(None, handle_operation, op_json)
+        runtime = getattr(websocket.app.state, "runtime", None)
+        if runtime is not None:
+            result = await loop.run_in_executor(None, runtime.execute_operation, op_json)
+        else:
+            result = await loop.run_in_executor(None, handle_operation, op_json)
         result_data = asdict(result) if result else None
         await websocket.send_json({"type": "complete", "result": result_data})
     except Exception as exc:

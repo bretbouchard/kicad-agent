@@ -51,11 +51,13 @@ def _handle_build_create(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     import uuid
     from datetime import datetime, timezone
 
+    from volta.governance import GovernedExecutionContext, run_governed_build
     from volta.manufacturing.build import (
         Build,
         BuildStatus,
         _get_git_sha,
     )
+    from volta.platform_runtime import get_active_governed_context
     from volta.parser.pcb_native_parser import NativeParser
     from volta.validation.gates.manufacturing_manifest import (
         ManufacturingArtifact,
@@ -148,7 +150,7 @@ def _handle_build_create(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
         build.save(build_dir / "build.json")
 
         # 10. Return success.
-        return {
+        result = {
             "success": True,
             "build_id": build_id,
             "board_rev": board_rev,
@@ -159,6 +161,22 @@ def _handle_build_create(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
             "source_files": source_files,
             "artifacts": [a.to_dict() for a in artifacts],
         }
+        governed_result = run_governed_build(
+            context=get_active_governed_context() or GovernedExecutionContext(),
+            project_dir=project_dir,
+            pcb_path=file_path,
+            schematic_path=(project_dir / f"{stem}.kicad_sch")
+            if (project_dir / f"{stem}.kicad_sch").exists()
+            else None,
+            build_result=result,
+        )
+        result["governed_build"] = {
+            "capability_name": governed_result.invocation.capability_name,
+            "subject_id": governed_result.invocation.subject_id,
+            "status": governed_result.status.value,
+            "evidence_count": len(governed_result.evidence),
+        }
+        return result
     except Exception as exc:
         # BUILD-04: no partial state -- rmtree the build dir on any failure.
         if build_dir is not None and build_dir.exists():
@@ -325,7 +343,9 @@ def _handle_build_handoff_export(op: Any, ir: PcbIR, file_path: Path) -> dict[st
     """
     from dataclasses import asdict
 
+    from volta.governance import GovernedExecutionContext
     from volta.manufacturing.handoff import export_handoff
+    from volta.platform_runtime import get_active_governed_context
 
     # 1. Resolve project_dir + reject path traversal (threat model #1).
     if op.project_dir and ".." in Path(op.project_dir).parts:
@@ -344,6 +364,7 @@ def _handle_build_handoff_export(op: Any, ir: PcbIR, file_path: Path) -> dict[st
         include_step=op.include_step,
         include_render=op.include_render,
         skip_validation=op.skip_validation,
+        governed_context=get_active_governed_context() or GovernedExecutionContext(),
     )
 
     # 3. Serialize HandoffResult to dict.
@@ -358,6 +379,21 @@ def _handle_build_handoff_export(op: Any, ir: PcbIR, file_path: Path) -> dict[st
     if result.build is not None:
         out["build_id"] = result.build.build_id
         out["build_status"] = result.build.status.value
+    if result.governed_verification is not None:
+        out["governed_verification"] = {
+            "capability_name": result.governed_verification.invocation.capability_name,
+            "subject_id": result.governed_verification.invocation.subject_id,
+            "status": result.governed_verification.status.value,
+            "evidence_count": len(result.governed_verification.evidence),
+        }
+    if result.governed_handoff is not None:
+        out["governed_handoff"] = {
+            "capability_name": result.governed_handoff.invocation.capability_name,
+            "subject_id": result.governed_handoff.invocation.subject_id,
+            "status": result.governed_handoff.status.value,
+            "approval_required": result.governed_handoff.invocation.approval_required,
+            "evidence_count": len(result.governed_handoff.evidence),
+        }
     if result.error_message:
         out["error"] = result.error_message
     return out
