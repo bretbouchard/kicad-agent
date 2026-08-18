@@ -14,10 +14,10 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Any
 
-from skidl import Part, Net, generate_netlist, KICAD, erc, set_default_tool
-
-# Configure SKIDL for ERC
-set_default_tool(KICAD)
+# volta-ko7: no skidl usage remains in this module (gold circuits were
+# pre-validated — gold_erc_pass is set from the JSON payload). The old
+# module-level import + set_default_tool(KICAD) ran skidl config in the
+# main test process, poisoning later skidl-dependent suites.
 
 
 @dataclass

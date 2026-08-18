@@ -11,9 +11,16 @@ Error taxonomy (REQ-246-06):
 - skidl_erc_failed: model emitted valid Python but ERC raised an exception
 - gold_erc_failed: gold standard error (construction time, not per-case)
 """
+import atexit
 import ast
+import importlib.util
+import json
 import logging
+import subprocess
+import sys
+import threading
 from dataclasses import dataclass
+from pathlib import Path
 from typing import NamedTuple, Optional
 
 # Try to import required libraries, handle missing gracefully
@@ -31,11 +38,11 @@ try:
 except ImportError:
     ROUGE_AVAILABLE = False
 
-try:
-    from skidl import Part, Net, generate_netlist, KICAD, ERC, set_default_tool
-    SKIDL_AVAILABLE = True
-except ImportError:
-    SKIDL_AVAILABLE = False
+# Volta-ko7: skidl is NEVER imported in this process. Its global state
+# (default_circuit, lib cache) poisoned later test suites when predictions
+# were exec'd in-process. All skidl work runs in tests/eval/sandbox_worker.py.
+# Availability is probed without execution via find_spec.
+SKIDL_AVAILABLE = importlib.util.find_spec("skidl") is not None
 
 log = logging.getLogger(__name__)
 
@@ -62,14 +69,80 @@ class MetricResult(NamedTuple):
     error_class: Optional[str] = None
 
 
+class _SandboxWorker:
+    """Persistent sandbox child process (volta-ko7). One worker serves the
+    whole session; each request executes against a fresh skidl.Circuit in
+    the child. The parent stays free of skidl global state."""
+
+    def __init__(self) -> None:
+        self._proc: subprocess.Popen | None = None
+        self._lock = threading.Lock()
+        self._counter = 0
+        atexit.register(self.shutdown)
+
+    def _ensure(self) -> subprocess.Popen:
+        if self._proc is None or self._proc.poll() is not None:
+            worker = Path(__file__).parent / "sandbox_worker.py"
+            self._proc = subprocess.Popen(
+                [sys.executable, "-u", str(worker)],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+            )
+        return self._proc
+
+    def run(self, code: str) -> tuple[bool, str | None]:
+        """Execute code in the sandbox. Returns (ok, error_class_or_None)."""
+        with self._lock:
+            proc = self._ensure()
+            self._counter += 1
+            rid = self._counter
+            try:
+                proc.stdin.write(json.dumps({"id": rid, "code": code}) + "\n")
+                proc.stdin.flush()
+                line = proc.stdout.readline()
+            except (BrokenPipeError, OSError, ValueError):
+                self.shutdown()
+                return False, "skidl_erc_failed: sandbox worker crashed"
+            if not line:
+                self.shutdown()
+                return False, "skidl_erc_failed: sandbox worker exited"
+            try:
+                response = json.loads(line)
+            except ValueError:
+                return False, "skidl_erc_failed: sandbox worker protocol error"
+            if response.get("id") != rid:
+                return False, "skidl_erc_failed: sandbox worker desync"
+            if response.get("ok"):
+                return True, None
+            return False, response.get("error", "skidl_erc_failed: unknown")
+
+    def shutdown(self) -> None:
+        proc = self._proc
+        self._proc = None
+        if proc is not None and proc.poll() is None:
+            try:
+                proc.stdin.close()
+            except OSError:
+                pass
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
+_worker = _SandboxWorker()
+
+
 def erc_pass_rate(prediction: str, gold) -> MetricResult:
     """
-    Metric 1: ERC pass rate (skidl 2.2.3 ERC).
+    Metric 1: ERC pass rate (skidl 2.2.3 ERC) — subprocess-isolated.
 
     Algorithm:
-    1. Parse prediction with ast.parse
-    2. Execute in sandboxed namespace with SKIDL imports
-    3. Run erc() and check for errors
+    1. Parse prediction with ast.parse (in-process; no skidl needed)
+    2. Execute in the sandbox worker child (CR-01 import whitelist there)
+    3. Run ERC in the child and check for errors
     4. Return 1.0 if 0 errors, 0.0 if 1+ errors
 
     Returns MetricResult(1.0, None) on success,
@@ -85,46 +158,10 @@ def erc_pass_rate(prediction: str, gold) -> MetricResult:
     except SyntaxError as e:
         return MetricResult(0.0, "model_emit_syntax_error")
 
-    try:
-        # Step 2: Execute in sandboxed namespace with whitelisted builtins.
-        # CR-01 fix: __import__ is restricted to skidl.* modules only.
-        # This prevents os.system / subprocess / socket / open while still
-        # allowing `from skidl import ...` statements in model output.
-        def _safe_import(name, *args, **kwargs):
-            if not (name == "skidl" or name.startswith("skidl.")):
-                raise ImportError(
-                    f"Import of '{name}' is not permitted in eval sandbox"
-                )
-            return __import__(name, *args, **kwargs)
-
-        ns = {
-            "Part": Part,
-            "Net": Net,
-            "generate_netlist": generate_netlist,
-            "ERC": ERC,
-            "KICAD": KICAD,
-            "set_default_tool": set_default_tool,
-            "__builtins__": {
-                "__import__": _safe_import,
-                # True/False/None are keywords, not builtins — provided by default
-            },
-        }
-
-        # Configure SKIDL for KICAD
-        import skidl
-        skidl.set_default_tool(skidl.KICAD)
-
-        exec(prediction, ns)
-
-        # Step 3: Run ERC
-        ERC()
-        # SKIDL ERC() returns None when no errors
-        # If we get here without exception, assume pass
+    ok, error = _worker.run(prediction)
+    if ok:
         return MetricResult(1.0, None)
-
-    except Exception as e:
-        error_msg = str(e) if str(e) else type(e).__name__
-        return MetricResult(0.0, f"skidl_erc_failed: {error_msg}")
+    return MetricResult(0.0, error or "skidl_erc_failed: unknown")
 
 
 def syntactic_correctness(prediction: str, gold) -> MetricResult:

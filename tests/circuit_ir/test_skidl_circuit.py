@@ -31,21 +31,35 @@ class TestImportGuard:
     """W1-8: Import guard eliminates KICAD_SYMBOL_DIR warnings."""
 
     def test_no_symbol_dir_warnings(self) -> None:
-        """Importing circuit_ir must not emit KICAD*_SYMBOL_DIR warnings."""
-        import importlib
-        import volta.circuit_ir as circuit_ir_mod
+        """Importing circuit_ir must not emit KICAD*_SYMBOL_DIR warnings.
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            importlib.reload(circuit_ir_mod)
-            kicad_warnings = [
-                x for x in w
-                if "SYMBOL_DIR" in str(x.message)
-            ]
-            assert len(kicad_warnings) == 0, (
-                f"Import guard failed — got {len(kicad_warnings)} "
-                f"SYMBOL_DIR warnings"
-            )
+        Volta-ko7: verified in a fresh subprocess. The old in-process
+        importlib.reload re-monkeypatched skidl (double get_abs_filename
+        wrapping, fresh memo layer under live SchLib caches) and, with a
+        cold/minimal backup-lib cache, broke every later Part lookup in
+        the process (LED build produced 0 parts).
+        """
+        import subprocess
+        import sys
+
+        code = (
+            "import warnings; warnings.simplefilter('always')\n"
+            "import volta.circuit_ir\n"
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        kicad_warnings = [
+            line for line in result.stderr.splitlines()
+            if "SYMBOL_DIR" in line
+        ]
+        assert len(kicad_warnings) == 0, (
+            f"Import guard failed — got {len(kicad_warnings)} "
+            f"SYMBOL_DIR warnings: {kicad_warnings[:2]}"
+        )
 
     def test_ensure_skidl_env_returns_path(self) -> None:
         """_ensure_skidl_env returns a valid symbol directory path."""
