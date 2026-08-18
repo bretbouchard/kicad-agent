@@ -15,9 +15,29 @@ block. Routes through execute_schematic_op (Transaction + serialize).
 """
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from volta.ops.schema import PositionSpec, TargetFile
+
+
+class AnchorSpec(BaseModel):
+    """Anchor-relative note placement (volta-29).
+
+    Position is computed from the referenced component's position plus a
+    canonical side offset, so the note lands beside its subject without
+    manual coordinate math.
+    """
+
+    ref: str = Field(description="Reference designator to anchor to (e.g. 'R7')")
+    side: Literal[
+        "above-left", "above", "above-right",
+        "left", "right",
+        "below-left", "below", "below-right",
+    ] = Field(default="above-left")
+    offset: tuple[float, float] = Field(
+        default=(5.0, 5.0),
+        description="Extra mm offset applied after the side offset",
+    )
 
 
 class AddDesignNoteOp(BaseModel):
@@ -53,7 +73,18 @@ class AddDesignNoteOp(BaseModel):
         max_length=2000,
         description="Annotation content (1-2000 chars). Multi-line via \\n.",
     )
-    position: PositionSpec
+    position: PositionSpec | None = Field(
+        default=None,
+        description="Absolute placement (x, y in mm). Exactly one of position/anchor.",
+    )
+    anchor: AnchorSpec | None = Field(
+        default=None,
+        description=(
+            "Anchor-relative placement: position computed from the referenced "
+            "component plus a side/offset — notes stay attached when the "
+            "component moves in later edits"
+        ),
+    )
     note_type: Literal["NOTE", "REASON", "MATH", "BLOCK_HEADER"] = Field(
         default="NOTE",
         description="Semantic category — drives default styling",
@@ -68,3 +99,13 @@ class AddDesignNoteOp(BaseModel):
         lt=20,
         description="Text height in mm (default 1.27 = KiCad standard)",
     )
+
+    @model_validator(mode="after")
+    def _exactly_one_placement(self) -> "AddDesignNoteOp":
+        if (self.position is None) == (self.anchor is None):
+            raise ValueError(
+                "add_design_note requires exactly one of position or anchor"
+            )
+        return self
+
+

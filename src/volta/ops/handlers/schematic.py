@@ -652,15 +652,64 @@ def _handle_add_no_connect(op: Any, ir: SchematicIR, file_path: Path) -> dict[st
 @register_schematic("add_design_note")
 def _handle_add_design_note(op: Any, ir: SchematicIR, file_path: Path) -> dict[str, Any]:
     """volta-29: annotate schematic with design intent (NOTE/REASON/MATH/BLOCK_HEADER)."""
-    return ir.add_design_note(
+    if op.anchor is not None:
+        # Anchor-relative placement: resolve the component by its Reference
+        # property (kiutils model), apply the side offset, then extra offset.
+        def _ref_of(comp: Any) -> str:
+            for prop in getattr(comp, "properties", []):
+                if getattr(prop, "key", "") == "Reference":
+                    return prop.value
+            return ""
+
+        comp = next(
+            (c for c in ir.components if _ref_of(c) == op.anchor.ref),
+            None,
+        )
+        if comp is None:
+            return {
+                "status": "error",
+                "error": (
+                    f"add_design_note anchor ref {op.anchor.ref!r} not found in "
+                    f"{file_path.name}"
+                ),
+            }
+        cx, cy = comp.position.X, comp.position.Y
+        dx, dy = _ANCHOR_SIDE_OFFSETS[op.anchor.side]
+        x = cx + dx + op.anchor.offset[0]
+        y = cy + dy + op.anchor.offset[1]
+    else:
+        x, y = op.position.x, op.position.y
+    result = ir.add_design_note(
         text=op.text,
-        x=op.position.x,
-        y=op.position.y,
-        angle=getattr(op.position, "angle", 0.0) or 0.0,
+        x=x,
+        y=y,
+        angle=getattr(op.position, "angle", 0.0) if op.position else 0.0,
         note_type=op.note_type,
         target_ref=op.target_ref,
         font_size_mm=op.font_size_mm,
     )
+    result.setdefault("status", "ok")
+    result["position"] = [x, y]
+    if op.anchor is not None:
+        result["anchor"] = {
+            "ref": op.anchor.ref,
+            "side": op.anchor.side,
+            "resolved_to": [x, y],
+        }
+    return result
+
+
+# Schematic Y grows downward; "above" = smaller Y. Offsets in mm.
+_ANCHOR_SIDE_OFFSETS: dict[str, tuple[float, float]] = {
+    "above-left": (-5.0, -5.0),
+    "above": (0.0, -5.0),
+    "above-right": (5.0, -5.0),
+    "left": (-5.0, 0.0),
+    "right": (5.0, 0.0),
+    "below-left": (-5.0, 5.0),
+    "below": (0.0, 5.0),
+    "below-right": (5.0, 5.0),
+}
 
 
 @register_schematic("add_junction")
