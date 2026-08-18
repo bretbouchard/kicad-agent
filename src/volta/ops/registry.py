@@ -801,6 +801,15 @@ _RAW_CATALOG: dict[str, dict] = {
         "requires": [],
         "conflicts": [],
     },
+    "import_symbol": {
+        "category": "library",
+        "description": "Import a symbol into a .kicad_sym library (LCSC part data or raw S-expression)",
+        "file_types": [".kicad_sym"],
+        "is_readonly": False,
+        "scope": "single_point",
+        "requires": [],
+        "conflicts": [],
+    },
     "create_symbol": {
         "category": "create",
         "description": "Create a new symbol definition in a .kicad_sym library file",

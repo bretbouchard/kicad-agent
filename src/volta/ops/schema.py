@@ -312,6 +312,7 @@ from volta.ops._schema_create import (  # noqa: E402
     CreatePcbOp,
     CreateProjectOp,
     CreateSymbolOp,
+    ImportSymbolOp,
     EmbedSymbolOp,
     CreateFootprintOp,
     FootprintPadSpec,
@@ -461,6 +462,7 @@ class Operation(BaseModel):
         | CreatePcbOp
         | CreateProjectOp
         | CreateSymbolOp
+        | ImportSymbolOp
         | EmbedSymbolOp
         | SwapSymbolOp
         | RemoveWireOp

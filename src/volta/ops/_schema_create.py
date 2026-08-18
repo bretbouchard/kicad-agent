@@ -271,3 +271,51 @@ class ConvertKicad6To10Op(BaseModel):
 
     op_type: Literal["convert_kicad6_to_10"] = "convert_kicad6_to_10"
     target_file: TargetFile
+
+class ImportSymbolOp(BaseModel):
+    """Import a symbol into a .kicad_sym library (volta-4).
+
+    Two paths:
+    - provider: fetch pin/pad data for an LCSC part number via the
+      EasyEda source and generate a real-pinned symbol (positions and
+      names from the part's actual pin map — not a rectangle stub).
+    - raw: append a caller-supplied KiCad symbol S-expression.
+
+    Either way the symbol lands in the project's .kicad_sym library,
+    ready for add_component.
+    """
+
+    op_type: Literal["import_symbol"] = "import_symbol"
+    target_file: TargetFile
+    part_number: str | None = Field(
+        default=None,
+        max_length=32,
+        description="LCSC part number (e.g. 'C2040') — provider path",
+    )
+    symbol_sexp: str | None = Field(
+        default=None,
+        min_length=10,
+        max_length=1_000_000,
+        description="Raw KiCad symbol S-expression — raw path",
+    )
+    symbol_name: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Override symbol name (defaults: part title or sexp name)",
+    )
+    reference_prefix: str = Field(
+        default="U", min_length=1, max_length=8,
+        description="Reference prefix for the imported symbol",
+    )
+    value: str = Field(
+        default="",
+        max_length=256,
+        description="Default value (defaults to the part title)",
+    )
+
+    @model_validator(mode="after")
+    def _exactly_one_source(self) -> "ImportSymbolOp":
+        if (self.part_number is None) == (self.symbol_sexp is None):
+            raise ValueError("import_symbol requires exactly one of part_number or symbol_sexp")
+        return self
+
