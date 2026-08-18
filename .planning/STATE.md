@@ -62,12 +62,147 @@ Last activity: 2026-07-15 — Phase 246 complete (DONE)
 
 ## Current Position
 
-Phase: 250 (portable-build-setup) — COMPLETE — autonomous v11.0 sweep wrapped
-Plan: 1 of 1
-Status: Phase 250 complete. Phases 230-236 planning artifacts (PLAN.md + SUMMARY.md)
-written but execution DEFERRED to v12.0 (mobile + multi-day-effort backlog).
-**Last activity:** 2026-07-15 -- planning artifacts for 230-236 staged,
-state machine stopped at 250 pending user direction.
+**OVERRIDE STATE:** Buzz team's Volta Component Integration v8.0 takes priority over 247 gap closure.
+Phase: 251 (Mouser API Integration) — PLANNING — standalone component provider system
+Plan: 1 of 2
+Status: Executing /gsd-plan-phase 251. Buzz team platform work refactored into GSD process.
+
+## 2026-08-17 through 2026-08-18 Phase 2 Platform Migration Status
+
+- Python-side M2.3/M2.4 groundwork is live: governed object identity,
+  evidence-aware verification/manufacturing wrappers, and the shared
+  `VoltaPlatformRuntime` are embedded into the playground/runtime path.
+- Cross-repo proof exists in `integration/gsa-platform-proof/` and passes
+  against local `apps/gsa-platform`, proving downstream import plus the
+  governed revision→artifact scenario shape.
+- Pre-existing Swift routing test debt that blocked app-side migration was
+  fixed on 2026-08-17:
+  - duplicate `MockProcessRunner` collision removed
+  - fixture lookup made bundle-independent
+  - Freerouting test setup now stages real temp JAR/DSN inputs
+  - production crash fixes landed in `DSNConverter` and
+    `FreeroutingProvider.parseMetrics`
+- Live app embedding is now present in `macos-app`:
+  - local `gsa-platform` dependency added to SwiftPM and XcodeGen
+  - `GSAPlatformHost` boots `Platform.boot(...)` at app launch
+  - explicit storage/capability config uses
+    `~/Library/Application Support/VoltaPCB/gsa-platform`
+  - app-side tests prove boot + diagnostics snapshot creation
+- Verification on 2026-08-17:
+  - `swift test --filter 'KiCadCLIDetectorTests|FreeroutingProviderTests|FixtureBoardSmokeTests'`
+    → 41 tests passed
+  - `swift test --filter 'VoltaTests.GSAPlatformHostTests|KiCadCLIDetectorTests|FreeroutingProviderTests|FixtureBoardSmokeTests'`
+    → 45 tests passed, including live host boot, governed board-release export, denied authority, expired authority, and shell-visible platform failure handling
+
+### App-Owned Governed Flow
+
+- `GSAPlatformHost` now owns a real governed consequential flow for Volta:
+  board-release artifact export using GSA's packaged revision→artifact scenario
+- Negative-path proofs also exist at the app layer:
+  denied authority blocks export, and expired authority blocks export
+- `AppRootView` surfaces GSA boot failures with a retry action so the
+  embedded platform is operationally visible in the live shell
+- `LiquidGlassShell` now routes the live Share action through the governed
+  board-release export path instead of a placeholder share string:
+  - the shell waits for `GSAPlatformHost` readiness, runs the governed export,
+    and builds a real `CompletionSummary`
+  - `VerifyView` now receives a live governed artifact URL and shares the
+    actual exported file through `ShareLink`
+  - the shell presents governed export failures to the operator with retry,
+    keeping consequential release behavior visible rather than silent
+- Extended app-side proof coverage on 2026-08-17:
+  - `GovernedReleaseSummaryBuilder` maps the governed artifact flow into the
+    existing completion-summary UI model
+  - `LiquidGlassShell` trait tests now inject `GSAPlatformHost`, covering the
+    live environment dependency introduced by the governed export path
+  - `ValidationManager` now records governed verification evidence for live
+    ERC/DRC runs through `GSAPlatformHost` and the validation panel surfaces
+    gate/evidence/trace counts inline
+  - app-side proof now covers the real validation-manager DRC workflow against
+    the committed `simple_2layer_led.kicad_pcb` fixture, not only host-level
+    evidence helpers
+  - the governed verification and governed export paths now share a stable
+    modeled-world board-release object reference owned by `GSAPlatformHost`
+    instead of relying only on raw file-path claims
+  - verification evidence claims, historian records, and export summary
+    metadata are now object-scoped, giving the live shell its first concrete
+    project/board object identity across verification → artifact release
+- Verification on 2026-08-17:
+  - `swift test --package-path macos-app --filter 'VoltaTests.GSAPlatformHostTests|VoltaTests.GSDConversationEngineTests|VoltaTests.LiquidGlassShellTests|VoltaTests.ApprovalGatesTests|KiCadCLIDetectorTests|FreeroutingProviderTests|FixtureBoardSmokeTests'`
+    → 90 tests passed
+  - `swift test --package-path macos-app --filter 'VoltaTests.GSAPlatformHostTests|VoltaTests.ValidationPanelTests|VoltaTests.GSDConversationEngineTests|VoltaTests.LiquidGlassShellTests|VoltaTests.ApprovalGatesTests|KiCadCLIDetectorTests|FreeroutingProviderTests|FixtureBoardSmokeTests'`
+    → 92 tests passed
+
+### 2026-08-18 governed-slice widening
+
+- The live consequential path in `macos-app` now carries the full minimum
+  M2.3 governed object set across verification, release export, and
+  manufacturing handoff:
+  - project
+  - revision
+  - schematic
+  - sheet
+  - component
+  - net
+  - pcb
+  - footprint
+  - bom
+  - verification artifact
+- `GSAPlatformHost` now upserts these identities directly into the shared
+  modeled-world path used by the live shell rather than a sidecar-only proof.
+- `GovernedReleaseSummaryBuilder`, `ValidationManager`, the validation panel,
+  and `VerifyView` all expose the widened governed reference chain so the app
+  UI reflects the same traceability the runtime records.
+- Focused app-side verification on 2026-08-18:
+  - `swift test --package-path macos-app --filter 'VoltaTests.GSAPlatformHostTests|VoltaTests.ValidationPanelTests|VoltaTests.GSDConversationEngineTests|VoltaTests.LiquidGlassShellTests|VoltaTests.ApprovalGatesTests|KiCadCLIDetectorTests|FreeroutingProviderTests|FixtureBoardSmokeTests'`
+    → 94 tests passed
+- The first app-side M2.4 external-provider boundary is now governed in the
+  embedded GSA host:
+  - `GSAPlatformHost.recordProviderAssemblyCheck(...)` records a read-only
+    provider result for assembly availability as governed evidence plus
+    historian trace
+  - the first concrete subject is the existing JLCPCB assembly-data edge, kept
+    deliberately read-only so the app proves provider-boundary traceability
+    before any quote/order semantics are introduced
+- Focused app-side verification after adding the governed provider boundary on
+  2026-08-18:
+  - `swift test --package-path macos-app --filter 'VoltaTests.GSAPlatformHostTests|VoltaTests.ValidationPanelTests|VoltaTests.GSDConversationEngineTests|VoltaTests.LiquidGlassShellTests|VoltaTests.ApprovalGatesTests|VoltaTests.JlcpcbApiProviderTests|KiCadCLIDetectorTests|FreeroutingProviderTests|FixtureBoardSmokeTests'`
+    → 99 tests passed
+- The same live component-search workflow now carries a second governed
+  external-provider boundary:
+  - `GSAPlatformHost.recordComplianceCheck(...)` records lifecycle, RoHS,
+    and risk evidence for component compliance checks
+  - `ComponentDetailView` exposes that governed compliance trace directly in
+    the live app workflow instead of keeping it host-test-only
+- The live KiCad import flow is now governed as exchange, not only chat
+  context setup:
+  - `GSAPlatformHost.recordImportedDesign(...)` records import evidence and
+    historian trace for `.kicad_sch` / `.kicad_pcb` sources
+  - `LiquidGlassShell.handleFileImport(...)` now records that governed import
+    and surfaces the claim/evidence trace back into the conversation as a
+    system message
+- Focused app-side verification after adding governed compliance + governed
+  import on 2026-08-18:
+  - `swift test --package-path macos-app --filter 'VoltaTests.ComponentSearchViewTests|VoltaTests.GSAPlatformHostTests|VoltaTests.ValidationPanelTests|VoltaTests.GSDConversationEngineTests|VoltaTests.LiquidGlassShellTests|VoltaTests.JlcpcbApiProviderTests|KiCadCLIDetectorTests|FreeroutingProviderTests|FixtureBoardSmokeTests'`
+    → 91 tests passed
+- Follow-up gap logged on 2026-08-18:
+  - `volta-2ji` tracks that `Platform.boot(...)` currently recovers modeled
+    world state but not `EvidenceLedger` / `Historian` contents, so governed
+    import evidence persistence across host reboot cannot be fully proven from
+    Volta without an upstream `gsa-platform` export surface
+  - Volta deliberately did not add local sidecar governance persistence for
+    that trace, to avoid creating parallel governance infrastructure
+
+### Remaining highest-value Phase 2 app work
+
+- widen the same object-scoped governed chain into a consequential
+  provider/compliance action beyond release export + manufacturing handoff
+- reuse the existing provider/manufacturing surfaces to add one more real
+  capability boundary instead of creating a local-only governance abstraction
+- connect the new governed provider-check path to a live app-owned workflow
+  so provider evidence is surfaced outside host-only tests
+- widen the same live slice from governed release/handoff to richer
+  manufacturing or external-provider capability paths
 
 ## Previous Milestone: v6.0 KiCad Agent — The Closed Box (COMPLETE)
 
@@ -687,8 +822,49 @@ Next: plan Phase 205 (Board Metadata Foundation) — title_block parse/write + B
 - **SiliconExpert**: dropped from Phase 252/254 — Bret decision (enterprise-only access confirmed blocked)
 - **DeepPCB**: research verdict DEFERRED — enterprise-only access; re-evaluate trigger: docs.deeppcb.ai/api becomes public OR self-serve signup opens
 
+### GSA Phase 2 Adoption Slice (started 2026-08-17)
+
+- **Status:** In progress in `apps/volta` against the `gsa-platform` Phase 2 support contract
+- **Scope landed so far:**
+  - New Python governance layer at `src/volta/governance/`
+  - Governed file-level object identities for project / schematic / pcb
+  - Governed logical locators for schematic subobjects: sheet / component / net / bus
+  - Governed manufacturing artifact identities for bom / assembly outputs
+  - Governed capability wrappers for:
+    - build snapshot creation
+    - manufacturing handoff export
+    - verification batches
+    - CAD model import source tracing
+    - board metadata read identity tracing
+  - Bootable runtime wrapper at `src/volta/platform_runtime.py` for project-scoped governed execution, diagnostics, feed, and export snapshots
+  - Existing flows now emit governed metadata without breaking KiCad behavior:
+    - `build_create`
+    - `build_handoff_export`
+    - `ValidationPipeline.validate_and_apply()`
+    - `validate_generated()`
+    - `SnapMagicImportProvider.import_models()`
+    - `read_board_metadata`
+    - `drc_vendor`
+    - playground app boot/runtime execution path (`create_app()`, `/api/execute`, `/ws`)
+    - playground diagnostics/export surfaces (`/api/diagnostics`, `/api/runtime/export`)
+- **Focused verification:** governed/manufacturing/import/validation/routing regression slice passing (`112 passed` under `PYTHONPATH=src PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q -o addopts='' ...`)
+- **Current verification expansion:** broader governed Phase 2 slice passing (`134 passed` under `PYTHONPATH=src PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q -o addopts='' ...`)
+- **Runtime embedding verification:** platform-runtime + playground embedding slices passing (`76 passed`, then `85 passed` under `PYTHONPATH=src PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q -o addopts='' ...`)
+- **Broader post-runtime verification:** governed/manufacturing/runtime regression slice passing (`136 passed` under `PYTHONPATH=src PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -q -o addopts='' ...`)
+- **Cross-repo proof package:** dedicated downstream SwiftPM proof added at `integration/gsa-platform-proof/`, depending on local `../../../gsa-platform` and running `AdopterIntegrationScenario.runGovernedRevisionArtifactFlow(...)` with board-release semantics
+- **Cross-repo proof verification:** `swift test --package-path integration/gsa-platform-proof` passes (`1 test passed`) against the local `gsa-platform` package on 2026-08-17
+- **Remaining likely M2.3/M2.4 work:**
+  - Broaden governed object registration beyond current execution slices where more electronics entities get first-class runtime participation
+  - Audit whether any future concrete manufacturer API adapters need approval/evidence wiring once Phase 210 vendor adapters land
+  - Decide whether the live Volta app/runtime should directly embed `Platform.boot(...)` or keep the dedicated proof package as the Phase 2 cross-repo contract surface for now
+
 ### Source-of-Truth Note (2026-07-28)
 
 - **Repo `.planning/` IS canonical** for all Volta Component Integration planning going forward. Bret decision: "i want the planning to be in the repos . that way it track from here and other tools"
 - `~/.buzz/PLANS/volta-component-integration/` is now a historical mirror; do not edit. Cleanup target: Phase 1-3 mirror files (already superseded by git history of commits `0b62ac6`, `d657ab9`, `f1621d1`, `2ecb6c8`, `5572c0c`)
 - Phases 1-3 (component-provider-foundation, multi-source-expansion, assembly-backup-sources) were already merged to master before this migration; their buzz-workspace mirror files (`phases/1-…`, `phases/2-…`, `phases/3-…`, plus `COVERAGE-REVIEW.md`, `API_CONTRACTS.md`, `DIGIKEY_*`) are archived, not authoritative
+- 2026-08-17: Extended the app-owned GSA platform chain from governed verification + release export into a real governed manufacturing handoff. `GSAPlatformHost` now runs `runGovernedManufacturingHandoff()` on the same `electronics.board.release` object, `CompletionSummary` / `VerifyView` surface the handoff artifact and approval metadata, and `LiquidGlassShell` drives export + handoff in one live app flow. Focused Swift tests were updated to assert the shared object-scoped chain across verification, release, and manufacturing handoff.
+- 2026-08-17: Widened the live governed slice toward M2.3 object identity. `GSAPlatformHost` now supports explicit project context plus a governed `electronics.project` anchor, and the shell passes real `Project` / `Conversation` identity into governed release + manufacturing-handoff execution. Completion summaries now surface both `project:` and board-release object references so the trace is no longer board-only.
+- 2026-08-18: Split revision identity out of raw integer state into an explicit governed `electronics.project.revision` object. Verification evidence, release export, manufacturing handoff, and validation summaries now carry `revision:` references, making the live trace project → revision → board release rather than project → board release only.
+- 2026-08-18: Added governed `electronics.bom` identity to the same live slice. Verification, release export, manufacturing handoff, and validation summaries now carry `bom:` references, widening the proven chain to project → revision → bom → board release without creating a separate migration path.
+- 2026-08-18: Added governed `electronics.schematic` identity to the same live slice. Verification, release export, manufacturing handoff, and validation summaries now carry `schematic:` references, widening the proven chain to project → revision → schematic → bom → board release.

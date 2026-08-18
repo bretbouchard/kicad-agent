@@ -15,8 +15,8 @@
   },
   "project": {
     "type": "tool",
-    "code_path": "~/apps/volta",
-    "skill_path": "~/.claude/skills/volta",
+    "code_path": "/Users/bretbouchard/apps/kicad-agent/src/volta",
+    "skill_path": "/Users/bretbouchard/apps/kicad-agent/skills",
     "language": "python",
     "runtime": "claude"
   },
