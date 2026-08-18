@@ -70,6 +70,12 @@ public struct VoltaPlatform: Sendable {
         await platform.broker.register(
             ElectronicsManufacturingQuoteCapability(allowedRoots: roots)
         )
+        await platform.broker.register(
+            ElectronicsManufacturingUploadCapability(allowedRoots: roots)
+        )
+        await platform.broker.register(
+            ElectronicsComplianceCheckCapability(allowedRoots: roots)
+        )
 
         return VoltaPlatform(
             platform: platform,

@@ -307,3 +307,211 @@ public struct ElectronicsExportCapability: Capability {
         ArtifactSupport.verifyArtifact(result)
     }
 }
+
+// MARK: - electronics.manufacturing.upload
+
+/// M2.4: the manufacturer-upload path (`plans/VOLTA_PHASE2_EXECUTION_PLAN
+/// _2026-08-17.md` — "Gerber/BOM uploads", "manufacturer-upload or quote
+/// paths"). Consumes a digest-verified quote-request package
+/// (`ElectronicsManufacturingQuoteCapability` output) and writes the
+/// canonical upload-transmission manifest: the fabricator-facing record
+/// that a specific quoted package was transmitted, carrying the full
+/// lineage (export sha → quote sha → upload sha). Uploading publishes a
+/// board design to an external fabricator — consequential by default, so
+/// authority arrives only through
+/// `ElectronicsApprovals.requestManufacturingUploadAuthority`.
+public struct ElectronicsManufacturingUploadCapability: Capability {
+    public static let schemaTag = "volta.mfg-upload/1"
+
+    public let id = CapabilityID(name: "electronics.manufacturing.upload", version: 1)
+    public let effect =
+        "Writes a canonical upload-transmission manifest (sorted-key JSON, schema \(ElectronicsManufacturingUploadCapability.schemaTag)) for a digest-verified quote package, inside the allowed roots. Outward-facing manufacturing flow (M2.4)."
+
+    private let allowedRoots: [URL]
+
+    public init(allowedRoots: [URL]) {
+        self.allowedRoots = allowedRoots
+    }
+
+    public func invoke(_ input: WorldValue) async throws -> CapabilityResult {
+        guard case .object(let fields) = input,
+              case .string(let projectName)? = fields["projectName"],
+              case .string(let provider)? = fields["provider"]
+        else {
+            throw CapabilityInputError.missingField(
+                "projectName (string), provider (string) required"
+            )
+        }
+        guard case .string(let outputDir)? = fields["outputDir"] else {
+            throw CapabilityInputError.missingField("outputDir (string) required")
+        }
+        // The quote under transmission is pinned by digest — the upload
+        // refuses to publish anything it cannot verify byte-for-byte.
+        guard let quoteValue = fields["quotePackage"],
+              let quote = ArtifactSupport.artifactReference(in: quoteValue)
+        else {
+            throw CapabilityInputError.missingField(
+                "quotePackage (object with path + sha256) required"
+            )
+        }
+        let quoteBytes = try ArtifactSupport.verifiedExistingFile(
+            path: quote.path,
+            sha256: quote.sha256,
+            allowedRoots: allowedRoots
+        )
+
+        let manifest = try JSONSerialization.data(
+            withJSONObject: [
+                "schema": Self.schemaTag,
+                "projectName": projectName,
+                "provider": provider,
+                "transmittedAt": ISO8601DateFormatter().string(from: Date()),
+                "quotePackage": [
+                    "path": quote.path,
+                    "sha256": quote.sha256,
+                    "bytes": quoteBytes.count,
+                ],
+            ],
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+
+        let file = "mfg-upload-\(projectName.replacingOccurrences(of: "/", with: "-"))-\(provider)-\(UUID().uuidString.prefix(8)).json"
+        let url = try ArtifactSupport.resolveURL(
+            directory: outputDir,
+            file: file,
+            allowedRoots: allowedRoots
+        )
+        let written = try ArtifactSupport.write(manifest, to: url)
+
+        return CapabilityResult(
+            output: .object([
+                "path": .string(url.path),
+                "bytes": .int(written.bytes),
+                "sha256": .string(written.sha256),
+                "provider": .string(provider),
+                "quoteSha256": .string(quote.sha256),
+            ]),
+            evidence: Evidence(
+                kind: .artifact,
+                claim: "electronics.manufacturing.upload transmitted \(written.bytes) bytes to \(provider) for \(projectName) (upload sha256 \(written.sha256)), quoting package sha256 \(quote.sha256)",
+                producer: Principal(rawValue: "capability:electronics.manufacturing.upload"),
+                payload: .object([
+                    "path": .string(url.path),
+                    "sha256": .string(written.sha256),
+                    "bytes": .int(written.bytes),
+                    "provider": .string(provider),
+                    "quoteSha256": .string(quote.sha256),
+                ])
+            )
+        )
+    }
+
+    public func verify(_ result: CapabilityResult) -> Bool {
+        ArtifactSupport.verifyArtifact(result)
+    }
+}
+
+// MARK: - electronics.compliance.check
+
+/// M2.4: external compliance/provider checks behind the broker (the
+/// Phase 2 plan's "external compliance or provider checks"). Volta
+/// already talks to compliance data providers; this capability records
+/// the governed boundary crossing — which check was requested of which
+/// provider, against which digest-pinned package (when a package is in
+/// scope) — as a canonical, sha256-evidenced record. Crossing the system
+/// boundary with design data is consequential, so authority arrives only
+/// through `ElectronicsApprovals.requestComplianceCheckAuthority`.
+public struct ElectronicsComplianceCheckCapability: Capability {
+    public static let schemaTag = "volta.compliance-check/1"
+
+    public let id = CapabilityID(name: "electronics.compliance.check", version: 1)
+    public let effect =
+        "Writes a canonical compliance-check record (sorted-key JSON, schema \(ElectronicsComplianceCheckCapability.schemaTag)) naming the provider, check type, and digest-verified package under review, inside the allowed roots. External boundary-crossing check (M2.4)."
+
+    private let allowedRoots: [URL]
+
+    public init(allowedRoots: [URL]) {
+        self.allowedRoots = allowedRoots
+    }
+
+    public func invoke(_ input: WorldValue) async throws -> CapabilityResult {
+        guard case .object(let fields) = input,
+              case .string(let projectName)? = fields["projectName"],
+              case .string(let provider)? = fields["provider"],
+              case .string(let checkType)? = fields["checkType"]
+        else {
+            throw CapabilityInputError.missingField(
+                "projectName (string), provider (string), checkType (string) required"
+            )
+        }
+        guard case .string(let outputDir)? = fields["outputDir"] else {
+            throw CapabilityInputError.missingField("outputDir (string) required")
+        }
+
+        // An optional package under review: digest-verified when present.
+        var packageBlock: [String: Any] = [:]
+        var packageSha = "none"
+        if let packageValue = fields["package"],
+           let pkg = ArtifactSupport.artifactReference(in: packageValue) {
+            let bytes = try ArtifactSupport.verifiedExistingFile(
+                path: pkg.path,
+                sha256: pkg.sha256,
+                allowedRoots: allowedRoots
+            )
+            packageBlock = [
+                "path": pkg.path,
+                "sha256": pkg.sha256,
+                "bytes": bytes.count,
+            ]
+            packageSha = pkg.sha256
+        }
+
+        let record = try JSONSerialization.data(
+            withJSONObject: [
+                "schema": Self.schemaTag,
+                "projectName": projectName,
+                "provider": provider,
+                "checkType": checkType,
+                "requestedAt": ISO8601DateFormatter().string(from: Date()),
+                "package": packageBlock,
+            ],
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+
+        let file = "compliance-\(projectName.replacingOccurrences(of: "/", with: "-"))-\(provider)-\(UUID().uuidString.prefix(8)).json"
+        let url = try ArtifactSupport.resolveURL(
+            directory: outputDir,
+            file: file,
+            allowedRoots: allowedRoots
+        )
+        let written = try ArtifactSupport.write(record, to: url)
+
+        return CapabilityResult(
+            output: .object([
+                "path": .string(url.path),
+                "bytes": .int(written.bytes),
+                "sha256": .string(written.sha256),
+                "provider": .string(provider),
+                "checkType": .string(checkType),
+                "packageSha256": .string(packageSha),
+            ]),
+            evidence: Evidence(
+                kind: .artifact,
+                claim: "electronics.compliance.check recorded a \(checkType) check with \(provider) for \(projectName) (record sha256 \(written.sha256)), package sha256 \(packageSha)",
+                producer: Principal(rawValue: "capability:electronics.compliance.check"),
+                payload: .object([
+                    "path": .string(url.path),
+                    "sha256": .string(written.sha256),
+                    "bytes": .int(written.bytes),
+                    "provider": .string(provider),
+                    "checkType": .string(checkType),
+                    "packageSha256": .string(packageSha),
+                ])
+            )
+        )
+    }
+
+    public func verify(_ result: CapabilityResult) -> Bool {
+        ArtifactSupport.verifyArtifact(result)
+    }
+}

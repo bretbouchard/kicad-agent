@@ -96,6 +96,57 @@ public struct ElectronicsApprovals: Sendable {
         ))
     }
 
+/// Authority for an agent to transmit a quoted package to a
+    /// fabricator: invoke `electronics.manufacturing.upload` for the TTL
+    /// window (M2.4 upload path). Uploading publishes the board design to
+    /// an external manufacturer — the quote package is digest-verified at
+    /// invocation and the transmission lands as sha256-pinned evidence.
+    public func requestManufacturingUploadAuthority(
+        requester: Principal,
+        human: Principal,
+        projectName: String,
+        provider: String
+    ) async -> ApprovalRequest {
+        await ledger.submit(ApprovalRequest(
+            title: "Upload quoted package for \(projectName) to \(provider)",
+            decision: "Allow \(requester.rawValue) to transmit the quoted manufacturing package for \(projectName) to \(provider) (capability electronics.manufacturing.upload) for \(Int(Self.defaultTTL / 60)) minutes.",
+            supportingEvidence: [
+                "The quote package under transmission is verified against its recorded sha256 before the upload manifest is built.",
+                "The fabricator-facing transmission record is written inside the platform's allowed roots and recorded as artifact evidence with its digest.",
+            ],
+            requestedOf: human,
+            requestedBy: requester,
+            grantsScope: GrantScope(capabilities: ["electronics.manufacturing.upload"]),
+            grantsTTL: Self.defaultTTL
+        ))
+    }
+
+    /// Authority for an agent to run an external compliance/provider
+    /// check: invoke `electronics.compliance.check` for the TTL window
+    /// (M2.4 external provider checks). The check crosses the system
+    /// boundary with design data; when a package is under review it is
+    /// digest-verified and the record lands as sha256 evidence.
+    public func requestComplianceCheckAuthority(
+        requester: Principal,
+        human: Principal,
+        projectName: String,
+        provider: String,
+        checkType: String
+    ) async -> ApprovalRequest {
+        await ledger.submit(ApprovalRequest(
+            title: "Run \(checkType) compliance check on \(projectName)",
+            decision: "Allow \(requester.rawValue) to request \(checkType) checks from \(provider) for \(projectName) (capability electronics.compliance.check) for \(Int(Self.defaultTTL / 60)) minutes.",
+            supportingEvidence: [
+                "The compliance request crosses the system boundary with project data; any package under review is digest-verified before the record is built.",
+                "The provider-facing check record is written inside the platform's allowed roots and recorded as artifact evidence with its digest.",
+            ],
+            requestedOf: human,
+            requestedBy: requester,
+            grantsScope: GrantScope(capabilities: ["electronics.compliance.check"]),
+            grantsTTL: Self.defaultTTL
+        ))
+    }
+
     /// Records the human's decision on a request created by this flow.
     public func decide(
         _ requestID: UUID,
