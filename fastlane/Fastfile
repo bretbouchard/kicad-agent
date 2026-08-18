@@ -46,8 +46,10 @@ end
 
 before_all do
   ensure_macos_app_present!
+  # CI requires APP_IDENTIFIER from the environment (fastlane's
+  # ensure_env_vars takes env_vars: [names], not kwargs — volta-dif).
   ensure_env_vars(
-    APP_IDENTIFIER: default_bundle_id
+    env_vars: ["APP_IDENTIFIER"]
   ) unless ENV["CI"].nil?
 end
 
