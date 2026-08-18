@@ -129,3 +129,4 @@ kicad_agent-*/
 
 # fastlane run report — regenerates on every `fastlane` invocation; pure noise
 fastlane/report.xml
+.volta.lock
