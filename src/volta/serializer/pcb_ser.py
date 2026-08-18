@@ -18,7 +18,7 @@ from volta.io.atomic_write import atomic_write
 from volta.parser.types import ParseResult
 from volta.parser.uuid_extractor import UUIDMap
 from volta.serializer.normalizer import normalize_kicad_output
-from volta.serializer.uuid_reinjector import reinject_uuids
+from volta.serializer.uuid_reinjector import reinject_uuids, _strip_standalone_uuid_lines
 
 
 def serialize_pcb(
@@ -75,7 +75,9 @@ def serialize_pcb(
 
     # Re-inject UUIDs that kiutils dropped
     if uuid_map is not None and uuid_map.entries:
-        content = reinject_uuids(content, uuid_map)
+        # Volta-2yw idempotency: strip prior-reinjection uuid lines
+        # before inserting fresh ones so passes converge.
+        content = reinject_uuids(_strip_standalone_uuid_lines(content), uuid_map)
 
     # Atomic write for crash safety
     atomic_write(output_path, content)

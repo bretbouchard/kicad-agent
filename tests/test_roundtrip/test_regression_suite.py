@@ -19,11 +19,9 @@ FIXTURE_DIR = Path(__file__).parent.parent / "fixtures"
 # ordering differs from real KiCad output, causing UUID reinjector mismatches.
 # phase99_synthetic_4layer is a hand-crafted DSN test fixture (Phase 99 R-3/R-4)
 # with minimal structure — not a real KiCad-exported file.
-# backplane: pad-carried UUIDs mistyped by uuid_reinjector (bead volta-2yw) — crashes reinject with index error. P0-003-class fix.
 _SKIP_FILES = {
     "smd_test_board.kicad_pcb",
     "phase99_synthetic_4layer_mixedsignal.kicad_pcb",
-    "backplane.kicad_pcb",
 }
 
 
@@ -197,3 +195,26 @@ def test_symbol_lib_regression(tmp_path: Path) -> None:
     assert len(sym_results) >= 1, "Need at least 1 symbol library file"
     for r in sym_results:
         assert r.is_stable is True, f"Symbol lib {r.file_path.name} not stable"
+
+
+# ---------------------------------------------------------------------------
+# volta-2yw regression: backplane round-trip (pad-carried UUID board)
+# ---------------------------------------------------------------------------
+
+
+def test_backplane_roundtrip_stable(tmp_path: Path) -> None:
+    """KiCad 10 uuid-style board round-trips stably with UUIDs preserved.
+
+    volta-2yw: reinjection was a blind sequential zip that misassigned all
+    pad-carried UUIDs when kiutils reordered elements. Now: structural pad
+    keys (footprint idx, pad number), geometry signatures for
+    segments/vias/gr_lines, nested-close insertion, and skip-if-present
+    idempotency.
+    """
+    from volta.validation.roundtrip import round_trip_compare
+
+    board = FIXTURE_DIR / "backplane" / "backplane.kicad_pcb"
+    result = round_trip_compare(board, tmp_path)
+    assert result.error is None, result.error
+    assert result.is_stable, "backplane two-pass round-trip must be stable"
+    assert result.uuid_preserved, "backplane UUIDs must survive"

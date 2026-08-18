@@ -13,6 +13,7 @@ Usage:
     # uuid_map.entries -> tuple of UUIDEntry with structural context
 """
 
+import bisect
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -81,6 +82,15 @@ class UUIDEntry:
     parent_type: str
     parent_index: int
     line_number: int
+    # volta-2yw structural key for pads: (footprint_index, pad_number) is
+    # stable across kiutils reordering, unlike positional indexes.
+    footprint_index: int | None = None
+    pad_number: str | None = None
+    # volta-2yw order-independent key for single-line geometry elements
+    # (segment/via/gr_*): normalized geometry signature. The reinjector
+    # pairs entries with serialized elements by (type, signature,
+    # occurrence-among-identical) so reordering cannot swap uuids.
+    geometry_signature: str | None = None
 
 
 @dataclass(frozen=True)
@@ -119,7 +129,9 @@ def _determine_parent_type(
     Returns:
         Tuple of (parent_type_str, start_position_of_parent).
     """
-    search_start = max(0, match_start - 2000)
+    # volta-2yw: scan to start-of-file. The old 2000-char window gave up
+    # inside long kiutils footprint blocks, mis-parenting deep uuids.
+    search_start = 0
     depth = 0
     in_string = False
     escape_next = False
@@ -210,6 +222,102 @@ def _count_parent_index(
     return parent_counts.get((parent_type, parent_pos), 0)
 
 
+def _span_end(content: str, start: int) -> int:
+    """Balanced-close index of the sexpr at start (string-aware)."""
+    depth = 0
+    in_string = False
+    i = start
+    n = len(content)
+    while i < n:
+        ch = content[i]
+        if in_string:
+            if ch == "\\":
+                i += 2
+                continue
+            if ch == '"':
+                in_string = False
+        elif ch == '"':
+            in_string = True
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    return n
+
+
+def element_signature(content: str, start: int, end: int) -> str | None:
+    """Canonical geometry signature for a single-line element sexpr span.
+
+    Normalizes the format differences between KiCad-native and kiutils
+    output (decimal padding, net/layer quoting) so signatures match across
+    passes. Returns None for types without a known signature grammar.
+    """
+    text = content[start:end]
+    def nums(pattern):
+        m = re.search(pattern, text)
+        return m.groups() if m else None
+
+    def net_name() -> str | None:
+        # KiCad 10: (net NAME) — kiutils: (net INDEX "NAME"). Names may
+        # contain parens (Net-(R24-Pad2)), so capture the full inner span
+        # and prefer the quoted name / last bare token.
+        m = re.search(r"\(net (.+?)\)?$", text)
+        if not m:
+            return None
+        inner = m.group(1).rstrip(")").strip()
+        if '"' in inner:
+            q = re.search(r'"([^"]+)"', inner)
+            if q:
+                return q.group(1)
+        return inner.split()[-1] if inner.split() else None
+
+    if text.startswith("(segment"):
+        pts = nums(r"\(start ([-\d.]+) ([-\d.]+)\)[\s\S]*?\(end ([-\d.]+) ([-\d.]+)\)")
+        w = nums(r"\(width ([\d.]+)\)")
+        layer = nums(r'\(layer \"?([\w.]+)\"?\)')
+        if pts and w and layer:
+            numeric = [str(float(v)) for v in tuple(pts) + w]
+            return "|".join(numeric + [layer[0].strip('"')])
+        return None
+    if text.startswith("(gr_line"):
+        # Width excluded: kiutils loses old-format (width N) tokens on
+        # gr_lines (writes its 0.12 default), so width is not stable.
+        pts = nums(r"\(start ([-\d.]+) ([-\d.]+)\)[\s\S]*?\(end ([-\d.]+) ([-\d.]+)\)")
+        layer = nums(r'\(layer \"?([\w.]+)\"?\)')
+        if pts and layer:
+            return "|".join(
+                [str(float(v)) for v in tuple(pts)] + [layer[0].strip('"')]
+            )
+        return None
+    if text.startswith("(via"):
+        # Optional trailing angle (the at-angle normalizer appends 0).
+        at = nums(r"\(at ([-\d.]+) ([-\d.]+)(?: [-\d.]+)?\)")
+        size = nums(r"\(size ([\d.]+)\)")
+        if at and size:
+            return "|".join(str(float(v)) for v in tuple(at) + tuple(size))
+        return None
+    return None
+
+
+_GEOMETRY_KEYED_TYPES = ("segment", "via", "gr_line", "gr_arc",
+                         "gr_circle", "gr_rect", "gr_poly")
+
+
+def _pad_number_at(content: str, pad_pos: int) -> str | None:
+    """Pad number token from its opening sexpr: (pad "2" ... / (pad 1 ...
+
+    Unique within the enclosing footprint -> stable structural identity.
+    """
+    tail = content[pad_pos:pad_pos + 64]
+    m = re.match(r"\(pad\s+(\"[^\"]*\"|[^\s()]+)", tail)
+    if not m:
+        return None
+    return m.group(1).strip('"')
+
+
 def extract_uuids(content: str, file_type: str) -> UUIDMap:
     """Extract all UUID tokens from raw KiCad S-expression content.
 
@@ -256,11 +364,33 @@ def extract_uuids(content: str, file_type: str) -> UUIDMap:
         last_newline_pos = scan_start
         return current_line
 
+    # Line-anchored like the reinjector's _ELEMENT_PATTERN (MULTILINE) so
+    # footprint occurrence indexes align by construction on both sides
+    # (volta-2yw). Mid-line `(footprint` tokens would otherwise skew the
+    # bisect count relative to the reinjector's line-based counter.
+    footprint_starts = [
+        m.start() for m in re.finditer(r"(?m)^\s*\(footprint\b", content)
+    ]
+
     for match in _UUID_PATTERN.finditer(content):
         uuid_value = match.group(1)
         line_num = _line_number(match.start())
         parent_type, parent_pos = _determine_parent_type(content, match.start())
         parent_index = _count_parent_index(parent_counts, parent_type, parent_pos)
+
+        footprint_index = None
+        pad_number = None
+        geometry_signature = None
+        if parent_type == "pad":
+            # bisect_left counts starts strictly before parent_pos; the
+            # ENCLOSING footprint is that count minus one (0-based), i.e.
+            # the last footprint that opened before this pad.
+            footprint_index = max(0, bisect.bisect_left(footprint_starts, parent_pos) - 1)
+            pad_number = _pad_number_at(content, parent_pos)
+        elif parent_type in _GEOMETRY_KEYED_TYPES:
+            geometry_signature = element_signature(
+                content, parent_pos, _span_end(content, parent_pos)
+            )
 
         entries.append(
             UUIDEntry(
@@ -268,6 +398,9 @@ def extract_uuids(content: str, file_type: str) -> UUIDMap:
                 parent_type=parent_type,
                 parent_index=parent_index,
                 line_number=line_num,
+                footprint_index=footprint_index,
+                pad_number=pad_number,
+                geometry_signature=geometry_signature,
             )
         )
 

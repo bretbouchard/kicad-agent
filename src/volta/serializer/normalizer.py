@@ -62,6 +62,7 @@ def normalize_kicad_output(content: str) -> str:
     content = _fix_scientific_notation(content)
     content = _fix_at_angle(content)
     content = _fix_trailing_zero_floats(content)
+    content = _quote_paren_net_names(content)
     content = _strip_empty_tstamps(content)
     content = _normalize_whitespace(content)
     return content
@@ -77,6 +78,20 @@ def _strip_empty_tstamps(content: str) -> str:
     the empty node is dropped here.
     """
     return re.sub(r"[ ]*\(tstamp[ ]*\)", "", content)
+
+
+def _quote_paren_net_names(content: str) -> str:
+    """Quote unquoted net names containing parens: (net Net-(R24-Pad2)).
+
+    kiutils' net parser cuts unquoted values at the first ')' and would
+    re-serialize a truncated name ((net Net-)). Quoting survives the
+    reparse; kiutils re-emits the full name.
+    """
+    # Name = single token (no whitespace/quotes), must contain an open
+    # paren: [^"\s)]*\([^"\s)]*  — bounded so it cannot cross lines.
+    # Name = token containing a parenthesized run INCLUDING its closing
+    # paren; the group's own ')' follows. \1 owns the name's ')'.
+    return re.sub(r'\(net ([^"\s)]*\([^"\s)]*\))\)', r'(net "\1")', content)
 
 
 def _fix_trailing_zero_floats(content: str) -> str:
