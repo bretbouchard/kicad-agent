@@ -6,6 +6,7 @@ import GSAObdurate
 import GSAEvidence
 import GSAArtifacts
 import GSACapabilityKernel
+import GSAPlatform
 @testable import VoltaGSA
 
 @Suite("VO-TRUST-1/2: manufacturing DAIDs and signed handoff")
@@ -167,5 +168,46 @@ struct ManufacturingArtifactTests {
         )
         #expect(!tamperedVerdict.isValid)
         #expect(tamperedVerdict.findings.contains { $0.contains("hash mismatch") })
+    }
+}
+
+@Suite("Volta import recovery (volta-2ji)")
+struct VoltaPersistenceTests {
+
+    @Test("Governed boards, history, and evidence recover across reboots")
+    func recoveryAcrossBoots() async throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("volta-persist-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let bret = Principal(rawValue: "human:bret")
+
+        let first = try await Platform.boot(storageDirectory: dir)
+        await first.policy.issue(
+            AuthorityGrant(principal: bret, scope: .everything, grantedBy: bret)
+        )
+        let board = WorldObjectID()
+        _ = try await first.runtime.transact([
+            GovernedChange(
+                target: board,
+                operation: .create(
+                    typeName: "volta.board",
+                    initialState: .object(["name": .string("channel-strip"), "revision": .string("C")]
+                    )
+                ),
+                authorizedBy: bret,
+                intent: "board for fab"
+            ),
+        ])
+
+        // Reboot: the board, its change history, and the narrative all
+        // recover — Volta's import path can rebuild from this alone.
+        let second = try await Platform.boot(storageDirectory: dir)
+        let recovered = await second.runtime.snapshot().objects[board]
+        let expectedState: WorldValue = .object([
+            "name": .string("channel-strip"), "revision": .string("C"),
+        ])
+        #expect(recovered?.state == expectedState)
+        let committed = await second.historian.events(category: .change)
+        #expect(committed.contains { $0.title == "Transaction committed" })
     }
 }

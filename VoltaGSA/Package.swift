@@ -45,7 +45,10 @@ let package = Package(
         ),
         .testTarget(
             name: "VoltaGSATests",
-            dependencies: ["VoltaGSA"],
+            dependencies: [
+                "VoltaGSA",
+                .product(name: "GSAPlatform", package: "gsa-platform"),
+            ],
             path: "Tests/VoltaGSATests",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency"),

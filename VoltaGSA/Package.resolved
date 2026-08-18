@@ -1,13 +1,13 @@
 {
-  "originHash" : "d7140a98b36fb3a5e287c48b644f6633afa6ffdc3db7d6e4da362d6f106d3191",
+  "originHash" : "eee4f2635cde5b25055ab90df1a68a522de6fd7b005c0aee32da2ab74966025c",
   "pins" : [
     {
       "identity" : "gsa-platform",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/bretbouchard/gsa-platform.git",
       "state" : {
-        "revision" : "cea5283585bab7c78f9e41f22d95d9af308bc142",
-        "version" : "0.4.3"
+        "revision" : "07054b787e69045ecb8889c04fc38430872f2277",
+        "version" : "0.5.0"
       }
     }
   ],
