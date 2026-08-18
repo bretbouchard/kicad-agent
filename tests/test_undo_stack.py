@@ -311,7 +311,7 @@ class TestExecutorUndoIntegration:
                 "op_type": "add_component",
                 "target_file": "Arduino_Mega.kicad_sch",
                 "library_id": "Device:R",
-                "reference": "R99",
+                "reference": "R9001",
                 "value": "10k",
                 "position": {"x": 50.0, "y": 50.0},
             }
@@ -333,7 +333,7 @@ class TestExecutorUndoIntegration:
                 "op_type": "add_component",
                 "target_file": "Arduino_Mega.kicad_sch",
                 "library_id": "Device:R",
-                "reference": "R99",
+                "reference": "R9001",
                 "value": "10k",
                 "position": {"x": 50.0, "y": 50.0},
             }
@@ -356,7 +356,7 @@ class TestExecutorUndoIntegration:
                 "op_type": "add_component",
                 "target_file": "Arduino_Mega.kicad_sch",
                 "library_id": "Device:R",
-                "reference": "R99",
+                "reference": "R9001",
                 "value": "10k",
                 "position": {"x": 50.0, "y": 50.0},
             }
@@ -383,7 +383,7 @@ class TestExecutorUndoIntegration:
                 "op_type": "add_component",
                 "target_file": "Arduino_Mega.kicad_sch",
                 "library_id": "Device:R",
-                "reference": "R99",
+                "reference": "R9001",
                 "value": "10k",
                 "position": {"x": 50.0, "y": 50.0},
             }
@@ -490,7 +490,7 @@ class TestExecutorUndoIntegration:
                 "op_type": "add_component",
                 "target_file": "subdir/test.kicad_sch",
                 "library_id": "Device:R",
-                "reference": "R99",
+                "reference": "R9001",
                 "value": "10k",
                 "position": {"x": 50.0, "y": 50.0},
             }
@@ -516,7 +516,7 @@ class TestExecutorUndoIntegration:
                 "op_type": "add_component",
                 "target_file": "Arduino_Mega.kicad_sch",
                 "library_id": "Device:R",
-                "reference": "R99",
+                "reference": "R9001",
                 "value": "10k",
                 "position": {"x": 50.0, "y": 50.0},
             }

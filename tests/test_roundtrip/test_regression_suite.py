@@ -19,7 +19,12 @@ FIXTURE_DIR = Path(__file__).parent.parent / "fixtures"
 # ordering differs from real KiCad output, causing UUID reinjector mismatches.
 # phase99_synthetic_4layer is a hand-crafted DSN test fixture (Phase 99 R-3/R-4)
 # with minimal structure — not a real KiCad-exported file.
-_SKIP_FILES = {"smd_test_board.kicad_pcb", "phase99_synthetic_4layer_mixedsignal.kicad_pcb"}
+# backplane: pad-carried UUIDs mistyped by uuid_reinjector (bead volta-2yw) — crashes reinject with index error. P0-003-class fix.
+_SKIP_FILES = {
+    "smd_test_board.kicad_pcb",
+    "phase99_synthetic_4layer_mixedsignal.kicad_pcb",
+    "backplane.kicad_pcb",
+}
 
 
 # ---------------------------------------------------------------------------

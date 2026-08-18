@@ -27,13 +27,17 @@ class TestScientificNotation:
     def test_replaces_positive_exponent(self) -> None:
         """Positive exponent scientific notation is converted to fixed-point."""
         result = normalize_kicad_output("(at 1.5e+02 2.0e+01)")
-        assert "150.000000" in result
-        assert "20.000000" in result
+        # Trailing-zero-float rule collapses the fixer's fixed-point output
+        # ("150.000000") to KiCad-native integer form.
+        assert "(at 150 20 0)" in result
 
     def test_replaces_negative_exponent(self) -> None:
         """Negative exponent scientific notation is converted to fixed-point."""
         result = normalize_kicad_output("(at 1.5e-07 0.0)")
-        assert "0.000000" in result
+        # Fixer rounds to 6dp (0.000000) then collapses to "0"; the contract
+        # is that no scientific notation survives.
+        assert "e-07" not in result
+        assert "e+" not in result
 
     def test_regular_floats_get_angle(self) -> None:
         """Bug #29: Regular floats in (at X Y) get angle 0 appended."""
@@ -50,10 +54,7 @@ class TestScientificNotation:
     def test_mixed_content(self) -> None:
         """Only scientific notation is changed in mixed content."""
         result = normalize_kicad_output("(at 10.5 1.5e-07 20.3 2.0e+01)")
-        assert "10.5" in result
-        assert "0.000000" in result
-        assert "20.3" in result
-        assert "200.000000" in result or "20.000000" in result
+        assert "(at 10.5 0 20.3 20)" in result
 
     def test_sci_notation_inside_quoted_string_preserved(self) -> None:
         """Council M-01: Scientific notation inside quoted strings is NOT replaced."""
@@ -64,7 +65,7 @@ class TestScientificNotation:
         """Council M-01: Sci-notation outside quoted strings IS replaced."""
         result = normalize_kicad_output('(property "val" "text") (at 1.5e-07 0)')
         assert "1.5e-07" not in result.split('"text")')[1]
-        assert "0.000000" in result
+        assert "e-07" not in result
 
     def test_escaped_quotes_in_string_handled(self) -> None:
         """Council M-01: Escaped quotes inside strings don't break parsing."""
@@ -72,8 +73,8 @@ class TestScientificNotation:
         result = normalize_kicad_output(input_str)
         # The 1.5e-07 inside escaped quotes should be preserved
         assert "1.5e-07" in result
-        # The 2.0e+01 outside quotes should be replaced
-        assert "20.000000" in result
+        # The 2.0e+01 outside quotes should be replaced (integer form)
+        assert "(at 20)" in result
 
 
 class TestAtAngleFix:
@@ -91,21 +92,21 @@ class TestAtAngleFix:
         result = normalize_kicad_output(
             '(label "NET1" (at 50.0 75.0))'
         )
-        assert "(at 50.0 75.0 0)" in result
+        assert "(at 50 75 0)" in result
 
     def test_global_label_at_gets_angle(self) -> None:
         """(at X Y) in global_label context gets angle 0 appended."""
         result = normalize_kicad_output(
             '(global_label "VCC" (at 30.0 20.0))'
         )
-        assert "(at 30.0 20.0 0)" in result
+        assert "(at 30 20 0)" in result
 
     def test_hierarchical_label_at_gets_angle(self) -> None:
         """(at X Y) in hierarchical_label context gets angle 0 appended."""
         result = normalize_kicad_output(
             '(hierarchical_label "CLK" (at 15.0 40.0))'
         )
-        assert "(at 15.0 40.0 0)" in result
+        assert "(at 15 40 0)" in result
 
     def test_junction_at_not_modified(self) -> None:
         """(junction (at X Y)) must NOT get angle added — native KiCad format."""
@@ -135,23 +136,23 @@ class TestAtAngleFix:
         result = normalize_kicad_output(
             '(label "NET1" (at 50.0 75.0 180))'
         )
-        assert "(at 50.0 75.0 180)" in result
-        assert "(at 50.0 75.0 180 0)" not in result
+        assert "(at 50 75 180)" in result
+        assert "(at 50 75 180 0)" not in result
 
     def test_symbol_at_without_angle_not_modified(self) -> None:
         """Symbol (at X Y) without angle must not be modified (KiCad omits for 0-deg non-power)."""
         result = normalize_kicad_output(
             '(symbol (lib_id "Device:R") (at 100.0 200.0) (unit 1) (uuid abc))'
         )
-        assert "(at 100.0 200.0)" in result
-        assert "(at 100.0 200.0 0)" not in result
+        assert "(at 100 200)" in result
+        assert "(at 100 200 0)" not in result
 
     def test_symbol_at_with_mirror_not_modified(self) -> None:
         """Symbol (at X Y) followed by (mirror must not get angle."""
         result = normalize_kicad_output(
             '(symbol (lib_id "Device:R") (at 100.0 200.0) (mirror y) (unit 1) (uuid abc))'
         )
-        assert "(at 100.0 200.0)" in result
+        assert "(at 100 200)" in result
 
     def test_power_symbol_at_with_angle_preserved(self) -> None:
         """Power symbol (at X Y 0) already has angle — do not double."""
@@ -255,8 +256,8 @@ class TestUUIDPreservation:
         result = normalize_kicad_output(content)
         assert "123e4567-e89b-12d3-a456-426614174000" in result
         assert "00000000-0000-0000-0000-00000000e959" in result
-        assert "0.000000" in result  # 1.5e-07 was fixed
-        assert "20.000000" in result  # 2.0e+01 was fixed
+        assert "e-07" not in result  # 1.5e-07 was fixed
+        assert "(at 0 20 0)" in result  # 2.0e+01 was fixed, angle appended
 
     def test_real_schematic_uuids_preserved(self, arduino_mega_sch: Path) -> None:
         """UUIDs in real KiCad schematic files are not corrupted."""

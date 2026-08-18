@@ -41,6 +41,11 @@ def test_verify_hf_availability_module_exists():
     assert callable(verify_hf)
 
 
+@pytest.mark.integration
+@pytest.mark.skipif(
+    not Path("/Volumes/Storage/models/volta/adapters/volta-12b-v2").exists(),
+    reason="requires the volta-12b-v2 adapter on the external Storage volume",
+)
 def test_verify_hf_availability_runs_successfully():
     """Task 0: verify_hf_availability.py exits 0 when adapter is available."""
     from tests.eval.verify_hf_availability import main as verify_hf
@@ -281,6 +286,11 @@ def test_set_all_seeds():
     assert rand_val1 == rand_val2, "Random RNG not deterministic"
 
 
+@pytest.mark.integration
+@pytest.mark.skipif(
+    not Path("/Volumes/Storage/models/volta/adapters/volta-12b-v2").exists(),
+    reason="requires the volta-12b-v2 adapter on the external Storage volume",
+)
 def test_verify_adapter_hash_checks_size():
     """Task 3: verify_adapter_hash checks for 524MB safetensors."""
     from tests.eval.volta_v2_harness import verify_adapter_hash

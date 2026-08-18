@@ -1,0 +1,36 @@
+{
+  "_comment": "Test fixture project file; trailing legacy fragment feeds volta.crossfile.project_context tolerant regex extractor",
+
+  "board": {
+    "design_settings": {},
+    "layer_presets": [],
+    "viewports": []
+  },
+  "boards": [],
+  "cvpcb": {
+    "equivalence_files": []
+  },
+  "libraries": {
+    "pinned_symbol_libs": [],
+    "pinned_footprint_libs": []
+  },
+  "meta": {
+    "filename": "Arduino_Mega.kicad_pro",
+    "version": 1
+  },
+  "net_settings": {
+    "classes": []
+  },
+  "schematic": {
+    "legacy_lib_dir": "",
+    "legacy_lib_list": []
+  },
+  "sheets": [
+    [
+      "Arduino_Mega.kicad_sch",
+      ""
+    ]
+  ],
+  "text_variables": {}
+}
+(legacy_libraries (lib_dir "lib"))

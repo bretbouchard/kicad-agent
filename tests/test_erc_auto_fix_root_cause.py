@@ -17,6 +17,10 @@ from volta.ops._schema_erc_smart import (
     DiagnoseViolationsOp,
 )
 
+# These tests exercise the deprecated erc_auto_fix API knowingly (P0-003);
+# keep its DeprecationWarning from becoming an error under filterwarnings=error.
+pytestmark = pytest.mark.filterwarnings("ignore:erc_auto_fix is DEPRECATED")
+
 
 # ---------------------------------------------------------------------------
 # Schema tests

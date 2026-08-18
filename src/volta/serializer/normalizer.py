@@ -61,8 +61,26 @@ def normalize_kicad_output(content: str) -> str:
     content = _remove_generator_version(content)
     content = _fix_scientific_notation(content)
     content = _fix_at_angle(content)
+    content = _fix_trailing_zero_floats(content)
     content = _normalize_whitespace(content)
     return content
+
+
+def _fix_trailing_zero_floats(content: str) -> str:
+    """Collapse pure-zero decimal floats to integer form (1.0 -> 1, 0.0 -> 0).
+
+    kiutils materializes absent sub-items with float defaults that serialize
+    as ``0.0`` on the first pass, but re-parsing that output serializes as
+    ``0`` on the second pass -- a kiutils two-pass instability that breaks
+    round-trip stability for files with stroke-less wires / effects-less
+    labels. Numerically identical in KiCad s-expressions, so normalizing
+    both passes to the integer form keeps every round-trip stable.
+
+    All-zero decimals (``1.0`` and ``150.000000`` -> integer form) --
+    includes the output of _fix_scientific_notation for positive
+    exponents, unifying on KiCad-native minimal number form.
+    """
+    return re.sub(r"(\d)\.0+(?=[\s)])", r"\1", content)
 
 
 def _fix_generator_quoting(content: str) -> str:

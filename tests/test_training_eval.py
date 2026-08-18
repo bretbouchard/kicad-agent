@@ -15,6 +15,9 @@ from volta.training.reward_model import (
     eval_reward_quality,
 )
 
+# Deliberately small stat samples in these tests; scipy warns, filterwarnings=error escalates.
+pytestmark = pytest.mark.filterwarnings("ignore::UserWarning")
+
 
 # ---------------------------------------------------------------------------
 # Helpers

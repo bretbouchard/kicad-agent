@@ -28,9 +28,13 @@ class TestUnsupportedElementsConstant:
         """_UNSUPPORTED_ELEMENTS should be a frozenset[str]."""
         assert isinstance(_UNSUPPORTED_ELEMENTS, frozenset)
 
-    def test_constant_has_at_least_9_elements(self):
-        """_UNSUPPORTED_ELEMENTS should contain at least 9 elements."""
-        assert len(_UNSUPPORTED_ELEMENTS) >= 9
+    def test_constant_has_at_least_8_elements(self):
+        """_UNSUPPORTED_ELEMENTS should contain at least 8 elements.
+
+        Was 9 including title_block; title_block graduated to SUPPORTED
+        (NativeParser extracts it as metadata) so it left this set.
+        """
+        assert len(_UNSUPPORTED_ELEMENTS) >= 8
 
     def test_contains_thermal_relief_pads(self):
         assert "thermal_relief_pads" in _UNSUPPORTED_ELEMENTS
@@ -53,8 +57,9 @@ class TestUnsupportedElementsConstant:
     def test_contains_page_info(self):
         assert "page_info" in _UNSUPPORTED_ELEMENTS
 
-    def test_contains_title_block(self):
-        assert "title_block" in _UNSUPPORTED_ELEMENTS
+    def test_title_block_is_now_supported(self):
+        """title_block is parsed as metadata, not unsupported."""
+        assert "title_block" not in _UNSUPPORTED_ELEMENTS
 
 
 # ---------------------------------------------------------------------------
@@ -83,11 +88,7 @@ _PCB_WITH_UNSUPPORTED = """\
   (version 20231010)
   (generator "kicad")
   (general (thickness 1.6))
-  (title_block
-    (title "Test Board")
-    (rev "1.0")
-    (company "ACME")
-  )
+  (fp_text user "REF" (at 1 1) (layer "F.SilkS"))
 )
 """
 
@@ -96,7 +97,7 @@ class TestUnsupportedElementWarnings:
     """Verify parser logs warnings when encountering unsupported elements."""
 
     def test_unsupported_element_triggers_warning(self, caplog):
-        """Parsing a PCB with title_block should emit a warning."""
+        """Parsing a PCB with fp_text should emit a warning."""
         with caplog.at_level(logging.WARNING, logger="volta.parser.pcb_native_parser"):
             NativeParser.parse_pcb_content(_PCB_WITH_UNSUPPORTED)
 

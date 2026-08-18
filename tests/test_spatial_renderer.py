@@ -13,6 +13,10 @@ from PIL import Image
 
 from volta.ir.base import _clear_registry
 from volta.ir.pcb_ir import PcbIR
+
+# Pillow 14 deprecates Image.getdata (renderer still uses it);
+# scoped ignore — renderer migration tracked separately.
+pytestmark = pytest.mark.filterwarnings("ignore:Image.Image.getdata is deprecated")
 from volta.parser import parse_pcb
 from volta.parser.uuid_extractor import extract_uuids
 from volta.spatial.renderer import (

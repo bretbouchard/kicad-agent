@@ -37,6 +37,10 @@ dev = [
     "pytest-cov>=4.0",
     "mypy>=1.7",
     "ruff>=0.13",
+    # placement predictor inference + eval metrics (volta-7w9 repair)
+    "onnxruntime>=1.20",
+    "nltk>=3.9",
+    "rouge_score>=0.1.2",
 ]
 llm = [
     "anthropic>=0.61.0",

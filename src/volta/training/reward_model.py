@@ -476,15 +476,31 @@ def eval_reward_quality(
 
     n = len(model_avgs)
 
-    # Kendall tau and Spearman rho via scipy (with numpy fallback)
+    # Rank correlation is undefined below 2 samples — NaN per contract.
+    if n < 2:
+        return {
+            "kendall_tau": float("nan"),
+            "spearman_rho": float("nan"),
+            "top_1_accuracy": 0.0,
+            "top_3_accuracy": 0.0,
+            "n_samples": float(n),
+        }
+
+    # Kendall tau and Spearman rho via scipy (with numpy fallback).
+    # scipy emits SmallSampleWarning for tiny samples — it is informational
+    # (NaN result), so keep it from escalating under filterwarnings=error.
     try:
-        from scipy.stats import kendalltau, spearmanr
+        import warnings as _warnings
 
-        tau_result = kendalltau(model_avgs, truth_avgs)
-        kendall_tau = tau_result.statistic if hasattr(tau_result, 'statistic') else tau_result[0]
+        from scipy.stats import SmallSampleWarning, kendalltau, spearmanr
 
-        rho_result = spearmanr(model_avgs, truth_avgs)
-        spearman_rho = rho_result.statistic if hasattr(rho_result, 'statistic') else rho_result[0]
+        with _warnings.catch_warnings():
+            _warnings.filterwarnings("ignore", category=SmallSampleWarning)
+            tau_result = kendalltau(model_avgs, truth_avgs)
+            kendall_tau = tau_result.statistic if hasattr(tau_result, 'statistic') else tau_result[0]
+
+            rho_result = spearmanr(model_avgs, truth_avgs)
+            spearman_rho = rho_result.statistic if hasattr(rho_result, 'statistic') else rho_result[0]
     except ImportError:
         # Numpy-only fallback: compute rank correlation manually
         import numpy as np

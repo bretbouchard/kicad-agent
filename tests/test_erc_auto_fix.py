@@ -36,6 +36,8 @@ def arduino_ir():
     result = parse_schematic(ARDUINO_SCH)
     return SchematicIR(_parse_result=result)
 
+pytestmark = pytest.mark.filterwarnings("ignore:erc_auto_fix is DEPRECATED")
+
 
 # --- Schema validation tests ---
 

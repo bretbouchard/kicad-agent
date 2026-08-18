@@ -35,6 +35,8 @@ from volta.ops.repair import (
 )
 from volta.parser import parse_schematic
 
+pytestmark = pytest.mark.filterwarnings("ignore:erc_auto_fix is DEPRECATED")
+
 
 def _save_and_parse(board_path: Path, sch: Schematic) -> SchematicIR:
     """Save a kiutils Schematic to disk and parse it back into SchematicIR.

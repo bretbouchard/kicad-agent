@@ -98,6 +98,11 @@ _CATEGORY_DEFAULTS: dict[str, list[tuple[str, str | None]]] = {
     "gate": [
         ("volta_reference.md", "Generating a Netlist"),
     ],
+    # Auto-layout/placement operations
+    "autolayout": [
+        ("volta_reference.md", "Working with symbols"),
+        ("pcb_editor_reference.md", "Constraints"),
+    ],
     # Library operations
     "library": [
         ("kicad_docs.md", "Symbols and Symbol Libraries"),
