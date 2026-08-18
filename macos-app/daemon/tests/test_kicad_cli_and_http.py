@@ -1,8 +1,7 @@
 """
-test_kicad_cli_and_http.py — Phase 163 handler tests.
+test_http.py — external_http handler tests (kicad_cli_check probe removed (volta-jf4)).
 
 Coverage:
-    kicad_cli_check
         - .ready path (mocked which + version)
         - .wrong_version path (KiCad 9.x detected)
         - .not_installed path (no kicad-cli anywhere)
@@ -34,7 +33,6 @@ import pytest
 from handlers import (
     HandlerContext,
     HANDLERS,
-    kicad_cli_check,
     external_http_status,
     external_http_regenerate_token,
     external_http_set_enabled,
@@ -76,107 +74,7 @@ def ctx_no_audit() -> HandlerContext:
 
 
 # =============================================================================
-# kicad_cli_check
 # =============================================================================
-
-class TestKicadCliCheck:
-    def test_returns_not_installed_when_which_finds_nothing(
-        self, ctx: HandlerContext
-    ) -> None:
-        with patch("handlers.shutil.which", return_value=None), \
-             patch("handlers.os.path.isfile", return_value=False):
-            result = kicad_cli_check({}, ctx)
-        assert result == {"status": "not_installed"}
-
-    def test_returns_ready_when_v10_detected(
-        self, ctx: HandlerContext
-    ) -> None:
-        with patch("handlers.shutil.which", return_value="/usr/local/bin/kicad-cli"), \
-             patch("handlers._run_version_check", return_value="10.0.3\n"):
-            result = kicad_cli_check({}, ctx)
-        assert result["status"] == "ready"
-        assert result["path"] == "/usr/local/bin/kicad-cli"
-        assert result["version"] == "10.0.3"
-
-    def test_returns_ready_for_v11(self, ctx: HandlerContext) -> None:
-        with patch("handlers.shutil.which", return_value="/x/kicad-cli"), \
-             patch("handlers._run_version_check", return_value="11.0.0\n"):
-            result = kicad_cli_check({}, ctx)
-        assert result["status"] == "ready"
-        assert result["version"] == "11.0.0"
-
-    def test_returns_wrong_version_for_v9(self, ctx: HandlerContext) -> None:
-        with patch("handlers.shutil.which", return_value="/x/kicad-cli"), \
-             patch("handlers._run_version_check", return_value="9.0.2\n"):
-            result = kicad_cli_check({}, ctx)
-        assert result["status"] == "wrong_version"
-        assert result["found"] == "9.0.2"
-        assert result["minimum"] == "10.0.0"
-
-    def test_returns_not_installed_when_version_unparseable(
-        self, ctx: HandlerContext
-    ) -> None:
-        with patch("handlers.shutil.which", return_value="/x/kicad-cli"), \
-             patch("handlers._run_version_check", return_value="garbage\n"):
-            result = kicad_cli_check({}, ctx)
-        assert result == {"status": "not_installed"}
-
-    def test_returns_not_installed_when_spawn_fails(
-        self, ctx: HandlerContext
-    ) -> None:
-        # kicad-cli exists on disk but version check fails (corrupt binary).
-        with patch("handlers.shutil.which", return_value="/x/kicad-cli"), \
-             patch("handlers._run_version_check", return_value=None):
-            result = kicad_cli_check({}, ctx)
-        assert result == {"status": "not_installed"}
-
-    def test_falls_back_to_candidate_paths(self, ctx: HandlerContext) -> None:
-        # shutil.which returns None but a candidate path exists.
-        def fake_isfile(path: str) -> bool:
-            return path == "/Applications/KiCad/kicad-cli"
-
-        def fake_access(path: str, mode: int) -> bool:
-            return path == "/Applications/KiCad/kicad-cli"
-
-        with patch("handlers.shutil.which", return_value=None), \
-             patch("handlers.os.path.isfile", side_effect=fake_isfile), \
-             patch("handlers.os.access", side_effect=fake_access), \
-             patch("handlers._run_version_check", return_value="10.0.0\n"):
-            result = kicad_cli_check({}, ctx)
-        assert result["status"] == "ready"
-        assert result["path"] == "/Applications/KiCad/kicad-cli"
-
-    def test_parsing_handles_labeled_output(self, ctx: HandlerContext) -> None:
-        """kicad-cli prints 'KiCad CLI 10.0.3' — we should still parse 10.0.3."""
-        with patch("handlers.shutil.which", return_value="/x/kicad-cli"), \
-             patch("handlers._run_version_check",
-                   return_value="KiCad Command Line Interface\nVersion: 10.0.3\n"):
-            result = kicad_cli_check({}, ctx)
-        assert result["status"] == "ready"
-        assert result["version"] == "10.0.3"
-
-    def test_parsing_handles_v_prefix(self, ctx: HandlerContext) -> None:
-        with patch("handlers.shutil.which", return_value="/x/kicad-cli"), \
-             patch("handlers._run_version_check", return_value="v10.0.3\n"):
-            result = kicad_cli_check({}, ctx)
-        assert result["status"] == "ready"
-
-    def test_parsing_handles_partial_version(self, ctx: HandlerContext) -> None:
-        with patch("handlers.shutil.which", return_value="/x/kicad-cli"), \
-             patch("handlers._run_version_check", return_value="10.0\n"):
-            result = kicad_cli_check({}, ctx)
-        assert result["status"] == "ready"
-        assert result["version"] == "10.0.0"
-
-    def test_real_kicad_cli_if_installed(self, ctx: HandlerContext) -> None:
-        """If the test host has kicad-cli installed, exercise the real path."""
-        import shutil as _shutil
-        if not _shutil.which("kicad-cli"):
-            pytest.skip("No kicad-cli on test host")
-        result = kicad_cli_check({}, ctx)
-        # Should be ready (any dev machine with kicad-cli is on 10+).
-        assert result["status"] == "ready"
-
 
 # =============================================================================
 # _parse_version / _split_version helpers
@@ -420,13 +318,11 @@ class TestAutoRevoke:
 class TestRegistry:
     def test_phase_163_methods_registered(self) -> None:
         methods = registered_methods()
-        assert "kicad_cli_check" in methods
         assert "external_http_status" in methods
         assert "external_http_regenerate_token" in methods
         assert "external_http_set_enabled" in methods
 
     def test_get_handler_returns_phase_163_handlers(self) -> None:
-        assert get_handler("kicad_cli_check") is kicad_cli_check
         assert get_handler("external_http_status") is external_http_status
         assert (
             get_handler("external_http_regenerate_token")

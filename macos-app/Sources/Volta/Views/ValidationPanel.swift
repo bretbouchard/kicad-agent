@@ -224,27 +224,7 @@ final class ValidationManager {
         }
     }
 
-    /// Check if kicad-cli is installed (macOS only — informational).
-    func checkKiCadCLI(client: MCPClient?) async -> String {
-        #if os(macOS)
-        guard let client else { return "Daemon not connected (using native engine)" }
-        do {
-            let result = try await client.callRaw("kicad_cli_check", params: [:])
-            if let dict = result as? [String: Any] {
-                let status = dict["status"] as? String ?? "unknown"
-                if status == "ready" {
-                    return "KiCad \(dict["version"] ?? "?") ✓"
-                }
-                return "KiCad CLI: \(status)"
-            }
-        } catch {
-            return "Using native engine (kicad-cli check failed)"
-        }
-        return "Using native engine"
-        #else
-        return "Native engine (iOS)"
-        #endif
-    }
+
 }
 
 /// Panel showing ERC/DRC results.

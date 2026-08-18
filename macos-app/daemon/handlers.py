@@ -218,45 +218,6 @@ KICAD_CANDIDATE_PATHS = (
 )
 
 
-def kicad_cli_check(params: Any, ctx: HandlerContext) -> dict[str, Any]:
-    """Detect external KiCad CLI install (APP-04).
-
-    Probes `which kicad-cli`, then well-known absolute paths. On hit,
-    runs `<path> --version` and parses the version. Returns one of:
-
-        {"status": "ready", "path": "...", "version": "10.0.3"}
-        {"status": "wrong_version", "found": "9.0.2", "minimum": "10.0.0"}
-        {"status": "not_installed"}
-
-    This never raises — detection failures map to `not_installed`.
-    """
-    path = _find_kicad_cli()
-    if path is None:
-        return {"status": "not_installed"}
-
-    raw_version = _run_version_check(path)
-    if raw_version is None:
-        # kicad-cli exists but couldn't be executed. Treat as not installed
-        # so the onboarding UI keeps prompting.
-        return {"status": "not_installed"}
-
-    parsed = _parse_version(raw_version)
-    if parsed is None:
-        return {"status": "not_installed"}
-
-    if parsed >= KICAD_MINIMUM_VERSION:
-        return {
-            "status": "ready",
-            "path": path,
-            "version": ".".join(str(c) for c in parsed),
-        }
-    return {
-        "status": "wrong_version",
-        "found": ".".join(str(c) for c in parsed),
-        "minimum": ".".join(str(c) for c in KICAD_MINIMUM_VERSION),
-    }
-
-
 def external_http_status(params: Any, ctx: HandlerContext) -> dict[str, Any]:
     """Return current External HTTP MCP server state (DAEM-07).
 
@@ -629,7 +590,7 @@ def kicad_pre_check(params: Any, ctx: HandlerContext) -> dict[str, Any]:
     readonly_ops = {
         "query_components", "query_nets", "query_drc", "query_erc",
         "generate_bom", "parse_erc", "list_operations", "list_lib_symbols",
-        "kicad_cli_check", "health_check", "ping",
+        "health_check", "ping",
     }
     if op_type not in readonly_ops and not target_file:
         # Some ops legitimately take target_files plural; check args_present.
@@ -977,37 +938,6 @@ def _run_drc_safe(pcb_files: list[str]) -> dict[str, Any] | None:
 # Phase 163 internal helpers (KiCad CLI detection)
 # =============================================================================
 
-def _find_kicad_cli() -> str | None:
-    """Locate kicad-cli via PATH or well-known paths.
-
-    Returns the absolute path, or None if not found.
-    """
-    # 1. shutil.which honors PATH (works in dev, may not work in sandboxed app).
-    found = shutil.which("kicad-cli")
-    if found:
-        return found
-    # 2. Well-known absolute paths.
-    for candidate in KICAD_CANDIDATE_PATHS:
-        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
-            return candidate
-    return None
-
-
-def _run_version_check(path: str) -> str | None:
-    """Run `<path> --version`, capture output. Returns None on spawn failure."""
-    try:
-        proc = subprocess.run(
-            [path, "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5.0,
-        )
-        # Combine stdout + stderr — kicad-cli prints to either depending on version.
-        return (proc.stdout or "") + "\n" + (proc.stderr or "")
-    except (OSError, subprocess.SubprocessError):
-        return None
-
-
 def _parse_version(text: str) -> tuple[int, int, int] | None:
     """Parse a version tuple out of arbitrary text (kicad-cli --version output).
 
@@ -1111,7 +1041,6 @@ HANDLERS: dict[str, Any] = {
     "list_operations": list_operations,
     "shutdown": shutdown,
     # Phase 163 — KiCad CLI integration + External HTTP MCP opt-in
-    "kicad_cli_check": kicad_cli_check,
     "external_http_status": external_http_status,
     "external_http_regenerate_token": external_http_regenerate_token,
     "external_http_set_enabled": external_http_set_enabled,
