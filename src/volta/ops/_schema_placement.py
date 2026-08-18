@@ -23,6 +23,15 @@ class AutoPlaceOp(BaseModel):
 
     op_type: Literal["auto_place"] = "auto_place"
     target_file: TargetFile
+    constraints: list[dict] = Field(
+        default_factory=list,
+        max_length=100,
+        description=(
+            "Placement-intent rules (volta-24): dicts with rule_type "
+            "(edge_affinity|region|avoid|approach|orientation), refs, and "
+            "type-specific fields; enforced during placement and gated after"
+        ),
+    )
     component_refs: list[str] = Field(
         default_factory=list,
         max_length=500,

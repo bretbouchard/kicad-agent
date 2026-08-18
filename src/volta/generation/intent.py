@@ -28,9 +28,9 @@ Usage::
 """
 
 import re
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from volta.ops.schema import (
     AddComponentOp,
@@ -188,6 +188,101 @@ class PowerSpec(BaseModel):
     )
 
 
+class PlacementConstraintSpec(BaseModel):
+    """One natural-language placement constraint (volta-24).
+
+    LLM-facing mirror of volta.placement.constraints.PlacementRule:
+    flattened fields per rule type. to_rule() converts to the engine's
+    rule object; rule_type validation mirrors the engine model's.
+    """
+
+    rule_type: Literal[
+        "edge_affinity", "region", "avoid", "approach", "orientation"
+    ] = Field(description="Kind of placement intent")
+    refs: list[str] = Field(
+        min_length=1,
+        description="Component references the rule applies to",
+    )
+    refs_b: list[str] | None = Field(
+        default=None,
+        description="Other side of avoid/approach rules",
+    )
+    mm: float | None = Field(
+        default=None, gt=0,
+        description="Distance in mm (avoid/approach/edge_affinity band)",
+    )
+    edge: Literal["top", "bottom", "left", "right"] | None = Field(
+        default=None, description="Board edge for edge_affinity",
+    )
+    region: list[float] | None = Field(
+        default=None, min_length=4, max_length=4,
+        description="[x1, y1, x2, y2] bbox for region rules",
+    )
+    name: str | None = Field(default=None, description="Region name")
+    rotation: float | None = Field(
+        default=None, description="Required rotation (degrees)",
+    )
+    source: Literal["explicit", "inferred", "learned", "imported"] = Field(
+        default="explicit", description="Where the rule came from",
+    )
+    rationale: str = Field(
+        default="", max_length=512,
+        description="Why — surfaced to the user and future model turns",
+    )
+
+    @model_validator(mode="after")
+    def _cross_fields(self) -> "PlacementConstraintSpec":
+        if self.rule_type in ("avoid", "approach"):
+            if not self.refs_b or self.mm is None:
+                raise ValueError(f"{self.rule_type}: requires refs_b and mm")
+        elif self.rule_type == "edge_affinity" and self.edge is None:
+            raise ValueError("edge_affinity: requires edge")
+        elif self.rule_type == "region" and self.region is None:
+            raise ValueError("region: requires region bbox")
+        elif self.rule_type == "orientation" and self.rotation is None:
+            raise ValueError("orientation: requires rotation")
+        return self
+
+    def to_rule(self, rule_id: str | None = None):
+        from volta.placement.constraints import (
+            PlacementRule,
+            RuleSource,
+            RuleType,
+        )
+
+        payload: dict = {}
+        if self.rule_type in ("avoid", "approach"):
+            if not self.refs_b or self.mm is None:
+                raise ValueError(f"{self.rule_type}: requires refs_b and mm")
+            payload = {"refs_b": list(self.refs_b), "mm": self.mm}
+        elif self.rule_type == "edge_affinity":
+            if self.edge is None:
+                raise ValueError("edge_affinity: requires edge")
+            payload = {"edge": self.edge}
+            if self.mm is not None:
+                payload["mm"] = self.mm
+        elif self.rule_type == "region":
+            if self.region is None:
+                raise ValueError("region: requires region bbox")
+            payload = {"region": list(self.region)}
+            if self.name is not None:
+                payload["name"] = self.name
+        elif self.rule_type == "orientation":
+            if self.rotation is None:
+                raise ValueError("orientation: requires rotation")
+            payload = {"rotation": self.rotation}
+
+        return PlacementRule(
+            rule_id=rule_id or f"rule-{self.rule_type}-{'-'.join(self.refs)}",
+            rule_type=RuleType(self.rule_type),
+            source=RuleSource(self.source),
+            refs=tuple(self.refs),
+            payload=payload,
+            rationale=self.rationale,
+        )
+
+
+
 class GenerationIntent(BaseModel):
     """Structured specification for generating a PCB design.
 
@@ -217,6 +312,15 @@ class GenerationIntent(BaseModel):
     power: PowerSpec = Field(default_factory=PowerSpec, description="Power requirements")
     design_rules: dict[str, float] = Field(
         default_factory=dict, description="Custom clearances/widths"
+    )
+    placement_constraints: list[PlacementConstraintSpec] = Field(
+        default_factory=list, max_length=100,
+        description=(
+            "Placement intent from the description (volta-24): edge/region/"
+            "avoid/approach/orientation rules with rationale — e.g. 'keep "
+            "the switching regulator away from the analog front end' or "
+            "'the connector goes on the bottom edge'"
+        ),
     )
 
 

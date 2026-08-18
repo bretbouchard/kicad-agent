@@ -1312,6 +1312,8 @@ def _handle_auto_place(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     """Auto-place components on a PCB with overlap-free guarantee."""
     from volta.generation.intent import ComponentSpec, NetSpec
     from volta.placement.engine import HybridPlacementEngine, PlacementRequest
+
+    placement_rules = [dict(r) for r in getattr(op, "constraints", []) or []]
     from volta.placement.validation import PlacementValidator
 
     # Extract board bounds from PCB
@@ -1370,6 +1372,7 @@ def _handle_auto_place(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
         min_clearance=op.min_clearance,
         use_ml=False,
         refine_sa=True,
+        placement_rules=placement_rules,
     )
 
     engine = HybridPlacementEngine()

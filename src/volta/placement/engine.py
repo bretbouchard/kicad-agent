@@ -139,20 +139,32 @@ class PlacementOutput(BaseModel):
 
 
 def _build_placement_rules(request: "PlacementRequest") -> tuple:
-    """Parse serialized placement rules (volta-24) into PlacementRule objects."""
+    """Parse serialized placement rules (volta-24) into PlacementRule objects.
+
+    Accepts both shapes: serialized PlacementRule (nested ``payload``) and
+    the flat LLM/operation form (``refs_b``/``mm``/``edge``/... at top
+    level, validated via PlacementConstraintSpec).
+    """
     from volta.placement.constraints import PlacementRule, RuleSource, RuleType
 
-    return tuple(
-        PlacementRule(
-            rule_id=r.get("rule_id", ""),
-            rule_type=RuleType(r["rule_type"]),
-            source=RuleSource(r.get("source", "explicit")),
-            refs=tuple(r.get("refs", ())),
-            payload=r.get("payload", {}),
-            rationale=r.get("rationale", ""),
-        )
-        for r in getattr(request, "placement_rules", [])
-    )
+    rules = []
+    for r in getattr(request, "placement_rules", []):
+        if "payload" in r:
+            rules.append(
+                PlacementRule(
+                    rule_id=r.get("rule_id", ""),
+                    rule_type=RuleType(r["rule_type"]),
+                    source=RuleSource(r.get("source", "explicit")),
+                    refs=tuple(r.get("refs", ())),
+                    payload=r.get("payload", {}),
+                    rationale=r.get("rationale", ""),
+                )
+            )
+        else:
+            from volta.generation.intent import PlacementConstraintSpec
+
+            rules.append(PlacementConstraintSpec.model_validate(r).to_rule())
+    return tuple(rules)
 
 
 class HybridPlacementEngine:
