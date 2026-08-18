@@ -256,7 +256,7 @@ struct CollaborationTests {
         try ModelContainer(
             for: Project.self, Conversation.self, Message.self, Decision.self,
                  ValueChange.self, ProjectSnapshot.self, ProjectBranch.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            configurations: SwiftDataTestHelpers.makeIsolatedConfiguration()
         )
     }
 }

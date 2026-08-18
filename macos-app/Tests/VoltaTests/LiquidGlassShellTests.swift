@@ -206,7 +206,7 @@ struct LiquidGlassShellTests {
     private func makeContainer() throws -> ModelContainer {
         try ModelContainer(
             for: Project.self, Conversation.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            configurations: SwiftDataTestHelpers.makeIsolatedConfiguration()
         )
     }
 }

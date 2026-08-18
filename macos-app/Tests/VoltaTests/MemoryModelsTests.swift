@@ -305,7 +305,7 @@ struct MemoryModelsTests {
     // MARK: - Helpers
 
     private func makeContainer() throws -> ModelContainer {
-        try ModelSchemaRegistry.makeContainer(configuration: ModelConfiguration(isStoredInMemoryOnly: true))
+        try ModelSchemaRegistry.makeContainer(configuration: SwiftDataTestHelpers.makeIsolatedConfiguration())
     }
 }
 

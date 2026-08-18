@@ -118,7 +118,7 @@ struct OnboardingFlowTests {
     private func makeContainer() throws -> ModelContainer {
         try ModelContainer(
             for: OnboardingState.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            configurations: SwiftDataTestHelpers.makeIsolatedConfiguration()
         )
     }
 }

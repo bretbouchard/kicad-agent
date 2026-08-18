@@ -21,7 +21,7 @@ struct ConversationTests {
     func defaults() throws {
         let container = try ModelContainer(
             for: Project.self, Conversation.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            configurations: SwiftDataTestHelpers.makeIsolatedConfiguration()
         )
         defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
@@ -42,7 +42,7 @@ struct ConversationTests {
     func touchCascades() async throws {
         let container = try ModelContainer(
             for: Project.self, Conversation.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            configurations: SwiftDataTestHelpers.makeIsolatedConfiguration()
         )
         defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
@@ -64,7 +64,7 @@ struct ConversationTests {
     func persist() throws {
         let container = try ModelContainer(
             for: Project.self, Conversation.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            configurations: SwiftDataTestHelpers.makeIsolatedConfiguration()
         )
         defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext
@@ -84,7 +84,7 @@ struct ConversationTests {
     func cascadeDelete() throws {
         let container = try ModelContainer(
             for: Project.self, Conversation.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            configurations: SwiftDataTestHelpers.makeIsolatedConfiguration()
         )
         defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext

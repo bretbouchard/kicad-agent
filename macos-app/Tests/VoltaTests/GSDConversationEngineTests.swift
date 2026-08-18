@@ -169,7 +169,7 @@ struct GSDConversationEngineTests {
     func conversationForkMetadata() throws {
         let container = try ModelContainer(
             for: Project.self, Conversation.self,
-            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+            configurations: SwiftDataTestHelpers.makeIsolatedConfiguration()
         )
         defer { SwiftDataTestHelpers.drainContainer(container) }
         let ctx = container.mainContext

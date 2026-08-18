@@ -298,12 +298,14 @@ struct MLXLocalProvider: KiCadModelProvider {
             throw MLXProviderError.weightsMissing(directory: url.path)
         }
 
-        // Ponytail: actually load one safetensors file to prove the model
-        // weights are real MLX-loadable arrays. This catches corrupt
-        // downloads — Pitfall 7 supply-chain check (T-164-01 mitigation).
+        // Ponytail: validate the safetensors header directly to prove the
+        // weights are real, parseable tensors with offsets inside the file.
+        // This catches corrupt/truncated downloads — Pitfall 7 supply-chain
+        // check (T-164-01 mitigation) — without spinning up the MLX Metal
+        // runtime (whose metallib is not resolvable in every test bundle
+        // layout).
         let firstWeights = safetensors[0]
-        let (_, metadata) = try MLX.loadArraysAndMetadata(url: firstWeights)
-        let weightCount = metadata.count
+        let weightCount = try MLXLocalProvider.validateSafetensorsHeader(at: firstWeights)
         let totalSizeBytes = MLXLocalProvider.totalDiskSize(of: safetensors)
 
         return MLXModelMetadata(
@@ -325,6 +327,71 @@ struct MLXLocalProvider: KiCadModelProvider {
 
     /// Pitfall 7: 3GB minimum VRAM for any 4-bit 4B model.
     static let minimumVRAMBytes: UInt64 = 7 * 1024 * 1024 * 1024  // 7GB for 12B 4-bit models
+
+    /// Pure-Foundation safetensors header check. Format is
+    /// `<u64 LE header length><JSON header><tensor data>`. Validates the
+    /// header parses, is inside the file, and every tensor's
+    /// data_offsets stay within the data region — so truncated or corrupt
+    /// downloads are rejected without loading arrays via MLX/Metal.
+    /// Returns the tensor entry count.
+    static func validateSafetensorsHeader(at url: URL) throws -> Int {
+        let fm = FileManager.default
+        guard
+            let attrs = try? fm.attributesOfItem(atPath: url.path),
+            let fileSize = attrs[.size] as? UInt64, fileSize >= 8
+        else {
+            throw MLXProviderError.incompatibleFormat(
+                reason: "safetensors file too small or unreadable: \(url.lastPathComponent)")
+        }
+        guard let handle = try? FileHandle(forReadingFrom: url) else {
+            throw MLXProviderError.incompatibleFormat(
+                reason: "cannot open safetensors: \(url.lastPathComponent)")
+        }
+        defer { try? handle.close() }
+
+        guard let lenData = try? handle.read(upToCount: 8), lenData.count == 8 else {
+            throw MLXProviderError.incompatibleFormat(
+                reason: "safetensors missing header length: \(url.lastPathComponent)")
+        }
+        let headerLen = lenData.withUnsafeBytes { UInt64(littleEndian: $0.load(as: UInt64.self)) }
+        // Header must fit in the file; cap guards against absurd allocations.
+        guard headerLen > 0, headerLen <= fileSize - 8, headerLen <= 100_000_000 else {
+            throw MLXProviderError.incompatibleFormat(
+                reason: "safetensors header length out of bounds: \(url.lastPathComponent)")
+        }
+        guard
+            let headerData = try? handle.read(upToCount: Int(headerLen)),
+            headerData.count == Int(headerLen)
+        else {
+            throw MLXProviderError.incompatibleFormat(
+                reason: "safetensors header truncated: \(url.lastPathComponent)")
+        }
+        // The spec allows a trailing NUL inside the header region.
+        var json = headerData
+        while json.last == 0 { json.removeLast() }
+        guard let obj = (try? JSONSerialization.jsonObject(with: json)) as? [String: Any] else {
+            throw MLXProviderError.incompatibleFormat(
+                reason: "safetensors header is not valid JSON: \(url.lastPathComponent)")
+        }
+
+        let dataStart = 8 + headerLen
+        let tensors = obj.filter { $0.key != "__metadata__" }
+        for (name, value) in tensors {
+            guard let entry = value as? [String: Any],
+                let offsets = entry["data_offsets"] as? [Int],
+                offsets.count == 2,
+                let end = offsets.last, end >= 0
+            else {
+                throw MLXProviderError.incompatibleFormat(
+                    reason: "safetensors tensor '\(name)' has invalid data_offsets")
+            }
+            if dataStart + UInt64(end) > fileSize {
+                throw MLXProviderError.incompatibleFormat(
+                    reason: "safetensors tensor '\(name)' extends past end of file (truncated download)")
+            }
+        }
+        return tensors.count
+    }
 
     private static func totalDiskSize(of urls: [URL]) -> UInt64 {
         var total: UInt64 = 0

@@ -314,8 +314,9 @@ struct TimeTravelTests {
 
     @MainActor
     private func makeEngine() throws -> (TimeTravelEngine, UUID) {
-        let container = try ModelSchemaRegistry.makeContainer(configuration: ModelConfiguration(isStoredInMemoryOnly: true))
+        let container = try ModelSchemaRegistry.makeContainer(configuration: SwiftDataTestHelpers.makeIsolatedConfiguration())
         let ctx = container.mainContext
+        ctx.autosaveEnabled = false
         let project = Project(name: "Test")
         ctx.insert(project)
         let conversation = Conversation(project: project, title: "Test")
@@ -326,8 +327,9 @@ struct TimeTravelTests {
 
     @MainActor
     private func makeEngineWithConversation() throws -> (TimeTravelEngine, Conversation) {
-        let container = try ModelSchemaRegistry.makeContainer(configuration: ModelConfiguration(isStoredInMemoryOnly: true))
+        let container = try ModelSchemaRegistry.makeContainer(configuration: SwiftDataTestHelpers.makeIsolatedConfiguration())
         let ctx = container.mainContext
+        ctx.autosaveEnabled = false
         let project = Project(name: "Test")
         ctx.insert(project)
         let conversation = Conversation(project: project, title: "Test")

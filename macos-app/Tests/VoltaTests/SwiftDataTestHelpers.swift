@@ -10,6 +10,19 @@ import Foundation
 @testable import Volta
 
 enum SwiftDataTestHelpers {
+
+    /// Unique store identity per container. All in-memory containers in a
+    /// process share ONE store identity, so creating a second container (or
+    /// draining one) resets the store underneath still-live contexts from
+    /// other suites — the "destroyed by calling ModelContext.reset" fatal.
+    /// A unique /tmp URL gives every container a truly isolated store.
+    static func makeIsolatedConfiguration() -> ModelConfiguration {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("volta-sd-\(UUID().uuidString)", isDirectory: false)
+            .appendingPathExtension("sqlite")
+        return ModelConfiguration(url: url)
+    }
+
     /// Tear down an in-memory ModelContainer by deleting all entities.
     /// Prevents cross-test contamination when multiple tests create
     /// local containers.
