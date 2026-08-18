@@ -1314,6 +1314,28 @@ def _handle_auto_place(op: Any, ir: PcbIR, file_path: Path) -> dict[str, Any]:
     from volta.placement.engine import HybridPlacementEngine, PlacementRequest
 
     placement_rules = [dict(r) for r in getattr(op, "constraints", []) or []]
+    if not placement_rules:
+        # volta-24: fall back to the project sidecar emitted by the
+        # generation planner (constraints.json next to the board).
+        sidecar = file_path.parent / "constraints.json"
+        if sidecar.exists():
+            import json as _json
+
+            try:
+                data = _json.loads(sidecar.read_text(encoding="utf-8"))
+                placement_rules = [
+                    {
+                        "rule_id": r.get("rule_id", ""),
+                        "rule_type": r.get("rule_type"),
+                        "source": r.get("source", "imported"),
+                        "refs": r.get("refs", []),
+                        "payload": r.get("payload", {}),
+                        "rationale": r.get("rationale", ""),
+                    }
+                    for r in data.get("rules", [])
+                ]
+            except (ValueError, OSError):
+                placement_rules = []
     from volta.placement.validation import PlacementValidator
 
     # Extract board bounds from PCB

@@ -132,3 +132,62 @@ class TestAutoPlaceGate:
         assert status in ("ok", "partial", "placed", "completed") or not status
         # The op executed with constraints attached without schema rejection
         # (the constraint gate reports via placement_rule violations).
+
+
+class TestSidecarRoundtrip:
+    """Planner emits constraints.json; auto_place falls back to it."""
+
+    def test_planner_writes_sidecar(self, tmp_path):
+        from volta.generation.intent import GenerationIntent
+        from volta.generation.op_planner import OpPlanner
+        from volta.placement.constraints import PlacementRuleSet
+
+        intent = GenerationIntent.model_validate({
+            "name": "T",
+            "placement_constraints": [
+                {"rule_type": "avoid", "refs": ["U3"], "refs_b": ["U1"],
+                 "mm": 25.0, "rationale": "EMI"},
+            ],
+        })
+        OpPlanner(intent, tmp_path).plan()
+        sidecar = tmp_path / "constraints.json"
+        assert sidecar.exists()
+        loaded = PlacementRuleSet.load(sidecar)
+        assert len(loaded.rules) == 1
+        assert loaded.rules[0].payload["mm"] == 25.0
+        assert loaded.board_width == 50.0  # BoardSpec default (50x50)
+
+    def test_planner_no_sidecar_without_constraints(self, tmp_path):
+        from volta.generation.intent import GenerationIntent
+        from volta.generation.op_planner import OpPlanner
+
+        intent = GenerationIntent(name="T")
+        OpPlanner(intent, tmp_path).plan()
+        assert not (tmp_path / "constraints.json").exists()
+
+    def test_sidecar_rules_revalidate_through_engine_builder(self, tmp_path):
+        from volta.generation.intent import GenerationIntent
+        from volta.generation.op_planner import OpPlanner
+        from volta.placement.engine import _build_placement_rules
+        from volta.placement.constraints import PlacementRuleSet
+
+        intent = GenerationIntent.model_validate({
+            "name": "T",
+            "placement_constraints": [
+                {"rule_type": "edge_affinity", "refs": ["J1"], "edge": "bottom",
+                 "mm": 4.0, "rationale": "connector access"},
+            ],
+        })
+        OpPlanner(intent, tmp_path).plan()
+        data = PlacementRuleSet.load(tmp_path / "constraints.json")
+        serialized = [
+            {"rule_id": r.rule_id, "rule_type": r.rule_type.value,
+             "source": r.source.value, "refs": list(r.refs),
+             "payload": dict(r.payload), "rationale": r.rationale}
+            for r in data.rules
+        ]
+        rules = _build_placement_rules(
+            type("R", (), {"placement_rules": serialized})()
+        )
+        assert len(rules) == 1
+        assert rules[0].payload["edge"] == "bottom"

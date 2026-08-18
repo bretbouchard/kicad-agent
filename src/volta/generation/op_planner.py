@@ -75,6 +75,12 @@ class OpPlanner:
         steps: list[PlanStep] = []
         step_ids: list[str] = []
 
+        # volta-24: persist placement constraints as a project sidecar so
+        # downstream stages (auto_place fallback, review, re-runs) see the
+        # design's placement intent even without the original intent.
+        if self._intent.placement_constraints:
+            self._write_constraints_sidecar()
+
         # 1. Board outline step
         board_step = self._make_board_outline_step()
         steps.append(board_step)
@@ -140,6 +146,18 @@ class OpPlanner:
         """Generate the next step ID."""
         self._step_counter += 1
         return f"step_{self._step_counter}"
+
+
+    def _write_constraints_sidecar(self) -> None:
+        """Write constraints.json from the intent's placement rules."""
+        from volta.placement.constraints import PlacementRuleSet
+
+        ruleset = PlacementRuleSet(
+            board_width=self._intent.board.width_mm,
+            board_height=self._intent.board.height_mm,
+            rules=tuple(spec.to_rule() for spec in self._intent.placement_constraints),
+        )
+        ruleset.save(self._target_dir / "constraints.json")
 
     def _make_board_outline_step(self) -> PlanStep:
         """Create the board outline step."""
