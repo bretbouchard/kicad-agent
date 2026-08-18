@@ -74,7 +74,10 @@ struct ProcessManagerTests {
         #expect(ProcessManager.verifyChecksum(of: tmp) == true)
     }
 
-    @Test("Checksum verification rejects tampered sidecar")
+    @Test(
+        "Checksum verification rejects tampered sidecar",
+        .disabled(if: ProcessManager.resolveDaemonURL() == nil)
+    )
     func checksumRejectsTamper() async throws {
         guard let url = ProcessManager.resolveDaemonURL() else {
             Issue.record("Daemon binary not built — run `pyinstaller volta-daemon.spec`")

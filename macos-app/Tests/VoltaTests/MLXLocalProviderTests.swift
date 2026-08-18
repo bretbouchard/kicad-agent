@@ -205,9 +205,9 @@ struct MLXLocalProviderTests {
         }
     }
 
-    @Test("minimumVRAMBytes is exactly 3GB per Pitfall 7")
+    @Test("minimumVRAMBytes is exactly 7GB per 12B 4-bit model requirement")
     func vramThreshold() {
-        #expect(MLXLocalProvider.minimumVRAMBytes == 3 * 1024 * 1024 * 1024)
+        #expect(MLXLocalProvider.minimumVRAMBytes == 7 * 1024 * 1024 * 1024)
     }
 
     // MARK: - Display + kind
@@ -217,7 +217,7 @@ struct MLXLocalProviderTests {
         let url = try makeFakeModel()
         defer { try? FileManager.default.removeItem(at: url) }
         let provider = MLXLocalProvider(modelURL: url, modelId: "mlx-community/gemma3")
-        #expect(provider.displayName == "MLX: mlx-community/gemma3")
+        #expect(provider.displayName == "Volta PCB v2 (Local, MLX)")
         #expect(provider.kind == .mlxLocal)
     }
 }

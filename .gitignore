@@ -38,6 +38,8 @@ tests/fixtures/freerouting/
 tests/fixtures/*/freerouting/
 # Council IN-04: KiCad + volta lock files (should never be committed)
 *.lck
+# SwiftPM build artifacts (integration/gsa-platform-proof/.build etc.)
+.build/
 ~$*
 .volta.lock
 

@@ -25,15 +25,16 @@ struct MemoryModelsTests {
 
     // MARK: - Schema Registry
 
-    @Test("Schema registry lists 6 models in v6.0.0 schema")
+    @Test("Schema registry lists 7 models in v6.0.0 schema")
     func schemaRegistry() {
         let schema = ModelSchemaRegistry.v600Schema
-        #expect(schema.count == 6)
+        #expect(schema.count == 7)
         #expect(schema.contains(where: { $0 == Project.self }))
         #expect(schema.contains(where: { $0 == Message.self }))
         #expect(schema.contains(where: { $0 == Decision.self }))
         #expect(schema.contains(where: { $0 == ValueChange.self }))
         #expect(schema.contains(where: { $0 == ProjectSnapshot.self }))
+        #expect(schema.contains(where: { $0 == OnboardingState.self }))
     }
 
     @Test("Schema version tag is frozen at v6.0.0")
