@@ -25,8 +25,15 @@ import OSLog
 final class TimeTravelEngine {
     private let modelContext: ModelContext
 
+    /// ModelContext does NOT retain its ModelContainer (macOS 26+ SwiftData):
+    /// if the creator drops the container, the next fetch traps with a
+    /// "destroyed by ModelContext.reset" fatal. The engine is meaningless
+    /// after its store dies, so it retains the container itself.
+    private let container: ModelContainer
+
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
+        self.container = modelContext.container
     }
 
     // MARK: - Materialization

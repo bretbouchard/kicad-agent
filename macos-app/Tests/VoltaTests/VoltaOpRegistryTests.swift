@@ -20,7 +20,7 @@ import Foundation
 @testable import Volta
 
 @MainActor
-@Suite("VoltaOpRegistry")
+@Suite("VoltaOpRegistry", .serialized)
 struct VoltaOpRegistryTests {
 
     // MARK: - Registry integrity

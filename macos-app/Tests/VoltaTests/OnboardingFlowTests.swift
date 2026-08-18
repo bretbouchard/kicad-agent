@@ -16,7 +16,7 @@ import Foundation
 import SwiftData
 @testable import Volta
 
-@Suite("Onboarding (Phase 242)")
+@Suite("Onboarding (Phase 242)", .serialized)
 struct OnboardingFlowTests {
 
     // MARK: - SwiftData round-trip

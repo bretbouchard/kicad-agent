@@ -11,7 +11,7 @@ import SwiftUI
 import SwiftData
 @testable import Volta
 
-@Suite("Time-Travel + Event Sourcing", .disabled(if: ProcessInfo.processInfo.environment["CI_SKIP_SMOKE"] != nil))
+@Suite("Time-Travel + Event Sourcing", .serialized, .disabled(if: ProcessInfo.processInfo.environment["CI_SKIP_SMOKE"] != nil))
 struct TimeTravelTests {
 
     // MARK: - DiffUtil
