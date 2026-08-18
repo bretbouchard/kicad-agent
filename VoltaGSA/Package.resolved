@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/bretbouchard/gsa-platform.git",
       "state" : {
-        "revision" : "929c794ba160672bc5aeda2b26e6bb06739ef2a7",
-        "version" : "0.1.2"
+        "revision" : "cea5283585bab7c78f9e41f22d95d9af308bc142",
+        "version" : "0.4.3"
       }
     }
   ],
