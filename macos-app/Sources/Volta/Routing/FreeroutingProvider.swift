@@ -380,7 +380,7 @@ public final class FreeroutingProvider: RoutingProvider, @unchecked Sendable {
             // unrouted nets may be a single number; if summary has a list, prefer that.
             if summary?.unroutedNets.isEmpty ?? true {
                 let count = parseTrailingNumber(after: "unrouted nets:", in: stdout[range.upperBound...]) ?? 0
-                unrouted = (1...count).map { "NET_\($0)" }
+                unrouted = count > 0 ? (1...count).map { "NET_\($0)" } : []
             }
         }
 

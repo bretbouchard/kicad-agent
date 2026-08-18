@@ -151,23 +151,38 @@ public enum DSNConverter {
 
     /// Lightweight tokenizer. Returns the input split into raw s-expression
     /// tokens (parens + bare words + quoted strings).
+    ///
+    /// KiCad DSN always emits `(string_quote ")` declaring the quote char.
+    /// That bare quote must NOT enter quote-mode (it would swallow the rest
+    /// of the file), so it is emitted as a standalone token instead.
     static func tokenize(_ text: String) -> [String] {
         var tokens: [String] = []
         var current = ""
+        var lastToken = ""
         var inQuote = false
         for char in text {
             if char == "\"" {
+                // KiCad DSN declares the quote char as `(string_quote ")` —
+                // the bare quote after a space is a token, not a delimiter.
+                if !inQuote && lastToken == "string_quote" {
+                    tokens.append(String(char))
+                    lastToken = "\""
+                    continue
+                }
                 inQuote.toggle()
                 current.append(char)
             } else if !inQuote && (char == "(" || char == ")") {
                 if !current.isEmpty {
                     tokens.append(current)
+                    lastToken = current
                     current = ""
                 }
                 tokens.append(String(char))
+                lastToken = String(char)
             } else if !inQuote && char.isWhitespace {
                 if !current.isEmpty {
                     tokens.append(current)
+                    lastToken = current
                     current = ""
                 }
             } else {
@@ -210,10 +225,33 @@ public enum DSNConverter {
         var line = 1
         var openLine = 0
         var inQuote = false
+        var current = ""
+        var lastToken = ""
         for char in text {
             if char == "\n" { line += 1 }
-            if char == "\"" { inQuote.toggle(); continue }
+            if char == "\"" {
+                // `(string_quote ")` declares the quote char — the bare
+                // quote following the string_quote token (with a space
+                // between) is not a string delimiter.
+                if !inQuote && lastToken == "string_quote" {
+                    lastToken = "\""
+                    continue
+                }
+                inQuote.toggle()
+                current = ""
+                continue
+            }
             if inQuote { continue }
+            if char.isWhitespace {
+                if !current.isEmpty { lastToken = current; current = "" }
+                continue
+            }
+            if char == "(" || char == ")" {
+                if !current.isEmpty { lastToken = current; current = "" }
+                lastToken = String(char)
+            } else {
+                current.append(char)
+            }
             if char == "(" {
                 if depth == 0 { openLine = line }
                 depth += 1
@@ -234,17 +272,20 @@ public enum DSNConverter {
     /// Pull "(host_cad \"...\")" and "(host_version \"...\")" from the parser
     /// section and return them joined.
     static func extractHostCad(in tokens: ArraySlice<String>) -> String? {
-        guard let parserRange = findSection(named: "parser", in: Array(tokens)) else {
+        let tokenArray = Array(tokens)
+        guard let parserRange = findSection(named: "parser", in: tokenArray) else {
             return nil
         }
-        let parserTokens = tokens[parserRange]
+        // Array(...) re-bases the slice — slices keep parent indices and
+        // positional loops below assume a zero base.
+        let parserTokens = Array(tokenArray[parserRange])
         var host = "unknown"
         var version = ""
         for i in 0..<parserTokens.count {
-            if parserTokens[i] == "host_cad", i + 2 < parserTokens.count {
-                host = stripQuotes(parserTokens[i + 2])
-            } else if parserTokens[i] == "host_version", i + 2 < parserTokens.count {
-                version = stripQuotes(parserTokens[i + 2])
+            if parserTokens[i] == "host_cad", i + 1 < parserTokens.count {
+                host = stripQuotes(parserTokens[i + 1])
+            } else if parserTokens[i] == "host_version", i + 1 < parserTokens.count {
+                version = stripQuotes(parserTokens[i + 1])
             }
         }
         return version.isEmpty ? host : "\(host) \(version)"
@@ -252,12 +293,14 @@ public enum DSNConverter {
 
     /// Pull "(resolution mm <int>)" → units-per-mm scaling.
     static func extractResolution(in tokens: ArraySlice<String>) -> Int? {
-        guard let r = findSection(named: "resolution", in: Array(tokens)) else {
+        let tokenArray = Array(tokens)
+        guard let r = findSection(named: "resolution", in: tokenArray) else {
             return nil
         }
-        let toks = tokens[r]
-        // (resolution mm <number>)
-        if toks.count >= 4, let n = Int(toks[toks.count - 2]) {
+        let toks = Array(tokenArray[r])
+        // (resolution mm <number>) — range excludes the closing paren, so
+        // the value is the final token.
+        if toks.count >= 4, let n = Int(toks[toks.count - 1]) {
             return n
         }
         return nil
@@ -265,10 +308,11 @@ public enum DSNConverter {
 
     /// Pull layer names from the (structure ...) section.
     static func extractLayers(in tokens: ArraySlice<String>) -> [String] {
-        guard let r = findSection(named: "structure", in: Array(tokens)) else {
+        let tokenArray = Array(tokens)
+        guard let r = findSection(named: "structure", in: tokenArray) else {
             return []
         }
-        let toks = tokens[r]
+        let toks = Array(tokenArray[r])
         var layers: [String] = []
         var i = 0
         while i < toks.count - 1 {
@@ -282,10 +326,11 @@ public enum DSNConverter {
 
     /// Count (net ...) entries and aggregate wires + vias from the network section.
     static func extractNetworkCounts(in tokens: ArraySlice<String>) -> (nets: Int, wires: Int, vias: Int) {
-        guard let r = findSection(named: "network", in: Array(tokens)) else {
+        let tokenArray = Array(tokens)
+        guard let r = findSection(named: "network", in: tokenArray) else {
             return (0, 0, 0)
         }
-        let toks = tokens[r]
+        let toks = Array(tokenArray[r])
         var nets = 0
         var wires = 0
         var vias = 0
@@ -307,14 +352,15 @@ public enum DSNConverter {
 
     /// Pull unrouted net names from (wiring (wires_failed (net "X") (net "Y") ...)).
     static func extractUnroutedNets(in tokens: ArraySlice<String>) -> [String] {
-        guard let wiringRange = findSection(named: "wiring", in: Array(tokens)) else {
+        let tokenArray = Array(tokens)
+        guard let wiringRange = findSection(named: "wiring", in: tokenArray) else {
             return []
         }
-        let toks = tokens[wiringRange]
-        guard let failedRange = findSection(named: "wires_failed", in: Array(toks)) else {
+        let toks = Array(tokenArray[wiringRange])
+        guard let failedRange = findSection(named: "wires_failed", in: toks) else {
             return []
         }
-        let failed = toks[failedRange]
+        let failed = Array(toks[failedRange])
         var nets: [String] = []
         var i = 0
         while i < failed.count - 1 {

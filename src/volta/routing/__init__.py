@@ -50,6 +50,13 @@ from volta.routing.pathfinder import (
     route_all_nets,
     route_net,
 )
+from volta.routing.provider import (
+    RoutingProvider,
+    RoutingProviderInfo,
+    RoutingProviderRegistry,
+    RoutingProviderType,
+)
+from volta.routing.freerouting_provider import FreeroutingProvider
 
 __all__ = [
     "RoutingConstraints",

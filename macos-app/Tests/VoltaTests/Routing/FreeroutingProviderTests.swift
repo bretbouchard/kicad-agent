@@ -18,6 +18,29 @@ import VoltaPCBCore
 
 @Suite("Freerouting Provider")
 struct FreeroutingProviderTests {
+    private static func makeTempJarURL() throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("freerouting-test-\(UUID().uuidString).jar")
+        FileManager.default.createFile(atPath: url.path, contents: Data())
+        return url
+    }
+
+    private static func makeRouteWorkspace() throws -> (pcbURL: URL, cleanupURL: URL) {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("freerouting-workspace-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let pcbURL = dir.appendingPathComponent("test-board.kicad_pcb")
+        let dsnURL = dir.appendingPathComponent("input.dsn")
+        FileManager.default.createFile(atPath: pcbURL.path, contents: Data())
+        let dsn = """
+        (pcb
+          (layer F.Cu)
+          (component U1)
+        )
+        """
+        try dsn.write(to: dsnURL, atomically: true, encoding: .utf8)
+        return (pcbURL, dir)
+    }
 
     // MARK: - Identity
 
@@ -36,7 +59,7 @@ struct FreeroutingProviderTests {
 
     @Test("Availability is .unavailable when java not on PATH")
     func availabilityNoJava() async {
-        let runner = MockProcessRunner(
+        let runner = FreeroutingMockProcessRunner(
             whichResults: ["java": .whichFailed(exitCode: 1)],
             runResults: [:]
         )
@@ -51,7 +74,7 @@ struct FreeroutingProviderTests {
 
     @Test("Availability is .unavailable when java found but JAR missing")
     func availabilityNoJar() async {
-        let runner = MockProcessRunner(
+        let runner = FreeroutingMockProcessRunner(
             whichResults: ["java": .pathFound("/usr/bin/java")],
             runResults: [:]
         )
@@ -66,11 +89,12 @@ struct FreeroutingProviderTests {
 
     @Test("Availability is .available when java + JAR both found")
     func availabilityReady() async {
-        let runner = MockProcessRunner(
+        let runner = FreeroutingMockProcessRunner(
             whichResults: ["java": .pathFound("/usr/bin/java")],
             runResults: [:]
         )
-        let jarURL = URL(fileURLWithPath: "/tmp/freerouting-test.jar")
+        let jarURL = try! Self.makeTempJarURL()
+        defer { try? FileManager.default.removeItem(at: jarURL) }
         let provider = FreeroutingProvider(
             runner: runner,
             jarPathOverride: jarURL
@@ -83,18 +107,21 @@ struct FreeroutingProviderTests {
 
     @Test("Route returns RoutingResult on success")
     func routeSuccess() async throws {
-        let runner = MockProcessRunner(
+        let runner = FreeroutingMockProcessRunner(
             whichResults: ["java": .pathFound("/usr/bin/java")],
             runResults: [:]
         )
-        let pcbURL = URL(fileURLWithPath: "/tmp/test-board.kicad_pcb")
-        let jarURL = URL(fileURLWithPath: "/tmp/freerouting-test.jar")
+        let workspace = try Self.makeRouteWorkspace()
+        let pcbURL = workspace.pcbURL
+        defer { try? FileManager.default.removeItem(at: workspace.cleanupURL) }
+        let jarURL = try Self.makeTempJarURL()
+        defer { try? FileManager.default.removeItem(at: jarURL) }
         let provider = FreeroutingProvider(
             runner: runner,
             jarPathOverride: jarURL
         )
         // Inject canned Freerouting success output via the runner
-        runner.runResults["/usr/bin/java"] = MockProcessRunner.RunResult(
+        runner.runResults["/usr/bin/java"] = FreeroutingMockProcessRunner.RunResult(
             stdout: Self.freeroutingSuccessLog,
             stderr: "",
             exitCode: 0
@@ -113,22 +140,26 @@ struct FreeroutingProviderTests {
 
     @Test("Route throws nonZeroExit on java failure")
     func routeNonZeroExit() async {
-        let runner = MockProcessRunner(
+        let runner = FreeroutingMockProcessRunner(
             whichResults: ["java": .pathFound("/usr/bin/java")],
             runResults: [:]
         )
-        runner.runResults["/usr/bin/java"] = MockProcessRunner.RunResult(
+        runner.runResults["/usr/bin/java"] = FreeroutingMockProcessRunner.RunResult(
             stdout: "",
             stderr: "Error: invalid DSN format",
             exitCode: 1
         )
+        let workspace = try! Self.makeRouteWorkspace()
+        defer { try? FileManager.default.removeItem(at: workspace.cleanupURL) }
+        let jarURL = try! Self.makeTempJarURL()
+        defer { try? FileManager.default.removeItem(at: jarURL) }
         let provider = FreeroutingProvider(
             runner: runner,
-            jarPathOverride: URL(fileURLWithPath: "/tmp/freerouting-test.jar")
+            jarPathOverride: jarURL
         )
         await #expect(throws: FreeroutingError.self) {
             _ = try await provider.route(
-                pcbFile: URL(fileURLWithPath: "/tmp/test.kicad_pcb"),
+                pcbFile: workspace.pcbURL,
                 rules: RoutingRules(),
                 progress: nil
             )
@@ -137,24 +168,28 @@ struct FreeroutingProviderTests {
 
     @Test("Route throws timeout when process exceeds rules.timeout")
     func routeTimeout() async {
-        let runner = MockProcessRunner(
+        let runner = FreeroutingMockProcessRunner(
             whichResults: ["java": .pathFound("/usr/bin/java")],
             runResults: [:]
         )
         // Simulate a long-running process by making run() throw a timeout
-        runner.runResults["/usr/bin/java"] = MockProcessRunner.RunResult(
+        runner.runResults["/usr/bin/java"] = FreeroutingMockProcessRunner.RunResult(
             stdout: "",
             stderr: "killed by timeout",
             exitCode: 124  // GNU `timeout` exit code
         )
+        let workspace = try! Self.makeRouteWorkspace()
+        defer { try? FileManager.default.removeItem(at: workspace.cleanupURL) }
+        let jarURL = try! Self.makeTempJarURL()
+        defer { try? FileManager.default.removeItem(at: jarURL) }
         let provider = FreeroutingProvider(
             runner: runner,
-            jarPathOverride: URL(fileURLWithPath: "/tmp/freerouting-test.jar")
+            jarPathOverride: jarURL
         )
         let rules = RoutingRules(timeout: .seconds(1))
         await #expect(throws: FreeroutingError.self) {
             _ = try await provider.route(
-                pcbFile: URL(fileURLWithPath: "/tmp/test.kicad_pcb"),
+                pcbFile: workspace.pcbURL,
                 rules: rules,
                 progress: nil
             )
@@ -163,18 +198,22 @@ struct FreeroutingProviderTests {
 
     @Test("Route streams progress events")
     func routeStreamsProgress() async throws {
-        let runner = MockProcessRunner(
+        let runner = FreeroutingMockProcessRunner(
             whichResults: ["java": .pathFound("/usr/bin/java")],
             runResults: [:]
         )
-        runner.runResults["/usr/bin/java"] = MockProcessRunner.RunResult(
+        runner.runResults["/usr/bin/java"] = FreeroutingMockProcessRunner.RunResult(
             stdout: Self.freeroutingProgressLog,
             stderr: "",
             exitCode: 0
         )
+        let workspace = try Self.makeRouteWorkspace()
+        defer { try? FileManager.default.removeItem(at: workspace.cleanupURL) }
+        let jarURL = try Self.makeTempJarURL()
+        defer { try? FileManager.default.removeItem(at: jarURL) }
         let provider = FreeroutingProvider(
             runner: runner,
-            jarPathOverride: URL(fileURLWithPath: "/tmp/freerouting-test.jar")
+            jarPathOverride: jarURL
         )
 
         actor ProgressCollector {
@@ -185,7 +224,7 @@ struct FreeroutingProviderTests {
         let collector = ProgressCollector()
 
         _ = try await provider.route(
-            pcbFile: URL(fileURLWithPath: "/tmp/test.kicad_pcb"),
+            pcbFile: workspace.pcbURL,
             rules: RoutingRules(),
             progress: { event in
                 Task { await collector.append(event) }
@@ -203,13 +242,15 @@ struct FreeroutingProviderTests {
 
     @Test("Estimate time scales with board complexity")
     func estimateTime() {
-        let runner = MockProcessRunner(
+        let runner = FreeroutingMockProcessRunner(
             whichResults: ["java": .pathFound("/usr/bin/java")],
             runResults: [:]
         )
+        let jarURL = try! Self.makeTempJarURL()
+        defer { try? FileManager.default.removeItem(at: jarURL) }
         let provider = FreeroutingProvider(
             runner: runner,
-            jarPathOverride: URL(fileURLWithPath: "/tmp/freerouting-test.jar")
+            jarPathOverride: jarURL
         )
         let smallBoard = PCBSummary(
             componentCount: 10,
@@ -272,7 +313,7 @@ struct FreeroutingProviderTests {
 /// which-results and run-results keyed by executable path. Mirrors
 /// the shape of RealProcessRunner so the provider can be tested
 /// without spawning real subprocesses.
-final class MockProcessRunner: ProcessRunner, @unchecked Sendable {
+final class FreeroutingMockProcessRunner: ProcessRunner, @unchecked Sendable {
     /// What `which <executable>` should return per binary name.
     enum WhichResult: Equatable, Sendable {
         case pathFound(String)
@@ -302,6 +343,21 @@ final class MockProcessRunner: ProcessRunner, @unchecked Sendable {
         lastExecutable = executable
         lastArguments = arguments
         if let result = runResults[executable] {
+            if result.exitCode == 0,
+               let outputIndex = arguments.firstIndex(of: "-do"),
+               arguments.indices.contains(outputIndex + 1) {
+                let outputPath = arguments[outputIndex + 1]
+                if !FileManager.default.fileExists(atPath: outputPath) {
+                    let output = """
+                    (pcb
+                      (layer F.Cu)
+                      (wire (path a b))
+                      (via x y)
+                    )
+                    """
+                    try output.write(toFile: outputPath, atomically: true, encoding: .utf8)
+                }
+            }
             return ProcessResult(
                 stdout: result.stdout,
                 stderr: result.stderr,

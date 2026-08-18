@@ -19,9 +19,8 @@
 //  documented as a manual smoke-test in
 //  PLANS/volta-component-integration/phases/4-routing-plugin-system/SMOKE_TEST.md.
 //
-//  ponytail: no IO mocking — Bundle.module URL is honest about the file
-//  being a fixture. Skip the suite if the fixture is missing so devs who
-//  delete fixtures don't get false-positives.
+//  ponytail: no IO mocking. Resolve the committed fixture from the source
+//  tree so the suite works in both SwiftPM and XcodeGen test bundles.
 //
 
 import Testing
@@ -32,21 +31,15 @@ import VoltaPCBCore
 @Suite("Freerouting Fixture Board (simple_2layer_led)")
 struct FixtureBoardSmokeTests {
 
-    /// Locate the committed fixture relative to the test bundle. Skip the
-    /// entire suite rather than fail if the fixture is missing — fixtures
-    /// are documentation, not load-bearing test data.
+    /// Locate the committed fixture relative to common SwiftPM/XcodeGen
+    /// working directories. Skip the suite if the fixture is missing —
+    /// fixtures are documentation, not load-bearing test data.
     private static func locateFixture() -> URL? {
-        if let url = Bundle.module.url(
-            forResource: "simple_2layer_led",
-            withExtension: "kicad_pcb"
-        ) {
-            return url
-        }
-        // Fallback: try the source tree directly. Useful when running tests
-        // from Xcode before the resource bundle has been rebuilt.
         let candidates = [
             "Tests/VoltaTests/Routing/Fixtures/simple_2layer_led.kicad_pcb",
             "../Tests/VoltaTests/Routing/Fixtures/simple_2layer_led.kicad_pcb",
+            "macos-app/Tests/VoltaTests/Routing/Fixtures/simple_2layer_led.kicad_pcb",
+            "../macos-app/Tests/VoltaTests/Routing/Fixtures/simple_2layer_led.kicad_pcb",
         ]
         for path in candidates {
             let url = URL(fileURLWithPath: path)
@@ -124,11 +117,12 @@ struct FixtureBoardSmokeTests {
     func fixtureNeedsRouting() throws {
         guard let url = Self.locateFixture() else { return }
         let text = try String(contentsOf: url, encoding: .utf8)
+        let normalizedLines = text.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
         // The whole point: input board has no (segment ...) blocks,
         // so Freerouting has unrouted copper to fill.
-        #expect(!text.contains("(segment"),
+        #expect(!normalizedLines.contains(where: { $0.hasPrefix("(segment") }),
                 "Fixture should have NO pre-routed segments so Freerouting has work to do")
-        #expect(!text.contains("(via "),
+        #expect(!normalizedLines.contains(where: { $0.hasPrefix("(via ") }),
                 "Fixture should have NO pre-placed vias for the same reason")
     }
 }
