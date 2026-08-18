@@ -612,7 +612,42 @@ struct AutoPlaceGenOp: VoltaOperation {
             // Update footprint position
             placed += 1
         }
-        return ["status": "ok", "placed": placed, "message": "Grid placement applied"]
+
+        // volta-24: contextual constraint gate — report rule violations
+        // alongside the placement result (pure Swift math, no daemon).
+        var result: [String: Any] = [
+            "status": "ok", "placed": placed, "message": "Grid placement applied",
+        ]
+        if let rawRules = params["constraints"] as? [[String: Any]] {
+            if let data = try? JSONSerialization.data(withJSONObject: rawRules),
+               let rules = try? JSONDecoder().decode([PlacementConstraint].self, from: data) {
+                let footprints = board.footprints.filter { !$0.reference.isEmpty }
+                let positions = PlacementPositions(
+                    uniqueKeysWithValues: footprints.map { fp in
+                        (fp.reference, (fp.position.x, fp.position.y, fp.rotation))
+                    }
+                )
+                let xs = footprints.map { $0.position.x }
+                let ys = footprints.map { $0.position.y }
+                let boardW = (xs.max() ?? 100) - (xs.min() ?? 0)
+                let boardH = (ys.max() ?? 80) - (ys.min() ?? 0)
+                let violations = PlacementConstraints.validate(
+                    rules, positions: positions,
+                    boardWidth: max(boardW, 1), boardHeight: max(boardH, 1)
+                )
+                result["constraint_violations"] = violations.map { v in
+                    [
+                        "type": "placement_rule",
+                        "rule_id": v.ruleId,
+                        "rule_type": v.ruleType.rawValue,
+                        "component_refs": [v.ref],
+                        "message": v.message,
+                        "severity": "warning",
+                    ]
+                }
+            }
+        }
+        return result
     }
 }
 
