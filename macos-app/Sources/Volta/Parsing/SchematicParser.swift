@@ -169,6 +169,12 @@ struct SchematicParser {
             }
         }
 
+        // Fallback: some tools (and test fixtures) use the shorthand
+        // (reference "R1") attribute instead of a Reference property.
+        if ref == "?", let shorthand = node.find("reference")?.childString(0) {
+            ref = shorthand
+        }
+
         // lib_id is usually a direct child value
         libId = node.find("lib_id")?.childString(0) ?? ""
 

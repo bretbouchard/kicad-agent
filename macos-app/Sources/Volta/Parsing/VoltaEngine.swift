@@ -598,8 +598,13 @@ struct RunNativeERCOp: VoltaOperation {
     let readOnly = true
 
     func execute(params: [String: Any], on fileURL: URL) throws -> [String: Any] {
-        let result = NativeERC.run(schematicURL: fileURL)
-        return result.toDict()
+        var result = NativeERC.run(schematicURL: fileURL).toDict()
+        // `ok` = ERC executed; `passed` = no errors (aliases `clean` for
+        // contract parity with the op shape the registry tests enforce).
+        let errorCount = result["error_count"] as? Int ?? 0
+        result["ok"] = true
+        result["passed"] = errorCount == 0
+        return result
     }
 }
 
@@ -655,7 +660,7 @@ struct AnnotateOp: VoltaOperation {
             // Extract prefix (letters before the number)
             let prefix = String(ref.prefix { $0.isLetter })
             prefixCounters[String(prefix), default: 0] += 1
-            let newRef = "(prefix)(prefixCounters[prefix] ?? 0)"
+            let newRef = "\(prefix)\(prefixCounters[prefix] ?? 0)"
             annotations.append(["old": ref, "new": newRef])
         }
 

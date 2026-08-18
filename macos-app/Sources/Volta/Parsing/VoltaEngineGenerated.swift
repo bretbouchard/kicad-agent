@@ -1062,14 +1062,6 @@ struct AssignFootprintOp: VoltaOperation {
     }
 }
 
-struct SchSwapFootprintOp: VoltaOperation {
-    let opType = "swap_footprint"
-    let readOnly = false
-    func execute(params: [String: Any], on fileURL: URL) throws -> [String: Any] {
-        try AssignFootprintOp().execute(params: params, on: fileURL)
-    }
-}
-
 // MARK: - Net Label Operations
 
 struct RemoveLabelOp: VoltaOperation {
@@ -1222,7 +1214,7 @@ extension VoltaEngine {
         MoveComponentOp(), SnapComponentsToGridOp(), SnapToGridOp(), RenumRefsOp(),
         RebuildRootSheetOp(), EmbedSymbolOp(), SwapSymbolOp(), PropagateSymbolChangeOp(),
         UpdateSymbolsFromLibraryOp(), UpdateFootprintFromLibraryOp(),
-        AssignFootprintOp(), SchSwapFootprintOp(),
+        AssignFootprintOp(),
         // Label/junction ops
         RemoveLabelOp(), RemoveLabelsOp(), RemoveJunctionOp(), RemoveNoConnectOp(),
         RenameNetLabelOp(), PlaceNetLabelsOp(),
